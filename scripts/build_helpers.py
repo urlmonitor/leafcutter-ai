@@ -390,9 +390,15 @@ def install_shims(
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     # Single-file shims (these are files, not directories)
+    # scripts/goal_to_epic.py and scripts/build_ac_mode_detection.py (BP-900a-2):
+    # shim the top-level <output_root>/scripts/<name> deploy target (populated by
+    # build_template_standalone_scripts) at the consumer project's <target>/scripts/,
+    # matching the existing pattern for setup_ticket_worktree.py-style scripts.
     file_shims: list[tuple[str, str]] = [
         (".pre-commit-config.yaml", "pre-commit-config.yaml"),
         (".claude/settings.json", "settings.json"),
+        ("scripts/goal_to_epic.py", "scripts/goal_to_epic.py"),
+        ("scripts/build_ac_mode_detection.py", "scripts/build_ac_mode_detection.py"),
     ]
 
     for canonical_rel, output_rel in file_shims:
@@ -460,16 +466,24 @@ def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
 def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
     """Create a file shim (symlink or copy) at canonical pointing to source.
 
+    The symlink target is stored as a RELATIVE path (relative to
+    ``canonical``'s parent directory), never an absolute developer-machine
+    path — see BP-016/BP-017 (commits 47fb660ff, 9bf606c28), where absolute
+    shim symlink targets broke every consumer install because they pointed
+    at a path that only exists on the machine that ran the build.
+
     Returns the method used ("symlink" or "copy").
     """
+    import os
     import shutil
 
     if strategy == "copy":
         shutil.copy2(source, canonical)
         return "copy"
 
+    relative_source = Path(os.path.relpath(source, start=canonical.parent))
     try:
-        canonical.symlink_to(source)
+        canonical.symlink_to(relative_source)
     except (OSError, PermissionError):
         if strategy == "symlink":
             raise
@@ -628,6 +642,20 @@ def install_hooks(target_root, dry_run=False):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/03]: Added
+#   scripts/goal_to_epic.py and scripts/build_ac_mode_detection.py to
+#   install_shims()'s file_shims list so <target>/scripts/<name> resolves to
+#   the <output_root>/scripts/<name> copies deployed by
+#   build_template_standalone_scripts (scripts/build_phases.py). Also fixed
+#   _create_file_shim to store a RELATIVE symlink target (computed via
+#   os.path.relpath from canonical's parent) instead of an absolute one —
+#   required by AC BP-900a-2's shim-relativity assertion and consistent with
+#   the BP-016/BP-017 regression note (absolute shim targets break every
+#   consumer install because they point at a path unique to the build
+#   machine). This affects both new file_shims entries and the two
+#   pre-existing ones (.pre-commit-config.yaml, .claude/settings.json), which
+#   is a strict improvement with no observed test relying on absolute
+#   targets. (#EPIC-DeploymentCompleteness/03)
 # - 2026-05-15 10:15 [python-coder/EPIC-PortableSQLAgents/ticket-01]: (#EPIC-LeafcutterMVP/01)
 #   Created this module by extracting write_build_manifest, _seed_docs,
 #   _update_diagrams, and _install_shims from build.py. The extraction

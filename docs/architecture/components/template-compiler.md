@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-06-08
+last_updated: 2026-08-17
 components:
   - template_compiler
 ---
@@ -31,6 +31,19 @@ The Template Compiler transforms templates from `templates/agents/`, `templates/
 ## Integration
 
 The `build-self.sh` script invokes the compiler for local development. Consumer installs run `python leafcutter-ai/scripts/build.py --target-dir .` to deploy compiled artifacts.
+
+## Standalone Script Deployment
+
+`build_template_standalone_scripts` (scripts/build_phases.py) deploys every
+top-level `.py` file under `templates/scripts/` (non-recursive) verbatim to
+`<output_root>/scripts/`. This includes `goal_to_epic.py` (a thin delegator
+to the full implementation deployed separately at
+`<output_root>/scripts/ac_store/goal_to_epic.py` by `build_ac_store`, kept
+this way to stay under the 400-line file-size limit) and
+`build_ac_mode_detection.py` (a full copy, small enough to duplicate
+safely). `install_shims()` (scripts/build_helpers.py) then creates a
+relative-symlink shim at `<target>/scripts/<name>` for each, resolving to
+the deployed copy (AC BP-900a-2).
 
 ## CI and Fresh-Clone Test Requirements
 
