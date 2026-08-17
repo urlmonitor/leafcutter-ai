@@ -1,0 +1,82 @@
+id: ACS-500g-5
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A retrospective sweep over the existing store seeds the first patterns and ends the cold start"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a store that already holds hundreds of ACs, contains zero patterns, and
+    contains zero ACs that reference a pattern — so every pattern-first check comes
+    up empty and another standalone AC is written,
+  When the retrospective sweep runs across the whole store as a deliberate pass,
+  Then it returns a list of pattern candidates ranked by recurrence count, highest
+    first,
+  And each entry names the behavior, the ids of the ACs it recurs in, the count, and
+    the proposed slots,
+  And on approval of the top-ranked candidates at least one pattern is written into
+    the store and its source ACs are converted to reference it,
+  And after the sweep the store contains at least one pattern and at least one AC
+    that references a pattern,
+  So that the next pattern-first check runs against a non-empty inventory instead of
+    an empty one.
+depends_on: [ACS-500g, ACS-500g-1, ACS-500g-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+  - path: templates/agents/pattern-steward.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: L
+it_requirements:
+  - "GAP RESOLUTION (agent assignment): reassigned from workflow-architect to llm-expert. The sweep is a MODE of templates/agents/pattern-steward.md, not a new package artifact — llm-expert owns agent templates and is dispatchable as a ticket phase; workflow-architect (is_ticket_phase:false) is not. The registry entry created under ACS-500g-1 is a prerequisite: no entry, no dispatchable sweep."
+  - "The sweep is a MODE of the same agent, not a second agent. Do not create a second registry entry — ACS-500g-1 delivers the scan, this AC adds ranking, approval and conversion on top of it. A second agent would fork the recurrence predicate and re-introduce the drift ACS-500g-3 exists to prevent."
+  - "REAL STORE SCALE: docs/acceptance-criteria/ holds roughly 2,900 AC YAML files across ~40 component namespaces. A single unbounded pass will not fit in one context window. Require a batched, resumable sweep — process a bounded set of feature folders per batch, persist partial results to reports/pattern-candidates/, and make re-running the sweep resume rather than restart."
+  - "Ranking is by recurrence count descending; the tie-break must be deterministic (e.g. then by number of proposed slots ascending, then by lowest source AC id) so two runs over an unchanged store produce the same ordered list. A non-deterministic ranking makes the sweep impossible to review as a diff."
+  - "Candidates below the skill's recurrence threshold are not listed as candidates; they are written to the ACS-500g-4-i near-miss ledger instead. The threshold value is read from templates/skills/authoring-patterns/SKILL.md, never restated in the template."
+  - "Approval is a hard gate. The sweep writes nothing to docs/acceptance-criteria/ before the user approves a specific candidate — the ACS-500g-1-i no-rewrite invariant applies unchanged to this mode."
+  - "Pattern AC ids must come from the existing store id conventions (docs/reference/ac-schema.md); a swept pattern is a new AC in the owning component's namespace and must pass check-ac-limits (child caps) and check-ac-parent-covered-by (the parent's covered_by is appended) in the same commit as the child."
+  - "Conversion of source ACs must land atomically with the pattern record: check_ac_pattern_refs rejects an implements_pattern pointing at an id that is not yet in the store, and check_ac_schema.validate_pattern_bindings_completeness rejects a consuming AC missing a binding for any declared slot. Stage the pattern and all its converted consumers in one commit."
+  - "The outcome assertion 'the store now contains at least one pattern and at least one AC referencing a pattern' is proven behaviourally by ACS-500g-7's store-level test, which walks the real store and runs the deployed _has_parameterized_slots predicate. This AC declares no tests of its own because an LLM agent's sweep is not unit-testable; its quality is verified by the ACS-500g-6 evaluation protocol instantiated for pattern-steward."
+delivers_to:
+  - agent: llm-expert
+    contract: "A retrospective-sweep mode in templates/agents/pattern-steward.md: a batched, resumable, deterministic-ranked candidate list written to reports/pattern-candidates/, and an approval-gated promotion that writes the pattern AC and its converted source ACs in one atomic commit."
+  - agent: documentation-expert
+    contract: "The invocation and the candidate-report shape that docs/how-to/promoting-a-shared-pattern.md (ACS-500g-2-ii) documents as 'how to run the sweep and read its candidate list'."
+expects_from:
+  - ac_id: ACS-500g-1
+    contract: "The store-wide scan and its candidate records (shared Given/When/Then body, source AC ids, recurrence count, proposed slots) plus the pattern-steward registry entry that makes the agent dispatchable."
+  - ac_id: ACS-500g-2
+    contract: "The recurrence threshold (3) and the slot naming / parameterised-criteria rules from templates/skills/authoring-patterns/SKILL.md."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500g-5-i]
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+test_required: false
+notes: |
+  Half (b) of the L1's two halves — the RETROSPECTIVE SWEEP that breaks the
+  cold-start deadlock. Kept distinct from half (a), ongoing promotion
+  (ACS-500g-4): the sweep is a deliberate pass over requirements already on the
+  shelf, not something that fires during an authoring run.

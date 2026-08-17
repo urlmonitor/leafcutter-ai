@@ -12,9 +12,9 @@ description: 'Depth-0 ticket orchestrator — dispatched directly by `/build-fea
   set: `.claude/skills/building-epics/SKILL.md`. Architecture decision: ADR-006-flatten-supervisor-chain.md.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # ticket-supervisor
 

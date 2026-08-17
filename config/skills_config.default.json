@@ -1,5 +1,5 @@
 {
-  "_comment": "Portable configuration for the .claude/ agent/skill stack. All values are Bybit-Trader defaults. An adopter copies this file into their project and edits the values that differ. Skills and agents read from this file via a _get(key, default) lookup pattern; if the key or file is absent, the Bybit-Trader default is used, preserving current behaviour.",
+  "_comment": "Portable configuration for the .claude/ agent/skill stack. All values are package defaults. An adopter copies this file into their project and edits the values that differ. Skills and agents read from this file via a _get(key, default) lookup pattern; if the key or file is absent, the package default is used, preserving current behaviour.",
 
   "project_description": "",
   "common_commands": "",
@@ -36,7 +36,7 @@
     "models",
     "scripts"
   ],
-  "test_output_dir": "%TEMP%/bybit-trader-tests/",
+  "test_output_dir": "%TEMP%/leafcutter-tests/",
   "worktree_base_path": "../",
   "settings_module": "settings",
   "changelog_folder": "changelogs/",

@@ -1,17 +1,17 @@
 ---
-title: "Agent Reference: reference-author"
+title: 'Agent Reference: reference-author'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/documentation/write-reference.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/documentation/write-reference.md
+description: 'Overview of Agent Reference: reference-author.'
 ---
-
 # Agent Reference: `reference-author`
 
 Implementing agent: `reference-author` (Sonnet, internal).
@@ -153,7 +153,7 @@ run).
 
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   visibility classes (§3), tool allowlists (§4.2 — strict-research-delegation).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   three-tier ladder (§2.1), strict-research-delegation rationale (§2.6).
 - [`docs/how-to/documentation/write-reference.md`](../../how-to/documentation/write-reference.md) —
   the how-to this agent loads before writing. Single source of truth for

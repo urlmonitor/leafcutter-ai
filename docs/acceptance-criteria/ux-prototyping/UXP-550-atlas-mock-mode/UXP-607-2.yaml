@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given an UNLOCKED deployment whose LEAFCUTTER_MOCK env sets live as the DEFAULT data source
     and whose runtime overrides are honored (no production lock, overrides allowed),

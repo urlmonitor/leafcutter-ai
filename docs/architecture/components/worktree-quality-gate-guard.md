@@ -14,10 +14,10 @@ children:
   - docs/architecture/diagrams/self-heal-sequence.md
   - docs/architecture/diagrams/gates-sequence.md
 related_docs:
-  - docs/architecture/adrs/ADR-017-worktree-quality-gate-guard.md
+  - docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
   - docs/architecture/components/commit-guardian.md
 related_adrs:
-  - ADR-017
+  - ADR-031
 tags:
   - worktree
   - pre-commit
@@ -58,7 +58,7 @@ diagram at the component level (L3):
 
 ## Cross-References
 
-- [ADR-017 — Worktree Quality Gate Guard](../adrs/ADR-017-worktree-quality-gate-guard.md)
+- [ADR-031 — Worktree Quality Gate Guard](../adrs/ADR-031-worktree-quality-gate-guard.md)
   — the design decision this subsystem implements.
 - [Commit Guardian](commit-guardian.md) — the parent pre-commit enforcement layer.
 

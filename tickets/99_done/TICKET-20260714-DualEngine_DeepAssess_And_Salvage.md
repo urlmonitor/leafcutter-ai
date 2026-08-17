@@ -93,7 +93,7 @@ from. PR #198 (`bf73f9a6`) was a **squash-merge of the entire branch** — all 1
 (01–13, including remediation tickets 08–13), not just 01–04. `git show bf73f9a6 --stat`
 shows +7907/-2866 across `build-feature.js` (+413 net-new), `plan-feature.js`,
 `finalize-feature.js`, `build-epic.js`, `build-ticket.js`, `build_phases.py`,
-command templates, ADR-017, the authoring contract, and the full dual-engine test suite.
+command templates, ADR-030, the authoring contract, and the full dual-engine test suite.
 
 **AC-1 — per-artifact state on `main` (evidence: file content on `origin/main`):**
 - `build-feature.js` — present & correct (pure-literal `meta`; Phase-0 worktree establish;

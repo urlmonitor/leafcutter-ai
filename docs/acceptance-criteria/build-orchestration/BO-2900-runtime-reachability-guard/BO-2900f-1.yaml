@@ -41,11 +41,73 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The workflow-step analogue (done). Reuse its record shape — one outcome per item, reason carried with the skip — do not fold the two together."
-assigned_agent: null
-estimated_complexity: null
-it_requirements: null
-delivers_to: null
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "_build_agents_map (line 651) is where the requested-gate set is computed from guardrail_gates.yaml and materialised onto the work item. That computed set is the denominator this AC requires; it is captured before any enablement decision runs."
+  - path: config/guardrail_gates.yaml
+    relationship: describes
+    status: exists
+    relevance: "Declares which gates a (change_target, risk_surface) pair requests. Requesting is a property of this table plus the work item's own classification — not of what was dispatched."
+  - path: scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: "VALID_STATUSES (line 36) is the single place the four-value outcome enum is enforced. Under the ticket-surface option this file is where a fifth `skipped` value and its parity representation land; under the JSONL option it is the file the new vocabulary must stay consistent with."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns the gate-dispatch and outcome-recording surface."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    requested_gate_record:
+      type: object
+      description: "One record per gate the work item REQUESTED: { gate: str, outcome: 'skipped' | the outcome the gate actually produced, reason: str|null, source: str|null }. When outcome is 'skipped', reason and source are both required and non-empty: reason names the disabling condition (the setting that is off, or the precondition that is absent) and source names where that condition was read from (config file plus key path, or the named precondition). A gate that is NOT in the requested set has no record at all — not an entry with a null outcome, not an entry with outcome 'skipped'."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "THE DENOMINATOR IS THE REQUESTED SET, CAPTURED BEFORE THE ENABLEMENT FILTER. _build_agents_map already computes exactly the set this AC needs. The enablement decision must be applied to a copy downstream of that computation, never in place — a gate filtered out of the map before the map is recorded is a gate that vanishes from the denominator, which IS the defect. The one-line test of the implementation: switching every gate off must leave the entry COUNT unchanged and turn every outcome into 'skipped'."
+    - "TERM COLLISION — TWO SENSES OF `skipped`, AND ONLY ONE OF THEM IS AN OUTCOME VALUE. BO-2100b-2's approved wording ('the live-app check is skipped for that ticket' when the ticket does not opt in) describes the ABSENCE of a request and must produce NO record. This AC's `skipped` means 'you requested it and it did not run'. An implementer who reads the two as one will emit a skipped entry for every unrequested gate on every work item and will believe BO-2100b-2 required it. Encode the distinction at the seam: the record loop iterates the REQUESTED set only, so an unrequested gate is unreachable from the loop rather than filtered inside it."
+    - "THE REASON MUST NAME BOTH THE CONDITION AND ITS SOURCE. For a config-disabled gate that means the key path and the file it resolved from (for example live_surface_testing.enabled read from the resolved skills_config); for an absent precondition it means the precondition by name. Free text such as 'gate disabled' or 'not applicable' fails this AC — the reader must be able to go and change the thing the reason names."
+    - "SURFACE-DEPENDENT — DO NOT IMPLEMENT THE WRITE SITE AHEAD OF THE USER'S DECISION. Everything above is surface-agnostic and implementable now. Only WHERE the record is written is open, and the two options differ materially. (a) GIT-TRACKED TICKET: `skipped` becomes a fifth member of VALID_STATUSES in scripts/commit_guardian/_signoff_parity_checks.py, with a matching `## Sign-offs` surface representation that carries the reason, the parity rules extended in the same change, and the four-value enum quoted in templates/skills/signoff/SKILL.md updated to match. Blast radius is the enum, every prose surface that restates it, AND the done check itself — `_check_done_folder` tests `status in (\"needed\", \"failed\")`, a denylist, so a fifth value is admitted by default rather than refused; see the DENYLIST constraint on BO-2900f-3. The payoff is that the record and the done rule live on one surface, not that BO-2900f-3 falls out for free. (b) DURABLE JSONL SINK: a new append-only stream carrying the record shape above plus a work-item id and a run id, plus a reader for BO-2900f-3. Blast radius is small, but the sink MUST NOT be best-effort in the manner of scripts/agent-health/agent_telemetry.py, which swallows OSError, increments a counter and continues — a record whose loss is silent cannot carry a guarantee whose entire content is that silence is never an outcome, and a sink under debugging/logs/ is not in the PR diff a reviewer reads."
+    - "NOT A MESSAGE-QUALITY AC. BO-2900e owns the quality of a failure message that IS emitted. Here the reason string only has to name the disabling condition and its source; do not import BO-2900e's message-composition requirements into this seam."
+    - "ONE SEAM, NOT ONE PER GATE. BO-2900f-4 forbids gate-name-specific recording branches, and BO-2900f-2 requires the cardinality fix to land once. Write the record from a single place inside the requested-set iteration so both siblings inherit it."
+delivers_to:
+  agent: python-coder
+  contract: "The requested-gate record set: one { gate, outcome, reason, source } entry per gate the work item requested, with outcome 'skipped' plus a non-empty reason and source for every requested gate that did not run, and no entry at all for any gate the work item did not request. Consumed by BO-2900f-2's cardinality invariant, BO-2900f-2-i's halt carve-out, BO-2900f-3's completion summary and done-eligibility assessment, and quoted as the published contract by BO-2900f-5."
 expects_from: null
+test_spec:
+  - name: test_config_disabled_gate_records_skipped_naming_the_setting_and_its_source
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Drives the real recording path over a work item requesting three gates with one governed by a setting that is switched off; asserts against the records the run actually produced that the disabled gate has outcome 'skipped' and that its reason names the setting key AND the file it was read from."
+  - name: test_absent_precondition_gate_records_skipped_naming_the_precondition
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Same run shape with the second skip cause; asserts the reason names the missing precondition rather than restating that the gate did not run."
+  - name: test_executed_gate_carries_the_outcome_it_actually_produced
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the gate that did execute carries its own outcome and is not rewritten to 'skipped' by the recording pass — the record must not flatten executed and unexecuted gates onto one value."
+  - name: test_a_gate_the_work_item_never_requested_produces_no_entry_at_all
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "With a gate present in the project vocabulary but absent from the work item's requested set, asserts zero entries for it — specifically that no entry with outcome 'skipped' appears. This is the gate D clause and the guard against the BO-2100b-2 term collision."
+  - name: test_requested_set_is_the_denominator_not_the_dispatched_set
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Runs the same work item twice — once with every requested gate enabled, once with every one switched off — and asserts the entry COUNT is identical across the two runs while every outcome in the second is 'skipped'. An implementation that filters before capturing fails this and passes the four tests above."
+test_rationale: "A direct-import unit test of a record-building helper would be handed the gate set as an argument, and the argument would be the requested set because that is what the test author would naturally pass. That test passes on the defective implementation — the one where the enablement decision filters the set before it is recorded — because the filtering happens upstream of the function under test. The whole content of this AC is WHICH set reaches the recorder, so every test drives the real recording path over a real work item with real enablement configuration and asserts against the records the run emitted. The fifth test is the one that actually discriminates: entry-count invariance across an all-enabled and an all-disabled run is a property no filter-before-capture implementation can satisfy, and it is invisible to any test that inspects a single run."
 origin_agent: BrainCandy
 created: 2026-08-13
 amended_by:
@@ -95,3 +157,35 @@ notes: |
   a durable JSONL sink. Every clause above — the denominator rule, the reason
   content, the gate D negative — holds either way. Do not implement the surface
   before that decision lands.
+
+  2026-08-14 (IT PO enrichment). The OPEN item above is deliberately still open:
+  it_requirements enriches everything that is surface-agnostic and states the
+  surface dependency as an explicit two-option constraint rather than resolving
+  it. Three technical findings from the enrichment pass that bear on the choice
+  and are recorded here so they are not re-derived:
+
+  - THE DENOMINATOR ALREADY EXISTS IN CODE. `_build_agents_map` in
+    scripts/ac_store/generate_ticket_from_ac.py computes the requested-gate set
+    from config/guardrail_gates.yaml and the work item's (change_target,
+    risk_surface) classification. That computed map IS the denominator this AC
+    asks for; no new concept of "requested" needs inventing, and the gate D
+    clause is exactly "a gate not in the map".
+  - THE FOUR-VALUE ENUM HAS A SINGLE ENFORCEMENT POINT: VALID_STATUSES at
+    scripts/commit_guardian/_signoff_parity_checks.py line 36. Every other
+    statement of the enum (templates/skills/signoff/SKILL.md) is prose. If the
+    ticket surface is chosen, that line is the load-bearing edit and the prose is
+    the follow-on — a `skipped` value added only to the skill text is a no-op.
+  - THE EXISTING JSONL PRECEDENT IS BEST-EFFORT BY DESIGN. emit_agent_telemetry
+    swallows OSError, increments a dropped-record counter and continues
+    (docs/reference/build-telemetry.md). If the JSONL option is chosen, this AC's
+    sink must NOT inherit that behaviour; a silently-droppable record cannot
+    carry a guarantee about silence.
+
+  MIXED-SURFACE FLAG (S2.8 partial). `assigned_agent: python-coder` covers the
+  denominator capture, the record shape and its enforcement, which is where the
+  guarantee is decidable. Under the ticket-surface option a portion of the WRITE
+  side lives in the JS supervisor/phase driver and in agent prompt templates,
+  which python-coder does not own. That portion is unresolvable until the surface
+  is chosen; when it is, it needs a companion pass (llm-expert for the templates,
+  the workflow surface for the driver). Flagged rather than split, because the
+  tree is at its child cap and the split boundary is not yet knowable.

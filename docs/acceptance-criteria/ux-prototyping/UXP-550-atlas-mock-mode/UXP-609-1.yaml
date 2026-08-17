@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the CI drift-guard runs in an environment where mock mode is NOT genuinely active
     (isMockActive() is false — the app would read the live repo, not the fixtures),

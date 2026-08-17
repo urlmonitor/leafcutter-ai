@@ -1,8 +1,8 @@
 {
-  "_comment": "Portable configuration for scripts/doc_compliance/. All values are Bybit-Trader defaults. Override any key for your project.",
+  "_comment": "Portable configuration for scripts/doc_compliance/. All values are package defaults. Override any key for your project.",
   "config_file": "docs/doc_compliance.json",
   "components_file": "docs/components.json",
-  "bootstrap_project_name": "bybit-trader",
+  "bootstrap_project_name": "my-project",
   "bootstrap_scan_paths": {
     "python": ["collector/", "models/", "trading/", "live_trader/", "utils/"],
     "sql": ["sql_functions/"],

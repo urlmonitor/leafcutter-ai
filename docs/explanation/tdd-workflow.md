@@ -5,7 +5,7 @@ agentic build pipeline — specifically how it differs from classical TDD with a
 human at the keyboard, why it was designed this way, and what the enforcement
 layers look like.
 
-See [ADR-004](../architecture/adrs/ADR-004-tdd-workflow-enforcement.md) for the
+See [ADR-027](../architecture/adrs/ADR-027-tdd-workflow-enforcement.md) for the
 architectural decision record that formally adopted this approach.
 See [docs/how-to/writing-a-tdd-ticket.md](../how-to/writing-a-tdd-ticket.md) for
 the step-by-step guide on writing a ticket that goes through TDD flow.

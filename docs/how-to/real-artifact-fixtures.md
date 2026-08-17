@@ -11,7 +11,7 @@ components:
   - testing_quality
 related_docs:
   - docs/reference/fixture-policy.md
-  - docs/architecture/adrs/ADR-007-test-fixture-convention.md
+  - docs/architecture/adrs/ADR-028-test-fixture-convention.md
   - docs/how-to/prove-ac-done.md
   - docs/architecture/components/build-orchestration.md
 ---
@@ -207,10 +207,10 @@ You do **not** need to apply this rule for:
 - Tests that generate output and assert on the bytes produced — those are testing the
   serializer itself, not a downstream parser.
 
-## 6. Relationship to the load_fixture() helper (ADR-007)
+## 6. Relationship to the load_fixture() helper (ADR-028)
 
 `load_fixture('<module>/<name>')` (defined in `tests/conftest.py` per
-[ADR-007-test-fixture-convention.md](../architecture/adrs/ADR-007-test-fixture-convention.md))
+[ADR-028-test-fixture-convention.md](../architecture/adrs/ADR-028-test-fixture-convention.md))
 loads a JSON file from `tests/fixtures/`. That mechanism handles the **storage and
 retrieval** of fixtures whose data blob would push a test file past the 500-line
 ceiling.
@@ -220,6 +220,6 @@ apply together:
 
 1. Build the fixture bytes with `yaml.safe_dump` / `json.dumps` (Fixture Authenticity Rule).
 2. If the data is large enough to push the test file over 500 lines, write it to
-   `tests/fixtures/<module>/<name>.json` and load it with `load_fixture()` (ADR-007).
+   `tests/fixtures/<module>/<name>.json` and load it with `load_fixture()` (ADR-028).
 3. For parser/validator tests, always round-trip through a temporary file even if you
    also use `load_fixture()` for the raw data.

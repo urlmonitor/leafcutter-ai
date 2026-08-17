@@ -1,21 +1,21 @@
 ---
-title: "Agent Reference: architecture-author"
+title: 'Agent Reference: architecture-author'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/documentation/write-architecture-doc.md"
-  - "tickets/09_done/EPIC-CodingAgents/23_architecture_author.md"
-  - "tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/documentation/write-architecture-doc.md
+- tickets/09_done/EPIC-CodingAgents/23_architecture_author.md
+- tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md
 related_code:
-  - ".claude/agents/architecture-author.md"
+- .claude/agents/architecture-author.md
+description: 'Overview of Agent Reference: architecture-author.'
 ---
-
 # Agent Reference: `architecture-author`
 
 Implementing agent: `architecture-author` (Sonnet, internal).
@@ -99,7 +99,7 @@ The agent loads `docs/how-to/documentation/write-architecture-doc.md` before wri
 ## 7. Cross-Links
 
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1), file layout (§2), visibility classes (§3), tool allowlists (§4), strict-research-delegation (§4.2).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) — upstream policy: three-tier ladder (§2.1), tool allowlist (§2.6), nesting depth (§2.7).
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — upstream policy: three-tier ladder (§2.1), tool allowlist (§2.6), nesting depth (§2.7).
 - [`docs/how-to/documentation/write-architecture-doc.md`](../../how-to/documentation/write-architecture-doc.md) — the how-to this agent loads at runtime; the single source of truth for architecture-doc conventions.
 - [`.claude/agents/architecture-author.md`](../../../.claude/agents/architecture-author.md) — the agent file itself.
 - [`tickets/09_done/EPIC-CodingAgents/23_architecture_author.md`](../../../tickets/09_done/EPIC-CodingAgents/23_architecture_author.md) — the ticket that shipped this agent.

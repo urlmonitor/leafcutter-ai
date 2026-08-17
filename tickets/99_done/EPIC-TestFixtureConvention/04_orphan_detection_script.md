@@ -158,7 +158,7 @@ feedback-id: fb_2026-06-04_0c91076f
 completion_manifest:
   branch_pushed: true
   pr_open: true
-Pushed commit 6bbde68 to origin/EPIC-TestFixtureConvention. Existing PR #44 (feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-007)) on github.com/urlmonitor/leafcutter-ai updated automatically with the new commit.
+Pushed commit 6bbde68 to origin/EPIC-TestFixtureConvention. Existing PR #44 (feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-028)) on github.com/urlmonitor/leafcutter-ai updated automatically with the new commit.
 
 ## Implementation Tasks
 

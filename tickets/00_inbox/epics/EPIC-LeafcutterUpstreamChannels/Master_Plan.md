@@ -20,9 +20,9 @@ Set up community feedback channels on the upstream `urlmonitor/leafcutter-ai` Gi
 
 **Prerequisite**: `EPIC-LeafcutterMVP` ST-3 must have published `github.com/urlmonitor/leafcutter-ai`. This epic has no dependency on `EPIC-LeafcutterPostMVP` sub-tickets 01–04 (it works against the upstream repo independently).
 
-This epic was extracted from `EPIC-LeafcutterPostMVP` original sub-ticket 05. All file changes target the `leafcutter-ai` upstream repo (accessed via the submodule or a separate clone). They are NOT changes to bybit-trader itself.
+This epic was extracted from `EPIC-LeafcutterPostMVP` original sub-ticket 05. All file changes target the `leafcutter-ai` upstream repo (accessed via the submodule or a separate clone). They are NOT changes to the consumer project itself.
 
-Once `EPIC-LeafcutterPostMVP` ST-2 (submodule replacement) is complete, edits to files inside `leafcutter/` in bybit-trader must go through a fork + PR against the upstream — not direct edits in bybit-trader.
+Once `EPIC-LeafcutterPostMVP` ST-2 (submodule replacement) is complete, edits to files inside `leafcutter/` in the consumer project must go through a fork + PR against the upstream — not direct edits in the consumer project.
 
 ## Naming Convention
 

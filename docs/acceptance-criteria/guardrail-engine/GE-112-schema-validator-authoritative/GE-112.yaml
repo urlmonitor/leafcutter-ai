@@ -48,7 +48,7 @@ doc_links:
   - path: "config/ac_store_schema.json"
     relationship: specifies
     status: exists
-  - path: "docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md"
+  - path: "docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md"
     relationship: describes
     status: exists
 assigned_agent: python-coder

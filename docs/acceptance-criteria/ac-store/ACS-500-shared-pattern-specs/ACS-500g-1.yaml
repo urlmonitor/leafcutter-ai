@@ -1,0 +1,91 @@
+id: ACS-500g-1
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A pattern-steward scans the whole store and surfaces recurring behavior as pattern candidates"
+component: ac-store
+level: L2
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the AC store contains three ACs in three different feature folders whose
+    criteria each describe "a list view that filters on one text field and exports
+    the currently visible rows",
+  And the three ACs differ only in the field they filter on (customer name / part
+    number / order id) and the export format (CSV / CSV / XLSX),
+  And no pattern AC covering that behavior exists in the store,
+  When the pattern-steward performs a store-wide scan,
+  Then it reports exactly one pattern candidate for that behavior,
+  And the candidate names all three source AC ids,
+  And the candidate states the behavior the three share in one Given/When/Then body,
+  And the candidate lists one proposed slot per value that differs across the three
+    occurrences (a filter-field slot and an export-format slot),
+  And the candidate states the recurrence count (3) that qualified it.
+
+  Given the same store also contains two ACs that both use the word "table" but
+    specify unrelated outcomes (one asserts row selection, the other asserts a
+    printed footer total),
+  When the same scan runs,
+  Then those two ACs are not reported as a pattern candidate.
+depends_on: [ACS-500g]
+doc_links:
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: governs
+    status: exists
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/pattern-steward.md
+    relationship: specifies
+    status: planned
+  - path: templates/skills/authoring-patterns/SKILL.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: L
+it_requirements:
+  - "GAP RESOLUTION (agent assignment): reassigned from workflow-architect to llm-expert. workflow-architect is is_ticket_phase:false / tier:supervisor / spawned_by:[user] in config/agent_registry.json — a generated ticket cannot dispatch it as a phase. llm-expert IS is_ticket_phase:true, owns templates/agents/*.md and templates/skills/*/SKILL.md, and already lists add-agent-to-package and add-skill-to-package in skills_used, so it can perform the exact package promotion workflow-architect would. This also matches sibling ACS-500c-1 (the consumer-side §3a work), which is assigned llm-expert."
+  - "PREREQUISITE DELIVERABLE — the registry entry. config/agent_registry.json contains no `pattern-steward` entry today (verified: 60 agents, none named pattern-steward). Promote via the add-agent-to-package skill, which writes templates/agents/pattern-steward.md, appends the config/agent_registry.json entry, and adds the docs/agents/README.md row. Nothing in this AC is runnable until that entry exists."
+  - "Registry entry fields that are mechanically enforced, not optional: `components: [ac_store]`, `produces`, `knowledge_channels`, and `template_path`. registry_validator.py rule A additionally requires `requires_verification: true` in the template frontmatter whenever `tools:` lists Edit or Write — omitting it fails build.py's install_shims step BEFORE pytest runs, so it surfaces as a build failure, not a template error."
+  - "Modifying config/agent_registry.json trips the check-agent-diagrams hook (regenerate the agent topology diagram) and check-agent-registry; run `python scripts/build.py --validate-only` and then `python scripts/build.py --target-dir . --force` before commit, per add-agent-to-package Step 6."
+  - "The steward MUST NOT carry its own copy of the pattern-worthiness rules. It loads templates/skills/authoring-patterns/SKILL.md (ACS-500g-2) and reads the recurrence threshold (3) from there. A numeric threshold written into templates/agents/pattern-steward.md is a duplication defect that ACS-500g-3-i's gate rejects."
+  - "The steward's recurrence predicate MUST agree with the deployed pattern-detection predicate `_has_parameterized_slots` in templates/scripts/commit_guardian/check_ac_pattern_refs.py (pattern_slots non-empty OR a {word} placeholder in criteria) so a candidate it proposes is recognised as a pattern once written. This is the ACS-500f-2 alignment constraint applied to the producer."
+  - "Store scale constraint: the live store holds ~2,900 AC YAML files. The scan must be a bounded, read-only pass — reuse the existing on-disk index helpers (templates/scripts/commit_guardian/_ac_store_index.py / _ac_store_index_disk.py) rather than re-walking the tree per candidate."
+  - "The scan is READ-ONLY. It must not write, move, or reformat any AC file; see ACS-500g-1-i for the no-rewrite invariant."
+  - "VERIFICATION ROUTE: the steward is an LLM agent, so its behaviour is not unit-testable. It is verified by the agent-evaluation protocol (ACS-500g-6) instantiated for `pattern-steward` (ACS-500g-7). Register `pattern-steward` in scripts/evals/agent_eval_config.json with a `triggers` closure covering templates/agents/pattern-steward.md and templates/skills/authoring-patterns/SKILL.md, so the existing check-eval-staleness hook blocks template edits that lack a fresh eval result."
+delivers_to:
+  - agent: llm-expert
+    contract: "templates/agents/pattern-steward.md plus its config/agent_registry.json entry — a store-wide analyst whose scan emits pattern candidates, each carrying the shared Given/When/Then body, the source AC ids, the recurrence count, and one proposed slot per varying value. Consumed by ACS-500g-5 (retrospective sweep mode) and ACS-500g-1-i (no-rewrite invariant)."
+  - agent: business-analyst
+    contract: "Pattern candidate records (behavior body, source AC ids, count, proposed slots) in the shape ACS-500g-6/-7 consume when the first pattern is authored."
+expects_from:
+  ac_id: ACS-500g-2
+  contract: "templates/skills/authoring-patterns/SKILL.md, registered in config/skill_registry.json — the single statement of the four pattern-worthiness rules including the recurrence threshold value 3. The steward reads the threshold from the skill; it does not declare one."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: [ACS-500g-1-i]
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+test_required: false
+notes: |
+  The steward is a STORE-WIDE analyst, not a per-authoring-run consumer. The
+  per-run consumer behavior (detect an EXISTING pattern and link to it) is
+  ACS-500c and must not be re-specified here. This AC covers detection of
+  recurrence across ACs that do NOT yet share a pattern.

@@ -1,5 +1,5 @@
 ---
-title: "ADR-017: Worktree Quality Gate Guard — Execution-Proof Fail-Closed Design"
+title: "ADR-031: Worktree Quality Gate Guard — Execution-Proof Fail-Closed Design"
 description: "Records the design of the worktree quality gate guard: a four-check probe model (binary, config, git_hook, canary) whose canary check requires the hook chain to actually FIRE, a fail-closed-on-self-error invariant with no fail-open path, an index-0 self-healing hook that re-materialises the pre-commit config, dual create-time and pre-drive gates, template/deployed source parity per ADR-001, and supersession of the interim one-file feature/SKILL.md slice (commit 586d6191). Motivated by the fresh-worktree silent-skip failure mode surfaced in the EPIC-AcPipelineDeployGaps retrospective."
 type: "adr"
 status: "active"
@@ -19,7 +19,7 @@ related_code:
   - templates/skills/feature/SKILL.md
 ---
 
-# ADR-017: Worktree Quality Gate Guard — Execution-Proof Fail-Closed Design
+# ADR-031: Worktree Quality Gate Guard — Execution-Proof Fail-Closed Design
 
 ## Status
 

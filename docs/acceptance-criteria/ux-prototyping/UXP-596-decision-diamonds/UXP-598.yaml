@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 criteria: |
   Given a decision diamond drawn for a conditional fork,
   When the graph renders the edges leaving that diamond,

@@ -1,25 +1,25 @@
 ---
-title: "Agent Reference: sql-table-creator"
+title: 'Agent Reference: sql-table-creator'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/database/create-table.md"
-  - "docs/database-domain.md"
-  - "tickets/09_done/EPIC-CodingAgents/15_sql_table_creator.md"
-  - "tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/database/create-table.md
+- docs/database-domain.md
+- tickets/09_done/EPIC-CodingAgents/15_sql_table_creator.md
+- tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md
 related_code:
-  - ".claude/agents/sql-table-creator.md"
-  - "models/"
-  - "alembic/versions/"
-  - "sql_functions/schema/tables/"
+- .claude/agents/sql-table-creator.md
+- models/
+- alembic/versions/
+- sql_functions/schema/tables/
+description: 'Overview of Agent Reference: sql-table-creator.'
 ---
-
 # Agent Reference: `sql-table-creator`
 
 Internal identifier: `sql-table-creator`.
@@ -121,7 +121,7 @@ All timestamp columns that must be set by PostgreSQL use `server_default=text("N
 - [`docs/how-to/database/create-table.md`](../../how-to/database/create-table.md) — the canonical how-to the agent loads at runtime. Contains the full step-by-step, skeletons, and example commit references.
 - [`docs/database-domain.md`](../../database-domain.md) — high-level hybrid-Alembic-vs-sql_functions rules (§ "Hybrid Schema Management").
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1), tool allowlists (§4), internal visibility class (§3.3).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) — strict-research-delegation rule (§2.6); why search tools are absent from this agent's allowlist.
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — strict-research-delegation rule (§2.6); why search tools are absent from this agent's allowlist.
 - [`tickets/09_done/EPIC-CodingAgents/15_sql_table_creator.md`](../../../tickets/09_done/EPIC-CodingAgents/15_sql_table_creator.md) — the ticket that shipped this agent.
 - [`tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md`](../../../tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md) — the parent orchestrator (`sql-coder`) that dispatches here.
 

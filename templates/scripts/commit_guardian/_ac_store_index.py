@@ -40,7 +40,7 @@ ARCHITECTURE: Standalone stdlib module — no leafcutter imports. Imported by
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
-  - docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
 
 DECISION HISTORY:
   - 2026-06-30 [python-coder/TICKET-20260629-AC_Hook_Store_Index]: Created.

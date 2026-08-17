@@ -41,7 +41,7 @@ ARCHITECTURE: Pure-stdlib with optional PyYAML. Walks docs/acceptance-criteria/
 
 DOC_LINKS:
   - docs/reference/ac-schema.md
-  - docs/architecture/adrs/ADR-007-ac-store-schema-id-format-enforcement.md
+  - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
   - templates/skills/create-ac/SKILL.md
 
 DECISION HISTORY:

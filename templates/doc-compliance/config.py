@@ -17,7 +17,7 @@ from pathlib import Path
 # The portable configuration for this package lives at:
 #   scripts/doc_compliance/doc_compliance.json
 # That file holds project-specific path overrides. If the file is absent or
-# a key is missing, the Bybit-Trader defaults below are used as fallbacks.
+# a key is missing, the package defaults below are used as fallbacks.
 # An adopter customises this package by editing doc_compliance.json only —
 # no Python source changes are required.
 # ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ DECISION HISTORY
   size below the pre-commit 400-line threshold.
 - 2026-05-13 09:20 [EPIC-PortableDevWorkflow/12]: Added _get(key, default) loader and
   _load_pkg_config() cache. DEFAULT_CONFIG_FILE and DEFAULT_COMPONENTS_FILE now read from
-  scripts/doc_compliance/doc_compliance.json with fallback to Bybit-Trader defaults.
+  scripts/doc_compliance/doc_compliance.json with fallback to package defaults.
   This makes the package adoptable by any project without editing Python source.
 ====================================================================
 """

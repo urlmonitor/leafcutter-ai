@@ -1,25 +1,25 @@
 ---
-title: "Agent Reference: sql-function-creator"
+title: 'Agent Reference: sql-function-creator'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
-  - infrastructure
+- infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/database/create-function.md"
-  - "docs/database-domain.md"
-  - "tickets/09_done/EPIC-CodingAgents/18_sql_function_creator.md"
-  - "tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/database/create-function.md
+- docs/database-domain.md
+- tickets/09_done/EPIC-CodingAgents/18_sql_function_creator.md
+- tickets/09_done/EPIC-CodingAgents/07_sql_coder_agent.md
 related_code:
-  - ".claude/agents/sql-function-creator.md"
-  - "sql_functions/functions/"
-  - "unit_tests/sql_functions/"
+- .claude/agents/sql-function-creator.md
+- sql_functions/functions/
+- unit_tests/sql_functions/
+description: 'Overview of Agent Reference: sql-function-creator.'
 ---
-
 # Agent Reference: `sql-function-creator`
 
 Internal identifier: `sql-function-creator` (no slash command — internal only).

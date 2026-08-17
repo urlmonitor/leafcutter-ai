@@ -9,9 +9,9 @@ description: 'Confirmation-gated commit agent. Shows the planned commit message 
   with a specific message.'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # commit
 

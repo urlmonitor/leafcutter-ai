@@ -7,13 +7,13 @@ status: active
 created: 2026-07-01
 last_updated: 2026-07-01
 flight_level: L1
-parent: docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+parent: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
 components:
   - supervisor_system
 related_code:
   - templates/workflows-js/quick-fix.js
 related_docs:
-  - docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
   - docs/reference/workflow-authoring-contract.md
 tags:
   - workflow-engine
@@ -140,7 +140,7 @@ flowchart TD
 
 | Document | What this diagram adds |
 |---|---|
-| [ADR-017 Dual-Engine Workflow Support](../adrs/ADR-017-dual-engine-workflow-support.md) | The ADR records the decision. This diagram shows the structural data flow the decision implies. |
+| [ADR-030 Dual-Engine Workflow Support](../adrs/ADR-030-dual-engine-workflow-support.md) | The ADR records the decision. This diagram shows the structural data flow the decision implies. |
 | [Workflow Authoring Contract](../../reference/workflow-authoring-contract.md) | The reference doc shows the E2 canonical skeleton and shim pattern in code. This diagram shows how those artifacts relate in the build and runtime pipeline. |
 | [quick-fix.js](../../../templates/workflows-js/quick-fix.js) | The working E2 reference implementation this diagram was derived from. |
 

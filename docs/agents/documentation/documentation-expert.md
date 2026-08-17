@@ -1,22 +1,22 @@
 ---
-title: "Agent Reference: documentation-expert"
+title: 'Agent Reference: documentation-expert'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
-  - "infrastructure"
+- infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/README.md"
-  - "tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/README.md
+- tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md
 related_code:
-  - ".claude/agents/documentation-expert.md"
-  - ".claude/commands/documentation.md"
+- .claude/agents/documentation-expert.md
+- .claude/commands/documentation.md
+description: 'Overview of Agent Reference: documentation-expert.'
 ---
-
 # Agent Reference: `documentation-expert`
 
 Implementing agent: `documentation-expert` (Sonnet orchestrator).
@@ -165,7 +165,7 @@ feature") also auto-triggers the agent via its `description` field.
 
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1),
   file layout (§2), visibility classes (§3), tool allowlists (§4), patterns (§5).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream policy: three-tier ladder (§2.1), Multi-Skill Dispatcher pattern (§2.4),
   strict-research-delegation (§2.6), nesting depth (§2.7).
 - [`docs/README.md`](../../README.md) — Diataxis index; loaded by the orchestrator

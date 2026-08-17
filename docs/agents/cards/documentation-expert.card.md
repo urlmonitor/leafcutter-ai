@@ -12,9 +12,9 @@ description: 'Diataxis-routing documentation orchestrator. Classifies a "write o
   documentation".'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # documentation-expert
 
@@ -156,6 +156,24 @@ flowchart TD
 - ACD-1200b-3: How-to guide documents the approval gate workflow for unapproved ACs
 - ACD-1200e-3: How-to guide documents the unified /build-ac leaf-vs-goal behavior
 - ACD-1200g-1: How-to guide documents the goal-to-epic workflow for users
+- ACD-1600a-4: Reference doc for the thin-ticket (reference-not-copy) convention
+- ACD-1600c-3: Reference doc for the implementation-readiness completeness gate
+- ACD-1600d-3: Reference doc for the canonical-source pointer rule
+- ACD-1600e-3: Reference doc for the behaviour-only criteria rule
+- ACD-1600f-3: Reference doc for the AC-vs-supporting-artifact consistency gate
+- ACD-1700a-4: Reference doc for role-scoped context delivery
+- ACD-1700b-3: Reference doc for the surface-to-specialist assignment rule
+- ACD-1700c-5: How-to guide for previewing an agent's brief before a build
+- ACD-1800a-3: Reference doc describes the requirement deliverable checklist
+- ACD-1800b-3: Reference doc describes per-deliverable sign-off and requirement-level done
+- ACD-1800c-3: Reference doc describes the ticket-as-grouping model
+- ACD-1800d-2: Reference doc describes per-deliverable traceability back-references
+- ACD-1900a-4: Reference doc describes schema_version and the new optional fields
+- ACD-1900c-4: How-to guide covers operating the flag and its kill-switches
+- ACD-1900d-5: How-to guide covers the advisory-to-required gate rollout
+- ACD-1900e-5: How-to guide covers running the opt-in backfill safely
+- ACD-1900f-4: How-to guide covers upgrade and the compatibility-window lifecycle
+- ACD-1900g-4: How-to guide covers the dogfood proof and the go/no-go checklist
 - ACS-900a-3: How-to guide and sequence diagram for the retirement-detection trigger
 - ACS-900b-3: How-to guide and sequence diagram for the retirement-blocks-commit behavior
 - ACS-900c-2: How-to guide documents the block message and how to act on it
@@ -202,6 +220,9 @@ flowchart TD
 - BP-800d-4: How-to guide for legacy agent retirement
 - BP-800e-4: How-to guide for upgrading from legacy agent layout
 - BP-800f-4: Reference documentation for database paradigm support
+- CR-100a-4: Reference doc: the code-smell finding anatomy and named catalogue
+- CR-100d-3: Reference doc: severity rubric and consolidated report format
+- CR-100e-2: How-to guide: running /code-smell-review on a file, folder, or snippet
 - FIN-100c-10: How-to guide describes the null-baseline targeted rerun, not the old blanket-halt
 - FIN-200a-4: How-to guide documents the automatic changelog step
 - GE-102e: The pre-commit hooks how-to documents the new transform hooks and their silent auto-fix behavior
@@ -227,3 +248,4 @@ flowchart TD
 - PER-100e-4: How-to guide for creating and refining personas with the persona expert
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
+- UXP-606: How-to: read decision diamonds in the Atlas Flows view

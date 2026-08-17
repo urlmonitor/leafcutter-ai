@@ -5,7 +5,7 @@ TDD flow: `test-writer` (writes failing tests) → `python-coder` (makes them gr
 
 For background on why this flow exists, see
 [docs/explanation/tdd-workflow.md](../explanation/tdd-workflow.md) and
-[ADR-004](../architecture/adrs/ADR-004-tdd-workflow-enforcement.md).
+[ADR-027](../architecture/adrs/ADR-027-tdd-workflow-enforcement.md).
 
 ---
 

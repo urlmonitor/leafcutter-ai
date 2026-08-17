@@ -1,0 +1,167 @@
+id: ACS-500g-6-iii
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "The eval harness scores a seeded-gap evaluation all-or-nothing, per round"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given the eval registry configures an agent by a fractional pass threshold —
+    pt-classifier at 0.7 — and that agent does not opt into seeded-gap scoring,
+  When the harness scores a run for it,
+  Then it is scored exactly as it is today: the fractional threshold decides the
+    outcome and the reported result is unchanged,
+  And seeded-gap scoring applies only to an agent whose registry entry opts into
+    it explicitly, so registering the new mode changes no existing agent's
+    outcome.
+
+  Given an agent that opts into seeded-gap scoring, and a run in which round 1
+    recorded 4 seeded items, round 2 recorded 6, and round 3 recorded 5,
+  When each round is scored,
+  Then every round carries its own verdict, computed as "the agent reported
+    every seeded item recorded for that round",
+  And a round that reported 4 of 4 passes, and a round that reported 6 of 6
+    passes,
+  And a round that reported 4 of 5 fails, and its result names the seeded item
+    that went unreported,
+  And no configured threshold below "every recorded item" can make a partial
+    round pass.
+
+  Given rounds 1 and 2 passed and round 3 reported 4 of its 5 seeded items —
+    14 of the run's 15 seeded items,
+  When the overall verdict is computed,
+  Then the verdict is fail,
+  And 93% is never reported as a passing score: the rounds are not averaged, not
+    scored as a percentage, and not treated as two-out-of-three,
+  And the overall verdict is a pass only when all three rounds are a pass.
+
+  Given a round that recorded 5 seeded items, and the agent reported 4 of them
+    plus 10 further findings that were never seeded,
+  When the round is scored,
+  Then the 10 unseeded findings are recorded in their own list, separate from
+    the seeded items,
+  And the round is still a fail — unseeded findings do not substitute for the
+    missed seeded item and never turn a failing round into a pass,
+  And no count taken over the union of seeded and unseeded findings is used to
+    decide any round or the overall verdict.
+
+  Given a round whose recorded seeded items, or their count, were visible in the
+    material handed to the agent under test,
+  When the round is scored,
+  Then its status is invalid — a third status alongside pass and fail, not a
+    pass and not a fail,
+  And the overall verdict is not a pass while any round is invalid,
+  And the invalid round is re-run on material the answers have been removed
+    from, with the invalid result retained on record.
+
+  Given an overall verdict that is not a pass — whether because a round failed
+    or because a round is invalid,
+  When the harness finishes the run,
+  Then it exits non-zero, so the run can be used as a gate,
+  And it exits zero only when all three rounds are a pass.
+depends_on: [ACS-500g-6]
+doc_links:
+  - path: docs/product-truth/schemas/agent-eval.schema.json
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: governs
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/fixture-policy.md
+    relationship: governs
+    status: exists
+  - path: docs/how-to/real-artifact-fixtures.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "This is the harness change ACS-500g-6-i and ACS-500g-6-ii both flagged as missing. Neither of those docs ACs can be claimed as enforced until this one lands: today nothing in the repo can express a per-round verdict, an all-or-nothing pass, or an invalid round."
+  - "Surface — three real files, all verified present: scripts/evals/agent_eval_config.json (the per-agent registry that must carry the opt-in), scripts/evals/run_agent_eval.py (verdict computation, result record, process exit code), and scripts/evals/eval_selector.py (trigger-based selection). Change eval_selector.py ONLY if seeded-gap agents cannot be selected by the existing `triggers` mechanism; if they can, leave it untouched and say so rather than editing it to look thorough."
+  - "Opt-in via the EXISTING key, not a parallel one: agent_eval_config.json already has a per-agent `scoring_mode` with values `label` and `artifact`. Add `seeded_gap` as a third value of that same key. Do not introduce a second mode-selection key — two competing switches is the duplicated-source defect."
+  - "BACKWARD COMPATIBILITY IS A HARD REQUIREMENT. The three registered agents today — pt-classifier (scoring_mode label, threshold 0.70), mock-data-author and flow-author (scoring_mode artifact, threshold 0.66) — must produce byte-identical verdicts and the identical exit code before and after this change. The fractional-threshold path is untouched; an entry that omits `seeded_gap` gets today's behaviour with no config edit required."
+  - "`threshold` MUST BE IGNORED, not reinterpreted, in seeded_gap mode. Do not implement all-or-nothing as 'threshold defaults to 1.0' — a config that sets threshold: 0.8 on a seeded_gap agent must not soften the rule. Reject or ignore it explicitly; a silently-honoured fractional threshold reintroduces exactly the percentage scoring this AC exists to forbid."
+  - "Round status is a THREE-valued enum in the persisted result record: pass | fail | invalid. Two booleans are not sufficient — 'cannot be pass while any round is invalid' (ACS-500g-6-ii) must be representable after the fact, from the stored result alone, not only in memory during the run."
+  - "The result record holds seeded and unseeded findings in two DISJOINT lists (reported_seeded and additional_findings, or equivalent). Make this a structural property of the record rather than an instruction to the scorer, so no code path can compute a ratio over their union by accident."
+  - "Exit code is the gate: non-zero whenever the overall verdict is not pass (any round fail, or any round invalid); zero only when all three rounds are pass. Do NOT change the exit-code semantics of the label and artifact modes while doing so."
+  - "Results are append-only under scripts/evals/results/ (the directory exists and is gitignored). A re-run of an invalid or failed round must write a new record beside the earlier one, never overwrite it — otherwise ACS-500g-6-i's 'the earlier failing verdict remains on record' and ACS-500g-6-ii's 'the invalid result stays on record' are both unverifiable."
+  - "Seeded items per round travel in the eval row's `expected` payload, which docs/product-truth/schemas/agent-eval.schema.json declares open (additionalProperties: true). Extend that payload rather than adding a fourth top-level row key, and keep the seeded items out of `input_field` — the blinding rule of ACS-500g-6-ii depends on the input/expected split the harness already has."
+  - "NO GREP-ONLY TESTS. Every test below must call the verdict computation (and, for the exit-code case, run the harness entrypoint) and assert the returned value. A test that asserts a mode name or a status string is present in the source passes on dead code and is forbidden in this repo — this is a gate AC, and the fast-lane runner shipped phantom-done precisely this way."
+  - "Tests belong in unit_tests/evals/ (the package exists, alongside test_eval_selector.py and test_trigger_sha_stamp.py). Include a regression test that pins the unchanged fractional path, not only the new mode."
+delivers_to:
+  agent: python-coder
+  contract: "A seeded_gap scoring mode in scripts/evals/: opt-in via scoring_mode in agent_eval_config.json; a per-round verdict of pass|fail|invalid where pass requires every recorded seeded item; an overall verdict that is pass only when all three rounds pass, with no averaging or percentage path and no honoured fractional threshold; unseeded findings in a disjoint additional_findings list; append-only results under scripts/evals/results/; and a non-zero process exit whenever the overall verdict is not pass. This is the enforcement ACS-500g-6-i (all-or-nothing scoring) and ACS-500g-6-ii (invalid round on a leaked answer key) each declare they depend on and do not themselves provide."
+expects_from:
+  ac_id: ACS-500g-6
+  contract: "The three-round protocol body and the {round_seeded_items} slot, whose per-round recorded seeded items are the input this scorer compares the agent's reported findings against."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by:
+  - "2026-08-13 [commit/ac-pattern-steward]: removed a top-level files_touched field. check-ac-schema (ACS-500f-1) blocked the commit because files_touched is not a recognised AC-schema property (it belongs on tickets, not ACs, per the AC Referencing Convention). The file scope it named — scripts/evals/run_agent_eval.py and scripts/evals/agent_eval_config.json — is already stated in delivers_to.contract and the it_requirements surface note above, so no information was lost."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_existing_fractional_agents_are_scored_unchanged
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score a label-mode run for an agent configured at threshold 0.70 (the real pt-classifier entry) and assert the verdict and exit code match the pre-change behaviour — the backward-compatibility pin, executed rather than asserted from source."
+  - name: test_seeded_gap_mode_is_opt_in_per_agent
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score the same run for an agent entry with and without scoring_mode seeded_gap; assert the seeded-gap rules apply only to the opted-in entry and the other keeps the fractional outcome."
+  - name: test_round_passes_only_when_every_seeded_item_is_reported
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Compute round verdicts for 4-of-4, 6-of-6 and 4-of-5; assert pass, pass, fail, and that the failing round's result names the unreported item."
+  - name: test_no_threshold_below_one_can_pass_a_partial_round
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score a 4-of-5 round for a seeded_gap agent whose config also sets threshold 0.8; assert the round is still fail — the fractional threshold is ignored, not reinterpreted."
+  - name: test_overall_verdict_is_fail_when_any_round_fails
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Compute the overall verdict for rounds 4/4, 6/6, 4/5 (14 of 15 seeded items, 93%); assert fail, and assert no percentage or averaged score appears as a passing figure in the result record."
+  - name: test_overall_verdict_requires_all_three_rounds_to_pass
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Assert [pass, pass, pass] is the only overall pass; assert [pass, pass, fail] and [pass, fail, pass] are fail — two-of-three is never a pass."
+  - name: test_unseeded_findings_never_turn_a_fail_into_a_pass
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score a round with 4 of 5 seeded items reported plus 10 unseeded findings; assert the round is fail and the extras land in a list disjoint from the seeded items."
+  - name: test_round_with_visible_seeded_items_is_invalid_not_pass
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score a round whose material exposed the recorded seeded items (or their count) and whose agent reported all of them; assert the round status is invalid, and that invalid is a distinct third value from pass and fail in the persisted record."
+  - name: test_overall_verdict_is_not_pass_while_any_round_is_invalid
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Compute the overall verdict for [pass, pass, invalid]; assert it is not pass, and assert the invalid round's earlier record still exists after the round is re-run on cleaned material."
+  - name: test_harness_exits_non_zero_when_the_overall_verdict_is_not_pass
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Run the harness entrypoint for a seeded_gap run in a fresh process for three cases — all rounds pass, one round fail, one round invalid — and assert exit status 0, non-zero, non-zero respectively, so the run is usable as a gate."

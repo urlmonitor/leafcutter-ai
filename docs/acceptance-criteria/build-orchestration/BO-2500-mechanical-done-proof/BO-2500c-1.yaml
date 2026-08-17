@@ -23,7 +23,7 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-007-test-fixture-convention.md
+  - path: docs/architecture/adrs/ADR-028-test-fixture-convention.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
@@ -32,7 +32,7 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
-  - "Encode in the test-writer agent template the rule that any fixture standing in for serialized data must be produced by the real serializer (e.g. yaml.safe_dump) or read from an existing on-disk artifact — never a hand-typed literal (aligns with ADR-007 test-fixture convention)."
+  - "Encode in the test-writer agent template the rule that any fixture standing in for serialized data must be produced by the real serializer (e.g. yaml.safe_dump) or read from an existing on-disk artifact — never a hand-typed literal (aligns with ADR-008 test-fixture convention)."
   - "The convention must name the concrete failure mode it prevents (hand-typed indented block lists vs real column-0 dashes — see project memory: spot-check the REAL data format), so authors understand why."
   - "The convention must be consistent with the mechanical fixture-quality lint (BO-2500c-1-i); it states the WHAT so the lint can enforce it."
 delivers_to:

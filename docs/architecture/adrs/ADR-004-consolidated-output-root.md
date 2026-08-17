@@ -1,3 +1,20 @@
+---
+title: "ADR-004: Consolidated Output Root — All build.py Artifacts Under .leafcutter/"
+description: "Decision to write every build.py artifact into a single .leafcutter/ output root and bridge the canonical tool paths with shims, instead of scattering outputs across the consumer project."
+type: "adr"
+status: "active"
+created: "2026-05-27"
+last_updated: "2026-08-13"
+deciders:
+  - BrainCandy
+components:
+  - build_pipeline
+  - infrastructure
+related_docs:
+  - docs/explanation/consolidated-output-root.md
+  - docs/how-to/output-layout/adopt-consolidated-output-root.md
+---
+
 # ADR-004: Consolidated Output Root — All build.py Artifacts Under .leafcutter/
 
 ## Status

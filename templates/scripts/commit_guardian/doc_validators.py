@@ -307,10 +307,10 @@ def _detect_complex_constructs(code_only: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Tail-Tag Traceability Validation (EPIC-DocTraceability / ADR-033)
+# Tail-Tag Traceability Validation (EPIC-DocTraceability)
 # ---------------------------------------------------------------------------
 
-# Regex patterns for the tail-tag grammar defined in ADR-033 §2 Decision A
+# Regex patterns for the tail-tag grammar; see templates/skills/doc-enforcer/SKILL.md
 _TICKET_TAG_RE = re.compile(r'\(#[A-Za-z0-9_-]+/[A-Za-z0-9_-]+\)')
 _TICKETLESS_RE = re.compile(r'\(#TICKETLESS reason=([A-Za-z0-9_\-]{1,})\)')
 _TAIL_TAG_RE = re.compile(
@@ -525,7 +525,7 @@ DECISION HISTORY
   below 400-line limit. Contains all validation logic: Mermaid diagram verification,
   DECISION HISTORY enforcement, architecture field validation, SQL header extraction,
   and complex construct detection (including PL/Python support).
-- 2026-05-18 12:45 [python-coder]: Added tail-tag validation functions for EPIC-DocTraceability ADR-033: _build_ticket_resolver, _get_added_dh_lines, _validate_tail_tag, validate_tail_tags_in_diff, report_legacy_untagged. (#EPIC-DocTraceability/03) (ADR-033)
+- 2026-05-18 12:45 [python-coder]: Added tail-tag validation functions for EPIC-DocTraceability: _build_ticket_resolver, _get_added_dh_lines, _validate_tail_tag, validate_tail_tags_in_diff, report_legacy_untagged. (#EPIC-DocTraceability/03)
 - 2026-05-18 00:00 [epic-supervisor/merge]: Added PARENT_DIAGRAM declaration to module docstring to satisfy check-mermaid-parent-link hook (string literals containing ```mermaid trigger the check). (#EPIC-UserSurfaceVerification/merge)
 ====================================================================
 """

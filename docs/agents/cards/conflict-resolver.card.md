@@ -8,9 +8,9 @@ description: 'Resolves merge conflicts in the working tree after a failed merge 
   — invoked by parent agents only)'
 type: card
 status: active
-created: 2026-08-10
+created: 2026-08-13
 card_version: generated
-last_updated: '2026-08-10'
+last_updated: '2026-08-13'
 ---
 # conflict-resolver
 

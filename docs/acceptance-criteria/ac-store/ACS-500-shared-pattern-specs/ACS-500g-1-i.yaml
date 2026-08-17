@@ -1,0 +1,63 @@
+id: ACS-500g-1-i
+components:
+  - ac_store
+readiness: approved
+priority: high
+title: "A pattern candidate is a proposal — existing ACs are never rewritten by the scan"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a store-wide scan has produced a pattern candidate covering source ACs
+    ACS-310a-2, ACS-320b-1 and ACS-340c-4,
+  When the scan finishes and the candidate has not yet been approved,
+  Then those three source ACs are byte-for-byte unchanged — none has gained an
+    implements_pattern value, lost criteria text, or had pattern_bindings added,
+  And no pattern AC has been written into the store,
+  And the candidate report states, per source AC, what would change if the
+    candidate were approved (criteria replaced by implements_pattern plus the
+    named bindings).
+
+  Given the same candidate is then approved,
+  When the promotion is carried out,
+  Then the pattern AC is written,
+  And each source AC is converted to reference it,
+  And any source AC whose behavior is only a partial match is left unconverted and
+    listed as needing a separate deviation decision rather than being force-fitted.
+depends_on: [ACS-500g-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/pattern-steward.md
+    relationship: specifies
+    status: planned
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "Assignment follows ACS-500g-1: this is a section of templates/agents/pattern-steward.md (a scan/approve phase boundary in the agent template), so llm-expert owns it. workflow-architect is not a ticket-phase agent and cannot be dispatched."
+  - "The steward's tools: frontmatter must make the read-only phase mechanically impossible to violate — the scan phase runs with Read/Grep/Glob only. Write and Edit are used solely in the post-approval promotion phase. If Edit or Write appear in tools:, the template MUST also declare requires_verification: true (registry_validator.py rule A) or build.py's install_shims step fails."
+  - "Byte-for-byte unchanged must be provable, not asserted: the scan phase ends with `git status --porcelain docs/acceptance-criteria/` returning empty, and the agent reports that check. A scan that cannot show a clean worktree has failed this AC."
+  - "The candidate report is an artifact, not chat output. Write it outside the AC store (e.g. reports/pattern-candidates/<timestamp>.md) so the report itself never trips check-ac-schema or the folder-density guard, and so approval can be reviewed as a diff-free document."
+  - "On approval, each converted source AC must satisfy the existing commit-time gates in one pass: check_ac_schema.validate_pattern_bindings_completeness (one pattern_bindings key per declared slot) and check_ac_pattern_refs (the referenced pattern id must exist and pass _has_parameterized_slots). Convert-then-commit, never partially convert."
+  - "Partial matches are left unconverted and reported for a separate deviation decision, per the deviation rule already documented in docs/reference/ac-schema.md § 'Pattern deviations — separate files, not inline overrides'. Do not restate that rule in the template; point at the doc."
+delivers_to:
+  agent: llm-expert
+  contract: "The scan/approve phase boundary in templates/agents/pattern-steward.md: a read-only scan phase producing a candidate report under reports/pattern-candidates/, and a separate post-approval promotion phase that writes the pattern AC and converts full-match source ACs."
+expects_from:
+  ac_id: ACS-500g-1
+  contract: "Pattern candidates emitted by the store-wide scan, each naming its source AC ids, the shared behavior body, the recurrence count, and the proposed slots."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+test_required: false

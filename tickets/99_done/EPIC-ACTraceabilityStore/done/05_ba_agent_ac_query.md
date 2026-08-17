@@ -152,7 +152,7 @@ completion_manifest:
   branch_pushed: true
   pr_created: true
   pr_body_complete: true
-Pushed commits 50c5d30 (feat: business-analyst Step 0.5) and 8ec6f67 (chore: finalize phase sign-offs) to origin/EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-007) at https://github.com/urlmonitor/leafcutter-ai/pull/46 now includes ticket 05 changes. One PR per epic — no new PR needed.
+Pushed commits 50c5d30 (feat: business-analyst Step 0.5) and 8ec6f67 (chore: finalize phase sign-offs) to origin/EPIC-ACTraceabilityStore. Existing PR #46 (feat(ac-store): AC YAML schema, validator hook, and ADR-008) at https://github.com/urlmonitor/leafcutter-ai/pull/46 now includes ticket 05 changes. One PR per epic — no new PR needed.
 
 ## Implementation Tasks
 

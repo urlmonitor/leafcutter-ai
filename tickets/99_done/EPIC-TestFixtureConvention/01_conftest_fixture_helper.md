@@ -124,7 +124,7 @@ completion_manifest:
   adr_file_created: true
   all_sections_present: true
   status_set: true
-Authored ADR-007-test-fixture-convention.md at docs/architecture/adrs/; all five required sections present (Status, Context, Decision, Consequences, Alternatives). Handoff file written to tickets/.pending/adr_handoff.json. ADR-007 is the next free number (ADR-006 was highest on main).
+Authored ADR-028-test-fixture-convention.md at docs/architecture/adrs/; all five required sections present (Status, Context, Decision, Consequences, Alternatives). Handoff file written to tickets/.pending/adr_handoff.json. ADR-028 is the next free number (ADR-006 was highest on main).
 
 ### 2026-06-04 10:05 — architect-review (status: ok)
 feedback-id: fb_2026-06-04_afaa2e85
@@ -132,7 +132,7 @@ completion_manifest:
   blast_radius_assessed: true
   impact_classified: true
   architectural_note_written: true
-Blast-radius analysis: 3 files touched (tests/conftest.py, tests/fixtures/_shared/.gitkeep, docs/testing/README.md), 1 component (build_pipeline), no Alembic migration, no hypertable change, no public API change, no ADR contract change. Classification: SMALL — all threshold criteria below the large bar. No escalation to architect-review-deep needed. Design note: purely additive; no existing test files altered, no module boundary crossed, no contract changes. ADR-007 already authored. No diagrams needed (documentation/convention change, no new data flow or service boundary).
+Blast-radius analysis: 3 files touched (tests/conftest.py, tests/fixtures/_shared/.gitkeep, docs/testing/README.md), 1 component (build_pipeline), no Alembic migration, no hypertable change, no public API change, no ADR contract change. Classification: SMALL — all threshold criteria below the large bar. No escalation to architect-review-deep needed. Design note: purely additive; no existing test files altered, no module boundary crossed, no contract changes. ADR-028 already authored. No diagrams needed (documentation/convention change, no new data flow or service boundary).
 
 ### 2026-06-04 10:10 — test-writer (status: ok)
 feedback-id: fb_2026-06-04_019d312d
@@ -149,7 +149,7 @@ completion_manifest:
   gitkeep_created: true
   gitignore_verified: true
   tests_green: true
-Created tests/conftest.py with load_fixture(name: str) -> Any per ADR-007 spec: imports json and Path, resolves Path(__file__).parent / "fixtures" / f"{name}.json", opens with encoding="utf-8", raises FileNotFoundError naturally (no suppression). Created tests/fixtures/_shared/.gitkeep. Verified .gitignore has no fixtures/ exclusion. All 3 unit tests green (pytest 3 passed in 0.18s).
+Created tests/conftest.py with load_fixture(name: str) -> Any per ADR-028 spec: imports json and Path, resolves Path(__file__).parent / "fixtures" / f"{name}.json", opens with encoding="utf-8", raises FileNotFoundError naturally (no suppression). Created tests/fixtures/_shared/.gitkeep. Verified .gitignore has no fixtures/ exclusion. All 3 unit tests green (pytest 3 passed in 0.18s).
 
 ### 2026-06-04 10:20 — documentation-expert (status: ok)
 feedback-id: fb_2026-06-04_c15514a1
@@ -160,7 +160,7 @@ completion_manifest:
   module_naming_rule_documented: true
   shared_vs_module_guidance_documented: true
   agent_requirements_noted: true
-Updated docs/testing/README.md with a "Fixture Convention (ADR-007)" section covering: directory layout with module-naming table, load_fixture() signature with usage examples, _shared/ vs module-specific guidance table, agent requirements (test-writer and python-coder must read this file before authoring tests), and cross-reference links to ADR-007 and the implementation files.
+Updated docs/testing/README.md with a "Fixture Convention (ADR-028)" section covering: directory layout with module-naming table, load_fixture() signature with usage examples, _shared/ vs module-specific guidance table, agent requirements (test-writer and python-coder must read this file before authoring tests), and cross-reference links to ADR-028 and the implementation files.
 
 ### 2026-06-04 10:25 — pr-reviewer (status: ok)
 feedback-id: fb_2026-06-04_0e3b2e70
@@ -170,7 +170,7 @@ completion_manifest:
   tests_verified: true
   documentation_reviewed: true
   no_regressions: true
-All four Acceptance Criteria are covered: load_fixture() returns parsed JSON (test_load_fixture_returns_parsed_json, test_load_fixture_slash_maps_to_subdir), slash-path maps to subdir (test_load_fixture_slash_maps_to_subdir), missing path raises FileNotFoundError (test_load_fixture_missing_raises_file_not_found), docs/testing/README.md has Fixture Convention section. Implementation is clean: no bare-except, FileNotFoundError unblocked per error-handling policy, encoding="utf-8" on open, type hint present. ADR-007 complete with all 5 sections. 3 unit tests green (pytest 3 passed in 0.18s). No regressions introduced.
+All four Acceptance Criteria are covered: load_fixture() returns parsed JSON (test_load_fixture_returns_parsed_json, test_load_fixture_slash_maps_to_subdir), slash-path maps to subdir (test_load_fixture_slash_maps_to_subdir), missing path raises FileNotFoundError (test_load_fixture_missing_raises_file_not_found), docs/testing/README.md has Fixture Convention section. Implementation is clean: no bare-except, FileNotFoundError unblocked per error-handling policy, encoding="utf-8" on open, type hint present. ADR-028 complete with all 5 sections. 3 unit tests green (pytest 3 passed in 0.18s). No regressions introduced.
 
 ### 2026-06-04 10:30 — commit (status: ok)
 feedback-id: fb_2026-06-04_6473cda5
@@ -178,14 +178,14 @@ completion_manifest:
   files_staged_explicitly: true
   commit_succeeded: true
   lock_acquired_and_released: true
-Staged 7 files explicitly by path (no git add .). Committed as 773f4bf on branch EPIC-TestFixtureConvention: ADR-007, tests/conftest.py, tests/fixtures/_shared/.gitkeep, docs/testing/README.md, unit_tests/commit_guardian/test_load_fixture_helper.py, tickets/.pending/adr_handoff.json, ticket sign-offs. Lock acquired before staging and released after successful commit.
+Staged 7 files explicitly by path (no git add .). Committed as 773f4bf on branch EPIC-TestFixtureConvention: ADR-028, tests/conftest.py, tests/fixtures/_shared/.gitkeep, docs/testing/README.md, unit_tests/commit_guardian/test_load_fixture_helper.py, tickets/.pending/adr_handoff.json, ticket sign-offs. Lock acquired before staging and released after successful commit.
 
 ### 2026-06-04 10:35 — pull-request (status: ok)
 feedback-id: fb_2026-06-04_7f628a1a
 completion_manifest:
   branch_pushed: true
   pr_opened: true
-Pushed EPIC-TestFixtureConvention branch to origin and opened PR #44 at https://github.com/urlmonitor/leafcutter-ai/pull/44. Title: "feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-007)".
+Pushed EPIC-TestFixtureConvention branch to origin and opened PR #44 at https://github.com/urlmonitor/leafcutter-ai/pull/44. Title: "feat: add tests/fixtures/ convention and load_fixture() conftest helper (ADR-028)".
 
 ## Implementation Tasks
 

@@ -7,6 +7,16 @@ title: "Integration failures are caught before code reaches main"
 component: finalize
 level: L0
 status: active
+# Waiver: FIN-100h takes this tree to 8 L1 children, one over the default cap
+# of 7. Granted rather than split because FIN-100h ("a step that did not run is
+# never recorded as having succeeded") is squarely this L0's own subject — it
+# closes a hole through which an unintegrated branch could reach main, which is
+# precisely what "Integration failures are caught before code reaches main"
+# asserts. Splitting it out would put the gate and its own integrity guarantee
+# in different trees.
+# The overcrowding is real, though: at 8 children this L0 is a split candidate
+# (ac-tree-split Pattern A) and should be revisited before a 9th child lands.
+child_limit_override: 8
 criteria: |
   As a developer, I want finalize-feature to verify that my changes integrate
   cleanly with the latest main branch BEFORE merging my PR, so that main never

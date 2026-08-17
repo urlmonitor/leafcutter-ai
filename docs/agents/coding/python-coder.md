@@ -1,21 +1,21 @@
 ---
-title: "Agent Reference: python-coder"
+title: 'Agent Reference: python-coder'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "tickets/09_done/EPIC-CodingAgents/Master_Plan.md"
-  - "tickets/09_done/EPIC-CodingAgents/06_python_coder_agent.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- tickets/09_done/EPIC-CodingAgents/Master_Plan.md
+- tickets/09_done/EPIC-CodingAgents/06_python_coder_agent.md
 related_code:
-  - ".claude/agents/python-coder.md"
-  - ".claude/commands/python-coder.md"
+- .claude/agents/python-coder.md
+- .claude/commands/python-coder.md
+description: 'Overview of Agent Reference: python-coder.'
 ---
-
 # Agent Reference: `python-coder`
 
 Visibility class: **User-facing** — auto-triggers on Python implementation requests.
@@ -179,7 +179,7 @@ None.
 - [docs/agents/conventions.md](../conventions.md) — frontmatter schema (§1),
   file layout (§2), visibility classes (§3), tool allowlists (§4),
   strict-research-delegation (§4.2), nesting depth soft cap (§5.4).
-- [docs/architecture/adrs/ADR-006-agent-model-tiers.md](../../architecture/ADR-006-agent-model-tiers.md) —
+- [docs/architecture/adrs/ADR-033-agent-model-tiers.md](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   model tier policy; Sonnet rationale; tool allowlist rule (§2.6).
 - [tickets/09_done/EPIC-CodingAgents/Master_Plan.md](../../../tickets/09_done/EPIC-CodingAgents/Master_Plan.md) —
   Phase 2 implementation plan; python-coder is ticket 06.

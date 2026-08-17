@@ -1,22 +1,22 @@
 ---
-title: "Agent Reference: adr-author"
+title: 'Agent Reference: adr-author'
 type: reference
 status: active
 created: 2026-05-07
 last_updated: 2026-05-07
 components:
-  - "infrastructure"
-  - "infrastructure"
+- infrastructure
+- infrastructure
 related_docs:
-  - "docs/agents/conventions.md"
-  - "docs/architecture/adrs/ADR-006-agent-model-tiers.md"
-  - "docs/how-to/documentation/write-adr.md"
-  - "tickets/09_done/EPIC-CodingAgents/22_adr_author.md"
+- docs/agents/conventions.md
+- docs/architecture/adrs/ADR-033-agent-model-tiers.md
+- docs/how-to/documentation/write-adr.md
+- tickets/09_done/EPIC-CodingAgents/22_adr_author.md
 related_code:
-  - ".claude/agents/adr-author.md"
-  - "docs/architecture/"
+- .claude/agents/adr-author.md
+- docs/architecture/
+description: 'Overview of Agent Reference: adr-author.'
 ---
-
 # Agent Reference: `adr-author`
 
 Internal identifier: `adr-author` (Sonnet specialist).
@@ -107,19 +107,18 @@ closes any gap).
 
 The zero-padded pattern is `NNN` — three digits: `001`, `007`, `010`, `100`.
 
-As of the last corpus audit (2026-05-07):
+Never hard-code the corpus or the next number into this doc — a snapshot goes stale
+and then actively misleads. Resolve both at execution time:
 
-| ADR | Topic |
-|---|---|
-| ADR-001 | Advisory Lock Concurrency Control |
-| ADR-002 | Scheduled Tasks vs Background Workers |
-| ADR-003 | Strategy Re-Evaluation Lifecycle |
-| ADR-004 | Win Rate Floor for Strategy Routing |
-| ADR-005 | candle_context GIN Index Strategy |
-| ADR-006 | Agent Model Tiers and Gatekeeper Escalation |
+```bash
+python scripts/adr_refs.py
+```
 
-The next ADR at time of authoring this reference doc would be **ADR-007** (but
-confirm at execution time — the corpus may have grown).
+The generated index at [`docs/architecture/adrs/README.md`](../../architecture/adrs/README.md)
+lists every ADR. The audit's **Unclaimed numbers** line gives the next safe number —
+it excludes numbers that own no file but are still cited somewhere, which would
+false-resolve if reused. See
+[ADR-029](../../architecture/adrs/ADR-029-adr-number-collision-prevention.md).
 
 ---
 
@@ -162,7 +161,7 @@ Key rules applied on every run:
   the how-to guide the agent loads at runtime; grounded in ADR-001 through ADR-006.
 - [`docs/agents/conventions.md`](../conventions.md) — agent authoring conventions
   (frontmatter schema, visibility classes, tool allowlists).
-- [`docs/architecture/adrs/ADR-006-agent-model-tiers.md`](../../architecture/ADR-006-agent-model-tiers.md) —
+- [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream policy ADR; strict-research-delegation rule (§2.6) governs the tool
   allowlist used by this agent.
 - [`.claude/agents/adr-author.md`](../../../.claude/agents/adr-author.md) —

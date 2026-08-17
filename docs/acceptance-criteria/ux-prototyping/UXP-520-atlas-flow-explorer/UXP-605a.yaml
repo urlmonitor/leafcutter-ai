@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 criteria: |
   Given the person has set the "Show ACs in graph" toggle on (or off),
   When they reload the /flows view or navigate away and back,

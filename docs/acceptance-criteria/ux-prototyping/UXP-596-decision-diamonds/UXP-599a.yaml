@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: not_started
+work_status: done
 criteria: |
   Given a flow whose conditional branch forks off the LAST ordered step
   (there is no subsequent step for the "else"/happy path to fall through to),

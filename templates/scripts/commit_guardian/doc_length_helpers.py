@@ -6,7 +6,7 @@ BUSINESS CONTEXT: Extracted from check_doc_length.py to stay under the 400-line
     lookup used by the AUTOFIX_AGENT hint mechanism.
 ARCHITECTURE: Not needed.
 DOC_LINKS:
-  - docs/architecture/adrs/ADR-006-agent-model-tiers.md
+  - docs/architecture/adrs/ADR-033-agent-model-tiers.md
 """
 
 import json

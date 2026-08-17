@@ -13,7 +13,7 @@ related_code:
   - tests/fixtures/_shared/.gitkeep
 ---
 
-# ADR-007: Test Fixture Convention — load_fixture() Helper and tests/fixtures/ Directory Layout
+# ADR-028: Test Fixture Convention — load_fixture() Helper and tests/fixtures/ Directory Layout
 
 ## Status
 

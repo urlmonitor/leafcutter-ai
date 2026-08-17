@@ -8,7 +8,7 @@ last_updated: 2026-07-01
 components:
   - supervisor_system
 related_docs:
-  - docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md
+  - docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
   - docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md
   - docs/reference/workflow-constraints.md
 ---
@@ -402,7 +402,7 @@ throws when called, so `typeof` alone does not distinguish E1 from E2 reliably.
 ## See Also
 
 - `templates/workflows-js/quick-fix.js` — canonical working E2 workflow script.
-- `docs/architecture/adrs/ADR-017-dual-engine-workflow-support.md` — the
+- `docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md` — the
   architectural decision this contract implements, including probe evidence.
 - `docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md` —
   data flow diagram of the build-time transform and runtime routing.

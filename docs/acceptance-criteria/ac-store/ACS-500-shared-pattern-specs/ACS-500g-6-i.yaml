@@ -1,0 +1,98 @@
+id: ACS-500g-6-i
+components:
+  - ac_store
+readiness: approved
+priority: critical
+title: "An agent passes evaluation only when it catches every seeded item in all three rounds"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a run of the agent-evaluation protocol in which round 1 seeds 4 known
+    defects, round 2 seeds 6, and round 3 seeds 5,
+  When the agent under test reports its findings for a round,
+  Then the round passes only if the agent reported every seeded item recorded for
+    that round,
+  And a round in which one or more seeded items go unreported fails, and the round
+    result names each missed item,
+  And findings the agent reports that were not seeded are recorded separately as
+    additional findings and never turn a failing round into a pass.
+
+  Given rounds 1 and 2 passed and round 3 left one of its 5 seeded defects
+    unreported,
+  When the overall verdict is computed,
+  Then the verdict is fail — the three rounds are not averaged, scored as a
+    percentage, or treated as two-out-of-three,
+  And the agent is not treated as verified while the verdict is fail.
+
+  Given a failed agent is then changed and re-run,
+  When the re-run is scored,
+  Then it uses a fresh set of seeded items rather than the set the agent already
+    missed,
+  And the earlier failing verdict remains on record alongside the new one.
+depends_on: [ACS-500g-6]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-017-computed-quality-gates.md
+    relationship: governs
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+assigned_agent: business-analyst
+estimated_complexity: S
+it_requirements:
+  - "Assignment follows ACS-500g-6: the scoring rule is a section of the same pattern record's parameterised body, authored by business-analyst. It is written literally (it does not vary per agent) and therefore consumes no additional slot."
+  - "BLOCKING INTEGRATION CONFLICT — the existing harness contradicts this rule. scripts/evals/agent_eval_config.json scores every registered agent against a FRACTIONAL `threshold` (pt-classifier: 0.7) and run_agent_eval.py exits non-zero only when the aggregate falls below it. That is precisely the percentage-averaging this AC forbids. Enforcing the all-or-nothing rule requires a `seeded_gap` scoring mode with per-round verdicts and threshold 1.0 in scripts/evals/run_agent_eval.py — a python-coder change NOT covered by this docs AC. Raise it as a follow-up AC under ACS-500g-6 before this rule is claimed as enforced."
+  - "State the verdict as a three-valued round status — pass / fail / invalid (invalid is ACS-500g-6-ii's leaked-answer-key case) — and an overall verdict that is pass only when all three rounds are pass. Two states are not enough to express 'cannot be pass while any round is invalid'."
+  - "Unseeded findings are recorded in a separate bucket with no effect on the verdict. Say this as a structural rule about the result record (two disjoint lists: reported_seeded, additional_findings), not as an instruction to the scorer, so a percentage over the union can never be computed by accident."
+  - "The re-run rule needs a data property, not a name: 'a fresh set of seeded items' means a set disjoint from every set previously used for that agent, so the constraint must be checkable from the recorded history rather than from an operator's memory. Results are already persisted under scripts/evals/results/ — keep the history there."
+  - "Earlier failing verdicts remain on record alongside the new one: results are append-only. A re-run must not overwrite the prior result file, or 'the earlier failing verdict remains on record' is unverifiable."
+  - "Do not state a per-round seeded-item count in the pattern body — 4/6/5 are the example's values and belong in the {round_seeded_items} binding, not in the parameterised body."
+delivers_to:
+  agent: business-analyst
+  contract: "The scoring section of the agent-evaluation pattern body: per-round pass requires every recorded seeded item reported; round status is pass/fail/invalid; the overall verdict is pass only when all three rounds pass, with no averaging or percentage path; unseeded findings live in a disjoint additional_findings list; re-runs draw a seeded set disjoint from all previous sets and append rather than overwrite the result history."
+expects_from:
+  ac_id: ACS-500g-6
+  contract: "The three-round protocol body and the {round_seeded_items} slot that carries each round's recorded seeded items."
+origin_agent: BrainCandy
+created: 2026-08-13
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+test_spec:
+  - name: test_protocol_declares_a_per_round_seeded_items_slot
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Run slot extraction over the real on-disk pattern record and assert a per-round seeded-items slot is declared and placed, since the scoring rule is meaningless without it."
+  - name: test_verdict_is_fail_when_any_round_misses_a_seeded_item
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Compute the overall verdict for a round record of 4/4, 6/6, 4/5 and assert 'fail' — executes the verdict computation rather than asserting the rule's prose is present."
+  - name: test_verdict_has_no_averaging_or_percentage_path
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Assert that a 14-of-15 aggregate (93%) still yields 'fail' and that no configured threshold below 1.0 can make the seeded-gap mode pass a partial round."
+  - name: test_unseeded_findings_never_turn_a_failing_round_into_a_pass
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Score a round with 4 of 5 seeded items reported plus 10 additional unseeded findings; assert the round is 'fail' and the extras land in additional_findings."
+  - name: test_rerun_uses_a_seeded_set_disjoint_from_previous_runs
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: behavioral
+    description: "Given a recorded failing run for an agent, assert a re-run's seeded set shares no item with any previously recorded set for that agent, and that the earlier result file still exists afterwards."

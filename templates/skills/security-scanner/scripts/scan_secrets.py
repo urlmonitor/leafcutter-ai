@@ -1,7 +1,7 @@
 """
 MODULE: scan_secrets.py
 GOAL: Detect secrets, API keys, and high-entropy strings in source files.
-BUSINESS CONTEXT: The project manages live Bybit API keys and database credentials.
+BUSINESS CONTEXT: The project manages live third-party API keys and database credentials.
     A leaked key causes immediate financial loss. This scanner is the primary
     defense against accidental credential commits.
 ARCHITECTURE: Standalone script. Accepts file paths as CLI args. Returns exit
@@ -33,8 +33,8 @@ _ALLOWLIST_FILE = Path(".security-allowlist")
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("PRIVATE_KEY", re.compile(r"-----BEGIN\s+(RSA|EC|OPENSSH)\s+PRIVATE KEY-----")),
     ("AWS_KEY", re.compile(r"AKIA[0-9A-Z]{16}")),
-    ("BYBIT_API_KEY", re.compile(
-        r"(?i)(bybit|api_key|apikey|api_secret)[^\n]{0,30}['\"][A-Za-z0-9]{30,}['\"]"
+    ("EXCHANGE_API_KEY", re.compile(
+        r"(?i)(api_key|apikey|api_secret)[^\n]{0,30}['\"][A-Za-z0-9]{30,}['\"]"
     )),
     ("GENERIC_SECRET", re.compile(
         r"(?i)(password|passwd|secret|token|auth_key)\s*[=:]\s*['\"][^'\"]{8,}['\"]"

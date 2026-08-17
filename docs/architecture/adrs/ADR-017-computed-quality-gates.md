@@ -77,7 +77,7 @@ decision operates under the self-hosting boundary of
 templates, registry, and Python generation scripts. This work originates in
 EPIC-ComputedQualityGates (ticket `01_adr_computed_quality_gates.md`) and
 builds directly on the contract-driven AC model of
-[ADR-007](ADR-007-contract-driven-acs.md).
+[ADR-008](ADR-007-contract-driven-acs.md).
 
 ## Decision
 

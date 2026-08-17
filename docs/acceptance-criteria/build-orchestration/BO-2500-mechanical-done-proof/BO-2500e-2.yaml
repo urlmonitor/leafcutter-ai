@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -24,7 +24,7 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-  - path: docs/architecture/adrs/ADR-004-tdd-workflow-enforcement.md
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
@@ -70,7 +70,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BO-2500e-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260812-BO-2500e-2.md
 change_target: pipeline
 risk_surface: internal
 notes: |
