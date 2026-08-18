@@ -57,8 +57,9 @@ estimated_complexity: S
 it_requirements:
   - "The survivor is chosen by computing declared-state-versus-folder agreement from `tickets/ticket_lifecycle.json`, the same data `_check_status_folder` reads — not by a rule of thumb that the completed folder wins. Four of the five will very likely resolve to the completed copy, but that is an outcome to be arrived at per pair, not an assumption to implement; assuming it is precisely how the wrong copy gets deleted."
   - "THIS IS A DELETION AND IT IS NOT REVERSIBLE FROM THE STORE. Before deleting either copy, diff the two and record the diff on the surviving file. Two copies that have drifted may each hold something the other lacks — sign-off comments, a status history, a comment stream — and the point of the repair is that one identifier means one thing, not that half the record disappears."
-  - "SCOPE IS THE FIVE THE CRITERIA NAME. GE-122a-2's whole-collection pass will also surface `EPIC-MoveOnMainOnly`, which is held by BOTH `tickets/99_done/` and `tickets/99_rejected/` — one identifier in two TERMINAL folders that flatly disagree, with Master_Plan.md and four sub-items duplicated inside. It is not in the five and it is NOT repaired under this AC. Report it and stop; expanding scope silently is the mirror image of the re-expansion GE-122e-3 fails an implementer for."
-  - "Sixteen loose `TICKET-*.md` files sit at `tickets/` root outside any lifecycle folder. They are not twice-held and are out of scope here; do not tidy them while in the area."
+  - "SCOPE IS THE FIVE THE CRITERIA NAME. The principle stands unchanged: this repair touches the five twice-held work items and nothing else. Expanding scope silently from inside an implementation is the mirror image of the re-expansion GE-122e-3 fails an implementer for."
+  - "SUPERSEDED PREMISE — the epic-folder exclusion this requirement used to carry is now moot. It read that `EPIC-MoveOnMainOnly` is held by BOTH `tickets/99_done/` and `tickets/99_rejected/` and must be reported rather than repaired. That pair no longer exists: it was repaired on 2026-08-17 under PR #462, and on 2026-08-18 PR #467 examined the three remaining `99_rejected` epic folders and emptied the folder entirely. `tickets/99_rejected/` now contains only `.gitkeep`. Do not look for the pair, and do not treat its absence as evidence that someone widened this AC's scope — it was repaired deliberately, outside this AC, on direct user instruction. See the amendment entry below for what that repair found."
+  - "Seventeen loose `TICKET-*.md` files sit at `tickets/` root outside any lifecycle folder (sixteen when this AC was written on 2026-08-17; one was added since, and the number will keep moving). They are not twice-held and are out of scope here; do not tidy them while in the area. Assert the set by NAME rather than by count — a count assertion breaks every time an unrelated ticket is added at root, which makes it a test that fails for reasons this AC is not about."
   - "ORDERING: this repair must land before the work-item stage of the uniqueness guard becomes blocking, or every commit is stopped by five pre-existing conditions the author did not create. GE-122e-3 is the check that the ordering worked."
   - "Use `git mv` / `git rm` so the deletions and moves are tracked; a ticket file removed with a plain filesystem delete loses the history that would let the decision be reviewed. Note that `templates/hooks/check_ticket_no_branch_move.py` blocks `git mv` of ticket files on non-main branches — it is currently registered nowhere, so it will not fire today, but if it is wired during this tree's work this repair collides with it. Perform the repair on a branch with that interaction understood, not discovered."
   - "Idempotency: re-running the repair over the repaired collection makes no further change."
@@ -93,11 +94,11 @@ test_spec:
     framework: unittest
     type: behavioral
     description: "Every reference to any of the five identifiers anywhere in the repository resolves to the surviving file and to no other."
-  - name: test_out_of_scope_duplicates_are_untouched
+  - name: test_out_of_scope_tickets_are_untouched
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
-    description: "EPIC-MoveOnMainOnly is still present in both tickets/99_done/ and tickets/99_rejected/, and the sixteen loose root tickets are unmoved — the repair stayed inside the five, exactly as GE-122e-3 requires of the unnumbered diagrams."
+    description: "Every loose TICKET-*.md at tickets/ root is still at tickets/ root, asserted BY NAME against a list captured before the repair — not by count, which changes whenever an unrelated ticket is added. The repair stayed inside the five, exactly as GE-122e-3 requires of the unnumbered diagrams. The EPIC-MoveOnMainOnly half of this descriptor is deleted rather than rewritten: that pair no longer exists, so asserting it is 'still present in both folders' is unsatisfiable."
 test_rationale: |
   Counting files is the obvious test and the coverage note rules it out, because deleting the
   correct copy also yields one file — so the load-bearing descriptor is the folder-versus-declared-state
@@ -105,8 +106,10 @@ test_rationale: |
   folder wins. The no-content-lost descriptor exists because this is an irreversible deletion of
   records that may each hold sign-off history the other lacks. The out-of-scope descriptor is the
   same shape as GE-122e-3's negative assertion about the unnumbered diagrams, applied to the
-  duplicates this repair deliberately does not touch: an implementer who tidies EPIC-MoveOnMainOnly
-  while in the area fails rather than quietly widening a scope the user set.
+  tickets this repair deliberately does not touch: an implementer who tidies the loose root tickets
+  while in the area fails rather than quietly widening a scope the user set. (That descriptor
+  originally guarded the EPIC-MoveOnMainOnly pair as well; see the 2026-08-18 amendment for why
+  that half was removed rather than rewritten.)
 delivers_to: null
 expects_from:
   ac_id: GE-122a-2
@@ -131,6 +134,37 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: stale-premise-correction-after-the-epic-duplicates-were-repaired
+  date: '2026-08-18'
+  by: human user
+  entry: 'THE OUT-OF-SCOPE EXCLUSION IN THIS AC IS NOW MOOT, AND ONE TEST DESCRIPTOR
+    HAD BECOME UNSATISFIABLE. Both are corrected above; the entries before this one
+    are left intact because they accurately record what was known on 2026-08-17.
+    WHAT CHANGED: this AC deliberately excluded the EPIC-MoveOnMainOnly pair (held
+    by both tickets/99_done/ and tickets/99_rejected/) and told the implementer to
+    report it and stop. On 2026-08-17 PR #462 repaired that pair, and on 2026-08-18
+    PR #467 examined the three remaining 99_rejected epic folders and emptied the
+    folder; tickets/99_rejected/ now holds only .gitkeep. Both were done on direct
+    user instruction, as their own scoped work, NOT from inside an implementation
+    of this AC — the anti-scope-creep principle this AC states is unchanged and
+    still binding. THE DEFECT THIS CREATED: test_out_of_scope_duplicates_are_untouched
+    asserted that the pair "is still present in both tickets/99_done/ and
+    tickets/99_rejected/". That condition no longer holds, so an implementer building
+    this AC today would have written a test that cannot pass. Renamed to
+    test_out_of_scope_tickets_are_untouched and narrowed to the loose root tickets,
+    which are still in scope as a negative assertion. THE COUNT WAS ALSO STALE: the
+    loose root tickets were sixteen when measured and are seventeen now. The
+    requirement now says to assert them by NAME rather than by count, because a count
+    assertion fails whenever an unrelated ticket is added at root — a test that breaks
+    for reasons this AC is not about. THE FIVE TWICE-HELD WORK ITEMS ARE UNAFFECTED
+    and were re-verified present on origin/main on 2026-08-18: four held by 00_inbox
+    plus 99_done (ConfigDrivenBuildPaths, FeedbackAnalysisPipeline,
+    PullRequestAgentProjectContext, ContractShrinkingSelfExclusion) and one by
+    00_inbox plus 01_todo (BP-1200a-1-ii). This AC''s actual subject is untouched and
+    ready to build. WHY THIS IS RECORDED RATHER THAN QUIETLY PATCHED: an approved
+    criterion whose factual premises have been overtaken by events, left uncorrected,
+    is the same defect class this whole tree exists to end — a record that no longer
+    describes the thing it names.'
 superseded_by: null
 covered_by: []
 implemented_by: []

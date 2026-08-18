@@ -65,7 +65,8 @@ it_requirements:
   - "DO NOT BUILD THIS FROM SCRATCH. `templates/hooks/check_ticket_state_integrity.py` already performs exactly this detection — basename duplicates across lifecycle folders plus status-folder inconsistency, over the whole tickets/ tree, reading `tickets/ticket_lifecycle.json` for the allowed-status-per-folder mapping. Verified 2026-08-17: it is referenced only by its own source, its tests, a changelog and closed tickets — it is registered in no settings.json entry, no hooks_manifest, no CI job, and no git post-merge installer, so it has never run in anger. Extract its detection into the shared pass rather than reimplementing it."
   - "Its always-exit-0 contract must be changed when it is adopted. It was written as a non-blocking post-merge watchdog ('always exits 0, non-blocking, informational'); this AC requires a failing result. Announce-only is what let the five duplicates accumulate, and a second inert copy of the same logic is the worst possible outcome — retire or re-point the post-merge script rather than leaving two definitions of the rule (GE-122d-1 forbids the second definition)."
   - "THE WORK-ITEM IDENTIFIER MUST BE DECLARED EXPLICITLY, and it is not self-evident. Verified 2026-08-17: over bare basenames of all `*.md` under `tickets/`, the duplicate set is enormous and almost entirely spurious — every epic contributes `Master_Plan.md`, `01_*.md`, `02_*.md` and so on, which are distinct work items that merely share a numeric prefix. Over `TICKET-*.md` basenames the duplicate set is exactly the five the criteria name. Declare the identifier rule as DATA in the same declared rule GE-122b-1 introduces, not as a hard-coded pattern in the pass, so the fifth namespace and any future work-item shape inherit it."
-  - "ONE ADDITIONAL COLLISION EXISTS THAT THE FIVE DO NOT COVER, and the implementer will meet it on the first whole-collection run: the epic folder `EPIC-MoveOnMainOnly` is held by BOTH `tickets/99_done/` and `tickets/99_rejected/` — one identifier, two TERMINAL lifecycle folders that flatly disagree (done versus rejected), with `Master_Plan.md` and four sub-items duplicated inside. It is invisible under a `TICKET-*.md` basename rule and visible under an epic-qualified path rule. Whichever rule is declared, this case must be REPORTED, never silently exempted; whether it is also repaired is GE-122e-2's scope question and is flagged to the user, not decided here."
+  - "SUPERSEDED PREMISE (corrected 2026-08-18) — this requirement previously said the implementer would meet an additional collision on the first whole-collection run: the epic folder `EPIC-MoveOnMainOnly` held by BOTH `tickets/99_done/` and `tickets/99_rejected/`. That pair was repaired under PR #462, and PR #467 then emptied `tickets/99_rejected/` entirely; it now holds only `.gitkeep`. Do NOT expect that finding, and do not treat its absence as the pass having missed something."
+  - "THE RULE QUESTION IT RAISED IS STILL LIVE AND IS STILL THIS AC'S TO ANSWER. The epic pair was the concrete example of a case that is invisible under a `TICKET-*.md` basename rule and visible under an epic-qualified path rule. The example is gone; the choice is not. This AC must still declare its identifier rule explicitly, and must still report — never silently exempt — any work item held by two lifecycle folders under whichever rule it declares. Verify against the collection as it stands rather than against the counts below, which were measured on 2026-08-17."
   - "Sixteen loose `TICKET-*.md` files sit at `tickets/` root, outside any lifecycle folder. The declared rule must state whether the root counts as a lifecycle location; if it does not, those files are unenrolled rather than uniquely-held, and the report must not silently treat 'no lifecycle folder' as 'exactly one lifecycle folder'."
   - "The declared state, not the folder, is authoritative — this repository's existing convention (ticket-prioritizer, finalize-feature-archive-check, BO-400a-3/c-2). The finding must carry both copies' declared states so GE-122e-2 can pick a survivor from the report alone, without reopening either file."
   - "Feeds the same shared verdict object as GE-122a-1 so that all three stages evaluate one rule (GE-122d-1). Do not emit a separate work-item report format."
@@ -138,6 +139,21 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: stale-premise-correction-after-the-epic-duplicates-were-repaired
+  date: '2026-08-18'
+  by: human user
+  entry: 'ONE EXPECTED FINDING NO LONGER EXISTS. The entry above records an
+    it_requirement naming the EPIC-MoveOnMainOnly done-versus-rejected pair as a
+    collision the implementer would meet on the first whole-collection run. That pair
+    was repaired under PR #462 on 2026-08-17, and PR #467 emptied
+    tickets/99_rejected/ on 2026-08-18; the folder now holds only .gitkeep. The
+    requirement is rewritten above to say so, and to keep the part that is still
+    live — the identifier-rule choice the example was illustrating. A pass built to
+    expect that finding would otherwise look broken when it correctly reports
+    nothing. The five twice-held TICKET-*.md items are unaffected and were
+    re-verified present on origin/main on 2026-08-18. The loose root tickets are now
+    seventeen, not sixteen. Prior entries are left intact as the record of what was
+    known when they were written.'
 superseded_by: null
 covered_by: []
 implemented_by: []
