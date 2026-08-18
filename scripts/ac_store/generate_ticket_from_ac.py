@@ -532,6 +532,53 @@ def _extract_paths_from_prose(text: str) -> list[str]:
     return found
 
 
+def _resolve_worktree_root_or_none() -> "Path | None":
+    """Resolve the worktree root from this module's own location, or None.
+
+    Wraps :func:`_find_worktree_root` so callers that must degrade gracefully
+    (rather than raise) when no ``.git`` marker is found — e.g. the prose
+    path-existence gate below, which is a best-effort filter, not a hard
+    requirement — can treat "root not found" as "skip the filter".
+
+    Returns:
+        The worktree root path, or ``None`` when no ``.git`` marker is found.
+    """
+    try:
+        return _find_worktree_root(Path(__file__))
+    except FileNotFoundError:
+        return None
+
+
+def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
+    """Return True when *token* names a file that actually exists on disk.
+
+    TKT-600a-1: a narrative it_requirements bullet may quote example paths
+    purely to illustrate a scenario (e.g. ``"src/foo.py"`` in a sentence
+    describing an exploit) — such tokens satisfy ``_extract_paths_from_prose``'s
+    extension/prefix heuristics but do not name a real edit-surface file, so
+    they must not leak into ``files_touched``. Gating on on-disk existence
+    (per the AC's own remediation note: "gate on file existence") distinguishes
+    illustrative examples from real paths without narrowing the token-detection
+    regex, which would risk dropping genuine paths that happen to look unusual.
+
+    When *worktree_root* is ``None`` (root could not be resolved), the gate is
+    skipped and the token is treated as real — this preserves prior behaviour
+    in contexts where the worktree cannot be located, rather than silently
+    dropping every prose-extracted path.
+
+    Args:
+        token: Candidate path token extracted from prose.
+        worktree_root: Resolved worktree root, or ``None``.
+
+    Returns:
+        True when the file exists (or the root could not be resolved), False
+        when the root resolved but the file does not exist there.
+    """
+    if worktree_root is None:
+        return True
+    return (worktree_root / token).exists()
+
+
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
 
@@ -539,7 +586,12 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
 
     1. The ``reference_file_path`` named in ``it_requirements`` (structured form),
        or file path tokens extracted from prose bullets when ``it_requirements``
-       is a list of strings (list form — TKT-500f-8-i).
+       is a list of strings (list form — TKT-500f-8-i), FILTERED to tokens that
+       name a file actually present on disk (TKT-600a-1) — illustrative example
+       paths quoted only to describe a scenario (e.g. ``src/foo.py`` in prose
+       that never touches a real ``src/`` tree) do not exist on disk and are
+       excluded, while a real edit-surface path named in a bullet (e.g.
+       ``scripts/goal_to_epic.py``) survives.
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
        ``creates``, ``implements``, ``modifies``, ``specifies``).
@@ -559,19 +611,25 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     paths: set[str] = set()
 
     # Source 1 — it_requirements edit surface.
-    # Structured form: a dict with an explicit reference_file_path key.
+    # Structured form: a dict with an explicit reference_file_path key. This
+    # form is trusted verbatim — it is an authored, structured field, not a
+    # prose token, so the existence gate below does not apply to it.
     # List form (TKT-500f-8-i): a list of prose bullet strings; each bullet is
-    # scanned for file path tokens via _extract_paths_from_prose.
+    # scanned for file path tokens via _extract_paths_from_prose, then each
+    # candidate token is gated on on-disk existence (TKT-600a-1) so
+    # illustrative example paths never leak into files_touched.
     it_req = ac.get("it_requirements")
     if isinstance(it_req, dict):
         ref_path = it_req.get("reference_file_path", "")
         if isinstance(ref_path, str) and ref_path:
             paths.add(ref_path)
     elif isinstance(it_req, list):
+        worktree_root = _resolve_worktree_root_or_none()
         for bullet in it_req:
             if isinstance(bullet, str):
                 for path_token in _extract_paths_from_prose(bullet):
-                    paths.add(path_token)
+                    if _is_real_prose_path(path_token, worktree_root):
+                        paths.add(path_token)
 
     # Source 2 — doc_links edit-surface entries
     doc_links = ac.get("doc_links") or []
@@ -1460,6 +1518,54 @@ def _extract_doc_genre(ac: AcRecord) -> str:
     return "explanation"
 
 
+def _load_derive_parent_id_fn(*, warn_context: str = "parent genre resolution"):
+    """Load ``ac_parent_id.derive_parent_id`` from the sibling module, or None.
+
+    Shared loader used by both :func:`_load_parent_ac` (parent-genre
+    resolution) and :func:`_build_ticket_depends_on` (TKT-600a-1: dropping a
+    structural-parent AC id from a generated ticket's ``depends_on``) so the
+    ``importlib.util`` sibling-load boilerplate exists in exactly one place.
+
+    Args:
+        warn_context: Short phrase naming the caller's use case, interpolated
+            into the WARNING messages so log output stays traceable to the
+            feature that needed the function.
+
+    Returns:
+        The ``derive_parent_id`` callable, or ``None`` when the sibling
+        module cannot be loaded or does not define it.
+
+    DECISION HISTORY:
+        BO-2200c-3 (2026-08-11): Introduced (as inline logic in
+        ``_load_parent_ac``) to support parent-genre resolution. Uses
+        importlib.util (same pattern as _load_migration_map) for robust
+        sibling-module import regardless of sys.path state.
+        TKT-600a-1 (2026-08-18): Extracted into this shared helper so
+        ``_build_ticket_depends_on`` can reuse the same loader instead of
+        duplicating the importlib boilerplate.
+    """
+    sibling = Path(__file__).resolve().parent / "ac_parent_id.py"
+    try:
+        spec = importlib.util.spec_from_file_location("ac_parent_id", sibling)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        derive_fn = getattr(mod, "derive_parent_id", None)
+    except (OSError, AttributeError, ImportError, SyntaxError) as exc:
+        logger.warning(
+            "Cannot load ac_parent_id module for %s: %s", warn_context, exc
+        )
+        return None
+
+    if derive_fn is None:
+        logger.warning(
+            "ac_parent_id module has no derive_parent_id function; "
+            "%s unavailable",
+            warn_context,
+        )
+        return None
+    return derive_fn
+
+
 def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
     """Load the parent L1 AC record for *ac_id* from the AC store.
 
@@ -1473,7 +1579,8 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
 
     File I/O for YAML reads is handled inside :func:`_find_ac_by_id`; the
     only new I/O here is the ``importlib.util`` load of the sibling module
-    (wrapped in a specific except clause per Error Handling Policy Rule 1).
+    (wrapped in a specific except clause per Error Handling Policy Rule 1),
+    delegated to :func:`_load_derive_parent_id_fn`.
 
     Args:
         ac_id: Leaf AC identifier (e.g. ``"BO-2200c-3"``).
@@ -1486,24 +1593,11 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
         BO-2200c-3 (2026-08-11): Introduced to support parent-genre resolution.
         Uses importlib.util (same pattern as _load_migration_map) for robust
         sibling-module import regardless of sys.path state.
+        TKT-600a-1 (2026-08-18): Delegated the sibling-module load to the
+        shared :func:`_load_derive_parent_id_fn` helper.
     """
-    sibling = Path(__file__).resolve().parent / "ac_parent_id.py"
-    try:
-        spec = importlib.util.spec_from_file_location("ac_parent_id", sibling)
-        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-        derive_fn = getattr(mod, "derive_parent_id", None)
-    except (OSError, AttributeError, ImportError, SyntaxError) as exc:
-        logger.warning(
-            "Cannot load ac_parent_id module for parent genre resolution: %s", exc
-        )
-        return None
-
+    derive_fn = _load_derive_parent_id_fn(warn_context="parent genre resolution")
     if derive_fn is None:
-        logger.warning(
-            "ac_parent_id module has no derive_parent_id function; "
-            "parent genre resolution unavailable"
-        )
         return None
 
     parent_id: "str | None" = derive_fn(ac_id)
@@ -1526,6 +1620,74 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
 
     _, parent_ac = result
     return parent_ac
+
+
+def _build_ticket_depends_on(
+    ac: AcRecord,
+    ac_id: str,
+    tickets_root: "Path | None",
+) -> list[str]:
+    """Translate the source AC's ``depends_on`` into a guard-valid ticket list.
+
+    TKT-600a-1: a generated ticket is standalone (one ticket per AC), but the
+    source AC's own ``depends_on`` lists AC identifiers — typically its
+    structural parent, sometimes a genuine sibling dependency.
+    ``templates/hooks/ticket_frontmatter_guard.py``'s ``_check_depends_on``
+    requires every ticket ``depends_on`` entry to resolve to a sibling ticket
+    file in the same tickets folder, so an AC id can never be copied verbatim.
+    This function classifies each entry:
+
+    * The AC's own structural parent (via ``ac_parent_id.derive_parent_id``)
+      is always dropped — it is not a ticket-level dependency.
+    * An AC id with an already-generated, co-located ticket in *tickets_root*
+      (found via :func:`_find_existing_ticket` matching ``source_ac``) is
+      translated to that ticket's filename, preserving the dependency.
+    * Any other AC id (dangling — no ticket exists for it in scope) is
+      dropped, with a WARNING naming the dropped id so the omission is
+      traceable rather than silently lossy.
+
+    Args:
+        ac: Parsed AC record dict.
+        ac_id: The AC id the ticket is being generated for.
+        tickets_root: Root directory to search for co-located sibling
+            tickets, or ``None`` when unavailable (e.g. a caller that has not
+            resolved a tickets root) — in that case every entry is dangling
+            and the result is always ``[]``.
+
+    Returns:
+        List of ticket filenames (each a guard-valid ``depends_on`` entry).
+        Empty when the AC declares no dependencies, none survive
+        classification, or *tickets_root* is ``None``.
+    """
+    raw_deps = ac.get("depends_on") or []
+    if not isinstance(raw_deps, list) or not raw_deps or tickets_root is None:
+        return []
+
+    own_parent_id = None
+    derive_fn = _load_derive_parent_id_fn(warn_context="depends_on structural-parent drop")
+    if derive_fn is not None:
+        own_parent_id = derive_fn(ac_id)
+
+    resolved: list[str] = []
+    for dep in raw_deps:
+        if not isinstance(dep, str) or not dep:
+            continue
+        if dep == own_parent_id:
+            # Structural parent — never a ticket-level dependency (dropped
+            # silently; this is the expected, common case, not an omission).
+            continue
+        existing = _find_existing_ticket(tickets_root, dep)
+        if existing is not None:
+            resolved.append(existing.name)
+        else:
+            logger.warning(
+                "AC '%s': depends_on entry %r has no co-located ticket in %s; "
+                "dropping it to keep the generated ticket's depends_on guard-valid.",
+                ac_id,
+                dep,
+                tickets_root,
+            )
+    return resolved
 
 
 def _resolve_genres_from_parent(
@@ -1975,6 +2137,7 @@ def _build_frontmatter(
     files_touched: list[str],
     agents: dict[str, str],
     ac_store_path: "str | None" = None,
+    tickets_root: "Path | None" = None,
 ) -> str:
     """Build the YAML frontmatter block for the ticket.
 
@@ -1988,6 +2151,10 @@ def _build_frontmatter(
             frontmatter carrying both the AC id and the store path, enabling
             ac-validator and ac-fulfillment-gate to locate the source AC
             directly without scanning the whole store.
+        tickets_root: Root directory to search for co-located sibling tickets
+            when translating the AC's ``depends_on`` (TKT-600a-1). When
+            ``None`` (the default — preserves prior callers' behaviour),
+            ``depends_on`` is always ``[]``.
 
     Returns:
         Formatted frontmatter string (including opening and closing ``---``).
@@ -2007,10 +2174,13 @@ def _build_frontmatter(
         # ticket depends_on entry to resolve to a sibling ticket file in the
         # same tickets/ folder, so copying the AC-level value verbatim hard-
         # blocks the generated ticket with "depends_on references missing
-        # file: '<AC-id>'" (ACD-400b-7). There is no ticket-scoped
-        # dependency source in an AC record for a standalone generated
-        # ticket, so depends_on is intentionally empty here.
-        "depends_on": [],
+        # file: '<AC-id>'" (ACD-400b-7). _build_ticket_depends_on (TKT-600a-1)
+        # drops the AC's structural parent, translates a genuine sibling
+        # dependency to its co-located ticket filename when one has already
+        # been generated in tickets_root, and drops any other (dangling) AC
+        # id — so the result is always guard-valid. When tickets_root is
+        # None the result is always [] (prior behaviour preserved).
+        "depends_on": _build_ticket_depends_on(ac, ac_id, tickets_root),
         "priority": _map_priority(ac),
         "roadmap_phase": "phase_1",
         "advances_current_outcome": True,
@@ -2904,7 +3074,9 @@ def main(argv: list[str] | None = None) -> int:
             files_touched=files_touched,
             declares_side_effect=declares_side_effect,
         )
-        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
+        frontmatter = _build_frontmatter(
+            ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
+        )
         body = _build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
         print(frontmatter)
         print()
@@ -2941,7 +3113,9 @@ def main(argv: list[str] | None = None) -> int:
         files_touched=files_touched,
         declares_side_effect=declares_side_effect,
     )
-    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
+    frontmatter = _build_frontmatter(
+        ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
+    )
     body = _build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
     ticket_content = frontmatter + "\n\n" + body
 
