@@ -7,6 +7,10 @@ status: active
 component: knowledge-management
 level: L2
 title: "Atlas draws an absent relation as a gap, never as an untrusted link"
+parent: KM-ADM-100b
+depends_on:
+  - KM-ADM-100b
+  - KM-ADM-002
 origin_agent: BrainCandy
 criteria: |
   Given the artifact knowledge-graph JSON now marks a relation that does not exist in the
@@ -40,5 +44,10 @@ notes: |
   components/atlas/edges.ts and components/flows/flow-explorer.tsx. The user approved
   the /quick-fix one-file constraint being relaxed for it rather than escalating to
   /build-feature.
+
+  PARENT ADDED 2026-08-18 (product-owner). Home is KM-ADM-100b, alongside KM-ADM-002.
+  The ordering obligation recorded above (recording absent edges WITHOUT this treatment
+  makes the map worse) is now carried at the L1 so it survives beyond this pair.
+  `depends_on` names KM-ADM-002 explicitly for the same reason.
 change_target: ui
 risk_surface: internal

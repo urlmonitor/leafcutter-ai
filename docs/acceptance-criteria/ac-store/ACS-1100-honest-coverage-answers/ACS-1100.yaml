@@ -10,6 +10,7 @@ work_status: todo
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
+scope: standing
 criteria: |
   Every answer states how much of the whole it actually looked at.
 
@@ -36,6 +37,22 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Mandates exactly ONE child-counting implementation for tree limits — explicitly exempted from ACS-1100a's independent-denominator rule. See notes."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "SHIPPED INSTANCE (merged, PR #425). One surface already satisfies this contract's spirit in hand-written prose. It is not superseded by ACS-1100 and must not be re-implemented by it — see the PRIOR ART section in notes for the per-L1 breakdown."
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: related
+    status: exists
+    relevance: "Carries the shipped instance: the test-covers edge note states its diff scope and reports '244 of 607 done ACs carry no covering test tag (measured 2026-08-13)'. A worked example of the contract, and the strongest argument for it — the figure is hand-typed and will rot."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: related
+    status: exists
+    relevance: "The ratchet behind that figure (HIGH_WATER_MARK = 244). Enumerates the store filter-free via rglob — the correct denominator shape ACS-1100a-2 describes — but reports only the numerator in its failure message."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400.yaml
+    relationship: related
+    status: exists
+    relevance: "Adjacent, NOT overlapping. TQ-400 governs whether the EVIDENCE for finished work still holds over time; ACS-1100 governs whether an ANSWER about the store states its own coverage. TQ-400a's store-wide sweep will be one of this contract's first consumers, and TQ-400d owns retiring the untagged-done pile."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -129,3 +146,56 @@ notes: |
      FOLLOW-UP NEEDED (not in this tree): those two bugs need their own ACs in
      their owning components (agent_telemetry and the retrospective surface).
      ACS-1100 as scoped will NOT fix them.
+
+  ==========================================================================
+  PRIOR ART — ONE SURFACE ALREADY SHIPPED PART OF THIS (2026-08-18, PO).
+  Read before decomposing or building. Nothing above is contradicted.
+  ==========================================================================
+  KM-ADM-005 (knowledge-management, reviewed, MERGED in PR #425) fixed exactly the
+  defect this L0 describes, for exactly one surface, five days after this tree was
+  authored and with no reference in either direction. What it shipped:
+    (i)  the artifact map's `test-covers` edge note now declares its SCOPE —
+         check-done-proof is diff-scoped, evaluates only ACs changed in the current
+         commit/PR, never re-examines a done AC predating the gate — and reports
+         "244 of 607 done ACs carry no covering test tag (measured 2026-08-13)";
+    (ii) a ratchet (unit_tests/docs/test_artifact_graph_covers_scope.py,
+         HIGH_WATER_MARK = 244) that fails the build if that count rises.
+
+  WHAT THIS MEANS FOR EACH L1 — do not re-implement, do not contradict:
+    - ACS-1100a (denominator): satisfied AS A ONE-OFF for this surface. The figure
+      is "244 of 607", i.e. numerator AND denominator. It is a hand-typed constant
+      in a prose note, not a computed field on an answer. The AC is NOT satisfied
+      generally; the shipped note is the proof the contract is needed, because it
+      is already accruing rot.
+    - ACS-1100b (method): satisfied AS A ONE-OFF, and unusually well — the note
+      states the scope ("diff-scoped ... describes NEW work, not the store"), the
+      measurement date, and the enforcing test. Reuse its wording as the worked
+      example of a method record; do not invent a second vocabulary.
+    - ACS-1100c (halt on unexplained gap): NOT satisfied and NOT contradicted. The
+      ratchet fails a build when the backlog GROWS; it does not withhold an answer
+      whose numbers fail to reconcile. Different trigger, different subject. Do not
+      cite the ratchet as evidence that the halt exists.
+    - ACS-1100d (no laundered all-clear): satisfied AS A ONE-OFF at the map level —
+      "enforced" can no longer be read downstream as store-wide coverage, which is
+      precisely a verdict capped by the coverage it consumed. The propagation
+      machinery is unbuilt.
+    - ACS-1100e (contract written down once): NOT satisfied, and now has more work
+      to do, not less. The single reference section must be written so that the
+      KM-ADM-005 note reads as an INSTANCE of the contract's vocabulary. Cite it as
+      the worked example.
+
+  THE NON-DUPLICATION RULE, STATED ONCE: ACS-1100 is a STANDING contract
+  (scope: standing) that other components INHERIT; it is not a home for their
+  surfaces. KM-200 already records the same reading ("a STANDING principle every
+  figure here must obey, not a home for it ... Inherited, not duplicated"), and
+  KM-ADM-005 stays in knowledge-management under its own L0, KM-ADM-100. When this
+  tree builds, it must leave the shipped edge note working and should REPLACE the
+  hand-typed 244/607 with a generated figure rather than deleting or re-asserting it.
+
+  ADJACENT TREE, DO NOT MERGE: TQ-400 (durable done proof) owns whether the
+  evidence for finished work still holds over time, and TQ-400d owns retiring the
+  244. ACS-1100 owns how an answer describes its own coverage. TQ-400 and
+  KM-ADM-005 currently report DIFFERENT counts of the same population (240 of 641
+  vs 244 of 607, four days apart, different inclusion rules, neither citing the
+  other) — the sharpest available in-house evidence for why this contract matters,
+  and a regression case worth an L3 replay fixture.

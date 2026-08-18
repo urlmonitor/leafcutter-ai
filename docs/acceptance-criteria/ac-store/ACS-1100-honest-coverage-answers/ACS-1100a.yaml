@@ -27,6 +27,10 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Exempt surface — the tree-limit counter keeps its single shared implementation. See ACS-1100 notes."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: related
+    status: exists
+    relevance: "Shipped one-off instance (KM-ADM-005). Enumerates the store filter-free via rglob and computes both the tagged and untagged populations — the correct denominator shape — but its assertion and failure message report only the numerator."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -68,3 +72,19 @@ notes: |
   and excluded).
 
   Independence applies to the DENOMINATOR, not to the rule applied per record.
+
+  ALREADY SATISFIED, FOR ONE SURFACE ONLY (2026-08-18, PO). KM-ADM-005 shipped a
+  denominator on the artifact map's test-covers edge: "244 of 607 done ACs carry no
+  covering test tag (measured 2026-08-13)". Two things to take from it:
+    - Its counting method is the SHAPE THIS L1 WANTS and is worth copying rather
+      than re-deriving: a filter-free rglob over the whole store root yields the
+      done population, and the tagged set is joined against it on a separate key
+      (the `# covers:` tag). Filter-free enumeration, independent join key — exactly
+      ACS-1100a-2, arrived at independently. Its one subtlety is worth carrying into
+      L2: it strips quotes from ids before joining, because a quoted `id: "GE-114-1"`
+      would otherwise not match its bare-token tag and four records were spuriously
+      counted as untagged. A join-key normalisation bug IS a denominator bug.
+    - It is a hand-typed constant in a prose note and a python module constant, with
+      a measurement date attached. It will rot, and TQ-400 has already produced a
+      second, different figure for the same population. This L1 is what stops that;
+      when it builds, generate the figure and leave the shipped note working.
