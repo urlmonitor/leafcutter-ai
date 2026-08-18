@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -63,12 +63,76 @@ doc_links:
     relationship: implements
     status: exists
     relevance: "The fixed, code-defined phase order the review must be inserted into: today Worktree, Resolve, Test Writer, Coder, Commit, Pull Request. The review belongs between Coder and Commit."
+assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_review_verdict:
+      type: object
+      description: "Review-phase payload consumed between the green+coverage gate and the commit dispatch: {verdict_obtained: bool, high_findings: [str], medium_findings: [str], low_suppressed_count: int, message: str}. The commit dispatch is reachable only when verdict_obtained is true AND high_findings is empty. A non-empty high_findings list, or verdict_obtained false/absent/unparseable, ends the run before the commit dispatch; the blocking findings are echoed verbatim in the terminal message."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The review must be an awaited dispatch whose returned verdict is read by a guard sitting between the green+coverage gate and the commit dispatch. Adding the phase to meta.phases, or dispatching the reviewer without branching on what it returned, does not satisfy this criterion: the commit dispatch must be unreachable on every path that has not first read a verdict. One guard site, not a convention."
+    - "The blocking decision is taken solely on the class the pr-reviewer agent assigned to each finding. The run must not re-derive, threshold, count, or infer severity from any other signal — message text, total finding count, agent exit status, or the presence of an escalation section. No new confidence vocabulary is introduced; pr-reviewer's own medium-cluster promotion to high is already reflected in what it returns."
+    - "Fail closed on an unusable verdict. A missing key, a null, an unparseable payload, or a schema-nonconforming reply must take the not-committed branch via the same plain-falsy read already used for the red-baseline gate_passed key, so version skew and an explicit 'no verdict' behave identically. No default-true, no `|| true`, no optional read that yields undefined-as-pass. The terminal outcome must state that no verdict was obtained rather than reporting zero findings."
+    - "What is submitted for review is the run's uncommitted working diff, read by the reviewer from the run's own worktree. A dispatch that instead hands over the coder's files_modified list, the coder's message, or any run-composed account of the change does not satisfy the criterion."
+    - "A run stopped by review has claimed ACs in in_progress and has committed nothing, so that branch must release its own claims exactly as every other pre-commit halt branch does (BO-2400f-10). A review-blocked branch that returns without releasing leaves the connected set stuck in in_progress."
+    - "On the proceed path the medium- and low-confidence findings are carried into the terminal payload without altering its status; on the blocked path every blocking finding is named in the message. Neither path may collapse findings into a bare count."
+    - "This criterion does not relax BO-2400f-4-vi: a review-blocked run opened no pull request, so its terminal payload is a halt naming review as the failing phase — never an 'ok' carrying a warning, and never the 'pull request opened but blocked' outcome, which asserts that a pull request exists."
+    - "Covering tests must EXECUTE the workflow under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2 with label_responses stubbing the review dispatch) and assert on the recorded downstream dispatches — the presence or absence of the commit and pull-request calls. A test that greps fast-lane-ship.js for a reviewer string, a phase name, or source-text ordering is not acceptable evidence: it passes on dead code, and this same lane already shipped a runner whose gates never executed behind exactly that kind of test (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
 delivers_to:
   agent: commit
   contract: "A review verdict for the run's working diff, obtained before the commit step. The commit step runs only on a verdict that carries no high-confidence findings; a verdict with high-confidence findings, or no verdict at all, stops the run short of committing."
 expects_from: null
 test_required: true
+test_spec:
+  - name: test_high_confidence_finding_prevents_commit_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executed under the E2 harness with the review dispatch stubbed to return one high-confidence finding, the run records no commit dispatch and no pull-request dispatch."
+  - name: test_blocked_outcome_names_each_high_confidence_finding
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The terminal payload of a review-blocked run carries the text of every blocking finding, not a count or a bare 'review failed'."
+  - name: test_medium_and_low_only_verdict_permits_commit_and_pr
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With the review stub returning only medium- and low-confidence findings, the commit and pull-request dispatches both occur and the non-blocking findings appear in the terminal payload without changing its status."
+  - name: test_absent_verdict_does_not_commit
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the review stub returning no readable verdict (empty object, null, or a payload missing the verdict field), the run records no commit dispatch and reports that no verdict was obtained — an unobtainable verdict is never treated as a clean review."
+  - name: test_review_dispatch_precedes_commit_in_executed_call_order
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "In a fully green harness run the recorded agent-call sequence places the pr-reviewer dispatch before the commit dispatch, asserted on executed call order rather than on source text."
+  - name: test_review_dispatch_targets_the_uncommitted_worktree_diff
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The captured prompt of the executed reviewer dispatch directs the reviewer at the uncommitted diff in the run's worktree, rather than supplying the coder's files_modified list or message as the thing to review."
+  - name: test_review_blocked_run_releases_its_own_claims
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "A run halted by a high-confidence finding still dispatches the release step for the ACs it claimed, so review-blocked ACs are not left stuck in in_progress."
 origin_agent: BrainCandy
 created: 2026-08-18
 amended_by: []
