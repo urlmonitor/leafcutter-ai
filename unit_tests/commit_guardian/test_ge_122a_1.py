@@ -91,6 +91,15 @@ DECISION HISTORY
   because templates/scripts/commit_guardian/check_identifier_uniqueness.py
   does not exist yet and the decision-namespace hook is registered nowhere
   (see the test-writer sign-off comment for the exact captured output).
+- 2026-08-18 [GE-122a-1/test-writer, performance regression]: Added
+  TestUniquenessPassPerformanceBudget per pr-reviewer's finding that
+  run_uniqueness_pass('.') measured 10.2-11.4s over three runs against this
+  repo's real collection (3092 AC yaml, 35 decisions, 24 diagrams, 289 work
+  items) -- over 2x the ticket's own <5s Implementation Notes budget, and
+  isolated to scan_acceptance_criteria's per-file yaml.safe_load. No prior
+  test in this file asserted on wall-clock time, which is exactly why the
+  regression was invisible to a fully green suite. Verified RED: see the
+  test-writer sign-off comment for the measured elapsed time.
 """
 
 from __future__ import annotations
@@ -100,6 +109,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -124,6 +134,34 @@ _CLEAN_ENV_TEMPLATE = {"PATH": "/usr/bin:/bin:/usr/local/bin"}
 _NS_AC = "acceptance-criteria"
 _NS_DECISIONS = "decisions"
 _NS_DIAGRAMS = "diagrams"
+_NS_WORK_ITEMS = "work-items"
+
+# Performance regression guard constants -- see
+# TestUniquenessPassPerformanceBudget below. Sized to roughly this repo's
+# own real collection as measured directly by a pr-reviewer pass (3092 AC
+# yaml, 35 decisions, 24 diagrams, 289 work items), rounded to clean counts.
+_PERF_AC_COUNT = 3000
+_PERF_DECISION_COUNT = 35
+_PERF_DIAGRAM_COUNT = 24
+_PERF_WORK_ITEM_COUNT = 289
+_PERF_WORK_ITEM_FOLDERS = ("00_inbox", "01_todo", "99_done")
+_PERF_WALLCLOCK_CEILING_SECONDS = 8.0
+
+# A representative Gherkin criteria block, repeated to approximate this
+# repo's own real AC record size (measured average 2677 bytes/file across
+# 3092 on-disk records -- a trivial 3-key flat dict does NOT reproduce the
+# regression: yaml.safe_load's per-file cost scales with content size, not
+# merely file count, so an unrealistically tiny fixture record would leave
+# this test falsely green against the real defect).
+_PERF_CRITERIA_BLOCK = (
+    "Given a staged artifact that exercises a representative Gherkin scenario\n"
+    "And the record body contains a realistic number of clauses similar to a\n"
+    "  real on-disk acceptance-criteria record in this store\n"
+    "When the whole-collection uniqueness pass reads and parses the file\n"
+    "Then the per-file parse cost is comparable to a real AC record's cost\n"
+    "And the fixture is not an unrealistically tiny flat dict\n"
+    "And this multi-line block approximates real criteria length.\n"
+) * 5
 
 
 def _load_module():
@@ -277,6 +315,87 @@ def _build_fixture_collection(root: Path, *, contested: bool) -> None:
             diagram_root / f"c2-{600 + i}-standalone.md",
             f"# c2-{600 + i}\n",
         )
+
+
+def _build_volume_fixture_collection(root: Path) -> dict:
+    """Build a real on-disk collection sized to roughly this repo's own.
+
+    Mirrors the exact per-namespace scale a pr-reviewer pass measured
+    directly against this repository's real collection (3092 AC yaml files,
+    35 decisions, 24 diagrams, 289 work items), rounded to clean,
+    easy-to-assert counts. Every AC record is written with yaml.safe_dump
+    (Fixture Authenticity Rule -- never a hand-typed YAML literal); the
+    work-items lifecycle manifest is written with json.dump, never a
+    hand-typed JSON literal. No collisions are planted anywhere: this
+    fixture exists purely to measure wall-clock time and inspected counts at
+    realistic volume -- collision detection is already covered by
+    TestContestedCollectionReporting / TestRepairedCollectionPasses above.
+
+    Args:
+        root: Tempdir root to build the fixture collection under.
+
+    Returns:
+        Mapping of namespace name -> the exact count of artifacts written
+        for that namespace, for an independent ground-truth comparison
+        against verdict.namespaces[name].inspected_count.
+    """
+    ac_root = root / "docs" / "acceptance-criteria" / "perf-fixture-component"
+    adr_root = root / "docs" / "architecture" / "adrs"
+    diagram_root = root / "docs" / "architecture" / "diagrams"
+    tickets_root = root / "tickets"
+
+    for i in range(_PERF_AC_COUNT):
+        _write_ac_yaml(
+            ac_root / f"GE-PERF-{i}-standalone.yaml",
+            {
+                "id": f"GE-PERF-{i}",
+                "components": ["commit_guardian"],
+                "title": f"Perf-volume fixture AC record number {i} with a realistically long title",
+                "component": "guardrail-engine",
+                "status": "active",
+                "level": "L2",
+                "readiness": "draft",
+                "work_status": "done",
+                "priority": "high",
+                "criteria": _PERF_CRITERIA_BLOCK,
+                "origin_agent": "business-analyst-v2",
+                "created": "2026-08-18",
+                "created_by_ticket": f"tickets/00_inbox/TICKET-perf-{i}.md",
+                "covered_by": [f"unit_tests/commit_guardian/test_perf_{i}.py"],
+                "implemented_by": [f"templates/scripts/commit_guardian/hooks/perf_{i}.py"],
+            },
+        )
+
+    for i in range(_PERF_DECISION_COUNT):
+        _write_text(
+            adr_root / f"ADR-{2000 + i}-perf-volume.md",
+            f"# ADR-{2000 + i}\n\nStatus: accepted\n",
+        )
+
+    for i in range(_PERF_DIAGRAM_COUNT):
+        _write_text(
+            diagram_root / f"c2-{2000 + i}-perf-volume.md",
+            f"# c2-{2000 + i}\n",
+        )
+
+    lifecycle_manifest = {"folders": [{"path": f"tickets/{name}"} for name in _PERF_WORK_ITEM_FOLDERS]}
+    tickets_root.mkdir(parents=True, exist_ok=True)
+    with open(tickets_root / "ticket_lifecycle.json", "w", encoding="utf-8") as fh:
+        json.dump(lifecycle_manifest, fh)
+
+    for i in range(_PERF_WORK_ITEM_COUNT):
+        folder_path = tickets_root / _PERF_WORK_ITEM_FOLDERS[i % len(_PERF_WORK_ITEM_FOLDERS)]
+        _write_text(
+            folder_path / f"TICKET-PERF-{i}.md",
+            "---\nstatus: todo\n---\n# Perf-volume ticket\n",
+        )
+
+    return {
+        _NS_AC: _PERF_AC_COUNT,
+        _NS_DECISIONS: _PERF_DECISION_COUNT,
+        _NS_DIAGRAMS: _PERF_DIAGRAM_COUNT,
+        _NS_WORK_ITEMS: _PERF_WORK_ITEM_COUNT,
+    }
 
 
 def _expected_claimant_paths(root: Path) -> dict:
@@ -806,6 +925,110 @@ class TestDecisionNamespaceGateRegistration(unittest.TestCase):
                     "NOT block a commit staging two decision records both claiming "
                     f"number 029. stdout={hook_result.stdout} "
                     f"stderr={hook_result.stderr}"
+                ),
+            )
+
+
+# ---------------------------------------------------------------------------
+# Performance regression guard -- wall-clock upper bound
+# ---------------------------------------------------------------------------
+
+
+class TestUniquenessPassPerformanceBudget(UniquenessPassFixtureTestCase):
+    """test_uniqueness_pass_completes_within_generous_wallclock_ceiling.
+
+    Regression guard for the performance defect a pr-reviewer pass measured
+    directly against this repository's own real collection:
+    run_uniqueness_pass('.') took 10.2-11.4s over three runs (3092 AC yaml
+    files, 35 decisions, 24 diagrams, 289 work items); an independent
+    re-measurement on the same collection was worse still, at 13.6/14.9/16.0s.
+    Either way it is multiples of this
+    ticket's own Implementation Notes budget of "under 5 seconds at commit
+    time... a commit-time gate slower than that gets bypassed." pr-reviewer
+    isolated the cost to scan_acceptance_criteria alone (10.9s for 3092
+    files): every *.yaml is opened and run through yaml.safe_load purely to
+    read the top-level `id` field. NO EXISTING TEST elsewhere in this file
+    asserts on wall-clock time -- that is exactly why the regression was
+    invisible to a fully green suite.
+    """
+
+    def test_uniqueness_pass_completes_within_generous_wallclock_ceiling_at_realistic_scale(self):
+        # covers: GE-122a-1
+        """Assert an 8-second upper bound -- a GENEROUS ceiling, NOT the
+        ticket's 5-second target.
+
+        The 3-second margin above the 5s commit-time target absorbs
+        ordinary machine variance (CI runner contention, cold filesystem
+        cache, a slower dev laptop) so this test is not flaky for reasons
+        unrelated to the code under test. The point of an 8s ceiling is to
+        catch an ORDER-OF-MAGNITUDE regression like the one pr-reviewer
+        actually measured (10.2-11.4s, over 2x budget) -- not to
+        micro-benchmark down to the ticket's literal number, which would
+        make this test a source of noise rather than a real regression
+        guard.
+
+        Fixture CONSTRUCTION (writing ~3348 files to disk across all four
+        namespaces) is deliberately EXCLUDED from the timed region -- only
+        the run_uniqueness_pass call itself is timed. A pass that inspected
+        nothing (or only a fraction of the fixture) would otherwise be
+        trivially fast and falsely green against this wall-clock assertion,
+        so every namespace's inspected_count is checked against the EXACT
+        count of artifacts this fixture actually wrote -- never a bare
+        "> 0" check, which cannot distinguish a real full pass from a
+        partial or empty one.
+
+        FAILS TODAY: run_uniqueness_pass takes 10+ seconds against a
+        collection sized like this one, because scan_acceptance_criteria
+        opens and yaml.safe_load's every one of the 3000 AC fixture files
+        purely to read their top-level `id` field. This assertion is
+        expected to be RED until python-coder fixes the AC namespace scan
+        (e.g. a cheap id-only fast path before falling back to full
+        yaml.safe_load, or parallelizing the per-file reads).
+        """
+        expected_counts = _build_volume_fixture_collection(self.root)
+
+        start = time.perf_counter()
+        verdict = _mod.run_uniqueness_pass(self.root)
+        elapsed = time.perf_counter() - start
+
+        self.assertLess(
+            elapsed,
+            _PERF_WALLCLOCK_CEILING_SECONDS,
+            msg=(
+                f"run_uniqueness_pass took {elapsed:.2f}s against a fixture sized to "
+                f"roughly this repo's real collection ({sum(expected_counts.values())} "
+                f"total artifacts across {sorted(expected_counts)}) -- over the "
+                f"{_PERF_WALLCLOCK_CEILING_SECONDS}s generous ceiling. The ticket's own "
+                "Implementation Notes budget is under 5s at commit time ('a commit-time "
+                "gate slower than that gets bypassed'); this 8s ceiling only catches an "
+                "order-of-magnitude regression, so overshooting it is a real defect, not "
+                "machine noise."
+            ),
+        )
+
+        self.assertTrue(
+            verdict.passed,
+            msg=(
+                "This fixture plants no collisions in any namespace; a non-passing "
+                "verdict indicates a bug in the fixture builder, not a genuine finding."
+            ),
+        )
+        for ns_name, expected_count in expected_counts.items():
+            self.assertIn(
+                ns_name,
+                verdict.namespaces,
+                msg=f"Verdict is missing the {ns_name!r} namespace entirely.",
+            )
+            actual_count = verdict.namespaces[ns_name].inspected_count
+            self.assertEqual(
+                actual_count,
+                expected_count,
+                msg=(
+                    f"Namespace {ns_name!r} inspected_count must equal the exact count "
+                    f"of artifacts this fixture wrote ({expected_count}), got "
+                    f"{actual_count}. A pass that inspected zero (or only a partial "
+                    "fixture) would otherwise look trivially fast and falsely satisfy "
+                    "the wall-clock ceiling above."
                 ),
             )
 

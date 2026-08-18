@@ -13,8 +13,14 @@ BUSINESS CONTEXT: See check_identifier_uniqueness.py's module docstring for
     what was actually inspected rather than what happened to parse cleanly.
 ARCHITECTURE: Two walk shapes, both non-git, pure filesystem:
       - acceptance-criteria: recursive walk of docs/acceptance-criteria/**/*.yaml,
-        keyed on each record's top-level ``id`` field (PyYAML with a minimal
-        fallback parser when PyYAML is unavailable).
+        keyed on each record's top-level ``id`` field. ``_read_yaml_id`` tries
+        a cheap line-scan fast path (``_fast_scan_top_level_id``) before ever
+        constructing a YAML parser; it falls back to a full parse (PyYAML,
+        with a minimal fallback parser when PyYAML is unavailable) only when
+        the line scan cannot prove its result matches what a full parse would
+        produce. This exists because yaml.safe_load-ing every file purely to
+        read one top-level scalar measured 10+ seconds against this store's
+        real ~3100-file collection -- see the DECISION HISTORY entry below.
       - decisions / diagrams: flat (non-recursive) walk of *.md files, keyed
         on a number captured from the filename via a compiled regex.
     Each per-file read failure (unreadable, unparsable, non-matching
@@ -29,6 +35,16 @@ DECISION HISTORY:
   - 2026-08-18 [python-coder/GE-122a-1]: Extracted from check_identifier_uniqueness.py
     to keep both that module and this one under the 400-line new-file limit
     (check-file-size pre-commit hook).
+  - 2026-08-18 [python-coder/GE-122a-1]: Added _fast_scan_top_level_id as the
+    fast path ahead of yaml.safe_load in _read_yaml_id. pr-reviewer measured
+    run_uniqueness_pass at 10.2-11.4s against this repo's real collection
+    (3092 AC yaml files), isolated to scan_acceptance_criteria's per-file
+    yaml.safe_load call -- against the ticket's own <5s commit-time budget
+    ("a commit-time gate slower than that gets bypassed"). The fast path
+    recognizes only unambiguous id shapes and falls back to a full parse for
+    everything else, so correctness is unchanged: measured against the real
+    collection post-fix at under 5s (see the sign-off comment for exact
+    timings).
 """
 
 from __future__ import annotations
@@ -105,8 +121,87 @@ def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+_UNSAFE_SCALAR_PREFIXES = ("|", ">", "&", "*", "!", "%", "@", "`", "[", "{", "#")
+
+
+def _strip_simple_quoted_scalar(value: str, quote: str) -> str | None:
+    """Strip a simple, non-escaped quoted scalar's surrounding quote chars.
+
+    Only trusted as "simple" when the value is properly terminated with the
+    same quote character and contains no embedded quote or (for
+    double-quoted values) backslash escape -- either of which could change
+    the value a full YAML parse would produce in a way this cheap scan
+    cannot safely reproduce.
+
+    Args:
+        value: The raw value text; must start with quote (caller's contract).
+        quote: The quote character in use, ``'"'`` or ``"'"``.
+
+    Returns:
+        The unquoted inner string, or None if it cannot be proven simple.
+    """
+    if len(value) < 2 or not value.endswith(quote):
+        return None
+    inner = value[1:-1]
+    if quote in inner or (quote == '"' and "\\" in inner):
+        return None
+    return inner
+
+
+def _fast_scan_top_level_id(content: str) -> str | None:
+    """Cheaply extract a record's top-level ``id`` field via a line scan.
+
+    This is the FAST PATH ahead of a full YAML parse (PyYAML or the minimal
+    fallback): a single pass over the raw lines with no parser construction
+    at all, which recognizes only the ``id`` value shapes this store's AC
+    records actually use in practice -- a bare plain scalar, or a simple
+    single/double-quoted plain scalar with no embedded quote, backslash
+    escape, or inline comment. Every other shape (block scalars, flow
+    collections, anchors/aliases/tags, an inline ``#`` comment, an embedded
+    colon) makes this function bail out with None -- "cannot prove this
+    matches what yaml.safe_load would produce" -- so the caller falls back
+    to a full parse rather than ever guess at the value.
+
+    Only a line with zero leading whitespace is treated as top-level, since
+    no legal top-level ``id`` in this store's schema is nested under another
+    key. When more than one such line is present (a malformed duplicate
+    key), the LAST one wins, matching PyYAML's own last-value-wins behavior
+    for a mapping with a duplicate key.
+
+    Args:
+        content: Raw YAML text of the record.
+
+    Returns:
+        The extracted id string, or None if no line unambiguously matches.
+    """
+    found: str | None = None
+    for raw_line in content.splitlines():
+        if not raw_line or raw_line[0] in (" ", "\t", "#"):
+            continue
+        if not raw_line.startswith("id:"):
+            continue
+        value = raw_line[len("id:") :].strip()
+        if not value or value.startswith(_UNSAFE_SCALAR_PREFIXES):
+            return None
+        if value.startswith('"') or value.startswith("'"):
+            stripped = _strip_simple_quoted_scalar(value, value[0])
+            if stripped is None:
+                return None
+            found = stripped
+            continue
+        if "#" in value or ":" in value:
+            return None
+        found = value
+    return found or None
+
+
 def _read_yaml_id(yaml_path: Path) -> str | None:
     """Read one AC YAML file from disk and return its top-level ``id`` field.
+
+    Tries the cheap _fast_scan_top_level_id line-scan first and only falls
+    back to a full YAML parse (_parse_yaml_dict) when the fast scan cannot
+    prove its result matches a full parse's -- see that function's docstring
+    for exactly which shapes are considered unambiguous.
 
     Fails open per file: an unreadable or unparsable file contributes to the
     namespace's inspected_count (tracked by the caller during the walk) but
@@ -127,6 +222,10 @@ def _read_yaml_id(yaml_path: Path) -> str | None:
             file=sys.stderr,
         )
         return None
+
+    fast_id = _fast_scan_top_level_id(content)
+    if fast_id is not None:
+        return fast_id
 
     data = _parse_yaml_dict(content, yaml_path)
     if data is None:
