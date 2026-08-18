@@ -102,7 +102,7 @@ def validate_required_fields(fm: dict[str, Any], filepath: str | None = None) ->
     document's own ``type`` as not component-linked (see
     ``doc_type_validators.is_component_exempt``) — the exemption follows the
     declaring file rather than a second hardcoded type check here, so the two
-    statements about the property cannot drift apart (AC GE-120).
+    statements about the property cannot drift apart (AC GE-118c).
 
     Args:
         fm: Parsed frontmatter dictionary.
@@ -529,6 +529,14 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-18 [business-analyst/GE-118c]: IDENTIFIER CLARIFICATION ONLY -- no
+  behaviour change, no code touched. The requirement tracked in the entry below
+  as ``GE-120`` was renumbered to ``GE-118c`` (``docs/acceptance-criteria/
+  guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118c.yaml``); ``GE-120``
+  was simultaneously claimed by an unrelated goal-level record whose 43-file
+  tree holds that id. The entry below keeps its own ``GE-120`` citations
+  because they record the identifier in use on 2026-08-18; resolve them to
+  ``GE-118c`` today.
 - 2026-08-18 [python-coder/GE-120]: Wired
   ``doc_type_validators.is_component_exempt()`` into
   ``validate_required_fields()`` so the ``components`` requirement is skipped

@@ -111,14 +111,17 @@ directory as `leafcutter/`, while this package installs as `leafcutter-ai/`, and
 self-hosted workspace target has no `config/` tree at all. `doc_types` fails loudly there;
 `diagram_types` fails quietly.
 
-**This is the exact failure GE-120 fixed in the sibling module on the same day.** That work
+**This is the exact failure GE-118c fixed in the sibling module on the same day.**
+(That requirement was tracked as `GE-120` until 2026-08-18, when the id was found to
+collide with an unrelated goal-level tree and the record was renumbered to `GE-118c`
+under `GE-118`.) That work
 removed the silent `except (json.JSONDecodeError, OSError): pass` and the `.exists()`
 fallthrough from `doc_type_validators.py`, on the stated grounds that "a guard that quietly
 answers a different question than the one it was configured with is enforcing a rule nobody
-wrote." `diagram_type_validators.py` is the file GE-120 copied its ancestor-walk pattern
+wrote." `diagram_type_validators.py` is the file GE-118c copied its ancestor-walk pattern
 *from*, and it still has the behaviour that was removed.
 
-**Fix direction.** Mirror GE-120 the rest of the way: raise a `FileNotFoundError` naming
+**Fix direction.** Mirror GE-118c the rest of the way: raise a `FileNotFoundError` naming
 the resolved path instead of substituting the constant, and fix the path resolution for
 both modules together. If a fallback must be retained for consumer installs, log it at
 WARNING so it is at least observable — a narrowed enum reached in silence is

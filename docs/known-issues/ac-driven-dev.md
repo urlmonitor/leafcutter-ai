@@ -404,4 +404,18 @@ plus 4 `# covers: GE-120` tags in
 files for the tree. Left for a decision rather than done unilaterally, because it
 renames another author's AC and edits their tests.
 
+**Update — the collision is resolved (2026-08-18); the allocator defect above is NOT.**
+The loose L2 was renumbered from `GE-120` to `GE-118c` and moved into
+`docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/`, parented under
+`GE-118` (2 of 7 children -> 3 of 7). Its four `# covers:` tags moved with it and the test
+module was renamed to `test_ge_118c_doc_types_deployed_resolution.py`. The goal tree keeps
+`GE-120`, as its claim is test-enforced by `unit_tests/commit_guardian/test_ge_122e_1.py`.
+A suffix-shaped id was chosen over the free root number `GE-124` because
+`check_ac_parent_covered_by.py` and `scan_ac_orphans.py` derive a parent from id SHAPE and
+`derive_parent_id()` returns `None` for a root id — a root-shaped id would carry a parent
+link no gate could police. The evidence block above is left exactly as written: it records
+what was true on `main` when this issue was filed. **This entry stays open** — nothing about
+the id-allocation step has changed, and the next `/plan-feature` run can still mint a
+duplicate the same way.
+
 ---
