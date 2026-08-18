@@ -6,9 +6,9 @@ title: "Edge: a traceability block the gate cannot interpret is never a green si
 component: ac-driven-dev
 level: L3
 status: active
-req_status: draft
+req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 criteria: |
@@ -197,6 +197,14 @@ amended_by:
       LIST of dicts -- a THIRD shape, matching neither the producer nor the gate. It is
       harmless today only because its source_ac branch runs first. Both are recommended
       follow-ups, not in scope here.
+  - reason: "readiness approval"
+    by: BrainCandy
+    at: 2026-08-18
+    note: >-
+      req_status draft -> active and readiness draft -> approved. Approved by the user
+      after the it-po enrichment pass, so the AC is eligible for /build-ac selection.
+      criteria, work_status, priority and every technical field are untouched by this
+      amendment; it is a readiness flip only.
 superseded_by: null
 covered_by: []
 implemented_by: []
