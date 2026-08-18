@@ -11,6 +11,24 @@ ARCHITECTURE: Each function is self-contained and safe to import independently.
     All exceptions are caught and surfaced as printed warnings — helpers never
     abort the build. write_build_manifest supports both Direction A (template
     hashes) and Direction B (output_mappings) manifest sections.
+
+    BP-100k-1/-2 (2026-08-18): Direction A now records a fingerprint for
+    every template family the drift gates actually scan — not just
+    templates/agents/*.md — by mirroring check_build_drift.py's own scanned
+    set (templates/agents/*.md + templates/scripts/commit_guardian/*.py).
+    Direction B now records output_mappings keys at the CANONICAL,
+    shim-resolved path (e.g. ``.claude/agents/README.md``,
+    ``.agents/rules/foo.md``) that check_output_drift.py actually looks up,
+    rather than the pre-shim ``output_root``-relative path — the earlier
+    keys (e.g. ``agents/README.md``) never matched any real on-disk file, so
+    every deployed output was permanently "not in output_mappings". The
+    agents/commands/workflows/hooks families are derived from
+    build_phases._compute_phase_mappings() (the same enumeration build.py's
+    own collision guard uses) rather than a second hand-written inventory,
+    and translated to their canonical path via ``shim_map`` — the same
+    table install_shims() uses to create the shims — so a new deploy
+    phase or a new shim entry extends coverage on both sides without a
+    separate edit here.
 """
 
 from __future__ import annotations
@@ -30,6 +48,139 @@ from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
 
+# ---------------------------------------------------------------------------
+# Canonical (shimmed) output directory table — the SINGLE source of truth for
+# translating an output_root-relative deploy path (e.g. "agents/README.md")
+# into the canonical tool path check_output_drift.py actually scans (e.g.
+# ".claude/agents/README.md"). install_shims() uses this exact table (in
+# place, not copied) to create the shims; _compute_output_mappings() reuses
+# it to key output_mappings entries the same way — never a second,
+# independently-maintained copy. Named ``shim_map`` (lowercase, matching
+# install_shims()'s historical local-variable name) rather than an
+# ALL_CAPS module constant so it stays the literal `tests/
+# test_build_artifact_parity.py::TestShimMapCoversAllUserFacingCategories`
+# AST-parses for — a structural parity test unrelated to this ticket.
+# ---------------------------------------------------------------------------
+shim_map: list[tuple[str, str]] = [
+    (".claude/agents", "agents"),
+    (".claude/skills", "skills"),
+    (".claude/commands", "commands"),
+    (".claude/hooks", "hooks"),
+    (".claude/workflows", "workflows"),
+    (".gemini", "gemini"),
+    # Bridge pre-consolidation scripts/ paths to .leafcutter/scripts/ so that
+    # tests and hooks that reference scripts/commit_guardian/,
+    # scripts/doc_compliance/, and scripts/feedback/ still resolve after the
+    # ADR-004 consolidation moved those directories under .leafcutter/scripts/.
+    # Required for CI (fresh-clone) and for any test suite that adds these
+    # directories to sys.path at the old location (ADR-016).
+    ("scripts/commit_guardian", "scripts/commit_guardian"),
+    ("scripts/doc_compliance", "scripts/doc_compliance"),
+    ("scripts/feedback", "scripts/feedback"),
+]
+
+# Reverse lookup restricted to single-path-component output_rel entries —
+# those are the only ones usable as a per-file canonicalization prefix (the
+# multi-segment "scripts/commit_guardian" family is copied verbatim, not
+# rendered per-template-file by _compute_output_mappings).
+_OUTPUT_REL_TO_CANONICAL: dict[str, str] = {
+    output_rel: canonical_rel
+    for canonical_rel, output_rel in shim_map
+    if "/" not in output_rel
+}
+
+
+def _load_build_phases_module(package_root: Path):
+    """Load ``build_phases.py`` fresh from ``package_root/scripts``.
+
+    ``build_phases.py`` resolves its own module-level constants
+    (``TEMPLATES_DIR``, ``PACKAGE_ROOT``, ``REGISTRY_PATH``,
+    ``SKILLS_TEMPLATE_DIR``) from ``Path(__file__)`` at import time rather
+    than accepting ``package_root`` as a parameter. A bare
+    ``import build_phases`` would silently reuse whatever copy of the module
+    a PRIOR call already cached in ``sys.modules`` under that bare name —
+    reading the wrong package's templates whenever this function runs more
+    than once against a different ``package_root`` within the same process
+    (exactly the scenario this module's own test suite exercises with
+    multiple temp-directory synthetic packages). Loading via
+    ``importlib.util.spec_from_file_location`` under a name derived from
+    ``package_root`` guarantees a fresh, correctly-rooted module every call.
+
+    Args:
+        package_root: Root of the leafcutter package to load
+            ``build_phases.py`` from.
+
+    Returns:
+        The freshly executed ``build_phases`` module object.
+    """
+    module_path = package_root / "scripts" / "build_phases.py"
+    unique_name = f"_build_helpers_dyn_build_phases_{abs(hash(str(module_path)))}"
+    spec = importlib.util.spec_from_file_location(unique_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[unique_name] = module
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
+def _template_family(source: Path, templates_dir: Path) -> str | None:
+    """Return the top-level template family name for a source template path.
+
+    E.g. ``<templates_dir>/agents/foo.md`` -> ``"agents"``. Used to pick the
+    correct render step (compile_agent_template, inject_config, or a raw
+    copy) for a ``(source, target)`` pair produced by
+    ``build_phases._compute_phase_mappings``.
+
+    Args:
+        source: Absolute path to a template source file.
+        templates_dir: Absolute path to the package's ``templates/`` root.
+
+    Returns:
+        The first path component of ``source`` relative to ``templates_dir``,
+        or None if ``source`` is not under ``templates_dir``.
+    """
+    try:
+        rel = source.relative_to(templates_dir)
+    except ValueError:
+        return None
+    return rel.parts[0] if rel.parts else None
+
+
+def _canonicalize_output_path(
+    output_root_path: Path, output_root: Path, target_root: Path
+) -> Path | None:
+    """Translate an ``output_root``-relative deploy target into its canonical,
+    shim-resolved path under ``target_root``.
+
+    Deploy phases (build_agents, build_commands, build_workflows, build_hooks)
+    write into ``output_root`` (``.leafcutter/`` by default); ``install_shims``
+    then bridges each managed subdirectory to its canonical tool path (e.g.
+    ``.claude/agents``). ``check_output_drift.py`` looks up deployed files at
+    that canonical path, so ``output_mappings`` keys must use it too — this
+    reuses ``shim_map``, the exact table ``install_shims`` uses to create the
+    shims, rather than a second hardcoded translation.
+
+    Args:
+        output_root_path: Absolute path under ``output_root`` that a deploy
+            phase would write to.
+        output_root: Absolute path to the consolidated output directory.
+        target_root: Absolute path to the target project root.
+
+    Returns:
+        The canonical absolute path under ``target_root``, or None when
+        ``output_root_path`` is not under ``output_root`` or its top-level
+        directory has no canonical shim entry.
+    """
+    try:
+        rel = output_root_path.relative_to(output_root)
+    except ValueError:
+        return None
+    if not rel.parts:
+        return None
+    canonical_dir = _OUTPUT_REL_TO_CANONICAL.get(rel.parts[0])
+    if canonical_dir is None:
+        return None
+    return target_root / canonical_dir / Path(*rel.parts[1:])
+
 
 def _compute_output_mappings(
     package_root: Path,
@@ -44,11 +195,21 @@ def _compute_output_mappings(
     This gives check_output_drift.py a ground truth to compare against
     on-disk output files.
 
-    Covers the same template directories that build_phases.py writes:
-    - agents:    templates/agents/*.md  to  .claude/agents/
-    - skills:    templates/skills/**/* to  .claude/skills/
-    - workflows: templates/workflows/*.md to .claude/commands/
-    - rules:     templates/rules/*.md  to  .agents/rules/
+    Covers the same template directories that build_phases.py writes, keyed
+    by the CANONICAL (post-shim) path check_output_drift.py scans:
+    - agents:    templates/agents/*.md      to  .claude/agents/
+    - commands:  templates/commands/*.md    to  .claude/commands/
+    - workflows: templates/workflows/*.md   to  .claude/commands/
+    - hooks:     templates/hooks/*.py       to  .claude/hooks/
+    - skills:    templates/skills/**/*      to  .claude/skills/
+    - rules:     templates/rules/*.md       to  .agents/rules/
+    - workflow scripts: templates/workflows-js/*.js to .claude/workflows/
+
+    The agents/commands/workflows/hooks families are derived from
+    ``build_phases._compute_phase_mappings()`` — the same per-platform
+    enumeration build.py's own deploy-collision guard uses — rather than a
+    second hand-written inventory, then translated to their canonical path
+    via ``shim_map`` (BP-100k-2).
 
     commit-guardian, doc-compliance, and ticket-lifecycle templates are
     intentionally excluded because those output files are maintained by the
@@ -61,8 +222,9 @@ def _compute_output_mappings(
         config: Merged config dict used for placeholder injection.
 
     Returns:
-        Dict mapping output-relative-path strings to dicts with keys
-        ``template`` (template rel-path) and ``expected_output_hash`` (sha256).
+        Dict mapping canonical output-relative-path strings to dicts with
+        keys ``template`` (template rel-path) and ``expected_output_hash``
+        (sha256).
     """
     scripts_dir = package_root / "scripts"
     if str(scripts_dir) not in sys.path:
@@ -81,6 +243,9 @@ def _compute_output_mappings(
     skills_root = templates_dir / "skills" if (templates_dir / "skills").exists() else None
     repo_root = package_root.parent  # package_root is one level below repo root
 
+    output_root_name = config.get("output_root", ".leafcutter")
+    output_root = target_root / output_root_name
+
     mappings: dict[str, dict[str, str]] = {}
 
     def _add(template_path: Path, output_path: Path, content: str) -> None:
@@ -98,20 +263,56 @@ def _compute_output_mappings(
             "expected_output_hash": hashlib.sha256(content.encode("utf-8")).hexdigest(),
         }
 
-    # --- agents ---
-    agents_tpl_dir = templates_dir / "agents"
-    if agents_tpl_dir.is_dir():
-        for tpl in sorted(agents_tpl_dir.glob("*.md")):
-            if tpl.name.startswith("_"):
-                continue
-            compiled = compile_agent_template(
-                tpl, config,
+    # --- agents / commands / workflows(->commands) / hooks ---
+    # Derived from the SAME (source, target) enumeration build.py's collision
+    # guard uses, so a new deploy phase added there extends coverage here
+    # automatically instead of requiring a parallel edit. Best-effort: a
+    # package_root without a full scripts/ tree (e.g. a minimal fixture that
+    # only exercises one of the other families below) degrades to skipping
+    # just this section instead of aborting the whole computation.
+    build_phases_mod = None
+    phase_mappings: list[tuple[Path, Path]] = []
+    try:
+        build_phases_mod = _load_build_phases_module(package_root)
+        phase_mappings = build_phases_mod._compute_phase_mappings(output_root, config)
+    except (OSError, ImportError, AttributeError, ValueError) as exc:
+        _warn(f"could not enumerate deploy-phase output mappings: {exc}")
+
+    def _render_phase_source(source: Path, family: str | None) -> str | None:
+        """Render a phase-mapping source exactly as its deploy phase would.
+
+        Args:
+            source: Absolute path to the template source file.
+            family: Top-level template family name (from ``_template_family``).
+
+        Returns:
+            The rendered content string, or None if ``family`` is not one of
+            the families handled by this section (caller should skip it).
+        """
+        if family == "agents":
+            content = compile_agent_template(
+                source, config,
                 registry_path=registry_path,
                 agents=agents_list,
                 skills_root=skills_root,
             )
-            output = target_root / "agents" / tpl.name
-            _add(tpl, output, compiled)
+            return build_phases_mod._inject_components_table(content, package_root)
+        if family in ("commands", "workflows"):
+            return inject_config(source.read_text(encoding="utf-8"), config)
+        if family == "hooks":
+            return source.read_text(encoding="utf-8")
+        return None
+
+    for source, target in phase_mappings:
+        canonical_output = _canonicalize_output_path(target, output_root, target_root)
+        if canonical_output is None:
+            continue  # no canonical shim for this family (e.g. cursor/copilot)
+
+        content = _render_phase_source(source, _template_family(source, templates_dir))
+        if content is None:
+            continue
+
+        _add(source, canonical_output, content)
 
     # --- skills (markdown only) ---
     skills_tpl_dir = templates_dir / "skills"
@@ -121,23 +322,15 @@ def _compute_output_mappings(
                 continue
             rel = tpl.relative_to(skills_tpl_dir)
             compiled = compile_skill_template(tpl, config)
-            output = target_root / "skills" / rel
+            output = target_root / ".claude" / "skills" / rel
             _add(tpl, output, compiled)
-
-    # --- workflows ---
-    workflows_tpl_dir = templates_dir / "workflows"
-    if workflows_tpl_dir.is_dir():
-        for tpl in sorted(workflows_tpl_dir.glob("*.md")):
-            text = inject_config(tpl.read_text(encoding="utf-8"), config)
-            output = target_root / "commands" / tpl.name
-            _add(tpl, output, text)
 
     # --- rules ---
     rules_tpl_dir = templates_dir / "rules"
     if rules_tpl_dir.is_dir():
         for tpl in sorted(rules_tpl_dir.glob("*.md")):
             text = inject_config(tpl.read_text(encoding="utf-8"), config)
-            output = target_root / "rules" / tpl.name
+            output = target_root / ".agents" / "rules" / tpl.name
             _add(tpl, output, text)
 
     # --- workflow scripts (JS, no compilation — raw copy) ---
@@ -145,7 +338,7 @@ def _compute_output_mappings(
     if workflows_js_dir.is_dir():
         for tpl in sorted(workflows_js_dir.glob("*.js")):
             content = tpl.read_text(encoding="utf-8")
-            output = target_root / "workflows" / tpl.name
+            output = target_root / ".claude" / "workflows" / tpl.name
             _add(tpl, output, content)
 
     return mappings
@@ -160,8 +353,12 @@ def write_build_manifest(
     """Write .build_manifest.json with template hashes and expected output hashes.
 
     The ``templates`` section records the SHA-256 content hash of every .md file
-    under ``package_root/templates/agents/`` (backward-compatible with
-    check_build_drift.py — Direction A detection).
+    under ``package_root/templates/agents/`` AND every .py file under
+    ``package_root/templates/scripts/commit_guardian/`` (backward-compatible
+    with, and mirroring the exact scope of, check_build_drift.py's own two
+    scanned template trees — Direction A detection). Without the second tree,
+    every commit-guardian hook template is permanently "not in manifest" and
+    can never be drift-checked (BP-100k-1).
 
     The ``output_mappings`` section records, for each template to output pair managed
     by build.py, the expected SHA-256 of what build.py would write to the output
@@ -193,6 +390,19 @@ def write_build_manifest(
     for tpl_path in sorted(templates_dir.rglob("*.md")):
         key = tpl_path.relative_to(repo_root).as_posix()
         template_hashes[key] = hashlib.sha256(tpl_path.read_bytes()).hexdigest()
+
+    # Commit-guardian hook templates: check_build_drift.py scans this second
+    # template tree independently (its own _collect_py_template_files()), so
+    # its fingerprints must live in the same manifest or every hook script
+    # edit is permanently reported "not in manifest" (BP-100k-1). Mirrors
+    # that collector exactly: all .py files, __pycache__ excluded.
+    cg_templates_dir = package_root / "templates" / "scripts" / "commit_guardian"
+    if cg_templates_dir.is_dir():
+        for tpl_path in sorted(cg_templates_dir.rglob("*.py")):
+            if "__pycache__" in tpl_path.parts:
+                continue
+            key = tpl_path.relative_to(repo_root).as_posix()
+            template_hashes[key] = hashlib.sha256(tpl_path.read_bytes()).hexdigest()
 
     # --- Direction B: expected output hashes (new output_mappings section) ---
     output_mappings: dict[str, dict[str, str]] = {}
@@ -326,24 +536,9 @@ def install_shims(
     if output_root is None:
         output_root = target_root / config.get("output_root", ".leafcutter")
 
-    shim_map: list[tuple[str, str]] = [
-        (".claude/agents", "agents"),
-        (".claude/skills", "skills"),
-        (".claude/commands", "commands"),
-        (".claude/hooks", "hooks"),
-        (".claude/workflows", "workflows"),
-        (".gemini", "gemini"),
-        # Bridge pre-consolidation scripts/ paths to .leafcutter/scripts/ so that
-        # tests and hooks that reference scripts/commit_guardian/,
-        # scripts/doc_compliance/, and scripts/feedback/ still resolve after the
-        # ADR-004 consolidation moved those directories under .leafcutter/scripts/.
-        # Required for CI (fresh-clone) and for any test suite that adds these
-        # directories to sys.path at the old location (ADR-016).
-        ("scripts/commit_guardian", "scripts/commit_guardian"),
-        ("scripts/doc_compliance", "scripts/doc_compliance"),
-        ("scripts/feedback", "scripts/feedback"),
-    ]
-
+    # Uses the module-level shim_map directly (single source of truth,
+    # shared with _compute_output_mappings' canonical-path translation) —
+    # never a second, independently-maintained copy of this table.
     results: list[dict[str, str]] = []
 
     for canonical_rel, output_rel in shim_map:
@@ -628,6 +823,33 @@ def install_hooks(target_root, dry_run=False):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-18 [python-coder/EPIC-BuildPipelinePhantomRemediation/07]: (#BP-100k-1/-2)
+#   Fixed two blind spots that made the drift gates report every non-agent
+#   template and every real deployed output as absent/unregistered while
+#   exiting clean. (1) Direction A (template_hashes) only hashed
+#   templates/agents/*.md; check_build_drift.py separately scans
+#   templates/scripts/commit_guardian/*.py and looked those keys up in the
+#   same manifest, so every commit-guardian hook template was permanently
+#   "not in manifest". write_build_manifest() now also hashes that tree,
+#   mirroring check_build_drift.py's own two-directory scan exactly.
+#   (2) Direction B (output_mappings) keyed entries by the pre-shim,
+#   output_root-relative path (e.g. "agents/README.md"), but
+#   check_output_drift.py looks up the CANONICAL, post-shim path (e.g.
+#   ".claude/agents/README.md") — no real deployed file ever matched.
+#   _compute_output_mappings() now derives the agents/commands/workflows/
+#   hooks families from build_phases._compute_phase_mappings() (the same
+#   enumeration build.py's own collision guard uses) and translates each
+#   target through the module-level shim_map — the exact table
+#   install_shims() uses to create the shims (both now read the SAME
+#   module-level list; install_shims() previously defined its own local
+#   copy) — rather than a second hardcoded inventory. skills/rules/
+#   workflow-js entries were also re-keyed onto their
+#   canonical path (.claude/skills, .agents/rules, .claude/workflows).
+#   Added _load_build_phases_module() to load build_phases.py by file path
+#   under a name derived from package_root: build_phases.py resolves
+#   TEMPLATES_DIR/PACKAGE_ROOT from its own __file__ at import time, so a
+#   bare `import build_phases` would silently reuse a stale module cached
+#   under a different package_root within the same process.
 # - 2026-05-15 10:15 [python-coder/EPIC-PortableSQLAgents/ticket-01]: (#EPIC-LeafcutterMVP/01)
 #   Created this module by extracting write_build_manifest, _seed_docs,
 #   _update_diagrams, and _install_shims from build.py. The extraction

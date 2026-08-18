@@ -174,14 +174,33 @@ def test_install_shims_does_not_use_nested_claude_path(
 
 
 # ---------------------------------------------------------------------------
-# Test D — _compute_output_mappings() records output_root/workflows/<name>, not .claude/
+# Test D — _compute_output_mappings() keys workflow JS at the path the gate scans
 # ---------------------------------------------------------------------------
 
 def test_compute_output_mappings_workflow_js_uses_correct_output_key(
     tmp_path, workflows_js_fixture
 ):
-    """_compute_output_mappings() must record workflow JS outputs under
-    <target_root>/workflows/<name>, not <target_root>/.claude/workflows/<name>.
+    """_compute_output_mappings() must key workflow JS outputs at
+    <target_root>/.claude/workflows/<name> — the shim-resolved path.
+
+    NOTE (BP-100k-2, 2026-08-18): this assertion was inverted until BP-100k-2.
+    It previously required the key NOT to contain '.claude/workflows', which
+    conflated two different things:
+
+      * where the build WRITES the file — `output_root/workflows/<name>`, the
+        BP-811 fix that Test A above still guards; and
+      * how the manifest KEYS that output for lookup.
+
+    The output-drift gate resolves a staged file against the mapping, and
+    `check_output_drift.py` scans `repo_root / ".claude" / "workflows"` (see
+    its `_OUTPUT_DIRS`). So a mapping keyed at the un-prefixed write path is
+    never found by the gate for any staged workflow JS, and the gate reports
+    the file as unregistered — which BP-100k-2 exists to eliminate.
+
+    Keying at the shim path is therefore correct and Test A is unaffected: the
+    file is still written to `output_root/workflows/`, and `install_shims()`
+    exposes it at `.claude/workflows/`. Do not re-invert this without first
+    re-reading `_OUTPUT_DIRS` in check_output_drift.py.
     """
     fake_target = tmp_path / ".leafcutter"
     fake_target.mkdir(parents=True)
@@ -210,11 +229,11 @@ def test_compute_output_mappings_workflow_js_uses_correct_output_key(
     )
 
     for key in workflow_js_keys:
-        # The key should not contain '.claude/workflows' — it should be just 'workflows'
-        assert ".claude/workflows" not in key, (
-            f"_compute_output_mappings() emitted broken output key '{key}' containing "
-            "'.claude/workflows' — fix not applied to _compute_output_mappings()"
-        )
-        assert "workflows/" in key, (
-            f"_compute_output_mappings() output key '{key}' does not contain 'workflows/'"
+        # The key must be the shim-resolved path the output-drift gate scans.
+        assert ".claude/workflows/" in key, (
+            f"_compute_output_mappings() emitted output key '{key}' without "
+            "'.claude/workflows/'. check_output_drift.py scans "
+            "repo_root/.claude/workflows, so a key at any other path is never "
+            "matched against a staged workflow JS file and the gate reports it "
+            "as unregistered (BP-100k-2)."
         )
