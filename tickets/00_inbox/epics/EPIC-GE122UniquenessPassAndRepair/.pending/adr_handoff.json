@@ -1,0 +1,10 @@
+{
+  "adr_id": "ADR-034",
+  "affected_files": [
+    "templates/scripts/commit_guardian/check_identifier_uniqueness.py",
+    "templates/scripts/commit_guardian/check_adr_collision.py",
+    "templates/scripts/commit_guardian/commit_guardian.json",
+    "unit_tests/commit_guardian/test_ge_122a_1.py"
+  ],
+  "one_line_summary": "Uniqueness is one importable whole-collection pass returning a fixed verdict object with one finding per contested number and a mandatory per-namespace inspected count; inspection stays whole-collection while commit blocking is diff-scoped."
+}
