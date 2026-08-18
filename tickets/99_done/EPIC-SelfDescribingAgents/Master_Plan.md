@@ -1,4 +1,34 @@
+---
+title: "EPIC: Self-Describing Agents (INF-600)"
+type: epic
+status: done
+change_target: pipeline
+risk_surface: internal
+components:
+  - build_pipeline
+created: 2026-06-05
+depends_on: []
+priority: high
+requires_diagram: false
+requires_adr: false
+---
+
 # EPIC: Self-Describing Agents (INF-600)
+
+> **Recovered 2026-08-18.** This plan was the sole occupant of
+> `tickets/99_rejected/EPIC-SelfDescribingAgents/`, moved there by PR #275 as an
+> "empty shell" — accurate as a description of the folder, which held no tickets,
+> but the folder was not empty of *content*: `tickets/99_done/EPIC-SelfDescribingAgents/`
+> has the five tickets and **no plan at all**, so this was the epic's only
+> Master_Plan and deleting the folder would have destroyed it. Moved here instead.
+>
+> Frontmatter added in the same pass: the file had none, and the ticket
+> frontmatter guard requires it. `status: done` reflects the verified state —
+> `scripts/generate_agent_cards.py`, `scripts/registry_validator.py`, 63 cards
+> under `docs/agents/cards/` and `test_agent_verification_consistency.py` are all
+> live, and all five tickets are signed off.
+>
+> Recovered by branch `chore/epic-duplicate-repair`.
 
 ## Goal
 Every agent describes itself completely enough that its full profile is assembled automatically — never hand-written, never stale.

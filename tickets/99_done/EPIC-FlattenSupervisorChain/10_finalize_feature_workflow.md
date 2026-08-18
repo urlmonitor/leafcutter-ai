@@ -1,6 +1,8 @@
 ---
 title: "Convert finalize-feature to a JS workflow script"
-status: todo
+status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
 created: 2026-06-02
@@ -250,3 +252,60 @@ placeholder_signature: "Invoke the .finalize-feature. agent"
 ## Comments
 
 _(Append-only log — leave blank when authoring.)_
+
+### 2026-08-18 — lifecycle reconciliation (status: todo → done)
+
+**The deliverable is live; this ticket's phases never ran.** Both are true and
+neither should be inferred from the other.
+
+Verified before this status was changed:
+`templates/workflows-js/finalize-feature.js` exists (2,383 lines) with
+`meta.name === "finalize-feature"` at line 40, and carries the leaf-invariant
+comment block stating `workflow()` is never called. That is what this ticket
+asked for.
+
+The `agents:` map above is deliberately left showing `architect-review`,
+`pr-reviewer`, `commit` and `pull-request` as `needed`. **No sign-offs were
+fabricated.** The work arrived through direct commits rather than this ticket's
+agent pipeline, so there are no phase sign-offs to record, and inventing any
+would be exactly the phantom-done pattern this repository exists to prevent.
+Take the verified artifact as the evidence, not the phase list.
+
+Why the status flipped anyway: this file was recovered from
+`tickets/99_rejected/EPIC-FlattenSupervisorChain/`, where it was the only
+surviving record of this work ever having been ticketed. Leaving `status: todo`
+inside `99_done/` would reproduce the duplicate-location contradiction the
+recovery exists to end — a terminal folder disagreeing with its own frontmatter.
+
+`change_target` and `risk_surface` were added in the same pass: both became
+required after this ticket was written in June, and the frontmatter guard
+blocks any edit without them.
+
+Recovered by branch `chore/epic-duplicate-repair`.
+
+### 2026-08-18 — lifecycle reconciliation (status: todo → done)
+
+**The deliverable is live; this ticket's phases never ran.** Both statements are
+true and neither should be inferred from the other.
+
+Verified live before this status was changed:
+`templates/workflows-js/finalize-feature.js` exists (2,383 lines) with
+`meta.name === "finalize-feature"` at line 40, and carries the leaf-invariant
+comment block stating `workflow()` is never called. That is what this ticket
+asked for.
+
+The `agents:` map above is deliberately left showing `architect-review`,
+`pr-reviewer`, `commit` and `pull-request` as `needed`. **No sign-offs were
+fabricated.** The work arrived through direct commits rather than this ticket's
+agent pipeline, so there are no phase sign-offs to record, and writing any here
+would be exactly the phantom-done pattern this repository exists to prevent. A
+reader should take the checked outcome as evidence, not the empty phase list.
+
+Why the status flipped anyway: the file was recovered from
+`tickets/99_rejected/EPIC-FlattenSupervisorChain/`, where it was the only
+surviving record of this work ever having been ticketed. Leaving `status: todo`
+inside `99_done/` would reproduce the duplicate-location contradiction the
+recovery exists to end — a terminal folder disagreeing with its own frontmatter.
+
+Recovered by `chore/epic-duplicate-repair`. Provenance of the folder it came
+from is recorded in that branch's commit message.
