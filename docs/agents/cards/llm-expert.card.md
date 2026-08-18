@@ -324,7 +324,7 @@ flowchart TD
 - BO-2300e-1-iii: A stale or expired pause is handled gracefully
 - BO-2400a-1: Exactly one test-writer and one coder agent per batch
 - BO-2400a-3: Red-baseline verification is a deterministic script gate before the coder runs
-- BO-2400a-3-i: Red-baseline gate halts when a batch test will not go red
+- BO-2400a-3-i: Red-baseline gate halts when the batch will not go red
 - BO-2400a-4-i: Green gate refuses commit staging when the coder cannot make all tests pass
 - BO-2400a-5: No heavy-path coordination constructs are used in the fast lane
 - BO-2400b-1: Scoped interactive work routes to the fast lane
@@ -332,6 +332,11 @@ flowchart TD
 - BO-2400b-3: A single documented rule deterministically decides the lane
 - BO-2400b-3-i: Ambiguous scope defaults to the heavy pipeline
 - BO-2400b-3-ii: An explicit lane override wins over the decision rule
+- BO-2400g-2: The fast lane's change is read before it is committed, and the reading has something real to read against
+- BO-2400g-2-i: A reading that examined nothing is recorded as a reading that did not happen
+- BO-2400g-3: The fast lane's change is read for design problems, not only for local mistakes
+- BO-2400g-4: What the reading finds decides the run: serious findings stop it before anything is committed, minor ones ride along
+- BO-2400g-4-i: Findings that did not stop the run arrive with the pull request, not only in the session that produced them
 - BO-2500b-1-i: Work whose local pre-commit check was skipped is still caught by the CI gate
 - BO-2500b-2: The final proof-of-done check runs on a fresh clean checkout in CI
 - BO-2500b-3: The CI proof-of-done check is required and blocks merge
@@ -362,7 +367,6 @@ flowchart TD
 - BO-530-1-i: Ticket with change_type doc_change skips TDD injection entirely
 - BO-530-2: test-runner is injected after every coder-class agent in the computed chain
 - BO-530-3: Test failure hands context back to the implementation agent for rework
-- BO-530-3-i: Retry cap on test-failure rework loop prevents infinite cycling
 - BO-540-1: flow_change injects architect-review before any coder in the computed chain
 - BO-540-1-i: Coder dispatch is blocked if architect-review has not signed off
 - BO-540-2: flow_change injects documentation-expert before any coder in the computed chain
