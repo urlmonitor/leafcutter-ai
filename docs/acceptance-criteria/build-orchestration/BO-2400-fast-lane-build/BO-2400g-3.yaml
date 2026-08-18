@@ -23,7 +23,7 @@ criteria: |
     behalf,
   And a change that contains a cross-cutting design problem but no local mistake is
     still surfaced.
-depends_on: [BO-2400g, BO-2400g-2]
+depends_on: [BO-2400g, BO-2400g-2, TQ-200c-2]
 doc_links:
   - path: templates/skills/code-smell-review/SKILL.md
     relationship: describes
@@ -38,7 +38,7 @@ doc_links:
     status: exists
     relevance: "The local reader (six mechanical smells: Mysterious Name, Duplicated Code, Long Function, Long Parameter List, Loops, Repeated Switches). Also returns findings rather than writing a file."
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "The run that must do the asking. Its phases sit between Coder (line 395) and Commit (line 471); today nothing occupies that space at all."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1.yaml

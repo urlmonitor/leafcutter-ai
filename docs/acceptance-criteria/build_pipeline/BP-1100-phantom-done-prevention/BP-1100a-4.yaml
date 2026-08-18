@@ -1,0 +1,238 @@
+id: BP-1100a-4
+components:
+  - build_pipeline
+title: "A file the requirement mentions but never says will change is not named as the work's surface"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement whose record mentions a runnable file only as something to RUN
+  once the work is written — an instruction to invoke it before a check will be
+  meaningful, never a statement that the file itself changes,
+  And whose record separately names the file the work does change,
+  When a ticket is generated from that requirement,
+  Then the surface the generated ticket names contains the file the work changes,
+  And that surface does NOT contain the file that was only ever mentioned as something
+  to run,
+  And no path reaches that surface on the strength of appearing in the requirement's
+  prose: a file becomes part of the work's surface only where the requirement says that
+  file changes.
+depends_on:
+  - BP-1100a
+  - BP-1100a-3
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The surface, and the same function as BP-1100a-3 but its other half — the only file this AC edits. Verified 2026-08-18: when it_requirements is the LIST form, _build_files_touched (lines 570-574) hands every prose bullet to _extract_paths_from_prose (line 496), which admits any token containing a '/' whose final component carries a known extension OR which starts a known path prefix. The extractor is purely lexical — it reads the token, never the sentence around it — so 'run this' and 'do not touch this' are indistinguishable from 'change this'."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The observed failure and the fixture to reproduce it. scripts/build.py appears in its record only as a command to run before a deployed-layout test is meaningful, yet it was emitted as the first entry of the generated files_touched. templates/agents/change-scope-reviewer.md is the prohibition case and is BP-1100a-4-i's subject. READ as a fixture, never edited — repairing that one record leaves the extractor unchanged."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "CITED, NOT DEPENDED ON — see this AC's notes for the reasoning. ACD-1600g-1 gives a requirement a structured home for the boundary it must not cross, alongside the surface it changes. That would make this AC mechanical rather than merely possible, so it is an enabler; the direction is compatible and must not be contradicted, but an edge would delay this fix behind a schema migration for no functional reason."
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "2 — _extract_paths_from_prose (line 496) AND its caller in _build_files_touched (lines 570-574). The extractor is a pure lexical scan with no access to the sentence, so the decision cannot be made inside it alone; the caller is where a prose-derived path may be admitted or refused. A change confined to the extractor's regex or prefix list narrows which tokens are seen and still admits every token it does see."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The admission rule for a path that arrives from prose. The current extractor answers one question — does this token look like a path — and the AC requires a second, which it structurally cannot answer: does the record SAY this file changes. The rule below is stated as a default-deny because that is the only shape the third criterion clause permits; a verb allowlist inverts it and admits every sentence the allowlist did not anticipate. No AC record changes: the ~3,100 existing records and the authoring convention are untouched by this AC, and giving a requirement a structured home for its exclusions is ACD-1600g's, cited here and deliberately not depended on."
+    required:
+      - prose_admission
+    properties:
+      prose_admission:
+        type: string
+        enum:
+          - denied
+        description: "The only legal value. A path does not enter the surface on the strength of appearing in the requirement's prose. This is the third criterion clause read literally, and it is why BP-1100a-3 is ordered first: once a reliable positive source exists (an edit-surface doc_link or reference_file_path), the prose fallback has nothing left to contribute except inventions. Denying admission is not the same as deleting the extractor — the extracted tokens may still be reported to an author as candidates, but they may not become the work's declared surface."
+      surface_when_no_positive_source:
+        type: string
+        enum:
+          - undetermined
+        description: "What happens when denying prose leaves nothing: the surface is UNDETERMINED and is announced as such via BP-1100a-3's determination outcome. It must not silently become an empty list presented as a complete surface. This is precisely why narrowing is ordered after BP-1100a-3 — narrowing first produces empty surfaces that read as scope-free work."
+  constraints:
+    - "The rule must be DEFAULT-DENY, not a verb blocklist or a verb allowlist. A blocklist ('run', 'do not touch', 'see also') admits every phrasing nobody anticipated; an allowlist over natural-language verbs is a parser nobody can keep correct. The criteria say a file becomes part of the surface only where the requirement says that file changes — a positive declaration, not the absence of a negative one."
+    - "The change cannot live inside _extract_paths_from_prose alone. It is a lexical token scan with no access to the governing sentence; narrowing its regex or prefix list changes which tokens are seen and still admits every token it does see. The admission decision belongs at the caller, where the positive sources are also known."
+    - "Denying prose admission must not produce a silent empty surface. When no positive source exists the outcome is BP-1100a-3's 'undetermined' determination, announced where a driver reads it. An empty files_touched emitted as though it were complete is the same defect in a smaller costume."
+    - "Records whose surface comes from a positive source must be unaffected. BO-2400e-3 (structured reference_file_path) and any record with an edit-surface doc_link must emit exactly what they emit today. Verify by regenerating a set of real ACs before and after and diffing the files_touched blocks — a narrowing that also trims a legitimately-declared path is a regression this AC cannot pay for."
+    - "Do not solve the prohibition case here beyond what default-deny already gives. A file the requirement forbids touching is BP-1100a-4-i's record; default-deny happens to cover it, and the child exists to prove it stays covered as the prohibition is stated more emphatically. Do not add a prohibition-keyword filter — a filter that scans for negative verbs is the allowlist mistake wearing a different hat, and BP-1100a-4-i's tests are written to reject it."
+    - "Do not make this AC depend on ACD-1600g. A structured exclusion field would make the negative case mechanical rather than merely possible; it is an enabler, not a prerequisite, and adding the edge would put this fix behind a schema migration. If it lands first it becomes the cleanest input, with no change to these criteria."
+    - "Point any test at a COPY of the store. The generator writes an implemented_by back-reference into the source AC, so a test run against docs/acceptance-criteria mutates the real store."
+    - "STALE-DOC CAVEAT, OUT OF SCOPE HERE. docs/how-to/ac-traceability-store.md describes the prose fallback as a live behaviour of the generator; this AC retires it as a source of surface membership and that page's section goes stale. It is deliberately NOT in this AC's surface — see the same caveat on BP-1100a-3; one follow-up documentation AC should cover both."
+delivers_to:
+  agent: python-coder
+  contract: "A surface that admits a path only from a positive declaration — an edit-surface doc_link or reference_file_path — and never on the strength of a prose mention, degrading to BP-1100a-3's 'undetermined' outcome when no positive source exists. BP-1100a-4-i consumes this as the general rule whose extreme case it pins: a file the requirement forbids touching must stay absent from the surface however emphatically the prohibition is stated."
+expects_from:
+  ac_id: BP-1100a-3
+  contract: "A reliable positive source for the surface (edit-surface doc_links and reference_file_path honoured, every file the requirement says will change present) together with the explicit determined/undetermined outcome and its announcement. Narrowing what may enter the surface is only safe once that exists — narrowing first would produce empty surfaces, which is why the two ACs are ordered rather than merged."
+test_required: true
+test_spec:
+  - name: test_a_file_mentioned_only_as_something_to_run_is_absent_from_the_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [BP-1100a-4]
+    description: "Over a fixture whose it_requirements bullet says a runnable path must be INVOKED before a check is meaningful, the ticket the real generator writes must not name that path in files_touched. Today scripts/build.py is emitted as the first entry of BO-2400g-2's surface for exactly this reason."
+  - name: test_the_file_the_work_does_change_is_still_named
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [BP-1100a-4]
+    description: "The same fixture's genuinely-changed file remains in the surface. Asserted alongside the exclusion because a narrowing that empties the surface satisfies the negative clause perfectly and destroys the AC — this is the failure mode the BP-1100a-3 ordering exists to prevent."
+  - name: test_no_path_enters_the_surface_on_the_strength_of_a_prose_mention
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [BP-1100a-4]
+    description: "THE GENERAL CLAUSE, tested with several unrelated phrasings in one fixture — an instruction to run, a cross-reference, an incidental example. Default-deny passes all of them; a verb blocklist passes the phrasings its author thought of and fails the rest, which is the distinction this test exists to make."
+  - name: test_a_record_whose_surface_comes_from_a_positive_source_is_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [BP-1100a-4]
+    description: "NEGATIVE CONTROL over real records. BO-2400e-3 (structured reference_file_path) and a record carrying an edit-surface doc_link must emit byte-identical files_touched after the change. A narrowing that also trims a legitimately-declared path passes every test above and is a regression."
+  - name: test_denying_prose_with_no_positive_source_yields_an_announced_undetermined_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [BP-1100a-4]
+    description: "A record with no edit-surface doc_link and no reference_file_path must produce BP-1100a-3's announced 'undetermined' outcome, not a silent empty list presented as a complete surface. Without this assertion the cheapest satisfying implementation is to delete the fallback and emit nothing."
+  - name: test_the_surface_is_asserted_on_the_ticket_the_real_generator_wrote
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [BP-1100a-4]
+    description: "PRODUCTION ENTRY POINT: the real generator command line over a COPY of a store, asserting on the frontmatter it actually wrote. A test that calls the extractor or the derivation directly passes on a corrected function the ticket writer never consults. Use a copy — the generator writes an implemented_by back-reference into the source AC."
+test_rationale: |
+  Every assertion is made on the WRITTEN TICKET produced by the real generator over a copy
+  of a store. A test that asserts the extractor's regex, its prefix list, or the presence
+  of a verb check passes on every variant of this bug, including one that filters the wrong
+  verbs — and the extractor is a lexical scan with no access to the sentence, so a test
+  aimed at it cannot see the decision the AC is actually about.
+  The exclusion and the retention are asserted together rather than in one test because the
+  cheapest way to satisfy the negative clause is to empty the surface, and an emptied
+  surface is the exact regression BP-1100a-3's ordering was designed to prevent. Pairing
+  them makes that dodge fail.
+  The multi-phrasing test is what separates default-deny from a verb blocklist. A blocklist
+  passes the phrasings its author anticipated — "run", "do not touch" — and admits the rest;
+  only a rule that requires a positive declaration is indifferent to how the mention was
+  worded. Stating several unrelated phrasings in one fixture is the cheapest way to make
+  that difference observable.
+  The undetermined test and the BO-2400e-3 control guard the two opposite over-corrections:
+  deleting the fallback and emitting nothing, and trimming a path that was legitimately
+  declared. Both pass the AC's own positive clauses and both are worse than the defect.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path
+      with n_location_rule spanning the extractor (line 496) AND its caller (lines 570-574) —
+      the extractor is a lexical scan with no access to the sentence, so a fix confined to it
+      narrows which tokens are seen and still admits every token it sees — plus a default-deny
+      prose-admission fragment, delivers_to (the general rule BP-1100a-4-i pins at its extreme),
+      expects_from (BP-1100a-3's positive source and undetermined outcome), and a six-entry
+      test_spec with rationale. doc_links needed no retagging: the generator was already
+      'modifies' and the AC links are deliberately 'related' — BO-2400g-2 is a fixture to READ,
+      and ACD-1600g-1 is cited and explicitly not depended on. Same stale-doc caveat as
+      BP-1100a-3: docs/how-to/ac-traceability-store.md's prose-fallback section goes stale and
+      is deliberately out of this surface; one follow-up documentation AC should cover both.
+      criteria, title and notes untouched."
+superseded_by: null
+covered_by:
+  - BP-1100a-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE DEFECT, OBSERVED (2026-08-18). The ticket generated from the real AC BO-2400g-2
+  named this surface:
+      files_touched:
+      - scripts/build.py
+      - templates/agents/change-scope-reviewer.md
+      - templates/agents/pr-reviewer.md
+      - unit_tests/_workflow_engine_harness.py
+  BP-1100a-3 owns what is MISSING from that list. This AC owns what is INVENTED in it.
+  scripts/build.py appears in BO-2400g-2 only inside a bullet saying that
+  `python scripts/build.py --target-dir .` must RUN before a test exercises the deployed
+  reviewer — an instruction to invoke a command, in a requirement that changes nothing in
+  that file. templates/agents/change-scope-reviewer.md appears only inside a bullet that
+  begins "DO NOT solve the scope-boundary problem here"; that case is sharp enough to be
+  its own record, BP-1100a-4-i.
+
+  WHY IT HAPPENS. _extract_paths_from_prose (generate_ticket_from_ac.py:496) is a lexical
+  token scan: a token qualifies if it contains a '/' and either ends in a recognised
+  extension or starts with a known path prefix. It never sees the verb governing the
+  sentence. So "must run", "do not touch", "see also" and "must change" all produce
+  identical output. Combined with BO-2400g-2's all-'describes' doc_links — which make
+  Source 2 contribute nothing (lines 576-581) — prose scraping became the ONLY contributor
+  to that ticket's surface.
+
+  WHY THIS IS A SEPARATE AC FROM BP-1100a-3 AND NOT A CLAUSE OF IT. They fail
+  independently and can be fixed independently. Marking BO-2400g-2's primary doc_link as
+  an edit surface fixes the omission and leaves all four inventions in place. Teaching the
+  prose scraper to require a change-verb removes the inventions and still emits nothing at
+  all for an AC whose doc_links are all 'describes'. A single AC covering both would be
+  satisfiable by either half, which is how a requirement ships a fix that closes the
+  visible symptom and leaves the other one live. They are ordered — this AC depends on
+  BP-1100a-3 — because narrowing what may enter the surface is only safe once the surface
+  has a reliable positive source; narrowing first would produce empty surfaces.
+
+  WHY IT MATTERS. An invented surface is not a harmless extra. files_touched is what
+  change-scope-reviewer treats as in-bounds and what a done-check reads as the work's
+  footprint, so naming scripts/build.py grants a coder standing permission to edit the
+  build script under a requirement that never asked for it, and grants a done-check a file
+  it can find unchanged without complaint (CLAUDE.md, EPIC-PhantomDoneFilesTouched,
+  2026-07-07).
+
+  DECISION ON ACD-1600g — CITED, NOT DEPENDED ON. ACD-1600g is independently moving the
+  out-of-scope declaration from ticket frontmatter onto the requirement itself
+  (ACD-1600g-1 authors it there; ACD-1600g-3 changes the reader). This AC is satisfiable
+  without any of it: the distinction it needs is between "the requirement says this file
+  changes" and "the requirement merely mentions this file", and BO-2400g-2 already carries
+  both signals in its record today. A structured exclusion field would make the negative
+  case mechanical instead of merely readable, which makes ACD-1600g an enabler rather than
+  a prerequisite. Adding the edge would put this fix behind a schema migration for no
+  functional gain, and would also invert the sequencing: ACD-1600g-3's own reasoning cites
+  the ticketless fast lane as the case a frontmatter-only implementation cannot serve, so
+  it is solving a different problem at a different layer. Nothing here contradicts that
+  direction — if the structured field lands first, it becomes the cleanest source for this
+  AC's negative half rather than a change to its criteria.
+
+  TESTS MUST NOT BE GREP-ONLY. Assert the WRITTEN TICKET produced by the real generator
+  over a real on-disk AC fixture whose it_requirements bullets mention a runnable path
+  under a non-change verb. A test that asserts the extractor's regex, its prefix list, or
+  the presence of a verb check passes on every variant of this bug, including one that
+  filters the wrong verbs. Point the generator at a COPY of the store: it writes an
+  implemented_by back-reference into the source AC.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2. No
+  test_spec is authored because this tree's existing L2s (BP-1100a-1, BP-1100a-2) carry
+  none; the test shape the IT PO should encode is stated above. change_target is 'code'
+  rather than the siblings' 'pipeline' because the surface is a Python script, matching
+  ACD-400b-6/-7/-8 which own that same file.

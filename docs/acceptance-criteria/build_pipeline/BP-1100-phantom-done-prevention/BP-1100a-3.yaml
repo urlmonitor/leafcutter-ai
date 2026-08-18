@@ -1,0 +1,251 @@
+id: BP-1100a-3
+components:
+  - build_pipeline
+title: "The surface a generated ticket names contains the file the requirement says will change"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement that names, in its own record, the runnable file where the
+  behaviour it describes will change, and names it ahead of everything else the
+  requirement references,
+  And the same requirement also references, elsewhere in that record, files it will
+  NOT change — pages that only explain the behaviour, and neighbouring requirements
+  it must not contradict,
+  When a ticket is generated from that requirement,
+  Then the surface the generated ticket names as this work's own contains the runnable
+  file where the behaviour will change,
+  And it contains every other file the requirement says will change,
+  And when the requirement offers no way to tell which of the files it references will
+  change, the generated ticket states that its surface could not be determined, in a
+  place the person driving the ticket reads before dispatching a coder — rather than
+  quietly emitting a surface assembled from whatever paths the requirement happened to
+  mention.
+depends_on:
+  - BP-1100a
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The surface, and the only file this AC edits. Verified 2026-08-18: _build_files_touched (line 535) unions exactly two sources. Source 2 (lines 576-581) admits a doc_link only when its relationship is in _EDIT_SURFACE_RELATIONSHIPS = {constrains, creates, implements, modifies, specifies} (lines 104-106); 'describes' and 'related' are excluded by design (docstring, lines 99-103). Source 1 (lines 561-574) takes reference_file_path from a structured it_requirements dict, or — when it_requirements is the LIST form — scrapes path-shaped tokens out of the prose bullets via _extract_paths_from_prose (line 496). Nothing in either source consults which file the requirement says the work changes. The third criterion clause is served by the same file's self-check block (lines 2790-2793), which today records 'files_touched has N path(s)' as a PASS and warns only when the list is EMPTY."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The observed failure, and the exact input to reproduce it. All five of its doc_links carry relationship 'describes' or 'related', so Source 2 contributes nothing at all — and templates/workflows-js/fast-lane-ship.js, its FIRST doc_link and the primary file it changes, is dropped, along with scripts/build_orchestration/fast_lane.py. Its it_requirements is the list/prose form, so the entire emitted surface came from prose scraping instead. READ as a fixture, never edited: retagging BO-2400g-2's own doc_links would repair that one record and leave the derivation defect untouched, which is the fix this AC exists to refuse."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The control that proves this is not uniformly broken. Its generated files_touched is correctly just scripts/build_orchestration/fast_lane.py — because it uses the STRUCTURED it_requirements form with reference_file_path (line 50), which Source 1 reads directly. Its own doc_link to that same file is relationship 'describes' (line 28) and contributes nothing. The difference between the two ACs is the authoring shape, not the requirement's clarity."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400b-6.yaml
+    relationship: related
+    status: exists
+    relevance: "NOT A DUPLICATE — read before assuming overlap. ACD-400b-6 (work_status: done) guarantees union-preservation and order-independence AMONG the paths that already qualify as an edit surface. It is silent on which relationship values qualify, and silent on prose-scraped paths. That is why it is green while BO-2400g-2's primary file is still dropped. This AC is about which paths qualify in the first place."
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "2 — the surface derivation (_build_files_touched, line 535) AND the self-check that reports it (lines 2790-2793). Both are enforcement points and only the second is what a driver reads; a membership fix applied to the derivation alone still reports a partial surface as a PASS, which is the third criterion clause's exact target."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The outcome of the surface derivation, made explicit. Today the derivation returns a bare list and the caller cannot distinguish 'this is the surface' from 'this is what I could scrape'. The third criterion clause requires those two to be different observable outcomes, so the derivation must return a determination, not just paths. Nothing is added to any AC record — the ~3,100 existing records and their authoring convention are untouched by this AC; changing what an author may declare is ACD-1600g's, and narrowing what may enter the surface is BP-1100a-4's."
+    required:
+      - paths
+      - determination
+    properties:
+      paths:
+        type: array
+        items:
+          type: string
+        description: "The files the requirement says its work changes. Must contain the runnable file the record names first among the files it changes, and every other file the record says will change. Must not silently absorb paths the record merely references — that negative half is BP-1100a-4's and must not be pre-empted here beyond leaving room for it."
+      determination:
+        type: string
+        enum:
+          - determined
+          - undetermined
+        description: "undetermined is the new outcome and the load-bearing one. It means the record offered no way to tell which of the files it references will change. It is NOT the same as an empty list: an empty list is visible, a confidently wrong four-path list reads as scope. When undetermined, the ticket must say so where a driver reads it before dispatching a coder, and the generator's self-check must not record a PASS."
+      undetermined_reason:
+        type: string
+        description: "Required when determination is undetermined. Names why the surface could not be settled — e.g. no doc_link carries an edit-surface relationship and it_requirements is the prose form — so the author can fix the record rather than guess."
+  constraints:
+    - "The membership rule must be fixed in the DERIVATION, not in the fixture. Retagging BO-2400g-2's doc_links repairs that one record's output and leaves every other all-'describes' record dropping its primary file. The AC's observable is the derivation's behaviour over a record shaped like BO-2400g-2, not BO-2400g-2 itself."
+    - "Do NOT widen _EDIT_SURFACE_RELATIONSHIPS. docs/how-to/ac-traceability-store.md states explicitly that 'describes' and 'related' are excluded by design and that the remedy is to re-tag the doc_link, not to edit the constant. Adding 'describes' to that set would pull every reference page into every surface and convert this defect into its mirror image."
+    - "An undetermined surface must degrade LOUDLY. The generator's self-check (lines 2790-2793) records 'files_touched has N path(s)' as a PASS and warns only when the list is EMPTY, so a confidently wrong four-path list reports as a pass today. A partial surface presented as complete is worse than an empty one: the empty one is visible, the partial one reads as scope."
+    - "The announcement must land where the driver reads it before dispatching a coder — the generated ticket and the generator's own report — not only in a log line or a return value. A correct determination nobody sees is the same observable as no determination at all."
+    - "Records that already emit a correct surface must keep emitting it byte-identically. BO-2400e-3's structured form produces exactly scripts/build_orchestration/fast_lane.py today; regenerating it after this change must produce the same single entry. Verify by regenerating a set of real ACs before and after and diffing the files_touched blocks."
+    - "Do not pre-empt BP-1100a-4. This AC adds a reliable positive source; narrowing what may enter the surface is the next AC and is ordered after this one deliberately, because narrowing first would produce empty surfaces. An implementation that also strips the prose fallback in this change makes the two ACs indistinguishable and removes the ordering that protects against empty surfaces."
+    - "Point any test at a COPY of the store. The generator writes an implemented_by back-reference into the source AC, so a test run against docs/acceptance-criteria mutates the real store."
+    - "STALE-DOC CAVEAT, OUT OF SCOPE HERE. docs/how-to/ac-traceability-store.md documents the current two-source derivation and the --verify count caveat verbatim; once this AC and BP-1100a-4 land, that section is stale. It is deliberately NOT in this AC's surface — BP-1100a carries no documentation_triggers and the criteria are about the generated ticket only. Raise a follow-up documentation AC rather than editing the page under this ticket."
+delivers_to:
+  agent: python-coder
+  contract: "A surface derivation that returns both the paths the requirement says its work changes and an explicit determined/undetermined outcome with a reason, plus an announcement of an undetermined surface in the generated ticket and in the generator's own report. BP-1100a-4 consumes this: narrowing what may enter the surface is only safe once a reliable positive source exists, which is why the two are ordered rather than merged."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_the_runnable_file_the_requirement_changes_is_named_in_the_generated_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [BP-1100a-3]
+    description: "Over a fixture shaped exactly like BO-2400g-2 — all doc_links 'describes'/'related', list-form it_requirements — the ticket the real generator writes names the primary runnable file in files_touched. Today that file is dropped and the emitted surface is 100% prose-scraped."
+  - name: test_every_other_file_the_requirement_says_will_change_is_also_named
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [BP-1100a-3]
+    description: "The second changed file is present too, not just the first-named one. Separate from the test above because a fix that promotes only the leading doc_link satisfies the primary-file clause and still drops the rest — BO-2400g-2 loses two files, not one."
+  - name: test_an_undeterminable_surface_is_announced_rather_than_assembled
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [BP-1100a-3]
+    description: "THE THIRD CLAUSE. A record that offers no way to tell which referenced files change produces a ticket stating its surface could not be determined, in a place read before a coder is dispatched — and does NOT quietly emit a surface assembled from whatever paths it mentioned. Both halves asserted: an announcement alongside a confident four-path list fails."
+  - name: test_a_partial_surface_is_not_reported_as_a_passing_check
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [BP-1100a-3]
+    description: "The generator's own self-check must not record a PASS for an undetermined surface. Today lines 2790-2793 pass on any non-empty list, so a confidently wrong four-path list reports green — a fix to the derivation alone leaves that report unchanged and the driver none the wiser."
+  - name: test_a_record_that_already_emits_a_correct_surface_is_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [BP-1100a-3]
+    description: "NEGATIVE CONTROL over real records. BO-2400e-3's structured form emits exactly scripts/build_orchestration/fast_lane.py today; after the change it must emit the same single entry. A derivation that fixes the omission by widening what qualifies passes every positive test above and pulls reference pages into every surface."
+  - name: test_the_surface_is_asserted_on_the_ticket_the_real_generator_wrote
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [BP-1100a-3]
+    description: "PRODUCTION ENTRY POINT: runs the real generator command line over a COPY of a store and reads files_touched out of the frontmatter it actually wrote. A test that calls the derivation directly passes on a corrected function the ticket writer never consults. Use a copy — the generator writes an implemented_by back-reference into the source AC."
+test_rationale: |
+  The observable is the WRITTEN TICKET, never the generator's source. A test that asserts
+  the relationship set contains some value, or that the derivation function mentions a
+  field, passes on every variant of this bug — including the variant that widens
+  _EDIT_SURFACE_RELATIONSHIPS and thereby converts a dropped-primary-file defect into a
+  reference-pages-in-every-surface defect. Every descriptor here therefore asserts on
+  frontmatter the real generator emitted over a copy of a store.
+  The two positive clauses are split into two tests because they fail independently: a fix
+  that promotes only the first-named doc_link satisfies "the primary file is present" and
+  still drops the second changed file, and BO-2400g-2 loses two.
+  The undetermined clause gets both a ticket-level test and a self-check test because the
+  announcement and the verdict are separate surfaces and the natural fix touches only the
+  first. Lines 2790-2793 pass on any non-empty list, so a derivation that correctly marks a
+  surface undetermined while the self-check keeps printing PASS leaves the driver reading
+  exactly today's green report.
+  The BO-2400e-3 negative control is mandatory rather than optional. The cheapest way to
+  make the primary file appear is to widen what qualifies as an edit surface, which the
+  how-to explicitly forbids and which passes every positive test in this contract. Only a
+  real record whose correct output must stay identical can reject it.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path
+      with n_location_rule spanning BOTH enforcement points (the derivation at line 535 and the
+      self-check at 2790-2793 — a fix to the derivation alone still reports a partial surface as
+      a PASS), the determined/undetermined outcome fragment, delivers_to (the positive source
+      BP-1100a-4 depends on), expects_from null, and a six-entry test_spec with rationale.
+      doc_links needed no retagging: the generator was already correctly tagged 'modifies' and
+      the three AC links are deliberately 'related' — BO-2400g-2 is a fixture to READ, and
+      retagging its own doc_links is the one-record fix this AC exists to refuse. CAVEAT recorded
+      as a constraint: docs/how-to/ac-traceability-store.md's derivation section goes stale once
+      this and BP-1100a-4 land, but BP-1100a carries no documentation_triggers and the criteria
+      are about the generated ticket only, so the page is deliberately NOT in this surface —
+      a follow-up documentation AC is needed. criteria, title and notes untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE DEFECT, OBSERVED (2026-08-18). Generating a ticket from the real AC BO-2400g-2
+  produced this frontmatter:
+      files_touched:
+      - scripts/build.py
+      - templates/agents/change-scope-reviewer.md
+      - templates/agents/pr-reviewer.md
+      - unit_tests/_workflow_engine_harness.py
+  Two files the requirement exists to change are missing:
+  templates/workflows-js/fast-lane-ship.js (the primary file, and the FIRST entry in the
+  AC's own doc_links) and scripts/build_orchestration/fast_lane.py. This AC owns the
+  omission half. The inventions in that same list are BP-1100a-4's half.
+
+  WHY THE OMISSION HAPPENS, MECHANICALLY. generate_ticket_from_ac.py:_build_files_touched
+  (line 535) is a union of two sources and neither of them reads "what does this
+  requirement change":
+    - Source 2 (lines 576-581) filters doc_links by relationship against
+      _EDIT_SURFACE_RELATIONSHIPS (lines 104-106) = {constrains, creates, implements,
+      modifies, specifies}. Every doc_link on BO-2400g-2 is 'describes' or 'related', so
+      Source 2 yields the empty set. The filter is not itself wrong — it exists to keep
+      reference pages out of the surface — but it makes the whole derivation depend on an
+      annotation the authoring convention does not reliably supply.
+    - Source 1 (lines 561-574) reads it_requirements. In the STRUCTURED form it takes
+      reference_file_path, which is exact. In the LIST form it scrapes path-shaped tokens
+      out of prose bullets via _extract_paths_from_prose (line 496), which is a guess.
+  BO-2400g-2 uses the list form and all-describes doc_links, so 100% of its emitted
+  surface came from prose scraping. BO-2400e-3, whose output is correct, uses the
+  structured form (reference_file_path at line 50) — and its own doc_link to that same
+  file is 'describes' and contributed nothing either. The two ACs differ in authoring
+  shape, not in how clearly each states what it changes.
+
+  WHY THE THIRD CLAUSE (SAY SO WHEN YOU CANNOT TELL) IS LOAD-BEARING. The generator
+  already has a place to say it: its own self-check records "files_touched has N path(s)"
+  as a PASS and only warns when the list is EMPTY (generate_ticket_from_ac.py:2790-2793).
+  A confidently wrong four-path list therefore reports as a pass today. A derivation that
+  cannot determine the surface must degrade loudly, because a partial surface presented as
+  complete is worse than an empty one: the empty one is visible, the partial one reads as
+  scope.
+
+  WHY IT MATTERS, IN THIS PROJECT'S OWN TERMS. CLAUDE.md records wrong files_touched as a
+  documented phantom-done driver: files_touched defines the surface downstream agents and
+  the scope reviewer treat as in-bounds. A ticket that omits the file the work must change
+  lets change-scope-reviewer flag the REAL edit as out of scope, and lets a done-check pass
+  over a file that was never touched (EPIC-PhantomDoneFilesTouched, 2026-07-07).
+
+  THIS IS NOT ACD-400b-6. ACD-400b-6 is done and correct within its own scope: it forbids
+  a first-wins or truncating reduction across the paths that already qualify, and
+  ACD-400b-6-i pins order-independence. Neither says anything about which relationship
+  values make a path qualify, nor about paths that arrive from prose. That is precisely
+  why BO-2400g-2 still drops its primary file with ACD-400b-6 green. Anyone reconciling
+  these two should treat ACD-400b-6 as the union rule and this AC as the membership rule.
+
+  TESTS MUST NOT BE GREP-ONLY. The observable is the WRITTEN TICKET, not the generator's
+  source: run the real generator over a real on-disk AC fixture and assert the
+  files_touched list in the frontmatter it actually wrote. A test that asserts the
+  relationship set contains some value, or that the derivation function mentions a field,
+  passes on every variant of this bug. Use BO-2400g-2's exact shape as a fixture — all
+  doc_links 'describes'/'related' plus list-form it_requirements — because that is the
+  shape that fails and the shape hand-written fixtures do not naturally reproduce.
+  One caution for whoever writes the test: the generator writes an implemented_by
+  back-reference into the source AC, so it must be pointed at a COPY of the store, never
+  at docs/acceptance-criteria itself.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
+  assigned_agent, it_requirements, estimated_complexity, delivers_to, expects_from and
+  test_spec are the IT PO's to set. Note that this tree's existing L2s (BP-1100a-1,
+  BP-1100a-2) carry no test_spec, so none is authored here; the test shape the IT PO
+  should encode is stated above. change_target is 'code' rather than the siblings'
+  'pipeline' because the surface is a Python script, matching ACD-400b-6/-7/-8 which own
+  that same file.

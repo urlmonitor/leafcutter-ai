@@ -276,11 +276,11 @@
         "AcStore"
       ],
       "impl_summary": {
-        "done": 3,
-        "in_progress": 3,
+        "done": 2,
+        "in_progress": 4,
         "not_started": 4,
         "total": 10,
-        "asof": "2026-07-20"
+        "asof": "2026-08-18"
       },
       "tags": [
         "ac-driven-dev",
@@ -935,11 +935,11 @@
       "path": "flows/leafcutter/ac-lifecycle.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 3,
-        "in_progress": 3,
+        "done": 2,
+        "in_progress": 4,
         "not_started": 4,
         "total": 10,
-        "asof": "2026-07-20"
+        "asof": "2026-08-18"
       },
       "expands": [],
       "parents": []

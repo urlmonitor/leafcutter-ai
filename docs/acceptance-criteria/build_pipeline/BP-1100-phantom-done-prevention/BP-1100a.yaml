@@ -32,9 +32,24 @@ superseded_by: null
 covered_by:
   - BP-1100a-1
   - BP-1100a-2
+  - BP-1100a-3
+  - BP-1100a-4
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  CHILD CAP — ONE L2 SLOT LEFT AS OF 2026-08-18. The default cap is 5 L2s per L1
+  (_MAX_L2_PER_L1 = 5 in templates/scripts/commit_guardian/check_ac_limits.py:82,
+  enforced as child_count > limit). This AC declares no child_limit_override. Four of the
+  five slots are now taken: BP-1100a-1 and BP-1100a-2 (enforcement points that flag a
+  documentation-only surface), plus BP-1100a-3 and BP-1100a-4 (the derivation itself —
+  what the generated surface must contain, and what it must not). L3 refinements are not
+  capped.
+
+  THE TWO HALVES ARE DELIBERATELY SPLIT. BP-1100a-1/-2 catch a ticket whose surface is
+  already wrong; BP-1100a-3/-4 stop the wrong surface being derived in the first place.
+  Both are wanted — a ticket authored by hand still needs the lens — but they are
+  different enforcement layers and must not be collapsed.
 product_truth:
   - flow: leafcutter/how-acs-are-built
     node: scope

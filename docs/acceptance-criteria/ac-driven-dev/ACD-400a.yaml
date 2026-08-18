@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   Given the AC store contains YAML files at levels L0 through L3 with varying
     work_status and depends_on relationships,
@@ -38,12 +38,50 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [ACD-400a-1, ACD-400a-2]
+covered_by: [ACD-400a-1, ACD-400a-2, ACD-400a-3, ACD-400a-4, ACD-400a-5]
 implemented_by:
 - scripts/ac_store/scan_ac_store.py
 - scripts/ac_store/ac_prioritizer.py
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  CHILD CAP — THIS L1 IS FULL AS OF 2026-08-18. The default cap is 5 L2s per L1
+  (_MAX_L2_PER_L1 = 5 in templates/scripts/commit_guardian/check_ac_limits.py:82,
+  enforced as child_count > limit, so exactly 5 passes). This AC declares no
+  child_limit_override and none should be added — the hook's own guidance calls it a
+  temporary waiver. The five L2 slots are taken by ACD-400a-1 through ACD-400a-5. A
+  sixth L2 will be blocked at commit time: split the tree (ac-tree-split skill) or place
+  the work under a different L1 instead. L3 refinements are NOT capped — _MAX_CHILDREN
+  in that file is keyed only for L0 and L1.
+
+  COVERED_BY DRIFT REPAIRED 2026-08-18. This list read [ACD-400a-1, ACD-400a-2] while
+  ACD-400a-3.yaml and ACD-400a-4.yaml had existed on disk as real ACs since 2026-08-12;
+  it was stale by two. All three missing ids (-3, -4, and the new -5) were added in one
+  pass. The drift survived because check_ac_parent_covered_by validates only the files
+  present in a commit's index — when -3 and -4 were committed this parent was not staged
+  alongside them, so the hook had nothing to compare and passed. Finding this class of
+  drift needs a store-wide sweep, not a per-commit hook.
+
+  WORK_STATUS CORRECTED done -> in_progress 2026-08-18. This composite claimed done while
+  ACD-400a-1 and ACD-400a-2 were both still work_status: todo — it was already falsely
+  done before ACD-400a-5 was added, and adding a-5 only made a third unfinished child.
+  A composite's completion is supposed to roll up from its children, so `done` here was
+  a claim nothing supported. It surfaced only because staging this parent made
+  check-done-proof evaluate it: that gate demands a direct '# covers: ACD-400a' tag,
+  which no composite has by design (the children carry the tags — see
+  unit_tests/ac_store/test_acd_400a_3.py). Two separate weaknesses meet here and both
+  are worth knowing: the gate cannot express roll-up for a composite, and nothing
+  re-derives a parent's work_status when a child is added. Do NOT set this back to done
+  to silence the gate — restore it only when every child in covered_by is genuinely
+  done.
+
+  WHY in_progress AND NOT todo. todo was tried first and is wrong in the other
+  direction: the product-truth derivation maps this AC to the 'scan' step of the
+  leafcutter/ac-lifecycle flow, and todo derives impl_status=not_started, which would
+  claim the scanner does not exist. It plainly does — implemented_by names
+  scan_ac_store.py and ac_prioritizer.py, and ACD-400a-3 and ACD-400a-4 are done.
+  in_progress is the only value that is true of a composite with some children
+  finished and some not.
 product_truth:
   - flow: leafcutter/ac-lifecycle
     node: scan

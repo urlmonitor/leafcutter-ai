@@ -1,0 +1,196 @@
+id: BP-1100a-4-i
+components:
+  - build_pipeline
+title: "A file the requirement forbids touching is never named as the work's surface"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement that names a file and states that this work must NOT touch it,
+  because the problem that file represents is deliberately being solved by a different
+  requirement,
+  When a ticket is generated from that requirement,
+  Then the surface the generated ticket names does not contain that file,
+  And that file appears nowhere in the generated ticket as something this work is
+  expected to change,
+  And this holds however often and however prominently the requirement's record mentions
+  the file — a prohibition is not weakened by being stated at length.
+depends_on:
+  - BP-1100a-4
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "Same surface as the parent, and the only file this L3 edits. This case is the parent's rule at its extreme: _extract_paths_from_prose (line 496) is a lexical token scan, so the more emphatically a requirement forbids a file, the more mentions it produces and the more certainly the path is scraped into the surface. The failure gets worse as the requirement gets clearer, which is why it needs its own record. Note the second criterion clause reaches beyond files_touched into the rest of the ticket body — the same file writes both."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The observed case, verbatim. Its it_requirements bullet begins 'DO NOT solve the scope-boundary problem here. templates/agents/change-scope-reviewer.md reads out_of_scope from ticket frontmatter and ACD-1600g-3 is independently moving that source...', and its notes repeat the prohibition under a heading. The generated ticket named templates/agents/change-scope-reviewer.md in files_touched anyway. Use this AC verbatim as the fixture — a paraphrase loses the repetition that makes the case sharp. READ, never edited."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "CITED, NOT DEPENDED ON. ACD-1600g-3 moves where a scope reviewer READS an exclusion from. This AC constrains what a generator WRITES as the surface. They meet without overlapping: nothing here requires the ticket to carry a structured exclusion, only that a forbidden file is absent from the surface."
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1 — the prose-admission decision the parent installs at the caller of _extract_paths_from_prose. This L3 adds no second mechanism; it constrains the parent's rule so that repetition cannot defeat it, and extends the assertion beyond files_touched to the rest of the emitted ticket."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The monotonicity constraint on the parent's default-deny rule. Nothing new is stored and no prohibition parser is introduced. What is fixed here is that the admission decision must be INDEPENDENT of how many times or how prominently a path is mentioned — the property the current lexical scan gets exactly backwards, since each additional sentence forbidding a file is another chance for its token to be scraped in."
+    required:
+      - mention_count_sensitivity
+    properties:
+      mention_count_sensitivity:
+        type: string
+        enum:
+          - none
+        description: "The only legal value. The surface a record produces must be identical whether a path is mentioned once or ten times, in a bullet or under a heading or in a doc_link relevance string. Any implementation whose output varies with mention count or prominence — including a frequency heuristic, a first-mention-wins rule, or a scan that walks more of the record the longer it is — fails this record even if it happens to exclude the forbidden file in the observed case."
+      scope_of_absence:
+        type: string
+        enum:
+          - whole_generated_ticket
+        description: "The second criterion clause is wider than files_touched: the forbidden file must appear nowhere in the generated ticket AS SOMETHING THIS WORK IS EXPECTED TO CHANGE. It may still appear as context — the requirement's own prohibition is worth carrying — but not in any position a coder or a reviewer reads as a change target."
+  constraints:
+    - "Do NOT add a prohibition-keyword filter, a negative-verb regex or an exclusion list. Default-deny from BP-1100a-4 already covers this case; this record exists to prove it STAYS covered as the prohibition is stated more emphatically. A filter that scans for 'DO NOT' is the verb-allowlist mistake in another costume, and it passes the observed case while failing any prohibition phrased differently."
+    - "The surface must be invariant to mention count and prominence. Generate from a fixture with the prohibition stated once, then from the same fixture with it stated three times and under a heading, and assert the emitted files_touched is identical. The current behaviour moves in the wrong direction, which is a property no test of the parent's homogeneous cases would surface."
+    - "The absence must hold across the WHOLE generated ticket, not just files_touched. The second clause says the file must appear nowhere as something this work is expected to change — that includes the Agent Contracts block, which is populated from doc_links, and any implementation-notes rendering. Context mentions are fine; change-target positions are not."
+    - "Assert on the ticket the real generator WROTE, over a copy of the real BO-2400g-2 record. Asserting that the generator's source contains a prohibition keyword, an exclusion list, or a negative-verb regex passes on a filter that never runs — and would in fact pass on the forbidden implementation this record's first constraint rules out."
+    - "This is the guardrail's own worst case and must be treated as such. change-scope-reviewer reads files_touched as the in-bounds set, so a forbidden file listed there converts the reviewer from a guard into an authorisation. A partial fix that removes the file from files_touched but leaves it presented as a change target elsewhere leaves that inversion intact wherever the reviewer's input is assembled from the ticket body."
+    - "Point any test at a COPY of the store. The generator writes an implemented_by back-reference into the source AC, so a test run against docs/acceptance-criteria mutates the real store."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100a-4
+  contract: "The default-deny prose-admission rule — a path enters the surface only from a positive declaration, never from a prose mention — installed at the caller of _extract_paths_from_prose. This L3 introduces no second mechanism: it constrains that same rule to be invariant to how often and how prominently a path is mentioned, and widens the assertion from files_touched to the whole emitted ticket."
+test_required: true
+test_spec:
+  - name: test_a_file_the_requirement_forbids_touching_is_absent_from_the_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [BP-1100a-4-i]
+    description: "Over a copy of the real BO-2400g-2 record — used verbatim, because a paraphrase loses the repetition that makes the case sharp — templates/agents/change-scope-reviewer.md must be absent from the files_touched of the ticket the real generator wrote. It is named there today."
+  - name: test_the_forbidden_file_appears_nowhere_as_a_change_target_in_the_ticket
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [BP-1100a-4-i]
+    description: "The second clause is wider than files_touched. The file must not be presented as something this work is expected to change anywhere in the emitted ticket, including the Agent Contracts block built from doc_links. A context mention of the prohibition itself is permitted and must not be asserted away."
+  - name: test_the_surface_is_identical_however_often_the_prohibition_is_repeated
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [BP-1100a-4-i]
+    description: "THE CLAUSE THAT JUSTIFIES THE RECORD. Generate from a fixture stating the prohibition once, then from the same fixture stating it three times and under a heading, and diff the emitted files_touched: identical. Today the output gets worse as the requirement gets clearer, and no test of the parent's homogeneous cases can see that inversion."
+  - name: test_the_absence_survives_the_real_generator_command_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [BP-1100a-4-i]
+    description: "PRODUCTION ENTRY POINT: the real generator command line over a COPY of a store holding the BO-2400g-2 record, asserting on the ticket file it actually wrote. A correct rule the ticket writer never consults leaves the forbidden file in the surface a coder is handed. Use a copy — the generator writes an implemented_by back-reference into the source AC."
+test_rationale: |
+  The discriminating assertion is the repetition test, and it is the only reason this record
+  exists separately from its parent. The parent's rule is "a mention is not a change
+  surface"; this case adds that the failure INTENSIFIES with the requirement's clarity,
+  because every extra sentence forbidding a file is another token for a lexical scan to
+  find. Stating the prohibition once and then three times over the same fixture and
+  diffing the two surfaces is the cheapest way to make that inversion observable, and no
+  homogeneous fixture from the parent can show it.
+  Every assertion is on the ticket the real generator WROTE. A test that greps the
+  generator for a prohibition keyword, an exclusion list or a negative-verb regex would not
+  merely be weak — it would PASS on the one implementation this record's constraints
+  explicitly forbid, a "DO NOT" filter that handles the observed case and nothing else.
+  The whole-ticket test is separate from the files_touched test because they fail
+  independently and the second is the one that defeats the guardrail: change-scope-reviewer
+  reads the declared in-bounds set, so a file removed from files_touched but still
+  presented as a change target elsewhere in the ticket leaves the inversion intact wherever
+  the reviewer's input is assembled from the body rather than the frontmatter.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (S — the parent's rule
+      constrained, not a second mechanism), object-form it_requirements naming
+      scripts/ac_store/generate_ticket_from_ac.py as reference_file_path plus a
+      mention-count-invariance fragment and the whole-generated-ticket scope of the second
+      clause, delivers_to (null — nothing downstream consumes this L3), expects_from
+      (BP-1100a-4's default-deny rule), and a four-entry test_spec with rationale. doc_links
+      needed no retagging: the generator was already 'modifies' and BO-2400g-2 is deliberately
+      'related' — it is the fixture to READ verbatim, and editing it would repair one record
+      while leaving the derivation untouched. Recorded as the first constraint: no
+      prohibition-keyword filter, because such a filter passes the observed case, fails every
+      other phrasing, and would also pass a grep-shaped test. criteria, title and notes
+      untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE SHARPEST HALF OF THE DEFECT, AND THE MOST TESTABLE. BO-2400g-2 states, in its own
+  record and twice over, that this work must not touch
+  templates/agents/change-scope-reviewer.md — once as an it_requirements bullet opening
+  "DO NOT solve the scope-boundary problem here", once as a notes heading of the same
+  words, plus a doc_link whose relevance text says the same thing again. The generated
+  ticket named that file as part of the work's surface. The requirement's clearest
+  instruction was inverted into its opposite.
+
+  WHY THIS DESERVES ITS OWN RECORD RATHER THAN A CLAUSE IN BP-1100a-4. The parent's rule
+  is "a mention is not a change surface". This case adds something the parent's rule does
+  not imply: that the failure INTENSIFIES with the requirement's clarity. Because
+  _extract_paths_from_prose is lexical, every additional sentence spent forbidding a file
+  is another opportunity for its path to be scraped in. An author who states a prohibition
+  once, weakly, is safer than one who states it three times — which is exactly backwards
+  and is a property no test of the parent's homogeneous cases would surface. The third
+  criterion clause exists to pin that inversion.
+
+  WHY IT MATTERS. This is the one case where the wrong surface actively defeats the
+  guardrail built to catch it. change-scope-reviewer's job is to flag edits outside the
+  declared boundary; when the forbidden file is listed in files_touched, the reviewer
+  reads it as in-bounds and an edit the requirement explicitly prohibited passes review
+  silently. CLAUDE.md records wrong files_touched as a documented phantom-done driver
+  (EPIC-PhantomDoneFilesTouched, 2026-07-07); this is its worst shape.
+
+  RELATIONSHIP TO ACD-1600g — CITED, NOT DEPENDED ON, AND DELIBERATELY SO. ACD-1600g-1
+  gives the exclusion a structured home on the requirement; ACD-1600g-3 moves the scope
+  reviewer's read to it. Neither is required here. This AC is satisfiable today because
+  BO-2400g-2's prohibition is already stated inside its own record, so a derivation that
+  declines to name a file the requirement marks as not-to-be-touched has something to
+  read. A structured field would make the check mechanical rather than possible — an
+  enabler, not a prerequisite. Depending on ACD-1600g would put the most testable half of
+  this defect behind a schema migration, and would blur two layers that are cleanly
+  separate: ACD-1600g governs where an exclusion is DECLARED and READ; this AC governs
+  what a generator may WRITE as the surface. If ACD-1600g lands first it simply becomes
+  the cleanest input to this rule, with no change to these criteria.
+
+  TESTS MUST NOT BE GREP-ONLY. Run the real generator over a copy of the real BO-2400g-2
+  record and assert that templates/agents/change-scope-reviewer.md is absent from the
+  files_touched of the ticket it actually wrote, and absent from the rest of the ticket as
+  a named change target. Asserting that the generator's source contains a prohibition
+  keyword, an exclusion list, or a negative-verb regex passes on a filter that never runs.
+  Point the generator at a COPY of the store: it writes an implemented_by back-reference
+  into the source AC.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L3; the IT
+  PO sets assigned_agent, it_requirements, estimated_complexity, the contracts and the
+  test contract. No test_spec is authored because this tree's existing L3 (BP-1100a-1-i)
+  carries none.
