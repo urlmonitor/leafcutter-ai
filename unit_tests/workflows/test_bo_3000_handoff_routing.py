@@ -50,9 +50,20 @@ CONTRACT THIS TEST FILE ESTABLISHES FOR python-coder (TDD: this is the spec):
      phase agent, the driver MUST NOT advance either — the same "no dispatch
      of the next phaseOrder entry" behavior applies as a fail-closed default.
 
-  All three tests below are RED against the current, unmodified drivers: the
-  current code dispatches the next phase (pr-reviewer) immediately after a
-  `handoff` result and never re-dispatches the named agent.
+  The first three tests below are RED against the current, unmodified
+  drivers: the current code dispatches the next phase (pr-reviewer)
+  immediately after a `handoff` result and never re-dispatches the named
+  agent. Two further tests were added in a follow-up pass to close review
+  findings M-1 and M-2:
+
+    - Test 4 (M-1) mirrors test 3's fail-closed-handoff coverage for
+      build-ticket.js, which previously had no equivalent to test 3's
+      build-feature.js coverage.
+    - Test 5 (M-2) covers a pre-existing gap in build-ticket.js (not part
+      of the original BO-3000 handoff defect): a phase agent whose result
+      is null or has no usable status must halt the driver instead of
+      being recorded as a completed phase. build-feature.js already had
+      this guard; build-ticket.js did not.
 
   Per the project's "Verify Behaviorally, Not by Grep" convention, these tests
   drive the REAL driver scripts through the Node.js-backed E2 stub harness
@@ -347,4 +358,125 @@ def test_handoff_with_unparseable_target_still_blocks_advance_in_build_feature()
         "must fail closed — it must NOT advance to the next phase in "
         f"phaseOrder (pr-reviewer). Got {len(pr_reviewer_calls)} pr-reviewer "
         f"dispatch(es). Dispatched labels: {_dispatched_labels(result)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 4 — build-ticket.js: a handoff with NO parseable target must still
+# fail closed (no silent advance), never a guess. Mirrors test 3
+# (build-feature.js) and drives build-ticket.js the way test 2 does.
+# ---------------------------------------------------------------------------
+
+
+def test_handoff_with_unparseable_target_still_blocks_advance_in_build_ticket():
+    # covers: BO-3000
+    """AC-2 (build-ticket.js): the sibling driver must apply the same
+    fail-closed handoff behaviour as build-feature.js. When a `status:
+    "handoff"` result has no `handoff_target` (or one that names no
+    recognizable phase agent), the driver must return a blocked result
+    rather than falling through to the completed-phase path — it must NOT
+    advance to the next phase in phaseOrder, and it must NOT guess a target
+    to re-dispatch.
+
+    `args.worktree_path` is supplied so the ambient worktree-check agent()
+    call is skipped (build-ticket.js Phase 0 trusts a caller-supplied path),
+    isolating the assertion to the fail-closed handoff behaviour itself —
+    the same isolation test 2 uses for build-ticket.js.
+    """
+    label_responses = {
+        "ticket-planner": {
+            "ticket_path": _TICKET_ABS_PATH,
+            "title": "BO-3000 unparseable-handoff fixture ticket (build-ticket.js)",
+            "files_touched": ["some/module.py"],
+            "has_test_requirements": True,
+            "existing_test_files": [],
+            "ordered_phases": [
+                {"agent": "python-coder", "status": "needed"},
+                {"agent": "pr-reviewer", "status": "needed"},
+            ],
+        },
+        "python-coder": {
+            "status": "handoff",
+            "message": "Something else needs to happen before I can proceed.",
+        },
+        "pr-reviewer": {"status": "ok"},
+    }
+
+    result = run_workflow_under_e2(
+        _BUILD_TICKET_JS,
+        timeout=_TIMEOUT,
+        label_responses=label_responses,
+        args={
+            "ticket_path": _TICKET_ABS_PATH,
+            "worktree_path": _WORKTREE_ABS_PATH,
+        },
+    )
+    assert result.error == "", f"Harness error: {result.error}"
+
+    pr_reviewer_calls = _calls_with_label(result, "pr-reviewer")
+    assert len(pr_reviewer_calls) == 0, (
+        "When a handoff result has no parseable handoff_target, build-ticket.js "
+        "must fail closed — it must NOT advance to the next phase in "
+        f"phaseOrder (pr-reviewer). Got {len(pr_reviewer_calls)} pr-reviewer "
+        f"dispatch(es). Dispatched labels: {_dispatched_labels(result)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — build-ticket.js: a phase agent that dies mid-run (agent() resolves
+# to null) or returns an empty/falsy status must halt the driver rather than
+# being recorded as a completed phase. Mirrors the null/empty-status guard
+# already present in build-feature.js's driveTicketPhases().
+# ---------------------------------------------------------------------------
+
+
+def test_null_phase_result_blocks_advance_in_build_ticket():
+    # covers: BO-3000
+    """M-2 (build-ticket.js): when a phase agent's result is null (agent()
+    died mid-run) or has no usable status, the driver must NOT record the
+    phase as completed and must NOT advance to the next phase in
+    phaseOrder. Before the fix, a null phaseResult fell through both the
+    handoff branch and the blocker/failed branch and was pushed onto
+    completedPhases as if the phase had succeeded.
+    """
+    label_responses = {
+        "ticket-planner": {
+            "ticket_path": _TICKET_ABS_PATH,
+            "title": "BO-3000 null-result fixture ticket (build-ticket.js)",
+            "files_touched": ["some/module.py"],
+            "has_test_requirements": True,
+            "existing_test_files": [],
+            "ordered_phases": [
+                {"agent": "python-coder", "status": "needed"},
+                {"agent": "pr-reviewer", "status": "needed"},
+            ],
+        },
+        "python-coder": None,
+        "pr-reviewer": {"status": "ok"},
+    }
+
+    result = run_workflow_under_e2(
+        _BUILD_TICKET_JS,
+        timeout=_TIMEOUT,
+        label_responses=label_responses,
+        args={
+            "ticket_path": _TICKET_ABS_PATH,
+            "worktree_path": _WORKTREE_ABS_PATH,
+        },
+    )
+    assert result.error == "", f"Harness error: {result.error}"
+
+    python_coder_calls = _calls_with_label(result, "python-coder")
+    assert len(python_coder_calls) >= 1, (
+        "Expected python-coder to be dispatched at least once. Dispatched "
+        f"labels: {_dispatched_labels(result)}"
+    )
+
+    pr_reviewer_calls = _calls_with_label(result, "pr-reviewer")
+    assert len(pr_reviewer_calls) == 0, (
+        "When a phase agent's result is null (dies mid-run) or has no "
+        "usable status, build-ticket.js must fail closed — it must NOT "
+        f"advance to the next phase in phaseOrder (pr-reviewer). Got "
+        f"{len(pr_reviewer_calls)} pr-reviewer dispatch(es). Dispatched "
+        f"labels: {_dispatched_labels(result)}"
     )

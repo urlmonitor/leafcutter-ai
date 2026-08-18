@@ -30,6 +30,15 @@ Both drivers now handle it identically:
 - A `handoff` whose `handoff_target` is missing or unrecognised fails closed — the driver
   refuses to guess a target and refuses to advance.
 
+Separately, in the same pass, `build-ticket.js` gained a null/empty-status guard on its
+per-phase result — immediately after `resultStatus` is computed and before the `handoff`
+branch — mirroring one `build-feature.js` already had. Without it, a phase agent that dies
+mid-run (`agent()` resolves to `null`) produced a falsy `resultStatus` that skipped both the
+new `handoff` branch and the `blocker`/`failed` branch, so the dead phase was pushed onto
+`completedPhases` as if it had succeeded and the loop advanced. This was a pre-existing gap
+in `build-ticket.js`, not part of the original handoff defect above — it is closed here
+because it sits in the same adjudication code the handoff fix touches.
+
 ## Why
 
 Found live in `EPIC-BuildPipelinePhantomRemediation` ticket 07. `python-coder` returned
@@ -45,12 +54,21 @@ what the first agent had already diagnosed and correctly reported.
 
 `unit_tests/workflows/test_bo_3000_handoff_routing.py` (AC `BO-3000`) drives the real
 driver scripts through the Node-backed E2 stub harness and asserts on the observed
-`agent()` dispatch sequence — that `test-writer` is dispatched twice in each driver, and
-that an unparseable target produces zero `pr-reviewer` dispatches. It does not grep the
-JS source; a grep-only test cannot tell a wired handler from a defined-and-ignored one.
+`agent()` dispatch sequence. It does not grep the JS source; a grep-only test cannot tell
+a wired handler from a defined-and-ignored one. Five tests in total:
 
-Red baseline before the fix: 3 failed. After: 3 passed, with 411 passing across
-`unit_tests/workflows/` and no regressions.
+- `test-writer` is dispatched twice (its normal turn, then the handoff re-dispatch) in
+  **each** driver — one test for `build-feature.js`, one for `build-ticket.js`.
+- An unparseable `handoff_target` produces zero `pr-reviewer` dispatches — fail-closed
+  coverage for **both** drivers (`build-feature.js` and `build-ticket.js`), not just one.
+- A phase agent whose result is `null` or has no usable status produces zero
+  `pr-reviewer` dispatches in `build-ticket.js` (covers the null/empty-status guard
+  described above).
+
+Red baseline before the handoff fix: 3 failed. After: 3 passed. The fail-closed
+`build-ticket.js` mirror test and the null/empty-status guard test were added in a
+follow-up pass; both were confirmed RED against the pre-fix `build-ticket.js` before the
+fix and green after. 413 passing across `unit_tests/workflows/` and no regressions.
 
 ## Not covered
 
