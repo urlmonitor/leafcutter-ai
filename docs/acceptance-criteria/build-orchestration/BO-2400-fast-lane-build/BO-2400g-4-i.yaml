@@ -20,10 +20,10 @@ criteria: |
   And each one names the requirement and the file it relates to,
   And a run whose reading produced no findings adds nothing of this kind to its pull
     request.
-depends_on: [BO-2400g-4]
+depends_on: [BO-2400g-4, TQ-200c-2]
 doc_links:
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "Pull Request is the lane's last phase (line 539) and the only durable artifact a fast-lane run leaves for a human. Anything held only in the run's own output disappears with the session."
   - path: docs/acceptance-criteria/build-orchestration/BO-800-self-describing-prs/BO-800.yaml

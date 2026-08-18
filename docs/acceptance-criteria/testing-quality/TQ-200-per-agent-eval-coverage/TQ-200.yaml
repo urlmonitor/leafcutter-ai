@@ -41,6 +41,7 @@ superseded_by: null
 covered_by:
   - TQ-200a
   - TQ-200b
+  - TQ-200c
 implemented_by: []
 change_target:
   - code

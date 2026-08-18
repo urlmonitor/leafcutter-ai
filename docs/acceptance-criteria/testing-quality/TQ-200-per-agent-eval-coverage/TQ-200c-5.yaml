@@ -1,0 +1,264 @@
+id: TQ-200c-5
+components:
+  - testing_quality
+  - ac_store
+  - ticket_creation_pipeline
+title: "A proof the pipeline cannot honour is announced, and never reported as a success"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose proof demand the pipeline cannot fully honour — a kind
+    of proof it has no way to ask for, a demand it can state but cannot deliver to
+    anyone able to satisfy it, or a judged demand with nowhere to land,
+  When the pipeline reports whether that work is ready to be built,
+  Then the report says which demanded kind of proof was not carried through and why,
+    naming the work,
+  And that outcome is not reported as a success: a report in which a demanded kind of
+    proof went uncarried cannot read as ready-to-build,
+  And the absence of any proof demand is itself only reportable as a success when the
+    work genuinely needs none, decided as TQ-200c-2 requires — never because the
+    question of what proof it needs was skipped,
+  And every check the pipeline performs on a proof demand is either performed for
+    this work, or named in the report as a check that was not performed and why — a
+    check that is silently not attempted is not permitted,
+  And this holds for the whole routed demand, not for any single field of it, so an
+    implementation that stops discarding one authored field still fails while another
+    demanded kind goes uncarried.
+depends_on:
+  - TQ-200c
+  - TQ-200c-1
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The exact behaviour this AC reverses, and the one file this AC edits. Verified 2026-08-18. Line 2740 sets is_code_ac; line 2773 records `PASS` with `non-code AC — no test contract required`, so the omission of every proof demand is reported as a passing check. Worse for the fourth clause: check #4 at line 2776 (would the generated Test Requirements pass the ticket guard?) and check #5 at line 2783 (it_requirements present?) are BOTH gated on is_code_ac and are therefore not failed but never attempted, and the report does not say so. The verdict line at 2801 is computed from the recorded lines, so a report full of un-attempted checks reads as READY. Retagged describes -> modifies by it-po 2026-08-18: this is an edit surface, and only edit-surface relationships reach a generated ticket's files_touched (generate_ticket_from_ac.py:104-106, docs/how-to/ac-traceability-store.md)."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The first of the three unhonourable cases in the Given — READ, not edited here: TQ-200c-1 owns the vocabulary change. Verified 2026-08-18: framework enum [\"unittest\", \"pytest\"] (line 401), angle enum without any judged value (line 411), additionalProperties: false at root (line 15) and on test_spec items (line 387). Until c-1 lands, a judged demand is literally unaskable — and an unaskable demand must be announced rather than absorbed. Kept describes deliberately: this AC must be shippable and testable while the vocabulary is still unbuilt, which it cannot be if it also owns the schema edit."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The second case: a demand that can be stated but not delivered — READ as a destination, edited by TQ-200c-1 rather than here. Verified 2026-08-18: zero occurrences of \"eval\", framework choice unittest or pytest. Handing this template a judged demand is the concrete instance of a demand reaching a party that cannot satisfy it, and it would answer with a pytest file rather than reporting that it could not comply."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The precedent for the never-a-skip rule at the run layer: a triggering change with a missing or stale eval result is a HARD FAILURE, never a skip and never an implicit pass. This AC applies the same principle one layer earlier — at the moment the demand is decided and reported, before any result exists."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The same never-silent principle stated for coverage: an in-scope agent with no eval set is reported as a coverage gap rather than passing silently. Consistency across the three is deliberate — one rule about silence, applied at the demand layer, the coverage layer and the run layer."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-check accounting record the readiness report must keep, and the verdict rule derived from it. The report today records only the checks it happened to run (line 2773 onward) and computes its verdict from that list (line 2801), so a check that was never attempted is indistinguishable from one that passed. The fix is to make NOT-ATTEMPTED a first-class recorded outcome carrying a reason, and to make the verdict a function of the full check inventory rather than of the lines that happen to be present. n_location_rule is 'all' rather than '1' because every gate on is_code_ac in the readiness block is an enforcement point — a fix applied to line 2773 alone leaves checks #4 and #5 silently unattempted, which is the fourth clause's exact target."
+    required:
+      - check_id
+      - outcome
+    properties:
+      check_id:
+        type: string
+        description: "The check being accounted for. The inventory must be enumerable, so that 'every check is either performed or named as not performed' is decidable rather than aspirational. An inventory derived from the checks that ran cannot express a check that did not."
+      outcome:
+        type: string
+        enum:
+          - pass
+          - fail
+          - not_attempted
+        description: "not_attempted is the new value and the whole point. Today an un-attempted check leaves no trace and the verdict at line 2801 reads READY over a report missing half its checks. not_attempted must never be counted toward a ready verdict — it is neither a pass nor a silent absence."
+      reason:
+        type: string
+        description: "Required whenever outcome is not_attempted or fail. For an uncarried proof demand it must name WHICH demanded kind was not carried through and WHY, and name the work — the third criterion clause is about the report's content, not merely its verdict."
+      uncarried_proof_kind:
+        type: string
+        description: "Set when the reason is that a demanded kind of proof could not be carried through. Uses the vocabulary TQ-200c-1 single-sources; before c-1 lands there is one kind and the field degenerates, which is why this AC depends on c-1."
+  constraints:
+    - "NOT-ATTEMPTED must be a recorded outcome, not an absence. Verified 2026-08-18: checks #4 (line 2776) and #5 (line 2783) are gated on is_code_ac and simply do not execute for judged work; nothing in the output says so. An un-attempted check that leaves no trace is indistinguishable from a passed one — the same failure BO-2400g-2 names for inert review phases."
+    - "The verdict must be computed from the FULL check inventory, not from the recorded lines. The verdict at line 2801 today is derived from whatever was recorded, so a report missing half its checks still reads READY. Any fix that adds not-attempted lines while leaving the verdict derived from the same list satisfies the fourth clause's letter and still emits a green verdict."
+    - "A report containing any uncarried demanded proof kind must not be emittable as ready-to-build. Assert on the verdict the real command surface writes, not on an in-memory structure — the operator reads the emitted report."
+    - "'No proof demand' may only read as a pass when the decision was actually made. The current line 2773 records `PASS  non-code AC — no test contract required` for work where the question was never asked; the two must become distinguishable in the output. This is the reporting rule only — how the answer is DERIVED is TQ-200c-2's and is deliberately not depended on here."
+    - "The guarantee is on the WHOLE routed demand, not on one field. An implementation that stops discarding an authored test_spec (the narrow, generator-local ACD-400b requirement being authored concurrently) and stops there still fails this AC: a judged kind can go uncarried while the authored deterministic field survives intact. Do not close this AC by citing that one."
+    - "Must not turn an announced gap into a merge gate. This AC produces a REPORT. Whether an announced gap blocks CI is TQ-200b-4's; whether an unreachable eval set is a gap is TQ-200c-4-i's. Adding a non-zero exit for a gap here would pre-empt both."
+    - "Must not alter the content, wording or order of any check that IS performed today. The existing readiness report is consumed by /build-ac; adding accounting must be additive, verified by generating tickets for a set of code ACs before and after and diffing the reports."
+    - "Point any test at a COPY of the store. The generator writes an implemented_by back-reference into the source AC, so a test run against docs/acceptance-criteria mutates the real store."
+delivers_to:
+  agent: python-coder
+  contract: "A readiness report in which every check carries an explicit outcome of pass, fail or not_attempted-with-reason; in which an uncarried demanded proof kind is named together with the work it belongs to; and whose verdict is computed from the full check inventory, so a report with any uncarried kind or any un-attempted check cannot read as ready-to-build. Consumed by whoever drives /build-ac, which today reads a green verdict over a report that silently omitted half its checks."
+expects_from:
+  ac_id: TQ-200c-1
+  contract: "The single-sourced proof-kind vocabulary (test_spec[].proof_mode, values {asserted, judged}, absent-means-asserted). 'Which demanded kind of proof was not carried through' is only a statable finding once kinds exist; before c-1 there is one kind and the finding degenerates. This AC reads the vocabulary and never redefines it."
+test_required: true
+test_spec:
+  - name: test_an_uncarried_proof_kind_is_named_in_the_report_together_with_the_work
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-5]
+    description: "A record carrying a demand the pipeline cannot honour produces a report that names the uncarried kind, the reason, and the work. Asserting only that the report is non-green passes on an implementation that fails opaquely, which leaves the operator no better off."
+  - name: test_a_report_with_an_uncarried_demand_cannot_read_as_ready_to_build
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-5]
+    description: "The emitted verdict for that same record is not a success. Separate from the naming test because the two fail independently: a report can name the gap in its body and still compute READY at line 2801 from the lines it recorded."
+  - name: test_a_check_that_was_not_attempted_is_named_as_not_attempted_with_a_reason
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-5]
+    description: "THE SHARPEST CLAUSE. For work where checks #4 and #5 are skipped, the report must say they were not performed and why. Today they leave no trace at all. A test asserting only that the report mentions the checks passes on a version that lists them as passed."
+  - name: test_the_verdict_is_computed_from_the_full_check_inventory_not_the_recorded_lines
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    covers: [TQ-200c-5]
+    description: "Removing a check from the executed path must change the verdict, not merely shorten the report. The natural half-fix adds not-attempted lines while leaving the verdict derived from the same list, which passes every presence assertion above and still emits READY."
+  - name: test_none_required_is_distinguishable_from_never_asked
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-5]
+    description: "Two records — one that genuinely needs no proof and one whose proof question was skipped — must produce different reports, and only the first may read as a pass. Today both produce the same line 2773 PASS. Does not assert HOW the answer was derived; that is TQ-200c-2's."
+  - name: test_fixing_the_authored_field_alone_does_not_satisfy_the_whole_routed_demand
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-5]
+    description: "NEGATIVE CONTROL against the concurrent generator-local fix. A record whose authored test_spec survives intact but whose judged kind goes uncarried must still fail. Without this test the AC is closable by ACD-400b's narrower change, which is precisely what the fifth criterion clause forbids."
+  - name: test_the_report_is_produced_by_the_real_generator_command_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-5]
+    description: "PRODUCTION ENTRY POINT: runs the real generator command line over a COPY of a store and asserts on the report it actually emitted. A correct accounting the command surface never prints is invisible, which is the same observable as no accounting at all. Use a copy — the generator writes an implemented_by back-reference into the source AC."
+  - name: test_reports_for_existing_code_acs_are_unchanged_apart_from_the_new_accounting
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [TQ-200c-5]
+    description: "Added by it-po. Over a copy of the real store, the reports for a set of ordinary code ACs must keep every check they carry today, in the same wording and order. /build-ac consumes this report; a rewrite that changes what a passing report looks like breaks the reader while every positive test above passes."
+test_rationale: |
+  Every assertion is made on the report the real generator EMITTED, never on an in-memory
+  structure, because the failure this AC names is invisible from the inside: checks #4 and
+  #5 are not failed, they simply never run, and the verdict is computed from the lines that
+  happened to be recorded. An implementation can hold a perfectly correct internal view of
+  what it skipped and still print today's green report.
+  Naming and verdict are separate tests because they fail independently, and the second is
+  the one that matters to an operator: a report that describes the gap in its body and still
+  computes READY at line 2801 has changed nothing about the decision anyone makes from it.
+  For the same reason the seam test requires the verdict to MOVE when the executed check set
+  moves — the natural half-fix appends not-attempted lines to the body while leaving the
+  verdict derived from the same list, and that half-fix passes every presence assertion.
+  The whole-routed-demand negative control is mandatory rather than optional. A narrow,
+  generator-local requirement forbidding the discard of an authored test_spec is being
+  authored concurrently under ACD-400b, and an implementer who closes it will be strongly
+  tempted to mark this one done too. The fifth criterion clause exists to prevent that, and
+  a test is the only thing that makes the clause bite.
+  The real_artifact test guards the reader rather than the writer: /build-ac consumes this
+  report today, so a restructure that satisfies every new clause while changing what a
+  passing report looks like trades one silent failure for another.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (L), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path
+      with n_location_rule 'all' (every is_code_ac gate in the readiness block is an enforcement
+      point; fixing line 2773 alone leaves checks #4 and #5 silently unattempted), the
+      not_attempted check-outcome fragment, delivers_to, expects_from (TQ-200c-1's vocabulary),
+      and an eight-entry test_spec with rationale. Retagged the generator doc_link
+      describes -> modifies so the one file this AC edits reaches the generated ticket's
+      files_touched; describes and related are excluded by design
+      (generate_ticket_from_ac.py:104-106, docs/how-to/ac-traceability-store.md). The schema and
+      test-writer template links stay describes deliberately: TQ-200c-1 owns those edits and this
+      AC must remain shippable while the vocabulary is unbuilt. criteria, title and notes
+      untouched. No edge added to c-2, c-3 or c-4 — the notes record that decision explicitly."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE HIGHER-LEVEL STATEMENT, AND IT IS NOT THE ACD-400b ONE. A narrow,
+  generator-local requirement — "never silently discard an authored test_spec" — is
+  being authored concurrently under ACD-400b by another author. Assume it exists and
+  assume it stays generator-local. The two are related and neither substitutes for
+  the other:
+    - Theirs is about ONE FIELD inside ONE PROGRAM: an authored test_spec must not be
+      thrown away.
+    - Mine is about the ROUTING DECISION AS A WHOLE: whatever kinds of proof were
+      decided to be necessary, if the pipeline cannot carry one of them through, that
+      must be announced and must not be reported as readiness. It bites on demands
+      nobody authored a field for — including a judged demand the vocabulary cannot
+      yet express and a judged demand with no harness entry to land in.
+  The fifth clause exists specifically to keep the two from being collapsed: an
+  implementation that stops discarding authored test_spec entries and stops there
+  still fails, because a judged kind can go uncarried while the authored
+  deterministic field survives perfectly. An implementer must not close one and mark
+  the other done.
+
+  WHY THE FOURTH CLAUSE IS THE SHARPEST ONE. Verified 2026-08-18: the readiness
+  report's checks #4 (line 2776) and #5 (line 2783) are gated on `is_code_ac`, so for
+  judged work they are not failed — they are never attempted, and their absence is
+  invisible in the output. The verdict at line 2801 is derived from the lines that
+  were recorded, so a report missing half its checks still reads READY. An
+  un-attempted check that leaves no trace is indistinguishable from a passed one,
+  which is the identical failure BO-2400g-2 names for review phases: a check that is
+  present but inert reads as coverage and is worse than an absent one. The remedy is
+  the same — name what was not performed, and why.
+
+  WHY THE THIRD CLAUSE IS NOT REDUNDANT WITH c-2. c-2 governs how the answer is
+  DERIVED. This clause governs how a particular answer — "none required" — may be
+  REPORTED. They fail independently: a correctly derived "none required" that the
+  report cannot distinguish from "we never asked" leaves the operator with today's
+  green light, and a badly derived answer reported with perfect transparency is still
+  the wrong answer. Today the pipeline fails both, at the same line.
+
+  WHY THIS IS AN L2 AND NOT AN L3 UNDER c-2. It is not an edge case of the routing
+  decision; it is a separate obligation on the pipeline's reporting, and it applies to
+  demands c-2 never made — for instance a judged demand a human authored by hand
+  before any routing exists. It also has to hold while c-2 is unbuilt, which an L3
+  under c-2 could not.
+
+  DEPENDENCY REASONING.
+    - depends_on TQ-200c-1: "a demanded kind of proof was not carried through" is only
+      a statable finding once kinds exist. Before c-1 there is one kind and the
+      finding degenerates.
+    - No edge to c-2, c-3 or c-4, deliberately. This AC must hold for demands from any
+      source, including hand-authored ones, and is testable with a hand-authored
+      unhonourable demand. Making it depend on the router would leave the loudness
+      guarantee unbuilt for exactly the period in which half-built routing is most
+      likely to drop things quietly. Recorded so the it-po does not add the edges on
+      aesthetic grounds.
+
+  BOUNDARY. This AC produces a REPORT, not a merge gate. Whether an announced gap
+  blocks CI belongs to TQ-200b-4; whether an unreachable eval set is a gap belongs to
+  TQ-200c-4-i. What is required here is that the pipeline stops describing the absence
+  of a proof demand as a passing check.

@@ -1,0 +1,86 @@
+id: BO-2400f-4-v
+components:
+  - build_orchestration
+  - changelog
+title: "Failing to produce a required entry halts the run with a named reason; it never proceeds as a warning"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has decided it owes a changelog entry,
+  When the run reaches the point of opening its pull request and no changelog entry is
+    present in the change it would deliver,
+  Then the run halts before opening the pull request,
+  And the halt carries exactly one reason drawn from a fixed named set:
+    changelog_emit_failed, when the attempt to produce the entry returned an error;
+    changelog_entry_absent_from_change, when the attempt reported success but no added
+    entry is present in the change to be delivered,
+  And no pull request is opened by that run,
+  And the halt names the acceptance criteria the run built and the branch holding them, so
+    the operator can finish the delivery without rebuilding,
+  And the condition is never reported as a warning alongside a successful outcome.
+depends_on: [BO-2400f-4, BO-2400f-4-iii]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_changelog_halt:
+      type: object
+      description: "Structured blocker: {classification: 'halt', reason: one of ['changelog_emit_failed','changelog_entry_absent_from_change'], built_ac_ids: [str], branch: str}. Mirrors the red-baseline halt shape (BO-2400a-3-i)."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The verification is a re-read of the delivered change, not a re-read of the emitter's return value. An emitter that reports success while writing outside the branch is exactly the silent failure this criterion exists to catch, so the post-condition must be checked independently of the attempt."
+    - "The halt reason must come from a fixed named set so callers and tests can branch on it, mirroring the red-baseline halt reasons in BO-2400a-3-i. Free-form text is not acceptable."
+    - "The halt must be surfaced as a structured blocker result from the workflow (classification: halt), the same shape as the existing pre-dispatch guard aborts — not a console warning followed by the PR step."
+    - "The built work must not be discarded or the claim silently released: the halt names the branch and the built AC ids so the operator can deliver them by hand. Coordinate with BO-2400f-10 on claim release so a halted run does not strand ACs in in_progress."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-4-iii
+  contract: "The attempt to produce the required changelog entry and the resulting state of the change to be delivered."
+test_required: true
+test_spec:
+  - name: test_emit_failure_halts_before_pr_is_opened
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "When entry production errors, the run halts with reason changelog_emit_failed and the pull-request step never runs."
+  - name: test_silent_emit_success_with_no_entry_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "When the attempt reports success but no added entry is present in the change, the run halts with reason changelog_entry_absent_from_change."
+  - name: test_halt_names_built_acs_and_branch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The halt payload names the built acceptance criteria and the branch holding the work."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Without this criterion, adding a changelog step buys nothing: a step that fails quietly
+  puts the lane back exactly where KI-BO-001 found it — a pull request that cannot merge,
+  reported as a success. The observed defect is not "no changelog step existed", it is
+  "the run could not tell the difference between delivered and blocked".
