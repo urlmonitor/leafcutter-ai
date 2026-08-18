@@ -92,8 +92,20 @@ def _is_suppressed(
     """Return True if this finding is covered by an allowlist entry.
 
     The file_path in an allowlist entry may be a bare filename, a relative
-    path, or an absolute path. We match if any suffix of the finding's
-    file_path equals the allowlist entry (using Path segment matching).
+    path, or an absolute path. A finding is suppressed only when one of
+    three modes holds:
+      - wildcard: the allowlist path is the literal "*" (any finding
+        matches),
+      - exact-path: the allowlist path segments equal the finding path
+        segments exactly, or
+      - path-suffix: the allowlist path segments are a true
+        segment-by-segment suffix of the finding path segments (this also
+        covers bare-filename entries, which suppress by basename at any
+        depth since a single segment is trivially a 1-segment suffix).
+
+    Basename equality alone is never sufficient when the allowlist entry
+    contains a path separator — only a genuine segment-suffix match
+    suppresses in that case.
 
     Args:
         finding: The Finding to check.
@@ -107,14 +119,13 @@ def _is_suppressed(
         if rule_id != finding.rule_id and rule_id != "*":
             continue
         if fp != "*":
-            al_path = Path(fp)
-            al_parts = al_path.parts
+            al_parts = Path(fp).parts
             fp_parts = finding_path.parts
-            # Match if allowlist path is a suffix of finding path
-            if fp_parts and fp_parts != tuple(fp_parts[-len(al_parts):] if len(fp_parts) >= len(al_parts) else fp_parts):
-                # Also try simple name match
-                if finding_path.name != al_path.name and finding.file_path != fp:
-                    continue
+            is_suffix_match = len(fp_parts) >= len(al_parts) and (
+                al_parts == fp_parts[len(fp_parts) - len(al_parts):]
+            )
+            if not is_suffix_match:
+                continue
         if lineno == "*" or lineno == str(finding.line_no):
             return True
     return False

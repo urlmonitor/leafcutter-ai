@@ -58,6 +58,43 @@ ENTROPY_HIGH:tests/fixtures/test_data.py:42
 API_KEY_GENERIC:docs/external-api.md:*
 ```
 
+### How path matching decides suppression
+
+`_is_suppressed` in `scripts/scan_secrets.py` compares an allowlist entry's `file_path`
+against a finding's path by POSIX path *segments*, not by string prefix/suffix or
+basename alone. A finding is suppressed only when one of three modes holds:
+
+- **wildcard** — the allowlist path is the literal `*` (suppresses any finding for
+  that rule, regardless of path).
+- **exact-path** — the allowlist path segments equal the finding path segments
+  exactly.
+- **path-suffix** — the allowlist path segments are a true segment-by-segment
+  suffix of the finding path segments. A bare filename (no path separator, e.g.
+  `secrets.py`) is a 1-segment allowlist path, so it suppresses findings with that
+  basename at *any* depth — this is intentional. A multi-segment, path-qualified
+  entry (e.g. `config/secrets.py`) only suppresses a finding whose trailing path
+  segments match all of those segments in order (e.g. it suppresses
+  `src/config/secrets.py` but not `other/secrets.py`).
+
+**Basename equality alone is never sufficient to suppress a finding when the
+allowlist entry contains a path separator.** Two exploit shapes this guards
+against:
+
+- A path-qualified entry for `src/foo.py` must **not** suppress a same-basename
+  finding in a different, equal-length directory such as `deploy/foo.py`
+  (basename-collision shadowing).
+- A longer allowlist path (e.g. `src/config/foo.py`) must **not** suppress a
+  shorter finding path (e.g. root-level `foo.py`) — there are not enough finding
+  path segments for a suffix match to be possible.
+
+See `unit_tests/commit_guardian/test_scan_secrets_suppression.py` for the test
+coverage of all six suppression/non-suppression cases, and
+[ADR-001](../../../docs/architecture/adrs/ADR-001-self-hosting-boundary.md) for why
+`scripts/scan_secrets.py` under `templates/` is the canonical copy to edit (fixes here
+propagate to the deployed copies via `build.py`; the [commit-guardian component
+doc](../../../docs/architecture/components/commit-guardian.md) covers how this scanner
+fits into the broader pre-commit hook pipeline).
+
 ## Secrets Detection Rules
 
 The scanner applies these rules in order:
