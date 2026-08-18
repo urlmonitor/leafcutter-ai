@@ -1,0 +1,183 @@
+id: TQ-400a-1
+components:
+  - testing_quality
+  - ac_store
+title: "Every finished record is evaluated, including ones in no pending change"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store holding finished records of which only a small minority appear in
+    any pending change, the majority having been untouched since the day they were
+    marked finished,
+  When the honesty sweep runs,
+  Then every finished record in the store receives a proof verdict,
+  And the number of records evaluated equals the number of finished records
+    present on disk, with no record left unvisited,
+  And a record that appears in no pending change is evaluated on identical terms
+    to one that does,
+  And running the change-scoped check over the same store evaluates strictly
+    fewer records, demonstrating that the sweep's population is genuinely wider
+    and not the same population under a new name.
+depends_on:
+  - TQ-400a
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The set-cover taxonomy this AC's test contract is written against, and the
+      rule that a direct-import test covers `criterion` and nothing else.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      THE FILE TO EDIT. check_all_done_acs (:403) already rglobs the whole store
+      and calls verify_done_eligible for every done record, and main() already
+      dispatches to it on --mode ci. This is the package source.
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Deployed mirror of the template above — build_phases.build_commit_guardian
+      copies templates/scripts/commit_guardian/ into scripts/commit_guardian/.
+      Byte-identical at HEAD; must be mirrored in the same change or build.py
+      silently reverts the edit.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      verify_done_eligible (the per-record verdict oracle),
+      _scan_test_root_for_covers_tags and _build_ac_status_map. Reuse; do not
+      reimplement — that constraint is TQ-400a-3.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the mark-time proof gates this sweep extends over time are
+      documented, including the dispatch-topology testing trap.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Must reuse check_all_done_acs in
+    templates/scripts/commit_guardian/check_done_proof.py as the store walker. A
+    second walker over docs/acceptance-criteria/ is a defect, not an
+    implementation choice — the capability already exists as live code.
+  - >-
+    Must not reimplement the per-record verdict: every verdict must originate
+    from verify_done_eligible in scripts/ac_store/done_proof.py.
+  - >-
+    Must report the number of records evaluated as an explicit count in the
+    run's output, so the population is observable without diffing verdict lists.
+  - >-
+    Must edit templates/scripts/commit_guardian/check_done_proof.py and mirror
+    the change into scripts/commit_guardian/check_done_proof.py in the same
+    change; the latter is a build output of build_phases.build_commit_guardian
+    and is overwritten by build.py.
+  - >-
+    Must not alter the behaviour or scope of --mode precommit or --mode
+    ci-changed; the store-wide population is additive to the existing gates.
+  - >-
+    Must complete a full-store pass over the measured baseline (2,888 records,
+    641 done L2/L3) inside the timeout of a scheduled CI job, and must report
+    its own runtime; if the full pass cannot meet that budget it must report the
+    overrun rather than silently sampling a subset.
+  - >-
+    Must handle errors gracefully per the project error handling policy; a
+    record that cannot be read must not silently leave the evaluated population
+    — the reconciliation contract for that case is TQ-400a-4-i.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400a-4
+    contract: >-
+      The whole-store verdict population as list[dict] — the shape
+      check_all_done_acs already returns — one entry per done L2/L3 record,
+      each carrying at minimum {ac_id: str, path: str (repo-relative), ok: bool,
+      reason: str | null}, plus a run-level records_evaluated int. TQ-400a-4
+      persists this list; it must not re-derive the population.
+  - agent: python-coder
+    ac_id: TQ-400b-1
+    contract: >-
+      The same list. The demotion writer consumes only entries whose ok is
+      false and reads reason verbatim; it never re-runs the verdict.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400a-1-i
+implemented_by: []
+test_spec:
+  - name: test_sweep_returns_one_verdict_per_done_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Over a temp store containing N done L2/L3 records, the sweep returns
+      exactly N verdict entries — one per record id, none missing, none
+      duplicated — and the run's reported records_evaluated count equals N.
+  - name: test_ci_mode_cli_evaluates_records_absent_from_any_diff
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Drive the production entry point via subprocess — check_done_proof.py
+      --mode ci --ac-root <tmp store> --test-root <tmp tests> — over a store
+      whose records appear in no git diff, and assert each is evaluated and the
+      process exit status is a function of the store's contents.
+  - name: test_ci_mode_population_strictly_exceeds_ci_changed_population
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Run --mode ci and --mode ci-changed over ONE identical store and test
+      tree; the ci population must strictly contain the ci-changed population
+      and be strictly larger. This is the anti-false-green control: it fails if
+      the sweep is still change-scoped under a new name.
+  - name: test_sweep_reads_records_serialized_by_the_real_writer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Build the fixture store with yaml.safe_dump (column-0 block lists) or by
+      copying real records verbatim out of docs/acceptance-criteria/, then read
+      it in a fresh subprocess; every record is evaluated. Hand-typed indented
+      YAML reproduced the bias that hid the files_touched no-op.
+test_rationale: >-
+  A test that imports check_all_done_acs and asserts it returns verdicts passes
+  today, on a store-wide walker nothing invokes — it answers "no" to the
+  deletion question. The contract therefore drives the real CLI and, crucially,
+  compares the two populations over one identical store, which is the only
+  assertion that can distinguish a genuinely widened sweep from the existing
+  change-scoped check renamed.
+change_target: code
+risk_surface: internal
+notes: |
+  Scope is the entire deliverable here — the per-record verdict already exists and
+  must NOT be re-specified (that is BO-2500's territory). Reuse
+  verify_done_eligible from scripts/ac_store/done_proof.py.
+
+  Verified at authoring time (2026-08-17): a store-wide walk already exists as
+  check_all_done_acs in scripts/commit_guardian/check_done_proof.py:403, which
+  rglobs every AC yaml and calls verify_done_eligible for each finished record.
+  It is the change of INVOCATION, not the walk, that is missing — see TQ-400a-2.
+  Prefer wiring that function up over writing a second walker.
+
+  Measured baseline the sweep must be able to see: 641 finished L2/L3 records, of
+  which 259 carry no test bearing their coverage tag anywhere in unit_tests/.
+
+  Test-angle constraint: the final clause is the anti-false-green control. A test
+  that only asserts "the sweep returned some verdicts" passes on a sweep still
+  scoped to staged files. Comparing the two populations over one identical store
+  is what makes the widening observable.

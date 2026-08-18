@@ -23,6 +23,7 @@ criteria: |
     the dangling reference is flagged.
 depends_on:
   - TQ-100b-1
+  - TQ-100b-4
 doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
     relationship: describes
@@ -36,6 +37,31 @@ it_requirements:
   - "Fail-safe direction is mandatory and must NOT be relaxed: a `# covers:` tag that resolves to no AC in the store makes the test ENFORCED (treated as unlinked), never informational — an unknown/typo'd id can never become an accidental off-switch."
   - "The unresolved-tag set must be exposed to the TQ-100c-2 pre-pytest linkage-integrity check so the dangling reference is flagged there; do not silently drop it inside the pytest session."
   - "Resolution of a tag to 'absent' must be deterministic under pytest-randomly and based on the same once-per-session AC-store read as TQ-100b-1 (no per-test re-read)."
+test_spec:
+  - name: test_failing_test_with_unresolvable_covers_tag_drives_the_run_non_passing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a purpose-built temp test tree, a deliberately failing test carries '# covers: <id-known-absent-from-the-store>'. Assert the run outcome is non-passing and the test is classified as unlinked-and-enforced. Deliberately independent of how many values the reader admits: assert the enforcement DECISION for one tag, never a count over the repository tree, so this test stays valid both before and after TQ-100b-4 narrows the reader."
+  - name: test_unresolvable_tag_never_downgrades_a_failure_to_informational
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The fail-safe negative control, and the entry that falsifies the accidental off-switch. Feed the same failing test through with (a) a tag resolving to a done AC, (b) a tag resolving to a todo AC, and (c) a tag resolving to nothing, and assert case (c) is enforced — not merely 'not skipped', but that the outcome it produces is the enforced one. A run in which an unresolvable tag produces an informational/xfail/skip classification fails this entry."
+  - name: test_enforcement_decision_reached_through_the_pytest_plugin_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run pytest itself as a subprocess with the enforcement plugin active over the temp tree and assert a non-zero exit status — the production entry point, not a directly-called classifier helper. Repeat with -p randomly (random seed) and assert the same verdict, proving the once-per-session AC-store read is order-independent. Deleting the single line that wires the unresolvable-tag branch into the plugin's outcome must turn this red."
+  - name: test_dangling_tag_set_is_consumed_by_the_linkage_integrity_check
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Pipe the REAL emitted set of { test_id, covers_tag } records from a real session into the REAL TQ-100c-2 pre-pytest linkage-integrity check and assert the check flags the dangling reference. Asserting the producer built the list, or that the consumer accepts a hand-written list, does not satisfy this: the producer/consumer contract is the thing under test."
 delivers_to:
   agent: python-coder
   contract: "The set of test ids/paths whose '# covers: <AC-ID>' tag resolves to no AC present in the store, exposed for the TQ-100c-2 pre-pytest linkage-integrity check to flag as a dangling reference. Shape: list of { test_id, covers_tag } repo-root-relative."
@@ -49,6 +75,14 @@ amended_by:
     by: it-po
     at: 2026-06-24
     note: "Added it_requirements (non-relaxable fail-safe: unresolved tag => enforced; expose dangling set to TQ-100c-2; deterministic, same once-per-session read). Tightened delivers_to contract shape to { test_id, covers_tag } so the TQ-100c integrity check has an exact consumer contract. Confirmed python-coder / S."
+  - reason: "build-order dependency added"
+    by: BrainCandy
+    at: 2026-08-17
+    note: "depends_on += TQ-100b-4. Criteria unchanged. Measured at HEAD 339b0981c: the canonical reader (COVERS_TAG_RE = (\\S+), applied with .search() per line) yields 80 tag values that resolve to no AC, of which only 16 are even AC-id-shaped — the other 64 are bare quote characters, f-string placeholders such as {ac_id}, doc placeholders such as <AC-ID>, and English words scraped out of prose. Built on today's reader, this AC's flag-the-dangling-reference clause fires on all 80 and is ~80% false positives on its first run, which is how a gate gets switched off and takes the 16 genuine dangling tags into permanent invisibility with it. TQ-100b-4 narrows what counts as a tag; this AC decides what happens to one that resolves to nothing. The edge makes that order machine-enforceable rather than prose-only."
+  - reason: "test contract added (check-ac-schema: approved code AC must declare a test contract)"
+    by: it-po
+    at: 2026-08-17
+    note: "Added test_spec ONLY. criteria, readiness (approved), work_status (todo), depends_on, it_requirements, delivers_to and expects_from are byte-unchanged; the two prior amended_by entries are preserved verbatim. Four angles: criterion / failure / reachability / seam. The contract deliberately does NOT assume the reader has been narrowed by TQ-100b-4 — every entry asserts the ENFORCEMENT DECISION for a single deliberately-unresolvable tag in a purpose-built temp tree, never a count over the repository tree, so it holds identically on today's 80-value reader and on the narrowed one. The failure entry is the accidental-off-switch negative control (done-AC / todo-AC / unresolvable, asserting the third is enforced); the reachability entry runs pytest as a subprocess with the plugin active and re-runs under -p randomly to pin the once-per-session read; the seam entry pipes the real { test_id, covers_tag } records into the real TQ-100c-2 consumer rather than a hand-written list."
 superseded_by: null
 covered_by: []
 implemented_by: []

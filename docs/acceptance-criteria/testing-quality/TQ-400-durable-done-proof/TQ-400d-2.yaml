@@ -1,0 +1,133 @@
+id: TQ-400d-2
+components:
+  - testing_quality
+  - ac_store
+title: "Progress through the pile is measurable from one cycle to the next"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a triage population recorded at one sweep, and decisions taken against
+    some of its records before the next,
+  When the next sweep runs,
+  Then the number of records still awaiting a decision is reported, and it is
+    lower than the previous cycle's by exactly the number decided,
+  And records decided in an earlier cycle are not returned to the awaiting pile,
+  And the report shows the remaining count and not only the population total, so
+    movement is visible without arithmetic,
+  And a cycle in which no decisions were taken reports an unchanged remaining
+    count rather than omitting the figure.
+depends_on:
+  - TQ-400d
+  - TQ-400d-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle applied across cycles: the previous cycle's decision record is the real producer and the next cycle's pile computation is the real consumer. The no-return regression is exactly a seam defect — each side correct in isolation, wrong when wired."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "check_all_done_acs recomputes the unproven population from scratch on every run. That recomputation is the direct cause of the no-return regression named in notes: a decided-but-not-yet-fixed record is still unproven, so a naive pile-from-sweep drags it straight back in."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where per-record state lives and what is durable across runs — read before deciding where a decision is persisted, since the decision must survive a cycle in which the sweep's verdict for that record has not changed."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE DECISION IS DURABLE STATE; THE UNPROVEN VERDICT IS RECOMPUTED. These are two different lifetimes and conflating them is the no-return regression. The awaiting-decision pile must be (records the sweep classifies unproven) MINUS (records carrying a durable decision), not the sweep's unproven set recomputed each cycle. A decided-but-not-yet-fixed record is still unproven and must not re-enter the awaiting pile."
+  - "THE ARITHMETIC MUST BE EXACT AND CHECKABLE: remaining(N) == remaining(N-1) - decided_between(N-1, N), holding for any set of decisions taken between cycles. An approximate or independently-recomputed remaining count that happens to agree on the happy path is not sufficient — the identity must hold by construction."
+  - "REPORT THE REMAINING COUNT ALONGSIDE THE POPULATION TOTAL, never the total alone. Movement must be readable without the reader doing arithmetic; a total-only report is why a 259-record pile looks static even while it is being worked."
+  - "A ZERO-PROGRESS CYCLE MUST REPORT THE UNCHANGED FIGURE, not omit it. Omission is indistinguishable from a failed computation, and a pile that reports nothing when nothing moved is a pile that reports nothing most weeks."
+  - "NEW ARRIVALS AND DECISIONS MUST BE REPORTED SEPARATELY. A cycle in which three records were decided and three newly lapsed shows an unchanged remaining count under a single-figure implementation, which reads as zero progress when real work happened. The criteria's exactness clause is about the decided component specifically."
+  - "Must handle errors gracefully per the project error handling policy: an unreadable decision record must be reported and its record treated as awaiting a decision — fail toward the pile, never toward clearing it."
+delivers_to:
+  - agent: python-coder
+    contract: "Per-cycle progress figures: {population_total, remaining_awaiting_decision, decided_since_previous_cycle, newly_arrived_since_previous_cycle, previous_occurrence}. Consumed by TQ-400c-2's published surface as the visible measure that the pile is being worked."
+expects_from:
+  ac_id: TQ-400d-1
+  contract: >-
+    The triage list and its per-record decision states, from which the
+    awaiting-decision count is derived. Required shape: one entry per unproven
+    record carrying {ac_id, decision: prove|redo|retire|not_yet_decided}, with
+    the decision persisted durably across cycles.
+test_spec:
+  - name: test_tq_400d_2_remaining_count_drops_by_exactly_the_number_decided
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Two real cycles with real decisions recorded in between: assert remaining(2) == remaining(1) - decided. Vary the number decided across at least two runs of the scenario so a hard-coded decrement fails. Do not assert that a counter field exists."
+  - name: test_tq_400d_2_decided_records_do_not_return_to_the_awaiting_pile
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE NAMED REGRESSION. Record a decision against a record that is STILL UNPROVEN (decided but not yet fixed), run the next cycle, and assert it is absent from the awaiting pile. A pile recomputed from the sweep each cycle passes every other test here and fails this one — which is the whole point of testing the decision store and the sweep verdict as a wired pair rather than separately."
+  - name: test_tq_400d_2_zero_progress_cycle_reports_the_unchanged_figure
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two cycles with no decisions in between: assert the remaining count is PRESENT and unchanged. Assert presence explicitly — an omitted figure must fail, because omission and 'no movement' are the same thing to a reader and to any test that only checks the value when present."
+  - name: test_tq_400d_2_progress_is_computed_across_two_real_runs_over_a_real_on_disk_store
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Both cycles run over a store written by the project's real serializer, with decisions persisted exactly as the production path persists them and read back from disk in the second cycle — never carried in memory between the two runs. An in-memory hand-off hides every durability defect this AC depends on."
+test_rationale: |
+  Three cheap greens are available and each is defeated by a different entry. Asserting a
+  counter field exists passes on a hard-coded value, so the arithmetic is varied across
+  scenarios. Testing the decision store and the sweep separately leaves the no-return
+  regression completely invisible — both sides are individually correct and the defect only
+  exists in the wiring, which is the textbook seam case and this repo's most-repeated failure
+  shape. And carrying decisions in memory between the two cycles hides the durability
+  requirement entirely, so the real_artifact entry forces a genuine round-trip through disk.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: >-
+      Assigned python-coder; complexity M. it_requirements separate the two
+      lifetimes (durable decision vs recomputed verdict) that cause the no-return
+      regression, state the exact arithmetic identity, and add a constraint the
+      criteria imply but do not name — decisions and new arrivals must be reported
+      separately or offsetting movement reads as zero progress. test_spec:
+      criterion / seam (the no-return regression) / boundary (zero-progress cycle)
+      / real_artifact (two runs with decisions round-tripped through disk).
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  "Worked through, not written off" is only checkable if the remaining count moves
+  and the movement matches the decisions actually taken. Prove it across two real
+  cycles with real decisions recorded in between, then check the arithmetic —
+  do not assert that a counter field exists.
+
+  The no-return clause guards a specific regression: a naive implementation
+  recomputes the pile from the sweep each cycle and, because a decided-but-not-yet
+  -fixed record is still unproven, drags it straight back into the awaiting pile.
+  That makes the remaining count permanently flat and the whole exercise look
+  futile even while people are working it.
+
+  The unchanged-count clause keeps a zero-progress cycle honest and visible rather
+  than silently skipped.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). One interaction the criteria do not name and
+  that would otherwise misreport progress: new arrivals. A cycle in which three
+  records are decided and three others newly lapse leaves the remaining count
+  unchanged, which reads as zero progress under a single-figure implementation
+  even though the exactness clause was satisfied. it_requirements therefore
+  require decided and newly-arrived to be reported as separate components.

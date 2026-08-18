@@ -1,0 +1,155 @@
+id: TQ-400e-4
+components:
+  - testing_quality
+  - ac_store
+title: "A test-free declaration carrying no reason is refused, not honoured"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record declared test-free whose stated reason is absent, empty,
+    or only whitespace,
+  When the whole-store honesty sweep evaluates it through the same entry point
+    that honours a properly-reasoned declaration,
+  Then the declaration is refused,
+  And the record is reported as unproven on exactly the same terms as a record
+    that carried no declaration at all,
+  And the report states that the declaration was refused and that the missing
+    reason is why,
+  And the record is therefore eligible for the same demotion any other unproven
+    record receives.
+depends_on:
+  - TQ-400e
+  - TQ-400e-3
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The normative reference for test_required and test_rationale, including that test_rationale must be a string and never a list — which is one of the malformed shapes the refusal must handle rather than treat as a present reason."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "test_rationale is typed string|null here. A null, an empty string, a whitespace-only string, and a non-string are four distinct malformed shapes, all of which must refuse. The schema permits null, so the schema alone will not catch a reasonless declaration — that is why this gate has to exist at the sweep."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Line 463 is the entry point that honours the declaration today with no reason whatsoever. The refusal must be implemented AT that point, so the known-bad input and the honoured case traverse the same path — that identity is the whole must_block requirement."
+  - path: scripts/commit_guardian/_ac_schema_validators.py
+    relationship: describes
+    status: exists
+    relevance: "The authoring-time rule that already rejects test_required: false on an approved leaf code AC. Read together with TQ-400e-3's reconciliation requirement so this refusal does not contradict it — the two must agree on which records may legally be exempt."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The must_block modifier: known-bad input through the SAME entry point, asserting it blocks. Also the failure angle and its fail-open precedents (BO-1700's gate had to be flipped to fail-closed; a wrong-shape config raised an uncaught exception and blocked commits) — both directions are live risks here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SAME ENTRY POINT AS THE HONOURED CASE — THIS IS THE AC. The reasonless declaration must be refused at scripts/commit_guardian/check_done_proof.py:463, the same place a reasoned declaration is honoured, and the change-scoped skip at :491-495 must be kept in agreement. A separate validator exercised only from a unit test leaves the production path unguarded, which is the BO-1700 fail-open shape that shipped."
+  - "REFUSE UNLESS THE REASON IS POSITIVELY CONFIRMED. Fail closed. Absent, null, empty string, whitespace-only, wrong type (a list, a number, a boolean), and unreadable must all refuse. A fail-open implementation that treats an unreadable or malformed reason as present is the named regression risk, and it converts the whole exemption path into a one-field escape hatch."
+  - "REFUSAL MUST NOT BE A NEW OUTCOME. A refused record is reported UNPROVEN, on exactly the same terms as a record that never carried a declaration, and is eligible for the same demotion. A third 'refused' outcome that sits outside the demotable population would defeat the AC precisely as thoroughly as honouring the declaration would."
+  - "THE REPORT MUST SAY WHY. The refusal and its cause (the missing reason) must be stated for that record, distinguishably from a plain unproven verdict. Otherwise nobody can fix it, and the record is re-flagged every cycle with no way to tell that a five-word reason would settle it."
+  - "DO NOT VALIDATE THE REASON'S CONTENT, ONLY ITS PRESENCE. The gate is 'is there a positively-confirmed non-empty reason', not 'is the reason good'. Judging quality is the reader's job — TQ-400e-3 puts the text in the report so a human can judge it. A content heuristic would be both unfalsifiable and trivially gamed."
+  - "MUST NOT CONTRADICT THE AUTHORING-TIME RULE. _ac_schema_validators.py already rejects test_required: false on an approved, not-yet-done, leaf code AC. This refusal must operate on the population that rule leaves legal (non-code and already-done records), or a record becomes legal to one layer and illegal to the other."
+  - "Must handle errors gracefully per the project error handling policy — every failure path must log at WARNING or higher and either re-raise or resolve to refusal, and none may resolve to honouring. Note the deliberate asymmetry with TQ-400e-2: uncertainty about EVIDENCE abstains, uncertainty about an EXEMPTION refuses. Both refuse to silently give the record what it wants."
+delivers_to:
+  - agent: python-coder
+    contract: "The enforceable half of the exemption path: a record carrying test_required: false without a positively-confirmed non-empty test_rationale is classified unproven — the same class, and the same demotable population, as a record with no declaration — with a refusal reason stated in the report. TQ-400b-1 demotes it like any other unproven record; TQ-400d-1 includes it in the triage pile."
+expects_from:
+  ac_id: TQ-400e-3
+  contract: >-
+    The honoured-exemption path and its stated-reason requirement. This AC is the
+    must-block counterpart: it feeds a reasonless declaration through that same
+    entry point and requires it to be refused. The identity of the entry point is
+    the contract — a refusal implemented anywhere else does not satisfy it.
+test_spec:
+  - name: test_tq_400e_4_reasonless_declaration_is_refused_through_the_honouring_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "MUST_BLOCK NEGATIVE CONTROL. Feed a record carrying test_required: false with no test_rationale through the SAME production entry point that honours a reasoned declaration — subprocess, real argv, outcome application enabled — and assert it is reported unproven with a refusal reason naming the missing rationale, while a reasoned record in the same store is honoured. A validator called directly from the test proves nothing about the path that runs in production."
+  - name: test_tq_400e_4_absent_empty_and_whitespace_reasons_all_refuse_and_a_minimal_reason_is_accepted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Four inputs refuse — field absent, null, empty string, whitespace-only — and one accepts: a short but genuine reason. The accepting case is essential: it proves the predicate is 'positively confirmed non-empty' rather than a length or content heuristic, which would be both unfalsifiable and trivially gamed."
+  - name: test_tq_400e_4_malformed_reason_types_refuse_rather_than_being_treated_as_present
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "FAIL-CLOSED CONTROL, THE NAMED REGRESSION RISK. A test_rationale that is a list, a number, or a boolean — and a record whose rationale cannot be read at all — must refuse, not be treated as present. Assert no exception escapes: this repo has shipped both directions of this bug, a fail-open gate (BO-1700) and a wrong-shape config raising an uncaught exception that blocked commits."
+  - name: test_tq_400e_4_refused_record_is_unproven_on_the_same_terms_and_is_demotable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In one run, a refused declaration and a record carrying no declaration at all reach the SAME outcome class, and both are actually demoted when outcomes are applied. Assert the refused record is not parked in a separate non-demotable state — a third 'refused' outcome outside the demotable population defeats this AC as completely as honouring the declaration would."
+test_rationale: |
+  An exemption gate has exactly one interesting property — can it actually refuse — and that
+  property is invisible to every positive-path test and to any test that calls a validator
+  directly. The mechanism as it stands today honours test_required: false with no reason
+  whatsoever, so the do-nothing implementation already passes any test of the honoured case;
+  only known-bad input through the same production entry point can distinguish the two. The
+  boundary entry includes an ACCEPTING case deliberately, because a refuse-everything gate
+  would satisfy the negative control while making the exemption path unusable. And the
+  fail-closed entry is separated out because this repo has shipped both halves of that bug:
+  a gate that failed open, and a malformed-input path that raised instead of degrading.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: >-
+      Assigned python-coder; complexity M. it_requirements pin the refusal to
+      check_done_proof.py:463 — the same point that honours the declaration today
+      with no reason at all — require fail-closed on every non-positively-confirmed
+      reason shape including wrong types, forbid a separate non-demotable 'refused'
+      outcome, forbid judging the reason's content, and require agreement with
+      _ac_schema_validators.py's opposing authoring-time rule. test_spec:
+      reachability (must_block through the honouring entry point) / boundary (four
+      refusing shapes plus one accepting) / failure (malformed types fail closed,
+      no exception escapes) / criterion (same terms, actually demotable).
+      criteria untouched.
+superseded_by: null
+covered_by:
+  - TQ-400e-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the must_block modifier from docs/testing/test-angles.md applied to the
+  exemption path: an exemption gate that cannot refuse is inert, and a
+  positive-path test alone cannot tell the difference. The known-bad input
+  (declaration present, reason absent) must go through the SAME entry point as
+  the honoured case in TQ-400e-3 — a separate validator exercised only from a
+  unit test would leave the production path unguarded.
+
+  Why this matters concretely: the mechanism as it stands today
+  (check_done_proof.py:463) honours test_required: false with no reason
+  whatsoever. Without this AC, TQ-400e-3 could be "satisfied" by a system in
+  which every unproven record is escaped by adding one field, which would make
+  the entire sweep decorative.
+
+  Regression risk to watch: a fail-open implementation that treats an unreadable
+  or malformed reason as present. Refusal must be the default when the reason
+  cannot be positively confirmed.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Three additions. First, the schema permits
+  test_rationale: null (config/ac_store_schema.json types it string|null), so
+  schema validation alone will never catch a reasonless declaration — the gate has
+  to live at the sweep, which is why the entry-point identity is stated as the
+  contract rather than as a preference. Second, a third 'refused' outcome sitting
+  outside the demotable population is an easy and completely defeating
+  implementation, so it is explicitly forbidden. Third, the gate must test
+  PRESENCE and not QUALITY: a content heuristic on the reason text would be
+  unfalsifiable and trivially gamed, and TQ-400e-3 already puts the reason in the
+  report precisely so a human judges it.

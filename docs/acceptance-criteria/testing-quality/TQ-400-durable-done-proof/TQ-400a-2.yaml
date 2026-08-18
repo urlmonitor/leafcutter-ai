@@ -1,0 +1,192 @@
+id: TQ-400a-2
+components:
+  - testing_quality
+  - ac_store
+title: "The sweep is reached by a real invocation, not only by calling it directly"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the whole-store honesty sweep,
+  When the routine the team actually runs is invoked as it is really invoked, with
+    no arguments a person would not normally supply and no direct call into the
+    sweep's internals,
+  Then the sweep executes across the whole store during that invocation,
+  And its verdicts are consumed by that routine's own outcome — a store containing
+    unproven finished records produces a different outcome from a store containing
+    none,
+  And removing the single step that wires the sweep into that routine makes this
+    scenario fail.
+depends_on:
+  - TQ-400a
+  - TQ-400a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The reachability angle and its deletion question, plus the reachability-gap
+      catalogue (BO-2400f-7..10, fast_lane.py's missing CLI) this AC belongs to.
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+    relevance: >-
+      THE GAP, in one line. The done-proof job (:136) runs check_done_proof.py
+      --mode ci-changed (:184) — the PR-scoped path. Nothing anywhere invokes
+      --mode ci. Add the store-wide invocation here or in a sibling workflow.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The entry point ALREADY EXISTS: --mode ci is a declared choice (:564) and
+      main() dispatches it to check_all_done_acs (:626). Do not add a mode; add
+      an invocation.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Line 1063 already asserts "--mode ci is the authoritative backstop that
+      runs verify_done_eligible on all done ACs". That claim is false at HEAD.
+      Either this AC makes it true or the sentence must be corrected.
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      build_commit_guardian (:1338) copies templates/scripts/commit_guardian/
+      into scripts/commit_guardian/. Explains why the template is the source and
+      why the deployed copy must be exercised.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    The store-wide CLI already exists — check_done_proof.py --mode ci dispatches
+    to check_all_done_acs. Do NOT add a new mode, a new script, or a second
+    walker. The deliverable is a production invocation of the existing mode plus
+    consumption of its result.
+  - >-
+    The invocation must be an automated job in .github/workflows/ (scheduled,
+    and/or on push to main), not a documented manual command. A command a person
+    must remember to run is not an entry point.
+  - >-
+    The job's conclusion must be a function of the sweep's result: a store
+    containing unproven done records must produce a different job conclusion
+    from a store containing none. The step must not carry continue-on-error, and
+    the command must not be suffixed with `|| true` — TQ-100 L-4 records that a
+    continue-on-error gate is a Lost Test that fires and is ignored.
+  - >-
+    Must not weaken or replace the existing PR-scoped done-proof job (ci.yml:136
+    and :184, --mode ci-changed); the store-wide sweep is additive to it.
+  - >-
+    Must reconcile the stale claim at
+    templates/scripts/commit_guardian/commit_guardian.json:1063, which already
+    documents --mode ci as the authoritative backstop; leaving the claim in place
+    without an invocation is the documented-but-unreachable state this AC exists
+    to end.
+  - >-
+    If the CLI is touched at all, edit templates/scripts/commit_guardian/ and
+    mirror scripts/commit_guardian/ in the same change; the deployed copy must
+    be able to import done_proof (the ModuleNotFoundError class of failure this
+    file has already hit once).
+  - >-
+    The invocation must pass --test-root at the project root, matching the
+    existing job's convention, so JS/TS-covered records are not misreported as
+    unproven.
+  - >-
+    Must fail the job on a crash: a sweep that raises must never be reported as
+    a clean run. Errors handled per the project error handling policy.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400c-1
+    contract: >-
+      A named, automated job that runs the store-wide sweep and whose conclusion
+      is derived from the sweep's exit status. TQ-400c-1 attaches the schedule
+      and the dated evidence to this job rather than creating a second runner.
+expects_from:
+  ac_id: TQ-400a-1
+  contract: >-
+    The whole-store evaluation population. This AC does not widen the
+    population; it guarantees a production invocation actually reaches it and
+    consumes the result. Concretely: check_all_done_acs' list[dict] of {ac_id,
+    path, ok, reason}, surfaced as a process exit status (non-zero when any
+    entry has ok false) and the offending ac_ids on stdout.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_store_wide_command_from_workflow_blocks_on_unproven_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      must_block. Parse the run: command out of the workflow job that owns the
+      sweep (never retype it), execute it via subprocess against a temp store
+      holding one unproven done record, and assert non-zero exit with that
+      record's id in the output.
+  - name: test_store_wide_command_from_workflow_passes_on_proven_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      The positive half of the pair: the same extracted command over a store
+      where every done record has a passing covers-tagged test exits zero. The
+      pair together proves the outcome is a function of store contents.
+  - name: test_scheduled_job_consumes_the_sweep_exit_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Against the parsed workflow YAML the two tests above sourced their command
+      from: the sweep step declares no continue-on-error, its command has no
+      `|| true` or trailing `; exit 0`, and the job has no other step that masks
+      its failure. Deleting the step makes the pair above unrunnable.
+  - name: test_deployed_check_done_proof_runs_store_wide_mode
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Run build.py into a temp target, then invoke the DEPLOYED
+      scripts/commit_guardian/check_done_proof.py --mode ci there; it must run
+      and import done_proof, proving the template/mirror pair and its dependency
+      are in the deploy manifest.
+test_rationale: >-
+  This AC IS the reachability angle, so a test that imports check_all_done_acs
+  and calls it answers "no" to the deletion question and proves nothing — the
+  function already passes such a test today while being unreachable. The
+  contract therefore extracts the literal command from the workflow file and
+  executes it in both polarities, then separately asserts the workflow does not
+  swallow the exit status. The deployed entry is included because this exact
+  file has already shipped a deploy-manifest gap that would have blocked every
+  merge.
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ACTUAL GAP, verified at authoring time (2026-08-17). The store-wide
+  sweep function already exists — check_all_done_acs in
+  scripts/commit_guardian/check_done_proof.py:403 — and nothing in production
+  invokes it. .github/workflows/ci.yml:184 runs the checker with --mode ci-changed
+  (the PR-scoped path, check_changed_done_acs), and the pre-commit hook runs the
+  staged-only path. The store-wide capability is therefore live code with no
+  entry point: exactly the reachability failure class catalogued in
+  docs/testing/test-angles.md (BO-2400f-7..10, fast_lane.py's missing CLI).
+
+  Consequence for implementation: this is wiring work, not new engine work. An
+  implementation that writes a fresh store-wide walker while leaving
+  check_all_done_acs unreached has added a second reader and solved nothing.
+
+  Test-angle constraint: the last clause is the deletion test from
+  docs/testing/test-angles.md — "if I deleted the single line that wires this in,
+  would this test go red?" A test that imports the sweep and calls it directly
+  answers no, and covers criterion only. Drive the real invocation and observe the
+  outcome change with the store's contents.

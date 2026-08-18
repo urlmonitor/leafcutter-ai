@@ -1,0 +1,206 @@
+id: TQ-400b-2
+components:
+  - testing_quality
+  - ac_store
+title: "The demoted record states what stopped holding and when"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record demoted by the sweep because its proof had lapsed,
+  When that record is read afterwards, on its own, without the run's report and
+    without re-running the sweep,
+  Then it carries the reason it was knocked back, and that reason names the
+    specific cause the verdict gave,
+  And it carries the date the demotion happened,
+  And a reader can determine from the record alone why it stopped being finished,
+  And the recorded reason matches the cause the run reported for that same record.
+depends_on:
+  - TQ-400b
+  - TQ-400b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The field reference both new fields must be documented in, in the same
+      change. An undocumented field on an additionalProperties:false schema is a
+      field nobody else will ever set.
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      THE BLOCKER. Root is additionalProperties:false (:15), so demotion_reason
+      and demotion_date cannot be written until they are declared here. This
+      edit and the demotion writer must land in the same change.
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The validator that reads that schema; must accept a demoted record and
+      reject a malformed demotion_date, and must still pass over all 2,888
+      existing records with neither field present.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Source of the cause strings that become demotion_reason — "no linked test
+      found for <id>" (:899) and "linked test non-passing: <nodeid>" (:962).
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The targeted single-field write pattern (:164-181) the two new fields must
+      be written with; a whole-file re-serialization is not acceptable.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Introduce exactly two new top-level AC record fields, and add BOTH to
+    config/ac_store_schema.json in the SAME change as the demotion writer. The
+    schema root is additionalProperties:false (config/ac_store_schema.json:15),
+    so a demotion shipped ahead of its schema fields makes every record the
+    sweep writes schema-invalid and blocks commits store-wide.
+  - >-
+    Field 1 — demotion_reason: string | null (oneOf string/null, minLength 1 on
+    the string branch). The verdict cause carried verbatim from
+    verify_done_eligible. Absent or null means never demoted.
+  - >-
+    Field 2 — demotion_date: string | null with JSON Schema "format": "date"
+    (YYYY-MM-DD). The date of the FIRST demotion; never rewritten on a later
+    sweep (TQ-400b-4).
+  - >-
+    Ruling on reusing an existing field — amended_by was evaluated and REJECTED.
+    It is typed as an append-only array whose object items are
+    additionalProperties:true, so (a) it validates nothing about the demotion
+    payload, (b) TQ-400b-4's "exactly one reason and one date, no duplicate
+    appended" cannot be expressed against an append list, (c) TQ-400b-3's
+    backlog listing would have to introspect a heterogeneous array of strings
+    and objects to find the reason, and (d) semantically it records amendments
+    to the CRITERION, whereas a demotion amends nothing about the requirement —
+    it revokes an implementation claim. Two dedicated scalar fields are
+    machine-checked by validate_ac_schema.py on every commit; an amended_by
+    entry would not be.
+  - >-
+    Neither field may be added to the schema's required list: all 2,888 existing
+    records must remain valid with neither present. Verify by running
+    validate_ac_schema.py over the whole store after the schema edit.
+  - >-
+    Both fields must be documented in docs/reference/ac-schema.md in the same
+    change, including the never-rewritten rule for demotion_date.
+  - >-
+    Every enforcement point with its own field vocabulary must accept the new
+    keys in the same change — the schema, validate_ac_schema.py, and any AC-store
+    commit hook carrying its own allow-list. A hook with a stale vocabulary is
+    the EPIC-ComputedQualityGates layer-3 disjoint-vocabulary defect; identify
+    which of these actually gates a commit and confirm that one accepts them.
+  - >-
+    demotion_reason must be the oracle's cause string, not a re-worded summary
+    and not a constant (TQ-400b-2-i is the negative control).
+  - >-
+    The reason written to the record and the reason in the run report / inventory
+    must be produced from ONE value at ONE formatting site, so the two can never
+    disagree.
+  - >-
+    Both fields must be written by the same targeted single-field write used for
+    work_status; no whole-file re-serialization of the record.
+  - >-
+    Must handle errors gracefully per the project error handling policy: if the
+    written record fails schema validation, the run must report that record as
+    an error rather than leaving an invalid record in the store.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400b-3
+    contract: >-
+      demotion_reason (string) and demotion_date (YYYY-MM-DD) present on the
+      demoted record on disk, to be surfaced into the pickable-backlog listing
+      so the reason travels with the work.
+  - agent: python-coder
+    ac_id: TQ-400b-4
+    contract: >-
+      The same two scalar fields, plus the rule that demotion_date records the
+      first demotion only. TQ-400b-4's idempotency guard reads
+      "demotion_reason present" as the already-demoted signal.
+expects_from:
+  ac_id: TQ-400b-1
+  contract: >-
+    The demotion write itself — the targeted single-field write site and the
+    unproven verdict that triggered it, including that verdict's cause string
+    verbatim. This AC adds the reason and date carried on the demoted record, so
+    the record is self-explaining once the run's output is gone.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400b-2-i
+implemented_by: []
+test_spec:
+  - name: test_demoted_record_carries_the_cause_and_the_date
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A record read on its own after the run — no run report, no re-run — has
+      demotion_reason equal to the verdict's cause and demotion_date equal to
+      the run's date.
+  - name: test_demotion_fields_are_written_by_the_real_apply_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Subprocess the production apply command over a temp store; both fields
+      appear on disk as a result of that invocation. Calling the writer helper
+      directly does not satisfy this entry.
+  - name: test_written_record_passes_the_store_schema_validator
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Run scripts/ac_store/validate_ac_schema.py as a subprocess over the record
+      the sweep actually wrote — it must pass; over a record with
+      demotion_date "yesterday" — it must be rejected (must_block); and over the
+      full existing store with neither field present — it must still pass.
+  - name: test_record_reason_equals_the_run_report_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      For the same ac_id, the demotion_reason on disk and the cause in the run
+      report / inventory are the identical string, proving one formatting site
+      rather than two that can drift.
+test_rationale: >-
+  The schema is additionalProperties:false, so the highest-risk failure is not a
+  missing reason but a demoted record the store validator rejects — which would
+  block every commit in the repository. The validator subprocess entry therefore
+  runs the real gate over the real written bytes, in both polarities, and over
+  the untouched store. The report/record equality entry exists because two
+  formatting sites for one cause is the same two-readers drift TQ-400a-3
+  prevents one level up.
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  Schema work is required. The record store's schema declares
+  additionalProperties: false at its root (config/ac_store_schema.json), so a
+  demotion reason and date cannot simply be written onto a record — the fields
+  must be added to the schema first or every demoted record becomes
+  schema-invalid and blocks commits. Verified on 2026-08-17: no demotion,
+  revocation, or lapse field exists on any record in the store today.
+
+  Note the ordering hazard this creates: the demotion writer and the schema change
+  must land together. A demotion shipped ahead of its schema field would make the
+  sweep's own output unable to pass the store's validator.
+
+  The last clause is a seam check between the record and the run report — the two
+  must not be able to disagree about why a record was knocked back.

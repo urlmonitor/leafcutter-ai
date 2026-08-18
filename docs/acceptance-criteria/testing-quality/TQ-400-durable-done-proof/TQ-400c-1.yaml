@@ -1,0 +1,139 @@
+id: TQ-400c-1
+components:
+  - testing_quality
+title: "The sweep runs on its own schedule, and the run leaves dated evidence"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the honesty sweep is set to run on a recurring schedule,
+  When a scheduled occurrence fires without anybody invoking the sweep by hand,
+  Then the sweep executes over the whole store on that occurrence,
+  And the occurrence produces a dated report of that run,
+  And the report's figures reflect the store as it stood at that occurrence — a
+    record changed since the previous occurrence is reflected in the new figures,
+  And a second occurrence produces a second, separately dated report rather than
+    overwriting the first.
+depends_on:
+  - TQ-400c
+  - TQ-400a-2
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this AC's test_spec is built from, and the source of the two smells named in notes: Neverfail Test (a grep of the schedule definition) and Lost Test (a schedule wired to nothing)."
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "THE SCHEDULE SURFACE DOES NOT EXIST YET. All five workflows in .github/workflows/ (ci, agent-evals, fixture-drift, release, schema_diff) are event-driven — verified 2026-08-17, not one carries `on: schedule`. This file is the shape and conventions to follow (python setup, dev deps, `install_shims` build step before anything that resolves .leafcutter), not an existing scheduled job to extend."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The whole-store sweep primitive ALREADY EXISTS: `main()` with `--mode ci` calls check_all_done_acs (:403, dispatched at :626), which walks every done record in the store. The schedule must invoke this existing entry point rather than a new walker; what is missing is the schedule, the dated report artifact, and the three-way outcome split."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "verify_done_eligible — the per-record oracle whose verdicts the report's figures must be an aggregation of. A second reader of the same evidence will drift (EPIC-ComputedQualityGates FP-1 layer 3)."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "REUSE THE EXISTING SWEEP. The whole-store walk already exists as check_all_done_acs in scripts/commit_guardian/check_done_proof.py, reachable via `main(['--mode','ci', ...])`. The scheduled occurrence must invoke that entry point. Do not author a second whole-store walker; two walkers of the same store drift, and the drift is invisible until the two disagree in public."
+  - "THE SCHEDULE IS A NEW SURFACE, NOT AN EXTENSION. No workflow in .github/workflows/ carries `on: schedule` as of 2026-08-17. Whatever scheduler is chosen, the occurrence must reach the sweep with no human in the loop, and that reachability must be demonstrable by executing the scheduled entry point in a test — not by reading its definition."
+  - "REPORTS ARE APPEND-ONLY PER OCCURRENCE. Each occurrence must write its own report under a distinct, date-bearing identity. An implementation that writes to a fixed path and overwrites destroys the predecessor TQ-400c-3 needs and makes the trend uncomputable. Report identity must be derived from the occurrence, never from a mutable 'latest' pointer alone."
+  - "FIGURES MUST BE COMPUTED AT THE OCCURRENCE, NOT CACHED. The report's counts must be a function of the store as read during that run. Any caching, memoisation, or reuse of a prior run's per-record verdicts is forbidden: it is precisely how a scheduled job degrades into republishing a stale result while looking healthy."
+  - "The report must be machine-readable by its own downstream consumers (TQ-400c-2's surface, TQ-400c-3's trend, TQ-400d-4's triage view) without re-running the sweep. Emit a structured artifact; a human-formatted-only report forces every consumer to re-derive, which is the drift TQ-400a-4 exists to prevent."
+  - "Must complete a whole-store sweep of the current corpus (2,888 AC records, ~641 done L2/L3) within the scheduled job's practical budget and without a second full walk of the test tree — the covers-tag scan is the expensive step and done_proof.py already performs it once."
+  - "Must handle errors gracefully per the project error handling policy. A run that cannot complete is TQ-400c-4's subject and must NOT be represented as an absent report."
+  - "DEPLOY-MANIFEST OBLIGATION: anything the scheduled job imports that ships through build.py must be present in the relevant deploy_map in scripts/build_phases.py. done_proof.py has already shipped once with a missing deploy_map entry (2026-07-22), which raised ModuleNotFoundError in the deployed layout while every source-tree test stayed green."
+delivers_to:
+  - agent: python-coder
+    contract: "One structured, date-identified report artifact per scheduled occurrence, containing (a) the occurrence identity and its date, (b) the three-way outcome counts — proven / unproven / exempt — plus the abstention count TQ-400e-2 adds, and (c) the per-record inventory reference for that run. Consumed by TQ-400c-2 (headline surface), TQ-400c-3 (trend against the predecessor) and TQ-400d-4 (triage view). Reports are never overwritten, so occurrence N-1 is always readable when occurrence N is produced."
+expects_from:
+  ac_id: TQ-400a-2
+  contract: >-
+    A sweep reachable from a real invocation. The schedule is one such invocation;
+    it cannot be wired to a sweep that no entry point can reach.
+test_spec:
+  - name: test_tq_400c_1_scheduled_entry_point_actually_runs_the_sweep
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT, MANDATORY. Fire the scheduled entry point exactly as the scheduler fires it (subprocess, real argv/env, no in-process helper call) against a temp store, then observe a new dated report appear. Then change one record in the store, fire the entry point a second time, and assert the SECOND report's figures track that change. Contents tracking the store is what proves the sweep ran on that occurrence; asserting a cron expression or a step name is present in a YAML file passes identically on a schedule wired to nothing."
+  - name: test_tq_400c_1_second_occurrence_writes_a_separate_dated_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Two occurrences produce two distinct, separately dated report artifacts; the first is still readable byte-for-byte after the second completes. A fixed-path implementation that overwrites fails this."
+  - name: test_tq_400c_1_report_figures_are_computed_from_real_on_disk_ac_records
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The store under test is written with the project's real serializer (yaml.safe_dump, block lists at column 0) and the test tree contains real .py files carrying real covers tags — never hand-typed dicts. Assert the report's counts equal the counts derived from those on-disk bytes. The PhantomDoneFilesTouched lesson: a hand-typed fixture reproduces the exact bias that hides the bug."
+  - name: test_tq_400c_1_report_counts_agree_with_the_existing_per_record_oracle
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "For every record in the store, the report's verdict equals verify_done_eligible's verdict for that same record — the report is an aggregation of the existing oracle, not a second reader. Assert set-equality per outcome, not just matching totals: matching totals can hide two offsetting misclassifications."
+test_rationale: |
+  Three of the four cheap greens available here are grep-shaped. A test that reads the
+  schedule definition and asserts a cron string is present proves only that a string exists
+  in a config file, and passes identically on a schedule wired to nothing — the Neverfail
+  Test smell named in docs/testing/test-angles.md. A test that calls the sweep function
+  directly proves nothing about the scheduled occurrence. And a test built on hand-typed AC
+  dicts reproduces the authenticity bias that hid the files_touched parser no-op for an
+  entire epic. Only firing the real scheduled entry point, over a real on-disk store, and
+  observing figures that TRACK a deliberate change between occurrences, distinguishes a live
+  cadence from a decorative one.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: >-
+      Assigned python-coder; complexity L (the schedule surface does not exist —
+      no workflow in .github/workflows/ carries `on: schedule` as of 2026-08-17).
+      it_requirements name check_all_done_acs as the sweep to invoke rather than
+      rebuild, and forbid caching and report overwriting. test_spec carries the
+      mandatory reachability entry (fire the scheduled entry point, observe figures
+      that track a store change) plus criterion / real_artifact / seam. criteria
+      untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Test-angle constraint — this is the AC most exposed to a grep-only false green.
+  A test that reads the schedule definition and asserts a cron expression or a
+  step name is present proves only that a string exists in a config file; it
+  passes identically on a schedule wired to nothing, which is the "Neverfail Test"
+  smell named in docs/testing/test-angles.md.
+
+  What must be observed instead: fire the scheduled entry point, then observe a
+  new dated report appear whose CONTENTS track a deliberate change made to the
+  store between occurrences. Contents tracking the store is what proves the sweep
+  really ran on that occurrence rather than a cached or stubbed result being
+  republished.
+
+  The separate-dated-reports clause is required by TQ-400c-3, which needs a
+  previous run to compare against; a report that overwrites its predecessor makes
+  the trend impossible to compute.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Two facts verified in the working tree that
+  the implementer should not have to rediscover. First, the whole-store sweep is
+  NOT new: check_all_done_acs already exists at
+  scripts/commit_guardian/check_done_proof.py:403 and is already reachable via
+  `main()` with `--mode ci` (:626). What is new is the schedule, the dated report,
+  and the three-way outcome split. Second, the schedule surface genuinely does not
+  exist: all five files in .github/workflows/ are event-driven, none carries
+  `on: schedule`. Complexity is L for that reason, not for the sweep logic.

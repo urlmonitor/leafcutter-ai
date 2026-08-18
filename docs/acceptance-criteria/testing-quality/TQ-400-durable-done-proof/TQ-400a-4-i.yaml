@@ -1,0 +1,156 @@
+id: TQ-400a-4-i
+components:
+  - testing_quality
+  - ac_store
+title: "An unreadable record is reported as an error, never dropped from the population"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store in which one record file cannot be parsed,
+  When the honesty sweep runs over that store,
+  Then the unparseable record is reported as an explicit error entry naming the
+    record,
+  And the records evaluated plus the records errored together account for every
+    record file present in the store,
+  And the run does not report a clean result while having examined fewer records
+    than exist,
+  And the remaining records are still evaluated, so one bad file does not abort
+    the sweep.
+depends_on:
+  - TQ-400a-4
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The negative-control catalogue: a fail-open gate that prints to stderr is
+      indistinguishable from a gate that passed, because nobody reads stderr on
+      a green run.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The WARNING-and-continue handler inside check_all_done_acs (:449) is the
+      exact code to amend — it must emit an error entry into the run's totals,
+      not just a stderr line.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The second silent-skip site: the yaml.YAMLError / OSError handlers in
+      _build_ac_status_map (:299). Both sites must be reconciled or a record can
+      still leave the population upstream of the sweep.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    An unparseable or unreadable record must produce an error entry carried into
+    the run's reported totals AND into the inventory. A WARNING on stderr is not
+    a report: silence must not equal pass.
+  - >-
+    Reconciliation must be explicit and self-asserted: records_evaluated plus
+    records_errored must equal the number of AC yaml files the walker found, and
+    the sweep must check this itself and fail when it does not hold.
+  - >-
+    Must fail closed: a run containing one or more error entries must not report
+    a clean result and must not exit zero in the store-wide production mode.
+  - >-
+    Must keep going: one bad file must not abort the sweep — the remaining
+    records are still evaluated in the same run.
+  - >-
+    Amend the existing WARNING-and-continue handlers (check_all_done_acs:449 and
+    _build_ac_status_map:299) rather than replacing them with an exception that
+    aborts the run; robustness and reporting are both required.
+  - >-
+    An error entry must name the record (id when parseable, otherwise the
+    repo-relative path) and the reason it could not be read, so it is
+    actionable without re-running the sweep.
+  - >-
+    Must handle errors gracefully per the project error handling policy — every
+    except block logs at WARNING or above and records the error entry; none may
+    silently swallow.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400a-4
+    contract: >-
+      Error entries in the same per-record shape as verdicts — {ac_id or path,
+      verdict: "error", cause: <reason>} — plus the run-level records_errored
+      count that the inventory's count-reconciliation assertion uses.
+expects_from:
+  ac_id: TQ-400a-4
+  contract: >-
+    The inventory's per-record schema and its records_evaluated /
+    records_errored run-level fields. This AC guarantees the second of those is
+    populated and that the two together account for every file on disk.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_unparseable_record_is_reported_as_an_explicit_error_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A store containing one file with malformed YAML yields an error entry
+      naming that record and its reason, present in both the run output and the
+      inventory — not merely a stderr WARNING.
+  - name: test_evaluated_plus_errored_accounts_for_every_file_present
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Across stores of shape zero-bad, one-bad, all-bad and one-unreadable
+      (permission denied), records_evaluated + records_errored always equals the
+      number of AC yaml files on disk.
+  - name: test_run_with_an_error_exits_nonzero_through_the_real_cli
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      must_block. Subprocess the store-wide CLI over a store with one corrupt
+      record; the process exits non-zero and does not print a clean-bill-of-health
+      summary. A run that exits zero here is the fail-open state this AC forbids.
+  - name: test_remaining_records_still_evaluated_after_one_bad_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With one corrupt record placed first in walk order, every other record in
+      the store still receives a verdict — the error path degrades without
+      aborting.
+test_rationale: >-
+  The current behaviour already "passes" any test that asserts the sweep does
+  not crash on a bad file: it warns to stderr and continues, which is precisely
+  the defect. The only assertion that can tell correct from broken is the count
+  reconciliation plus a non-zero exit through the real entry point — a warning
+  alone cannot satisfy either. Placing the corrupt file first in walk order is
+  what proves the sweep continues rather than silently truncating.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Silence must not equal pass. The existing store walkers skip unreadable files
+  after printing a WARNING to stderr and continue (see the yaml.YAMLError / OSError
+  handlers in _build_ac_status_map, done_proof.py:299, and check_all_done_acs,
+  check_done_proof.py:449). That is correct for robustness but means a corrupt or
+  malformed record silently leaves the evaluated population — the sweep would
+  report a clean bill of health over a store it only partly read.
+
+  This is the same failure shape as the advisory-hook problem recorded in project
+  memory: a gate that fails open and prints to stderr is indistinguishable from a
+  gate that passed, because nobody reads stderr on a green run.
+
+  The count-reconciliation clause is the testable form: it cannot be satisfied by
+  a warning alone, only by the error being carried into the run's reported totals.

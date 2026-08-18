@@ -1,0 +1,135 @@
+id: TQ-400e-5
+components:
+  - testing_quality
+  - ac_store
+title: "An honoured exemption stays settled instead of being re-raised every cycle"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record whose reasoned test-free declaration was honoured by one
+    whole-store sweep,
+  When a second sweep runs with no change to that record, to the test tree, or to
+    the declaration,
+  Then the record is reported exempt again, with the same stated reason,
+  And it does not appear in the list of records awaiting a triage decision in
+    either run,
+  And neither run writes anything to the record's file,
+  And the second run's report does not present the record as a newly-found
+    problem.
+depends_on:
+  - TQ-400e
+  - TQ-400e-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The real_artifact angle and its cold-process rule. Two consecutive runs must be two genuine runs over the same on-disk store; re-invoking in the same interpreter leaves caches and populated namespaces in place and masks exactly the state this AC is about."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The exemption honouring point (:463) whose stability across runs is being asserted. Note the current code is stateless per run — which is the correct starting property; the risk is an implementation that ADDS state (a 'confirmed' marker) in the course of making exempt a reported outcome."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The record fields involved. Relevant because the tempting implementation of 'stays settled' is to write a confirmation onto the record — which this AC forbids and TQ-400e-1 and TQ-400e-3 depend on not happening."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "STABILITY MUST COME FROM DETERMINISM, NOT FROM REMEMBERING. The second run reports the record exempt again because it re-evaluates the same unchanged inputs and reaches the same conclusion — not because it recorded that the exemption was already confirmed. No 'seen' set, no acknowledgement file, no confirmation marker, no suppression list."
+  - "NEITHER RUN MAY WRITE TO THE RECORD'S FILE. Writing 'exemption confirmed' onto the record each cycle churns the store and destroys the byte-level stability TQ-400e-1 and TQ-400e-3 both depend on. sha256 of the record file must be identical before run 1, after run 1, and after run 2."
+  - "EXEMPT RECORDS MUST BE ABSENT FROM THE TRIAGE PILE IN EVERY RUN, not removed from it after first appearing. Appearing once and being dismissed is still noise, and it is noise at the exact moment the pile is being read for the first time."
+  - "THE SECOND RUN MUST NOT PRESENT THE RECORD AS NEWLY FOUND. Whatever 'new since the previous run' means on the report (TQ-400c-3's delta), a stable exemption must not appear in it. An exemption re-raised as new every cycle turns the report into noise and the team stops reading it — at which point the TQ-400c cadence is worthless even though it technically runs."
+  - "IDEMPOTENCE IS THE GENERAL PROPERTY AND SHOULD BE BUILT AS ONE: two consecutive runs over an unchanged store must produce identical outcomes for every record and must leave every file byte-identical. Building that generally is simpler than special-casing exemptions and is what the rest of the tree assumes."
+  - "Must handle errors gracefully per the project error handling policy; an error in the second run must not silently reclassify a previously-exempt record."
+delivers_to:
+  - agent: python-coder
+    contract: "The stability guarantee the cadence depends on: over an unchanged store, consecutive runs produce identical per-record outcomes and write nothing, so a settled exemption never re-enters TQ-400d-1's triage pile and never appears in TQ-400c-3's newly-found delta. Consumed by TQ-400d-1 (pile membership) and TQ-400d-2 (whose remaining-count arithmetic breaks if settled records oscillate)."
+expects_from:
+  ac_id: TQ-400e-3
+  contract: >-
+    The honoured-exemption outcome and its no-write discipline. This AC asserts
+    that outcome is stable across consecutive runs and that stability is achieved
+    by re-evaluation rather than by recording state on the record.
+test_spec:
+  - name: test_tq_400e_5_two_consecutive_runs_leave_the_record_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "sha256 the exempt record's file at three points — before run 1, after run 1, after run 2 — over a real on-disk store, and assert all three are equal. Both runs must be genuine fresh processes over the same store, not two calls in one interpreter: an in-process second call leaves caches and populated namespaces in place and masks precisely the state this AC is about."
+  - name: test_tq_400e_5_second_run_reports_the_same_exempt_outcome_with_the_same_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The second run's report classifies the record exempt with the identical reason text, and does NOT list it among newly-found problems or in the run's delta. Assert the newly-found list explicitly — a stable exemption re-raised as new every cycle is the noise that kills the cadence."
+  - name: test_tq_400e_5_exempt_record_is_absent_from_the_triage_pile_in_both_runs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Assert the record is absent from the awaiting-decision list produced by BOTH runs — not present-then-dismissed. Appearing once is still noise, and it appears at the worst possible moment: the first time anyone reads the pile."
+  - name: test_tq_400e_5_stability_holds_without_any_persisted_confirmation_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT, AND THE ANTI-MEMORY CONTROL. Run the sweep twice as subprocesses, then delete every artifact the first run produced except the store itself, and run a third time. Assert the outcome is still exempt. An implementation that stays settled by remembering — a seen set, an acknowledgement file, a suppression list — regresses on the third run, while passing every other test here."
+test_rationale: |
+  The cheap green is an idempotency flag or a 'seen' set, and it passes every obvious test:
+  the second run reports the same thing, nothing is written to the record, the pile stays
+  clean. It is still wrong, because stability that depends on remembering breaks the moment
+  the memory is lost or diverges — and it converts a stateless sweep into one carrying hidden
+  state that no report shows. The third-run-after-deleting-artifacts test is the only one that
+  separates determinism from memory. The byte-identity assertion is taken at three points
+  rather than two because a confirmation write on run 1 followed by an identical write on run 2
+  yields identical bytes across runs 1 and 2 while still churning the file.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: >-
+      Assigned python-coder; complexity M. it_requirements require stability to
+      come from determinism rather than remembered state (no seen set,
+      acknowledgement file, confirmation marker, or suppression list), forbid any
+      write to the record in either run, require exempt records to be absent from
+      the triage pile in every run rather than dismissed after appearing, and
+      recommend building general run-to-run idempotence rather than special-casing
+      exemptions. test_spec: real_artifact (three-point sha256, fresh processes) /
+      criterion (same reason, not in the newly-found delta) / seam (absent from the
+      pile in both runs) / reachability (third run after deleting prior artifacts —
+      the anti-memory control). criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The PO's stated rationale for TQ-400e: without a durable exemption path the same
+  records get re-flagged every cycle, the report becomes noise, and the team stops
+  reading it — at which point the cadence in TQ-400c is worthless even though it
+  technically runs.
+
+  Must be proven with TWO consecutive real runs over the same on-disk store, not
+  by asserting an idempotency flag or a "seen" set exists. The no-write clause
+  matters independently: an implementation that recorded "exemption confirmed" on
+  the record each cycle would churn the store and defeat the byte-level stability
+  that TQ-400e-1 and TQ-400e-3 rely on.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). "Stays settled" has two implementations that
+  are indistinguishable on every obvious test: deterministic re-evaluation, and
+  remembered state. Only the second is wrong, and the difference is invisible
+  until the memory is lost or drifts. The test_spec therefore includes a third run
+  after deleting every artifact the earlier runs produced — the only check that
+  separates the two. Also note the three-point hash rather than two: a
+  confirmation write on run 1 followed by an identical write on run 2 gives
+  identical bytes between runs 1 and 2 and still churns the store, so the
+  before-run-1 hash has to be in the comparison.

@@ -1,0 +1,302 @@
+id: TQ-400d-5
+components:
+  - testing_quality
+  - ac_store
+title: "A first-time triager can work a record from the pile to a recorded decision using the guide alone"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a maintainer facing the unproven-finished pile for the first time — at the
+    measured starting size of 259 records out of 641 finished ones — with the
+    triage how-to and nothing else,
+  When they follow that guide,
+  Then they obtain the current pile and can state, for any record in it, why the
+    sweep could not prove that record,
+  And, for one record, they choose between the three decisions — prove it, redo
+    it, retire it — using stated criteria for which decision fits which situation,
+    rather than being left to judge unaided,
+  And they record that decision against that record and then demonstrate it has
+    left the awaiting-decision population, using only steps the guide gives,
+  And, having attempted to clear a record without recording a decision, they can
+    explain from the guide why it was refused and what to do instead — the guide
+    states the refusal as designed behaviour, not as a fault to be worked around,
+  And they can say where the number of records still awaiting a decision is read
+    and how it is expected to change between cycles, so progress through the pile
+    is checkable rather than asserted,
+  And they can state that a record's age is no part of any decision, and the guide
+    offers no route that clears records in bulk without a decision recorded
+    against each one,
+  And they can say which records are legitimately absent from the pile and why —
+    the proven and the reasoned-exempt — so an absent record is not mistaken for
+    one that was quietly written off,
+  And the steps the guide gives are the ones the delivered triage path actually
+    supports at publication: a reader who follows them works a real record to a
+    recorded decision without adjusting any step.
+depends_on:
+  - TQ-400d
+  - TQ-400d-1
+  - TQ-400d-2
+  - TQ-400d-3
+doc_links:
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The onward path for the "prove it" decision — how proof is established for
+      a single record. The triage guide should route there rather than restate
+      it.
+  - path: docs/how-to/deprecating-or-removing-artifacts.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The onward path for the "retire it" decision, so the guide hands a reader
+      to an existing governed route instead of inventing a retirement procedure.
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      What the sweep's stated causes mean, which the guide must be able to
+      translate into a decision. TQ-400a-5 publishes the cause vocabulary here;
+      link to it rather than restating the causes.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The coverage vocabulary behind the causes a triager reads, including why a
+      skipped or expected-to-fail covering test is not proof.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. Where the exemption rules live once TQ-400e-6 lands. The
+      "which records are legitimately absent" clause must LINK here for the
+      exemption boundary rather than carrying its own account of who may be
+      exempt — that account is the thing TQ-400e-6 exists to make singular.
+  - path: docs/how-to/triage-unproven-done-records.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      IT-PO ADDITION. THE TARGET FILE. A new how-to; the triage task has no
+      existing home, and folding it into done-proof-enforcement.md (191 lines,
+      already being extended by TQ-400a-5, 300-line advisory budget) would mix
+      "how enforcement works" with "how to work the backlog it produces".
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    TARGET DOCUMENT — a NEW how-to at docs/how-to/triage-unproven-done-records.md.
+    Cross-link it from docs/how-to/done-proof-enforcement.md (the guide a reader
+    arrives from) and from docs/how-to/prove-ac-done.md. A new file changes the
+    generated docs/INDEX.md — run `python scripts/build.py --target-dir .` and
+    commit the regenerated index rather than hand-editing it (build.py:1009).
+  - >-
+    THE STATED DECISION CRITERIA ARE THE SUBSTANCE OF THIS GUIDE, NOT A LIST OF
+    THREE VERBS. Give an explicit mapping from each sweep cause to the decision it
+    indicates, with the discriminating question a reader asks when a cause admits
+    more than one. At a pile of 259 records worked by many hands over many cycles,
+    the guide's real job is to make two different people reach the same decision on
+    the same record; an unguided choice among three verbs produces three different
+    piles depending on who is holding the list.
+  - >-
+    ROUTE, DO NOT RESTATE, FOR EVERY DECISION. "Prove it" routes to
+    docs/how-to/prove-ac-done.md; "retire it" routes to
+    docs/how-to/deprecating-or-removing-artifacts.md; the cause vocabulary routes
+    to docs/how-to/done-proof-enforcement.md; the exemption boundary routes to the
+    exemption entry in docs/reference/ac-schema.md (TQ-400e-6). A restated
+    procedure is a second account that will drift from the governed one.
+  - >-
+    PRESENT THE REFUSAL AS DESIGNED BEHAVIOUR AND QUOTE ITS MESSAGE VERBATIM.
+    TQ-400d-3 makes a reasonless clear impossible. Quote the exact refusal text the
+    delivered path emits — never a paraphrase — and state the correct next step
+    beside it. A guide that omits the refusal invites a reader to treat it as a bug
+    and go looking for a way around it, which is exactly how a 259-record pile gets
+    emptied in one gesture.
+  - >-
+    NEGATIVE REQUIREMENT — NO BULK ROUTE, IN ANY WORDING. The guide must contain no
+    command, flag, loop, script or suggestion that clears, closes or decides more
+    than one record without a decision recorded against each. This is the clause
+    most at risk of being violated by a well-meaning author trying to make 259
+    records feel tractable, and it is mechanically checkable, so it is checked
+    rather than trusted. Batching the READING of the pile is fine; batching the
+    DECISION is not.
+  - >-
+    NEGATIVE REQUIREMENT — RECORD AGE MUST NOT APPEAR AS A DECISION INPUT ANYWHERE,
+    including in an example, a sort order presented as a triage strategy, or a
+    "start with the oldest" aside. Age is not evidence about whether a record is
+    proven.
+  - >-
+    THE PROGRESS FIGURE MUST BE GIVEN AS A READ LOCATION PLUS AN EXPECTED
+    DIRECTION BETWEEN CYCLES, taken from TQ-400d-2's delivery. "Progress is
+    tracked" is not checkable by a reader; "this number, read here, should fall by
+    the number of decisions recorded since the last occurrence" is.
+  - >-
+    THE MEASURED SCALE MUST BE PRESENTED AS A DATED MEASUREMENT, NOT A LIVE CLAIM.
+    259 of 641 was measured on 2026-08-17. Write it with its date, or the guide
+    becomes wrong on the first cycle and a reader who checks discovers the guide
+    cannot be trusted about anything else.
+  - >-
+    EVERY STEP MUST BE COPY-RUNNABLE AS WRITTEN AGAINST THE DELIVERED TRIAGE PATH.
+    The test contract works a real record from the pile to a recorded decision by
+    executing the guide's own steps; a step that needs adjustment is a red test.
+  - >-
+    Tracked how-to subject to check_doc_frontmatter, check_doc_length and
+    check_doc_links; keep all three passing in the same commit.
+  - >-
+    SEQUENCE AFTER TQ-400d-1, TQ-400d-2 AND TQ-400d-3 LAND, and after TQ-400e-6 if
+    both are in flight, so the legitimately-absent populations can be linked rather
+    than described from intent.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-400d-1
+    contract: >-
+      The triage list and the closed decision set as delivered — the entries a
+      reader works through and the three decisions plus the explicit
+      not-yet-decided state the guide teaches them to choose between.
+  - ac_id: TQ-400d-3
+    contract: >-
+      The refusal behaviour when a record is cleared without a decision, and its
+      stated reason, which the guide must present as designed rather than as an
+      obstacle. The guide quotes the emitted message verbatim, so the exact text
+      is part of this contract.
+  - ac_id: TQ-400d-2
+    contract: >-
+      The remaining-count measure and where it is published, so the guide can
+      tell a reader how to see progress between cycles.
+  - ac_id: TQ-400e-6
+    contract: >-
+      IT-PO ADDITION. The single reconciled statement of which records may
+      legitimately be exempt, published in docs/reference/ac-schema.md. The
+      "legitimately absent from the pile" clause LINKS to it; this guide must not
+      carry its own account of who may be exempt.
+test_spec:
+  - name: test_tq400d5_guide_maps_every_sweep_cause_to_a_decision
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Assert the guide gives an explicit cause-to-decision mapping covering every
+      cause string the sweep can emit, with a discriminating question wherever a
+      cause admits more than one decision — not merely a list of the three
+      decisions. Assert it states the read location and expected between-cycle
+      direction of the remaining count, and states which populations are
+      legitimately absent from the pile.
+  - name: test_tq400d5_a_real_record_is_worked_to_a_recorded_decision_by_the_guides_own_steps
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT. Extract the guide's steps for obtaining the pile and
+      recording a decision, execute them as written via subprocess against a temp
+      store, and assert the record leaves the awaiting-decision population as a
+      RESULT of those steps. Asserting the guide mentions a command passes on a
+      command that does not exist or no longer takes those arguments.
+  - name: test_tq400d5_the_reasonless_clear_is_refused_with_the_message_the_guide_quotes
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE DESIGNED-REFUSAL PATH, BOTH HALVES. Execute the guide's own "what happens
+      if I skip the decision" step against a temp store and assert the delivered
+      path refuses (must_block), AND assert the refusal text the guide quotes is
+      byte-equal to the text actually emitted. A paraphrased message is one a
+      reader cannot match to their screen, and it rots silently.
+  - name: test_tq400d5_decision_vocabulary_matches_the_delivered_list_and_no_bulk_route_exists
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      TWO SOURCES, ONE VOCABULARY, PLUS THE NEGATIVE SCAN. Assert the decision
+      names the guide teaches equal the closed decision enum the delivered triage
+      list validates, in both directions — no documented decision the list rejects,
+      no accepted decision the guide omits. Then scan the guide and assert no
+      documented command, flag or loop decides more than one record at a time, and
+      that record age appears nowhere as a decision input.
+test_rationale: >-
+  change_target is docs, but this guide is the operating procedure for a
+  259-record backlog, so its failure modes are behavioural rather than editorial
+  and three of the four entries execute the guide rather than read it. Two clauses
+  are negative requirements — no bulk route, age is not an input — and a negative
+  requirement is invisible to a reviewer reading a diff of additions, so it is
+  covered by a mechanical absence scan folded into the seam entry. The refusal
+  clause gets its own failure-angle entry because the guide's account of a refusal
+  is only useful if the refusal actually fires and says what the guide says it
+  says; those are two separate ways to be wrong and both are checkable. NOT
+  MECHANICALLY TESTABLE: "they choose between the three decisions using stated
+  criteria rather than being left to judge unaided" is the heart of this AC and no
+  test can observe two triagers converging. The proxy is deliberately stronger than
+  a keyword check — assert the guide provides a mapping that COVERS every cause
+  the sweep can emit and supplies a discriminating question wherever a cause admits
+  more than one decision, because incomplete coverage of the cause space is the
+  mechanically visible form of "left to judge unaided". Similarly "they can state
+  that age is no part of any decision" is proxied by the absence scan: a reader
+  cannot conclude it from a guide that quietly suggests starting with the oldest.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: >-
+      Assigned documentation-expert; complexity M. Named the target as a NEW
+      docs/how-to/triage-unproven-done-records.md with bidirectional cross-links
+      and a build.py regeneration of docs/INDEX.md. Turned the two negative clauses
+      into explicit negative requirements (no bulk route in any wording; record age
+      nowhere as a decision input) and required the refusal message to be quoted
+      verbatim rather than paraphrased. Required the cause-to-decision mapping to
+      cover the whole cause space with a discriminating question where a cause is
+      ambiguous — that is the checkable form of the guide's central claim. Added
+      expects_from TQ-400e-6 (and docs/reference/ac-schema.md to doc_links) so the
+      legitimately-absent populations are linked to the single reconciled exemption
+      statement rather than described here. test_spec: criterion (cause coverage
+      and progress figure) / reachability (a real record worked to a recorded
+      decision by the guide's own steps) / failure (the designed refusal fires and
+      the quoted text is byte-equal, must_block) / seam (decision vocabulary
+      set-equality both directions plus the no-bulk-route and no-age absence scan).
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in TQ-400d's documentation_triggers.
+
+  SCALE IS THE POINT. Measured 2026-08-17: 641 finished L2/L3 records, 259 of
+  them carrying no test with their coverage tag. A pile that size is worked by
+  many hands over many cycles, so the guide's real job is to make two different
+  people reach the same decision on the same record. That is why the criteria
+  demand STATED CRITERIA for choosing between prove / redo / retire, not merely
+  a list of the three options — an unguided choice among three verbs produces
+  three different piles depending on who is holding the list.
+
+  The refusal clause is deliberate. TQ-400d-3 makes a reasonless clear impossible;
+  a guide that does not explain the refusal invites the reader to treat it as a
+  bug and go looking for a way around it, which is exactly how the pile gets
+  emptied in one gesture.
+
+  The no-bulk-path clause is a negative documentation requirement, and it is the
+  one most at risk of being violated by a well-meaning author trying to make 259
+  records feel tractable.
+
+  Written as reader outcomes rather than "a guide exists" because a triage page
+  listing three decisions satisfies a presence check while leaving every hard
+  question — which decision, on what grounds, and what happens if I skip it —
+  unanswered.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — NEGATIVE REQUIREMENTS NEED MECHANICAL
+  SCANS, NOT REVIEWER ATTENTION. Two of this AC's clauses forbid something rather
+  than require it. A reviewer reads a diff of additions and has no reliable way to
+  notice that a helpful-looking "process the oldest ten first" aside violates both
+  the no-bulk and the no-age clause at once. Both are therefore covered by an
+  absence scan in the seam entry, on the same reasoning the repo already applies to
+  GE-119d-5's anti-reintroduction guard.

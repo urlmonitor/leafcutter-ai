@@ -1,0 +1,130 @@
+id: TQ-100b-5-i
+components:
+  - testing_quality
+  - ac_store
+  - commit_guardian
+title: "Changing one coverage-tag reader without the other is blocked, not merely noted"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given the two coverage-tag readers agree over the committed unit-test tree and
+    the parity check passes,
+  When one reader's recognition behaviour is changed and the other is left
+    unchanged — for example the done-proof reader is taught to accept a tag
+    spelling, or to reject an id shape, that the commit-time check still treats
+    the old way — and the parity check is run again,
+  Then the parity check fails and blocks, naming the capture whose verdict
+    differs and which of the two readers changed its answer
+  And the blocking run and the earlier passing run go through the same entry
+    point over the same tree, so the difference in outcome is attributable to the
+    readers' behaviour and not to a different check being invoked
+  And restoring the mirrored change to the second reader makes the same entry
+    point pass again.
+depends_on:
+  - TQ-100b-5
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The parity comparison this AC is the negative control for. Its it_requirements name which gate consumes the verdict; this AC requires that gate to BLOCK."
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "READER 1 of 2 — COVERS_TAG_RE at :57. The one-sided change in the blocking run should be applied to a temp copy of THIS module (e.g. accept a spelling reader 2 rejects), never to the working tree."
+  - path: scripts/commit_guardian/check_test_ac_tags.py
+    relationship: relates-to
+    status: exists
+    relevance: "READER 2 of 2, deployed copy. Its check currently runs in WARN mode behind the commit_guardian test_ac_tag_enforcement key — a warn-mode path is precisely what this AC forbids as sufficient, so read how its exit status is produced before wiring the parity verdict."
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: implements
+    status: exists
+    relevance: "Reader 2's SOURCE OF TRUTH (build.py overwrites the scripts/ copy). The 'mirrored change' run must mirror into this file, or the third run passes for the wrong reason on a copy the build discards."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The must_block modifier and its rule: for any gate AC a second test must feed known-bad input through the SAME entry point and assert it blocks. The negative-control failure catalogue (BO-1700 fail-open, FIN-100h) is the evidence base."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "BLOCK means block: a non-zero exit from the entry point, or the blocker recorded in the payload the caller actually acts on. A printed warning, a logged message, or an advisory line that leaves exit status 0 does not satisfy this AC. If the parity verdict is wired behind the commit_guardian test_ac_tag_enforcement key, which runs reader 2's check in warn mode today, the change must move the parity verdict onto a blocking path and name in the ticket which key gates it."
+  - "The one-sided change must be applied to a REAL copy of a reader module and the check run as a process. Handing the comparator two fabricated result sets exercises the diff and leaves the readers themselves unproven — that is the fabricated-pair failure this AC exists to rule out."
+  - "All three runs — agree then pass, one-sided then block, mirrored then pass — must go through the identical entry point over the identical tree, so the outcome difference is attributable to reader behaviour rather than to a different check being invoked. Recording the entry point invocation verbatim in the test is the cheapest way to make that auditable."
+  - "Mutation must be confined to a temporary copy or temp checkout. The test must never leave the working tree, templates/, or the deployed layout modified, including on failure or on early abort — a reader left patched by a crashed test silently poisons every later run."
+  - "The mirrored-change run must mirror into reader 2's SOURCE (templates/scripts/commit_guardian/check_test_ac_tags.py), not only its build.py-generated copy under scripts/. A third run that passes against a patched deployed copy passes for a reason the next build erases."
+  - "The block message must name the diverging capture and which of the two readers changed its answer. 'Parity check failed' with no operand is not actionable and does not satisfy the criterion."
+  - "The one-sided change used in the test must be a genuine recognition difference (accept a spelling the other rejects, or reject a shape the other accepts), not a cosmetic edit. A whitespace or comment change that leaves behaviour identical must NOT block — assert that too, or the guard is indistinguishable from a file-hash comparison."
+test_spec:
+  - name: test_agreeing_readers_pass_through_the_parity_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run 1 of 3. Invoke the parity check through its production entry point as a subprocess over the committed tree with both readers unmodified, and assert it passes with a zero exit status. Establishes the baseline the next two runs are measured against."
+  - name: test_one_sided_reader_change_blocks_at_the_same_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run 2 of 3, and the must_block negative control. Apply a genuine recognition change to a temp copy of ONE reader (reader 1 accepts a spelling reader 2 still rejects), leave the other untouched, and invoke the IDENTICAL entry point over the IDENTICAL tree as a subprocess. Assert a non-zero exit / blocker in the payload the caller acts on — a warning with exit 0 fails this entry. Also assert a cosmetic-only edit to the same reader does NOT block, so the guard is proven to key on behaviour rather than on file contents."
+  - name: test_block_output_names_the_diverging_capture_and_the_reader_that_changed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "On the blocking run, assert the emitted message names the captured value, the file, and which of the two readers accepted it. A bare 'parity check failed' fails this entry; so does a message that names a count instead of the operand."
+  - name: test_mirroring_the_change_into_the_second_reader_source_restores_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run 3 of 3. Mirror the same recognition change into reader 2's SOURCE (templates/scripts/commit_guardian/check_test_ac_tags.py, rebuilt), rerun the identical entry point over the identical tree, and assert it passes again. Closes the three-run proof and pins the producer/consumer vocabulary re-alignment at the real seam — mirroring only the deployed copy under scripts/ must not be sufficient."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-5
+  contract: "The parity comparison over both readers' real output; this edge case is its negative control — the guard must be shown to BLOCK on a real one-sided change, not only to pass on the agreeing case."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: TQ-100b-5-i it-po technical enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Criteria untouched. Added assigned_agent (python-coder), estimated_complexity
+    (S), it_requirements, a four-angle test_spec (criterion / reachability+must_block
+    / failure / seam) and doc_links naming both readers with relevance; readiness
+    draft -> reviewed. The must_block modifier rides the reachability entry, which
+    is where the gate''s production entry point lives. Two implementer constraints
+    the criteria could not carry: reader 2''s check runs in WARN mode today behind
+    the test_ac_tag_enforcement key, so ''blocks'' requires moving the verdict onto
+    a blocking path; and the mirrored-change run must mirror into templates/scripts/commit_guardian/check_test_ac_tags.py,
+    since build.py overwrites the scripts/ copy and a pass against a patched deployed
+    copy is a false green. Added a cosmetic-edit assertion so the guard cannot degenerate
+    into a file-hash comparison, and a no-residue constraint on reader mutation.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A parity check that has only ever been observed passing is indistinguishable
+  from a parity check that is not wired up. This criterion pins the three-run
+  proof through one entry point: agree -> pass, one-sided change -> block naming
+  the divergence, mirrored change -> pass again. Asserting that a warning is
+  printed is not sufficient; the one-sided change must be shown to block.
+
+  TEST ANGLE: the one-sided change must be applied to a real copy of the reader
+  and the check run as a process, not simulated by handing the comparison two
+  fabricated result sets — a fabricated pair exercises the diff and leaves the
+  readers themselves unproven.
+change_target: code
+risk_surface: contract_boundary

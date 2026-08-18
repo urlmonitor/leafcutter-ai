@@ -1,0 +1,191 @@
+id: TQ-400a-4
+components:
+  - testing_quality
+  - ac_store
+title: "The sweep leaves a durable inventory that later steps read without re-running it"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the honesty sweep has run to completion over the whole store,
+  When the run finishes,
+  Then a durable record of that run exists, holding for every finished record
+    evaluated its identifier, its verdict, and the stated cause where it is not
+    proven,
+  And a separate later process reads that inventory and reproduces the run's
+    per-record verdicts without re-running the sweep and without re-running any
+    test,
+  And the number of records in the inventory equals the number the run reports
+    having evaluated,
+  And the inventory identifies which run produced it, so a stale one is not
+    mistaken for the current one.
+depends_on:
+  - TQ-400a
+  - TQ-400a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The seam and real_artifact angles, and the writer/reader schema-mismatch
+      incident (EPIC-AcPipelineDeployGaps inbound gap 4) this artifact repeats
+      if its shape is not contract-tested.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      check_all_done_acs (:403) produces the list this AC persists. The
+      inventory writer belongs alongside it, not in a new script.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Defines the verdict and cause vocabulary the inventory serializes; the
+      inventory must not introduce fields the oracle cannot populate.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Component home for the done-proof machinery; the inventory is a new
+      artifact of that component and should be documented there.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    The inventory must be machine-readable JSON (or JSONL), written as a file —
+    never the run's human-readable stdout. A consumer must never have to parse
+    log text to learn a verdict.
+  - >-
+    Per-record shape must carry at minimum: ac_id, path (repo-relative), verdict
+    (from the oracle's closed vocabulary, including the not-demotable outcome of
+    TQ-400b-1-i), cause (string, null when proven), and the record's work_status
+    at evaluation time. Run-level: run_id, started_at (ISO-8601 UTC), git_sha,
+    records_evaluated, records_errored.
+  - >-
+    The number of per-record entries must equal records_evaluated plus
+    records_errored, and the writer must assert this itself; a truncated
+    inventory must be an error, not a shorter file (TQ-400d's pile would
+    otherwise shrink without anyone deciding anything).
+  - >-
+    The inventory's location must be declared exactly once, as a module-level
+    constant that TQ-400c-3 and TQ-400d-4 import. Three hard-coded copies of the
+    path is the multiple-readers defect this L1 exists to prevent.
+  - >-
+    run_id must be unique per run and must let a consumer distinguish a stale
+    inventory from the current one without comparing file mtimes.
+  - >-
+    Writes must be atomic (write to a temp file, then rename) so a concurrent
+    reader never observes a half-written inventory.
+  - >-
+    Whether the inventory is committed to the repository is TQ-400c-1's
+    decision; this AC's behaviour must be identical whether or not it is, and
+    the writer must not assume a writable git working tree.
+  - >-
+    Must handle errors gracefully per the project error handling policy: if the
+    inventory cannot be written the run must fail loudly, because a sweep whose
+    output silently vanished is indistinguishable from a sweep that found
+    nothing.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400c-3
+    contract: >-
+      The per-run inventory file, consumed by the cadence report. Shape:
+      {run_id, started_at, git_sha, records_evaluated, records_errored,
+      records: [{ac_id, path, verdict, cause, work_status}]}. The report reads
+      this artifact rather than re-deriving the population, and compares two
+      such files by run_id to state direction of travel.
+  - agent: python-coder
+    ac_id: TQ-400d-4
+    contract: >-
+      The same file, consumed by the triage list. The pile is derived from the
+      records array (verdict != proven) rather than maintained beside it, so
+      sweep, report and triage cannot disagree.
+  - agent: python-coder
+    ac_id: TQ-400b-1
+    contract: >-
+      The same file, consumed by the demotion writer as its work list: it
+      demotes exactly the entries whose verdict is unproven, using their cause
+      verbatim, and re-runs no verdict of its own.
+expects_from:
+  ac_id: TQ-400a-1
+  contract: >-
+    The whole-store verdict population as list[dict] of {ac_id, path, ok,
+    reason}, plus the run's records_evaluated count. This AC serializes that
+    list; it must not filter, re-sort by a lossy key, or re-derive it.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400a-4-i
+implemented_by: []
+test_spec:
+  - name: test_inventory_holds_one_entry_per_evaluated_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      After a completed run over a temp store, the inventory's records array
+      length equals records_evaluated plus records_errored, and every record id
+      in the store appears exactly once with a verdict and (when unproven) a
+      cause.
+  - name: test_real_run_writes_the_inventory_to_the_declared_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Drive the sweep through its production CLI via subprocess; the inventory
+      file exists on disk afterwards at the single declared path constant. The
+      write must be an effect of the real invocation, not of a helper call.
+  - name: test_separate_process_reproduces_verdicts_without_rerunning_anything
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      A genuinely fresh subprocess (not importlib.reload) reads the on-disk JSON
+      the sweep actually wrote and reproduces every per-record verdict, with the
+      test tree removed or made unreadable so that re-running any test is
+      impossible.
+  - name: test_downstream_reader_consumes_the_sweeps_own_file_and_detects_staleness
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      The real downstream reader (the cadence/triage entry point) is pointed at
+      the file the sweep wrote — no hand-built fixture — and returns the same
+      verdicts; given the previous run's file instead, it reports it as stale by
+      run_id rather than presenting it as current.
+test_rationale: >-
+  Both downstream L1s read this artifact, so the risk is the writer/reader
+  schema mismatch that made a whole failure-tracking loop dead code in
+  EPIC-AcPipelineDeployGaps: each side green in isolation, no test round-tripping
+  a real artifact between them. The read-back is therefore specified through a
+  genuinely separate process with the test tree unavailable — a same-process
+  read-back would pass on an implementation that just returned its in-memory
+  result, and importlib.reload masks exactly this class of defect.
+change_target: code
+risk_surface: internal
+notes: |
+  This artifact is the single source the downstream L1s consume: TQ-400c's trend
+  comparison needs a previous run to compare against, and TQ-400d's triage pile
+  must be derived from it rather than maintained in parallel. Without a durable
+  inventory both are forced to re-derive the population and can disagree with the
+  sweep and with each other.
+
+  The read-back clause must be exercised by a genuinely separate process, not by
+  reusing the in-memory result inside the same run — docs/testing/test-angles.md
+  records that importlib.reload() and same-process read-backs mask precisely this
+  class of defect (GenReviewFixes H-2, the cold-import NameError).
+
+  The count-equality clause is the anti-truncation control: an inventory that
+  silently drops records would let TQ-400d's pile shrink without anyone deciding
+  anything.

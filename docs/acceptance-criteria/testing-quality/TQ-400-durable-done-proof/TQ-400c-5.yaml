@@ -1,0 +1,323 @@
+id: TQ-400c-5
+components:
+  - testing_quality
+title: "A reader can change the cadence and find the latest published verdict from the guide alone"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a maintainer who needs either to change how often the honesty sweep runs
+    or to find the result of the most recent run, and who has the cadence how-to
+    and nothing else,
+  When they follow that guide,
+  Then they can say where the recurring run is configured and what changing it
+    involves, and make such a change without searching the repository for the
+    schedule,
+  And they can reach the most recently published verdict and say which dated
+    occurrence produced it, and reach the preceding occurrence's report to compare
+    against it,
+  And, following the guide, they trigger one run outside the normal cadence and
+    see its report appear — so the instructions are demonstrably the live ones
+    rather than a description of them,
+  And the place the guide sends them to read the headline figures is the place a
+    completed run actually publishes to: a reader who follows the guide after a
+    run finds that run's figures there, not an empty or placeholder location,
+  And, faced with a cycle in which no report is present, they can tell from the
+    guide whether the run failed or has not yet fired, and what to look at in each
+    case,
+  And they can state what the direction-of-travel figures mean — which population
+    moved, in which direction, and against which earlier occurrence — rather than
+    only that a change is reported,
+  And the cadence, the trigger and the out-of-cycle instruction the guide gives
+    are the ones configured in the repository when the guide is published, not a
+    generic account of scheduling.
+depends_on:
+  - TQ-400c
+  - TQ-400c-1
+  - TQ-400c-2
+  - TQ-400c-3
+  - TQ-400c-4
+doc_links:
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The existing enforcement how-to. The cadence is a third layer on top of the
+      two documented there and must be reconcilable with them rather than
+      described in isolation. TQ-400a-5 adds the three-population table to this
+      file; the cadence guide LINKS to that table and must not restate it.
+  - path: docs/how-to/known-failing-tests-baseline.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      An existing example of a guide that teaches a reader to interpret a
+      recurring signal and distinguish a real regression from an expected one —
+      the same reading skill this guide must impart.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Component home for the machinery the cadence runs, and the place the new
+      scheduled surface should be positioned against.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The documented failure shapes a reader must be able to distinguish — a
+      schedule wired to nothing, and a report that runs but is never read.
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400c-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. THE BLOCKING PRECONDITION. TQ-400c-2's own it_requirements
+      and notes record an unresolved BLOCKING AMBIGUITY — "the place they already
+      use for routine status" is not resolvable from the criteria, the
+      architecture docs, or any sibling AC, and must be settled with the user
+      rather than chosen by an implementer. This guide's fourth clause is
+      unsatisfiable until that decision is recorded. Read TQ-400c-2 before
+      starting; the surface name is an INPUT from its delivery, never an
+      authoring choice made here.
+  - path: docs/how-to/done-proof-cadence.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      IT-PO ADDITION. THE TARGET FILE. A new how-to, separate from
+      done-proof-enforcement.md: that file is 191 lines, TQ-400a-5 extends it with
+      the third layer, and the 300-line advisory budget (check_doc_length) leaves
+      no room for the cadence material — which is a different task ("how the
+      schedule runs and where to read its result") from "how enforcement works".
+      Cross-link both ways.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    BLOCKING PRECONDITION — DO NOT START THE FOURTH CLAUSE UNTIL THE
+    ROUTINE-STATUS SURFACE IS NAMED BY THE USER. TQ-400c-2 records an unresolved
+    ambiguity: "the place they already use for routine status" is named nowhere in
+    the criteria, nowhere in the architecture docs, and in no sibling AC. This
+    guide's clause "the place the guide sends them to read the headline figures is
+    the place a completed run actually publishes to" cannot be satisfied while
+    that surface is unsettled. DO NOT guess a surface, DO NOT invent a dashboard,
+    and DO NOT write a placeholder path or a "TBD" heading — a guide that sends a
+    reader to an unsettled location reproduces exactly the invisibility the parent
+    L0 exists to remove, and a placeholder passes every presence check. The surface
+    name is an input from TQ-400c-2's delivery. Until the user's decision is
+    recorded on TQ-400c-2, this AC is ENRICHMENT-BLOCKED on that clause; the
+    remaining clauses (schedule location, out-of-cycle trigger, failed-versus-
+    not-yet-fired, direction-of-travel) may be authored once TQ-400c-1, TQ-400c-3
+    and TQ-400c-4 land, but the AC must not be signed off with the fourth clause
+    unaddressed.
+  - >-
+    TARGET DOCUMENT — a NEW how-to at docs/how-to/done-proof-cadence.md, NOT an
+    extension of docs/how-to/done-proof-enforcement.md. That file is 191 lines and
+    TQ-400a-5 is already extending it with the third enforcement layer; the
+    300-line advisory budget (check_doc_length, severity warn) leaves no room, and
+    the two documents answer different questions. Cross-link both ways so a reader
+    who finds one reaches the other.
+  - >-
+    LINK TO THE POPULATION TABLE, DO NOT RESTATE IT. TQ-400a-5 publishes the single
+    three-population blind-spot table and the outcome/cause vocabulary in
+    done-proof-enforcement.md. This guide names those outcomes and links; a second
+    account of the populations in a second file is the drift both guides exist to
+    remove.
+  - >-
+    NO RECURRING SCHEDULE EXISTS IN THE REPOSITORY TODAY (verified 2026-08-17:
+    every workflow is event-driven, none carries a recurring trigger). This guide
+    therefore documents a surface TQ-400c-1 CREATES, which makes the
+    publication-accuracy clause the sharpest one here — there is no incumbent
+    behaviour to fall back on, and a plausible generic account of scheduling would
+    be indistinguishable from a correct one until someone tried to change the
+    cadence. Name the delivered workflow file, job name, cron expression and
+    out-of-cycle trigger exactly as they ship.
+  - >-
+    EVERY COMMAND AND EVERY NAVIGATION STEP MUST BE COPY-RUNNABLE AS WRITTEN, and
+    the out-of-cycle trigger must be given as the actual invocation a reader
+    performs, not as a description of one. The test contract extracts each fenced
+    command and executes it, so an unrunnable step is a red test.
+  - >-
+    THE ABSENT-REPORT CASE MUST DISTINGUISH FAILED FROM NOT-YET-FIRED USING
+    TQ-400c-4'S DELIVERED REPRESENTATION, and must say what to look at in each
+    case. Do not invent a failure representation here — TQ-400c-4 owns it. "No
+    report" reading as "all clear" is the Lost Test failure this clause exists to
+    prevent.
+  - >-
+    THE DIRECTION-OF-TRAVEL EXPLANATION MUST NAME THREE THINGS PER FIGURE: which
+    population moved, in which direction, and against which earlier dated
+    occurrence it is compared. A delta with no stated comparison base is a number a
+    reader cannot act on, and it is the commonest way a trend report becomes
+    decorative.
+  - >-
+    REACHING THE PRECEDING OCCURRENCE'S REPORT IS A FIRST-CLASS STEP, not an
+    implication of "reports are dated". State how to list occurrences and how to
+    open the previous one; comparison against the previous run is the whole basis
+    of the direction-of-travel figures.
+  - >-
+    Tracked how-to subject to check_doc_frontmatter, check_doc_length and
+    check_doc_links. A new file also changes the generated docs/INDEX.md — run
+    `python scripts/build.py --target-dir .` and commit the regenerated index; do
+    not hand-edit it (build.py:1009).
+  - >-
+    SEQUENCE AFTER TQ-400c-1, TQ-400c-3 AND TQ-400c-4 LAND, and after the
+    TQ-400c-2 surface decision is recorded. Every clause here is a claim about a
+    configuration that does not yet exist.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-400c-1
+    contract: >-
+      The scheduled occurrence and its dated report as delivered — where the
+      schedule is defined, how an occurrence is triggered out of cycle, and where
+      each occurrence's report is written.
+  - ac_id: TQ-400c-2
+    contract: >-
+      The routine-status surface the headline figures are published to. The guide
+      names that surface as configured; it cannot be written until the surface is
+      settled. BLOCKING — see the first it_requirement. TQ-400c-2 itself records
+      this as an unresolved ambiguity requiring a user decision, so this contract
+      is currently unfulfillable by any implementer, not merely unwritten.
+  - ac_id: TQ-400c-4
+    contract: >-
+      The representation of a run that did not complete, so the guide can teach a
+      reader to tell a failed run from a run that has not fired.
+  - ac_id: TQ-400a-5
+    contract: >-
+      IT-PO ADDITION. The single three-population blind-spot table and the
+      outcome/cause vocabulary published in docs/how-to/done-proof-enforcement.md.
+      This guide links to them and must not restate either.
+test_spec:
+  - name: test_tq400c5_guide_states_schedule_location_trigger_and_the_absent_report_cases
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Read the published docs/how-to/done-proof-cadence.md and assert it names
+      where the recurring run is configured, how to trigger a run out of cycle,
+      how to list occurrences and open the preceding report, and — for the
+      no-report cycle — how to tell a failed run from one that has not fired, with
+      what to look at in each case. Assert every direction-of-travel figure it
+      explains names a population, a direction and a comparison occurrence.
+  - name: test_tq400c5_every_documented_command_runs_as_written
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT. Extract every fenced command from the guide and
+      execute each via subprocess (out-of-cycle trigger in its dry-run or
+      validate form where a real dispatch is not appropriate); each must be
+      accepted as written. must_block rides here — a command naming a workflow,
+      job or flag that does not exist must fail this test rather than be caught in
+      review.
+  - name: test_tq400c5_documented_cadence_and_trigger_match_the_delivered_workflow
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      REAL PRODUCER INTO REAL CONSUMER. Parse the workflow file TQ-400c-1 delivers
+      and assert the schedule expression, the job name and the out-of-cycle
+      trigger name quoted in the guide are byte-equal to those configured, in both
+      directions. This is the clause that catches a guide describing a cadence
+      nobody configured — the whole risk when no recurring schedule exists in the
+      repository today.
+  - name: test_tq400c5_a_completed_run_publishes_figures_where_the_guide_sends_the_reader
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      ROUND TRIP, AND THE ONE ENTRY THE BLOCKING PRECONDITION GATES. Complete a
+      real run over a temp store, then read the artifact at the location the guide
+      names — the dated report from TQ-400c-1 (settled), and the routine-status
+      surface from TQ-400c-2 (NOT settled; this half cannot be authored until the
+      user names the surface). Assert that run's figures and its occurrence date
+      are present there, from the emitted bytes rather than a renderer return
+      value. Until TQ-400c-2 resolves, the routine-status half of this entry is
+      blocked and must be recorded as blocked, never stubbed against a guessed
+      path.
+test_rationale: >-
+  change_target is docs, and a cadence how-to is the easiest of all to satisfy with
+  a page that restates a configuration — which is why three of the four entries
+  reach past the prose into the repository. The two clauses that cannot be faked
+  are round-trips and are treated as such: the reader triggers a run and sees its
+  report (real_artifact), and the cadence the guide quotes is the cadence actually
+  configured (seam, both directions). The seam entry matters more here than
+  anywhere else in this tree because no recurring schedule exists in the repository
+  today, so there is no incumbent behaviour to catch a wrong description — a
+  generic and entirely plausible account of scheduling would read correctly and be
+  false. NOT MECHANICALLY TESTABLE: "they can say where the run is configured" and
+  "they can state what the direction-of-travel figures mean" are comprehension
+  claims; their proxy is the criterion entry asserting the three components of each
+  explanation are PRESENT (population, direction, comparison occurrence) rather
+  than that a delta is merely reported, plus the seam entry asserting what is
+  present is true. BLOCKED, NOT PROXIED: the fourth criterion — figures found where
+  the guide sends the reader — is fully mechanical in principle and is deliberately
+  NOT given a weaker substitute, because the surface it targets is unnamed. Writing
+  a placeholder-tolerant test would let this AC pass while the clause it exists for
+  goes unmet, which is the artifact-satisfies-the-check failure in miniature.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: >-
+      Assigned documentation-expert; complexity M. ESCALATED HAND-OFF RESOLVED —
+      the unresolved TQ-400c-2 ambiguity is now recorded as an explicit BLOCKING
+      PRECONDITION in the first it_requirement rather than left for an implementer
+      to guess: no invented dashboard, no placeholder path, no TBD heading, and the
+      AC may not be signed off with the fourth clause unaddressed. The blocking
+      status is mirrored in the expects_from contract for TQ-400c-2 and in the
+      real_artifact test entry, which is marked blocked on its routine-status half
+      rather than stubbed against a guessed location. Ruled the target is a NEW
+      docs/how-to/done-proof-cadence.md rather than an extension of
+      done-proof-enforcement.md (191 lines, TQ-400a-5 already extending it, 300-line
+      advisory budget, different reader task) and required bidirectional
+      cross-links plus a build.py regeneration of docs/INDEX.md. Added expects_from
+      TQ-400a-5 so the population table is linked, not restated. test_spec:
+      criterion / reachability (extract-and-execute, must_block) / seam (quoted
+      cadence and trigger == the delivered workflow, both directions) /
+      real_artifact (run-then-read round trip). criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in TQ-400c's documentation_triggers.
+
+  NO RECURRING SCHEDULE EXISTS TODAY. Verified 2026-08-17: every workflow in the
+  repository is event-driven and none carries a recurring trigger. So unlike the
+  TQ-400a how-to, this guide documents a surface that TQ-400c-1 creates. That
+  makes the publication-accuracy clause the sharpest one here: the guide must be
+  written against the schedule as delivered, because there is no incumbent
+  behaviour to fall back on and a plausible-sounding generic account would be
+  indistinguishable from a correct one until someone tried to change the cadence.
+
+  AUTHORING DEPENDENCY TO FLAG AT ENRICHMENT. TQ-400c-2 records a blocking
+  ambiguity — the routine-status surface is not named anywhere in the tree and
+  must be settled with the user. This guide cannot satisfy its fourth clause
+  until that decision is made; a guide that sends a reader to an unsettled
+  surface reproduces the invisibility the parent L0 exists to remove.
+
+  Written as reader outcomes rather than "a guide exists" because a cadence
+  how-to is the easiest of all to satisfy with a page that restates the
+  schedule's configuration. The two clauses that cannot be faked are the
+  round-trip ones: the reader triggers a run and sees its report, and the reader
+  finds real figures at the surface the guide names.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — THE BA'S FLAG IS NOW A GATE, NOT A
+  WARNING. The BA asked at enrichment that the TQ-400c-2 ambiguity be acted on.
+  It is recorded three times over, deliberately: as the first and most emphatic
+  it_requirement, inside the expects_from contract for TQ-400c-2 (so a generator
+  reading contracts sees it), and inside the real_artifact test entry (so the test
+  contract cannot be satisfied by pointing at a guessed path). The reason for the
+  redundancy is that the failure mode is not an implementer ignoring a warning —
+  it is an implementer finding the ambiguity, reasonably picking the most
+  plausible surface, and shipping a guide that reads perfectly and sends every
+  reader to the wrong place. A single note in a notes block does not stop that.

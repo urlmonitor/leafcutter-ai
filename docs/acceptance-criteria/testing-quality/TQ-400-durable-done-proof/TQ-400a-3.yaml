@@ -1,0 +1,178 @@
+id: TQ-400a-3
+components:
+  - testing_quality
+  - ac_store
+title: "The sweep's verdict for a record is the established verdict, not a second opinion"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store of finished records spanning every outcome the established
+    per-record proof check can produce — a passing covering test, a covering test
+    that runs and fails, a covering test that is skipped or expected-to-fail, and
+    no covering test at all,
+  When the whole-store sweep and the established per-record check are both run
+    over that identical store and test tree,
+  Then the two agree on every record, both in verdict and in stated cause, with no
+    record on which they differ,
+  And when the established check's verdict for one record is altered, the sweep's
+    reported verdict for that record changes to match on the next run,
+  And the sweep reports no outcome the established check cannot produce.
+depends_on:
+  - TQ-400a
+  - TQ-400a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The seam angle and the disjoint-vocabulary incident (EPIC-ComputedQualityGates
+      FP-1 layer 3) that is exactly this AC's failure mode.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The oracle. verify_done_eligible is the only permitted verdict source;
+      _classify_outcomes (:666) is the fail-closed rule that must be inherited,
+      not restated; :899 and :962 are the two cause strings that must survive.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      _load_verify_done_eligible (:93) is the existing seam that loads the
+      oracle; check_all_done_acs (:403) is the caller that must keep using it.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Documents the mark-time proof mechanism whose verdict this sweep reuses,
+      including why xfail-masking is treated as non-passing.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Every verdict the sweep reports must be obtained by calling
+    verify_done_eligible in scripts/ac_store/done_proof.py. No second classifier,
+    no copy of _classify_outcomes, no local re-derivation of pass/fail from
+    pytest output anywhere in check_done_proof.py.
+  - >-
+    The fail-closed classification must be inherited rather than restated: XFAIL,
+    XPASS, SKIPPED, FAILED, ERROR and "nodeid not found" all count as
+    non-passing. An implementation that treats a skip as "no result" has drifted
+    and is a defect even when its own tests pass.
+  - >-
+    The set of outcome kinds the sweep can emit must be a subset of the oracle's.
+    Introducing a sweep-only outcome value is a contract break; if a new outcome
+    is genuinely needed it must be added to the oracle, where both readers see it.
+  - >-
+    Cause strings must be passed through verbatim from the oracle, never
+    re-worded or re-formatted at the sweep. TQ-400b-2-i depends on the two
+    distinct causes ("no linked test found for <id>" and "linked test
+    non-passing: <nodeid>") surviving intact onto the demoted record.
+  - >-
+    If the oracle does not expose a verdict at the granularity the sweep needs,
+    extend scripts/ac_store/done_proof.py — do not add a reader in
+    check_done_proof.py. One evidence source, one interpreter.
+  - >-
+    Depend on the oracle's public verdict entry point rather than reaching into
+    leading-underscore helpers, so the oracle can evolve without silently
+    creating a second reader.
+  - >-
+    Must handle errors gracefully per the project error handling policy: an
+    oracle call that raises for one record must be reported as an error entry
+    for that record (TQ-400a-4-i), never converted into a "proven" verdict.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400b-2
+    contract: >-
+      The oracle's cause string, unmodified, per unproven record — the exact
+      value that must land in the demoted record's demotion_reason field.
+expects_from:
+  ac_id: TQ-400a-1
+  contract: >-
+    The whole-store verdict population, list[dict] of {ac_id, path, ok, reason}.
+    This AC constrains where each entry's ok and reason come from: the oracle,
+    once, with no second interpretation.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_sweep_and_oracle_agree_on_every_outcome_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Over a fixture store with all four rows (passing covering test, failing
+      covering test, skipped/xfail covering test, no covering test), the sweep's
+      verdict AND cause equal verify_done_eligible's for every record, and the
+      set of outcome kinds the sweep emitted is a subset of the oracle's.
+  - name: test_altering_the_oracle_verdict_changes_the_sweep_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Flip one record's underlying evidence (make its passing covering test
+      fail) and re-run; the sweep's reported verdict for that record follows the
+      oracle. This is the coupling test — asserting that a function of a given
+      name is called proves nothing about whose verdict is used.
+  - name: test_skipped_covering_test_counts_as_non_passing_in_the_sweep
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      A SKIPPED or XFAIL covering test yields a non-passing sweep verdict,
+      matching _classify_outcomes' fail-closed rule. This is the row where a
+      reimplemented verdict most often diverges by treating a skip as no result.
+  - name: test_sweep_verdicts_match_the_oracle_through_the_real_cli
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Run --mode ci via subprocess over the four-row store and compare its
+      reported causes, string for string, against verify_done_eligible called
+      directly on the same records — agreement must hold at the production
+      entry point, not only in-process.
+test_rationale: >-
+  A grep or an assertion that the sweep calls a function named
+  verify_done_eligible cannot distinguish "uses the oracle's verdict" from
+  "calls it and then decides for itself". Only mutating the oracle's answer and
+  observing the sweep's answer follow proves the coupling. The four-row fixture
+  exists because the skip/xfail row is where a second implementation
+  characteristically diverges, and this repo has already shipped two readers of
+  one evidence source that drifted apart.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Anti-drift AC. The established check is verify_done_eligible in
+  scripts/ac_store/done_proof.py; its outcome classification is fail-closed —
+  _classify_outcomes (:666) counts XFAIL, XPASS, SKIPPED, FAILED, ERROR and
+  "nodeid not found" as non-passing, which is what defeats xfail-masking. The
+  sweep must inherit that behaviour by calling it, never by reimplementing it.
+
+  Why this AC exists as its own record: this repo has already shipped two readers
+  of one evidence source that drifted apart — EPIC-ComputedQualityGates FP-1
+  layer 3, where the hook's ALLOWED_CHANGE_TARGETS and guardrail_gates.yaml keys
+  were disjoint vocabularies, each side green against its own copy. A store-wide
+  sweep is a second reader by default unless this is enforced.
+
+  The skipped/expected-to-fail row in the fixture is load-bearing: it is the row
+  where a naively reimplemented verdict most often diverges, because a fresh
+  implementation typically treats a skip as "no result" rather than as
+  non-passing.
+
+  Test-angle constraint: the mutation clause makes this a seam test rather than a
+  grep. Asserting that the sweep calls a function of a given name proves nothing
+  about whose verdict is used; changing the oracle's answer and observing the
+  sweep's answer follow is the real coupling test.

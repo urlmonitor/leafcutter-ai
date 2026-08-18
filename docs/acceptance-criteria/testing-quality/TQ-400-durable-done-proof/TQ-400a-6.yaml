@@ -1,0 +1,287 @@
+id: TQ-400a-6
+components:
+  - testing_quality
+  - ac_store
+title: "The component diagram shows one verdict source with three checkers over three populations"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the done-proof machinery comprises a single per-record verdict source, a
+    commit-time check over the records staged for a commit, a change-time gate
+    over the records altered in a proposed change, and the whole-store sweep,
+  When a reader who has not seen the code opens the component diagram for
+    done-proof,
+  Then the diagram shows all four, and shows the three checkers as callers of the
+    one verdict source rather than as three independent judges of the same
+    evidence,
+  And each checker is labelled with the population it evaluates, so a reader can
+    say which finished records a given checker would never look at and therefore
+    which failure each layer is incapable of catching,
+  And the diagram shows the durable inventory the sweep leaves behind and the
+    consumers that read it — the cadence report and the triage list — so a reader
+    can say which downstream figures are derived from a single run and which are
+    independently re-derived from the store,
+  And a reader can answer from the diagram alone which element would have to
+    change to alter a verdict, and which would have to change to alter the set of
+    records that is checked, and see that those are different elements,
+  And the arrangement drawn is the one in the repository at publication: the
+    verdict source, the commit-time check and the change-time gate shown are the
+    ones that exist and are named as they are actually reached, with nothing drawn
+    as present that is not,
+  And any element introduced by this work rather than already running is
+    distinguishable as such, so a reader cannot mistake the diagram for a record
+    of what is live today.
+depends_on:
+  - TQ-400a
+  - TQ-400a-1
+  - TQ-400a-3
+  - TQ-400a-4
+doc_links:
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The component home the diagram belongs to and the existing description of
+      the mark-time gates the sweep extends over time. The new diagram must be
+      cross-linked from here (check_doc_links checks bidirectionality).
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the commit-time check lives as a component, so the diagram places
+      the sweep relative to an existing documented boundary rather than inventing
+      one.
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The prose statement of the two existing layers and their populations; the
+      diagram must not contradict it. TQ-400a-5 adds the third population to the
+      same file — the diagram's labels and that table are one vocabulary.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The two-readers drift failure (one evidence source, two interpreters) the
+      single-verdict-source depiction exists to make visible.
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. THE SIBLING VIEW OF THE SAME ORACLE. This existing L3
+      sequence diagram already documents verify_done_eligible in
+      scripts/ac_store/done_proof.py and lists its related_code. The new
+      component diagram is the structural view over the same oracle and must name
+      it identically; two names for one verdict source is the exact drift this AC
+      exists to prevent.
+  - path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. The nearest existing example of the diagram-file
+      conventions this file must follow — frontmatter shape, flight_level,
+      parent, components and related_docs.
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - >-
+    TARGET FILE — a NEW diagram under docs/architecture/diagrams/, named to the
+    enforced convention c{level}-{seq:03d}-{slug}.md. Allocate the sequence number
+    at authoring time with `python scripts/next_diagram_seq.py 3` (it returned 6 on
+    2026-08-18, so c3-006-*.md unless a sibling claims it first). Suggested slug:
+    done-proof-checkers-and-populations. Frontmatter must carry type: architecture,
+    diagram_type: component (a value from config/diagram_types.json) and
+    flight_level: L3-Component — scripts/commit_guardian/check_diagram_naming.py
+    rejects a filename whose c-prefix disagrees with flight_level.
+  - >-
+    EVERY NAMED ELEMENT MUST RESOLVE TO A REAL MODULE AT PUBLICATION, AND THE
+    frontmatter related_code LIST IS WHAT MAKES THAT CHECKABLE. List in
+    related_code every module a box names — at minimum
+    scripts/ac_store/done_proof.py (verify_done_eligible, the one verdict source),
+    the commit-time hook and the change-time gate in
+    scripts/commit_guardian/check_done_proof.py, and whatever TQ-400a-2 delivers as
+    the store-wide invocation. A box naming a module or symbol that does not exist
+    is the failure the publication-accuracy clause forbids, and it is only
+    mechanically detectable if the names are in related_code as well as in the
+    mermaid body.
+  - >-
+    NAME THE VERDICT SOURCE EXACTLY AS docs/architecture/diagrams/
+    c3-done-proof-evaluation-sequence.md NAMES IT. That sequence diagram already
+    documents verify_done_eligible as the authoritative oracle. Two diagrams
+    naming one oracle differently reintroduces, in the documentation layer, the
+    two-readers drift the single-verdict-source depiction exists to expose.
+  - >-
+    DRAW THE ARRANGEMENT AS DELIVERED, NOT AS INTENDED. If the delivered code has
+    two verdict sources, the diagram shows two and the discrepancy is raised
+    against TQ-400a-3 — it is not smoothed into the intended single source. A
+    diagram that draws the constraint rather than the code lets a reviewer believe
+    the constraint holds when it does not, which is worse than no diagram.
+  - >-
+    LIVE VERSUS INTRODUCED MUST BE A DECLARED CONVENTION, NOT AN IMPLICATION. Two
+    of the four elements already run. Use an explicit visual convention (e.g.
+    dashed for introduced-by-this-work) AND state the convention in a legend with
+    the publication date, so a reader in six months can tell what the distinction
+    was asserting and when.
+  - >-
+    EACH CHECKER CARRIES ITS POPULATION LABEL ON THE DIAGRAM ITSELF. This is the
+    one thing prose cannot do at a glance and is the diagram's whole justification.
+    Do NOT restate the population prose in body text — link to
+    docs/how-to/done-proof-enforcement.md for the narrative — but the label must be
+    on the node.
+  - >-
+    THE INVENTORY AND ITS CONSUMERS ARE PART OF THE DIAGRAM, WITH THE DERIVATION
+    DIRECTION EXPLICIT. Draw the durable inventory TQ-400a-4 delivers and both
+    readers of it (the cadence report, the triage list), and make clear by edge
+    direction which figures are derived from one run's inventory and which are
+    re-derived from the store. A consumer that re-derives is a second reader and
+    the diagram must show it as one.
+  - >-
+    CROSS-LINK BIDIRECTIONALLY. Add the diagram to related_docs on
+    docs/architecture/components/phantom-done-prevention.md and reference that
+    component doc from the diagram's related_docs; check_doc_links checks
+    bidirectionality and check_doc_frontmatter checks the required fields.
+  - >-
+    SEQUENCE AFTER TQ-400a-3 AND TQ-400a-4 LAND, for the same reason as the
+    draw-as-delivered rule: both the single-verdict-source constraint and the
+    inventory boundary are claims about shipped code.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-400a-3
+    contract: >-
+      The single-verdict-source constraint — every sweep verdict originates from
+      the established per-record oracle. The diagram depicts that constraint;
+      if the delivered code has two verdict sources the diagram must show two,
+      not the intended one.
+  - ac_id: TQ-400a-4
+    contract: >-
+      The durable inventory and the set of consumers that read it, which the
+      diagram places as the boundary between the sweep and its downstream
+      readers.
+test_spec:
+  - name: test_tq400a6_three_checkers_call_one_verdict_source_and_carry_population_labels
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Parse the mermaid block and assert all four elements are present, that each
+      of the three checkers has an edge INTO the single verdict node (and that
+      exactly one verdict node exists), that each checker node carries a
+      population label, and that the inventory node plus both consumer nodes are
+      present. Four labelled boxes with no edges into a shared verdict node
+      satisfies a presence check and is the failure this entry catches.
+  - name: test_tq400a6_named_modules_and_symbols_resolve_in_the_repository
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      For every path in the diagram's frontmatter related_code, assert the file
+      exists; for every module or symbol named in the mermaid body, assert it
+      resolves to a real definition in that file. Read the diagram as the bytes on
+      disk, not a fixture. An element drawn as present that names a module which
+      does not exist must fail.
+  - name: test_tq400a6_verdict_source_matches_the_sequence_diagram_and_the_real_caller
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      TWO SOURCES, ONE VOCABULARY. Assert the verdict-source symbol this diagram
+      names is the same symbol docs/architecture/diagrams/
+      c3-done-proof-evaluation-sequence.md names, AND the same symbol the
+      commit-time and change-time checkers in
+      scripts/commit_guardian/check_done_proof.py actually call. Two names for one
+      oracle across two diagrams is the drift the depiction exists to prevent.
+  - name: test_tq400a6_new_diagram_passes_the_real_naming_and_frontmatter_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT, BOTH POLARITIES. Run
+      scripts/commit_guardian/check_diagram_naming.py and
+      scripts/commit_guardian/check_doc_frontmatter.py as subprocesses over the
+      new file and assert they pass; then run them over a copy whose flight_level
+      contradicts its c-prefix and assert they block (must_block). Re-implementing
+      the naming regex in the test proves nothing about the gate that runs.
+test_rationale: >-
+  change_target is docs, but a diagram's failure mode is not absence — it is a
+  well-formed picture of something that is not there. A file-exists test, and even
+  documentation-verifier's real-diff assertion, are both satisfied by a diagram
+  drawing the intended architecture rather than the delivered one; that is the
+  precise artifact this AC's publication-accuracy clause forbids, so the contract
+  has to reach past the file into the repository. NOT MECHANICALLY TESTABLE: "a
+  reader can answer from the diagram alone which element would have to change to
+  alter a verdict versus the set of records checked" is a comprehension claim. Its
+  proxy is structural and deliberately narrow — one verdict node with three
+  inbound checker edges, each checker carrying a population label — because that
+  topology is what makes the two questions separable at a glance, and its absence
+  is what makes them inseparable. Likewise "distinguishable as introduced" is
+  proxied by requiring a declared legend convention rather than by asserting a
+  reader noticed it. The real_artifact and seam entries carry the weight: they
+  make every name in the picture falsifiable against the code and against the
+  sibling sequence diagram.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: >-
+      Confirmed architecture-diagram-author (the diagram surface is mermaid under
+      docs/architecture/diagrams/, which is that agent's owned surface via the
+      write-c4-diagram skill); complexity M. Named the exact target path and the
+      enforced conventions: c{level}-{seq:03d}-{slug}.md, next c3 sequence 6 as of
+      2026-08-18 via scripts/next_diagram_seq.py, diagram_type component from
+      config/diagram_types.json, flight_level L3-Component (check_diagram_naming
+      rejects a prefix/flight_level mismatch). Required frontmatter related_code to
+      list every module the boxes name — that is what makes the picture
+      mechanically falsifiable — and required the verdict source to be named
+      identically to the existing c3-done-proof-evaluation-sequence.md. Added that
+      diagram and c2-003-ac-readiness-states.md to doc_links. test_spec: criterion
+      (one verdict node, three inbound checker edges, population labels) /
+      real_artifact (every named module and symbol resolves) / seam (same oracle
+      name across both diagrams and the real callers) / reachability (the real
+      check_diagram_naming and check_doc_frontmatter gates, both polarities).
+      criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the component-diagram entry in TQ-400a's documentation_triggers.
+
+  The diagram's job is to make ONE relationship obvious: three checkers, three
+  populations, one verdict source. That single picture is what stops the next
+  implementer adding a fourth checker with its own verdict logic — the drift this
+  repo has already shipped once (two readers of one evidence source, each green
+  against its own copy).
+
+  The criteria are written as questions a reader must be able to answer, not as
+  "a diagram exists". A diagram file with the right name and four labelled boxes
+  satisfies a presence check while leaving the population distinction — the whole
+  point — invisible. "Which records would this layer never look at" is the
+  question the current state answers badly, and it is the one the diagram must
+  answer at a glance.
+
+  The publication-accuracy clause matters because two of the four elements are
+  already live. A diagram that draws the intended arrangement rather than the
+  delivered one is worse than none: it would let a reviewer believe the
+  single-verdict-source constraint holds when the code has drifted from it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — THE SIBLING DIAGRAM ALREADY NAMES THE
+  ORACLE. docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md exists
+  and already documents verify_done_eligible in scripts/ac_store/done_proof.py as
+  the authoritative oracle, with related_code naming both that module and
+  templates/scripts/commit_guardian/check_done_proof.py. This AC's diagram is the
+  structural view over the same oracle. Naming it differently would reproduce the
+  two-readers drift in the documentation layer — the seam test entry exists to
+  make that impossible.

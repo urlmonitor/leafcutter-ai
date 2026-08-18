@@ -1,0 +1,41 @@
+id: TQ-400c
+components:
+  - testing_quality
+title: "The honesty check lands on a rhythm you actually see"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A regular, visible verdict on whether "done" still means done.
+
+  The re-check runs on a schedule and surfaces its result where the team already
+  looks, rather than only when somebody remembers to ask for it. Each report also
+  shows the direction of travel, so you can tell whether the backlog is becoming
+  more honest or less.
+depends_on:
+  - TQ-400
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400c-1
+  - TQ-400c-2
+  - TQ-400c-3
+  - TQ-400c-4
+  - TQ-400c-5
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - how-to

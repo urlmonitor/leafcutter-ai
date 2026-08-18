@@ -1,0 +1,135 @@
+id: TQ-400c-2
+components:
+  - testing_quality
+title: "The verdict appears where the team already looks, not behind a command"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a completed scheduled sweep,
+  When the team looks at the place they already use for routine status, without
+    running anything themselves,
+  Then the sweep's headline verdict is present there — how many finished records
+    are proven, how many are not, and how many are exempt,
+  And the figures shown are those of the most recently completed run, identified
+    by its date,
+  And when a further run completes with different figures, the figures shown
+    change to match without anyone republishing them by hand.
+depends_on:
+  - TQ-400c
+  - TQ-400c-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The reachability angle definition: start at the production entry point and assert the result is CONSUMED, not merely produced. A published surface nobody's run writes to is the Lost Test smell in report form."
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "The strongest existing candidate for 'the place the team already looks for routine status' — the CI check list on every PR. Read the job structure before choosing a surface; whichever is chosen, it must be one that is already read without being asked for."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The sweep whose outcome is being surfaced. Note the existing gate publishes only a pass/fail verdict on staged files — the three-way population figures this AC surfaces have no publication path today."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Component context for where done-proof machinery lives and what already reports on it, so the new surface is added alongside rather than as a parallel reporting stack."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE SURFACE MUST BE ONE THE TEAM ALREADY READS WITHOUT ASKING. The criterion's load-bearing word is 'already'. A new dashboard, a new command, or a file that must be opened deliberately does not satisfy it — the current state (the per-record verdict has been computable all along and the 259-record backlog stayed invisible anyway) is exactly what a pull-only surface produces. BLOCKING AMBIGUITY: the criteria do not name the surface. See the caveat in notes; the surface must be settled with the user before implementation, not chosen by the coder."
+  - "PUSH, NOT PULL. The figures must change when a run completes, with no human republish step in between. Any implementation in which a person copies numbers, regenerates a page, or triggers a publish is a violation, and is testable: complete a second run with different figures and read the surface again."
+  - "THE THREE-WAY SPLIT MUST STAY THREE-WAY ALL THE WAY TO THE SURFACE. proven / unproven / exempt must be three separate published counts. Collapsing exempt into proven lets the 37 records that today carry a test-free declaration inflate the good news, which is the specific dishonesty the parent L0 exists to remove. TQ-400e-2's abstention count is a fourth outcome and must not be folded into any of the three either."
+  - "The published figures must be attributed to a specific dated occurrence, so a reader can tell WHICH run they are reading. An unattributed number cannot be distinguished from a stale one."
+  - "Must read the completed run's structured report from TQ-400c-1 rather than re-running the sweep. A surface that re-derives becomes a second reader of the store and will drift from the report it claims to be showing."
+  - "Must handle errors gracefully per the project error handling policy; the specific failure representation is TQ-400c-4's subject and must not be independently invented here."
+delivers_to:
+  - agent: documentation-expert
+    contract: "The published routine-status surface carrying the four outcome counts (proven / unproven / exempt / evidence-not-trustworthy) attributed to a dated occurrence. This is the surface the TQ-400c how-to documentation trigger must describe: where to look and how to read it."
+expects_from:
+  ac_id: TQ-400c-1
+  contract: >-
+    The dated per-occurrence report. This AC surfaces its headline figures on the
+    routine status surface the team already reads. Consumed as the structured
+    artifact TQ-400c-1 emits — the four outcome counts plus the occurrence date —
+    never by re-running the sweep.
+test_spec:
+  - name: test_tq_400c_2_completed_run_publishes_figures_to_the_routine_surface
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT, MANDATORY. Complete a sweep through the real scheduled entry point (subprocess, real argv/env), then read the published surface the way a reader reads it — the actual on-disk/emitted artifact, not the renderer's return value — and assert the headline figures are present there with no intervening manual step. Asserting that a template contains a placeholder for the figures passes on a surface wired to nothing."
+  - name: test_tq_400c_2_a_second_run_changes_the_published_figures_unaided
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Complete a second run whose population deliberately differs from the first, invoke nothing else, and assert the published figures now match the second run and are attributed to its date. This is the clause that separates a live surface from a snapshot someone pasted once."
+  - name: test_tq_400c_2_proven_unproven_and_exempt_are_three_separate_published_counts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Given a run containing all three outcomes, the surface shows three distinct counts. Assert specifically that the exempt count is NOT added into the proven count — construct a store where folding them would produce the same total-proven figure a correct implementation must not show."
+test_rationale: |
+  The cheap green here is a template test: assert the surface template contains a
+  placeholder for each figure. That passes on a surface no run ever writes to, which is
+  precisely the state this AC exists to leave. The load-bearing assertions are therefore
+  both dynamic — the figures appear after a real run, and they CHANGE after a second real
+  run — and both must read the surface as a reader does rather than inspecting the
+  renderer's return value. The three-way-split test is separated out because the
+  collapse-exempt-into-proven defect is arithmetically invisible in any test that only
+  checks the total.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: >-
+      Assigned python-coder; complexity M. it_requirements make the push-not-pull
+      obligation and the three-way split explicit, and record a BLOCKING ambiguity:
+      the criteria never name the routine-status surface. test_spec carries the
+      mandatory reachability entry (figures land where the criterion says people
+      look, after a real run) plus a seam entry for the second-run update and a
+      criterion entry for the exempt/proven collapse. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - docs
+risk_surface: internal
+notes: |
+  The product owner's phrasing is "a rhythm you actually see". A report that exists
+  but must be asked for is the state we are already in: the per-record verdict has
+  been computable all along, and the 259-record backlog stayed invisible anyway
+  because nothing put it in front of anybody.
+
+  Test-angle constraint: the last clause is what makes this more than a static
+  check. Complete a second run with deliberately different figures and observe the
+  surfaced numbers follow. Asserting that a template contains a placeholder for
+  the figures passes on a surface wired to nothing.
+
+  The three-way split (proven / not proven / exempt) is deliberate: collapsing
+  exempt into proven would let the 37 records currently carrying a test-free
+  declaration inflate the good news.
+
+  IT-PO CAVEAT (2026-08-17) — THE SURFACE IS UNNAMED, AND IT IS THE WHOLE AC.
+  "the place they already use for routine status" is not resolvable from the
+  criteria, from the architecture docs, or from any sibling AC. It is not a
+  detail: choosing wrong produces a technically-passing implementation that
+  reproduces the exact invisibility the L0 exists to remove, and no test can
+  detect the error because the test will assert against whichever surface was
+  chosen. The strongest existing candidate is the CI check list (the only status
+  surface in this repo that is read on every PR without being asked for); a
+  distant second is a committed report file that appears in review diffs. This
+  must be settled with the user before implementation. Flagged to the caller as a
+  caveat rather than resolved here — naming the surface would be writing criteria.

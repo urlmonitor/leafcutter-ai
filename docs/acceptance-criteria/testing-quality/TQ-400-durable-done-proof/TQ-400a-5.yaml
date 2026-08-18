@@ -1,0 +1,312 @@
+id: TQ-400a-5
+components:
+  - testing_quality
+  - ac_store
+title: "Someone who has never run the store-wide sweep can run it and read its verdict unaided"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a maintainer who has never run the whole-store honesty sweep, who has the
+    how-to guide and nothing else — no sibling to ask and no access to the sweep's
+    source,
+  When they follow the guide end to end against this repository,
+  Then they run the sweep over the whole store themselves and obtain a verdict for
+    every finished record, without having to discover which invocation reaches the
+    store-wide population,
+  And they can state which population each of the three done-proof layers covers —
+    the records staged for a commit, the records changed in a pull request, and
+    every finished record in the store — and therefore say which records a given
+    layer would never have looked at,
+  And they can state, before running anything, whether the run they are about to
+    start will write to the store, and what additional step is required before it
+    would,
+  And, shown a run's output naming one record, they can say which outcome that
+    record received, what its stated cause means, and which of the available
+    responses applies — obtaining proof, declaring the record exempt with a
+    reason, or fixing an unresolvable coverage tag at source,
+  And, shown a record the run demoted, they can explain from the guide alone why
+    it lost its finished badge and what would restore it, without opening the
+    sweep's source or a previous run's report,
+  And every command the guide gives runs as written against the repository at the
+    time the guide is published, producing the output the guide says it produces —
+    a reader who copies a step does not have to adjust it to make it work.
+depends_on:
+  - TQ-400a
+  - TQ-400a-1
+  - TQ-400a-2
+doc_links:
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE TARGET SURFACE — EXTEND IT, DO NOT OPEN A SECOND GUIDE. 191 lines as of
+      2026-08-18. It already carries the two-layer population statement
+      (## 1. The local pre-commit hook, ## 2. The CI gate, ## Summary: two-layer
+      strategy); the third population must join that statement rather than
+      compete with it from another file. Its frontmatter description ("two-layer
+      proof-of-done enforcement system") is the stale claim TQ-400a-2 also
+      records, and it propagates into the generated docs/INDEX.md (build.py:1009).
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The reader's onward path once the sweep names a record as unproven — how
+      proof is established for a single record. Link to it; do not restate it.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Component home for the done-proof machinery the guide describes; the
+      source of truth for what each layer actually does.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The outcome vocabulary a reader must be able to interpret, and the
+      documented reason a covering test that is skipped or expected-to-fail is
+      not proof.
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. The existing L3 sequence diagram of verify_done_eligible.
+      The guide's account of what a verdict means must agree with it, and the
+      guide should link to it rather than paraphrase the evaluation path.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. Where demotion_reason / demotion_date are defined
+      (TQ-400b-2 owns the entry, TQ-400b-7 is its standard). The guide's
+      "why it lost its finished badge" clause must LINK here for the field
+      definitions rather than carrying a second account of them.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    TARGET DOCUMENT — docs/how-to/done-proof-enforcement.md, EXTENDED IN PLACE.
+    Do not create a new guide for the third layer. The file already states the
+    populations of the two existing layers; a second file describing a third
+    population is the two-accounts-of-one-thing drift this tree exists to remove,
+    and the criteria's "which records would this layer never look at" clause is
+    only answerable when all three populations sit in one table. The file is 191
+    lines today and the advisory budget is 300 (check_doc_length, severity warn,
+    scripts/commit_guardian/check_doc_length.py). If the addition would exceed it,
+    move the READING-A-VERDICT material into a sibling how-to and cross-link —
+    never duplicate the population table.
+  - >-
+    THE STALE TWO-LAYER CLAIM MUST BE RETIRED IN THE SAME CHANGE, INCLUDING IN
+    FRONTMATTER. The document's own `description` field says "two-layer
+    proof-of-done enforcement system" and build.py regenerates docs/INDEX.md from
+    it (build.py:1009). A guide that adds a third layer in its body while its
+    description and its ## Summary heading still say two leaves the index lying.
+    Update body, heading and frontmatter description together, then run
+    `python scripts/build.py --target-dir .` so the generated index agrees. Do not
+    hand-edit docs/INDEX.md.
+  - >-
+    DOCUMENT THE INVOCATION AS DELIVERED, NOT AN IDEALISED ONE. The store-wide
+    mode already exists: `check_done_proof.py --mode ci` dispatches to
+    check_all_done_acs. What TQ-400a-2 adds is an automated job in
+    .github/workflows/. Name BOTH — the automated job (file and job name) that
+    actually reaches the store-wide population, and the local command a reader
+    runs by hand — and name them as they exist at publication. A guide that
+    documents a mode, flag or script no entry point uses is the same
+    documented-but-unreachable failure the parent L0 addresses.
+  - >-
+    EVERY COMMAND MUST BE COPY-RUNNABLE AS WRITTEN. No placeholder a reader must
+    silently substitute, no elided flag, no shortened path. Where a value genuinely
+    varies, show the real command with a real value and mark the varying part
+    explicitly. This clause is not stylistic: the test contract extracts each
+    fenced command from the published file and executes it, so an unrunnable
+    command is a red test, not a review comment.
+  - >-
+    STATE THE WRITE POSTURE BEFORE THE RUN, FROM TQ-400b-5 AS DELIVERED. The reader
+    must be able to say, before starting, whether the run writes to the store and
+    what additional step turns writing on. Preview-by-default is TQ-400b-5's
+    subject — take the posture and the opt-in step from its delivery, and do not
+    invent a flag name.
+  - >-
+    THE THREE-POPULATION TABLE IS THE LOAD-BEARING CONTENT AND MUST BE STATED AS A
+    BLIND-SPOT TABLE. For each of the three layers, state the population it
+    evaluates AND, explicitly, the finished records it never looks at. "Covers
+    changed files" is not a blind-spot statement; "never evaluates a finished
+    record that is not in the current change" is. The commonest misreading of a
+    store-wide result is that the pull-request gate would have caught the same
+    records; the table exists to make that misreading impossible.
+  - >-
+    THE THREE RESPONSES MUST ROUTE, NOT RESTATE. Obtaining proof routes to
+    docs/how-to/prove-ac-done.md; declaring an exemption routes to the exemption
+    entry in docs/reference/ac-schema.md (TQ-400e-6); the demotion explanation
+    routes to the demotion field entry in the same reference (TQ-400b-2 owns the
+    entry, TQ-400b-7 is its acceptance standard). This guide may summarise in one
+    sentence and must link for the rules. A fourth account of the exemption rules
+    reproduces exactly the two-layer disagreement TQ-400e-6 exists to reconcile.
+  - >-
+    QUOTE OUTCOME AND CAUSE STRINGS VERBATIM FROM THE RUN, NEVER PARAPHRASED. The
+    cause strings originate in scripts/ac_store/done_proof.py (e.g. "no linked test
+    found for <id>", "linked test non-passing: <nodeid>"). A paraphrase is a string
+    the reader cannot match against what they see on screen, and it rots silently
+    when the real message changes.
+  - >-
+    Tracked how-to subject to check_doc_frontmatter, check_doc_length and
+    check_doc_links; keep all three passing in the same commit as the edit.
+  - >-
+    SEQUENCE AFTER TQ-400a-1, TQ-400a-2 AND TQ-400b-5 LAND. Every publication-
+    accuracy clause in the criteria is a claim about the repository at publication
+    time. Written ahead of those deliveries, the guide documents an intention, and
+    a plausible-sounding intention is indistinguishable from a correct account
+    until a reader tries a command.
+delivers_to:
+  - agent: documentation-expert
+    ac_id: TQ-400c-5
+    contract: >-
+      The single three-population blind-spot table and the outcome/cause
+      vocabulary, published in docs/how-to/done-proof-enforcement.md. TQ-400c-5's
+      cadence guide LINKS to this table and this vocabulary and must not restate
+      either; two accounts of the populations is the drift both guides exist to
+      remove.
+expects_from:
+  - ac_id: TQ-400a-1
+    contract: >-
+      The whole-store verdict population and its reported record count — the
+      output shape the guide teaches a reader to interpret.
+  - ac_id: TQ-400a-2
+    contract: >-
+      The production invocation of the sweep as delivered. The guide documents
+      running that invocation; it must not describe a command that no automated
+      job or entry point actually uses.
+  - ac_id: TQ-400b-5
+    contract: >-
+      IT-PO ADDITION. The preview-by-default posture and the exact opt-in step
+      that turns writing on. The guide's before-you-run clause is a verbatim
+      statement of that posture; it cannot be authored from intent.
+test_spec:
+  - name: test_tq400a5_guide_states_three_populations_and_each_layers_blind_spot
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Read the published docs/how-to/done-proof-enforcement.md and assert it
+      names all three populations (staged-for-commit, changed-in-a-PR,
+      every-finished-record-in-the-store) AND, for each, an explicit statement of
+      the finished records it never evaluates; and that the write posture and its
+      opt-in step are stated before the first invocation appears. Assert the
+      stale "two-layer" claim is absent from the body, the summary heading and
+      the frontmatter description.
+  - name: test_tq400a5_every_documented_command_runs_as_written
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT. Extract every fenced shell command from the
+      published guide and execute each one via subprocess against a temp store
+      (write-capable commands run in preview posture). Each must be accepted and
+      exit as the guide says. must_block rides here — a command naming a mode or
+      flag the real CLI rejects must fail this test. Asserting the guide
+      "mentions the command" passes on a command that does not exist.
+  - name: test_tq400a5_documented_invocation_is_the_one_the_automated_job_runs
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      REAL PRODUCER INTO REAL CONSUMER. Parse the workflow file TQ-400a-2
+      delivers under .github/workflows/ and assert the store-wide invocation the
+      guide documents (script, mode flag, job name) is the same one that job
+      runs, in both directions — the guide names no invocation the job does not
+      use, and the job runs no store-wide invocation the guide omits.
+  - name: test_tq400a5_quoted_outcomes_and_causes_appear_verbatim_in_a_real_run
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Build a temp store with the project's real serializer containing one
+      proven, one unproven and one demoted record, run the sweep through its real
+      invocation, and assert every outcome name and cause string the guide quotes
+      appears verbatim in that run's actual output. Hand-typed fixtures reproduce
+      the author's expectation rather than the emitter's bytes.
+test_rationale: >-
+  change_target is docs, but four of this AC's seven clauses are round-trips
+  against live behaviour, not prose preferences, and each one has a mechanical
+  form. NOT MECHANICALLY TESTABLE: every clause phrased as "a first-time reader
+  can state / can explain / can say" is a claim about a human, and no test can
+  assert comprehension. Those clauses are covered by the strongest available
+  proxies rather than pretended into automation — the criterion entry asserts the
+  facts a reader would need are PRESENT and stated in the blind-spot form (not
+  merely that populations are mentioned), and the seam and real_artifact entries
+  assert those facts are TRUE of the shipped system, which is the half of "can
+  state correctly" that is checkable. The one clause that IS fully mechanical is
+  the last — "every command runs as written" — and it gets the reachability entry
+  that extracts and executes each command, because a file-exists or
+  phrase-present test is satisfied by a guide full of commands that do not run,
+  which is precisely the artifact-satisfies-the-check failure this tree closes.
+  The documentation-verifier agent's real-diff assertion is the floor here, not
+  the contract: a real diff full of unrunnable commands still passes it.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: >-
+      Assigned documentation-expert; complexity M. Ruled the target surface is
+      docs/how-to/done-proof-enforcement.md EXTENDED IN PLACE rather than a new
+      guide, so the three-population table has one home; recorded the 300-line
+      advisory budget and the split rule if it is exceeded. Required the stale
+      "two-layer" frontmatter description to be retired in the same change and
+      docs/INDEX.md regenerated via build.py rather than hand-edited. Added
+      expects_from TQ-400b-5 (the preview posture cannot be authored from intent)
+      and delivers_to TQ-400c-5 (the population table and outcome vocabulary the
+      cadence guide links to instead of restating). test_spec: criterion /
+      reachability (extract-and-execute every documented command, must_block) /
+      seam (documented invocation == the invocation the delivered job runs, both
+      directions) / real_artifact (quoted outcome and cause strings appear
+      verbatim in a real run). criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in TQ-400a's documentation_triggers.
+
+  THE SWEEP ALREADY EXISTS — THE GUIDE DOCUMENTS RUNNING IT, NOT BUILDING IT.
+  Verified 2026-08-17: check_all_done_acs already walks the whole store, and the
+  store-wide mode is already a declared CLI choice. What TQ-400a adds is an
+  automated invocation. The guide must therefore describe the sweep as it
+  actually behaves at publication, including the preview-by-default posture
+  TQ-400b-5 establishes, rather than an idealised runbook.
+
+  Why the criteria are written as reader outcomes rather than as "a guide
+  exists": a file with the right name and the right headings satisfies a
+  presence check while teaching nobody anything, which is the same
+  artifact-satisfies-the-check failure the parent L0 exists to remove. Every
+  clause here is a thing a first-time reader must be able to DO or SAY after
+  reading, and each is observable by putting the guide in front of someone who
+  has not run the sweep.
+
+  The three-population clause is load-bearing: the commonest misreading of a
+  store-wide result is to assume the pull-request gate would have caught the
+  same records. It would not, and a reader who cannot say why will misjudge how
+  much the sweep is telling them.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — ONE SURFACE, AND THE INDEX LIES TODAY.
+  The BA left the surface open ("the surface to extend or the sibling to link").
+  Ruled: extend docs/how-to/done-proof-enforcement.md in place. A second file
+  would give the repository two population accounts, and the criterion that a
+  reader "can say which records a given layer would never have looked at" is only
+  answerable from a single table covering all three. Secondary finding recorded in
+  it_requirements: the file's frontmatter description still says "two-layer
+  proof-of-done enforcement system" and build.py:1009 regenerates docs/INDEX.md
+  from that description, so the generated index currently advertises two layers.
+  Retiring the claim in the body while leaving the description untouched would
+  leave the index stating the very thing this AC removes.

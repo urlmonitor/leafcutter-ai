@@ -1,0 +1,203 @@
+id: TQ-400b-1
+components:
+  - testing_quality
+  - ac_store
+title: "A finished record whose proof has lapsed is returned to the to-do pile on disk"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record that the sweep reports as unproven,
+  When the sweep applies its outcome to the store,
+  Then that record's file on disk no longer reads as finished and reads as work
+    still to be done,
+  And the change is present in the file itself after the run, not only in the
+    run's output,
+  And a fresh read of the store afterwards, in a new process, returns the record
+    as unfinished work,
+  And every other field of the record is left as it was, so the demotion changes
+    the record's state and nothing else.
+depends_on:
+  - TQ-400b
+  - TQ-400a-1
+  - TQ-400e-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The AC record field reference; work_status semantics and the field
+      inventory the demotion write must leave untouched.
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      THE PRECEDENT AND THE GAP. It writes one direction only (:166-181), and
+      its targeted single-line work_status rewrite (:164-181) is the write
+      discipline to copy. Read it before specifying or writing the reverse path.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Where the sweep and its verdicts live; the apply path must hang off this
+      invocation rather than becoming a separate command with its own walker.
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The store validator the written record must still pass, in the same run.
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      build_ac_store (:793) deploys scripts/ac_store/* to
+      <output_root>/scripts/ac_store/; a new writer module placed there must be
+      added to that deploy map or it will be missing in the deployed layout.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    There is no demotion path today; mark_ac_done.py writes one direction only
+    and refuses non-active records. Build the reverse with the SAME write
+    discipline: a targeted single-field line rewrite (mark_ac_done.py:164-181),
+    never a whole-file yaml.safe_dump round-trip, which would reformat, reorder
+    and strip comments across every record it touches.
+  - >-
+    Every field other than the state field (and the demotion fields introduced by
+    TQ-400b-2) must be byte-identical after the write; this is verifiable by
+    diffing the file before and after, and must be verified, not assumed.
+  - >-
+    The write must be atomic (temp file then rename) so an interrupted sweep can
+    never leave a truncated or half-written record in the store.
+  - >-
+    The demoted record must remain schema-valid: scripts/ac_store/validate_ac_schema.py
+    must pass on it immediately after the write. A sweep whose own output fails
+    the store validator blocks every commit in the repository.
+  - >-
+    The apply path must be driven by the sweep's verdict list (TQ-400a-1 /
+    TQ-400a-4), never by a second evaluation of the record at write time.
+  - >-
+    Only records the sweep reports unproven may be written. A proven record must
+    never be touched — TQ-400e-1 is the standing guarantee and must hold before
+    this behaviour ships.
+  - >-
+    Must be reachable from the same production invocation as the sweep, behind an
+    explicit apply flag; preview is the safe default (TQ-400b-5). Do not create a
+    second command with its own store walk.
+  - >-
+    Must not demote L0/L1 composite records: the population is leaf L2/L3
+    records, and composites never legitimately reach work_status done.
+  - >-
+    If the writer lands as a new module under scripts/ac_store/, it must be added
+    to build_ac_store's deploy map in the same change, or it will be absent from
+    the deployed layout.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a write
+    failure on one record must be reported as an error for that record and must
+    not leave the run reporting a successful demotion.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400b-3
+    contract: >-
+      A record on disk with work_status todo and status / readiness / priority /
+      level untouched, so it satisfies scan_ac_store.py's eligibility predicate
+      unchanged (work_status match AND readiness approved AND status active).
+  - agent: python-coder
+    ac_id: TQ-400b-2
+    contract: >-
+      The write site itself, plus the verdict cause for the demoted record, into
+      which TQ-400b-2 adds demotion_reason and demotion_date as part of the same
+      targeted single-field write.
+expects_from:
+  - ac_id: TQ-400e-1
+    contract: >-
+      The guarantee that a proven record is never demoted. Demotion has no
+      authority without it — a sweep that demotes wrongly destroys trust in every
+      verdict it produces — so TQ-400e-1 must hold before this AC is built.
+  - ac_id: TQ-400a-4
+    contract: >-
+      The sweep's durable inventory as the writer's work list:
+      {run_id, records: [{ac_id, path, verdict, cause, work_status}]}. The
+      writer demotes exactly the entries whose verdict is unproven, addresses
+      each record by its recorded path, and re-runs no verdict of its own.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400b-1-i
+implemented_by: []
+test_spec:
+  - name: test_unproven_record_reads_as_todo_on_disk_after_the_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      After a real apply run over a temp store, the record's file re-read from
+      disk has work_status todo. Asserted on the file, not on the run's returned
+      decision object.
+  - name: test_demotion_happens_through_the_real_apply_invocation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      The demotion is produced by subprocessing the production command with its
+      apply flag — not by importing and calling a demote helper. Without the
+      flag the same store is left unchanged.
+  - name: test_only_the_state_field_changes_byte_for_byte
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Byte-diff the record file before and after the run over a store written by
+      the real serializer: exactly the work_status line (plus TQ-400b-2's two
+      fields) differs; field order, comments, block-list indentation and
+      trailing newline are unchanged.
+  - name: test_fresh_process_store_loader_returns_the_record_as_unfinished
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      A genuinely separate process using the store's own loader (the scan /
+      validate path, not the sweep's in-memory result) returns the record as
+      unfinished work, and validate_ac_schema.py passes on it.
+test_rationale: >-
+  "Returned to the to-do pile" is only provable by reading the file back off
+  disk in a fresh process after a real run. A test asserting that the sweep
+  returned a demotion decision, or that a demote function was called, passes on
+  an implementation that never writes anything — the BO-2300 phantom-build shape
+  where dispatch happened and the on-disk effect did not. The byte-diff entry
+  exists because the cheapest green for "record is demoted" is a whole-file
+  yaml.safe_dump round-trip, which would silently reformat every record it
+  touches.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  There is no supported demotion path today. Verified at authoring time:
+  scripts/ac_store/mark_ac_done.py moves work one direction only — it sets
+  work_status to done (:166-181) and its only refusals are the idempotency guard
+  and the non-active status guard. Nothing anywhere writes a record back to todo,
+  and a field scan of the whole store on 2026-08-17 found no demotion, revocation,
+  or lapse field on any of the 2,888 records. This AC creates that path.
+
+  Sequencing is deliberate and non-negotiable: depends_on names TQ-400e-1 before
+  any demotion behaviour, per the product owner's sequencing note.
+
+  Test-angle constraint: "returned to the to-do pile" is only provable by reading
+  the file back off disk in a fresh process after a real run. A test asserting
+  that the sweep returned a demotion decision, or that a demote function was
+  called, passes on an implementation that never writes anything — which is
+  precisely the BO-2300 phantom-build shape (dispatch happened, the on-disk effect
+  did not) catalogued in docs/testing/test-angles.md.
+
+  The negative control for this behaviour lives in TQ-400e-1 and is fed through
+  this same entry point; it is referenced rather than duplicated here.
