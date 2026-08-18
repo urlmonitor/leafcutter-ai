@@ -62,9 +62,22 @@ exactly one record.
 `EPIC-MoveOnMainOnly` ticket tree that had been sitting in the rejected-tickets
 folder alongside its real, completed copy.
 
-**Worth knowing:** while investigating this, three guard scripts were found
-running in the pipeline but never registered anywhere as an official check
-(`check_adr_collision.py`, `check_ticket_state_integrity.py`,
-`check_ticket_no_branch_move.py`), and the architecture decision record for one
-of them currently describes it as wired into pre-commit when it isn't wired in
-at all. Those gaps are documented, not yet fixed.
+**Also included (2026-08-18):** the architecture decision record governing
+decision-number collisions was amended, along with the convention document that
+restates it. Two things changed. First, its rule that the guard should stay
+quiet and let the commit through on *any* unexpected error was too broad: it
+covered the case where the guard could not read the numbers at all, which would
+mean reporting "your number is fine" after checking nothing. The rule now turns
+on whether the guard managed to read the sequence — a bug in the guard's own
+reporting still lets your commit through, because a guard that blocks work
+indiscriminately gets switched off, but a guard that could not see what it was
+meant to check now says so and stops. Second, the record claimed the guard was
+switched on in pre-commit. It is not, and never has been.
+
+**Worth knowing:** three guard scripts are deployed but registered nowhere as an
+official check, so none of them has ever run (`check_adr_collision.py`,
+`check_ticket_state_integrity.py`, `check_ticket_no_branch_move.py`). Registering
+them is part of the work this specification covers and is not done yet. The
+practical consequence is that decision numbers, ticket states and ticket
+locations have been unguarded throughout — clean by discipline rather than by
+enforcement.
