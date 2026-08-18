@@ -28,9 +28,26 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: XS
 it_requirements:
-  - "Allowlist must be configurable — not hardcoded inline in the guard logic"
-  - "Allowlist location must be discoverable from the project configuration"
-  - "Must handle errors gracefully if the allowlist file is missing or malformed"
+  config_schema_fragment:
+    type: array
+    items:
+      type: string
+    description: "Script paths referenced by templates that are external dependencies and must not be reported as broken references."
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the allowlist load site in the reference guard"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Allowlist must be configurable — not hardcoded inline in the guard logic"
+    - "Allowlist location must be discoverable from the project configuration"
+    - "Must handle errors gracefully if the allowlist file is missing or malformed"
+  notes: |
+    A missing or malformed allowlist must fail LOUDLY rather than fail-open to
+    an empty allowlist — an empty allowlist silently turns every legitimate
+    external reference into a broken-reference build failure, and the inverse
+    (treating a parse error as "allow everything") disables the guard entirely.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

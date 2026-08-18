@@ -28,10 +28,23 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "All error output must go to stderr only — stdout must remain clean for piped build output"
-  - "JSONL format must be machine-parseable — one valid JSON object per line"
-  - "Each JSON object must contain exactly the keys: missing_path, referencing_template, suggested_action"
-  - "Must integrate with the existing build.py exit code conventions"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the report emission site (stderr writer + exit code)"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "All error output must go to stderr only — stdout must remain clean for piped build output"
+    - "JSONL format must be machine-parseable — one valid JSON object per line"
+    - "Each JSON object must contain exactly the keys: missing_path, referencing_template, suggested_action"
+    - "Must integrate with the existing build.py exit code conventions"
+  notes: |
+    Assert the stream split explicitly — capture stdout and stderr separately and
+    assert stdout is empty. A test that merges the two streams passes even when
+    every error line is written to stdout, which is the exact failure this AC
+    exists to prevent.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

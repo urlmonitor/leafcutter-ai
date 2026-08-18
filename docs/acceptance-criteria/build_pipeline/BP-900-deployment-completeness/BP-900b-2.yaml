@@ -28,10 +28,23 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Must derive the deployable script manifest from the actual build phase functions — not a hardcoded list"
-  - "Must account for both .leafcutter/scripts/ paths and shimmed scripts/ paths when resolving references"
-  - "Must not produce false positives for scripts that are legitimately deployed via existing build phases"
-  - "Must be idempotent — repeated runs with the same compiled output produce the same result"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_phases.py
+  n_location_rule: "1 — the manifest derivation that enumerates deployable scripts across build phases"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must derive the deployable script manifest from the actual build phase functions — not a hardcoded list"
+    - "Must account for both .leafcutter/scripts/ paths and shimmed scripts/ paths when resolving references"
+    - "Must not produce false positives for scripts that are legitimately deployed via existing build phases"
+    - "Must be idempotent — repeated runs with the same compiled output produce the same result"
+  notes: |
+    "Derive, do not hardcode" is the whole point of this AC: the BP-900g-4/-5/-6
+    hotfixes (commits b65177287, 8a80dd5a8, 93dfba23a) were all cases where a
+    hand-maintained list drifted from what the build actually deploys. A manifest
+    that is itself a literal reintroduces the defect class this AC exists to close.
 delivers_to:
   agent: python-coder
   contract: "list[dict] — list of broken references, each {'missing_path': str, 'referencing_template': str}; empty list means all references resolved"

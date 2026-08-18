@@ -31,9 +31,22 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Each error entry must contain all three fields (missing_path, referencing_template, suggested_action) — no field may be empty or omitted"
-  - "Suggested action must be one of a finite set of known remediation options"
-  - "Error formatting must be consistent across all entries in a single report"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the report-entry construction site"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Each error entry must contain all three fields (missing_path, referencing_template, suggested_action) — no field may be empty or omitted"
+    - "Suggested action must be one of a finite set of known remediation options"
+    - "Error formatting must be consistent across all entries in a single report"
+  notes: |
+    BP-900c-3 and BP-900c-3-i extend the suggested_action selection to be
+    state-based (add-a-deploy-phase vs untracked-source). Keep the three-field
+    entry shape stable here — those ACs change which value is chosen, not the
+    schema of the entry.
 delivers_to: null
 expects_from:
   ac_id: BP-900b-2
@@ -45,6 +58,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - "unit_tests/test_build_tracked_source_guard.py"
+  - BP-900c-1-1
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900c-1.md
 change_target: pipeline

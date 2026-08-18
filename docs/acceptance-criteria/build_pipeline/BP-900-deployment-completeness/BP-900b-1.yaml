@@ -34,11 +34,24 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Must scan ALL compiled .md files in agents/ and skills/ directories — no partial scanning"
-  - "Must handle both single-quote and double-quote variants in sys.path.insert patterns"
-  - "Must complete validation in under 5 seconds for typical template sets (fewer than 100 files)"
-  - "Must not produce false positives for non-script-path strings that happen to match the regex pattern"
-  - "Must follow the existing post-build validation pattern used by build_propagation_audit.py and build_referential_integrity.py"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the reference-extraction pass over compiled agents/ and skills/"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must scan ALL compiled .md files in agents/ and skills/ directories — no partial scanning"
+    - "Must handle both single-quote and double-quote variants in sys.path.insert patterns"
+    - "Must complete validation in under 5 seconds for typical template sets (fewer than 100 files)"
+    - "Must not produce false positives for non-script-path strings that happen to match the regex pattern"
+    - "Must follow the existing post-build validation pattern used by build_propagation_audit.py and build_referential_integrity.py"
+  notes: |
+    The quote-variant requirement is not hypothetical: CLAUDE.md records a live
+    defect where a structural regex matched only single/double-quoted arguments
+    and was blind to backtick template literals, so the test stayed green on
+    broken code. Cover single-quote, double-quote AND backtick forms.
 delivers_to:
   agent: python-coder
   contract: "set[tuple[str, str]] — set of (template_path, referenced_script_path) tuples extracted from compiled .md files"

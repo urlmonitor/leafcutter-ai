@@ -1268,7 +1268,15 @@ def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) ->
     Only removes paths that are real directories/files (not symlinks pointing
     into the output root — those are shims we created).
 
-    Returns count of paths removed.
+    Args:
+        target_root: Absolute path to the target project root.
+        output_root: Absolute path to the consolidated output directory
+            (used to detect and skip symlinks that already point there).
+        dry_run: When True, logs intent but removes nothing.
+
+    Returns:
+        Count of stale paths removed (or that would be removed in
+        dry-run mode).
     """
     import shutil
 
@@ -1392,7 +1400,13 @@ def _run_migration_report(target_root: Path, output_root: Path) -> int:
     Checks known pre-consolidation output paths. If a path exists and is NOT
     a symlink pointing into the output root, it is reported as stale.
 
-    Returns 0 always (report-only, no deletions).
+    Args:
+        target_root: Absolute path to the target project root.
+        output_root: Absolute path to the consolidated output directory
+            (used to detect and skip symlinks that already point there).
+
+    Returns:
+        0 always (report-only, no deletions).
     """
     print(f"\nMigration report for: {target_root}")
     print(f"Output root: {output_root}\n")
@@ -1631,7 +1645,18 @@ def main(argv: list[str] | None = None) -> int:
     if _check_deploy_collision_guard(output_root, config):
         return 1
 
-    total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+    # AC BP-900a-1-1: build_ac_store() (scripts/build_phases.py) raises
+    # RuntimeError when one of its deploy_map source scripts is absent from
+    # the package, BEFORE writing any scripts/ac_store/ output. Catch it here
+    # and exit non-zero with a clean, single-line error that names the
+    # missing file(s) — instead of letting a raw traceback propagate out of
+    # main(). No partial ac_store output has been written at this point: the
+    # guard runs before build_ac_store's own copy loop.
+    try:
+        total = _run_phases(target_root, output_root, config, args.dry_run, effective_force)
+    except RuntimeError as exc:
+        _error(f"Build aborted: {exc}")
+        return 1
 
     uptodate = get_uptodate_count()
     if args.dry_run:
@@ -1881,4 +1906,12 @@ if __name__ == "__main__":
 #   Writes LEAFCUTTER_VERSION file to target_root so deployed consumers can
 #   determine the package version without reading the source package directly.
 #   Fallback: "unknown" on any read error. (#EPIC-AcPipelineConsolidation/12)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/BP-900a-1-1]: Wrapped
+#   the `_run_phases()` call in main() in a `try/except RuntimeError` so
+#   build_ac_store()'s new pre-write source-existence guard
+#   (scripts/build_phases.py) surfaces as a clean, single-line
+#   `_error("Build aborted: ...")` + exit 1 instead of an unhandled traceback.
+#   The guard itself lives in build_ac_store() (see that function's own
+#   DECISION HISTORY) — this catch only converts the raised RuntimeError into
+#   the CLI's standard non-zero-exit error presentation. (#BP-900a-1-1)
 # ====================================================================

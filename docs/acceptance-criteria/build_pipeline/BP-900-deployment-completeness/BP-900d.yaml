@@ -36,8 +36,16 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "onboard_hook_opt_in.py must exist under templates/scripts/ so _manifest_template_standalone_scripts lists it as deployable"
-  - "The deployed copy must be byte-identical to the package-dev source scripts/onboard_hook_opt_in.py at promotion time"
+  config_schema_fragment: null
+  reference_file_path: templates/scripts/onboard_hook_opt_in.py
+  n_location_rule: "1 — the tracked deploy-source copy under templates/scripts/"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "onboard_hook_opt_in.py must exist under templates/scripts/ so _manifest_template_standalone_scripts lists it as deployable"
+    - "The deployed copy must be byte-identical to the package-dev source scripts/onboard_hook_opt_in.py at promotion time"
 delivers_to: null
 expects_from: null
 origin_agent: debug

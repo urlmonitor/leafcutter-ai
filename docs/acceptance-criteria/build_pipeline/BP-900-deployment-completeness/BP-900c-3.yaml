@@ -42,10 +42,34 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "The suggested-action selector must branch on the state of the broken reference: when the source directory exists AND a deploy phase for it already exists, the missing-or-untracked-source action is selected instead of the add-a-deploy-phase action."
-  - "Determine whether the script file is untracked from the git index, not from filesystem presence alone, so an on-disk-but-untracked file is correctly diagnosed as untracked rather than as merely missing."
-  - "The corrected action text must direct the author to commit the source under templates/scripts/ (the tracked deploy-source mirror), matching the source-of-truth convention used by commit_guardian and doc_compliance."
-  - "Preserve the existing three-field entry shape (missing_path, referencing_template, suggested_action) from BP-900c-1; this AC changes only which suggested_action value is chosen for this state, not the entry schema."
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the suggested-action selector"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The suggested-action selector must branch on the state of the broken reference: when the source directory exists AND a deploy phase for it already exists, the missing-or-untracked-source action is selected instead of the add-a-deploy-phase action."
+    - "Determine whether the script file is untracked from the git index, not from filesystem presence alone, so an on-disk-but-untracked file is correctly diagnosed as untracked rather than as merely missing."
+    - "The corrected action text must direct the author to commit the source under templates/scripts/ (the tracked deploy-source mirror), matching the source-of-truth convention used by commit_guardian and doc_compliance."
+    - "Preserve the existing three-field entry shape (missing_path, referencing_template, suggested_action) from BP-900c-1; this AC changes only which suggested_action value is chosen for this state, not the entry schema."
+test_spec:
+  - name: test_existing_source_dir_with_untracked_file_suggests_committing_source
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "When the source directory and its deploy phase exist but the script is untracked in git, suggested_action tells the author to commit the source under templates/scripts/."
+  - name: test_untracked_state_is_read_from_the_git_index_not_the_filesystem
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "A file present on disk but untracked is diagnosed as untracked rather than as merely missing."
+  - name: test_entry_retains_missing_path_and_referencing_template
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "The corrected suggested_action does not alter the three-field entry shape from BP-900c-1."
 delivers_to: null
 expects_from:
   ac_id: BP-900c-1

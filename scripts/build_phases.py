@@ -38,6 +38,13 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``_compute_phase_mappings`` enumerates those pairs for all file-based
     artifact phases so build.py can run detect_deploy_collisions before any
     file write occurs.
+    ``get_deployable_script_manifest`` (AC BP-900b-2) scans a REAL, already-built
+    target project's ``.leafcutter/scripts/`` and shimmed ``scripts/`` directories
+    and returns the set of deployed ``"scripts/<path>"`` strings.
+    ``cross_check_refs_against_manifest`` consumes that manifest plus
+    ``build_referential_integrity.extract_compiled_script_path_refs``'s
+    ``set[tuple[str, str]]`` output and returns ``list[dict]`` — one
+    ``{"missing_path", "referencing_template"}`` entry per broken reference.
 """
 
 from __future__ import annotations
@@ -337,6 +344,92 @@ def _compute_phase_mappings(
     ))
 
     return mappings
+
+
+# ---------------------------------------------------------------------------
+# Deployed-script manifest & cross-reference guard (AC BP-900b-2)
+# ---------------------------------------------------------------------------
+
+
+def get_deployable_script_manifest(target_root: Path) -> set[str]:
+    """Derive the set of deployed script paths from a REAL build.py output.
+
+    Scans the two on-disk locations a compiled-template script reference can
+    resolve against, per this AC's Gherkin: scripts copied to
+    ``<target_root>/.leafcutter/scripts/`` (the consolidated output root,
+    populated by phases such as ``build_ac_store`` and
+    ``build_template_standalone_scripts``) and scripts shimmed to
+    ``<target_root>/scripts/`` (``install_shims()`` in ``build_helpers.py``).
+
+    Both locations are scanned directly from disk so the manifest reflects
+    what a real build run actually deployed, rather than a second
+    hand-maintained list that could silently drift from ``build_ac_store``'s
+    ``deploy_map`` — the exact failure mode the BP-900g-4/-5/-6 hotfixes had
+    to close after the fact.
+
+    Args:
+        target_root: Absolute path to a project root that has already been
+            built via ``build.py --target-dir``.
+
+    Returns:
+        Set of ``"scripts/<relpath>"`` strings (forward-slash, POSIX-style)
+        for every ``.py`` file found under either scanned root. Returns an
+        empty set when neither location exists (e.g. the build has not run
+        yet). This function performs read-only directory scans and never
+        raises.
+    """
+    manifest: set[str] = set()
+    scan_roots = (
+        target_root / ".leafcutter" / "scripts",
+        target_root / "scripts",
+    )
+    for base in scan_roots:
+        if not base.is_dir():
+            continue
+        for script_file in base.rglob("*.py"):
+            if script_file.is_file():
+                rel = script_file.relative_to(base).as_posix()
+                manifest.add(f"scripts/{rel}")
+    return manifest
+
+
+def cross_check_refs_against_manifest(
+    refs: set[tuple[str, str]],
+    manifest: set[str],
+) -> list[dict]:
+    """Cross-check extracted compiled-template references against a manifest.
+
+    Consumes ``build_referential_integrity.extract_compiled_script_path_refs``'s
+    ``set[tuple[str, str]]`` contract directly: each tuple is
+    ``(referencing_template, "scripts/<path>")``. A reference whose script
+    path IS present in *manifest* is resolved — it is simply absent from the
+    returned list. A reference whose script path is NOT present is reported.
+
+    Unlike ``build_propagation_audit.build_broken_ref_report`` (which groups
+    every referencing template for one missing script into a single entry's
+    ``referencing_templates`` tuple), this function reports one dict PER
+    reference tuple — the per-reference ``list[dict]`` shape this AC's
+    ``delivers_to`` contract requires.
+
+    This is a pure function — no I/O, no external calls — so per the
+    project's Error Handling Policy (Rule 4) it does not use try/except.
+
+    Args:
+        refs: Set of ``(referencing_template, "scripts/<path>")`` tuples, the
+            same shape returned by ``extract_compiled_script_path_refs``.
+        manifest: Set of ``"scripts/<path>"`` strings — the return value of
+            ``get_deployable_script_manifest`` or any equivalent set.
+
+    Returns:
+        List of ``{"missing_path": str, "referencing_template": str}`` dicts,
+        one per reference whose script path is absent from *manifest*. Empty
+        list when every reference resolves against the manifest.
+    """
+    return [
+        {"missing_path": script_path, "referencing_template": referencing_template}
+        for referencing_template, script_path in refs
+        if script_path not in manifest
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -858,6 +951,12 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     Returns:
         Count of files written (or that would be written in dry-run mode).
 
+    Raises:
+        RuntimeError: When one or more deploy_map source files are absent
+            from the package source tree. Raised BEFORE any output is
+            written, so no partial scripts/ac_store/ deployment reaches the
+            target (AC BP-900a-1-1).
+
     # DECISION HISTORY
     # - 2026-06-17 [python-coder/EPIC-AcPipelineDeployGaps/03]:
     #   Added build_ac_store() phase per ADR-013 (Option a). Closes the
@@ -870,6 +969,15 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     #   seven source files already existed in scripts/ac_store/ but were never
     #   wired into the deploy list, so consumer installs were missing 7 of the
     #   13 AC-store scripts the AC requires. (#BP-900a-1)
+    # - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/BP-900a-1-1]:
+    #   Added a pre-write source-existence guard: build_ac_store() now
+    #   validates every deploy_map source exists BEFORE copying any of them,
+    #   and raises RuntimeError naming every missing source when one is
+    #   absent, instead of the previous per-file "log a WARNING and skip"
+    #   behaviour. That skip let the build exit 0 while silently shipping a
+    #   PARTIAL scripts/ac_store/ deployment. build.py's main() catches this
+    #   RuntimeError and exits non-zero with a clean error message (see
+    #   scripts/build.py DECISION HISTORY). (#BP-900a-1-1)
     """
     ac_store_src = PACKAGE_ROOT / "scripts" / "ac_store"
     scripts_src = PACKAGE_ROOT / "scripts"
@@ -911,16 +1019,28 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
 
+    # Pre-write source-existence guard (AC BP-900a-1-1): validate every
+    # deploy_map source exists BEFORE writing any ac_store output. The
+    # previous behaviour (log a WARNING and `continue` inside the copy loop
+    # below) let the build exit 0 while shipping a PARTIAL scripts/ac_store/
+    # directory — exactly the "ships half-deployed" failure mode this AC
+    # closes. A missing source now hard-fails the whole build, before any of
+    # the OTHER (present) sources in this deploy_map are copied, so a
+    # consumer target never receives a partial ac_store deployment.
+    missing_sources = [
+        str(src_file) for src_file, _dest_name in deploy_map if not src_file.is_file()
+    ]
+    if missing_sources:
+        raise RuntimeError(  # noqa: TRY003
+            "build_ac_store: missing source script(s), aborting before writing "
+            "any scripts/ac_store/ output (no partial deployment): "
+            + ", ".join(missing_sources)
+        )
+
     output_dir = target_root / "scripts" / "ac_store"
     written = 0
 
     for src_file, dest_name in deploy_map:
-        if not src_file.is_file():
-            _log.warning(
-                "build_ac_store: source script not found, skipping: %s", src_file
-            )
-            continue
-
         output_path = output_dir / dest_name
 
         if not _should_overwrite(output_path, force):
@@ -2963,4 +3083,15 @@ def clean_stale_artifacts(
 #   for the four file-based artifact phases (agents, commands, workflows, hooks).
 #   Also suppressed pre-existing TRY003 violation in _emit_workflow_variant
 #   (#TICKET-20260707-BP-100m-1)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/07]: Added
+#   get_deployable_script_manifest() and cross_check_refs_against_manifest()
+#   (AC BP-900b-2). The manifest function scans a REAL, already-built target
+#   project's <target_root>/.leafcutter/scripts/ and shimmed <target_root>/
+#   scripts/ directories directly from disk rather than hardcoding a second
+#   copy of build_ac_store's deploy_map (the BP-900g-4/-5/-6 drift class).
+#   The cross-check function consumes BP-900b-1's
+#   extract_compiled_script_path_refs set[tuple[str, str]] contract and
+#   returns list[dict] — one {"missing_path", "referencing_template"} entry
+#   per broken reference, distinct from build_propagation_audit's per-script
+#   grouped BrokenRefEntry shape. (#EPIC-DeploymentCompleteness/07)
 # ====================================================================

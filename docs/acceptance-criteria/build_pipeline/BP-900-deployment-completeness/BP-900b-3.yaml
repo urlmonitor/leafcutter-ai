@@ -27,9 +27,23 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Must prevent any partial deployment when broken references are detected — fail-fast before writing to target"
-  - "Must integrate with the existing build.py exit code conventions"
-  - "Must handle errors gracefully per the project error handling policy"
+  config_schema_fragment: null
+  reference_file_path: scripts/build.py
+  n_location_rule: "1 — the guard's exit-code branch in the build entrypoint"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must prevent any partial deployment when broken references are detected — fail-fast before writing to target"
+    - "Must integrate with the existing build.py exit code conventions"
+    - "Must handle errors gracefully per the project error handling policy"
+  notes: |
+    Cover this behaviorally — run build.py against a fixture with a deliberately
+    broken reference and assert BOTH the non-zero exit AND that the target
+    directory was not written. A test that only greps build.py for the guard call
+    passes on a guard whose result is computed and then discarded (CLAUDE.md
+    "Gate / Workflow ACs — Verify Behaviorally, Not by Grep").
 delivers_to: null
 expects_from:
   ac_id: BP-900b-2

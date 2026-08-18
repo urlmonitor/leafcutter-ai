@@ -88,6 +88,7 @@ def test_guard_exits_1_on_broken_ref(tmp_path: Path) -> None:
     - the JSONL line written to stderr names scripts/does_not_exist.py as
       missing_path
     """
+    # covers: BP-900c-2
     # Build a minimal synthetic package root with:
     #   templates/agents/synthetic_broken.md  — references scripts/does_not_exist.py
     # No scripts/commit_guardian/, scripts/feedback/, etc. are needed because the
@@ -432,6 +433,95 @@ def test_main_does_not_call_tracked_source_guard_under_validate_only(
         f"_check_tracked_source_guard() was called {call_count[0]} time(s) under "
         "--validate-only. It must be skipped in --validate-only mode because it is "
         "a deployment preflight, not a config-correctness check."
+    )
+
+
+# ---------------------------------------------------------------------------
+# BP-900b-3: main() wiring for the SCRIPT REFERENCE guard specifically.
+#
+# The tests above (test_guard_exits_0_on_clean_package /
+# test_guard_exits_1_on_broken_ref) exercise _check_script_reference_guard()
+# directly — they prove the guard function computes the right answer, but NOT
+# that main() actually consumes that answer to abort the build and withhold
+# output. Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by
+# Grep", a guard whose result is computed and then discarded must be caught by
+# a test that runs main() itself. These two tests close that gap for the
+# script-reference guard, mirroring the tracked-source-guard wiring tests
+# above (test_main_calls_tracked_source_guard_when_sources_untracked /
+# test_main_does_not_call_tracked_source_guard_under_validate_only).
+# ---------------------------------------------------------------------------
+
+
+def test_main_exits_nonzero_and_writes_nothing_on_broken_script_ref(
+    tmp_path: Path,
+) -> None:
+    """main() must exit non-zero and write NO output when the script-reference
+    guard finds a broken reference.
+
+    # covers: BP-900b-3
+
+    Mocks _check_script_reference_guard to return 1 (simulating a broken
+    reference) and asserts BOTH halves of the AC:
+    - main() propagates a non-zero exit code, and
+    - no partial deployment is written to --target-dir (the guard must run
+      and abort BEFORE _run_phases() writes anything).
+
+    A test that only checks the exit code (or only greps build.py for the
+    guard call site) would pass even if the guard's non-zero return were
+    silently ignored downstream, or if _run_phases() ran before the guard
+    check and left partial output on disk despite the later abort.
+    """
+    target_dir = tmp_path / "deploy_target"
+    target_dir.mkdir()
+
+    with patch.object(_build, "_check_script_reference_guard", return_value=1):
+        result = _build.main(["--target-dir", str(target_dir)])
+
+    assert result != 0, (
+        "main() returned 0 (success) even though _check_script_reference_guard() "
+        "returned 1 (broken script reference detected). "
+        "The script-reference guard must be wired into main() so that a "
+        "non-zero guard return causes main() to propagate the exit code "
+        "(AC BP-900b-3). This test exercises main() — not "
+        "_check_script_reference_guard() in isolation — to verify the wiring, "
+        "not just the guard function."
+    )
+
+    output_files = list(target_dir.rglob("*"))
+    assert not output_files, (
+        f"main() wrote {len(output_files)} output file(s) after the script-"
+        "reference guard returned 1. The guard must abort before any "
+        "deployment output is written — no partial deployment may reach the "
+        f"target (AC BP-900b-3). Unexpected files: "
+        f"{[str(p) for p in output_files[:5]]}"
+    )
+
+
+def test_main_does_not_call_script_reference_guard_under_validate_only(
+    tmp_path: Path,  # noqa: ARG001 — kept for signature parity with sibling test
+) -> None:
+    """Under --validate-only, main() must NOT invoke _check_script_reference_guard.
+
+    # covers: BP-900b-3
+
+    The guard is a deployment preflight (it decides whether the build may
+    write output), not a config-correctness check, so it must be skipped by
+    the same ``if not args.validate_only:`` block that skips the
+    tracked-source guard.
+    """
+    call_count: list[int] = [0]
+
+    def _counting_guard(package_root: Path) -> int:  # noqa: ARG001
+        call_count[0] += 1
+        return 0  # returning 0 so if it IS called it would not abort main
+
+    with patch.object(_build, "_check_script_reference_guard", side_effect=_counting_guard):
+        _build.main(["--validate-only"])
+
+    assert call_count[0] == 0, (
+        f"_check_script_reference_guard() was called {call_count[0]} time(s) "
+        "under --validate-only. It must be skipped in --validate-only mode "
+        "because it is a deployment preflight, not a config-correctness check."
     )
 
 

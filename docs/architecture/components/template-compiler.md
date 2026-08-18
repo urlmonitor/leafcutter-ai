@@ -85,6 +85,35 @@ subprocess seeded only with the deployed `scripts/ac_store` path — reproducing
 the templates' own `sys.path.insert` pattern rather than importing from the
 source tree, which would mask a deploy-manifest gap (`unit_tests/test_bp_900a_3.py`).
 
+## Missing ac_store Source Hard-Fails the Build (AC BP-900a-1-1)
+
+`build_ac_store` (`scripts/build_phases.py`) validates that every source file
+in its `deploy_map` exists on disk **before copying any of them**. If one or
+more sources are absent (e.g. `scripts/ac_store/__init__.py` was deleted or
+renamed from the package), `build_ac_store` raises `RuntimeError` naming
+every missing source path, and `build.py`'s `main()` catches it around the
+`_run_phases()` call, prints a single `[ERROR] Build aborted: ...` line, and
+returns exit code 1 — before any `scripts/ac_store/` output is written to the
+target project.
+
+This replaced the previous per-file behaviour: a missing source used to log a
+`WARNING` and `continue` inside the copy loop, so the build exited `0` while
+depositing a **partial** `scripts/ac_store/` directory on the target (e.g.
+every file except the missing one). That silent partial deployment is exactly
+the "ships half-deployed" failure mode this AC closes — a capability that
+looks successfully installed (exit 0) but is missing a script another
+template or skill depends on at runtime.
+
+This guard is distinct from `_check_script_reference_guard`
+(`scripts/build.py`) and the deployed-manifest cross-check below: those scan
+what templates *reference* and what is *deployed*, so they never flag a
+`deploy_map` entry that no template invokes via a `python3 scripts/...`
+pattern (`scripts/ac_store/__init__.py` is one such entry — it is imported as
+a package member, never shelled out to directly). `build_ac_store`'s own
+pre-write existence check is the only guard that validates its `deploy_map`
+sources are complete, independent of how (or whether) any template
+references them.
+
 ## Compiled-Output Script Reference Scan (AC BP-900b-1)
 
 `build_referential_integrity.extract_compiled_script_path_refs(compiled_root)`
@@ -164,6 +193,36 @@ the build exits zero on that reference alone (assuming no other broken
 references exist). A reference that is neither deployed nor allowlisted is
 still reported broken; the allowlist only resolves the paths it explicitly
 names.
+
+## Deployed-Manifest Cross-Check Guard (AC BP-900b-2)
+
+`scripts/build_phases.py` provides two functions that close the loop between
+`extract_compiled_script_path_refs` (post-compile reference extraction, AC
+BP-900b-1) and the deployed output of a real build run:
+
+- **`get_deployable_script_manifest(target_root)`** — scans an
+  already-built project's `<target_root>/.leafcutter/scripts/` (the
+  consolidated output root, populated by phases such as `build_ac_store` and
+  `build_template_standalone_scripts`) and `<target_root>/scripts/` (the
+  `install_shims()` shim location) directly from disk, and returns the set
+  of `"scripts/<path>"` strings for every deployed `.py` file. It reads the
+  real filesystem output of a build — it does not hardcode or duplicate
+  `build_ac_store`'s `deploy_map`, avoiding the drift class that produced the
+  BP-900g-4/-5/-6 hotfixes.
+- **`cross_check_refs_against_manifest(refs, manifest)`** — takes the
+  `set[tuple[str, str]]` returned by `extract_compiled_script_path_refs`
+  (`(referencing_template, "scripts/<path>")` tuples) and the manifest above,
+  and returns `list[dict]` with one `{"missing_path": str,
+  "referencing_template": str}` entry per reference whose script path is
+  absent from the manifest. A reference whose script is present is marked
+  resolved simply by its absence from the result. Unlike
+  `build_broken_ref_report` (which groups all referencing templates for one
+  missing script into a single entry), this guard reports one entry **per
+  reference**, matching AC BP-900b-2's `delivers_to` contract.
+
+Like `extract_compiled_script_path_refs`, both functions are standalone and
+read-only; wiring them into `build.py`'s phase list as an active post-compile
+validation gate is a documented follow-up, not part of this AC's scope.
 
 ## CI and Fresh-Clone Test Requirements
 
