@@ -1,7 +1,9 @@
 ---
 title: "EPIC: Convert Supervisor Chain to Claude Code Workflows"
 type: epic
-status: in_progress
+status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
 created: 2026-06-01
@@ -14,6 +16,31 @@ requires_adr: null
 ---
 
 # EPIC: Convert Supervisor Chain to Claude Code Workflows
+
+> **TWO EPICS SHARE THE `EPIC-FlattenSupervisorChain/` FOLDER. This is the second
+> one.** Read this before assuming any ticket here belongs to the plan one level up.
+>
+> | | Epic | Created | Plan | Its tickets |
+> |---|---|---|---|---|
+> | Round 1 | "Flatten Supervisor Chain" — move `ticket-supervisor` to depth 0, write ADR-006 | 2026-05-29 | `../Master_Plan.md` | `../01`–`../07` |
+> | Round 2 | "Convert Supervisor Chain to Claude Code Workflows" — this file | 2026-06-01 | this file | `01`–`10` in this `done/` folder |
+>
+> Round 2 reused round 1's folder name rather than opening its own. Nothing
+> distinguished the two plans except their `title:`, and both were called
+> `Master_Plan.md` in sibling directories — so the round-2 plan was read as a
+> stale duplicate of round 1 and swept into `tickets/99_rejected/` by PR #275,
+> taking the only copy with it. This file was recovered from there on 2026-08-18
+> and renamed to `Master_Plan-convert-to-workflows.md` so the two are no longer
+> distinguishable only by their contents.
+>
+> `status:` was `in_progress` when recovered. It is set to `done` here: every
+> ticket this plan governs is complete and its deliverables were verified live in
+> the tree (`build-epic.js` / `build-ticket.js` worktree guards at
+> `worktree_required: true`, and `finalize-feature.js` as a leaf workflow). The
+> `in_progress` value is stale bookkeeping from the point the epic stopped being
+> driven ticket-by-ticket, not evidence of outstanding work.
+>
+> Recovered by branch `chore/epic-duplicate-repair`.
 
 ## Goal
 

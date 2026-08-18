@@ -1,6 +1,8 @@
 ---
 title: "Add worktree guard and auto-creation to build-epic.js and build-ticket.js"
 status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
 created: 2026-06-01

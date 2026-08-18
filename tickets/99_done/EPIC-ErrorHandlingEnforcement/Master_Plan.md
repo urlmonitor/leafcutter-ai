@@ -2,6 +2,8 @@
 title: "EPIC: Error Handling Enforcement"
 type: epic
 status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
   - config_loader
@@ -50,9 +52,9 @@ edits, and upfront behavioural priming.
 
 | # | File | Description | Status |
 |---|------|-------------|--------|
-| 01 | [01_ruff_precommit_exception_rules.md](./01_ruff_precommit_exception_rules.md) | Configure Ruff E722/BLE001/TRY + AST I/O boundary check in pre-commit | `[ ]` |
-| 02 | [02_claude_code_hook_ruff_feedback.md](./02_claude_code_hook_ruff_feedback.md) | PostToolUse Claude Code hook: run ruff on Edit/Write for immediate feedback | `[ ]` |
-| 03 | [03_error_handling_policy_claudemd.md](./03_error_handling_policy_claudemd.md) | Add error-handling policy to CLAUDE.md and coder skill templates | `[ ]` |
+| 01 | [01_ruff_precommit_exception_rules.md](./01_ruff_precommit_exception_rules.md) | Configure Ruff E722/BLE001/TRY + AST I/O boundary check in pre-commit | `[x]` |
+| 02 | [02_claude_code_hook_ruff_feedback.md](./02_claude_code_hook_ruff_feedback.md) | PostToolUse Claude Code hook: run ruff on Edit/Write for immediate feedback | `[x]` |
+| 03 | [03_error_handling_policy_claudemd.md](./03_error_handling_policy_claudemd.md) | Add error-handling policy to CLAUDE.md and coder skill templates | `[x]` |
 
 ## Phases
 
