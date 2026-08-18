@@ -1,0 +1,171 @@
+id: GE-123d-1
+components:
+  - commit_guardian
+title: "A quoted value that names a file is not read as a credential, in any file"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a changelog entry staged for commit is a Markdown file containing one
+    sentence that instructs a reader to add a suppression, written as the rule
+    name GENERIC_SECRET, a colon, and then the quoted repository-relative path
+    "docs/foo.md",
+  When the staged file is checked by the pre-commit secrets check,
+  Then no generic-credential finding is reported for that line,
+  And the commit is not blocked,
+  Because a quoted value that ends in one of the recognised text-file
+    extensions (.md, .yaml, .yml, .py, .json, .txt), with or without a leading
+    directory path, is a file reference and cannot be a live credential.
+
+  Given a source file named "secrets.py" staged for commit contains the
+    identical sentence inside a code comment,
+  When the staged file is checked by the pre-commit secrets check,
+  Then no generic-credential finding is reported for that line either,
+  And the commit is not blocked,
+  Because this narrowing is a property of the VALUE and not of the file's
+    location — it is the only part of this feature that applies to source,
+    configuration and prose alike.
+
+  Given a source file named "secrets.py" staged for commit contains a line
+    made of one of the credential keywords the rule recognises (password,
+    passwd, secret, token, auth_key), a separator, and a quoted sixteen-
+    character value that ends in none of the recognised text-file extensions,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the generic-credential finding IS reported, naming the file and its
+    1-based line number,
+  And the commit is blocked,
+  Because narrowing the rule by value shape must not weaken it for any value
+    that is not a file reference.
+depends_on:
+  - GE-123d
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Both files this AC edits live under templates/ and are the canonical copies; the copies under scripts/ and .leafcutter/ are build.py outputs. Edit the templates, verify through the round-trip, never hand-edit an output."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The file-reference decision must be computed from the full matched quoted value. The finding excerpt the pre-commit post-filter receives today is the stripped source line truncated to 120 characters, so a value whose closing quote falls past column 120 would otherwise change verdict by line length alone. Carrying the matched value forward and re-reading the line are both acceptable; a verdict that depends on where column 120 falls is not."
+  - "Both entry points that can report this rule must apply the narrowing identically: the pre-commit hook (templates/scripts/commit_guardian/check_secrets.py) and the scanner run directly as a CLI or by /security-audit (templates/skills/security-scanner/scripts/scan_secrets.py). Define the value-shape vocabulary once, in one place both read. The hook is the load-bearing enforcement point because it is the one that gates commits, but a narrowing applied only there lets the two tools reach opposite conclusions about the same line."
+  - "The recognised text-file extension set must be exactly the six extensions enumerated in the criteria, held as named data at a single site, so adding a seventh is one deliberate edit and never an inference from resemblance."
+  - "The shape must be anchored to the END of the quoted value. A value that merely contains a recognised extension somewhere inside it is not a file reference and must still be reported."
+  - "This feature narrows one rule only. The private-key, cloud-access-key, exchange-API-key and high-entropy rules must be unaffected in every file, and a regression arm must demonstrate that rather than assume it."
+  - "Because this narrowing is global — the only part of GE-123d that reaches source and configuration — its blast radius must be measured, not argued. Scan the tracked tree before and after the change and confirm every finding that disappears is file-reference shaped. A widening whose effect on the real repository cannot be enumerated has not been reviewed."
+  - "Per-finding cost must stay proportionate to a pre-commit hot path: no additional file reads beyond the one the scanner already performs, and no matcher whose worst case is superlinear in line length, because staged files include machine-generated long lines."
+  - "No diagnostic, log line or error message added by this work may reproduce a matched value."
+  - "ADR-001 parity: the canonical sources are the two files under templates/; the copies under scripts/ and .leafcutter/ are build.py outputs and must not be hand-edited. Verify the change through the build.py round-trip so the deployed hook and its packaged source stay in step."
+delivers_to:
+  agent: python-coder
+  contract: "A value-shape vocabulary — a set of named, recognisable non-credential shapes for the quoted value of a generic-credential match, of which the file-reference shape is the one applied unconditionally. GE-123d-2 consumes the same vocabulary for the shapes that are prose-scoped, and GE-123d-5 names the granting shape in its audit notice."
+expects_from: null
+test_spec:
+  - name: test_quoted_file_reference_in_prose_not_reported_through_the_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "A real changelog-area Markdown file staged in a temporary git repository, containing the suppression-instruction sentence whose quoted value is a repository-relative Markdown path, produces exit status 0 and no generic-credential line on stdout when the canonical pre-commit check is run as a subprocess with that repository as the working directory"
+  - name: test_quoted_file_reference_inside_a_source_comment_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The identical sentence inside a code comment in a staged Python file outside every prose location also produces exit status 0 — the narrowing is a property of the value, not of the location"
+  - name: test_opaque_quoted_value_in_source_still_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged Python file whose credential-keyword line carries a sixteen-character quoted value ending in no recognised extension produces exit status 1 and a stdout line naming the file and its 1-based line number"
+  - name: test_recognised_extension_must_terminate_the_value
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Each of the six extensions is accepted when it terminates the quoted value, with and without a leading directory path; a value that contains one of them but does not end in it is still reported and still blocks"
+  - name: test_value_past_the_excerpt_truncation_point_classified_the_same
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two staged files carrying the same quoted value, one on a short line and one on a line long enough that the closing quote falls past column 120, receive the same verdict — the decision is not read off the truncated excerpt"
+  - name: test_hook_and_scanner_cli_agree_on_the_same_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Running the canonical scanner script directly over the same staged files yields the same set of generic-credential verdicts as the pre-commit hook — one shared vocabulary, not two copies"
+  - name: test_other_rules_unaffected_by_the_value_shape_narrowing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Regression guard: a private-key header line, a cloud access key in the AKIA form and a high-entropy token in a staged Python file are all still reported after the narrowing lands"
+test_rationale: "Every entry runs the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository, with that repository as the working directory. That shape is mandatory here rather than stylistic: the check resolves its project root from git rev-parse, reads its file list from git diff --cached, and applies the exemption to repository-relative paths, so a test that calls the matcher or the exemption predicate with hand-built arguments proves only that a predicate answered — it cannot show the commit was blocked or unblocked. A sibling audit in this family (GE-113c-3) found two acceptance criteria that passed predicate-level tests while describing scenarios the real entry point can never produce. The harness was proven workable before this contract was written: the canonical check run against a three-line staged Markdown file in a temporary repository reported three generic-credential findings and exit status 1, which is the red baseline entries one, two and four must invert. Honesty note on red-vs-green: test_recognised_extension_must_terminate_the_value and test_other_rules_unaffected_by_the_value_shape_narrowing are regression guards that pass both before and after the change and must not be cited as evidence the narrowing landed. The deployed angle is deliberately not charged — this project's convention pins these tests to the canonical templates/ copy per ADR-001, and deployed/source parity is enforced separately by build.py and the hook-parity check."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18)"
+    detail: "Criteria untouched. Complexity S->M: the AC introduces a shared value-shape vocabulary consumed by three siblings and must reach two entry points, and the matched value has to survive the 120-character excerpt truncation that the pre-commit post-filter reads today. Authored nine policy-level it_requirements, of which three are facts the BA could not see: the excerpt truncation, the hook-versus-scanner-CLI drift risk, and the requirement to measure the blast radius of a global narrowing against the real tracked tree. Added an ADR-001 doc_link because both edited files are templates/ canonical copies. Authored a seven-entry test_spec plus test_rationale, all exercised through the real pre-commit path in a throwaway git repository; the harness was verified working and the three-finding red baseline measured before the contract was written. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE ONLY GLOBAL NARROWING IN GE-123d, and it is deliberately the
+  tightest of the four candidate directions the product-owner listed. It is
+  safe outside prose because the value shape it recognises is one no credential
+  can have: a string ending in a source or document file extension. Every other
+  shape in this feature (whitespace, placeholder brackets, masking characters,
+  project identifiers) is plausible enough as a weak password that it is
+  confined to the prose locations by GE-123d-2 and GE-123d-4.
+
+  MEASURED RED BASELINE, reproduced through the real entry point on the day of
+  authoring. Running the scanner over a Markdown file whose lines were the five
+  shapes in question reported five generic-credential findings, including:
+    line 1 — a sentence adding a suppression for a quoted repository path,
+    line 4 — an actual credential-shaped assignment.
+  Only lines 1 and 4 are relevant here: after this AC, line 1 reports nothing
+  and line 4 still reports. The current behaviour of the rule is
+  `keyword, separator, quote, eight-or-more non-quote characters, quote`, so
+  any quoted path of eight characters or more satisfies it.
+
+  WHY THIS SPECIFIC CASE IS WORTH ITS OWN AC: it is self-referential. The rule
+  name GENERIC_SECRET itself ends in one of the keywords the rule matches, so
+  every sentence that documents the rule and quotes a target path trips it. That
+  is the mechanism behind the third of the three observed blocks — a code
+  comment written to explain the previous two. Because that comment lives in
+  source, no location-based exemption can ever reach it; only a value-shape
+  narrowing can, which is why this AC exists separately from GE-123d-2.
+
+  VERIFICATION STANDARD FOR THIS TREE (inherited from the L0): exercise this
+  through the pre-commit secrets check against a real staged file, not by
+  calling the matching logic directly. A sibling audit in this same family found
+  two criteria verified only against the matcher in isolation that described
+  situations the real entry point can never produce.
+
+  RE-MEASURED BY THE IT PO, 2026-08-18, through the real entry point rather
+  than the matcher: the canonical pre-commit check, run as a subprocess with a
+  throwaway git repository as its working directory, over one staged Markdown
+  file in the ticket tree carrying three credential-shaped lines — a suppression
+  instruction naming a quoted Markdown path, a words-shaped value, and an opaque
+  sixteen-character value — reported three generic-credential findings and exit
+  status 1. Lines one and two must fall silent after GE-123d-1 and GE-123d-2;
+  line three must still report, which is GE-123d-3. This also confirms the test
+  harness the test_spec mandates is workable: the check resolves its project root
+  from git rev-parse in the working directory, and its own directory-relative
+  scanner lookup finds the canonical templates/ scanner without any deployed
+  copy being present.

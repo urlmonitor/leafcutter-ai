@@ -1,0 +1,136 @@
+id: GE-123d-4-i
+components:
+  - commit_guardian
+title: "An executable script inside a prose location does not inherit the exemption"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the skill-prompt area is one of the five enumerated prose locations,
+  And that area contains executable Python scripts alongside its Markdown
+    prompt text — the secrets scanner's own script among them,
+  And one of those scripts staged for commit contains a credential-shaped line
+    whose quoted value is a run of ordinary words, the same value that is
+    exempt in a ticket file,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the generic-credential finding IS reported and the commit is blocked,
+  Because being inside a named prose location is not sufficient on its own: the
+    file kind must also be one of the four admitted non-executing kinds, and a
+    Python script is not.
+
+  Given a Markdown prompt file in that same directory, staged in the same
+    commit, contains the identical line,
+  When the pre-commit secrets check runs over the staged set,
+  Then exactly one finding is reported — the one in the script — and none for
+    the Markdown prompt file,
+  And the two files differ in nothing but their kind,
+  Because the kind gate, not the location, is what separates them.
+depends_on:
+  - GE-123d-4
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: related
+    status: exists
+    relevance: "KI-CG-004 is the measured, pre-existing defect this AC is the standing argument against inheriting: the high-entropy rule is exempted for WHOLE FILES under a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source today. This AC governs only the NEW generic-credential exemption; repairing KI-CG-004 is separate work and the two must not be recorded as duplicates."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The location list for the new exemption is copied in spirit from the existing high-entropy prose-prefix list, and one entry on that list — the skill-prompt area — holds executable Python including the secrets scanner's own source. The kind gate is what stops the new exemption inheriting that shape. It must not be dropped as redundant, and it must be observable: removing it has to turn a test red."
+  - "The pre-existing defect this AC guards against is recorded as KI-CG-004 in docs/known-issues/commit-guardian.md, with measured evidence — a token of Shannon entropy 5.17 is exempt from the high-entropy rule at the scanner's own source path, at the ticket tree, at the acceptance-criteria store and at the retrospectives area, while reported under the build scripts directory. That defect is explicitly OUT OF SCOPE here. Do not repair it, do not widen it, and do not let this AC be closed as a duplicate of it: KI-CG-004 concerns an existing rule's file-level exemption, this AC concerns the kind gate on a new one."
+  - "If the location data is shared between the existing high-entropy exemption and the new generic-credential exemption, the kind gate must be applied on both sides or the sharing must not happen. Reusing the list without reusing the gate is exactly the careless line of reuse this AC exists to forbid, and it would silently widen KI-CG-004 rather than contain it."
+  - "The kind gate must reject on the file's own extension, so that two files in the same directory differing only in extension receive different verdicts in a single run. A gate that is short-circuited by a directory-level decision cannot satisfy the second scenario."
+  - "The scanner's own source path must be covered explicitly, not merely by implication from the extension rule. It is the sharpest instance of the class and the one a future reader will check first."
+  - "ADR-001 parity: the canonical copies are under templates/; verify through the build.py round-trip."
+delivers_to: null
+expects_from:
+  ac_id: GE-123d-4
+  contract: "The closed location list and the closed file-kind list. This AC is the case where the two disagree — a location on the list holding a kind that is not — and it fixes which one wins."
+test_spec:
+  - name: test_python_script_in_the_skill_prompt_area_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "A real Python file staged at a skill-prompt-area scripts path in a temporary git repository, carrying the credential-shaped line whose value is a run of ordinary words, makes the canonical pre-commit check exit 1 and print a finding for that file"
+  - name: test_two_files_in_one_directory_differing_only_in_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A Python file and a Markdown file in the same skill-prompt-area directory, carrying the identical line and staged in the same commit, yield exactly one finding — the script's — in a single invocation"
+  - name: test_the_scanners_own_source_path_is_not_exempt_for_this_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The same line placed at the scanner's own repository-relative source path is reported and blocks — the sharpest instance of an executable file inside a prose location"
+  - name: test_generic_secret_exemption_does_not_follow_the_entropy_prose_prefix_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In one run over a Python file under the skill-prompt area, the generic-credential finding is reported while the high-entropy rule's existing file-level exemption for that same path is unchanged — pinning that this AC narrows nothing about KI-CG-004 and inherits nothing from it"
+test_rationale: "Both criteria are about which of two gates wins for a file the location list already covers, and that is only observable at the level of a real run: the second scenario asserts an exact count of one across two files staged together, which a predicate called twice cannot demonstrate. Each entry therefore runs the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository and asserts on the exit status and the finding set. The fourth entry is deliberately a fence rather than a behaviour: it pins that the new generic-credential exemption and the pre-existing high-entropy file-level exemption (KI-CG-004) reach different verdicts for the same path, so that a later reader cannot mistake one for the other and cannot close this AC by touching that defect. The deployed angle is not charged; the project convention pins these tests to the canonical templates/ copy per ADR-001."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18)"
+    detail: "Criteria untouched. Complexity held at S. Authored six policy-level it_requirements, three of which turn on a fact measured after the BA wrote this AC and recorded as KI-CG-004 in docs/known-issues/commit-guardian.md: the existing high-entropy exemption is file-level over a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source. The requirements name the known-issue id explicitly, fence it as out of scope, and forbid the specific reuse that would widen it — sharing the location list without sharing the kind gate. Added a known-issues doc_link carrying the measured evidence. Authored a four-entry test_spec plus test_rationale, the fourth entry being a standing fence that the two exemptions reach different verdicts for the same path. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE CARELESS-WIDENING CASE THE PRODUCT-OWNER WARNED ABOUT, and it is
+  reachable today rather than hypothetical. The five prose locations were chosen
+  to mirror the existing high-entropy exemption list, and one of those entries —
+  the skill-prompt area — contains executable Python. The secrets scanner's own
+  script lives inside it. Copying the location list across to the
+  generic-credential rule without a file-kind gate would exempt a live
+  credential written into the scanner's own source. That is strictly worse than
+  the false positives the feature exists to fix, and it is one careless line of
+  reuse away.
+
+  IT IS ALSO WHY THE KIND GATE EXISTS AT ALL. Without this case the kind gate
+  looks like belt-and-braces and would plausibly be dropped as redundant during
+  implementation or review. This AC is the standing argument against dropping
+  it, and the second scenario — two files in one directory differing only in
+  kind — is the shape that makes the gate observable rather than inferred.
+
+  A NARROWER ALTERNATIVE WAS CONSIDERED: drop the skill-prompt area from the
+  location list entirely, rather than admitting it and gating on kind. Rejected
+  because the prompt text in that area is exactly the kind of writing that
+  describes credential shapes — it is where the security-scanner skill documents
+  its own rules — and because the same conflict recurs wherever prose and code
+  share a directory. Gating on kind solves the class; dropping one directory
+  solves one instance.
+
+  VERIFICATION STANDARD (inherited from the L0): both files must be real files
+  staged together and checked through the pre-commit secrets check. A test that
+  calls the exemption predicate with two paths cannot show that the reported
+  finding actually blocked the commit.
+
+  CONFIRMED AND FILED, 2026-08-18. The hazard this AC anticipates is not only
+  reachable — for the OTHER rule it has already happened, and it has now been
+  measured and recorded as KI-CG-004 in docs/known-issues/commit-guardian.md:
+  the high-entropy rule is exempted for whole files under a prefix list that
+  includes the skill-prompt area, so a token of Shannon entropy 5.17 goes
+  unreported in the secrets scanner's own source today while the same token is
+  reported under the build scripts directory. That strengthens this AC's
+  argument and changes none of its scope. The relationship is fenced in
+  it_requirements so the two are not later merged: KI-CG-004 is an existing
+  defect in an existing rule and is separate work; this AC is the guarantee that
+  the NEW exemption does not acquire the same shape, and it must not be closed
+  by anything done to KI-CG-004.

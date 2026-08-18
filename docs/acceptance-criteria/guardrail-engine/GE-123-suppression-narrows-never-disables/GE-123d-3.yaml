@@ -1,0 +1,168 @@
+id: GE-123d-3
+components:
+  - commit_guardian
+title: "A real credential written into a ticket or a requirement is still caught and still blocks"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket Markdown file staged for commit contains a line made of one of
+    the credential keywords the rule recognises, a separator, and a quoted
+    sixteen-character value with no whitespace, no placeholder brackets, no
+    masking characters, no recognised text-file extension, and no resemblance
+    to a project identifier,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the generic-credential finding IS reported, naming the file and its
+    1-based line number,
+  And the commit is blocked,
+  Because a live credential in a ticket is a live credential in the
+    repository's permanent history, and the ticket tree being a prose location
+    changes nothing about that.
+
+  Given a file in the acceptance-criteria store staged for commit contains, on
+    one line, a credential-shaped line whose quoted value is a run of ordinary
+    words, and three lines later the credential line described above,
+  When the staged file is checked by the pre-commit secrets check,
+  Then exactly one finding is reported — the credential line — and the commit
+    is blocked,
+  And the file is still reported after the earlier line was exempted,
+  Because the exemption is decided per finding and never per file: one exempt
+    line must never carry the rest of the file out of scope with it.
+
+  Given a ticket Markdown file staged for commit contains a private-key header
+    line and a cloud access key in the AKIA form,
+  When the staged file is checked by the pre-commit secrets check,
+  Then both findings are reported and the commit is blocked,
+  Because this feature widens exactly one rule for one closed list of value
+    shapes, and every other rule keeps its full strength in prose locations.
+
+  Given a retrospective Markdown file staged for commit contains a credential
+    line whose quoted value is the sixteen-character value above with a single
+    trailing space appended,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the finding IS reported and the commit is blocked,
+  Because the whitespace shape means a value that reads as a run of ordinary
+    words, not any value that happens to contain one space character —
+    otherwise a single keystroke would be enough to smuggle a credential past
+    the check.
+depends_on:
+  - GE-123d
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: related
+    status: exists
+    relevance: "KI-CG-004 is the pre-existing file-level high-entropy exemption this AC's notes flag and deliberately do not fix. Recorded here so the two are not later mistaken for duplicates, and so that its existence is never used to argue a file-level shape is acceptable for the generic-credential rule."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every scenario must be verified by the exit status of the real pre-commit check, not by the return value of an exemption predicate. A predicate that answers no is not evidence a commit was blocked, and this is the arm where that difference matters most."
+  - "The whitespace shape must be a run-of-ordinary-words test, not a contains-a-whitespace-character test. State the invariant the implementation has to hold: adding a single space at the start, at the end, or in the middle of an otherwise unrecognised value must not change the verdict. Any implementation for which one keystroke flips a report into an exemption fails this AC regardless of what the predicate returns."
+  - "No rule other than the generic-credential rule may be narrowed anywhere by this feature. The private-key, cloud-access-key, exchange-API-key and high-entropy rules must keep full strength inside every prose location."
+  - "The exemption must never be granted at file level. A staged file holding one exempt finding and one reported finding must still block, and the reported count must be exactly one — a count of zero and a count of two are both failures, and both are reachable from plausible implementations."
+  - "Every scenario must be red before the implementation lands. In particular, each must fail against an implementation that grants the exemption per file and against one built on a naive contains-whitespace test — those are the two cheapest wrong implementations, and a test suite that cannot distinguish them does not discharge this AC."
+  - "The pre-existing file-level high-entropy exemption (KI-CG-004 in docs/known-issues/commit-guardian.md) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked."
+  - "The exemption must be unreachable for any value the shape vocabulary cannot classify: unclassifiable defaults to reported, and that default must be exercised, not merely intended."
+  - "ADR-001 parity: any code this AC causes to change lives in the canonical copies under templates/; verify through the build.py round-trip."
+delivers_to: null
+expects_from:
+  ac_id: GE-123d-2
+  contract: "The per-finding exemption decision and its closed value-shape list. This AC is the load-bearing negative arm on that decision: every scenario here is a value or a rule the exemption must NOT reach, and none of them is satisfiable by an implementation that simply reports nothing."
+test_spec:
+  - name: test_opaque_credential_in_a_ticket_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "A real ticket Markdown file staged in a temporary git repository, carrying a credential keyword and a quoted sixteen-character value matching no recognised shape, makes the canonical pre-commit check exit 1 and print the file path with its 1-based line number"
+  - name: test_one_exempt_line_does_not_carry_the_file_out_of_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged acceptance-criteria-store file with a words-shaped value and, three lines later, the opaque credential produces exactly one finding, at the credential's line number, and exit status 1"
+  - name: test_private_key_and_cloud_access_key_still_reported_in_prose
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged ticket Markdown file carrying a private-key header line and a cloud access key in the AKIA form yields both findings and exit status 1 — only one rule was widened"
+  - name: test_a_single_appended_space_does_not_make_a_credential_word_shaped
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Three staged retrospective files carrying the opaque value with one space appended, one prepended and one embedded are each reported and each block — the whitespace shape is not satisfiable by one keystroke"
+  - name: test_unclassifiable_value_defaults_to_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A staged prose file whose quoted value resembles no entry in the shape vocabulary is reported and blocks — the closed list fails closed, and the residual cost the AC accepts is the observed behaviour rather than an intention"
+test_rationale: "This is the counter-arm for the whole GE-123d widening, so the standard of proof is higher than for the ACs it guards, not lower. Each entry runs the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository and asserts on the process exit status, because the specific thing being claimed is that the commit is blocked — an exemption predicate returning false proves only that the predicate answered, and cannot distinguish a finding that was correctly retained from a finding the run never produced. The per-finding entry asserts an exact count of one for the same reason: both zero and two are reachable from plausible implementations, and an assertion of at-least-one would pass on the file-level shape this AC exists to forbid. All five entries must be red before the implementation lands, and specifically must fail against a file-level exemption and against a naive contains-whitespace test; a suite that stays green against either of those has not discharged the AC."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18)"
+    detail: "Criteria untouched. Complexity held at S — this AC adds little code of its own; its weight is in the test contract. Authored eight policy-level it_requirements, including the two cheapest wrong implementations the red baseline must exclude (file-level exemption; naive contains-whitespace) and an explicit out-of-scope fence around KI-CG-004 so the pre-existing file-level high-entropy hole is never cited as precedent. Added a known-issues doc_link for the same reason. Authored a five-entry test_spec plus test_rationale, every entry asserting on the real process exit status rather than a predicate return. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE MANDATORY NEGATIVE ARM, stated as its own criterion rather than
+  as a caveat on GE-123d-2, because the product-owner identified it as the
+  load-bearing one: widening what prose may contain must not become a way to
+  smuggle a live credential into permanent history.
+
+  THE DISTINCTION THIS AC HOLDS, and the honest limit of it. The distinction the
+  feature has to draw is between text that DESCRIBES a credential shape and text
+  that CONTAINS a live value. That distinction cannot be drawn perfectly — a
+  short, low-entropy, human-chosen password is textually indistinguishable from
+  a placeholder someone typed by hand. Rather than claim a confident test, the
+  chosen answer is the narrower one the product-owner asked for: a closed list
+  of positively recognised non-credential shapes, with everything unrecognised
+  treated as a credential. The cost is accepted and named: a prose author who
+  writes an example value that resembles nothing on the list is still blocked
+  and must either reword it into a recognised shape or add an explicit
+  suppression. That residual cost is preferred to a broad exemption.
+
+  THE FOURTH SCENARIO IS THE SHARP EDGE of the whitespace shape and is why it is
+  written as a scenario rather than left to implementation. "Contains
+  whitespace" as a literal test is trivially defeatable — appending one space to
+  a credential would exempt it. The criterion therefore constrains the shape to
+  a value that reads as a run of ordinary words. Whatever test satisfies that,
+  a credential with a space bolted on must still be reported.
+
+  RELATIONSHIP TO THE PRE-EXISTING HIGH-ENTROPY EXEMPTION, flagged and NOT fixed
+  here. The high-entropy rule is exempted at FILE level for four of these same
+  locations, so a high-entropy credential already rides into a ticket file
+  unreported today. That is a separate, pre-existing hole, adjacent to this AC
+  but not caused by it; this AC is scoped to not repeating the mistake for the
+  generic-credential rule. It is recorded here so that it is not mistaken for
+  something this feature introduced, and so that whoever picks it up has the
+  observation.
+
+  VERIFICATION STANDARD (inherited from the L0): every scenario here must be
+  exercised through the pre-commit secrets check against a real staged file. A
+  negative arm verified against the exemption predicate in isolation proves the
+  predicate says no; it does not prove the commit was blocked.
+
+  IT-PO NOTE, 2026-08-18: the pre-existing file-level high-entropy exemption
+  this section flags has since been recorded formally as KI-CG-004 in
+  docs/known-issues/commit-guardian.md, with measured evidence. The two remain
+  separate: KI-CG-004 is an existing defect in the high-entropy rule, this AC is
+  the guarantee that the NEW generic-credential exemption does not acquire the
+  same shape. The fence is now also an it_requirement so a coder cannot reach
+  for the existing file-level exemption as a template.

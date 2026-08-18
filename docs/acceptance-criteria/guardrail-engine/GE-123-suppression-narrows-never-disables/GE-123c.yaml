@@ -1,0 +1,118 @@
+id: GE-123c
+title: "An instruction to quiet a warning does what its author thinks it does"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  An entry that can never match says so, instead of pretending to work.
+
+  When what you wrote cannot possibly apply — because part of it was read as
+  something you did not mean, or because it was discarded on the way in — you
+  find out while you are writing it, rather than months later when the thing
+  you believed was covered turns out never to have been.
+depends_on:
+  - GE-123
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Already specifies warn-and-skip for entries whose target path has zero segments and for a line with no separator at all, plus the warning's information content, the per-line-not-per-file rule, and silence on blank and comment lines. This L1 extends that mechanism to entries that parse SUCCESSFULLY into something other than what was written. Reuse its warning contract; do not restate its scenarios."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-123c-1
+  - GE-123c-2
+  - GE-123c-3
+  - GE-123c-4
+  - GE-123c-5
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  SCOPE IS THE RESIDUAL, and getting this wrong reopens finished work.
+  GE-113c-3-v (done) covers entries that are recognisably malformed: a target
+  path with no path segments in any of its spellings, and a line missing the
+  separator entirely. Those are OUT of scope here. What is IN scope is the
+  entry that parses cleanly and is accepted, but into a shape its author never
+  wrote — so it silently matches nothing.
+
+  DIRECTLY OBSERVED INSTANCE: a suppression line with a trailing explanatory
+  comment after the entry has the comment text absorbed into the field that
+  identifies which line of the target file is exempt. The result is a
+  well-formed entry pointing at a line that does not exist, so it never
+  matches and never warns. The author reads their own file back, sees their
+  note, and reasonably concludes the suppression is in force.
+
+  THE GENERALISATION THE BA SHOULD REACH FOR — this L1 is not "support
+  comments". Trailing comments are one route to the same failure: an accepted
+  entry that is incapable of ever matching anything. Whether the answer is to
+  understand comments, to reject them, or to detect unmatchable entries in
+  general is an L2 decision, and the third is the one that generalises. Two
+  candidate signals to weigh explicitly: an entry whose shape makes matching
+  impossible (detectable when it is read), and an entry that never matched
+  anything during a run (detectable afterwards, and a different, weaker
+  signal — a suppression for a problem that no longer exists is not an error).
+  Do not conflate the two.
+
+  REUSE, DO NOT REINVENT, THE ANNOUNCEMENT. -v established what a warning about
+  a bad entry must contain and that it goes to the error stream, that skipping
+  is per line and never per file, that every other entry in the same file still
+  applies, and that blank and comment lines never warn. A second warning
+  convention in the same file would be a defect in its own right.
+
+  WHY BOTH DOCUMENTATION TRIGGERS. Writing a suppression is a task a person
+  performs by hand, and the accepted forms are currently learned by imitation —
+  which is exactly how the observed instance happened; that is the how-to. The
+  reference that documents the suppression forms is also, today, silent on what
+  is rejected and why; that is the reference-doc. Neither substitutes for the
+  other.
+
+  ANTI-PRECEDENT, load-bearing: this component contains a guard documented as
+  automatically bringing in a specialist that does no such thing — its
+  remediation path is a placeholder and it always reports success. A
+  documented-but-dead correction path is worse than none, because authors
+  believe they are covered. Any L2 here that claims the author is told
+  something needs a test proving the message actually reaches them on the real
+  commit path.
+
+  BA DECOMPOSITION, 2026-08-18 (record of what was included and excluded).
+  Decomposed by FIELD, because that is where the general predicate lives: an
+  entry is unmatchable when the value that landed in one of its three parts can
+  never equal anything a finding carries. GE-123c-1 takes the line-number field
+  (the observed instance in its three-field spelling), GE-123c-2 the file-path
+  field (the same mistake in its two-field spelling), GE-123c-2-i the rule-id
+  field. GE-123c-1-i covers the surplus-field shapes, including a Windows drive
+  letter, and shows they need no special case. GE-123c-3 settles delivery — one
+  warning convention reused from -v, on the real commit path, never fatal — with
+  GE-123c-3-i as the no-false-warning arm measured on the repository's own 53
+  live entries and GE-123c-3-ii fixing the boundary against the weaker
+  never-matched-this-run signal, which is deliberately NOT reported. GE-123c-4
+  and GE-123c-5 discharge the two documentation triggers.
+  EXCLUDED, with reasons: a path field naming a file that does not exist (a
+  suppression may legitimately precede the file, so non-existence is not
+  evidence of anything); case-insensitive or fuzzy repair of a mis-typed rule id
+  and note-stripping repair of an appended comment (both guess at intent, which
+  is the habit this L1 removes — reject and tell the author instead); and any
+  report of entries that matched nothing during a run (GE-123c-3-ii).
+  At five L2 children this L1 is at the hard cap — further behaviour belongs at
+  L3 or in a sibling L1.

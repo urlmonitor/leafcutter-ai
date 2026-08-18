@@ -1,0 +1,161 @@
+id: GE-123a-3
+components:
+  - commit_guardian
+title: "A file whose name marks it as sensitive is still reported for its name — de-privileging the name signal must not delete it"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file whose name marks it as environment configuration, containing only
+    ordinary configuration text that no content rule recognises,
+  And no suppression entries are in force,
+  When the file is scanned through the scanner's multi-file entry point — the
+    same entry point the pre-commit secrets check calls,
+  Then exactly one finding is reported for that file, recording that the name
+    itself marks the file as sensitive,
+  And the run's exit status reports findings present,
+  Because the name is a signal in its own right: a file of that kind is worth
+    a second look even when nothing inside it is recognisable, and that is why
+    the rule exists.
+
+  Given the same environment-configuration file, now also containing four lines
+    the scanner's content rules recognise — a cloud access key in the AWS_KEY
+    form, a private-key header line, a quoted twelve-character value assigned to
+    a field named password, and a high-entropy token of at least twenty
+    characters,
+  And no suppression entries are in force,
+  When the file is scanned through the same entry point,
+  Then the filename finding is reported alongside all four content findings,
+  And the filename finding is reported as its own separate result, not merged
+    into, replaced by, or downgraded relative to any content finding,
+  Because reading the contents was added to the name check, not substituted for
+    it — an implementation that reaches the content findings by dropping the
+    name finding has traded one blind spot for another.
+
+  Given one file of every filename form the sensitive-filename rule recognised
+    before this change, each containing only ordinary configuration text,
+  And no suppression entries are in force,
+  When all of them are scanned in a single run,
+  Then each of them reports its filename finding,
+  Because narrowing the set of names the rule recognises is the same deletion by
+    another route, and it would be invisible to any criterion that exercises a
+    single example name.
+depends_on:
+  - GE-123a
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "Supplies the angle vocabulary used in this record's test_spec. The third arm is the boundary angle applied to a recognised SET rather than a range — one example name is the 'one' case, and the whole point of the arm is that only the 'many' case can detect narrowing."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-123a-1
+  contract: "The per-file scan that no longer stops at the filename recognition. ONLY the second arm of this criterion consumes it — the filename finding cannot be observed ALONGSIDE content findings until the content scan runs on an env-named file. The first and third arms are independent of GE-123a-1 and are observable against today's code, which is why depends_on names GE-123a alone; this contract records the arm-level dependency without changing that ordering."
+it_requirements:
+  - "The third arm's filename set must be a FROZEN BASELINE captured from the sensitive-filename rule as it stands BEFORE this change, written into the test with its provenance recorded. It must NOT be derived at test time from the rule under test: a derived set narrows whenever the rule narrows and therefore cannot detect narrowing, which is the only thing this arm exists to catch."
+  - "The frozen baseline must include the bare dotted name, the dotted-name-with-suffix form, the stem-plus-extension form, and at least one case variant. A single example name cannot detect narrowing, and the criterion says 'every filename form' for that reason."
+  - "Widening the recognised set is explicitly NOT a failure of this criterion; only narrowing is. Write the third arm so that a newly recognised form does not break it."
+  - "The filename finding must be observed as its own separate result identified by its rule id and its own line number — never inferred from a total count. A count-only assertion cannot distinguish 'reported separately' from 'merged into, or downgraded relative to, a content finding', which is the exact failure the second arm exists to catch."
+  - "All arms must run through the multi-file entry point scan_files over real files in a tempfile-backed directory, and the third arm must scan every baseline filename in a SINGLE run. Coverage of the filename matcher in isolation does not discharge any arm — that is how two sibling criteria in this family came to describe situations the real entry point can never produce."
+  - "Exit-status arms must run the scanner's CLI entry point in a fresh subprocess with the fixture directory as the working directory, and must assert the process exit code. A returned list of findings is not an exit status."
+  - "Test fixtures must assemble every credential-shaped string at runtime from concatenated fragments rather than writing it as a source literal, so this repository continues to need no PRIVATE_KEY or AWS_KEY suppression anywhere. The existing suppression test module does this deliberately; do not collapse the fragments back into literals."
+  - "The ordinary configuration text used by the first and third arms must contain no token of twenty or more characters and no keyword-followed-by-quoted-value line, or 'exactly one finding' becomes an accident of the fixture rather than a statement about the scanner."
+  - "The module under test must be loaded from the canonical templates/ path via importlib.util.spec_from_file_location, never from a deployed copy, which can be stale."
+  - "No test may write a .security-allowlist to any real project root. Every arm of this criterion runs with no allowlist present in the fixture directory."
+  - "Fixture files must not be placed under tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/. The pre-commit consumer post-filters entropy findings for those path prefixes, which would silently change the expected counts."
+  - "Reporting the filename finding on a file whose contents are innocuous is a deliberate accepted cost here. Whether that noise should be reduced is GE-123d's subject; no implementation of this criterion may reduce it by ceasing to report the finding."
+test_spec:
+  - name: test_name_only_env_file_reports_exactly_the_filename_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An env-named fixture holding only ordinary configuration text, scanned through scan_files with no allowlist, returns exactly one finding for that file and it carries the filename rule id — the only place the name signal is observable on its own."
+  - name: test_filename_finding_survives_alongside_all_four_content_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same fixture with the four recognised lines added returns five findings, one of which carries the filename rule id as its own separate result with its own line number, so an implementation that merges or drops the name finding once content findings exist fails."
+  - name: test_every_baseline_filename_form_still_reports_its_filename_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "One innocuous file per filename form in the frozen pre-change baseline set — bare dotted name, dotted-name-with-suffix, stem-plus-extension, and a case variant — scanned in a single run, each reports its filename finding; a rule narrowed to only the example name used elsewhere fails."
+  - name: test_cli_exit_status_is_nonzero_for_a_name_only_env_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    description: "The scanner CLI, run in a fresh subprocess with the fixture directory as its working directory over the innocuous env-named fixture alone, exits non-zero — the name signal reaches the author through the real entry point, not only through a returned list."
+test_rationale: "This is the positive arm that stops the rest of GE-123a being satisfiable by deletion: with no filename rule at all, contents are trivially read and there is nothing left for a name-scoped suppression to silence, so GE-123a-1 and GE-123a-2 both pass on a scanner that has quietly lost a detector. The three descriptors that mirror the three arms fail independently by design — outright deletion, result-discarded-once-content-exists, and deletion-by-narrowing — and the third is the one a single-example test cannot reach, which is why its filename set is a frozen baseline rather than a list an author chose. RED-VS-GREEN HONESTY, so a later TDD-order check does not misread the baseline. Only ONE descriptor is red: test_filename_finding_survives_alongside_all_four_content_findings, because today an env-named file produces the filename finding and nothing else, so there is no 'alongside' to observe. The other three are GREEN ON ARRIVAL and are regression guards, not evidence the fix landed. test_name_only_env_file_reports_exactly_the_filename_finding passes today because one finding is all such a file can currently produce; after the fix it keeps the same expected value for a genuinely different reason, and that is the point of keeping it. test_every_baseline_filename_form_still_reports_its_filename_finding passes today because the recognised set is the baseline it is captured from; it exists to fail on a FUTURE narrowing. test_cli_exit_status_is_nonzero_for_a_name_only_env_file passes today for the same reason. A green-on-arrival majority is correct for a deletion guard and must not be read as a TDD-order violation."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S; added expects_from GE-123a-1 scoped explicitly to the SECOND arm only, because the first and third arms are observable against today's code and depends_on (protected) correctly names GE-123a alone — this arm-level dependency is raised as a caveat rather than resolved by editing depends_on; authored it_requirements pinning the frozen-baseline filename set and its no-derivation rule, widening-is-not-failure, by-rule-id-not-by-count observation of the name finding, the shared scan_files/CLI-subprocess/fixture/loader/allowlist rules, and the GE-123d boundary that forbids reducing noise by ceasing to report; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale flagging three of the four descriptors as green on arrival, which is correct for a deletion guard. Criteria, depends_on and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE POSITIVE ARM OF GE-123a-1, AND IT IS LOAD-BEARING. GE-123a-1 asks
+  that the contents of a sensitively-named file be read; GE-123a-2 asks that
+  suppressing the name finding leave the content findings standing. Neither
+  criterion is violated by an implementation that simply removes the
+  sensitive-filename rule altogether — with no name finding at all, the contents
+  are trivially read and there is nothing left for a name-scoped suppression to
+  silence. GE-123a's own notes close that door in words ("The name-based result
+  itself is still wanted. This L1 does not remove it; it removes its
+  exclusivity") and GE-123a-1's notes name this record as the criterion that
+  closes it in a test. Without this record the L1 is satisfiable by deletion.
+
+  THE THREE ARMS FAIL INDEPENDENTLY. The first arm is the only place the name
+  finding is observable on its own, so it is the one that fails outright if the
+  rule is deleted. The second arm catches the subtler form — the rule kept but
+  its result discarded once content findings exist, or folded into one of them.
+  The third catches deletion by narrowing: a rule left in place but matching only
+  the one example filename the other criteria happen to use.
+
+  THE THIRD ARM'S FILENAME SET IS A BASELINE, NOT A LIST INVENTED HERE. Capture
+  the set of names the rule recognises BEFORE the fix and assert against that
+  captured set, so the arm fails on any narrowing rather than on disagreement
+  with a list written into a criterion. Widening the set is not a failure of this
+  criterion; narrowing it is.
+
+  RELATIONSHIP TO GE-123a-2. GE-123a-2's second arm asserts that a suppression
+  naming the filename rule still suppresses the filename finding. That is about
+  the suppression continuing to work. This criterion is about the finding
+  existing at all when nothing is suppressed. An implementation can pass
+  GE-123a-2's second arm vacuously — nothing suppressed, nothing to report —
+  which is precisely why the unsuppressed case is asserted here and not there.
+
+  RELATIONSHIP TO GE-123d (the noise question). Reporting the name finding on a
+  file whose contents are innocuous is a deliberate cost accepted here, not an
+  oversight. Whether that cost should be reduced is GE-123d's subject; the answer
+  must not be to stop reporting it, and it is out of scope for this criterion.
+
+  ENV FILENAMES ARE THE SUBJECT HERE, as in GE-123a-1 and for the same reason
+  recorded there. The tree-wide constraint on using them as casual illustrative
+  examples elsewhere is unaffected.
+
+  VERIFY THROUGH THE REAL MULTI-FILE ENTRY POINT with real files on disk. Per the
+  verification standard carried through this whole tree, coverage of the per-file
+  scan in isolation does not discharge any arm of this criterion.

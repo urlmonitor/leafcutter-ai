@@ -1,0 +1,86 @@
+id: GE-123b
+title: "No single line can leave a file unprotected"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A suppression narrows what you are told; it never blanks out a whole file.
+
+  Whatever you choose to quiet, everything else that protects that file still
+  runs — and when an instruction would remove the last protection a file has,
+  you are told, instead of being left to assume the file is still covered.
+depends_on:
+  - GE-123
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-123b-1
+  - GE-123b-2
+  - GE-123b-3
+  - GE-123b-4
+  - GE-123b-5
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  This is the INVARIANT L1 — the class that GE-123a is one instance of. It is
+  deliberately separate from GE-123a: the coverage collapse can be closed for
+  the one observed file kind while this invariant is still violated by some
+  other route, and the invariant can be enforced without the contents of that
+  file kind ever being read. Neither L1 discharges the other.
+
+  This component's history is the argument for having this L1 at all: four
+  successive point patches have been applied in this area (see the component
+  context note on GE-120), and the failure mode to avoid is a fifth. The
+  standing rule this L1 establishes is the structural fix.
+
+  WHAT "EFFECTIVE COVERAGE" MEANS HERE, for the BA to make testable: the set of
+  problems a given file could still be reported for, after every suppression
+  currently in force has been applied. The promise is that this set is never
+  empty as a result of suppression alone. It says nothing about a file for
+  which the check genuinely has no applicable rules — that is not suppression,
+  and this L1 must not be written so as to require inventing coverage where
+  none was ever offered.
+
+  BOUNDARY — do not re-author completed work. GE-113c-3-v already covers the
+  case where a MALFORMED entry disables a rule across the whole repository, and
+  is done. This L1 is about a WELL-FORMED entry, correctly written and
+  correctly parsed, whose effect on one file is nevertheless total. Cite -v,
+  reuse its warn-and-skip precedent and its warning contract, and do not
+  restate its scenarios.
+
+  OPEN QUESTION FOR L2, decide explicitly rather than by default: when an
+  instruction would remove a file's last protection, is the right disposition
+  to announce it and proceed, to refuse the instruction and report the finding
+  anyway, or to block? -v's precedent is warn-and-skip, which fails closed
+  because the author immediately sees the finding they tried to hide. The
+  inherited fail-open convention and GE-120's "a check that cannot run says so"
+  both apply, and neither is repealed here — but note that the unit of GE-120's
+  rule is VISIBILITY, not blocking, so it does not settle this question on its
+  own. Whatever is chosen, remember that this check runs on every commit, so a
+  hard error on a cosmetic mistake becomes a repository-wide outage.
+
+  A NEGATIVE ARM IS MANDATORY. Every scenario in this L1 is satisfiable by an
+  implementation that simply stops honouring suppressions at all. A regression
+  guard proving that ordinary, well-scoped suppressions still suppress is part
+  of the criterion, not an optional extra.
