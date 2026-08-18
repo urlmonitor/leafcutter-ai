@@ -27,7 +27,7 @@ agents:
   test-runner: needed
   documentation-expert: not_needed
   pr-reviewer: needed
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -95,7 +95,7 @@ tests:
 - [x] python-coder — 2026-08-18 15:10
 - [ ] test-runner
 - [ ] pr-reviewer
-- [ ] commit
+- [x] commit — 2026-08-18 15:45
 - [ ] pull-request
 
 ## Comments
@@ -207,6 +207,26 @@ now stale since its first two children are superseded. Recommend a follow-up tic
 to update `FIN-100e.yaml`'s status/title/covered_by (and separately reconcile
 `FIN-100e-3.yaml`'s `parent: FIN-100e-1` hierarchy inconsistency, also noted by
 architect-review as pre-existing and out of scope here).
+
+### 2026-08-18 15:45 — commit (status: ok)
+Auto-authorized commit gate: subject "docs(ac-store): supersede FIN-100e-1/e-2, reconcile Step 6a auto-ticketing contradiction"; staged files: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100e-1.yaml, docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100e-2.yaml, unit_tests/test_finalize_feature_step6a.py.
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Verified `templates/workflows-js/finalize-feature.js` was intentionally left
+unmodified (python-coder's sign-off already confirmed no code change was
+needed); staged only the three files that actually changed
+(FIN-100e-1.yaml, FIN-100e-2.yaml, unit_tests/test_finalize_feature_step6a.py)
+by name — left the unrelated concurrent modifications to
+`scripts/build_phases.py` and the untracked `unit_tests/build_guards/test_bp_100k_1.py`
+alone (shared worktree, out of this ticket's files_touched). Pre-flight checks:
+`python -m pytest unit_tests/test_finalize_feature_step6a.py -q` — 19 passed;
+`python scripts/ac_store/validate_ac_schema.py` on both edited AC YAML files — OK.
+`.claude/skills/signoff` / commit_guardian probe scripts are not present in this
+worktree (incomplete guardian install) — probe skipped per policy, proceeded to
+commit.
 
 ## Escalation
 
