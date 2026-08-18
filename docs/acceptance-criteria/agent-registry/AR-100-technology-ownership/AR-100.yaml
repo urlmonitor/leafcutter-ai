@@ -1,0 +1,52 @@
+id: AR-100
+title: "Every part of your codebase has a specialist who genuinely owns it"
+component: agent-registry
+components:
+  - agent_registry
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Work goes to an expert in that technology — never to a stand-in.
+
+  When you ask for a change, it is picked up by a specialist whose expertise
+  actually matches the technology involved, in your own project as well as in
+  leafcutter's own machinery. There are no unclaimed technologies where the
+  system quietly falls back on whoever happens to be nearby, and no ownership
+  that survives only because everyone has been copying the last person's guess.
+  Because the match is real rather than borrowed, the safeguards that check
+  whether the right specialist was chosen stay trustworthy: a warning means
+  something is genuinely wrong, not that the warning can be ignored.
+notes: |
+  Authored 2026-08-18 from BrainCandy's request. Deliberately excluded from
+  scope, at BrainCandy's direction: making technology ownership configurable
+  per installed project, and splitting specialists along frontend/backend
+  lines. Both are larger redesigns of how ownership is decided; the goal here
+  is to close the gap without presupposing or blocking that direction. No
+  criterion below may assume ownership is read from per-project configuration.
+depends_on: []
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The catalogue of specialists and the ownership information it carries."
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "House conventions every specialist must satisfy."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-100a
+  - AR-100b
+  - AR-100c
+  - AR-100d
+implemented_by: []

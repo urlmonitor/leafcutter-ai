@@ -16,7 +16,11 @@ criteria: |
   When the run finishes,
   Then the changes are committed on the worktree's branch and a pull request is opened
     against main,
-  And the operator does not run commit or open the PR by hand,
+  And the pull request is landable: everything the repository's required merge checks
+    demand of the change is present in it — including a changelog entry when, and only
+    when, the change requires one — so nothing stands between the reported pull request
+    and a merge except review,
+  And the operator does not run commit, write a changelog entry, or open the PR by hand,
   And the PR is opened non-interactively under the correct account, with the EMU REST
     fallback used when gh pr create is blocked.
 
@@ -27,9 +31,23 @@ depends_on: [BO-2400f-3]
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-07-23
-amended_by: []
+amended_by:
+  - reason: "amend (not supersede), 2026-08-18: the delivery obligation is widened from 'a PR is opened' to 'a landable PR is opened'. Withdrawn wording: 'And the operator does not run commit or open the PR by hand,' — retained and extended to 'And the operator does not run commit, write a changelog entry, or open the PR by hand,'; a new clause requires the PR to satisfy the repository's required merge checks, including a changelog entry when and only when the change requires one. Nothing in the pre-amendment criterion was wrong: the shipped code commits, opens the PR, and keeps the operator's hands off both, exactly as written. It under-specified. The gap is a blocker in practice — the lane's first end-to-end PR (#465) opened with 5 of 6 required checks green, 'Changelog entry present' failing and mergeable_state blocked, and had to be completed by hand in b3124ff25 (KI-BO-001). Requiring the operator to hand-write a changelog before the PR can merge defeats this criterion's evident intent — hands-off delivery — even though it does not break its letter, so the intent is now stated rather than implied. Decomposed into BO-2400f-4-i (requirement decision tracks the merge check's own rule), -ii (exempt-only run writes nothing), -iii (the run emits the entry through the repo's emitter, committed before the PR), -iv (breaking is never guessed: emitted not-breaking and declared undetermined for review — an earlier draft deriving it from risk_surface was rejected before authoring, because risk_surface marks where a criterion sits rather than whether callers break, and a wrong true auto-cuts an uncorrectable MAJOR release tag), -v (failure to produce a required entry is a named halt, not a warning), -vi (a reported success means no known-failing required check). Reset to work_status in_progress: the commit and PR behaviour is shipped, the landability guarantee is not. Change of intent authorised by BrainCandy."
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2400f-4-i
+  - BO-2400f-4-ii
+  - BO-2400f-4-iii
+  - BO-2400f-4-iv
+  - BO-2400f-4-v
+  - BO-2400f-4-vi
 implemented_by: [templates/workflows-js/fast-lane-ship.js]
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amended in place rather than superseded, following the BO-2400a-3 / BO-2400a-3-i
+  precedent of 2026-08-17. Superseding would set status to superseded_by, which excludes
+  the record from check_ac_coverage enforcement — and the commit-and-open-a-PR behaviour
+  this criterion governs must stay enforced, not retired. Nothing is being removed: every
+  pre-amendment clause survives, one of them extended. The withdrawn wording is quoted
+  verbatim in the amended_by entry above.
