@@ -4,24 +4,28 @@ Whole-collection uniqueness pass over the numbered artifact namespaces.
 MODULE: check_identifier_uniqueness
 GOAL: Provide a single importable entry point, ``run_uniqueness_pass``, that
     walks the whole on-disk collection (not a staged diff) and reports every
-    number claimed by two or more artifacts across three namespaces:
-    acceptance-criterion identifiers, decision-record integers, and
-    architecture-diagram level-and-sequence identifiers. Returns exactly one
-    finding per contested number -- never one finding per claimant file --
-    together with a per-namespace count of artifacts inspected.
+    number claimed by two or more artifacts across four namespaces:
+    acceptance-criterion identifiers, decision-record integers,
+    architecture-diagram level-and-sequence identifiers, and work-item
+    (ticket) identifiers held by two or more lifecycle folders. Returns
+    exactly one finding per contested number -- never one finding per
+    claimant file -- together with a per-namespace count of artifacts
+    inspected.
 BUSINESS CONTEXT: GE-122 ("numbers mean one thing") exists because a number
     that resolves to two different artifacts is a silent ambiguity: a reader
-    who follows "GE-119" or "ADR-029" has no way to know which of two records
+    who follows a bare "GE-000" or "ADR-000" has no way to know which of two records
     they landed on. A per-file check cannot see this -- it judges one file at
-    a time and never learns that a sibling file claims the same number. This
-    module is the load-bearing PRODUCER for the whole GE-122 tree: six sibling
-    ACs (GE-122a-1-i, GE-122c-1, GE-122c-2, GE-122d-1, GE-122d-3, GE-122e-3)
-    consume the verdict object this module returns, which is why the pass is
-    a plain importable function rather than logic embedded inside one
-    pre-commit hook script -- GE-122d-1 requires the same evaluation to run at
-    three separate commit-lifecycle stages, which is unsatisfiable if the
-    logic lives inside a single stage's script.
-ARCHITECTURE: Thin orchestrator over two sibling modules (split out to keep
+    a time and never learns that a sibling file claims the same number. The
+    work-items namespace covers the sibling failure shape (GE-122a-2): one
+    identifier existing as two copies free to disagree about its own state.
+    This module is the load-bearing PRODUCER for the whole GE-122 tree: six
+    sibling ACs (GE-122a-1-i, GE-122c-1, GE-122c-2, GE-122d-1, GE-122d-3,
+    GE-122e-3) consume the verdict object this module returns, which is why
+    the pass is a plain importable function rather than logic embedded
+    inside one pre-commit hook script -- GE-122d-1 requires the same
+    evaluation to run at three separate commit-lifecycle stages, which is
+    unsatisfiable if the logic lives inside a single stage's script.
+ARCHITECTURE: Thin orchestrator over three sibling modules (split out to keep
     every new file under the project's 400-line limit, following the
     _ac_store_index.py / _ac_store_index_disk.py precedent already
     established in this directory):
@@ -30,6 +34,10 @@ ARCHITECTURE: Thin orchestrator over two sibling modules (split out to keep
       - _uniqueness_scanners.py: the three purely-filesystem namespace walks
         (acceptance-criteria, decisions, diagrams) and their inspected_count
         tracking.
+      - _work_items_scanner.py: the fourth namespace walk (work-items),
+        reading tickets/ticket_lifecycle.json for the declared lifecycle
+        folder list and reporting cross-folder identifier collisions
+        together with each copy's declared status.
     Because this module can be loaded three different ways -- as a script
     (``python check_identifier_uniqueness.py``), as a subprocess target from
     the deployed layout, and via ``importlib.util.spec_from_file_location``
@@ -48,6 +56,10 @@ Public contract (consumed by six downstream ACs -- do not narrow):
     namespace_verdict.findings         -> list[Finding]
     finding.number                     -> str
     finding.paths                      -> list[str]
+    finding.declared_states            -> dict[str, str] (ADDITIVE, GE-122a-2;
+                                           empty {} for the three original
+                                           namespaces, populated for
+                                           "work-items")
 
 Exit codes (CLI usage -- ``python check_identifier_uniqueness.py``):
     0 - every namespace passed (no contested numbers).
@@ -56,6 +68,7 @@ Exit codes (CLI usage -- ``python check_identifier_uniqueness.py``):
 DOC_LINKS:
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-1.yaml
+  - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-2.yaml
 
 DECISION HISTORY:
   - 2026-08-18 [python-coder/GE-122a-1]: Created. Single importable module
@@ -70,6 +83,13 @@ DECISION HISTORY:
     fully functional when dynamically loaded via
     importlib.util.spec_from_file_location, which does not add the loaded
     file's own directory to sys.path the way running it as __main__ does.
+  - 2026-08-18 [python-coder/GE-122a-2]: Added the fourth "work-items"
+    namespace via a new sibling module, _work_items_scanner.py. Changed
+    main() to terminate via sys.exit() rather than merely returning an int,
+    so that a direct in-process call to main() (as this module's own test
+    suite now does, to assert on emitted output) observes the outcome as a
+    raised SystemExit -- the exit code is this module's real contract with
+    both a pre-commit hook and any other caller, CLI or in-process.
 """
 
 from __future__ import annotations
@@ -91,6 +111,7 @@ from _uniqueness_types import (  # type: ignore[import]  # noqa: E402
     NamespaceVerdict,
     UniquenessVerdict,
 )
+from _work_items_scanner import scan_work_items  # type: ignore[import]  # noqa: E402
 
 __all__ = [
     "Finding",
@@ -105,6 +126,7 @@ _HOOK_PREFIX = "[check_identifier_uniqueness]"
 _NS_AC = "acceptance-criteria"
 _NS_DECISIONS = "decisions"
 _NS_DIAGRAMS = "diagrams"
+_NS_WORK_ITEMS = "work-items"
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +135,7 @@ _NS_DIAGRAMS = "diagrams"
 
 
 def run_uniqueness_pass(collection_root: str | Path) -> UniquenessVerdict:
-    """Run the whole-collection uniqueness pass over three fixed namespaces.
+    """Run the whole-collection uniqueness pass over four fixed namespaces.
 
     Pure orchestration: each namespace walk (in _uniqueness_scanners) owns
     its own I/O boundary and fails open per file, so this function performs
@@ -122,17 +144,20 @@ def run_uniqueness_pass(collection_root: str | Path) -> UniquenessVerdict:
     Args:
         collection_root: Root directory of the collection to inspect (the
             directory containing docs/acceptance-criteria/,
-            docs/architecture/adrs/, and docs/architecture/diagrams/).
+            docs/architecture/adrs/, docs/architecture/diagrams/, and
+            tickets/).
 
     Returns:
         The UniquenessVerdict covering the acceptance-criteria, decisions,
-        and diagrams namespaces.
+        diagrams, and work-items namespaces.
     """
     root = Path(collection_root)
+    tickets_root = root / "tickets"
     namespaces = {
         _NS_AC: scan_acceptance_criteria(root / "docs" / "acceptance-criteria"),
         _NS_DECISIONS: scan_decisions(root / "docs" / "architecture" / "adrs"),
         _NS_DIAGRAMS: scan_diagrams(root / "docs" / "architecture" / "diagrams"),
+        _NS_WORK_ITEMS: scan_work_items(tickets_root, tickets_root / "ticket_lifecycle.json"),
     }
     passed = all(ns.passed for ns in namespaces.values())
     return UniquenessVerdict(passed=passed, namespaces=namespaces)
@@ -143,10 +168,30 @@ def run_uniqueness_pass(collection_root: str | Path) -> UniquenessVerdict:
 # ---------------------------------------------------------------------------
 
 
-def main() -> int:
+def _print_finding(finding: Finding) -> None:
+    """Print one finding line, including declared states when present.
+
+    Args:
+        finding: The Finding to report.
+    """
+    joined_paths = ", ".join(finding.paths)
+    line = f"  {finding.number} claimed by: {joined_paths}"
+    if finding.declared_states:
+        joined_states = ", ".join(f"{path}={state}" for path, state in sorted(finding.declared_states.items()))
+        line += f" (declared states: {joined_states})"
+    print(line, file=sys.stderr)
+
+
+def main() -> None:
     """Run the pass against the current working directory and print a report.
 
-    Returns:
+    Terminates the process via ``sys.exit`` rather than merely returning an
+    int, so that both CLI invocation (``python check_identifier_uniqueness.py``)
+    and a direct in-process call to ``main()`` observe the outcome as a
+    raised ``SystemExit`` -- the exit code is this module's real contract
+    with a pre-commit hook and with any other caller.
+
+    Exits:
         0 when every namespace passes; 1 when any namespace reports a
         contested number.
     """
@@ -160,10 +205,9 @@ def main() -> int:
             file=sys.stderr,
         )
         for finding in ns_verdict.findings:
-            joined_paths = ", ".join(finding.paths)
-            print(f"  {finding.number} claimed by: {joined_paths}", file=sys.stderr)
-    return 0 if verdict.passed else 1
+            _print_finding(finding)
+    sys.exit(0 if verdict.passed else 1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
