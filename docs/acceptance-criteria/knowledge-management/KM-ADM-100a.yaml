@@ -1,0 +1,62 @@
+id: KM-ADM-100a
+components:
+  - knowledge_management
+title: "A connection's trust rating reflects what actually runs, and says how much it covered"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+criteria: |
+  Trust ratings come from what really enforces a link — and state what they cover.
+
+  A link is rated on the basis of the check that genuinely runs against it, never on
+  a check that merely exists, and the rating declares how much of the project that
+  check actually looked at — so "protected" can never be read as "protected
+  everywhere".
+parent: KM-ADM-100
+depends_on:
+  - KM-ADM-100
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100a.yaml
+    relationship: context
+    status: exists
+    relevance: "Standing principle inherited here: a figure arrives with the total it was measured against. KM-ADM-005 satisfies it for one surface in prose; ACS-1100a makes it the mechanical rule for every answer about the store."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-ADM-001
+  - KM-ADM-005
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: docs
+risk_surface: internal
+notes: |
+  Both children are the same failure in two guises: a rating asserted from something
+  other than the enforcement that actually happens.
+    - KM-ADM-001 — rated from the PRESENCE of a hook script on disk rather than from
+      the registry that decides which hooks run. check_ac_coverage.py exists and has
+      never executed.
+    - KM-ADM-005 — rated from the FACT that a hook blocks, with no statement of what
+      it blocks over. check-done-proof is diff-scoped: new work only, never the back
+      catalogue.
+  The generalisation worth keeping: an enforcement rating has two parts — does it
+  block, and over what. A rating carrying only the first part is a partial answer
+  wearing the clothes of a complete one.
+
+  KM-ADM-005 shipped the disclosure IN PROSE, on one edge note ("244 of 607 done ACs
+  carry no covering test tag ... measured 2026-08-13 ... Do NOT read this edge as
+  store-wide coverage"). That is a hand-written figure with a hand-written date. It
+  is correct today and will rot. ACS-1100 is the mechanical version of the same
+  promise; when it lands, this note should be regenerated rather than re-typed.

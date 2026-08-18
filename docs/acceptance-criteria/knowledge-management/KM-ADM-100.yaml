@@ -1,0 +1,103 @@
+id: KM-ADM-100
+components:
+  - knowledge_management
+title: "Rely on the map of how your project fits together, because it admits what it cannot prove"
+component: knowledge-management
+level: L0
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+criteria: |
+  Every connection on the map says how far you can trust it.
+
+  Before changing anything you need to know what else it touches, and today that
+  answer arrives with the same confidence whether it rests on a rule that is really
+  enforced or on nothing at all. After this goal the map describes itself: each
+  connection states what backs it and how much of the project that backing actually
+  covered, the connections the project does not have appear as visible gaps rather
+  than silent absences, the links that matter most when deciding what a change will
+  break are ones you can follow, and every copy of the map tells the same story. You
+  can act on what it says — or see plainly that you cannot.
+depends_on: []
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: specifies
+    status: exists
+    relevance: "The machine-readable map itself — the SSOT this whole tree governs."
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: describes
+    status: exists
+    relevance: "The human-readable trust table derived from the JSON; kept in step by KM-ADM-006."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: "Standing principle this tree INHERITS, does not duplicate: any figure the map reports states what it counted and what it left out. ACS-1100 governs how an answer describes its own coverage; KM-ADM-100 governs what this particular map claims. Same inheritance relationship KM-200 already declares."
+  - path: docs/known-issues/knowledge-management.md
+    relationship: context
+    status: exists
+    relevance: "Open defects in this component recorded on sight; KI-KM-001 and KI-KM-003 are candidate future children of this L0."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-ADM-100a
+  - KM-ADM-100b
+  - KM-ADM-100c
+  - KM-ADM-100d
+implemented_by: []
+change_target:
+  - docs
+  - ui
+risk_surface: internal
+notes: |
+  RETROACTIVE PARENT, AUTHORED 2026-08-18 BY THE PO. This L0 was written AFTER its
+  children shipped. KM-ADM-001 through KM-ADM-006 were authored one at a time by
+  /quick-fix between 2026-08-13 and 2026-08-18 and merged (PR #425) as six reviewed
+  L2s with no parent at all — a coherent body of work with no value statement above
+  it, invisible to any goal-level view of the store. This record supplies the missing
+  statement. It does not re-specify anything the six already say.
+
+  WHY THE SIX WERE NOT SCATTERED. KM-ADM-005 is one concrete instance of the general
+  contract in ACS-1100 (ac-store), and the temptation was to re-home it there. It
+  stays here. The six are one artifact-map body — every one of them is about what the
+  map claims and how it is drawn — and pulling any single one into another component
+  would leave the remaining five describing a map whose trust ratings are governed
+  somewhere else. The relationship to ACS-1100 is INHERITANCE, not ownership: KM-200
+  already records the same reading ("ACS-1100 is a STANDING principle every figure
+  here must obey, not a home for it ... Inherited, not duplicated"), and this tree
+  follows that established convention rather than inventing a second one.
+
+  ID TOPOLOGY — READ BEFORE ADDING A CHILD. Compound-prefix ids (KM-ADM-*, and the
+  KM-KGS-100 tree before it) are NOT resolvable by derive_parent_id():
+  "KM-ADM-100a" and "KM-ADM-005" both derive to "KM-ADM", which is not an AC. Every
+  parent/child link in this tree is therefore carried explicitly by the `parent`
+  field (the schema's documented mechanism for exactly this case), by `depends_on`
+  on the child, and by `covered_by` here. Consequences a reader must not be
+  surprised by:
+    - check-ac-parent-covered-by does not enforce these links (it only fires when
+      the DERIVED parent appears in the child's depends_on, which never happens
+      here) — so the back-links are a convention nothing mechanically defends.
+    - check-ac-tree-limits builds its tree by derivation, so it sees this L0 as
+      childless and may emit its advisory "<3 children" line. That is a topology
+      artefact, not a real thinness.
+    - Renaming the six to derivable ids is NOT an option: ids never change after
+      creation, and KM-ADM-005 is already cited by `# covers:` tags in shipped
+      tests and by PR #425.
+
+  NO work_status FIELD — DELIBERATE. All four L1s' children have shipped, so the
+  natural instinct is work_status: done. Do not add it. The ratchet KM-ADM-005
+  itself shipped counts every `work_status: done` AC that carries no `# covers:`
+  test tag and fails the build if that count rises above 244; a done flag on this
+  record with no test tagging it would push the count to 245 and break main. The
+  six children carry no work_status either, so this record matches its family. When
+  TQ-400 lands a supported way to record proven-done state, revisit.
+
+  NO roadmap_phase CLAIMED — DELIBERATE. The six children claim none. Asserting
+  phase_1 on their new parent would be a roadmap claim the shipped work never made.
+  Left for the user to set at approval.

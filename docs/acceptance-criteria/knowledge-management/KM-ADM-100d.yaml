@@ -1,0 +1,53 @@
+id: KM-ADM-100d
+components:
+  - knowledge_management
+title: "Whichever copy of the map you open, it tells you the same thing"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+criteria: |
+  The written map and the drawn map can never disagree about what is trustworthy.
+
+  The same facts exist in a version people read and a version the tool draws, and the
+  two are held in step automatically — so which trust ratings you believe never
+  depends on which copy you happened to open.
+parent: KM-ADM-100
+depends_on:
+  - KM-ADM-100
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: specifies
+    status: exists
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: specifies
+    status: exists
+    relevance: "Direction of truth: the JSON is the SSOT, the prose is the derived view, so parity is asserted as doc-must-agree-with-JSON."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-ADM-006
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: docs
+risk_surface: internal
+notes: |
+  This L1 is the reason the other three stay true over time: five corrections landed
+  on the machine-readable copy alone and the prose silently contradicted it on four
+  rows. Without a parity check, every future correction re-opens the same drift.
+
+  INHERITED STANDING CONSTRAINT (ACS-1100, and stated in KM-ADM-006's own criteria):
+  the parity check must assert a MINIMUM NUMBER OF ROWS MATCHED. A check that skips
+  what it cannot match degrades to vacuously green the moment the table is
+  reformatted — a zero-denominator pass, exactly the defect ACS-1100 exists to end.
+  Any future child of this L1 inherits that requirement; do not let it be dropped as
+  an implementation detail.
