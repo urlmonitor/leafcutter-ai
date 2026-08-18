@@ -38,6 +38,14 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``_compute_phase_mappings`` enumerates those pairs for all file-based
     artifact phases so build.py can run detect_deploy_collisions before any
     file write occurs.
+    ``check_command_reachability`` is a post-deploy guard (BP-900g-1 /
+    BP-900g-1-i) that scans every deployed command under
+    ``<output_root>/commands/*.md`` for ``Workflow(...)``/``Skill(...)``
+    handoff targets and resolves each against the TRUE post-deploy layout —
+    name-form targets via the deployed workflow/skill registry, path-form
+    targets as a literal path relative to output_root. It returns one
+    verdict dict per unresolvable target; an empty list means the build may
+    proceed. This is the COMMAND-SIDE analogue of the BP-811 shim guardrail.
 """
 
 from __future__ import annotations
@@ -45,6 +53,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -220,6 +229,153 @@ def detect_deploy_collisions(
         for target, sources in target_to_sources.items()
         if len(sources) >= 2
     ]
+
+
+# ---------------------------------------------------------------------------
+# Command-reference reachability guard (BP-900g-1 / BP-900g-1-i guardrail)
+# ---------------------------------------------------------------------------
+
+#: Matches Workflow("target") / Workflow('target') / Skill("target") /
+#: Skill('target') handoff calls in a deployed command body, capturing the
+#: call name (group 1) and the raw target string (group 2).
+_HANDOFF_TARGET_RE = re.compile(r"""\b(Workflow|Skill)\(\s*["']([^"']+)["']""")
+
+
+def _handoff_target_resolves(
+    target: str,
+    kind: str,
+    output_root: Path,
+    registered_workflows: set[str],
+    registered_skills: set[str],
+) -> bool:
+    """Return True if a single Workflow()/Skill() handoff target resolves post-deploy.
+
+    Name-form targets (no "/") resolve via deployed-registry membership only
+    (BP-900g-1-i): the target must equal the stem of a ``*.js`` file directly
+    under ``output_root/workflows/`` (kind="workflow") or the name of a
+    directory directly under ``output_root/skills/`` (kind="skill").
+    Path-form targets (containing "/") resolve ONLY as a literal relative
+    path against output_root (BP-900g-1) — a path such as
+    "scripts/workflows/foo.js" is never rewritten or special-cased into the
+    name-form registry lookup, even when "foo" is itself registered.
+
+    This is a pure function — no I/O — per the project Error Handling Policy
+    (Rule 4).
+
+    Args:
+        target: The raw handoff target string extracted from a command body.
+        kind: "workflow" or "skill".
+        output_root: Absolute path to the consolidated, already-deployed
+            build output directory.
+        registered_workflows: Stems of ``*.js`` files directly under
+            ``output_root/workflows/``.
+        registered_skills: Names of directories directly under
+            ``output_root/skills/``.
+
+    Returns:
+        True if the target resolves to a deployed artifact; False otherwise.
+    """
+    if "/" not in target:
+        registry = registered_workflows if kind == "workflow" else registered_skills
+        return target in registry
+    return (output_root / target).exists()
+
+
+def check_command_reachability(output_root: Path) -> list[dict]:
+    """Scan deployed commands for Workflow()/Skill() targets unresolvable post-deploy.
+
+    Extracts every ``Workflow("...")``/``Skill("...")`` handoff target from
+    every ``*.md`` file directly under ``output_root/commands/``, resolves
+    each against the TRUE post-deploy layout, and returns one verdict dict
+    per unresolvable target (BP-900g-1). A target resolves if EITHER it
+    names a registered workflow/skill in the deployed registry (name-form,
+    BP-900g-1-i) OR it is a literal path that exists relative to
+    output_root (path-form). A bare ``.js`` path such as
+    "scripts/workflows/build-feature.js" does NOT resolve, because
+    ``build_workflow_scripts()`` deploys workflow ``.js`` files to
+    ``output_root/workflows/``, never ``output_root/scripts/workflows/``.
+
+    This is the COMMAND-SIDE analogue of the BP-811 ``.claude/workflows``
+    shim guardrail (BP-811 resolves the deployed workflow artifact's own
+    reachability; this function resolves the COMMAND's reference to it). It
+    does not modify or re-parent BP-811.
+
+    Per the project Error Handling Policy (Rule 1 / Rule 3), reading a
+    command file is external I/O: a read failure is logged at WARNING and
+    that file is skipped (best-effort — an unreadable command cannot be
+    scanned, which is a distinct failure mode from an unresolvable target).
+
+    Args:
+        output_root: Absolute path to the consolidated, ALREADY-DEPLOYED
+            build output directory (e.g. ``<target>/.leafcutter``), expected
+            to contain ``commands/*.md``, ``workflows/*.js``, and
+            ``skills/*/`` post-deploy.
+
+    Returns:
+        List of dicts, one per unresolvable target::
+
+            {
+                "command": Path,               # the command .md file
+                "target":  str,                # the raw handoff target string
+                "kind":    "workflow" | "skill",
+                "reason":  str,                 # names the target and states
+                                                 # it does not resolve to a
+                                                 # deployed artifact post-deploy
+            }
+
+        Empty list means every extracted reference resolves (build may
+        proceed) — mirroring the "ok=true iff empty" contract established by
+        ``detect_deploy_collisions()`` (BP-100m) in this same module.
+    """
+    commands_dir = output_root / "commands"
+    if not commands_dir.is_dir():
+        return []
+
+    workflows_dir = output_root / "workflows"
+    registered_workflows = (
+        {p.stem for p in workflows_dir.glob("*.js")}
+        if workflows_dir.is_dir()
+        else set()
+    )
+    skills_dir = output_root / "skills"
+    registered_skills = (
+        {p.name for p in skills_dir.iterdir() if p.is_dir()}
+        if skills_dir.is_dir()
+        else set()
+    )
+
+    verdicts: list[dict] = []
+    for command_path in sorted(commands_dir.glob("*.md")):
+        try:
+            text = command_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning(
+                "check_command_reachability: cannot read %s: %s",
+                command_path,
+                exc,
+            )
+            continue
+
+        for call, target in _HANDOFF_TARGET_RE.findall(text):
+            kind = "workflow" if call == "Workflow" else "skill"
+            if _handoff_target_resolves(
+                target, kind, output_root, registered_workflows, registered_skills
+            ):
+                continue
+            verdicts.append(
+                {
+                    "command": command_path,
+                    "target": target,
+                    "kind": kind,
+                    "reason": (
+                        f"{kind} target {target!r} referenced by "
+                        f"{command_path.name} does not resolve to a "
+                        "deployed artifact post-deploy"
+                    ),
+                }
+            )
+
+    return verdicts
 
 
 def _per_platform_mappings(
@@ -2924,4 +3080,19 @@ def clean_stale_artifacts(
 #   layout, so the deployed gate's CLI invocation would crash with
 #   ModuleNotFoundError even though unit tests importing from source stay
 #   green. (#ACD-1900b-5-i)
+# - 2026-08-18 18:30 [python-coder/06_bp900g1_command_reachability_guard]: Added
+#   command-reference reachability guardrail (BP-900g-1 / BP-900g-1-i). Two
+#   new symbols: check_command_reachability() scans every deployed command
+#   under output_root/commands/*.md, extracts Workflow(...)/Skill(...)
+#   handoff targets via _HANDOFF_TARGET_RE, and resolves each against the
+#   real post-deploy layout: name-form targets (no "/") via deployed-registry
+#   membership (workflow .js stems / skill directory names), path-form
+#   targets (containing "/") as a literal relative path against output_root.
+#   _handoff_target_resolves() is the pure per-target resolution helper. This
+#   replaces the previously phantom-done BP-900g-1 finding -- the name-based
+#   Workflow("build-feature") workaround already applied to the real command
+#   templates is now backed by a real guard that would catch a regression
+#   back to the non-resolving path form. COMMAND-SIDE analogue of BP-811 (the
+#   .claude/workflows shim); does not modify or re-parent BP-811.
+#   (#EPIC-BuildPipelinePhantomRemediation/06)
 # ====================================================================
