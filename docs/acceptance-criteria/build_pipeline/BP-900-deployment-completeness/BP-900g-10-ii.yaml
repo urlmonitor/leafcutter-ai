@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 work_status: todo
@@ -67,6 +67,66 @@ delivers_to: null
 expects_from:
   ac_id: BP-900g-10
   contract: "The REQUIRED-versus-OPTIONAL dependency classification and the fail-closed load contract, extended here to a lookup whose absent result is itself a meaningful-looking value."
+test_spec:
+  - name: test_bp_900g_10_ii_absent_capability_registry_yields_unable_to_decide_and_the_message_names_the_file
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive the decision through the DEPLOYED workflow as a real subprocess (node, launched from a consumer-layout install) with the agent registry ABSENT, and assert: the recorded outcome is the unable-to-decide category; the message names the registry file and the location it looked for; and the message does NOT assert anything about the actor's permissions - specifically it does not say a charter does not permit an action. The negative half is the criterion's own clause that the message must describe the unreadable file rather than the outcome the absent lookup would have produced, and it is what separates a correct stop from the 2026-08-18 message that sent an operator to disprove a permission in a record that was fine."
+  - name: test_bp_900g_10_ii_permitted_denied_by_record_and_unable_to_decide_are_three_pairwise_distinct_outcomes
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE THREE-OUTCOME DISCRIMINATION. Same deployed entry point, three fixtures: (a) registry present and the record GRANTS the capability - assert permitted, so a granted capability is not withheld; (b) registry present and the record DENIES it - assert denied, and assert the message names the record; (c) registry absent - assert unable-to-decide. Assert all three values are pairwise distinct, and assert (c) is not equal to (a) as a named assertion of its own. That last one is the control the AC notes call for: a fix that permits everything when the file is missing is the opposite defect with a friendlier failure mode, and it is green on any test that only checks the absent case is not a denial."
+  - name: test_bp_900g_10_ii_the_workflow_halts_and_its_halt_reason_identifies_the_missing_registry
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Run the deployed workflow end to end through its real dispatch entry point with the registry absent, and assert it halts and that the halt payload's reason field identifies the registry file. Must not be satisfied by asserting a helper returns an error object: the defect is in the CALLER that coerces the lookup result to a boolean, and a helper that already reports the failure correctly is exactly what the live code has. Pair it with the healthy-registry run through the same entry point, which must not halt."
+  - name: test_bp_900g_10_ii_every_deployed_load_site_of_a_capability_declaring_file_takes_the_unable_to_decide_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The idiom audit, made falsifiable. Enumerate every deployed artifact that reads a capability-declaring file - derived from the same declaring-file inventory BP-900h-4 builds, not from a hand-written list - and for each, run it with that file absent and assert the outcome is unable-to-decide rather than a denial. NON-VACUITY: assert the enumerated set is non-empty and contains more than the one named workflow, or state in the failure message that only one load site was found. The AC notes are explicit that the surface is the idiom and not the one workflow, and that the same idiom is available in every language - the live instance is JavaScript. A fix applied only at the named call site passes entries 1 to 3 and is caught only here."
+test_rationale: |
+  The three-outcome shape is the assertion, and two of the three outcomes already
+  exist in the live code. Permitted and denied are both produced today; what does not
+  exist is the third, and the defect is precisely that absence collapses into the
+  second. So the contract is written around distinctness rather than around any single
+  expected value: entry 2 asserts all three are pairwise distinct and separately
+  asserts that the absent case is not the permitted case. Without that second
+  assertion, the cheapest green is to flip the coercion so an absent record permits
+  everything - the opposite defect, and one that no test asserting merely "not denied"
+  can see.
+
+  Entry 3 exists because the failure is in the caller, not the loader. Any expression
+  that coerces a possibly-absent lookup to a boolean - a truthiness test, a
+  get-with-default returning the falsy value, an equality test an empty result fails -
+  collapses absent and says-no into one branch, and every one of those idioms sits at
+  a call site, downstream of a loader that may already be reporting the problem
+  correctly. A test that calls the loader and asserts it returns an error is green on
+  the live defect. Only running the workflow through its real dispatch and inspecting
+  the halt reason reaches the branch.
+
+  Entry 4 is the generalisation clause. The criterion is written in general terms - any
+  decision taken by looking up a record in a declaring file - and the notes say plainly
+  that the fix must land at every load site rather than at the two named ones. Deriving
+  the audited set from the BP-900h-4 inventory rather than listing it keeps the entry
+  honest as new load sites appear, and the non-emptiness assertion stops the audit from
+  passing over an empty enumeration.
+
+  SURFACE NOTE for the implementer and for test-writer: the live instance is a
+  JavaScript workflow while the assigned agent is python-coder. The contract is
+  written to be executable as assigned - the deployed workflow is invoked as a node
+  subprocess from a pytest test - but the code change itself lands in .js. Flagged at
+  IT PO sign-off as an intent-versus-surface mismatch to confirm before dispatch.
+
+  Angles: criterion, failure, reachability, deployed — at the cap of four, with
+  must_block riding entry 3.
 origin_agent: business-analyst
 created: 2026-08-18
 created_by_ticket: null

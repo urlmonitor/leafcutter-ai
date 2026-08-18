@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -63,6 +63,75 @@ delivers_to: null
 expects_from:
   ac_id: BP-900g-10
   contract: "The fail-closed load contract. This AC constrains HOW the declaring file is located, so the fail-closed path is entered only when the file is genuinely absent and not merely unfindable from the current directory."
+test_spec:
+  - name: test_bp_900g_10_iii_same_verdict_and_same_resolved_file_from_the_install_root_and_from_a_nested_subdirectory
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "TWO REAL INVOCATIONS, never a unit test of a resolver function. Run the DEPLOYED artifact as a subprocess twice against identical input: once with cwd set to the install root, once with cwd set to a directory at least three levels below it that does NOT itself contain a copy of the declaring file. Assert identical verdicts, identical resolved declaring-file paths as reported by the artifact itself, and that neither run reports the file missing. THE VARIABLE UNDER TEST IS cwd AND NOTHING ELSE: both runs must receive byte-identical arguments and environment, and neither may be passed an absolute path to the declaring file, because an argument that pre-resolves the file makes the test return the right answer whichever way the artifact resolves - the non-falsifiable shape that let a GIT_DIR regression test sit green for six weeks."
+  - name: test_bp_900g_10_iii_an_artifact_started_from_a_different_install_reads_its_own_installs_declaring_file
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE DECISIVE ANCHORING ENTRY - the only one that separates artifact-anchored resolution from a walk up from the working directory. Build TWO consumer installs, A and B, into separate temp directories, and give each a declaring file carrying a distinguishable marker value. Invoke install A's DEPLOYED artifact as a subprocess with cwd set to install B's root. Assert the verdict reflects A's marker, that the resolved path reported is under A, and that the report names install A as the install it resolved against. A cwd-relative read returns B's marker and goes red; a walk-up-from-cwd read also returns B's marker and goes red - and a walk-up implementation is green on entry 1, which is why entry 1 alone is not sufficient. This stays on this AC's side of the ACS-300g-6 boundary: the process is inside an install by artifact location, only its cwd is elsewhere."
+  - name: test_bp_900g_10_iii_both_working_directories_name_the_same_expected_location_when_the_file_is_genuinely_absent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Delete the declaring file from install A's deployed root, then repeat the two invocations of entry 1 - install root and nested subdirectory. Assert both report the file missing, that both name the SAME expected location string, and that the location named is under install A's root rather than under either run's cwd. A cwd-relative implementation names two different expected locations here and goes red; an implementation that fixed only the success path while leaving the error message built from cwd also goes red. The criterion is explicit that the two outcomes - resolves-and-judges versus genuinely-absent - must remain distinguishable from each other, so assert this entry's reports differ from entry 1's."
+  - name: test_bp_900g_10_iii_the_production_dispatch_resolves_the_declaring_file_identically_from_both_directories
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Drive the deployed workflow through its real dispatch entry point - not a helper, not the resolver - from the install root and from the nested subdirectory, and assert neither run halts and both report the same resolved declaring-file path. The resolver almost certainly returns the right answer when called with the right arguments; the defect is in the call site that hands it a relative path, so a green resolver unit test is exactly the evidence that would have existed while the defect was live. This entry is what proves the fix landed at the call site."
+test_rationale: |
+  The two-directory invocation is the whole assertion, and getting it wrong produces a
+  test that cannot fail. The failure to avoid is the one already observed in this repo:
+  a regression test that set GIT_DIR while the working directory was already the
+  worktree top, so the right answer came back under either implementation and the AC
+  sat done for six weeks. Applied here, three concrete constraints follow, and they are
+  stated in the entries rather than left to the author. The variable under test is the
+  process working directory and nothing else - identical arguments, identical
+  environment, identical input. The declaring file must not be passed as an absolute
+  path argument, because that pre-resolves the thing under test. And the nested
+  subdirectory must not itself contain a copy of the declaring file.
+
+  Entry 1 alone is still insufficient, which is the subtler trap. A cwd-relative read
+  fails entry 1, but so would a fix that merely walks upward from the working
+  directory until it finds the file - and a walk-up read is green on entry 1 while
+  still violating the criterion's clause that the expected location be derived from
+  where the running artifact lives. Entry 2 is constructed to be red for both wrong
+  implementations: with two installs carrying different marker values and A's artifact
+  run from B's root, only an artifact-anchored resolution returns A's marker. That is
+  the variation that makes a wrong implementation actually go red, and it is the reason
+  this AC needs two installs rather than two directories in one.
+
+  Entry 3 covers the error path, which is where a partial fix hides. It is entirely
+  possible to anchor the successful read while still composing the not-found message
+  from the working directory, and the resulting behaviour is the criterion's own stated
+  harm: the correct new message shown for the wrong reason, intermittently, depending
+  on how the process was launched.
+
+  None of these may be written against the shared root-resolution helper. The helper is
+  not the defect; the call site is.
+
+  BOUNDARY, restated because the tests brush against it: ACS-300g-6 owns how an install
+  root is determined for a process running outside any install. Entry 2 does not enter
+  that territory - the artifact under test is inside install A by its own location, and
+  only the working directory is elsewhere. If an implementer finds they cannot make
+  entry 2 pass without solving the ACS-300g-6 question, that is a signal to stop and
+  say so rather than to absorb it.
+
+  SURFACE NOTE: the live instance is a JavaScript workflow while the assigned agent is
+  python-coder. The contract is executable as assigned - the deployed workflow is run
+  as a node subprocess from pytest - but the code change lands in .js. Flagged at IT PO
+  sign-off as an intent-versus-surface mismatch to confirm before dispatch.
+
+  Angles: criterion, deployed, failure, reachability — at the cap of four.
 origin_agent: business-analyst
 created: 2026-08-18
 created_by_ticket: null

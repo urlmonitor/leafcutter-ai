@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -60,6 +60,60 @@ delivers_to: null
 expects_from:
   ac_id: BP-900h-5
   contract: "The three-way per-guardrail outcome — passed, failed, unable-to-run — which this AC's guardrail must land in correctly rather than defaulting to failed."
+test_spec:
+  - name: test_bp_900h_5_i_absent_canonical_reports_comparison_not_performed_and_emits_no_difference_findings
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Invoke the DEPLOYED hook-parity guardrail as a subprocess inside the BP-900h-4 consumer-layout install, where the package's canonical source layout genuinely does not exist beneath the install root. Assert three things: the recorded outcome is the comparison-not-performed category rather than failed, so the consumer is not failed for the sole reason that a package-development path is absent; the message names the canonical location it looked for; and the output contains ZERO per-file difference findings. The zero-findings assertion is the load-bearing one - the criterion forbids reporting a difference it never measured, and an implementation that reports every deployed hook as differing from an absent canonical satisfies any assertion that merely checks something was reported."
+  - name: test_bp_900h_5_i_with_both_copies_present_the_guardrail_still_detects_a_real_divergence_and_still_passes_an_identical_pair
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The did-not-turn-the-guardrail-off control, and the entry that kills the cheapest wrong fix. In an install where BOTH the canonical and the deployed copies exist, run the same deployed entry point twice: once with the two copies byte-identical - assert passed; once after seeding a real byte difference into one deployed hook - assert failed, and assert the report names the diverging file. A fix that skips the guardrail whenever the canonical location is absent is green on entry 1 and is caught only here, because it is indistinguishable from the guardrail not existing until a real divergence is put in front of it."
+  - name: test_bp_900h_5_i_absent_canonical_and_absent_deployed_produce_the_same_shape_of_report
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The symmetry clause, asserted structurally rather than on prose. Two runs of the same deployed entry point: (a) canonical absent, deployed present; (b) canonical present, deployed absent. Assert both land in the SAME outcome category, that both reports carry the same fields, and that each names a location of the same kind. Add the anti-substitution control the notes call for: assert the canonical location named in run (a) is NOT the deployed path. A guardrail that points its canonical resolution at the deployed copy when the source copy is absent compares a file with itself and passes always, which is the failure BP-1300b-2 exists for and which is green on every other entry here."
+  - name: test_bp_900h_5_i_applicability_is_decided_from_the_install_layout_not_from_the_bare_absence_of_the_path
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier, and the BP-1300b-1-i boundary held open. Drive the guardrail through the real commit-guardian hook runner, as a subprocess, in two different installs against the same absent-canonical-file condition: in the vendoring consumer install the commit is NOT blocked for that reason; in an install that does declare a canonical tree, where a canonical file is missing that should be present, the same runner DOES block. Assert both. This is the pair that separates a stated applicability decision from a blanket skip-when-absent, and it is the only entry that would notice the fix quietly disabling the check in the package's own repository. It does not re-specify BP-1300b-1-i; it asserts this AC's clause that applicability is established before the comparison is attempted."
+test_rationale: |
+  This is the edge case that most exposes a lazy fix, and each of the three wrong
+  resolutions the AC notes enumerate is green on a differently-shaped test, so the
+  entries are chosen to kill one each rather than to cover the criterion evenly.
+
+  Skipping the guardrail whenever the canonical location is absent is green on entry 1
+  and dies only on entry 2, where a real byte divergence is put in front of it in an
+  install that has both copies. Pointing the canonical resolution at the deployed copy
+  is green on entries 1 and 2 - it compares a file with itself and reports no
+  difference - and dies only on entry 3's assertion that the named canonical location
+  is not the deployed path. Failing closed unconditionally is green on entry 3 and dies
+  on entry 1 and on the first half of entry 4.
+
+  Entry 4 exists because the criterion's first clause is about a decision, not an
+  outcome: applicability must be established BEFORE the comparison is attempted. A
+  decision derived from the bare absence of the path produces the right answer in the
+  consumer and the wrong answer in the package repository, where the same absence is a
+  real defect that BP-1300b-1-i requires to fail closed. Running the same condition
+  through the same runner in two differently-classified installs is what makes that
+  distinction observable; asserting only the consumer half would let the fix resolve
+  the two ACs by making one of them unreachable, which both records forbid.
+
+  None of these entries may be written as a unit test over the guardrail's resolution
+  helper. The defect is in how the live guardrail classifies an install, and a helper
+  called with the arguments the test author already believes are right returns the
+  answer the author expects in either implementation.
+
+  Angles: criterion, deployed, failure, reachability — at the cap of four, with
+  must_block riding entry 4.
 origin_agent: business-analyst
 created: 2026-08-18
 created_by_ticket: null

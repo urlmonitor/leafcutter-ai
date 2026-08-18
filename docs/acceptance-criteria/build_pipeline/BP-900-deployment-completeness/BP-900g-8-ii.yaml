@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 work_status: todo
@@ -85,6 +85,60 @@ delivers_to:
 expects_from:
   ac_id: BP-900g-8
   contract: "The derived intra-package dependency closure and the temporary-target deployed-tree harness. This AC widens the closure's notion of a dependency rather than building a second closure beside it."
+test_spec:
+  - name: test_bp_900g_8_ii_derived_closure_for_a_deployed_guardrail_contains_the_non_code_files_it_reads
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Compute the closure for the deployed guardrails from the code and assert the non-code half is in it: config/doc_types.json in the closure of the document-frontmatter guardrail, config/ac_store_schema.json in the closure of the AC-schema guardrail, config/agent_registry.json in the closure of the planning workflow. For each, assert the closure ALSO reports it as not covered by the deploy declaration at HEAD, so the containment claim and the verdict claim are both exercised. Assert the closure's contents and the containment verdict - never that a filename appears in a list literal in build_phases.py, which is green on a hand-maintained map."
+  - name: test_bp_900g_8_ii_build_subprocess_blocks_when_a_non_code_read_is_withheld_from_the_deploy_manifest_with_the_same_force_as_a_module
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier; charges deployed at the same time. Copy the package tree to a temp dir and run python scripts/build.py --target-dir <tmp_target> as a SUBPROCESS in three states: (1) unmodified tree - exit 0; (2) one NON-CODE dependency of a deployed script withheld from the deploy declaration - non-zero, and the output names the file, the reading script, and the phase that would have to carry it; (3) one MODULE dependency withheld instead - non-zero with the same three elements named. Then assert the same-force clause by comparing (2) and (3): both are non-zero and both report the same shape, so a data-file gap cannot be a warning while a module gap is an error. State (1) is not optional - a positive-path build alone cannot tell a working guard from an absent one."
+  - name: test_bp_900g_8_ii_a_non_code_read_added_after_the_guard_exists_fails_the_build_without_any_change_to_the_guard
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "THE DERIVED-NOT-HARDCODED CONTROL, and the entry the criterion explicitly demands. In a temp copy of the package tree, create a config file that has never existed before under a name the guard cannot know, add a read of it to a deployed script, and add it to NO deploy map. Run build.py as a subprocess and assert non-zero naming the new file and the script that reads it. Then add it to the appropriate deploy map and assert the build passes. A guard that recognises only the five files named in this AC's doc_links is green on entries 1 and 2 and dies only here - which is the difference between widening the mechanism and deploying the five known files, the failure mode the AC notes forbid."
+  - name: test_bp_900g_8_ii_a_read_of_an_operating_system_or_external_tool_path_is_not_added_to_the_derived_set
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The does-not-demand-what-the-package-does-not-own half. In a temp copy, add to a deployed script a read of an absolute operating-system path and a read of a path owned by an external tool the package does not ship; run build.py as a subprocess and assert exit 0 with neither path named in the report. Pair it with the control that a package-owned config file added in the same commit IS still named - otherwise the exclusion is satisfiable by a rule that excludes everything, which is the same defect as no rule at all. Also assert that whatever the derivation cannot resolve statically is reported as underivable rather than silently dropped from the set, since a silent drop is indistinguishable from a clean closure."
+test_rationale: |
+  The failure mode this AC is against is not five forgotten files; it is that every
+  guard in the family is phrased in terms of scripts, so no guard was capable of having
+  an opinion about a JSON file. That makes the derivation clause, not the presence
+  clause, the thing the tests have to be able to falsify — and entry 3 is the only one
+  that can. A guard hardcoded to the five files named in this AC's own doc_links passes
+  entries 1 and 2 completely, because those entries name exactly those files. Entry 3
+  introduces a config file the guard cannot possibly know about, after the guard
+  exists, which is the construction the criterion itself specifies.
+
+  Entry 2 runs build.py as a subprocess against a temp target rather than calling the
+  preflight function, and it runs both the withheld and unmodified states through the
+  same command. A positive-path build alone cannot tell a working guard from an absent
+  one, and a guard exercised only through its own function is not evidence that
+  build.py consumes its verdict. The third state in that entry — withholding a module
+  instead of a data file and comparing the two reports — is how the same-force clause
+  becomes falsifiable; without it, an implementation that logs a warning for data files
+  and raises for modules satisfies every other assertion in this contract.
+
+  Entry 4's second half is the one most likely to be dropped. An exclusion rule for
+  operating-system and external-tool paths is trivially satisfiable by a rule that
+  excludes too much, and a closure that silently omits what it could not resolve
+  statically looks exactly like a closure that found nothing to complain about. The
+  criterion's own reasoning says a data read is an ordinary function call against a
+  path that may be constructed, so underivable reads are expected and must be visible
+  in the report rather than absorbed into a clean result.
+
+  Angles: criterion, reachability (which charges deployed in the same subprocess test,
+  as the taxonomy explicitly permits), failure, boundary — at the cap of four.
 origin_agent: business-analyst
 created: 2026-08-18
 created_by_ticket: null
