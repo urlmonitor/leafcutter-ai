@@ -6,8 +6,8 @@ component: ac-store
 level: L3
 status: active
 req_status: active
-work_status: todo
-readiness: draft
+work_status: done
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -54,8 +54,10 @@ origin_agent: BrainCandy
 created: 2026-08-13
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/ac_store/test_acs200f_done_gate_strict_verification.py"
+implemented_by:
+  - scripts/ac_store/done_proof.py
 change_target: code
 risk_surface: contract_boundary
 notes: "Paired negative case for ACS-200f. Authored deliberately because the reported symptom is a false REFUSAL, and the naive fix for a false refusal is to stop refusing — which would silently convert the strongest anti-phantom-done gate in the store into a rubber stamp and contradict BO-2500a-2-i. Id note: the store's id pattern does not admit a roman-numeral segment directly after a letter segment (ACS-200f-i is rejected), so this L3 takes the numeric child slot ACS-200f-1 under the letter-slot L2 ACS-200f — the same slot shape its sibling ACS-200e occupies."
