@@ -1,28 +1,41 @@
 """
 MODULE: injection_builders
 GOAL: Build the markdown table strings injected into compiled agent templates
-    by template_compiler._apply_registry_injection().
+    by template_compiler._apply_registry_injection(), and expose the
+    prompt-caching layer (assemble_context_bundle) as a command-line surface
+    the fast lane can reach from an agent-dispatched Bash call.
 BUSINESS CONTEXT: Template compilation resolves six placeholder types at
     build time so agents see a ready-to-use sub-agent table, skills table,
     phase-agent registry, doc-type table, project-paths table, or dispatch
     table instead of raw placeholders. Splitting these builders from
     template_compiler keeps that file under the 400-line limit while preserving
-    a clean public API.
+    a clean public API. The ``assemble-bundle`` CLI subcommand (BO-2400c-1-ii)
+    lets the fast-lane workflow body — which has no filesystem access
+    (ADR-024) — reach assemble_context_bundle the only way it reaches Python:
+    a single ``python3 <script> <subcommand> --args`` Bash dispatch.
 ARCHITECTURE: Public functions: build_per_agent_spawn_table (Type 1),
     build_per_agent_skills_table (Type 2), build_registry_block (Type 3),
     build_doc_type_reference_table (Type 4), build_project_paths_table (Type 5),
     build_agent_priority_table (Type 6), build_doc_types_dispatch_table (Type 7),
     build_signoff_block (sign-off appender), assemble_context_bundle (LLM
-    prompt assembly — pure string function, no I/O). Internal: _load_registry,
-    _TICKET_PHASE_MACRO. No file I/O other than reading JSON config files and
-    SKILL.md frontmatter headers. Imported by template_compiler; not intended
-    for standalone CLI use.
+    prompt assembly — pure string function, no I/O). CLI surface: main(),
+    _build_arg_parser(), _cmd_assemble_bundle(), _read_optional_layer()
+    (assemble-bundle subcommand — reads layer files, calls
+    assemble_context_bundle, prints the bundle to stdout only; all
+    diagnostics go to stderr; the module remains importable and
+    side-effect-free at import time). Internal: _load_registry,
+    _TICKET_PHASE_MACRO. No file I/O other than reading JSON config files,
+    SKILL.md frontmatter headers, and (CLI only) the layer content files
+    named by ``assemble-bundle``'s arguments. Imported by template_compiler;
+    also runnable standalone as ``python3 injection_builders.py assemble-bundle``.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -612,6 +625,160 @@ def assemble_context_bundle(
 
 
 # ====================================================================
+# Command-line surface (BO-2400c-1-ii)
+# ====================================================================
+#
+# The fast-lane workflow body has no filesystem access (ADR-024) and reaches
+# Python only by dispatching an agent that runs a single Bash command. This
+# section wraps assemble_context_bundle() as that command — it does not
+# reimplement the layering, the ordering, or the marker placement.
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the argparse parser for injection_builders.py's CLI surface.
+
+    Returns:
+        Configured ArgumentParser exposing the ``assemble-bundle`` subcommand.
+    """
+    parser = argparse.ArgumentParser(
+        prog="injection_builders.py",
+        description="Command-line surface over the prompt-caching layer builders.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    assemble = subparsers.add_parser(
+        "assemble-bundle",
+        help="Assemble the layered LLM context bundle and print it to stdout.",
+    )
+    assemble.add_argument(
+        "--architecture", required=True,
+        help="Path to a UTF-8 file holding the architecture layer content.",
+    )
+    assemble.add_argument(
+        "--conventions", required=True,
+        help="Path to a UTF-8 file holding the conventions layer content.",
+    )
+    assemble.add_argument(
+        "--high-level", required=True,
+        help="Path to a UTF-8 file holding the L0/L1 high-level AC content.",
+    )
+    assemble.add_argument(
+        "--acs", required=True,
+        help="Path to a UTF-8 file holding the per-batch L2/L3 AC content.",
+    )
+    assemble.add_argument(
+        "--prior-tests", required=True,
+        help="Path to a UTF-8 file holding the prior-tests content.",
+    )
+    assemble.add_argument(
+        "--prior-outputs", required=False, default=None,
+        help="Optional path to a UTF-8 file holding prior-phase distilled outputs.",
+    )
+    assemble.add_argument(
+        "--working-diff", required=False, default=None,
+        help="Optional path to a UTF-8 file holding the current working diff.",
+    )
+    assemble.add_argument(
+        "--breakpoint-marker", required=False, default="<!-- CACHE_BREAKPOINT -->",
+        help="Literal breakpoint marker string (not a path).",
+    )
+    return parser
+
+
+def _read_optional_layer(
+    path_str: str | None, layer_name: str
+) -> tuple[str | None, str | None]:
+    """Read one layer's content file if a path was supplied.
+
+    Args:
+        path_str: Filesystem path to the layer's content, or None when the
+            layer was not supplied (optional layers only — required layers
+            always have a path here because argparse enforces their presence).
+        layer_name: Human-readable layer name, used in the diagnostic message.
+
+    Returns:
+        A ``(content, error_message)`` tuple. When ``path_str`` is None,
+        returns ``(None, None)`` — the layer is simply omitted. When the path
+        cannot be read, returns ``(None, <diagnostic naming the layer>)``.
+    """
+    if path_str is None:
+        return None, None
+    try:
+        return Path(path_str).read_text(encoding="utf-8"), None
+    except OSError as exc:
+        return None, f"unreadable layer '{layer_name}' at {path_str!r}: {exc}"
+
+
+def _cmd_assemble_bundle(parsed: argparse.Namespace) -> int:
+    """Execute the ``assemble-bundle`` subcommand.
+
+    Reads each required (and any supplied optional) layer file as UTF-8,
+    calls assemble_context_bundle() with the contents, and prints the result
+    to stdout with nothing else — no banner, no progress line, no log text,
+    because any extra byte on the stable side of the breakpoint destroys the
+    byte-identity BO-2400c-1-iv rests on. All diagnostics go to stderr.
+
+    Args:
+        parsed: Parsed CLI arguments from the ``assemble-bundle`` subcommand.
+
+    Returns:
+        Process exit code: 0 on success. 1 when a required layer is missing
+        or unreadable — never a zero exit with a partial or empty bundle.
+    """
+    layer_paths = (
+        ("architecture", parsed.architecture),
+        ("conventions", parsed.conventions),
+        ("high_level", parsed.high_level),
+        ("acs", parsed.acs),
+        ("prior_tests", parsed.prior_tests),
+        ("prior_outputs", parsed.prior_outputs),
+        ("working_diff", parsed.working_diff),
+    )
+    contents: dict[str, str | None] = {}
+    for layer_name, path_str in layer_paths:
+        content, error = _read_optional_layer(path_str, layer_name)
+        if error is not None:
+            print(f"injection_builders assemble-bundle: {error}", file=sys.stderr)
+            return 1
+        contents[layer_name] = content
+
+    bundle = assemble_context_bundle(
+        architecture=contents["architecture"],
+        conventions=contents["conventions"],
+        high_level=contents["high_level"],
+        acs=contents["acs"],
+        prior_tests=contents["prior_tests"],
+        prior_outputs=contents["prior_outputs"],
+        working_diff=contents["working_diff"],
+        breakpoint_marker=parsed.breakpoint_marker,
+    )
+    print(bundle)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for injection_builders.py's command-line surface.
+
+    Args:
+        argv: Optional argument list. Defaults to ``sys.argv[1:]`` when None
+            (argparse's own default).
+
+    Returns:
+        Process exit code.
+    """
+    parser = _build_arg_parser()
+    parsed = parser.parse_args(argv)
+    if parsed.command == "assemble-bundle":
+        return _cmd_assemble_bundle(parsed)
+    parser.print_usage(sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+# ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-05-14 10:00 [EPIC-ArchitectureDocsEnforcement/ticket 08 — refactor]: (#EPIC-LeafcutterMVP/01)
@@ -634,4 +801,18 @@ def assemble_context_bundle(
 #   Classification Table and Dispatch Contract in documentation-expert.md.
 #   writer_agent: null renders as "no dedicated agent". Insertion order
 #   preserved (no sorting). Additive — does not modify build_doc_type_reference_table.
+# - 2026-08-18 [python-coder/BO-2400c-1-ii]: (#KI-BO-005)
+#   Added the `assemble-bundle` CLI subcommand (main, _build_arg_parser,
+#   _cmd_assemble_bundle, _read_optional_layer) over assemble_context_bundle.
+#   KI-BO-005 recorded that the fast lane's workflow body has no filesystem
+#   access (ADR-024) and reaches Python only by dispatching an agent that runs
+#   a single Bash command — so a pure function with no command-line entry
+#   point was unreachable from the lane, and the only production call site (an
+#   orphaned runner, fast-lane-build.js) was a silent no-op. The subcommand
+#   reads each layer from a file path (never inline text), calls
+#   assemble_context_bundle() unchanged, and prints only its return value to
+#   stdout; every diagnostic goes to stderr so no run-varying byte can land on
+#   the stable side of the breakpoint. Wired into the live lane
+#   (templates/workflows-js/fast-lane-ship.js) by BO-2400c-1-iii/-iv in the
+#   same change.
 # ====================================================================

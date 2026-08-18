@@ -366,6 +366,20 @@ _BASE_RESPONSES: dict = {
     # carrying no verdict at all as a clean review. That is precisely the
     # fail-open BO-2400f-11 forbids ("no default-true, no || true"). The fixture
     # is the right place to say "review passed", not the guard.
+    # Added when BO-2400c-1-iii wired the prompt-caching layer into the lane.
+    # The context-bundle gate is mandatory and fails closed, so a fixture that
+    # does not stub it halts the run before the Test Writer phase and every
+    # assertion below about reaching commit/PR fails. Same reason the two
+    # entries beneath this one exist: the harness default reply has no
+    # `obtained` key, which is precisely the "absent" case the gate must reject.
+    "fastlane-context-bundle": {
+        "obtained": True,
+        "bundle": (
+            "ARCHITECTURE (stub)\n\nCONVENTIONS (stub)\n\nHIGH-LEVEL ACS (stub)"
+            "\n\n<!-- CACHE_BREAKPOINT -->\n\nBATCH ACS (stub)\n\nPRIOR TESTS (stub)"
+        ),
+        "message": "bundle assembled",
+    },
     "fastlane-review": {
         "verdict_obtained": True,
         "high_findings": [],

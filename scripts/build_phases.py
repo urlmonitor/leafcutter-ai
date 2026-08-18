@@ -2320,10 +2320,15 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # install. Module-scope imports are stdlib only (argparse, json, logging,
     # subprocess, sys, time) — no sibling module to co-deploy.
     "pause_store.py",
-    # fast-lane-build.js invokes this at every phase to build the layered LLM
-    # context bundle (assemble_context_bundle). No deploy phase shipped it
-    # before BP-900g-6. Module-scope imports are stdlib only (json, logging,
-    # pathlib, typing) — no sibling module to co-deploy.
+    # fast-lane-ship.js's context-bundle dispatch (BO-2400c-1-ii/-iii) invokes
+    # this module's `assemble-bundle` CLI subcommand once per run to build the
+    # layered LLM context bundle (assemble_context_bundle) — the live lane's
+    # only production call site as of BO-2400c-1. fast-lane-build.js's earlier
+    # reference was an orphaned runner (KI-BO-005: no CLI entry point existed,
+    # so the call was a silent no-op) and is not this deploy justification.
+    # No deploy phase shipped this file before BP-900g-6. Module-scope imports
+    # are stdlib only (argparse, json, logging, sys, pathlib, typing) — no
+    # sibling module to co-deploy.
     "injection_builders.py",
 )
 

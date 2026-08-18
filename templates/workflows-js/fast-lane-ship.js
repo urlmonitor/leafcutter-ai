@@ -132,6 +132,22 @@ const PR_SCHEMA = {
   },
 };
 
+const CONTEXT_BUNDLE_SCHEMA = {
+  type: "object",
+  required: ["obtained"],
+  properties: {
+    bundle: { type: "string" },
+    obtained: { type: "boolean" },
+    message: { type: "string" },
+  },
+};
+
+// The literal breakpoint marker assemble_context_bundle() inserts once
+// between the stable prefix and the volatile suffix (scripts/injection_builders.py).
+// Kept as a single named constant here so the usability check below and any
+// future consumer cannot drift from the CLI's own default.
+const CACHE_BREAKPOINT_MARKER = "<!-- CACHE_BREAKPOINT -->";
+
 const REVIEW_SCHEMA = {
   type: "object",
   required: ["verdict_obtained"],
@@ -403,6 +419,91 @@ const releaseInvocation =
   `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
 
 // ---------------------------------------------------------------------------
+// Context Bundle — assemble the prompt-caching layer ONCE per run
+// (BO-2400c-1-ii/-iii/-iv). Obtained exactly once here and threaded verbatim,
+// unaltered, as the prefix of every later build-context-carrying dispatch
+// (Test Writer, Coder) — never re-assembled per phase, which is precisely how
+// a mid-run re-read of a stable source would bust the cache anchor without
+// anyone noticing.
+// ---------------------------------------------------------------------------
+
+const bundleScript = `${worktreePath}/{{config.output_root}}/scripts/injection_builders.py`;
+
+const bundleResult = await agent(
+  `You are the context-bundle phase agent for a fast-lane build. Assemble the ` +
+  `layered LLM context bundle the test-writer and coder dispatches will receive ` +
+  `verbatim — ONCE for this whole run; do not re-derive it per phase.\n\n` +
+  `Worktree: ${worktreePath}\n` +
+  `AC store: ${acStoreRoot}\n` +
+  `Connected build set (dependency order): ${batchIds}\n\n` +
+  `Step 1 — Write each layer's content to a real UTF-8 temp file:\n` +
+  `  - architecture: this repo's architecture overview (e.g. ` +
+  `${worktreePath}/docs/architecture/README.md, or the nearest architecture ` +
+  `index if that exact path does not exist)\n` +
+  `  - conventions: ${worktreePath}/CLAUDE.md\n` +
+  `  - high_level: the L0/L1 parent AC(s) covering ${targetAc}, read from ${acStoreRoot}\n` +
+  `  - acs: the L2/L3 AC YAML content for the connected build set (${batchIds}), ` +
+  `read from ${acStoreRoot}\n` +
+  `  - prior_tests: any existing tests already covering this component/area ` +
+  `(a short placeholder note is fine when none exist yet)\n\n` +
+  `Step 2 — Run this single Bash command:\n` +
+  `   python3 ${bundleScript} assemble-bundle --architecture <path> ` +
+  `--conventions <path> --high-level <path> --acs <path> --prior-tests <path>\n\n` +
+  `Return JSON: { "bundle": "<the command's stdout, verbatim>", "obtained": true, ` +
+  `"message": "bundle assembled" } on a zero exit.\n` +
+  `If the command exits non-zero, or any layer cannot be obtained, return ` +
+  `{ "bundle": "", "obtained": false, "message": "<what failed>" } — never fabricate a bundle.`,
+  {
+    agentType: "python-coder",
+    schema: CONTEXT_BUNDLE_SCHEMA,
+    label: "fastlane-context-bundle",
+    phase: "Resolve",
+  }
+);
+
+// Fail closed exactly like the review verdict and red-baseline gate_passed
+// checks elsewhere in this file: `obtained` is read as a plain JS falsy
+// check, so a missing key, a null response, or an explicit obtained: false
+// all behave identically — never a default-true, never an `|| ''` that turns
+// an unreadable bundle into an empty-but-truthy string. The bundle text
+// itself must also be non-empty and carry the breakpoint marker; an assembly
+// that silently dropped a stable layer would still look non-empty without
+// this check (BO-2400c-1-ii/-iii).
+const contextBundleObtained = !!(bundleResult && bundleResult.obtained);
+const contextBundle =
+  contextBundleObtained && typeof bundleResult.bundle === "string"
+    ? bundleResult.bundle
+    : "";
+const contextBundleUsable =
+  contextBundleObtained &&
+  contextBundle.length > 0 &&
+  contextBundle.includes(CACHE_BREAKPOINT_MARKER);
+
+if (!contextBundleUsable) {
+  await agent(
+    `You are the release-phase agent. The context-bundle phase failed after claiming.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-context-bundle-fail", phase: "Resolve" }
+  );
+  return {
+    status: "blocked",
+    message:
+      "The context bundle was not obtained — the prompt-caching layer's " +
+      "assembling dispatch failed, returned nothing usable, or the bundle " +
+      "was empty or missing the cache breakpoint marker. The run halts " +
+      "rather than falling back to prompts composed some other way " +
+      `(BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+    failing_phase: "context-bundle",
+    worktree_path: worktreePath,
+    branch,
+    built_ac_ids: acIds,
+    classification: "halt",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
 // ---------------------------------------------------------------------------
 
@@ -420,6 +521,7 @@ const greenCoverageInvocation =
 phase("Test Writer");
 
 const testWriterResult = await agent(
+  `${contextBundle}\n\n` +
   `You are the test-writer phase agent for a fast-lane AC-scoped build.\n\n` +
   `Worktree: ${worktreePath}\n` +
   `AC store: ${acStoreRoot}\n` +
@@ -496,6 +598,7 @@ if (!testWriterResult.gate_passed) {
 phase("Coder");
 
 const coderResult = await agent(
+  `${contextBundle}\n\n` +
   `You are the python-coder phase agent for a fast-lane AC-scoped build.\n\n` +
   `Worktree: ${worktreePath}\n` +
   `AC store: ${acStoreRoot}\n` +

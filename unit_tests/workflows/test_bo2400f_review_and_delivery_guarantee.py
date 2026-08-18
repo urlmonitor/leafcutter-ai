@@ -182,6 +182,20 @@ _GREEN_LABELS: dict = {
         "uncovered_ac_ids": [],
         "message": "implementation green",
     },
+    # Added when BO-2400c-1-iii wired the prompt-caching layer into the lane.
+    # The context-bundle gate runs before the Test Writer phase and fails
+    # closed, so an unstubbed fixture halts there and never reaches the
+    # behaviour these tests are about. The harness default reply carries no
+    # `obtained` key — exactly the absent case the gate must reject — so the
+    # stub has to be explicit and schema-conforming, as below.
+    "fastlane-context-bundle": {
+        "obtained": True,
+        "bundle": (
+            "ARCHITECTURE (stub)\n\nCONVENTIONS (stub)\n\nHIGH-LEVEL ACS (stub)"
+            "\n\n<!-- CACHE_BREAKPOINT -->\n\nBATCH ACS (stub)\n\nPRIOR TESTS (stub)"
+        ),
+        "message": "bundle assembled",
+    },
     # The changelog phase must be stubbed with a SCHEMA-CONFORMING positive
     # reply (status ok + entry_added true). An unstubbed label falls through to
     # the harness default, whose shape is {passed: true, ...}; the changelog
