@@ -8,7 +8,7 @@ status: active
 req_status: draft
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Given a delivery workflow (/plan-feature, /build-feature, /finalize-feature,
     or the epic and ticket workflows behind them) dispatches an internal helper
@@ -66,9 +66,10 @@ origin_agent: it-po
 created: 2026-07-15
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/test_bp_300e_6_agent_json_only_contract.py::TestBP300e6AgentJsonOnlyContract
 implemented_by:
-- tickets/00_inbox/TICKET-20260716-BP-300e-6.md
+- tickets/99_done/TICKET-20260716-BP-300e-6.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: >-

@@ -25,7 +25,13 @@ it_requirements: |
   - Must set baseline_failures to null (not empty array) on any failure path
   - Must log a warning with the failure reason (worktree creation failed, pytest not found, import error)
   - Must NOT halt the workflow — control must pass to step 1 regardless of failure
-  - Parse-failure of the agent response must also degrade gracefully (status: parse_failed)
+  - Parse-failure of the agent response must also degrade gracefully (status: parse_failed).
+    Since the 2026-08-17 adjudication (see BP-300e-4) this clause is NOT a licence for a
+    bare catch: the step-0 baseline reading point must be an entry in the workflow's
+    declared degradation register, naming its stage, its substitute value
+    (status: parse_failed with a null baseline) and its reason, and the run must record
+    that the stage carried on without a readable reply. Every reading point NOT in that
+    register halts with the typed stage/agent error.
 delivers_to:
   - agent: "test-failure-triage"
     contract: "provides baseline_failures=null signaling conservative classification mode"
@@ -37,10 +43,38 @@ doc_links:
     relevance: "Step 1 — Handle null baseline (classifies all as regression)"
 depends_on: []
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "adjudication of BP-300e-4 against the step-0 baseline degradation exception"
+    by: business-analyst
+    entry: >-
+      2026-08-17. This AC is the store-resident side B of the conflict with BP-300e-4. The
+      in-source comment at templates/workflows-js/finalize-feature.js:841-846 cites "AC-4",
+      which is a ticket-body-local label — AC-4 of
+      tickets/99_done/EPIC-FinalizeFeatureHardening-2/09_finalize_p2_hygiene.md, delivered
+      in commit e76e7fcbd, a ticket that predates AC-store-first authoring and carries no
+      ac_coverage mapping. This AC's it_requirements carry the same requirement for the same
+      site. The adjudication UPHELD the behaviour: option (b), superseding this AC so the
+      baseline site halts too, was rejected because a null baseline already forces triage to
+      treat every post-merge failure as a regression (FIN-100c-3), which is the conservative
+      direction, so halting would cost availability and buy no safety. criteria are therefore
+      UNCHANGED and this AC is NOT superseded. What changed is the fourth it_requirement
+      bullet, which now states that the degradation must be a declared register entry rather
+      than a bare catch, per the amended BP-300e-4. work_status (done) untouched — the
+      required behaviour at this site is unchanged; the register wiring is BP-300e-4 /
+      BP-300e-4-ii work, not a reopening of this AC. Grounds are recorded in BP-300e-4 notes.
 covered_by:
   - "unit_tests/workflows/test_finalize_pre_merge_safety_gate.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
 work_status: done
+notes: >-
+  Side B of the 2026-08-17 BP-300e-4 adjudication. This AC's degradation is the ONE
+  reading point the adjudication confirmed as legitimately exempt from the halt rule, and
+  it is the calibration case for an admissible register entry: the substitute value it
+  continues with (a null baseline) steers the run toward MORE checking, because triage
+  then treats every post-merge failure as a regression. Contrast the negative case named
+  in BP-300e-4 — the AC-authoring reading point in plan-feature.js, whose substitute lets
+  the stage report success with its product missing, and which the register may never
+  admit. The full adjudication, both positions and the grounds are in the notes of
+  BP-300e-4; do not re-open the question from this end.

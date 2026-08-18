@@ -8,7 +8,7 @@ status: active
 req_status: draft
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Given a helper agent returns a valid JSON object in which a string value literally
     contains a '{', '}', or '#' character (for example a description reading

@@ -1,19 +1,27 @@
 ---
 title: "Broken-ref guard: templates-commit action must win over allowlist for tracked-source-under-templates"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-07-14
+last_updated: 2026-08-17
 depends_on: []
 priority: high
 requires_diagram: false
 requires_adr: false
+change_target: code
+risk_surface: internal
 source_ac: BP-900c-3
 ac_coverage:
   - BP-900c-3
 files_touched:
   - scripts/build_propagation_audit.py
   - unit_tests/test_build_tracked_source_guard.py
+out_of_scope:
+  # Belongs to ticket 05 (BP-1200b), not to this ticket. Both tickets close in the
+  # same reconciliation commit, so the scope guard attributes every staged source
+  # file to both; this declares the correct owner.
+  - unit_tests/build_guards/test_ci_test_gate.py
 agents:
   architect-review: not_needed
   test-writer: needed
@@ -91,3 +99,27 @@ tests:
 - [ ] pull-request
 
 ## Comments
+
+### 2026-08-17 — scope-refresh review (status: ok)
+
+**Closed as SUPERSEDED — the defect was fixed on `main` after this ticket was written.**
+
+Verified independently by three reviewers (product-owner, business-analyst, it-po) and
+re-checked directly against the tree:
+
+- `scripts/build_propagation_audit.py::_suggest_action` now evaluates the
+  `_PREFIXES_WITH_EXISTING_DEPLOY_PHASE` branch **before** the allowlist branch, returning
+  `ACTION_COMMIT_UNDER_TEMPLATES` first. The reorder carries an inline comment naming
+  BP-900c-3 and the `scripts/feedback/...` scenario as its rationale — i.e. the fix was
+  made deliberately against this AC, not incidentally.
+- `unit_tests/test_build_tracked_source_guard.py` carries `# covers: BP-900c-3` (x3) and
+  `# covers: BP-900c-3-i` (x2), green under `AC_ENFORCE_STRICT=1`. The named proof test
+  `test_ac_bp900c3_suggests_commit_when_dir_exists` calls `_suggest_action` directly — a
+  real behavioural assertion, not a source grep.
+- BP-900c-3-i (source-dir-absent → `ACTION_ADD_DEPLOY_PHASE`) did not regress.
+
+No work remains. Driving this ticket would dispatch `test-writer` onto an already-green
+suite, which is a TDD-order violation rather than a pass.
+
+Residual: the AC row itself still read `work_status: not_started`; store reconciliation
+is tracked separately with per-row evidence.

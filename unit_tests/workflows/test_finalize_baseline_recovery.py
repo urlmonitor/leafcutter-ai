@@ -196,6 +196,7 @@ def test_behavioral_recovery_ok_subset_triage_gets_recovered_list():
     Post-merge failures: [T1, T2, T3]. Recovery reports [T2, T3] fail on main.
     Expected: triage receives baseline_failures=[T2, T3] (T1 is a regression).
     """
+    # covers: FIN-100c-6
     recovered = ["tests/bar.py::test_two", "tests/baz.py::test_three"]
     label_responses = _base_label_responses(
         targeted_rerun_response={"status": "ok", "recovered_failures": recovered},
@@ -226,6 +227,7 @@ def test_behavioral_recovery_ok_empty_triage_gets_empty_not_null():
     Expected: triage receives baseline_failures=[] — the [] vs null distinction is
     load-bearing: null would re-trigger the conservative all-regressions path.
     """
+    # covers: FIN-100c-6
     label_responses = _base_label_responses(
         targeted_rerun_response={"status": "ok", "recovered_failures": []},
     )
