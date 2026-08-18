@@ -48,6 +48,13 @@ components:
     directory_patterns:
       - "templates/workflows/build-feature.md"
       - "templates/workflows-js/build-epic.js"
+  - id: agent-registry
+    prefix: AR
+    description: "ACs for the agent registry: which specialist owns which kind of work, unclaimed technologies, and the routing signals that depend on that ownership being real"
+    owner: null
+    directory_patterns:
+      - "config/agent_registry.json"
+      - "templates/agents/*.md"
   - id: infrastructure
     prefix: INF
     description: "ACs for cross-cutting infrastructure: agent context injection, pre-commit hooks, and project conventions"

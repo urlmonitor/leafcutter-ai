@@ -554,8 +554,10 @@
             "priority_rationale": "Primary implementation agent; runs after architectural review is complete",
             "requires_ticket_section": true,
             "owns_file_extensions": [
-                ".py"
+                ".py",
+                ".js"
             ],
+            "owns_file_extensions_rationale": "'.js' is an EXPEDIENT, not a judgement that a Python agent is the right owner of JavaScript. Leafcutter's own orchestration layer is ~8800 lines of workflow JS under templates/workflows-js/, and its covering tests are pytest driving a Node harness (unit_tests/_workflow_engine_harness.py) — so the executable contract really is Python, and every AC touching those files has assigned python-coder by convention already. Before this entry, no agent in the registry claimed '.js' at all: the convention was held together by imitation, the intent-vs-surface check (BP-1100f-3) flagged every such AC as a technology contradiction, and an agent with no precedent to copy had nothing to route on. KNOWN LIMITATION for consumer installs: a consumer whose own application code is JavaScript will have it assigned here too, which is wrong for them. The blast radius is advisory only — the commit-guardian hooks that read this field (check_complexity.py, check_exception_handling.py) both look up '.py' explicitly, so nothing mechanical routes on '.js'. The proper fix is a dedicated workflow-author agent, with ownership driven by per-consumer configuration rather than a hardcoded list; ACs for that are being authored. Revisit this entry when they land.",
             "produces": "production_code",
             "doc_links": [
                 {
