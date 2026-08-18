@@ -1295,6 +1295,7 @@
             "name": "Status Checker",
             "tier": "phase",
             "role": "analysis",
+            "permits_shell": false,
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
@@ -1362,6 +1363,7 @@
             "name": "Worktree Agent",
             "tier": "utility",
             "role": "orchestration",
+            "permits_shell": true,
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
