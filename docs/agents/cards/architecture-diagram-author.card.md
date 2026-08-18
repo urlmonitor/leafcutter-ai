@@ -209,7 +209,9 @@ flowchart TD
 - GE-111d-5: Sequence diagram: developer reconciles via update or confirm and re-commits
 - GE-117d-5: Sequence diagram: the commit-time declaration-enforcement interaction
 - GE-117e-4: Sequence diagram: the fix-or-opt-out route out of a declaration block
-- GE-119c-5: The new verification surface is drawn as an architecture component
+- GE-120c-5: The new verification surface is drawn as an architecture component
+- GE-122c-4: The remediation flow is drawn once per stage, showing who can act at each
+- GE-122d-4: The three-stage arrangement is drawn, showing which stage owns which promise
 - KM-KGS-100a-4: Component diagram shows the acceptance-criteria store as a knowledge-map surface
 - KM-KGS-100b-4: Sequence diagram of a requirement-to-code traversal
 - PER-100c-4: Sequence diagram for persona capability query workflow

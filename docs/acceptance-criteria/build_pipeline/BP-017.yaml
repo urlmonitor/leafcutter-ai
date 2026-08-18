@@ -1,87 +1,74 @@
-id: BP-017
-components:
-  - build_pipeline
-component: build-pipeline
-level: L2
-status: active
-readiness: draft
-priority: medium
-work_status: todo
-title: "Symlink shims are created with targets relative to the link's own location"
-origin_agent: BrainCandy
-created: 2026-08-14
 assigned_agent: python-coder
-criteria: |
-  Given install_shims() bridges canonical tool paths into the consolidated
-    output root (ADR-004 / ADR-016) — the directory shims .claude/agents,
-    .claude/skills, .claude/commands, .claude/hooks, .claude/workflows,
-    .gemini, scripts/commit_guardian, scripts/doc_compliance and
-    scripts/feedback, plus the single-file shims .pre-commit-config.yaml and
-    .claude/settings.json,
-  And the output root sits at <target_root>/.leafcutter,
-  When a build creates those shims as symlinks (shim_strategy "symlink", or
-    "auto" where link creation succeeds),
-  Then reading each link back returns a relative path — it does not begin at a
-    filesystem root and contains no directory name belonging to the machine the
-    build ran on,
-  And the relative path is expressed from the directory containing the link,
-    not from the directory the build process was invoked in, so a link nested
-    one level deep carries one leading parent step and a link at the project
-    root carries none: .claude/agents reads back as "../.leafcutter/agents",
-    scripts/commit_guardian reads back as
-    "../.leafcutter/scripts/commit_guardian", .gemini reads back as
-    ".leafcutter/gemini", and .pre-commit-config.yaml reads back as
-    ".leafcutter/pre-commit-config.yaml",
-  And every link resolves to exactly the same file or directory inside the
-    output root as it did when the target was absolute — the destination is
-    unchanged and only the way the link records it differs,
-  And after the entire project tree (both the links and the output root they
-    point into) is moved or copied to a different absolute path, each link
-    still resolves to its counterpart inside the relocated output root, with no
-    link left dangling,
-  And re-running the build over a shim that is already relative leaves the
-    recorded target unchanged, character for character,
-  And re-running the build over a shim left absolute by an earlier build
-    replaces the recorded target with the relative form, so no absolute shim
-    survives a rebuild,
-  And when the canonical location and the output root have no common ancestor
-    on the filesystem, so no relative path between them can be expressed, the
-    link is created with an absolute target instead and the build still
-    completes,
-  And when a shim is produced by the copy strategy — requested explicitly via
-    shim_strategy "copy", or entered as the automatic fallback after the
-    platform refuses link creation — it remains a copied file or directory
-    exactly as before: a copy records no target, so this criterion imposes
-    nothing on the copy path and must not be read as a reason to change it.
+change_target: code
+component: build-pipeline
+components:
+- build_pipeline
+created: 2026-08-14
+criteria: "Given install_shims() bridges canonical tool paths into the consolidated\n\
+  \  output root (ADR-004 / ADR-016) — the directory shims .claude/agents,\n  .claude/skills,\
+  \ .claude/commands, .claude/hooks, .claude/workflows,\n  .gemini, scripts/commit_guardian,\
+  \ scripts/doc_compliance and\n  scripts/feedback, plus the single-file shims .pre-commit-config.yaml\
+  \ and\n  .claude/settings.json,\nAnd the output root sits at <target_root>/.leafcutter,\n\
+  When a build creates those shims as symlinks (shim_strategy \"symlink\", or\n  \"\
+  auto\" where link creation succeeds),\nThen reading each link back returns a relative\
+  \ path — it does not begin at a\n  filesystem root and contains no directory name\
+  \ belonging to the machine the\n  build ran on,\nAnd the relative path is expressed\
+  \ from the directory containing the link,\n  not from the directory the build process\
+  \ was invoked in, so a link nested\n  one level deep carries one leading parent\
+  \ step and a link at the project\n  root carries none: .claude/agents reads back\
+  \ as \"../.leafcutter/agents\",\n  scripts/commit_guardian reads back as\n  \"../.leafcutter/scripts/commit_guardian\"\
+  , .gemini reads back as\n  \".leafcutter/gemini\", and .pre-commit-config.yaml reads\
+  \ back as\n  \".leafcutter/pre-commit-config.yaml\",\nAnd every link resolves to\
+  \ exactly the same file or directory inside the\n  output root as it did when the\
+  \ target was absolute — the destination is\n  unchanged and only the way the link\
+  \ records it differs,\nAnd after the entire project tree (both the links and the\
+  \ output root they\n  point into) is moved or copied to a different absolute path,\
+  \ each link\n  still resolves to its counterpart inside the relocated output root,\
+  \ with no\n  link left dangling,\nAnd re-running the build over a shim that is already\
+  \ relative leaves the\n  recorded target unchanged, character for character,\nAnd\
+  \ re-running the build over a shim left absolute by an earlier build\n  replaces\
+  \ the recorded target with the relative form, so no absolute shim\n  survives a\
+  \ rebuild,\nAnd when the canonical location and the output root have no common ancestor\n\
+  \  on the filesystem, so no relative path between them can be expressed, the\n \
+  \ link is created with an absolute target instead and the build still\n  completes,\n\
+  And when a shim is produced by the copy strategy — requested explicitly via\n  shim_strategy\
+  \ \"copy\", or entered as the automatic fallback after the\n  platform refuses link\
+  \ creation — it remains a copied file or directory\n  exactly as before: a copy\
+  \ records no target, so this criterion imposes\n  nothing on the copy path and must\
+  \ not be read as a reason to change it.\n"
 depends_on: []
 doc_links:
-  - path: scripts/build_helpers.py
-    relationship: modifies
-    status: exists
-  - path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
-    relationship: describes
-    status: exists
-  - path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
-    relationship: describes
-    status: exists
-change_target: code
+- path: scripts/build_helpers.py
+  relationship: modifies
+  status: exists
+- path: docs/architecture/adrs/ADR-016-ci-fresh-clone-test-dependencies.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-004-consolidated-output-root.md
+  relationship: describes
+  status: exists
+id: BP-017
+level: L2
+notes: 'Follow-up identified during /quick-fix BP-016 (merged as 47fb660f, PR #441).
+  BP-016 fixed the tracking half — the shims are now untracked and matched by .gitignore,
+  so one developer''s absolute paths are no longer published to every clone. This
+  AC covers the remaining robustness half. install_shims() builds both canonical_path
+  and source_path as absolute paths and passes the absolute source straight to Path.symlink_to(),
+  so every link bakes in one machine''s directory layout; that is what made BP-016''s
+  damage possible in the first place, and it still breaks any tree that is moved,
+  copied, rsynced or bind-mounted at a different path. Two shim depths exist and need
+  different prefixes, which is why the relative target must be computed against the
+  link''s parent directory rather than the process working directory: .gemini and
+  .pre-commit-config.yaml sit at the project root, while .claude/* and scripts/* sit
+  one level down. Scope note: the single-file shims created alongside the directory
+  shims are included deliberately — they are produced by the same function from the
+  same absolute source_path and carry the identical portability hazard, and fixing
+  only the directory half would leave .pre-commit-config.yaml pointing at a machine-local
+  path.'
+origin_agent: BrainCandy
+priority: medium
+readiness: draft
 risk_surface: contract_boundary
-notes: >-
-  Follow-up identified during /quick-fix BP-016 (merged as 47fb660f, PR #441).
-  BP-016 fixed the tracking half — the shims are now untracked and matched by
-  .gitignore, so one developer's absolute paths are no longer published to every
-  clone. This AC covers the remaining robustness half. install_shims() builds
-  both canonical_path and source_path as absolute paths and passes the absolute
-  source straight to Path.symlink_to(), so every link bakes in one machine's
-  directory layout; that is what made BP-016's damage possible in the first
-  place, and it still breaks any tree that is moved, copied, rsynced or
-  bind-mounted at a different path.
-  Two shim depths exist and need different prefixes, which is why the relative
-  target must be computed against the link's parent directory rather than the
-  process working directory: .gemini and .pre-commit-config.yaml sit at the
-  project root, while .claude/* and scripts/* sit one level down.
-  Scope note: the single-file shims created alongside the directory shims are
-  included deliberately — they are produced by the same function from the same
-  absolute source_path and carry the identical portability hazard, and fixing
-  only the directory half would leave .pre-commit-config.yaml pointing at a
-  machine-local path.
+status: active
+title: Symlink shims are created with targets relative to the link's own location
+work_status: done
