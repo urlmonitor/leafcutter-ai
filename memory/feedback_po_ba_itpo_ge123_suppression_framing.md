@@ -10,21 +10,28 @@ when next editing it.**
 ## GE-120 is CURRENTLY a duplicated id — observed 2026-08-18
 
 Two records claim `GE-120`: the L0 tree
-`guardrail-engine/GE-120-green-means-checked/GE-120.yaml` (renamed from GE-119
-by origin/main PR #453) and a loose L2 at `guardrail-engine/GE-120.yaml`
-(subject: the doc-frontmatter guard enforcing the declared document types). Same
-id, different levels, different subjects — the same shape as the GE-119
-collision the PROJECT_CONTEXT records as resolved. It is NOT resolved; the
-rename relocated it. Flagged, not fixed. It is exactly the defect class GE-122a
-exists to catch, and GE-122e ("repair the drift that already exists") should
-treat it as a live instance rather than assuming the store is clean.
+`guardrail-engine/GE-120-green-means-checked/GE-120.yaml` (renamed onto this id
+from its retired predecessor by origin/main PR #453) and a loose L2 at
+`guardrail-engine/GE-120.yaml` (subject: the doc-frontmatter guard enforcing the
+declared document types). Same id, different levels, different subjects — the
+same shape as the earlier collision the PROJECT_CONTEXT records as resolved. It
+is NOT resolved; the rename relocated it. Flagged, not fixed. It is exactly the
+defect class GE-122a exists to catch, and GE-122e ("repair the drift that
+already exists") should treat it as a live instance rather than assuming the
+store is clean.
+
+(The retired predecessor id is deliberately not written out here. A guard added
+by GE-122e-1 fails the build on any live citation of it outside dated
+historical records — changelogs, tickets, the guardrail-engine AC tree — and
+this note is none of those. PR #453 is the durable pointer.)
 
 ## Root-id registry for guardrail-engine, 2026-08-18
 
 Taken: GE-100..GE-113, GE-114 (loose, as `GE-114-N`), GE-115 (loose), GE-116,
 GE-117, GE-118, GE-120 (twice — see above), GE-122, GE-123.
 
-- `GE-119` is RETIRED and must never be reissued.
+- The id between GE-118 and GE-120 is RETIRED and must never be reissued (see
+  PR #453; not written out here, per the GE-122e-1 citation guard).
 - `GE-121` must not be reissued either: GE-111f's and GE-122e's prose cite it
   repeatedly as the rejected candidate for the GE-111f move, so a reader would
   resolve it to the wrong thing.

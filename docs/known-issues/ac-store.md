@@ -182,7 +182,9 @@ a whole-store check rather than a per-file one, so it needs a mode that takes th
 root — note the CLI currently accepts **file** arguments only and silently skips
 anything that is not a `.yaml`, which is also why a directory argument returns the
 misleading `No YAML files to validate.` Worth covering retired ids in the same pass:
-`GE-119` is recorded as retired and must never be reissued, which a pure
-uniqueness check would not catch on its own.
+the id between GE-118 and GE-120 is recorded as retired and must never be
+reissued (see PR #453), which a pure uniqueness check would not catch on its
+own. It is not written out here because the GE-122e-1 guard fails the build on
+any live citation of it outside dated historical records.
 
 ---

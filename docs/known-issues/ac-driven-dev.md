@@ -377,7 +377,7 @@ Ordering, from git:
 
 | When | Commit | What |
 |---|---|---|
-| 2026-08-17 16:48 | `ec8bb173a` (#453) | the `GE-119` tree was renamed to `GE-120` — folder + 43 files |
+| 2026-08-17 16:48 | `ec8bb173a` (#453) | a tree was renamed onto `GE-120` from its now-retired predecessor id — folder + 43 files |
 | 2026-08-18 09:09 | `160d4f47a` (#466) | a **`plan-feature(AC)`** run authored a loose L2 *also* claiming `GE-120` |
 
 The tree held the id for ~16 hours before `/plan-feature` reissued it. A
@@ -393,7 +393,9 @@ uniqueness, so a duplicate id merges clean.
 **Fix direction.** Id allocation must enumerate every `id:` field actually present in
 the component's store — walking the directory tree, not listing folder names or loose
 files alone — and must refuse to allocate an id already in use. It should also treat
-retired ids as taken: `GE-119` is recorded as retired and must never be reissued.
+retired ids as taken: the id between GE-118 and GE-120 is recorded as retired and
+must never be reissued (see PR #453; not written out here, because the GE-122e-1
+guard fails the build on any live citation of it).
 
 **Not fixed here.** Resolving the live `GE-120` collision means renaming one of the two
 records. The loose L2 is the later claimant (#466) and is the cheaper move — 1 AC file
