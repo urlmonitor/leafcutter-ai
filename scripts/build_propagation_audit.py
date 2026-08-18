@@ -529,4 +529,14 @@ def propagation_audit(
 #   per the AC's n_location_rule); this file is documented because the AC's doc_links
 #   name it with an "extends" relationship. No functional change in this file.
 #   (#BP-900b-1)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/06_BP-900b-1-1]: Confirmed
+#   test_drift classification (ADR-003 Rule 1): EXTERNAL_DEPENDENCY_ALLOWLIST /
+#   check_broken_references() / build_broken_ref_report() already implement this
+#   AC's Gherkin in full (allowlisted references resolve, are excluded from the
+#   broken set, and the build exits zero) — authored under
+#   EPIC-BuildGuardFalsePositive/03, before this AC existed. No behavior in this
+#   file changed; the gap closed by this ticket was a missing dedicated test
+#   (unit_tests/build_guards/test_bp900b1_1_external_dependency_allowlist.py) and
+#   a missing architecture-doc section (template-compiler.md, "External-Dependency
+#   Allowlist (AC BP-900b-1-1)"). (#BP-900b-1-1)
 # ===========================================================================

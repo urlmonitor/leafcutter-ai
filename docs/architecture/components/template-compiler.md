@@ -136,6 +136,35 @@ all three of the following fields — none may be empty or omitted:
 is the factory that produces the list of `BrokenRefEntry` instances for a
 build run.
 
+## External-Dependency Allowlist (AC BP-900b-1-1)
+
+`EXTERNAL_DEPENDENCY_ALLOWLIST` (`scripts/build_propagation_audit.py`) is a
+`frozenset[str]` of `scripts/<path>` strings that the reference guard treats
+as intentionally external — scripts that agent or skill templates reference
+but that this repository does not, and is not expected to, deploy itself
+(e.g. `scripts/build.py`'s own self-reference, or
+`scripts/inline_adr/append_entry.py`, which doc-enforcer's SKILL.md already
+guards with an explicit "if present" check). Each entry carries an inline
+comment explaining why the path is legitimately out of scope rather than a
+deploy-phase gap.
+
+`check_broken_references(refs, deployed_scripts, allowlist=None)` and
+`build_broken_ref_report(refs_to_sources, deployed_scripts, allowlist=None)`
+both resolve a reference against `deployed_scripts | allowlist` before
+deciding it is broken, defaulting `allowlist` to
+`EXTERNAL_DEPENDENCY_ALLOWLIST` (merged with the empty
+`KNOWN_UNDEPLOYED_ALLOWLIST`) when the caller passes `None` — which is the
+path `build._check_script_reference_guard` exercises in production, since it
+calls `build_broken_ref_report` without an explicit `allowlist` argument.
+Per AC BP-900b-1-1: when a referenced script path (e.g.
+`scripts/external_tool.py`) is listed in `EXTERNAL_DEPENDENCY_ALLOWLIST`,
+the guard treats the reference as resolved, and it does NOT appear in the broken-reference
+set or report, even though the path is absent from `deployed_scripts` — so
+the build exits zero on that reference alone (assuming no other broken
+references exist). A reference that is neither deployed nor allowlisted is
+still reported broken; the allowlist only resolves the paths it explicitly
+names.
+
 ## CI and Fresh-Clone Test Requirements
 
 The full test suite requires the build step to run **before** `pytest` on any
