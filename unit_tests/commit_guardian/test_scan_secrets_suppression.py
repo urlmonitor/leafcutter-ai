@@ -135,6 +135,8 @@ class TestIsSuppressedPathSuffixSemantics(unittest.TestCase):
 
     def test_basename_collision_not_suppressed(self):
         # covers: GE-113c-3
+        # covers: GE-113c-3-i
+        # covers: GE-113c-3-iv
         """AC-3 / Path A: basename equality alone is never sufficient to
         suppress a finding when the allowlist entry contains a path
         separator. `RULE:src/foo.py:*` must NOT suppress a finding at
@@ -160,6 +162,8 @@ class TestIsSuppressedPathSuffixSemantics(unittest.TestCase):
 
     def test_longer_allowlist_not_shadows_shorter(self):
         # covers: GE-113c-3
+        # covers: GE-113c-3-ii
+        # covers: GE-113c-3-iv
         """AC-2 / AC-3 / Path B: a longer allowlist path must not suppress a
         structurally shorter finding path. `RULE:src/config/foo.py:*` must
         NOT suppress a root-level finding at `foo.py`.
@@ -180,6 +184,7 @@ class TestIsSuppressedPathSuffixSemantics(unittest.TestCase):
 
     def test_bare_filename_suppresses_any_depth(self):
         # covers: GE-113c-3
+        # covers: GE-113c-3-iii
         """Bare-filename allowlist entries (no path separator) suppress
         findings with that basename at any depth — the preserved,
         intentional contract for entries with a single path segment (a
@@ -207,6 +212,51 @@ class TestIsSuppressedPathSuffixSemantics(unittest.TestCase):
             msg="wildcard '*' allowlist path must suppress any finding for "
             "the matching rule",
         )
+
+    def test_exact_path_match_suppresses_ii(self):
+        # covers: GE-113c-3-ii
+        # covers: GE-113c-3-iv
+        """GE-113c-3-ii positive arm: the same 3-segment allowlist entry that
+        must NOT suppress a 1-segment finding path MUST still suppress the
+        finding whose path matches it exactly.
+
+        Paired with test_longer_allowlist_not_shadows_shorter so the negative
+        arm cannot be satisfied by a rule that simply suppresses nothing.
+        """
+        finding = self._finding("src/config/foo.py")
+        allowlist = {("GENERIC_SECRET", "src/config/foo.py", "*")}
+
+        self.assertTrue(
+            self._mod._is_suppressed(finding, allowlist),
+            msg="an allowlist entry matching the finding path exactly must "
+            "still suppress it (GE-113c-3-ii positive arm)",
+        )
+
+    def test_path_qualified_does_not_degrade_to_basename(self):
+        # covers: GE-113c-3-iii
+        # covers: GE-113c-3-iv
+        """GE-113c-3-iii second scenario: a path-qualified entry must not
+        degrade into a basename match.
+
+        Allowlist "config/.env" suppresses "config/.env" (exact) and
+        "src/config/.env" (segment suffix), but must NOT suppress
+        "deploy/.env", which shares only the basename.
+        """
+        allowlist = {("GENERIC_SECRET", "config/.env", "*")}
+
+        for path in ("config/.env", "src/config/.env"):
+            with self.subTest(path=path, expected="suppressed"):
+                self.assertTrue(
+                    self._mod._is_suppressed(self._finding(path), allowlist),
+                    msg=f"{path} is a segment-suffix match and must suppress",
+                )
+
+        with self.subTest(path="deploy/.env", expected="not suppressed"):
+            self.assertFalse(
+                self._mod._is_suppressed(self._finding("deploy/.env"), allowlist),
+                msg="a path-qualified allowlist entry must not degrade to a "
+                "basename match for deploy/.env",
+            )
 
 
 if __name__ == "__main__":

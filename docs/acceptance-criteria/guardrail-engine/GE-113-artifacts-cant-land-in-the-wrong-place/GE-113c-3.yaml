@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 criteria: |
@@ -89,7 +89,9 @@ covered_by:
   - GE-113c-3-ii
   - GE-113c-3-iii
   - GE-113c-3-iv
-implemented_by: []
+implemented_by:
+  - templates/skills/security-scanner/scripts/scan_secrets.py
+  - unit_tests/commit_guardian/test_scan_secrets_suppression.py
 notes: "Semantic-fit note: the parent L1 GE-113c is about deployed-layout root resolution; this L2 addresses _is_suppressed algorithm correctness in the secrets scanner — a related but distinct concern. The user accepted this drift consciously for pipeline speed. The bug: line 114 of scan_secrets.py compares fp_parts against a suffix of ITSELF (not al_parts), yielding two exploit paths (basename collision and root-level shadowing) detailed in the L3 children."
 change_target: code
 risk_surface: contract_boundary
