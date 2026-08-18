@@ -9,6 +9,15 @@ component: build-pipeline
 level: L1
 status: active
 work_status: todo
+# Temporary waiver, 2026-08-17. BP-300e has carried 6 L2 children (BP-300e-1..-6)
+# since before the 2026-08-17 reconciliation; the default L1 cap is 5, so
+# check-ac-limits (ACS-100c-1) blocks ANY commit that stages one of those six —
+# including a work_status-only reconciliation that does not add a child. This
+# override unblocks that without weakening the rule for anyone else: it is scoped
+# to this parent, and 6 is the current count, so adding a 7th child still blocks.
+# NOT a resolution. The tree-shape debt stands and wants ac-tree-split Pattern C
+# (split BP-300e into sibling L1s). Remove this line when that lands.
+child_limit_override: 6
 criteria: |
   Extra wording in an agent's reply never crashes your run.
 

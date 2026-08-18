@@ -8,7 +8,7 @@ status: active
 req_status: draft
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Given a workflow dispatches a helper agent and receives its result already as a
     structured object or array rather than as a string of text (the runtime handed
