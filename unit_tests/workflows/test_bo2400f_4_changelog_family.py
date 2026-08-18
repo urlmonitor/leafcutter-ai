@@ -162,10 +162,11 @@ compute_changelog_requirement: Any = None
 build_changelog_payload: Any = None
 
 try:
-    from fast_lane import (  # noqa: E402  # type: ignore[no-redef]
-        build_changelog_payload,
-        compute_changelog_requirement,
-    )
+    # Split into one import per line: with a parenthesised import mypy reports
+    # no-redef against the individual name lines, so an ignore on the opening
+    # line never applies. Same single-line shape the sibling KI-BO-003 suite uses.
+    from fast_lane import build_changelog_payload  # type: ignore[no-redef]  # noqa: E402
+    from fast_lane import compute_changelog_requirement  # type: ignore[no-redef]  # noqa: E402
     _FUNC_IMPORT_OK = True
 except (ImportError, AttributeError) as _exc:
     _FUNC_IMPORT_ERR = str(_exc)
