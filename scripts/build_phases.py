@@ -1831,9 +1831,12 @@ def validate_agent_self_description(
     ``knowledge_channels``.
 
     ``skills_invoked`` entries are validated by resolving ``skill_id`` against
-    both ``target_root / "templates" / "skills"`` (package) and
-    ``.claude/skills/`` (project-local). An unresolvable skill_id produces a
-    problem entry naming which lookup location was checked.
+    the canonical source only: ``target_root / "templates" / "skills"`` (the
+    package tree, populated by the same registry the build ships from). The
+    deployed ``.claude/skills/`` tree is never consulted — a stale or missing
+    local deploy must not change the verdict (BP-1300a-1-ii). An unresolvable
+    skill_id produces a problem entry naming the offending skill_id and the
+    referencing registry entry.
 
     Entries marked ``descriptive_only: true`` document intentional inline
     capabilities that have no deployed skill directory by design. The validator
@@ -1884,11 +1887,18 @@ def validate_agent_self_description(
     #   test prevents accidental skipping when the key holds a string, int, or None.
     #   Unmarked unresolvable entries continue to fail (guardrail preserved).
     #   (#TICKET-20260708-BP-1300a-descriptive-skills)
+    # - 2026-08-18 [python-coder/EPIC-BuildPipelinePhantomRemediation/02_bp1300a1]:
+    #   Dropped the ``in_project`` (deployed ``.claude/skills/``) resolution leg
+    #   per BP-1300a-1 / -1-i / -1-ii. A stale local deploy previously resolved
+    #   ``in_project = True`` for a since-removed skill, masking a genuinely
+    #   dangling pointer in a local checkout while it still failed a fresh CI
+    #   clone — an environment-dependent verdict. Resolution is now against the
+    #   canonical source only (``templates/skills/``); the error message no
+    #   longer names the deployed path. (#02_bp1300a1_canonical_skill_resolution)
     """
     agents_template_dir = target_root / "templates" / "agents"
     registry_path = target_root / "config" / "agent_registry.json"
     package_skills_dir = target_root / "templates" / "skills"
-    project_skills_dir = target_root / ".claude" / "skills"
 
     _REQUIRED_FRONTMATTER = [
         "behavioral_patterns",
@@ -1978,13 +1988,12 @@ def validate_agent_self_description(
                             if inv.get("descriptive_only") is True:
                                 continue  # Intentional inline-capability entry (INF-600d-1) — no deployed skill dir required
                             in_package = (package_skills_dir / skill_id).exists()
-                            in_project = (project_skills_dir / skill_id).exists()
-                            if not in_package and not in_project:
+                            if not in_package:
                                 problems.append(
                                     f"Registry entry '{agent_name}' has unresolvable "
                                     f"skills_invoked skill_id '{skill_id}'.\n"
-                                    f"  Not found in package (templates/skills/{skill_id}/) "
-                                    f"nor project-local (.claude/skills/{skill_id}/).\n"
+                                    f"  Not found in the canonical source "
+                                    f"(templates/skills/{skill_id}/).\n"
                                     f"  Fix hint: Create the skill template or correct the skill_id."
                                 )
 
