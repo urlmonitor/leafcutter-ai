@@ -81,8 +81,11 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Added estimated_complexity (S), it_requirements (recovered baseline = post_merge ∩ fails-on-main; exclude passers; forward as non-null at ~L759-761; the load-bearing []-vs-null edge so an all-regressions case is not re-conservatized; no new triage code), and test_spec (4 descriptors incl. the empty-list edge). Tightened delivers_to to state the empty-list/never-null recovery contract. assigned_agent python-coder and criteria unchanged."
     by: it-po
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_finalize_baseline_recovery.py::test_behavioral_recovery_ok_subset_triage_gets_recovered_list
+  - unit_tests/workflows/test_finalize_baseline_recovery.py::test_behavioral_recovery_ok_empty_triage_gets_empty_not_null
+implemented_by:
+  - templates/workflows-js/finalize-feature.js
 change_target: pipeline
 risk_surface: contract_boundary
-work_status: todo
+work_status: done

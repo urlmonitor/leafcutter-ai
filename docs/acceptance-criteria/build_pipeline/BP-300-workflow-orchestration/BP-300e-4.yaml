@@ -13,11 +13,38 @@ criteria: |
   Given a workflow run dispatches a helper agent to return a structured result,
   And that agent's reply contains no recoverable structured result at all
     (prose only, with no valid JSON object or array anywhere in it),
+  And the point in the run that reads that reply is not named in the workflow's
+    declared degradation register — the single, enumerable list, carried in the
+    workflow itself, of the reply-reading points that are allowed to carry on
+    without a readable reply, each entry naming the stage it covers, the
+    substitute value the run carries on with, and a written reason,
   When the workflow reads the agent's reply,
   Then the run stops with a clear, typed error that names the stage and the agent
     whose reply could not be understood,
   And the failure is neither silently skipped nor swallowed — the user is told a real
     problem occurred rather than the run appearing to succeed with missing output.
+
+  Given the same unreadable reply,
+  And the point that reads it IS named in the workflow's declared degradation
+    register,
+  When the workflow reads the agent's reply,
+  Then the run carries on using exactly the substitute value that register entry
+    declares, and no other,
+  And the run's own account of what happened records that the named stage carried
+    on without a readable reply, so a run that finishes never presents that stage
+    as having produced the result it was asked for.
+
+  Given a reply-reading point where the reply IS the product the stage exists to
+    deliver — for example the stage that authors requirements, whose reply carries
+    the list of requirements it wrote,
+  And that stage's agent returns a prose-only reply,
+  When the workflow reads the agent's reply,
+  Then the run stops with the typed error naming that stage and that agent,
+  And it stops whether or not that point appears in the declared degradation
+    register, because a substitute that lets a stage report success while its
+    product is missing is not an admissible degradation — the register admits only
+    substitutes that steer the run toward more checking, never toward an unearned
+    success.
 depends_on:
   - BP-300e
 assigned_agent: python-coder
@@ -48,16 +75,68 @@ test_spec:
     type: unit
     description: "Reader given a prose-only string raises a typed error whose message carries the caller-supplied stage/agent identity (not a generic crash, not None)."
   - name: test_run_halts_on_unparseable_reply
-    target_dir: unit_tests/
+    target_dir: unit_tests/workflows/
     framework: unittest
-    type: integration
-    description: "Stubbed agent returns prose-only output; the run halts with the named error rather than proceeding with missing output."
+    type: behavioral
+    description: "Executing the workflow under run_workflow_under_e2 with a prose-only reply substituted at a reading point NOT in the declared degradation register, the run stops at that point: the typed stage/agent error surfaces and NO dispatch is observed after that point (the audit's dispatch_count=6-and-no-error signature must fail this test)."
+  - name: test_registered_reading_point_degrades_to_its_declared_substitute_and_says_so
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Executing the workflow with a prose-only reply substituted at a reading point that IS in the register (the step-0 baseline), the run continues and the value it carries forward — read off the later dispatch that consumes it — equals exactly the declared substitute, and the run's reported outcomes record that stage as having degraded rather than succeeded."
+  - name: test_stage_product_reading_point_halts_even_if_registered
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Stubbed AC-authoring agent returns prose-only output; the run halts with the typed error and never reports the authoring stage as succeeded with an empty list of written requirements, whether or not that point is listed in the register."
 origin_agent: BrainCandy
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: "adjudication of BP-300e-4 against the step-0 baseline degradation exception"
+    by: business-analyst
+    entry: >-
+      2026-08-17. Adjudicated the head-on conflict between this AC's halt requirement and
+      the deliberate degrade-on-malformed-reply behaviour at the finalize step-0 baseline
+      site (templates/workflows-js/finalize-feature.js:841-846, comment "AC-4"). The halt
+      requirement is CORRECT and is retained unchanged as the default. What changed is that
+      the exception is no longer allowed to be implicit: criteria now require the permitted
+      exceptions to live in a single declared, enumerable degradation register carried in
+      the workflow, each entry naming its stage, its substitute value and a written reason;
+      require a registered degradation to be reported in the run's own account of what
+      happened rather than passing as success; and refuse the exception outright to any
+      reading point whose reply IS the stage's product. Two scenarios and two test_spec
+      descriptors were added for those clauses; the original scenario is unchanged except
+      for the register qualifier on its Given. Grounds are recorded in notes. No other field
+      touched; work_status left at todo.
+  - reason: "it-po-review-of-amended-test-contract"
+    by: it-po
+    entry: >-
+      2026-08-17. Reviewed the BA's extended test_spec as the technical owner of the test
+      contract; corrected three of the four descriptors and left the reader-level one alone.
+      (1) test_run_halts_on_unparseable_reply, (2)
+      test_registered_reading_point_degrades_to_its_declared_substitute_and_says_so and (3)
+      test_stage_product_reading_point_halts_even_if_registered were all filed under
+      target_dir unit_tests/ with type integration, which points them at the reader-unit
+      file rather than the workflow suite; retargeted to unit_tests/workflows/ and retyped
+      behavioral, matching the in-repo behavioural precedent for workflow-level proof.
+      Descriptions (1) and (2) named the outcome but not the observable, so both were
+      satisfiable by a direct-call assertion that never runs the workflow: (1) now requires
+      execution under run_workflow_under_e2 and pins the halt to the ABSENCE of any dispatch
+      after that point — the exact signature the audit found violated (prose-only pre-flight
+      reply yielded dispatch_count=6 and no error); (2) now requires the substitute to be
+      read off the later dispatch that consumes it, so an implementation that continues with
+      some other default fails. Descriptor
+      test_prose_only_reply_raises_typed_error_naming_stage_and_agent was left untouched: it
+      is a reader-level unit test, correctly sited at unit_tests/ alongside the existing
+      parseAgentJson suite, and it is the one claim in this AC the audit confirmed already
+      holds. Descriptor (3)'s description was already the strongest of the four — it names
+      the empty-written-requirements-as-success outcome explicitly — so only its
+      target_dir/type changed. criteria, it_requirements, assigned_agent, complexity and
+      contracts untouched.
 superseded_by: null
 covered_by:
   - BP-300e-4-i
+  - BP-300e-4-ii
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
@@ -70,3 +149,77 @@ notes: >-
   error rather than proceeding. This AC is the "never blind" guarantee — the deliberate
   boundary between tolerated cosmetic wording (BP-300e-1..3) and a genuinely unusable
   reply.
+
+
+  ADJUDICATION 2026-08-17 — halt-by-default vs the step-0 baseline exception.
+  This AC now carries the declared-exception mechanism, so the argument is recorded here
+  in full. Do not re-open it without reading this section.
+
+
+  THE TWO POSITIONS.
+  Side A is this AC (and its L3 child BP-300e-4-i): a reply with no recoverable structured
+  result must stop the run with a typed error naming the stage and agent, "neither silently
+  skipped nor swallowed", never "the run appearing to succeed with missing output".
+  Side B is the finalize step-0 baseline site. Its in-source rationale reads: "Malformed
+  reply is not the same as 'baseline failed' — degrade gracefully (same as run_failed path)
+  without spuriously halting." The "AC-4" that comment cites is a TICKET-BODY-LOCAL label,
+  not a store id: it is AC-4 of tickets/99_done/EPIC-FinalizeFeatureHardening-2/
+  09_finalize_p2_hygiene.md ("Step result parsing uses a defined structured contract (or a
+  tolerant parse that distinguishes 'agent said halt' from 'reply was malformed'), so a
+  malformed-but-benign reply does not spuriously halt finalize"), delivered in commit
+  e76e7fcbd. That ticket predates AC-store-first authoring and carries no ac_coverage
+  mapping. The STORE AC that carries the same requirement at that same site is FIN-100a-2
+  "Baseline capture degrades gracefully on failure" (readiness reviewed, work_status done),
+  whose it_requirements state: "Parse-failure of the agent response must also degrade
+  gracefully (status: parse_failed)".
+
+
+  THE DECISION — option (c), a hardened form of (a).
+  Side A holds by default. The exception survives, but ONLY through a single declared
+  degradation register, and only for substitutes that point the run toward more checking.
+  Three clauses make the register non-abusable: (1) a reading point not in the register
+  halts; (2) a registered degradation must be reported in the run's own account of what
+  happened, so it cannot pass as success; (3) a reading point whose reply IS the stage's
+  product is refused the exception outright, however it is declared.
+
+
+  GROUNDS.
+  Side B's rationale is genuinely sound AT THAT ONE SITE and nowhere else by default. The
+  baseline is an advisory input to a conservative default: a null/parse_failed baseline
+  makes triage treat every post-merge failure as a regression (FIN-100c-3), which is the
+  SAFER direction. Halting there instead would strictly reduce finalize's availability while
+  buying no safety, and would regress FIN-100a-2 — an approved, done, tested behaviour. That
+  is why option (b) was rejected.
+
+  Plain option (a) was rejected as too weak. The defect the audit found is not that an
+  exception exists; it is that the exception is implicit and unbounded. Expressed as a bare
+  `catch { <safe default> }` it is indistinguishable at a glance from an accidental swallow,
+  and it has metastasised to roughly 50 sites — 26 in plan-feature.js and 24 in
+  finalize-feature.js. Behaviourally confirmed via the E2 harness: injecting a prose-only
+  pre-flight reply into finalize-feature.js produced dispatch_count=6 and no error, the run
+  sailing on with the worktree root defaulted. Merely requiring the set be enumerable would
+  let someone enumerate all fifty and declare compliance.
+
+  Clause (3) is the load-bearing one. It kills the worst instance, plan-feature.js:2231-2235,
+  where the catch sets stepResultObj = {} so acs_written becomes [] and the AC-authoring
+  stage reports success having written nothing. That is verbatim the outcome this AC's own
+  second clause forbids — "the run appearing to succeed with missing output" — so no
+  declaration can ever admit it. The direction test is the discriminator between the two
+  sites: the baseline substitute causes MORE checking, the authoring substitute manufactures
+  an unearned success.
+
+
+  WHAT THIS OBLIGES.
+  The step-0 baseline site keeps its behaviour but must become a register entry rather than
+  a bare catch. Every other swallowing site either becomes a register entry that passes the
+  direction test, or halts. The register's completeness and its ratchet against new
+  undeclared swallows is specified separately in BP-300e-4-ii, because that is a whole-run
+  inventory property this AC's per-reply Given/When/Then cannot carry.
+
+
+  PROOF CONSTRAINT. Every clause above is stated so it is provable by EXECUTING the workflow
+  under the E2 harness (run_workflow_under_e2) with an injected prose-only reply, and
+  asserting on the run's halt/continue behaviour, its substitute value and its reported
+  outcomes. Nothing here is satisfiable by reading the .js text — a grep-only proof over
+  workflow source is the defect class BP-1100b-5 exists to reject, and a `catch` block is
+  precisely the construct whose presence proves nothing about which branch runs.

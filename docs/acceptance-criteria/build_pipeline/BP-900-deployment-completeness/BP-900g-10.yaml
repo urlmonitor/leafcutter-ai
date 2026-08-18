@@ -1,0 +1,269 @@
+id: BP-900g-10
+components:
+  - build_pipeline
+title: "A deployed script that cannot load a dependency it needs stops instead of emitting degraded output"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given a deployed script whose output depends on data or behaviour it obtains by
+    loading another module at runtime,
+  And that module being absent, unreadable, or unloadable in the install where the
+    script is running,
+  When the script runs,
+  Then it stops with a non-zero exit and an error naming the dependency it could not
+    load and the output it therefore cannot produce,
+  And it does NOT continue with a neutral default — an empty mapping, an empty list,
+    a passthrough — because a neutral default is indistinguishable in the output from
+    a correct result computed against a dependency that had nothing to say,
+  And it does not downgrade the condition to a log line, because a warning emitted
+    into a build or agent transcript that already carries hundreds of lines is
+    observationally equivalent to silence,
+  And no artifact is written on the failing path, so a partially-correct artifact is
+    never left behind for a later step to consume as if it were complete,
+  And the demonstration builds into a temporary target, removes the dependency from
+    the deployed tree, invokes the deployed script's real entry point in a fresh
+    subprocess against a real on-disk input, and asserts both the non-zero exit and
+    the absence of the output artifact — asserting that the loader function returns
+    an error when called directly does not satisfy this criterion, because the
+    degradation happens in the caller that ignores it,
+  Because at HEAD 339b0981c the sibling loader in
+    scripts/ac_store/generate_ticket_from_ac.py (~line 328) catches OSError at ~line
+    334, logs a WARNING and returns an empty mapping, so in a consumer install every
+    generated ticket silently receives the wrong `components` list. The ticket is
+    produced, it looks well-formed, and the field that is wrong is precisely the one
+    the knowledge graph reads — the failure is durable, downstream, and invisible at
+    the point it occurs.
+depends_on:
+  - BP-900g
+  - BP-900g-8
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance: sibling resolution ~line 328, OSError caught ~line 334 returning an empty mapping. The degraded path produces a ticket with the wrong components list rather than no ticket."
+  - path: scripts/ac_store/_component_migration_map.py
+    relationship: describes
+    status: exists
+    relevance: "The dependency whose absence in a consumer install triggers the degradation."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines why a wrong `components` list is consequential: it is the list the knowledge graph reads for component_membership edges, not the scalar `component`."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Error Handling Policy Rule 3 — an except block must log at WARNING or higher OR re-raise. This AC resolves the ambiguity for this class: for a dependency the output's correctness depends on, logging alone is not sufficient."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary (deployed + real_artifact + failure, with must_block on the entry point)."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Delivers the temp-target deployed-tree harness this AC reuses (it removes a dependency from that same tree), and the closure whose static blind spots this AC is the runtime backstop for. Read its IT-PO RULING before implementing: the same three-set direction rule constrains what may be assumed about the deploy map."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Produces the temporary target the deployed script is exercised from (`python scripts/build.py --target-dir <tmp>`). Not modified by this AC — the change is in the deployed script — but it is how the test reaches the deployed layout at all."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The load contract this AC narrows CLAUDE.md Error Handling Policy Rule 3 with. Rule 3 permits an except block to either log at WARNING or re-raise; this classification decides which of those two is permitted, per dependency, and is the thing that must be made explicit at each load site."
+    required:
+      - dependency_class
+      - on_failure
+    properties:
+      dependency_class:
+        type: string
+        description: "REQUIRED — the caller's output is wrong or incomplete without this dependency. OPTIONAL — a cache, a telemetry sink, or an enrichment whose absence leaves the output correct. The class must be decided and recorded at each load site; an unclassified load site defaults to REQUIRED, because guessing OPTIONAL is how the live defect reads today."
+      on_failure:
+        type: string
+        description: "For REQUIRED: stop with a non-zero exit, name the dependency and the output that cannot be produced, and write no artifact. Logging is NOT one of the permitted options for this class. For OPTIONAL: degrading with a log line remains correct and Rule 3 is undisturbed."
+      failure_modes_covered:
+        type: array
+        items:
+          type: string
+        description: "The load can fail as absent, unreadable (permissions), or unloadable (syntax/import error). All three take the stop path for a REQUIRED dependency. Catching only the absent case leaves two live fail-open branches."
+  constraints:
+    - "DO NOT SATISFY THIS BY DEPLOYING THE ONE SIBLING. Adding _component_migration_map.py to the deploy map makes the live symptom disappear and leaves the fail-open loader in place for the next undeployed dependency. That is BP-900g-5's failure mode repeated — fixing the instances on the list while the mechanism that produced them stays as it was. The deploy fix belongs to BP-900g-8; this AC is not done until the loader itself fails closed on a tree where the dependency is withheld."
+    - "n_location_rule IS 'all' AND IT MEANS EVERY LOAD SITE IN THE FILE. The Because clause names the sibling loader at ~328/334, but the criterion is a class rule. Audit scripts/ac_store/generate_ticket_from_ac.py for every runtime load whose failure is currently absorbed into a neutral default — an empty mapping, an empty list, a passthrough — classify each as REQUIRED or OPTIONAL, and enumerate the findings in the sign-off. Point-fixing line 334 reproduces the exact history BP-900g-8's criteria cite: three prior instances fixed one at a time while the fourth shipped."
+    - "THIS NARROWS CLAUDE.md RULE 3 FOR ONE CLASS ONLY, AND THE NARROWING MUST BE WRITTEN DOWN. Rule 3 permits log-at-WARNING OR re-raise. The live defect satisfies Rule 3 and is still a silent-degradation bug, because the choice was made against a dependency the output's correctness depends on. For REQUIRED dependencies, logging is no longer one of the two options. Rule 3 is undisturbed for optional dependencies, caches and telemetry, where degrading is correct. Whoever implements this must ensure the narrowing is discoverable by the next author, not just present in one function."
+    - "ALL THREE FAILURE MODES, NOT ONLY ABSENCE. Absent, unreadable (permission denied), and unloadable (syntax or import error) must all take the stop path for a REQUIRED dependency. The live code catches OSError, which covers absent and unreadable but not unloadable; narrowing the fix to 'file missing' leaves live fail-open branches behind a change that reads as complete."
+    - "NO ARTIFACT ON THE FAILING PATH IS THE LOAD-BEARING ASSERTION, NOT THE EXIT CODE. A script that writes the degraded ticket and then exits non-zero satisfies an exit-code assertion while leaving the same wrong file on disk for the next step to consume. Order the work so the dependency is resolved before anything is written, and assert the artifact's ABSENCE. If a write has already begun when the failure is detected, the partial artifact must be removed."
+    - "VERIFY IN A GENUINELY FRESH SUBPROCESS. The claim is about module load. importlib.reload() re-executes inside an already-populated namespace and masks cold-import failures — that is exactly how the GenReviewFixes H-2 forward-reference NameError survived its tests. The verification must spawn a new `python` process with the package source tree absent from sys.path, so the deployed copy is the only copy."
+    - "THE INPUT MUST BE A REAL ON-DISK AC FILE. Feed the deployed script an actual AC YAML from docs/acceptance-criteria/, not a hand-typed fixture. Hand-built inputs reproduce the author's model of the format, which is the bias that hid the files_touched parser no-op for a whole epic and survived its first remediation spot-check."
+    - "The error must follow the project error handling policy: raise a typed failure naming both the dependency that could not be loaded and the output that therefore cannot be produced. A bare exception tells the consumer neither."
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-8
+  contract: "The derived intra-package dependency closure and the deployed-tree harness that builds into a temporary target — this AC removes a dependency from that same deployed tree and asserts the runtime behaviour, so the two share the harness rather than each building their own."
+test_spec:
+  - name: test_bp_900g_10_required_dependency_load_failure_stops_instead_of_returning_a_neutral_default
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The loader for a REQUIRED dependency, given an unloadable dependency, raises a typed failure naming the dependency and the output that cannot be produced — and specifically does NOT return an empty mapping. Assert the raise and assert the empty-mapping return is gone; the current code returns {} and a test that only checks 'a warning was logged' is green on it."
+  - name: test_bp_900g_10_absent_unreadable_and_unloadable_all_take_the_stop_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The fail-closed contract across all three failure modes: dependency file absent, present but unreadable (permission denied), and present but unloadable (syntax error). Each must stop; none may degrade to a neutral default and none may be downgraded to a log line. The live code catches OSError, which covers two of the three — a fix scoped to 'file missing' leaves the unloadable branch live behind a change that reads as complete."
+  - name: test_bp_900g_10_deployed_script_with_the_dependency_removed_exits_non_zero_and_writes_no_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier — the acceptance test for this AC. Build into a temp target via the BP-900g-8 harness, DELETE _component_migration_map.py from the DEPLOYED tree, then invoke the deployed generate_ticket_from_ac.py entry point in a GENUINELY FRESH `python` subprocess (never importlib.reload; the package source tree must be absent from sys.path) against a REAL on-disk AC YAML from docs/acceptance-criteria/. Assert BOTH the non-zero exit AND that the output ticket file does not exist. The artifact-absence half is the load-bearing one: a script that writes the degraded ticket and then exits non-zero passes the exit-code assertion while leaving the wrong file on disk."
+  - name: test_bp_900g_10_deployed_script_with_the_dependency_present_writes_a_correct_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The paired positive control through the SAME deployed entry point and the same fresh-subprocess invocation, with the dependency present in the deployed tree: exit zero, the ticket file exists, and its components list matches the source AC's rather than being empty. This is what distinguishes a correct fail-closed change from one that simply refuses to run — and it is also the only entry that would catch the fix being satisfied by making the script always fail."
+test_rationale: |
+  The degradation is not in the loader. The loader already knows it failed and says so.
+  The degradation is in the CALLER that ignores the failed result and carries on with an
+  empty mapping — which is why the criterion explicitly disqualifies asserting that the
+  loader returns an error when called directly. Entry 1 therefore asserts the neutral
+  default is gone, not merely that something was raised somewhere.
+
+  Entry 3 is the acceptance test and it is constructed to defeat three separate false
+  greens this repo has already been caught by. It runs the DEPLOYED copy, because the
+  source tree contains the dependency by construction and is structurally blind to the
+  defect (BP-811, done_proof.py). It spawns a genuinely FRESH subprocess, because
+  importlib.reload re-executes in an already-populated namespace and masks cold-import
+  failures — precisely how GenReviewFixes H-2 survived. And it feeds a REAL on-disk AC
+  file, because hand-typed fixtures reproduce the author's model of the format, which is
+  what hid the files_touched no-op for an entire epic and survived its first spot-check.
+
+  Within entry 3 the artifact-absence assertion carries more weight than the exit code.
+  An implementation that writes the degraded ticket and then exits non-zero satisfies
+  the exit-code half while leaving exactly the wrong file on disk for the next step to
+  consume — which is the original defect with a louder ending.
+
+  Entry 4 exists because every other entry passes against a script that refuses to run
+  at all. It is also the only assertion that the components list is actually CORRECT
+  rather than merely non-empty.
+
+  Entry 2 charges `failure` because the AC's subject is a fail-open/fail-closed
+  contract and the three failure modes are not interchangeable — the live code catches
+  OSError, which handles absence and unreadability but not an unloadable module.
+
+  Four distinct angles at the cap: criterion, failure, reachability, deployed.
+  `real_artifact` is triggered too and could not be given its own slot, so its two
+  substantive requirements — the genuinely fresh subprocess and the real on-disk AC
+  input — are written into entries 3 and 4 as hard conditions and restated in
+  it_requirements.constraints, so they cannot be quietly dropped by an implementer
+  counting angle labels.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; REQUIRED-vs-OPTIONAL dependency classification narrowing CLAUDE.md
+    Rule 3, all-three-failure-modes, artifact-absence as the load-bearing assertion,
+    fresh-subprocess and real-on-disk-input constraints), test_spec (criterion / failure
+    / reachability+must_block / deployed) and test_rationale. Set declares_side_effect:
+    true — see notes. Added two doc_links. expects_from preserved verbatim from the
+    BA. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  HOLE B, runtime half — the backstop for everything the build-time guards miss.
+
+  WHY A RUNTIME AC IS NEEDED AT ALL WHEN BP-900g-8 EXISTS. g-8 makes the build refuse
+  to ship an incomplete tree. It cannot cover an install that was produced by an older
+  build, an install a consumer has edited, or a dependency that is present but
+  unreadable. More importantly, the two guards fail independently: g-8 is a static
+  closure over what the code appears to resolve, and dynamic loaders are exactly the
+  case a static closure is weakest on. If g-8's closure misses a reference, this AC is
+  the only thing standing between the miss and a silently wrong artifact.
+
+  THE DISTINCTION THIS AC TURNS ON. CLAUDE.md's Error Handling Policy Rule 3 permits
+  an except block to EITHER log at WARNING or re-raise. The live defect satisfies that
+  rule and is still a silent-degradation bug, because the choice was made against a
+  dependency the output's correctness depends on. This AC narrows the rule for that
+  class only: where the caller's output is wrong without the dependency, logging is
+  not one of the two acceptable options. It does not disturb Rule 3 for optional
+  dependencies, caches, or telemetry, where degrading is correct.
+
+  TEST ANGLES for it-po. Floor: criterion + reachability. `deployed` and
+  `real_artifact` are both triggered and are covered by the same subprocess test —
+  build into a temp target, delete the dependency, run the deployed entry point cold
+  against a real on-disk AC file. `failure` is triggered (the AC names an error path
+  and a fail-open/fail-closed contract) and is the load-bearing angle here rather than
+  an optional extra. The must_block modifier attaches to the reachability entry.
+
+  THE NEGATIVE CONTROL THAT MATTERS MOST. Assert the artifact is ABSENT on the failing
+  path, not merely that the exit code is non-zero. A script that writes the degraded
+  ticket and then exits non-zero has satisfied the exit-code assertion while leaving
+  the same wrong file on disk for the next step to consume.
+
+  DO NOT SATISFY THIS BY DEPLOYING THE ONE SIBLING. Adding
+  _component_migration_map.py to the deploy map makes the live symptom disappear and
+  leaves the fail-open loader in place for the next undeployed dependency. That is
+  BP-900g-5's failure mode repeated: fixing the instances on the list while the
+  mechanism that produced them stays as it was.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO ENRICHMENT NOTE (2026-08-17).
+
+  ANGLE CAP RESOLUTION. Five angles are genuinely triggered here — criterion,
+  reachability, deployed, real_artifact and failure — against a cap of four. `failure`
+  is kept because the BA is right that it is load-bearing rather than decorative: the
+  AC's whole subject is a fail-open/fail-closed contract, and the live code catches
+  OSError, which covers absence and unreadability but not an unloadable module, so the
+  three failure modes are not interchangeable. `real_artifact` is the one dropped as a
+  LABEL, and its two substantive demands — a genuinely fresh subprocess, and a real
+  on-disk AC file as input — are written into entries 3 and 4 as hard conditions and
+  repeated in it_requirements.constraints. They are not negotiable; they simply do not
+  occupy a slot. This is recorded explicitly so a later reader does not mistake the
+  missing label for a dropped requirement.
+
+  declares_side_effect: true IS SET, and this is the only record in the set of seven
+  where it is. The distinction from its siblings is not stylistic. BP-900g-7, -8 and -9
+  are build-time guards whose observable is a build exit code — force-routing a surface
+  smoker at them would be the "a derivation that marks everything is indistinguishable
+  from one that marks nothing" failure BO-2900g-2 warns about. This AC's Then clauses
+  are about a durable artifact written into a consumer install: a generated ticket file,
+  whose `components` list the knowledge graph reads. That is a real observable outside
+  the process, on a surface a consumer sees, and the failing-path clause is precisely a
+  claim about a file NOT existing. It is exactly what the field is for.
+
+  n_location_rule IS 'all' DELIBERATELY. The Because clause names one loader at ~328/334
+  and the temptation is to treat that line as the work. The criterion is a class rule:
+  every runtime load in generate_ticket_from_ac.py whose failure is currently absorbed
+  into a neutral default must be classified REQUIRED or OPTIONAL and handled per class,
+  with the findings enumerated in the sign-off. Point-fixing the named line reproduces
+  the history BP-900g-8's criteria cite — three instances fixed one at a time, warning
+  comments left behind, and a fourth live at HEAD.

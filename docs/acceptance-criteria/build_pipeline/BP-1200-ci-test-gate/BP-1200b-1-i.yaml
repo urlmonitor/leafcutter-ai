@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -44,7 +44,9 @@ amended_by:
     entry: "Set readiness: approved and priority: high per the final user gate. Noted the BP-1200c-1 branch-protection approach is now decided = settings-as-code. Criteria unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_ci_test_gate.py::TestFailingTestBlocksMerge
+implemented_by:
+  - .github/workflows/ci.yml
 change_target: pipeline
 risk_surface: safety

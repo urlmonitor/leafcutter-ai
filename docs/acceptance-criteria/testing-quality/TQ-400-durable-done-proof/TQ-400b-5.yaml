@@ -1,0 +1,169 @@
+id: TQ-400b-5
+components:
+  - testing_quality
+  - ac_store
+title: "A preview run lists every demotion it would make and changes nothing"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing finished records the sweep would demote,
+  When the sweep is run in preview over that store,
+  Then it reports each record it would demote and the reason it would record
+    against it,
+  And every record file in the store is byte-for-byte unchanged after the preview,
+  And running the sweep for real immediately afterwards demotes exactly the
+    records the preview named, no more and no fewer,
+  And the reasons written by the real run match the reasons the preview stated.
+depends_on:
+  - TQ-400b
+  - TQ-400b-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Paired positive/negative controls through one entry point, and why a
+      preview proven only to print something is not proven at all.
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The existing precedent on the promotion side: --dry-run (:158-162) and its
+      "[dry-run] would mark ..." output shape. Note the polarity is inverted
+      here — preview is the default for a store-wide write.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Where the preview and apply flags hang off the sweep invocation; both must
+      share one decision function rather than becoming two code paths.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The record fields a preview must be proven NOT to have written
+      (work_status, demotion_reason, demotion_date).
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Preview must be the DEFAULT for the store-wide demotion path; writing must
+    require an explicit apply flag. The polarity is deliberately inverted
+    relative to mark_ac_done.py's --dry-run because this operation writes across
+    the whole store, and the first real run against the measured baseline would
+    demote on the order of 259 records.
+  - >-
+    A preview must open no file for writing anywhere in the store, and this must
+    be provable by a byte-level comparison of the ENTIRE store before and after
+    — not only of the records it named.
+  - >-
+    Preview and apply must share ONE decision function. A preview that computes
+    its list by a separate code path can disagree with the run, which is worse
+    than no preview because it invites approval of a change set that never
+    happens.
+  - >-
+    Preview output must name each record and the exact reason string that would
+    be written, so preview and applied result can be compared verbatim rather
+    than by category.
+  - >-
+    Preview must be visibly distinguishable from an apply run in its output, and
+    its exit-status semantics must be stated explicitly in the CLI help rather
+    than inherited by accident from the apply path or from the read-only sweep
+    gate (TQ-400a-2).
+  - >-
+    Preview must be safe to run against the real store from a developer machine:
+    no lock files, no inventory overwrite that would disturb a scheduled run's
+    artifact, no git operations.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a
+    record the preview cannot evaluate must be reported in the preview output,
+    so the apply run holds no surprises.
+delivers_to: null
+expects_from:
+  ac_id: TQ-400b-1
+  contract: >-
+    The demotion decision function and its per-record output ({ac_id, path,
+    reason}). Preview renders that list without writing; apply renders the same
+    list and writes it. One function, two renderings.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_preview_leaves_the_whole_store_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Hash every file in the store before and after a real preview subprocess
+      run over a store written by the real serializer; all hashes match,
+      including records the preview did not name. A preview that silently writes
+      fails here.
+  - name: test_preview_names_each_record_and_the_reason_it_would_write
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Preview output lists every record it would demote together with the exact
+      reason string, so a preview that computes nothing and prints a banner
+      cannot pass.
+  - name: test_apply_demotes_exactly_the_previewed_set_with_the_same_reasons
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Preview then apply over the same store: the set of demoted ac_ids equals
+      the previewed set exactly, and each written demotion_reason equals the
+      previewed reason string for string.
+  - name: test_preview_is_the_default_and_writing_requires_the_apply_flag
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Invoke the production command with no write flag against a store of
+      unproven records — the store is unchanged; invoke it with the apply flag —
+      the records are written. Both through subprocess, so the default is proven
+      at the entry point a person actually types.
+test_rationale: >-
+  This AC is itself a paired positive/negative control through one entry point.
+  Checking only that preview mode prints something would pass on a preview that
+  silently writes; checking only that it writes nothing would pass on a preview
+  that computes nothing. The equivalence entry is what makes the preview
+  trustworthy — a preview that can disagree with the real run invites approval
+  of a change set that never happens — and the byte comparison covers the whole
+  store rather than the named records so an accidental write elsewhere is caught.
+change_target: code
+risk_surface: internal
+notes: |
+  A destructive store-wide operation needs a way to see what it will do before it
+  does it, particularly on its first run against the real store where the demoted
+  population is expected to be large (259 records unproven as measured on
+  2026-08-17). Precedent exists on the promotion side: mark_ac_done.py already
+  carries --dry-run (:158-162).
+
+  Test-angle constraint: this AC is itself a paired positive/negative control
+  through one entry point. The preview must be shown NOT to mutate (byte-level
+  comparison of the whole store, not just the records of interest), and the real
+  run must be shown to produce exactly the previewed set. Checking only that
+  preview mode prints something would pass on a preview that silently writes, and
+  checking only that it writes nothing would pass on a preview that computes
+  nothing.
+
+  The equivalence clause is what makes the preview trustworthy: a preview that can
+  disagree with the real run is worse than none, because it invites approval of a
+  change set that never happens.

@@ -1,0 +1,124 @@
+id: "GE-120"
+components:
+  - commit_guardian
+title: "A guard enforces the document types the project declared, not a narrower list it kept to itself"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a repository whose config/doc_types.json declares the set of permitted
+    document types,
+  And the deployed frontmatter guard running from the installed layout rather
+    than from the source tree,
+  When a document is committed whose `type` is one this file declares,
+  Then the guard accepts it,
+    And a document whose `type` is absent from that file is still rejected by
+      name,
+    And a generated agent card — declared in that file as not component-linked —
+      is not additionally rejected for lacking a components field,
+    And if the guard cannot read the declaring file at all it says so and fails
+      rather than continuing against a narrower built-in list, because a guard
+      that silently substitutes its own answer for the one it was configured
+      with is enforcing a rule nobody wrote.
+depends_on: []
+doc_links:
+  - path: config/doc_types.json
+    relationship: describes
+    status: exists
+    relevance: "The declaring file. Its own _comment asserts that check_doc_frontmatter.py reads it at startup and that it is the single source of truth — a claim this AC makes true. Do not edit its contents."
+  - path: templates/scripts/commit_guardian/doc_type_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "The defect site: _DOC_TYPES_JSON at lines 18-21, and the silent .exists() fallthrough in _load_doc_types(). This is the SOURCE; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build outputs regenerated from it."
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: "The established root resolver. Reuse it rather than hand-counting parents[N] — hand-counted parents is precisely what broke here."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "FIX THE TEMPLATE, NOT THE BUILD OUTPUT. templates/scripts/commit_guardian/doc_type_validators.py is the source; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are regenerated from it by build_commit_guardian. An edit to the deployed copy alone is reverted by the next build.py run."
+  - "REUSE THE EXISTING RESOLVER. scripts/commit_guardian/_resolve_root.py exists for exactly this. Do not introduce a second path-resolution scheme and do not hand-count parents[N] — the defect is a hand-counted parents[2] producing the doubled segment 'leafcutter/leafcutter/config'."
+  - "THE FALLBACK MUST STOP BEING SILENT. Today the miss happens at `if _DOC_TYPES_JSON.exists():`, before any exception could be raised, so the `except (json.JSONDecodeError, OSError): pass` arm never runs and nothing is ever logged. An unreadable or absent declaring file must produce an observable failure, not a quiet substitution of DOC_FM_ALLOWED_TYPES."
+  - "DO NOT WIDEN THE ENUM BY HAND. The fix is to read the declaring file. Adding 'card' and 'how_to' to the hardcoded constant would make the symptom disappear while leaving the file still unread and still falsely advertising itself as the source of truth — the same shape as BP-900g-5, which emptied a list of known-bad entries while the mechanism that produced them stayed as it was."
+  - "The components exemption for cards must follow the declaring file's own 'Not component-linked' property rather than a second hardcoded card special-case, or the two statements drift."
+  - "After editing the template, run `python scripts/build.py --target-dir .` and then `python -m pytest unit_tests/commit_guardian/ -q`. The build step is not optional: the tests that matter exercise the deployed copy."
+test_spec:
+  - name: test_ge_120_deployed_validator_resolves_the_real_doc_types_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "PRODUCTION LAYOUT: run build.py into a temp target, then import doc_type_validators from the DEPLOYED .leafcutter/scripts/commit_guardian/ path in a fresh subprocess and assert _DOC_TYPES_JSON resolves to a file that exists. Importing from the source tree is structurally blind to this defect — the two layouts resolve differently and only the deployed one is what runs."
+  - name: test_ge_120_deployed_guard_accepts_a_card_and_a_how_to_document
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: stage a document with `type: card` and one with `type: how_to` and run the deployed hook via `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <paths>` as a subprocess. Assert exit zero. Asserting the loaded key set is not sufficient: the reported failure named BOTH the unknown type AND a missing components field, so only the real hook proves both arms are cleared."
+  - name: test_ge_120_deployed_guard_still_rejects_an_undeclared_type
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "must_block negative control through the SAME deployed entry point: a document with a `type` absent from config/doc_types.json must exit non-zero and name the offending value. Without this the fix is indistinguishable from disabling the check."
+  - name: test_ge_120_unreadable_declaring_file_fails_observably
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Point the resolver at an absent and then at a malformed doc_types.json and assert each produces an observable failure naming the file — not a silent fallback to the built-in list. This is the clause that stops the defect reappearing the next time the path moves."
+test_rationale: |
+  Every weaker shape passes on the bug. A test that imports the module from the
+  source tree resolves a different path than the deployed copy and cannot see
+  the defect at all. A test that asserts `'card' in _load_doc_types()` passes
+  the moment someone appends 'card' to the hardcoded constant, leaving the
+  declaring file still unread. And a test that only checks the happy path
+  passes if the guard is disabled outright — hence the must_block negative
+  control on an undeclared type.
+origin_agent: "BrainCandy"
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix on 2026-08-18.
+
+  ROOT CAUSE, verified by import rather than by reading:
+
+      _DOC_TYPES_JSON = Path(__file__).resolve().parents[2] / "leafcutter" / "config" / "doc_types.json"
+
+  From the deployed location .leafcutter/scripts/commit_guardian/, parents[2]
+  is .leafcutter, so this resolves to .leafcutter/leafcutter/config/doc_types.json
+  — a doubled segment that has never existed in any layout. From the source
+  location templates/scripts/commit_guardian/ it resolves to
+  templates/leafcutter/config/, which does not exist either. Observed:
+
+      resolved path: .../.leafcutter/leafcutter/config/doc_types.json
+      exists: False
+      types actually loaded: ['adr', 'architecture', 'explanation', 'how-to',
+                              'reference', 'retro', 'tutorial']
+
+  So config/doc_types.json has never been read by anything. It declares ten
+  types; seven are honoured. The canonical spelling `how_to` is rejected while
+  the entry marked `_deprecated: true` (`how-to`) is the only one that works,
+  and `card` — the type every generated agent card carries — is rejected, which
+  makes agent cards uncommittable.
+
+  WHY THIS IS WORTH AN AC RATHER THAN A ONE-LINE PATCH. build.py regenerates
+  architect-review.md and business-analyst.md from this file, so agents are
+  being told about document types the validator will reject. The file asserts
+  in its own _comment that it is the single source of truth and that
+  check_doc_frontmatter.py reads it at startup. Both statements are false
+  today. This is the same failure class as BP-900g-7 (a registry naming
+  something nothing consumes) and BP-900g-10 (a loader that degrades to a
+  default instead of failing) — found while committing this very branch, when
+  the hook rejected regenerated agent cards.

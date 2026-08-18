@@ -610,7 +610,19 @@ def _dfs_collect_leaves(
         return
 
     level: str = record.get("level", "")
-    children: list[str] = record.get("covered_by") or []
+    # Hierarchy (parent → child) lives in the ``children`` field in stores that
+    # follow the ADR-007 schema, where ``covered_by`` is reserved for test-file
+    # paths. Older/leafcutter-internal stores overloaded ``covered_by`` to mean
+    # children. Prefer ``children``; fall back to ``covered_by`` only when it
+    # contains AC-id references (not test paths) — i.e. when ``children`` is
+    # absent. A test path contains a "/" or "::"; an AC id never does.
+    children: list[str] = record.get("children") or []
+    if not children:
+        candidate = record.get("covered_by") or []
+        children = [
+            c for c in candidate
+            if isinstance(c, str) and "/" not in c and "::" not in c
+        ]
     status: str = record.get("status", "")
     work_status: str = record.get("work_status", "")
 
@@ -629,9 +641,10 @@ def _dfs_collect_leaves(
         if emit:
             result.append(node_id)
 
-    # Recurse into covered_by children for any level that has them.
+    # Recurse into child AC ids for any level that has them.
     # NOTE: we always recurse even for superseded nodes so that replacement
-    # children (listed in covered_by) are still collected (ACD-1200a-10).
+    # children (listed in ``children``, or legacy ``covered_by``) are still
+    # collected (ACD-1200a-10).
     for child_id in sorted(children):
         _dfs_collect_leaves(
             child_id,

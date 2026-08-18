@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -39,6 +39,14 @@ doc_links:
   - path: "docs/pre-commit-hooks.md"
     relationship: describes
     status: exists
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: modifies
+    status: exists
+    relevance: "sibling drift gate — must consume the SAME exemption declaration and emit the same four-verdict vocabulary, otherwise a declaration honoured by one gate and ignored by the other reintroduces the ambiguity this AC removes"
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: modifies
+    status: exists
+    relevance: "the authoritative commit-guardian config (1181 lines, holds hooks_manifest and every per-hook config key) — this is where the exemption registry key is declared. NOTE: this file is NOT at config/commit_guardian.json; templates/commit-guardian/commit_guardian.json is a different, 61-line file and is NOT the registration surface."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -59,6 +67,41 @@ it_requirements:
     - "An exemption entry without a stated ground must itself be rejected, so the registry cannot become a silent suppression list."
     - "Verify behaviorally — execute each gate against a synthesized tree containing one exempt artifact and one unrecorded, undeclared artifact, and assert the two are reported differently and that the summary counts the uncompared one; do not grep the gate source."
     - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+    - "REGISTRATION SURFACE CORRECTION: the exemption-registry key belongs in templates/scripts/commit_guardian/commit_guardian.json — the authoritative guardian config that also holds hooks_manifest. There is no config/commit_guardian.json in this repo, and templates/commit-guardian/commit_guardian.json is a different, much smaller file that is NOT the registration surface. Registering the key in the wrong file yields an inert declaration that neither gate reads."
+    - "SERIALIZATION: templates/scripts/commit_guardian/commit_guardian.json is also edited by BP-1100b-5 (bundle B). These two tickets MUST NOT run concurrently — the supervisor must serialize them, and whichever lands second must rebase onto the first rather than re-writing the whole config object."
+    - "The exemption registry must be data-driven: a gate's decision to skip an artifact must derive from a declared entry with a ground, never from a hard-coded filename inside the gate script, so a new hand-maintained file inherits the rule by being declared rather than by a code change."
+test_spec:
+  - name: test_declared_exemption_is_reported_as_exempt_and_names_its_ground
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Running each drift gate as a process over a synthesized tree containing one declared-exempt hand-maintained artifact reports that artifact as a declared exemption and includes the stated ground in the output."
+  - name: test_unrecorded_undeclared_artifact_is_reported_as_a_coverage_gap
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same executed run reports a second artifact that is neither in the manifest nor declared exempt as a coverage gap, naming the artifact and the action that would register it."
+  - name: test_run_summary_counts_uncomparable_artifacts_and_is_not_called_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The executed gate's run summary states a non-zero count of artifacts it could not compare and does not describe that run as clean."
+  - name: test_uncomparable_is_distinguishable_from_compared_in_output_and_exit_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An artifact the gate could not compare is absent from the verified count, and the process exit status of a run containing an uncomparable artifact differs from that of a run in which every artifact was compared and matched."
+  - name: test_both_gates_honour_the_same_exemption_registry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "check_build_drift.py and check_output_drift.py, each executed as a process against the same declared exemption, both report it as exempt — neither ignores a declaration the other honours."
+  - name: test_exemption_entry_without_a_ground_is_rejected
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An exemption entry carrying no stated ground causes the executed gate to reject the registry entry rather than silently suppressing the artifact."
+test_rationale: "The incumbent defect is that both gates already PRINT an informational line for an uncomparable artifact and then exit as if the run were clean. Any test that reads the gate source, or that imports a helper and inspects its return value, stays green on exactly that behaviour. Each descriptor therefore runs the gate as a process over a synthesized tree and asserts on the emitted summary and the exit status — the two signals a commit actually depends on."
 delivers_to:
   agent: python-coder
   contract: "A per-artifact drift verdict vocabulary of compared-and-matched / compared-and-drifted / declared-exempt / could-not-compare, plus a run summary that counts the last category, consumed by the pre-commit drift gates."
@@ -67,11 +110,15 @@ expects_from:
   contract: "The manifest fingerprint records that determine which artifacts are comparable at all; this AC governs how the gate reports the artifacts that remain uncomparable."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added test_spec (6 behavioral descriptors, one per Then-clause plus the both-gates and no-ground constraints) and test_rationale; every descriptor executes the gate as a process and asserts on the run summary and exit status rather than on gate source text. Added three it_requirements constraints: (a) REGISTRATION SURFACE CORRECTION — the exemption-registry key belongs in templates/scripts/commit_guardian/commit_guardian.json, NOT the non-existent config/commit_guardian.json; (b) SERIALIZATION with BP-1100b-5, which edits the same guardian config; (c) the registry must be data-driven, never a hard-coded filename in the gate. Added two edit-surface doc_links (check_output_drift.py, commit_guardian.json) so files_touched covers the real surface. criteria, assigned_agent (python-coder), estimated_complexity (M), reference_file_path, delivers_to, expects_from, readiness and work_status left unchanged."
+    by: it-po
 superseded_by: null
 covered_by:
   - BP-100k-3-i
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-13. Today both gates emit an INFO line for an artifact they cannot compare ('not in manifest (new template — run build.py before committing built outputs)' in check_build_drift.py; 'not in output_mappings (intentional one-off or newly added output; run build.py to register it)' in check_output_drift.py) and then exit as if the run were clean, so a deliberate exemption and an accidental omission are indistinguishable and both read as success. Complements GE-118b, which covers the whole-manifest-missing case; this AC covers the per-artifact case."

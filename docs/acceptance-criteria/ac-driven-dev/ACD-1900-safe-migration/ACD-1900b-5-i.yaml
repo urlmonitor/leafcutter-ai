@@ -1,0 +1,295 @@
+id: ACD-1900b-5-i
+components:
+  - ac_driven_dev
+  - build_orchestration
+title: "Edge: a traceability block the gate cannot interpret is never a green sign-off"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket produced by the AC-to-ticket generator whose frontmatter carries a
+    traceability block in the two-key form -- the source AC's identifier plus the
+    repo-relative path to that AC's store file -- and carries no list-form keys
+    (no L2 list, no L3 list, no base-path key),
+    And the store AC that block names has work_status "todo", an empty implemented_by
+      list and an empty covered_by list,
+  When the fulfillment gate runs its coverage-resolution step against that ticket,
+  Then the gate resolves that AC from the traceability block it was actually given,
+    And it verifies that AC's work_status, implemented_by and covered_by,
+    And it returns a blocking verdict naming that AC and each field that failed,
+    And it does not return ok.
+
+  Given a ticket whose traceability block is present but yields no resolvable AC in
+    any accepted form,
+  When the fulfillment gate runs,
+  Then the gate returns a non-ok verdict that names the traceability block as
+    uninterpretable and lists the keys it found there,
+    And it does not report that the ticket has no AC store fields to verify,
+    And it does not return ok on the strength of an empty set of ACs to check --
+      an ok verdict requires at least one AC to have been resolved and verified.
+
+  Given a ticket whose traceability block uses the list form (an L2 list, an optional
+    L3 list, and a base path) and whose named ACs all have work_status "done" with a
+    non-empty implemented_by and a non-empty covered_by,
+  When the fulfillment gate runs,
+  Then the gate returns ok, and the count of ACs it reports as verified equals the
+    number of ACs the block named -- the previously accepted form keeps working
+    unchanged.
+depends_on:
+  - ACD-1900b-5
+doc_links:
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: describes
+    status: exists
+    relevance: "Step 1 (the coverage-resolution step) is where the block is read. It extracts an L2 list, an L3 list and a base path; the generator emits none of them. The absent-block skip path is documented here too, and a present-but-unrecognised block currently lands in the same place."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The producer of the block. _build_frontmatter writes the two-key form, and also writes source_ac carrying the same identifier -- a second, already-present resolution route."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "Non-negotiable rule 5 scopes the retained silent-skip to the ABSENT-block case only, which is why a present-but-unrecognised block is not covered by that carve-out."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO: establishes that templates/ is canonical and the .claude/agents/ tree is build output. It is the reason the fix must be authored in templates/ AND rebuilt -- the running gate reads the deployed copy, which today carries the same three-key instruction."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO: the component this defect sits inside. A gate that reports a pass it never earned is the phantom-done class; this doc is the standing context for why a vacuous ok is treated as critical."
+  - path: docs/acceptance-criteria/build-orchestration/BO-201.yaml
+    relationship: describes
+    status: exists
+    relevance: "IT-PO: the fulfillment gate's own spec AC, which illustrates the list form. See it_requirements for how the divergence is reconciled -- BO-201 is a subset, not a contradiction, and needs no amendment. Note also that its single covered_by entry is a read_text()+regex suite over the template, which is why this divergence survived a 'done' AC."
+  - path: templates/agents/ac-fulfillment-gate.md
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO edit surface (llm-expert): Step 1 must call the shared resolver instead of extracting l2/l3/ac_path itself, and Step 5's ok condition must require at least one resolved AC. This is the enforcement point that actually runs."
+  - path: scripts/ac_store/ac_coverage_resolver.py
+    relationship: creates
+    status: planned
+    relevance: "IT-PO edit surface (python-coder): the executable, importable coverage-resolution helper that makes the verified-AC count assertable. Exactly one such resolver may exist -- see it_requirements."
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO edit surface (python-coder): build_ac_store's deploy_map is a hardcoded list. A new AC-store module absent from it exists in source but not in the deployed layout."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO edit surface (python-coder): the _build_frontmatter docstring asserts that ac-validator and ac-fulfillment-gate both use ac_traceability. ac-validator does not read the key at all; the false claim is corrected on this same touched file. The producer's emitted shape is NOT changed."
+  - path: unit_tests/ac_driven_dev/test_acd_1900b_5_i.py
+    relationship: creates
+    status: planned
+    relevance: "IT-PO: home of the behavioral, count-asserting suite described in test_spec."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: llm-expert
+    contract: "An importable, side-effect-free coverage-resolution API in the new AC-store resolver module, taking a ticket path and returning a resolved-AC list plus the keys it found in the traceability block -- shape: {resolved_acs: [{ac_id: str, ac_yaml_path: str, resolved_via: 'traceability_block' | 'source_ac'}], block_keys_found: [str], block_interpretable: bool}. Step 1 of the gate template must call this instead of extracting l2/l3/ac_path itself, and Step 5's ok condition must require len(resolved_acs) >= 1 rather than 'every AC in the working list passed'. The prose edit plus a package rebuild into the deployed agents tree is what makes the running gate honour it."
+  - agent: test-writer
+    contract: "The same API, plus a verified-AC count on the emitted verdict (int, the number of ACs actually loaded and checked), so a test can assert the COUNT -- 1 for a two-key generated ticket, 0 for an uninterpretable block, N for an N-entry list-form block -- rather than only the verdict string. Without the count exposed on the verdict the discriminating assertion of this AC cannot be written."
+expects_from:
+  - ac_id: ACD-1900b-5
+    contract: "The restructured Step 1 coverage-resolution control flow of the gate template (dual-read: ac_traceability OR source_ac) into which this AC's shape-tolerance is inserted. This AC extends that same Step 1; it must not add a second, parallel resolution path. If ACD-1900b-5 has not landed when this is built, this AC authors the Step 1 seam and ACD-1900b-5 builds on it rather than replacing it."
+  - ac_id: ACD-1900b-1
+    contract: "The shared store-first spec resolver (source_ac -> store AC record). When it exists, the coverage resolver here reuses its AC-id -> store-file lookup instead of duplicating it. NOT a blocking prerequisite: ACD-1900b-1 is phase_acbuild_1_foundation while this defect is live in phase_1, so this AC may land first and become that resolver's seed."
+it_requirements:
+  - "THE LOAD-BEARING CONSTRAINT, stated once rather than per-criterion: coverage resolution must return an explicit resolved-AC list whose length is observable to its caller, and the ok verdict must be conditional on that length being >= 1. An empty resolved list must never satisfy the ok condition. Today's rule -- ok when 'every AC in the working list is passed or skipped' -- is vacuously true over an empty list, and that vacuity, not the key names, is the defect."
+  - "TWO ENFORCEMENT POINTS, BOTH MANDATORY, ONLY ONE LOAD-BEARING AT RUNTIME: (a) the executable resolver module declared in doc_links, which the tests call, and (b) the agent-template prose in templates/agents/ac-fulfillment-gate.md, Steps 1 and 5, which is what the running gate actually reads. (b) is the point that gates commits; (a) is the point that makes the behaviour provable. Changing only (a) leaves the live gate vacuous; changing only (b) leaves the AC unprovable and unenforceable. Neither alone satisfies this AC."
+  - "DEPLOYED-COPY ACCEPTANCE: a templates-only edit does not satisfy this AC. Acceptance requires that after the package build deploys templates into the workspace root, the DEPLOYED copy of the gate template under the .claude/agents/ tree carries the dual-shape Step 1 and the >=1-resolved-AC ok precondition. templates/ remains the canonical source per ADR-001 and the deployed copy must NEVER be hand-edited -- but the deployed copy is the artifact whose state is asserted, because it is the one that runs. The three-key instruction is live there today at approximately lines 40-43, so this is not a source-only drift."
+  - "DEPLOY MANIFEST: any new module added to the AC-store scripts package must also be added to the hardcoded deploy_map in build_ac_store (scripts/build_phases.py, approx. line 851). A module absent from deploy_map exists in the source tree but not in the deployed layout, so anything importing it raises ModuleNotFoundError at runtime while unit tests -- which import from source -- stay green. This is the exact failure mode CLAUDE.md records for the done-proof module."
+  - "BO-201 RECONCILIATION -- NOT A BLOCKING PREREQUISITE, NO AMENDMENT REQUIRED. Accepting both shapes is a strict superset of BO-201, not a contradiction: BO-201's list form appears in its criteria as an illustrative 'e.g.', not as an exclusive shape, and its list-form scenario is preserved verbatim as this AC's third scenario. The implementation MUST NOT narrow or drop the list form, and the regression test that asserts the list-form verified-count must also carry a '# covers: BO-201' tag so BO-201 gains its first executing coverage. SEPARATELY FLAGGED, OUT OF SCOPE: BO-201 is work_status done, but its only covered_by entry is the legacy gate-template suite under tests/, which is entirely read_text() + regex over the template and asserts only frontmatter fields -- it could never have detected this divergence, which is how a 'done' spec AC and a vacuous gate coexisted."
+  - "SOURCE_AC FALLBACK -- USE IT, BUT ORDERED AND NEVER SILENTLY. Resolution order is block-first, then source_ac: the block's own id/path is authoritative when interpretable (it names the exact store file rather than a directory a filename must be guessed inside), and source_ac is consulted only when the block yields nothing. source_ac must NOT silently rescue an unrecognised block: when the block is present with unrecognised keys and source_ac does resolve, the verdict must still name the unrecognised keys it found, otherwise the next shape drift becomes invisible exactly as this one was. The PRODUCER is not changed -- the two-key form is already on disk in tickets that have reached 99_done, so re-shaping the writer would retroactively invalidate every ticket generated to date."
+  - "EXACTLY ONE RESOLVER may exist in the AC-store scripts package. If ACD-1900b-1's shared spec resolver already exists when this lands, extend it; otherwise the module created here is that resolver's seed and ACD-1900b-1 / ACD-1900b-5 must consume it rather than adding a second. A duplicated resolver reintroduces producer/consumer divergence one level up -- the same defect class this AC exists to close."
+  - "SCOPE BOUNDARY -- the ac-validator agent template does not read ac_traceability at all and is OUT of scope here; it is a separate finding warranting its own AC, and its template must not be edited under this AC. In scope, because it sits on a file this change already touches: the _build_frontmatter docstring in scripts/ac_store/generate_ticket_from_ac.py (approx. line 1862) claims the block enables 'ac-validator and ac-fulfillment-gate' to locate the source AC. That claim is false for ac-validator and must be corrected in the same change rather than left as a documented untruth on an edited file."
+  - "RESOLUTION IS READ-ONLY AND DETERMINISTIC. The coverage-resolution step must not mutate the ticket or any AC YAML file, and must return the same result for the same inputs. Auto-fix stays where it is, in the gate's Step 3, strictly downstream of resolution. This keeps the count assertion stable across repeated runs and prevents resolution from masking a failure by fixing it."
+  - "ERROR HANDLING: ticket-frontmatter and AC-YAML reads must follow the repo error handling policy (Ruff E722 / BLE001 / TRY) -- typed except, log-or-re-raise, no bare except, no silent swallow. A parse failure of the traceability block must surface as a non-ok verdict naming the parse failure; it must never degrade into a resolved-count of zero that is then treated as 'nothing to verify'."
+  - "TEST CONSTRAINT (binding on test-writer, per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep'): no descriptor in test_spec may be satisfiable by a read_text() + regex over the gate template or the generator. Each test must obtain its ticket by INVOKING the generator (a real artifact, never a hand-indented literal fixture -- see the files_touched column-0 precedent) and then EXECUTE the resolution. The discriminating assertion is the verified-AC COUNT, not the verdict: an implementation still reading only the list form yields 0 on a generated ticket, whereas any verdict-only assertion can be made to pass by an implementation that blocks for an unrelated reason."
+  - "DECLARED SURFACE HYGIENE: files_touched is derived from this AC's doc_links, and every edit-surface entry there is a file this change is expected to modify or create. Do not treat any other path named in prose as an edit surface; conversely, if implementation lands on a file not listed, reconcile doc_links rather than leaving the declared surface wrong."
+test_spec:
+  - name: test_two_key_block_resolves_exactly_one_ac_from_a_generated_ticket
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Invoke the generator to WRITE a real ticket for a store AC (work_status todo, empty implemented_by, empty covered_by), then execute coverage resolution on that ticket path: the resolved-AC count is exactly 1 and the resolved entry names that AC id. An implementation reading only l2/l3 resolves 0 and fails here."
+  - name: test_two_key_block_todo_ac_blocks_and_names_each_failed_field
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "On that same generated ticket the emitted verdict is not ok, names the AC id, reports a verified-AC count of 1, and lists work_status, implemented_by and covered_by as the fields that failed. The count assertion prevents a block emitted for an unrelated reason from satisfying this test."
+  - name: test_uninterpretable_block_is_non_ok_with_zero_verified_and_lists_found_keys
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "For a ticket whose traceability block carries only unrecognised keys and whose source_ac resolves to nothing: the verdict is not ok, the verified-AC count is 0, the message enumerates the keys actually found in the block, and the 'ac_traceability absent -- no AC store fields to verify' message is not emitted."
+  - name: test_ok_verdict_is_impossible_over_an_empty_resolved_ac_list
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    description: "Direct invariant on the verdict step: given an empty resolved-AC list it does not return ok, whatever the per-AC results contain. This is the vacuous-truth guard and it fails against today's 'every AC in the working list is passed or skipped' rule."
+  - name: test_list_form_verified_count_equals_number_of_acs_named
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    covers:
+      - ACD-1900b-5-i
+      - BO-201
+    description: "Regression for the previously accepted form: a ticket with l2 naming two ACs, l3 naming one, and an ac_path, all three store ACs done with non-empty implemented_by and covered_by, yields ok AND a verified-AC count of 3 -- equal to the number the block named. Fails if the fix swapped to the two-key form instead of accepting both."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: "ACD-1900b-5-i it-po-enrichment"
+    by: it-po
+    at: 2026-08-17
+    note: >-
+      Added the technical dimension only; criteria, readiness, work_status and priority
+      untouched. Independently re-verified every BA claim against the working tree before
+      enriching (producer generate_ticket_from_ac.py:1897 two-key form; consumer
+      ac-fulfillment-gate.md:85-93 three-key extraction and :230 vacuous ok; the same
+      three-key text live in the deployed agents copy at approx. lines 40-43; the
+      ac-validator template contains no ac_traceability reference at all).
+      SURFACE DECISION: assigned_agent python-coder as PRIMARY, llm-expert as the
+      co-required second surface (recorded in it_requirements and delivers_to). The fix
+      genuinely spans both. The prose is what runs and gates commits; the Python resolver
+      is what makes the verified-AC count assertable, and this AC's proof obligation
+      explicitly forbids a grep-only test, so a prose-only route leaves the AC unprovable
+      by construction. change_target deliberately LEFT at prompt rather than widened:
+      guardrail_gates.yaml prompt/contract_boundary wires llm-expert + architect-review +
+      pr-reviewer, and _build_agents_map unions that with assigned_agent plus
+      test-writer/test-runner (python-coder produces production_code) and
+      ac-validator/ac-fulfillment-gate (coder assigned) -- so leaving it at prompt yields
+      exactly the dual-surface agent set the fix needs, whereas widening it to code would
+      not add llm-expert. Confirmed by --verify: the generated agents map contains both
+      python-coder and llm-expert.
+      Added it_requirements covering: the vacuous-ok root cause named once; both
+      enforcement points with the runtime-load-bearing one identified; deployed-copy
+      acceptance after the package build (a templates-only edit does not satisfy this AC);
+      deploy_map registration in build_phases for any new AC-store module; BO-201
+      reconciliation (superset, no amendment, no blocking prerequisite, plus a
+      '# covers: BO-201' tag on the list-form regression test); source_ac used as an
+      ORDERED fallback that must never silently rescue an unrecognised block, with the
+      producer left unchanged; a single-resolver rule; the ac-validator scope boundary
+      (out of scope, separate finding) with the false generator docstring claim corrected
+      in scope; read-only deterministic resolution; the error-handling policy; and
+      declared-surface hygiene.
+      Added a 5-descriptor test_spec that preserves the BA's grep-proof property -- every
+      descriptor asserts the verified-AC COUNT (1 / 0 / 3) over a ticket obtained by
+      invoking the generator, and none is satisfiable by read_text() + regex over either
+      file. Added doc_links: three informational (ADR-001, phantom-done-prevention,
+      BO-201) and five edit-surface entries so files_touched is non-empty (the BA's
+      describes-only links derive an EMPTY files_touched, which would leave the gate's own
+      auto-fix with no diff to intersect). Prose in it_requirements was then deliberately
+      scrubbed of path-shaped tokens for non-edit-surface files: the generator's
+      prose-path extractor had pulled an absolute deployed path, the build entrypoint, the
+      ac-validator template and the legacy tests/ suite into files_touched, which would
+      have declared four surfaces this change must not touch.
+      NEW FINDINGS not in the BA record, both surfaced during verification: (1) BO-201's
+      sole covered_by entry is a read_text() + regex suite over the template asserting
+      only frontmatter fields -- it is itself an instance of the defect class this AC
+      forbids, which is how a work_status done spec AC coexisted with a vacuous gate.
+      (2) scripts/backfill_ticket_components.py line 211 reads ac_traceability expecting a
+      LIST of dicts -- a THIRD shape, matching neither the producer nor the gate. It is
+      harmless today only because its source_ac branch runs first. Both are recommended
+      follow-ups, not in scope here.
+  - reason: "readiness approval"
+    by: BrainCandy
+    at: 2026-08-18
+    note: >-
+      req_status draft -> active and readiness draft -> approved. Approved by the user
+      after the it-po enrichment pass, so the AC is eligible for /build-ac selection.
+      criteria, work_status, priority and every technical field are untouched by this
+      amendment; it is a readiness flip only.
+superseded_by: null
+covered_by:
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestTwoKeyBlockOnGeneratedTicket
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestUninterpretableBlock
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestVacuousTruthGuard
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestListFormRegression
+implemented_by:
+  - scripts/ac_store/ac_coverage_resolver.py
+  - scripts/ac_store/generate_ticket_from_ac.py
+  - scripts/build_phases.py
+  - templates/agents/ac-fulfillment-gate.md
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  VERIFIED DEFECT, LIVE TODAY (verification performed 2026-08-17 against the working
+  tree; every claim below was read from the files, not inferred):
+
+  - PRODUCER: scripts/ac_store/generate_ticket_from_ac.py:1897 --
+    fm["ac_traceability"] = {"id": ac_id, "path": ac_store_path} (the path value is
+    computed at line 2763). Two keys: id, path.
+  - CONSUMER: templates/agents/ac-fulfillment-gate.md, Step 1, lines 85-93 -- "If
+    ac_traceability: is present, extract: l2: ... l3: ... ac_path: ... Build the
+    working list of ACs to check: combine l2 and l3."
+  - CONSEQUENCE: on a generator-produced ticket the working list is EMPTY. Step 5
+    (line 230) returns ok when "every AC in the working list is passed or skipped" --
+    vacuously true over an empty list. The gate signs off green having verified
+    nothing.
+  - CONFIRMED ON REAL ARTIFACTS, not fixtures: tickets/00_inbox/TICKET-20260813-ACD-400b-7.md
+    and tickets/00_inbox/epics/EPIC-InFlightVisibility/01_TICKET-20260720-BO-1000a-1.md
+    both carry the two-key form. A store-wide grep found the list form (ac_path) only
+    in hand-authored tickets, never in a generated one.
+  - CONFIRMED LIVE IN THE DEPLOYED COPY: .claude/agents/ac-fulfillment-gate.md lines
+    41-43 carry the same three-key instruction, so this is not a source-only drift.
+  - CONFIRMED SOLE CONSUMER: templates/agents/ac-validator.md does not read
+    ac_traceability at all, and no script under scripts/ or templates/ reads the key.
+    The gate is the only consumer, so nothing else compensates.
+  - SEVERITY: the gate runs at priority 11.7, immediately before commit. It is the
+    mechanical check that work_status / implemented_by / covered_by are accurate. A
+    vacuous pass there is the phantom-done class this repository exists to prevent,
+    sitting in the pre-commit path of every AC-generated ticket.
+
+  AUTHORITATIVE SIDE -- DECIDED, NOT LEFT OPEN. The CONSUMER accepts both forms.
+  Reasoning: (a) the two-key form is already on disk in dozens of tickets, several
+  already in 99_done, so changing the producer would silently invalidate every ticket
+  written to date; (b) the two-key form is strictly more precise -- it names the exact
+  store file rather than a directory the gate must guess a filename inside; (c) the
+  gate additionally has source_ac available on every generated ticket as a second
+  resolution route, so no new data is needed. What is NOT decided here, and is left to
+  the IT PO: whether the dual-shape read lands in the gate's own prose or in the shared
+  resolver introduced by ACD-1900b-1. The third scenario exists so that whichever route
+  is taken, the list form is provably still honoured.
+
+  WHY BLOCKING HERE DOES NOT CONTRADICT ADR-026 RULE 5. Rule 5 retains the silent skip
+  for tickets with NO traceability block until fat tickets drain. These tickets HAVE a
+  block; they are exactly the fat tickets the gate is supposed to be verifying now. The
+  carve-out does not reach them, so the foundation-phase advisory fallback of the parent
+  ACD-1900b-5 does not apply and a non-ok verdict is correct today. roadmap_phase is
+  phase_1 rather than the parent's phase_acbuild_1_foundation for the same reason: this
+  is a live defect in the current fat-ticket pipeline and is fixable independently of
+  the ADR-026 migration.
+
+  BOUNDARY vs the parent and its twins -- keep these distinct at implementation time:
+    - ACD-1900b-5 (parent): traceability block ABSENT -> dual-read from source_ac. Its
+      premise is the absence of the block, so it does not fire on these tickets at all;
+      this defect survives ACD-1900b-5 untouched.
+    - ACD-1900c-6: the enforce-time flip of that same absent-block path.
+    - ACD-1900b-1-i: source_ac unresolvable -> halt, never silent-green. Different input
+      (no resolvable AC anywhere) from this one (a resolvable AC the gate never looks
+      at).
+    - BO-201: the original fulfillment-gate spec. Note it codifies the list form in its
+      own criteria, so the store's spec and the generator have disagreed since the
+      generator gained the block. BO-201 is a loose L2 whose ID admits no children,
+      which is why this AC is parented here instead.
+
+  PROOF OBLIGATION FOR THE IT PO AND TEST AUTHOR. This must be proven by a test that
+  EXECUTES the gate's coverage-resolution over a real generator-produced ticket (or one
+  written by invoking the generator) and asserts the emitted verdict and the count of
+  ACs actually verified. A test that greps either the template or the generator for a
+  key name would itself be an instance of the defect class -- it passes while the two
+  sides still disagree -- and is explicitly disallowed here, per CLAUDE.md "Gate /
+  Workflow ACs -- Verify Behaviorally, Not by Grep". The discriminating assertion is the
+  verified-AC COUNT: an implementation that still reads only the list form yields zero
+  on a generated ticket, while every verdict-only assertion can be made to pass.
+
+  change_target is set to prompt on the reading that the fix lands in the gate template.
+  If the IT PO routes it through the shared resolver instead, widen change_target to
+  include code in the same pass.

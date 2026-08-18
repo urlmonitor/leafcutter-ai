@@ -1,0 +1,139 @@
+id: TQ-400b-1-i
+components:
+  - testing_quality
+  - ac_store
+title: "A retired criterion is not demoted — it is reported as not demotable"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record with no passing proof whose criterion is no longer live
+    because it has been retired or replaced by a successor,
+  When the sweep applies its outcome,
+  Then the record is left as it is, with nothing written to its file,
+  And the report shows it under an outcome distinct from both "demoted" and
+    "proven", stating that a retired criterion is not demotable,
+  And a finished record with no passing proof whose criterion IS live is demoted
+    in the same run, showing the distinction is drawn per record.
+depends_on:
+  - TQ-400b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines status / req_status / superseded_by — the lifecycle fields the
+      not-demotable decision must be derived from.
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The symmetric guard on the promotion side: the non-active status refusal
+      at :150-156. Mirror its shape rather than inventing a new rule.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      _collect_dangling_tags (:544) already resolves status and treats
+      non-active records differently; the demotion guard must agree with it,
+      not contradict it.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    The guard must be data-driven from the record's own lifecycle fields
+    (status, req_status, superseded_by), mirroring mark_ac_done.py:150-156's
+    non-active refusal. Never an id allow-list and never a hard-coded set of
+    exempt records — new retired records must inherit the rule automatically.
+  - >-
+    Must produce a third outcome value, distinct from both demoted and proven.
+    The outcome vocabulary is a closed set that the run report and the inventory
+    (TQ-400a-4) both read; add the value in one place.
+  - >-
+    A not-demotable record must still appear in the inventory with its own
+    outcome. Skipping must not remove it from the population — that is the same
+    disappearing-record failure as TQ-400a-4-i.
+  - >-
+    Nothing at all may be written to a not-demotable record's file. Prove by
+    byte comparison of the file, not by inspecting a field.
+  - >-
+    The guard must agree with the oracle's own status handling
+    (_collect_dangling_tags, done_proof.py:544); two different notions of
+    "retired" in one pipeline is the disjoint-vocabulary defect.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a
+    record whose status cannot be resolved is an error entry, not a silent skip
+    and not an implicit demotion.
+delivers_to: null
+expects_from:
+  ac_id: TQ-400b-1
+  contract: >-
+    The apply path and its per-record write site. This AC adds a refusal branch
+    before the write, plus the third outcome value carried into the run report
+    and the inventory.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_retired_record_file_is_byte_identical_after_an_apply_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Negative control. A superseded/retired record with no passing proof is
+      byte-for-byte unchanged after a real apply run over a store written by the
+      real serializer — no work_status change, no demotion fields, no
+      reformatting.
+  - name: test_retired_record_is_reported_under_a_distinct_outcome
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The run report and the inventory both carry the record under an outcome
+      that is neither demoted nor proven, and the stated reason says a retired
+      criterion is not demotable.
+  - name: test_live_record_is_demoted_in_the_same_run_as_the_retired_one
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      One store, one subprocess apply invocation, two unproven records — one
+      retired, one live. The live one is demoted and the retired one is not,
+      proving the distinction is per record rather than a blanket skip.
+test_rationale: >-
+  The cheapest green for "do not demote retired records" is a branch that skips
+  anything awkward, and a test that only checks the retired record was not
+  demoted cannot detect it. Driving both records through ONE real invocation is
+  what forces a per-record decision. The byte comparison is used instead of a
+  field check because a write that touches the file but restores the value would
+  still reformat the record and would still be a write.
+change_target: code
+risk_surface: internal
+notes: |
+  Mirrors a guard that already exists on the promotion side: mark_ac_done.py
+  refuses to mark a record done when its status is not active
+  (mark_ac_done.py:150-156). The demotion side needs the symmetric guard, or the
+  sweep will churn deprecated and superseded records that nobody intends to pick
+  up again — inflating TQ-400d's triage pile with work that should never be
+  triaged.
+
+  Consistent with the existing verdict oracle, which already resolves status and
+  treats non-active records differently (_collect_dangling_tags,
+  done_proof.py:544).
+
+  The same-run contrast clause prevents the lazy implementation that simply skips
+  every record it finds awkward.

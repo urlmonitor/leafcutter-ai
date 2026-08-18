@@ -8,7 +8,7 @@ status: active
 req_status: draft
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Given a /plan-feature run dispatches a helper agent to return a structured result,
   And that agent wraps a complete, valid JSON object in surrounding prose — an

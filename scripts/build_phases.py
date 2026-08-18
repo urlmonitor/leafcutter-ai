@@ -868,6 +868,12 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # /build-ac Step 2b.1 fails even though the file is present — a
         # file-presence check cannot catch this, only executing it can (BP-900g-4).
         (ac_store_src / "ac_parent_id.py",              "ac_parent_id.py"),
+        # ac_coverage_resolver.py backs the ac-fulfillment-gate agent template's
+        # Step 1 coverage-resolution seam (ACD-1900b-5-i). It MUST deploy or
+        # the gate's CLI invocation crashes with ModuleNotFoundError in the
+        # deployed layout even though unit tests -- which import from source --
+        # stay green.
+        (ac_store_src / "ac_coverage_resolver.py",      "ac_coverage_resolver.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
@@ -2902,4 +2908,11 @@ def clean_stale_artifacts(
 #   for the four file-based artifact phases (agents, commands, workflows, hooks).
 #   Also suppressed pre-existing TRY003 violation in _emit_workflow_variant
 #   (#TICKET-20260707-BP-100m-1)
+# - 2026-08-18 [python-coder]: Added ac_coverage_resolver.py to build_ac_store's
+#   deploy_map. This new AC-store module backs the ac-fulfillment-gate agent
+#   template's Step 1 coverage-resolution seam (ACD-1900b-5-i); without a
+#   deploy_map entry it would exist in the source tree but not the deployed
+#   layout, so the deployed gate's CLI invocation would crash with
+#   ModuleNotFoundError even though unit tests importing from source stay
+#   green. (#ACD-1900b-5-i)
 # ====================================================================

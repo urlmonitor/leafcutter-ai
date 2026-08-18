@@ -1,0 +1,84 @@
+id: TQ-400
+components:
+  - testing_quality
+  - ac_store
+title: "Trust that work marked done is still done today, not just the day it shipped"
+component: testing-quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  "Done" keeps meaning done — proof is re-checked over time, never assumed.
+
+  Today a piece of work that reaches "done" keeps that badge forever: nothing
+  ever looks at it again, and there is no way to take it back. So a requirement
+  can pass its check on the day it ships, quietly lose the behaviour or the test
+  that proved it months later, and still read as finished — and the backlog you
+  plan from silently overstates what you have. After this goal, finished work is
+  re-proven on a rhythm you can see, anything whose proof has lapsed loses its
+  "done" badge with the reason recorded, and the work already sitting in that
+  state is worked through rather than written off. A done flag that cannot be
+  falsified is a decoration, not a status; this goal makes it a status again.
+depends_on: []
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400a
+  - TQ-400b
+  - TQ-400c
+  - TQ-400d
+  - TQ-400e
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIRD HONESTY AXIS — deliberately distinct from two neighbouring goals. Do not
+  fold this work into either of them:
+
+    - BO-2500 (mechanical done proof) establishes proof AT MARK TIME: at the
+      moment work is declared done, is there a real passing test exercising the
+      real thing. It says nothing about the interval afterwards.
+    - BP-1100 (phantom-done prevention) establishes proof AT THE TICKET/EPIC
+      LEVEL during a drive: does the delivered change actually execute before a
+      ticket is called done. Also a mark-time guarantee, one altitude up.
+    - TQ-400 (this goal) establishes proof OVER TIME, across the WHOLE store,
+      AFTER mark time — plus a supported path back out of "done" when the
+      evidence stops holding. Neither neighbour ever re-checks a finished
+      record, and neither can demote one.
+
+  Evidence gathered at authoring time (2026-08-17, HEAD 339b0981c):
+    - BO-2500d-2 was work_status: done while its own criterion ("the LLM review,
+      validator, and fulfillment gate agents are still present in the heavy
+      pipeline phase order") was FALSE from the day it was marked done until
+      PR #451 fixed the phase order on 2026-08-17. Nobody noticed for the entire
+      interval. Its named tests were never written. Sharpest possible case: the
+      requirement written specifically to keep those gates in the pipeline stayed
+      green while three of them sorted past commit.
+    - Store-wide, 240 of 641 done L2/L3 records (37%) have no test anywhere in
+      the repo carrying their coverage tag.
+    - The per-record verdict is already computable, but is only ever computed
+      over files staged for a commit — so the 240 are structurally invisible.
+    - There is no supported transition from done back to todo.
+
+  Namespace rationale: filed under testing-quality (test-suite trustworthiness and
+  staged enforcement rollout) rather than build-orchestration (drive-time
+  sequencing gates), because the subject is whether test evidence for finished
+  work still holds — a sibling of TQ-100 (which tests gate main) and TQ-300 (does
+  the tooling have tests at all), not a dispatch-time gate.

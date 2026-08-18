@@ -1,0 +1,353 @@
+id: TQ-400e-6
+components:
+  - testing_quality
+  - ac_store
+title: "The exemption reference states when a declaration is honoured, when refused, and which records may carry one"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the exemption path — a finished record declared to need no test, carrying
+    a written reason — which is already live and unguarded today and is honoured
+    with no reason required for 37 finished records,
+  When a reader consults the reference entry for exemptions, without the schema or
+    the check's source in front of them,
+  Then they can state which two existing record fields express an exemption — the
+    declaration and its written reason — and that no third or parallel field is
+    involved,
+  And they can state exactly when a declaration is honoured and when it is
+    refused: that an absent, empty or whitespace-only reason is refused, that the
+    reason's wording is never judged for quality, and that a refused record is
+    reported unproven on the same terms as one carrying no declaration at all and
+    is demotable like any other,
+  And they can determine, for a record in front of them, whether it may legally
+    carry an exemption before writing one — the entry reconciles the two rules
+    that today point in opposite directions, the authoring-time rule that refuses
+    a test-free declaration on an approved leaf code requirement and the
+    check-time rule that honours the same declaration unconditionally on a
+    finished record, and states which records the reconciled rule leaves eligible,
+  And they can tell what the store looks like today as distinct from what the
+    hardened rule requires, so the finished records currently exempt without a
+    reason are described as the backlog they are rather than as compliant,
+  And a reader can write a valid exemption from the entry alone and have the next
+    run honour it, and can write the reasonless form and see it refused — the
+    rules the entry states are the rules the check applies, not a parallel
+    description of them,
+  And the entry is the single statement of these rules, with each enforcement
+    point that applies them pointing to it rather than carrying its own account,
+    so the two layers cannot drift into disagreeing about which records may be
+    exempt.
+depends_on:
+  - TQ-400e
+  - TQ-400e-3
+  - TQ-400e-4
+  - TQ-400e-5
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE SURFACE. Both fields the exemption uses are already defined here; this
+      entry hardens and completes their account rather than introducing new
+      fields. Read the existing entries first — a second description elsewhere
+      would be the drift the last criterion forbids. 846 lines as of 2026-08-18;
+      extend the existing test_required and test_rationale entries in place.
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the check-time behaviour is described for readers today; it must
+      point at the reconciled rule rather than restating the unguarded one.
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The alternative to an exemption. A reader deciding between proving a record
+      and exempting it needs both routes legible from the same place.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The documented boundary between work that genuinely cannot carry a covering
+      test and work that merely has not got one — the judgement the entry must
+      equip a reader to make.
+  - path: scripts/commit_guardian/_ac_schema_validators.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. ENFORCEMENT POINT 1, AND IT POINTS THE OPPOSITE WAY.
+      Verified 2026-08-18 at ~:515-540: an approved, not-yet-done, leaf CODE AC
+      carrying test_required: false is REJECTED outright ("a code AC always needs
+      tests"), and test_required: false alongside a non-empty test_spec is
+      rejected as a contradiction. The reconciled boundary the entry must state is
+      a statement about THIS rule as much as about the check-time one.
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. ENFORCEMENT POINT 2 AND 3, AND THEY POINT THE OTHER WAY.
+      Verified 2026-08-18 at :463 — `if data.get("test_required") is False:
+      continue` — the whole-store sweep honours the declaration UNCONDITIONALLY on
+      any done record, with no reason required; :491-495 is the change-scoped CI
+      mode doing the same. 37 done records in the store carry it today, so the two
+      layers are in live disagreement about those 37 records.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    THIS ENTRY CARRIES A RECONCILIATION OBLIGATION, NOT ONLY A DESCRIPTION — THE
+    DEFINING CONSTRAINT ON THIS RECORD. Two shipped layers disagree about the same
+    records today, verified 2026-08-18. (a) scripts/commit_guardian/
+    _ac_schema_validators.py (~:515-540) REJECTS test_required: false on an
+    approved, not-yet-done, leaf CODE AC, and rejects test_required: false
+    alongside a non-empty test_spec as a contradiction. (b)
+    scripts/commit_guardian/check_done_proof.py:463 HONOURS test_required: false
+    unconditionally on ANY done record — `if data.get("test_required") is False:
+    continue` — with no reason required; :491-495 does the same in the
+    change-scoped CI mode. 37 done records in the store carry it. The entry MUST
+    state, in one sentence a reader can apply to the single record in front of
+    them, WHICH RECORDS THE RECONCILED RULE LEAVES ELIGIBLE. The boundary the two
+    layers currently imply is: non-code records, and records already done. An
+    entry that documents either layer alone leaves a record that is legal to one
+    layer and illegal to the other, and those 37 records stay in dispute — which
+    is the disjoint-vocabulary failure this repo has already shipped once.
+  - >-
+    NAME ALL THREE ENFORCEMENT POINTS AND SAY WHICH ONE GATES WHAT.
+    _ac_schema_validators.py (~:515-540) gates AUTHORING; check_done_proof.py:463
+    gates the WHOLE-STORE SWEEP; check_done_proof.py:491-495 gates the
+    CHANGE-SCOPED CI mode. A reader who does not know which layer will meet their
+    record cannot predict what will happen to it. Each of the three must point at
+    this entry rather than carry its own account of the rule.
+  - >-
+    THE RECONCILED BOUNDARY MUST BE THE ONE TQ-400e-3 ACTUALLY DELIVERS. If the
+    delivered code narrows or widens eligibility relative to the boundary above,
+    the entry follows the delivery and the divergence is raised against TQ-400e-3
+    — never smoothed over. This entry is a description of a shipped rule, not a
+    proposal for one.
+  - >-
+    TARGET DOCUMENT AND SITE — docs/reference/ac-schema.md, extending the EXISTING
+    test_required and test_rationale entries into one coherent exemption account.
+    Do NOT introduce a third field, a new allowlist, a parallel declaration
+    syntax, or a new document: TQ-400e-3's it_requirements already rule that
+    minting a second mechanism is the primary risk, and a second DOCUMENT is the
+    documentation-layer form of the same defect. The file is 846 lines and already
+    over the 300-line advisory budget (check_doc_length, severity warn) — a
+    further reason to complete the existing entries rather than add a section.
+  - >-
+    STATE EXACTLY TWO FIELDS AND SAY SO. The reader must be able to conclude that
+    test_required and test_rationale are the whole mechanism and that no third or
+    parallel field is involved. That negative statement is load-bearing: it is what
+    stops the next implementer inventing one.
+  - >-
+    THE REFUSAL RULES MUST BE STATED AS A CLOSED SET WITH THE CONSEQUENCE ATTACHED:
+    absent, empty and whitespace-only reasons are refused; the reason's WORDING is
+    never judged for quality; and a refused record is reported unproven on exactly
+    the same terms as one carrying no declaration at all, and is demotable like any
+    other — not parked in a separate state. All four facts, explicitly.
+  - >-
+    STATE THAT NOTHING IS WRITTEN TO AN EXEMPT RECORD. TQ-400e-5 requires an
+    honoured exemption to be re-derived each run with the record's file left
+    byte-identical. A reader who expects an acknowledgement to appear on the record
+    and finds none will assume the exemption was not registered.
+  - >-
+    DESCRIBE TODAY AND TOMORROW AS TWO DISTINCT STATES, WITH THE MEASUREMENT DATED.
+    37 done records carry a reasonless declaration as of 2026-08-17. The entry must
+    present them as a BACKLOG — non-compliant but live — not as compliant, and must
+    say what happens to them when the hardened rule takes effect. An entry written
+    purely against the hardened rule misdescribes the store as it stands.
+  - >-
+    THE HONOUR/REFUSE ACCOUNT MUST BE WRITTEN AS EXTRACTABLE EXAMPLES. Give the
+    valid exemption form and the reasonless form as records a reader could paste,
+    so the round-trip criterion can be checked by feeding them to the real check
+    rather than by re-reading the prose.
+  - >-
+    SINGLE STATEMENT, ENFORCED BY LINKING AND BY CHECKING FOR RIVALS.
+    docs/how-to/done-proof-enforcement.md currently describes the unguarded
+    check-time behaviour for readers; it must be updated to point here in the same
+    change. Scan for any other doc that states an exemption rule and convert it to
+    a link. Two accounts of who may be exempt is the same drift in prose that the
+    three enforcement points have in code.
+  - >-
+    SEQUENCE AFTER TQ-400e-3, TQ-400e-4 AND TQ-400e-5 LAND. The reconciled
+    boundary, the refusal set and the no-write guarantee are all claims about
+    shipped behaviour.
+  - >-
+    The file is a tracked reference subject to check_doc_frontmatter and
+    check_doc_links; keep both passing in the same commit.
+delivers_to:
+  - agent: documentation-expert
+    ac_id: TQ-400d-5
+    contract: >-
+      The single reconciled statement of which records may legitimately carry an
+      exemption, published in docs/reference/ac-schema.md. TQ-400d-5's triage guide
+      LINKS here for the "legitimately absent from the pile" clause and must not
+      carry its own account of who may be exempt.
+expects_from:
+  - ac_id: TQ-400e-3
+    contract: >-
+      The honoured-exemption outcome as delivered — the two fields it reads, the
+      reported outcome it produces, and the reconciled boundary of which records
+      may legally be exempt. This is the boundary the entry states; if the
+      delivered boundary differs, the entry follows the delivery.
+  - ac_id: TQ-400e-4
+    contract: >-
+      The refusal rule as delivered — the reason shapes that refuse, the fact
+      that content is never judged, and that a refused record is unproven and
+      demotable rather than parked in a separate state.
+  - ac_id: TQ-400e-5
+    contract: >-
+      The stability guarantee: an honoured exemption is re-derived each run and
+      nothing is written to the record, which the entry must state so no reader
+      expects an acknowledgement to appear on the record.
+test_spec:
+  - name: test_tq400e6_entry_states_two_fields_the_refusal_set_and_the_reconciled_boundary
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Assert the entry names exactly test_required and test_rationale and states
+      that no third field is involved; states all four refusal facts (absent /
+      empty / whitespace-only refused, wording never judged, refused record
+      unproven on the same terms, refused record demotable); states that nothing
+      is written to an exempt record; and states the reconciled eligibility
+      boundary as a rule applicable to one record, naming all three enforcement
+      points.
+  - name: test_tq400e6_stated_boundary_partitions_the_real_store_the_way_both_layers_do
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      THE RECONCILIATION, MADE FALSIFIABLE. Over the REAL store, derive three sets:
+      the records _ac_schema_validators.py would reject for carrying
+      test_required: false, the records check_done_proof.py:463 currently honours,
+      and the records the entry's stated rule declares eligible. Assert the entry's
+      rule is consistent with both layers — no record it calls eligible that the
+      authoring validator would reject, and no record it calls ineligible that the
+      sweep silently honours without the entry saying so is backlog. A one-layer
+      check passes on an entry that documents only half the disagreement.
+  - name: test_tq400e6_documented_exemption_forms_are_honoured_and_refused_by_the_real_check
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT, BOTH POLARITIES. Lift the valid and the reasonless
+      exemption examples out of the entry, write them into a temp store, and run
+      the sweep through its real invocation: the valid form must be reported
+      exempt, the reasonless form must be refused and reported unproven
+      (must_block). This is the round-trip criterion — the rules the entry states
+      are the rules the check applies — and it is not satisfiable by any
+      prose-only assertion.
+  - name: test_tq400e6_todays_backlog_description_matches_the_real_store
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Walk the actual docs/acceptance-criteria/ tree, collect the done records
+      carrying test_required: false with no non-empty test_rationale (37 as of
+      2026-08-17), and assert the entry's today-versus-hardened statement matches
+      what the store actually contains — the figure is dated, and those records are
+      characterised as backlog rather than compliant. A hand-built fixture would
+      reproduce the author's belief about the store instead of measuring it.
+test_rationale: >-
+  change_target is docs, and the cheapest satisfying artifact here is two field
+  rows and a sentence — which would answer none of the three questions an author of
+  an exemption actually has. The clause that makes this AC hard is the
+  reconciliation, and it is the clause an author writing to satisfy a presence
+  check will omit, so it gets the seam entry: derive both layers' behaviour over
+  the REAL store and assert the entry's stated rule is consistent with both. A
+  test that read only one enforcement point would pass on an entry documenting only
+  half the disagreement, which is the status quo. The round-trip clause is fully
+  mechanical and gets a real-invocation entry in both polarities, because "the
+  rules the entry states are the rules the check applies" is exactly the claim a
+  parallel description satisfies textually and fails behaviourally. NOT
+  MECHANICALLY TESTABLE: "they can determine, for a record in front of them,
+  whether it may legally carry an exemption" is comprehension. Its proxy is two-
+  part and deliberately so — the criterion entry asserts the boundary is stated as
+  a rule applicable to ONE record (not as a narrative about two layers), and the
+  seam entry asserts that rule is TRUE of both shipped layers. Applicability plus
+  correctness is the checkable half; whether a given reader applies it correctly is
+  not observable. The today-versus-tomorrow clause is measured against the live
+  store rather than asserted, because 37 is a fact about the repository that will
+  move, and an entry whose stated figure has silently drifted is one a reader
+  learns to distrust.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Assigned documentation-expert; complexity M. ESCALATED HAND-OFF RESOLVED
+    — the reconciliation obligation is now the first and defining it_requirement,
+    with both sides verified at enrichment on 2026-08-18: _ac_schema_validators.py
+    ~:515-540 REJECTS test_required: false on an approved, not-yet-done, leaf code
+    AC (and rejects it alongside a non-empty test_spec as a contradiction), while
+    check_done_proof.py:463 (`if data.get("test_required") is False: continue`) HONOURS
+    it unconditionally on any done record, as does :491-495 in the change-scoped mode;
+    37 done records carry it. The it_requirement now demands the entry state WHICH
+    RECORDS THE RECONCILED RULE LEAVES ELIGIBLE — the boundary the two layers imply
+    is non-code records and already-done records — and names all three enforcement
+    points with what each gates. Both source files added to doc_links with the verified
+    line references. Ruled the target is the EXISTING test_required / test_rationale
+    entries in docs/reference/ac-schema.md extended in place, not a new document,
+    on the same no-second-mechanism reasoning TQ-400e-3 applies to the code. Added
+    delivers_to TQ-400d-5 so the triage guide links to this single statement. test_spec:
+    criterion (two fields, four refusal facts, boundary as a one-record rule, three
+    enforcement points) / seam (the stated rule partitions the REAL store consistently
+    with BOTH layers) / reachability (documented exemption forms through the real
+    sweep, both polarities, must_block) / real_artifact (the today-backlog description
+    measured against the live store). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc entry in TQ-400e's documentation_triggers.
+
+  THE SUBJECT IS ALREADY LIVE, WHICH IS WHY THE ENTRY MUST DESCRIBE TODAY AS WELL
+  AS TOMORROW. Verified 2026-08-17: the test-free declaration is already honoured
+  at check time with no reason required, 37 finished records carry it, and the
+  prose reason field already exists in the store's schema. Nothing is being
+  invented. An entry written purely against the hardened rule would misdescribe
+  the store as it stands and would let a reader believe those 37 records are
+  already compliant.
+
+  THE RECONCILIATION IS THE HARDEST CLAUSE AND IS DELIBERATE. Two enforcement
+  layers currently point in opposite directions: the authoring-time schema
+  validator refuses a test-free declaration on an approved, not-yet-done, leaf
+  code requirement, while the check-time sweep honours the same declaration
+  unconditionally on a finished record. A reference entry that documents only one
+  of the two leaves a record that is legal to one layer and illegal to the other
+  — the disjoint-vocabulary failure this repo has already shipped once. The
+  reconciled boundary is the thing a reader most needs and the thing an author
+  writing to satisfy a presence check will omit.
+
+  Written as reader outcomes rather than "the fields are documented" because the
+  cheapest satisfying artifact here is two field rows and a sentence, which would
+  answer none of the three questions an author of an exemption actually has: may
+  this record have one, what will be refused, and what will the next run do.
+
+  The round-trip clause makes the entry falsifiable against the shipped check
+  rather than against its author's intent.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — BOTH SIDES RE-VERIFIED, AND THE
+  RECONCILIATION IS NOW A TEST, NOT A HOPE. The two opposing rules were read at
+  source during enrichment and are quoted with line references in doc_links and in
+  the first it_requirement, so no implementer has to rediscover them. More
+  importantly the obligation is no longer only prose: the seam test entry derives
+  both layers' behaviour over the REAL store and asserts the entry's stated rule is
+  consistent with both, in both directions. That is what stops this AC being
+  satisfied by a well-written description of one layer — the outcome that would
+  leave the same 37 records in dispute while every check goes green.

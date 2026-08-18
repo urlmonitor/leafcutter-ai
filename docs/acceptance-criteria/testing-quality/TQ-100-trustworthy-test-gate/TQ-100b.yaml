@@ -36,6 +36,8 @@ covered_by:
   - TQ-100b-1
   - TQ-100b-2
   - TQ-100b-3
+  - TQ-100b-4
+  - TQ-100b-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
