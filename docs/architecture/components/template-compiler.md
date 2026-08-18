@@ -67,6 +67,35 @@ site invokes it as part of `build.py`'s phase list yet. Wiring it into an
 actual post-compile validation phase is a documented follow-up, not part of
 this AC's scope.
 
+## Broken-Reference Report Entry Schema (AC BP-900c-1)
+
+When the build-time guard finds a script path referenced by a compiled
+template but absent from the deployable script set, it reports the failure as
+a `BrokenRefEntry` (`scripts/build_propagation_audit.py`). Every entry names
+all three of the following fields — none may be empty or omitted:
+
+- **`missing_path`** — the `scripts/<path>` string that was referenced but is
+  not in the deployable script set (e.g. `scripts/ac_store/ac_prioritizer.py`).
+- **`referencing_templates`** — the compiled template path(s) that reference
+  the missing script (e.g. `agents/build-ac.md`). When multiple templates
+  reference the same missing path, `build_broken_ref_report` consolidates them
+  into a single entry's `referencing_templates` tuple instead of emitting one
+  entry per template (AC BP-900c-1-1). `emit_broken_ref_report_jsonl` writes
+  this field to JSONL as `referencing_template` (singular key, string or list
+  value) (AC BP-900c-2).
+- **`suggested_action`** — a corrective action drawn from a finite, named set
+  of constants: `ACTION_ADD_DEPLOY_PHASE` ("add a deploy phase in
+  build_phases.py"), `ACTION_ADD_TO_ALLOWLIST` ("add to the
+  external-dependency allowlist"), or `ACTION_COMMIT_UNDER_TEMPLATES` (the
+  directory already has a deploy phase, so the source file is merely missing
+  or untracked — commit it under `templates/scripts/`) (AC BP-900c-3). The
+  three-field entry shape is stable across all three action values; only the
+  chosen action varies with the missing path's classification.
+
+`build_broken_ref_report(refs_to_sources, deployed_scripts, allowlist=None)`
+is the factory that produces the list of `BrokenRefEntry` instances for a
+build run.
+
 ## CI and Fresh-Clone Test Requirements
 
 The full test suite requires the build step to run **before** `pytest` on any
