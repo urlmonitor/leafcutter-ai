@@ -212,6 +212,15 @@ flowchart TD
 - ACS-300k-2: Agent templates referencing index.yaml for component metadata are migrated to components.json
 - ACS-500c-1: BA agent checks for existing pattern before writing new behavioral AC
 - ACS-500c-2: IT PO agent preserves implements_pattern when enriching an AC
+- ACS-500g-1: A pattern-steward scans the whole store and surfaces recurring behavior as pattern candidates
+- ACS-500g-1-i: A pattern candidate is a proposal — existing ACs are never rewritten by the scan
+- ACS-500g-2: An authoring-patterns skill states the pattern-worthiness rules as decidable tests
+- ACS-500g-2-i: A newly promoted pattern is recognised as a pattern by both the authoring scan and the commit-time check
+- ACS-500g-3: Producer and consumer decide 'is this a pattern?' from one shared source that cannot drift
+- ACS-500g-4: Recurrence noticed while authoring is promoted in that same authoring run
+- ACS-500g-4-i: A below-threshold repetition is recorded so the next occurrence can trip the threshold
+- ACS-500g-5: A retrospective sweep over the existing store seeds the first patterns and ends the cold start
+- ACS-500g-5-i: Re-running the sweep reports already-covered behavior instead of proposing a duplicate pattern
 - ACS-800f: The authoring guidance reflects the new model
 - ACS-800f-1: The tree-split guidance describes re-home as a single metadata change
 - ACS-800f-1-i: Guidance documents the child-limit override as removable once tooling reads metadata
@@ -279,7 +288,7 @@ flowchart TD
 - BO-200c-3: Commit message is written by a dedicated agent, not inline by the supervisor
 - BO-200c-4: An approved commit message subject line is never rewritten by hooks or subsequent staging
 - BO-2100a-1: Ticket authoring adds live-surface-tester to the agents map when both toggles are on
-- BO-2100a-1-i: live-surface-tester is absent from the agents map unless both toggles are on
+- BO-2100a-1-i: live-surface-tester is absent from the agents map unless both toggles are on, and a requested-but-disabled check is recorded as skipped
 - BO-2100a-2: ticket-supervisor Spawn Allowlist permits live-surface-tester
 - BO-2100a-4: building-epics canonical dispatch order documents live-surface-tester at 11.8
 - BO-2100b-1: Project toggle off means the check never runs, even when the ticket opts in
@@ -392,6 +401,9 @@ flowchart TD
 - BP-1100f-2-i: Asserting the artifact path was passed as an argument is topology, not effect coverage
 - BP-1100f-3: A work item whose stated intent contradicts its declared surface is caught before implementation
 - BP-1100f-3-i: A mixed-surface work item flags only the portion its stated intent cannot handle
+- BP-1100g-1: Every kind of proof the plan can ask for is a kind the test writer has been taught
+- BP-1100g-2: When the plan cannot name the way in, the writer is told how to resolve one and records the one it resolved
+- BP-1100g-5: The cross-layer seam rule leaves exactly one answer per piece of work, and an honest no is one of them
 - BP-200a-1: Agent template frontmatter declares all required fields for a phase agent
 - BP-200a-2: Agent template body contains the six-item Prompt-Quality Checklist with detection heuristics
 - BP-200a-3: Agent template defines stop-and-ask boundaries deferring infrastructure edits
