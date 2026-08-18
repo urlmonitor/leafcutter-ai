@@ -382,6 +382,30 @@ def test_deployed_fast_lane_actually_executes(tmp_path: Path) -> None:
     deployed = output_root / "scripts" / "build_orchestration" / "fast_lane.py"
     assert deployed.is_file(), f"fast_lane.py was not deployed to {deployed}."
 
+    # The connected set is resolved against a FROZEN COPY of the GE-113c-3
+    # records, not the live store. Pointing --ac-root at the real store made
+    # this test depend on those ACs staying unbuilt: once GE-113c-3 and its
+    # children were completed (work_status: done) the resolver correctly
+    # returned [] and this test failed, even though the deployed script ran
+    # perfectly — which is the only thing BP-900g-4 is actually about.
+    # Copying the real records preserves schema fidelity; resetting
+    # work_status pins the fixture so completing real work cannot break it.
+    fixture_root = tmp_path / "ac-store"
+    fixture_dir = fixture_root / "guardrail-engine" / "GE-113c-3-fixture"
+    fixture_dir.mkdir(parents=True)
+    source_dir = (
+        _REPO_ROOT
+        / "docs"
+        / "acceptance-criteria"
+        / "guardrail-engine"
+        / "GE-113-artifacts-cant-land-in-the-wrong-place"
+    )
+    for ac_id in ("GE-113c", "GE-113c-3", "GE-113c-3-i", "GE-113c-3-ii",
+                  "GE-113c-3-iii", "GE-113c-3-iv"):
+        text = (source_dir / f"{ac_id}.yaml").read_text(encoding="utf-8")
+        text = text.replace("work_status: done", "work_status: todo")
+        (fixture_dir / f"{ac_id}.yaml").write_text(text, encoding="utf-8")
+
     result = subprocess.run(
         [
             sys.executable,
@@ -391,7 +415,7 @@ def test_deployed_fast_lane_actually_executes(tmp_path: Path) -> None:
             "--ac",
             "GE-113c-3",
             "--ac-root",
-            str(_REPO_ROOT / "docs" / "acceptance-criteria"),
+            str(fixture_root),
         ],
         capture_output=True,
         text=True,
