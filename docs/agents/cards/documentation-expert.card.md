@@ -250,9 +250,15 @@ flowchart TD
 - GE-117c-2: How-to guide: the extended decision-history tail-tag with ticket and AC references
 - GE-117d-4: How-to guide: understanding and clearing a declaration-guardrail block
 - GE-117e-3: How-to guide: fixing a missing declaration or deliberately opting out
-- GE-119a-5: The no-silent-pass rule is written where the next check author will find it
-- GE-119b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
-- GE-119d-5: The how-to states what a prepared working copy guarantees and how to confirm it
+- GE-120a-5: The no-silent-pass rule is written where the next check author will find it
+- GE-120b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
+- GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
+- GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
+- GE-122a-3: The numbering rules for all four namespaces are written down in one place
+- GE-122b-3: An author with no prior knowledge can find out how to get a number
+- GE-122b-4: Which locations must carry a number, and which need not, is written down
+- GE-122c-3: A person blocked where nobody can be brought in has a procedure to follow
+- GE-122d-5: Which stage you can skip, and what still catches you, is written down
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface

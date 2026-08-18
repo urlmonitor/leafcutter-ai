@@ -72,10 +72,10 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The pre-commit check and the scanner both live under templates/ as canonical copies; the copies under scripts/ and .leafcutter/ are build.py outputs and must not be hand-edited."
-  - path: docs/known-issues/guardrail-engine.md
+  - path: docs/known-issues/commit-guardian.md
     relationship: related
     status: exists
-    relevance: "KI-GE-001 records that the existing high-entropy prose exemption is file-level over the same location list. This AC deliberately does NOT copy that shape; the known issue is context for why, and is out of scope to fix here."
+    relevance: "KI-CG-004 records that the existing high-entropy prose exemption is file-level over the same location list. This AC deliberately does NOT copy that shape; the known issue is context for why, and is out of scope to fix here."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -211,5 +211,5 @@ notes: |
   today. The rejected alternatives recorded above rule out shapes that would
   weaken the value list; this is the equivalent hazard on the LOCATION list, and
   it is captured as an it_requirement rather than a criteria change. It is a
-  property of the existing matcher, adjacent to KI-GE-001 but not the same
+  property of the existing matcher, adjacent to KI-CG-004 but not the same
   defect, and repairing the existing high-entropy exemption is out of scope here.

@@ -18,3 +18,43 @@ breaking: false
 ---
 
 ## Entry
+
+### Correction (added 2026-08-18 — read before trusting the title above)
+
+A customer audit at pin `54356a92` found that the build was still generating
+every symlink shim with an absolute, machine-local target, and traced the gap
+back to this entry. They are right, and the record needs to say so explicitly
+rather than being silently rewritten.
+
+**What BP-016 actually fixed:** tracking only. It stopped five already-committed
+symlinks — `scripts/commit_guardian`, `scripts/doc_compliance`,
+`scripts/feedback`, `.claude/workflows`, and the self-referential `.env` — from
+being present in the git index, and corrected the two `.gitignore` defects
+(trailing slashes that only match directories, plus three missing entries)
+that had let them get committed in the first place. That is a complete fix
+*for this repo*, where build output is untracked by design.
+
+**What BP-016 did NOT fix:** generation. `install_shims()` — both
+`_create_shim` (directory shims) and `_create_file_shim` (file shims) —
+continued to build `source_path` as an absolute path and pass it straight into
+`Path.symlink_to()`, exactly as before this ticket. Nothing in BP-016 touched
+that code path.
+
+**The title is misleading on exactly this point.** "Untrack build-shim
+symlinks committed with absolute local paths" names the absolute-path hazard
+in its own title while describing a fix to *tracking*, not to *generation*. A
+reader — including, evidently, a downstream auditor — can reasonably infer
+from that title that the absolute-path problem itself was resolved. It was
+not. Do not read this entry as having closed the absolute-path hazard; it
+closed only the committed-symlink symptom of it.
+
+**Who was exposed in the interval:** any consumer who vendors, copies, or
+otherwise ships this repo's *build output* (as opposed to cloning the repo
+itself) inherited machine-specific absolute symlink targets from BP-016
+(2026-08-14) until BP-017 landed (2026-08-18) — four days.
+
+**The generation gap was closed by BP-017** (PR #477, squashed to
+`967f37fbc` on main), which added `_relative_symlink_target()` so shim targets
+are computed with `os.path.relpath` and no longer bake in a build-time
+absolute path. See the BP-017 changelog entry for detail:
+`changelogs/2026-08-18-1352-symlink-shims-now-record-relative-targets-closes-the-generation-gap-bp-016-left-open-bp-017.md`.

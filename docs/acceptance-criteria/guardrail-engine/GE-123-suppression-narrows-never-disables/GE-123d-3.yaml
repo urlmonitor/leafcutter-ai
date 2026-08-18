@@ -59,10 +59,10 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
-  - path: docs/known-issues/guardrail-engine.md
+  - path: docs/known-issues/commit-guardian.md
     relationship: related
     status: exists
-    relevance: "KI-GE-001 is the pre-existing file-level high-entropy exemption this AC's notes flag and deliberately do not fix. Recorded here so the two are not later mistaken for duplicates, and so that its existence is never used to argue a file-level shape is acceptable for the generic-credential rule."
+    relevance: "KI-CG-004 is the pre-existing file-level high-entropy exemption this AC's notes flag and deliberately do not fix. Recorded here so the two are not later mistaken for duplicates, and so that its existence is never used to argue a file-level shape is acceptable for the generic-credential rule."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -71,7 +71,7 @@ it_requirements:
   - "No rule other than the generic-credential rule may be narrowed anywhere by this feature. The private-key, cloud-access-key, exchange-API-key and high-entropy rules must keep full strength inside every prose location."
   - "The exemption must never be granted at file level. A staged file holding one exempt finding and one reported finding must still block, and the reported count must be exactly one — a count of zero and a count of two are both failures, and both are reachable from plausible implementations."
   - "Every scenario must be red before the implementation lands. In particular, each must fail against an implementation that grants the exemption per file and against one built on a naive contains-whitespace test — those are the two cheapest wrong implementations, and a test suite that cannot distinguish them does not discharge this AC."
-  - "The pre-existing file-level high-entropy exemption (KI-GE-001 in docs/known-issues/guardrail-engine.md) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked."
+  - "The pre-existing file-level high-entropy exemption (KI-CG-004 in docs/known-issues/commit-guardian.md) is explicitly out of scope. Do not close it, do not extend it, and do not cite it as precedent for a file-level generic-credential exemption. The two must remain separately tracked."
   - "The exemption must be unreachable for any value the shape vocabulary cannot classify: unclassifiable defaults to reported, and that default must be exercised, not merely intended."
   - "ADR-001 parity: any code this AC causes to change lives in the canonical copies under templates/; verify through the build.py round-trip."
 delivers_to: null
@@ -114,7 +114,7 @@ origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S — this AC adds little code of its own; its weight is in the test contract. Authored eight policy-level it_requirements, including the two cheapest wrong implementations the red baseline must exclude (file-level exemption; naive contains-whitespace) and an explicit out-of-scope fence around KI-GE-001 so the pre-existing file-level high-entropy hole is never cited as precedent. Added a known-issues doc_link for the same reason. Authored a five-entry test_spec plus test_rationale, every entry asserting on the real process exit status rather than a predicate return. readiness draft->reviewed; work_status and priority untouched."
+    detail: "Criteria untouched. Complexity held at S — this AC adds little code of its own; its weight is in the test contract. Authored eight policy-level it_requirements, including the two cheapest wrong implementations the red baseline must exclude (file-level exemption; naive contains-whitespace) and an explicit out-of-scope fence around KI-CG-004 so the pre-existing file-level high-entropy hole is never cited as precedent. Added a known-issues doc_link for the same reason. Authored a five-entry test_spec plus test_rationale, every entry asserting on the real process exit status rather than a predicate return. readiness draft->reviewed; work_status and priority untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -160,9 +160,9 @@ notes: |
   predicate says no; it does not prove the commit was blocked.
 
   IT-PO NOTE, 2026-08-18: the pre-existing file-level high-entropy exemption
-  this section flags has since been recorded formally as KI-GE-001 in
-  docs/known-issues/guardrail-engine.md, with measured evidence. The two remain
-  separate: KI-GE-001 is an existing defect in the high-entropy rule, this AC is
+  this section flags has since been recorded formally as KI-CG-004 in
+  docs/known-issues/commit-guardian.md, with measured evidence. The two remain
+  separate: KI-CG-004 is an existing defect in the high-entropy rule, this AC is
   the guarantee that the NEW generic-credential exemption does not acquire the
   same shape. The fence is now also an it_requirement so a coder cannot reach
   for the existing file-level exemption as a template.

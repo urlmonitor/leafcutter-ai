@@ -39,16 +39,16 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
-  - path: docs/known-issues/guardrail-engine.md
+  - path: docs/known-issues/commit-guardian.md
     relationship: related
     status: exists
-    relevance: "KI-GE-001 is the measured, pre-existing defect this AC is the standing argument against inheriting: the high-entropy rule is exempted for WHOLE FILES under a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source today. This AC governs only the NEW generic-credential exemption; repairing KI-GE-001 is separate work and the two must not be recorded as duplicates."
+    relevance: "KI-CG-004 is the measured, pre-existing defect this AC is the standing argument against inheriting: the high-entropy rule is exempted for WHOLE FILES under a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source today. This AC governs only the NEW generic-credential exemption; repairing KI-CG-004 is separate work and the two must not be recorded as duplicates."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "The location list for the new exemption is copied in spirit from the existing high-entropy prose-prefix list, and one entry on that list — the skill-prompt area — holds executable Python including the secrets scanner's own source. The kind gate is what stops the new exemption inheriting that shape. It must not be dropped as redundant, and it must be observable: removing it has to turn a test red."
-  - "The pre-existing defect this AC guards against is recorded as KI-GE-001 in docs/known-issues/guardrail-engine.md, with measured evidence — a token of Shannon entropy 5.17 is exempt from the high-entropy rule at the scanner's own source path, at the ticket tree, at the acceptance-criteria store and at the retrospectives area, while reported under the build scripts directory. That defect is explicitly OUT OF SCOPE here. Do not repair it, do not widen it, and do not let this AC be closed as a duplicate of it: KI-GE-001 concerns an existing rule's file-level exemption, this AC concerns the kind gate on a new one."
-  - "If the location data is shared between the existing high-entropy exemption and the new generic-credential exemption, the kind gate must be applied on both sides or the sharing must not happen. Reusing the list without reusing the gate is exactly the careless line of reuse this AC exists to forbid, and it would silently widen KI-GE-001 rather than contain it."
+  - "The pre-existing defect this AC guards against is recorded as KI-CG-004 in docs/known-issues/commit-guardian.md, with measured evidence — a token of Shannon entropy 5.17 is exempt from the high-entropy rule at the scanner's own source path, at the ticket tree, at the acceptance-criteria store and at the retrospectives area, while reported under the build scripts directory. That defect is explicitly OUT OF SCOPE here. Do not repair it, do not widen it, and do not let this AC be closed as a duplicate of it: KI-CG-004 concerns an existing rule's file-level exemption, this AC concerns the kind gate on a new one."
+  - "If the location data is shared between the existing high-entropy exemption and the new generic-credential exemption, the kind gate must be applied on both sides or the sharing must not happen. Reusing the list without reusing the gate is exactly the careless line of reuse this AC exists to forbid, and it would silently widen KI-CG-004 rather than contain it."
   - "The kind gate must reject on the file's own extension, so that two files in the same directory differing only in extension receive different verdicts in a single run. A gate that is short-circuited by a directory-level decision cannot satisfy the second scenario."
   - "The scanner's own source path must be covered explicitly, not merely by implication from the extension rule. It is the sharpest instance of the class and the one a future reader will check first."
   - "ADR-001 parity: the canonical copies are under templates/; verify through the build.py round-trip."
@@ -80,13 +80,13 @@ test_spec:
     framework: unittest
     type: integration
     angle: boundary
-    description: "In one run over a Python file under the skill-prompt area, the generic-credential finding is reported while the high-entropy rule's existing file-level exemption for that same path is unchanged — pinning that this AC narrows nothing about KI-GE-001 and inherits nothing from it"
-test_rationale: "Both criteria are about which of two gates wins for a file the location list already covers, and that is only observable at the level of a real run: the second scenario asserts an exact count of one across two files staged together, which a predicate called twice cannot demonstrate. Each entry therefore runs the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository and asserts on the exit status and the finding set. The fourth entry is deliberately a fence rather than a behaviour: it pins that the new generic-credential exemption and the pre-existing high-entropy file-level exemption (KI-GE-001) reach different verdicts for the same path, so that a later reader cannot mistake one for the other and cannot close this AC by touching that defect. The deployed angle is not charged; the project convention pins these tests to the canonical templates/ copy per ADR-001."
+    description: "In one run over a Python file under the skill-prompt area, the generic-credential finding is reported while the high-entropy rule's existing file-level exemption for that same path is unchanged — pinning that this AC narrows nothing about KI-CG-004 and inherits nothing from it"
+test_rationale: "Both criteria are about which of two gates wins for a file the location list already covers, and that is only observable at the level of a real run: the second scenario asserts an exact count of one across two files staged together, which a predicate called twice cannot demonstrate. Each entry therefore runs the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository and asserts on the exit status and the finding set. The fourth entry is deliberately a fence rather than a behaviour: it pins that the new generic-credential exemption and the pre-existing high-entropy file-level exemption (KI-CG-004) reach different verdicts for the same path, so that a later reader cannot mistake one for the other and cannot close this AC by touching that defect. The deployed angle is not charged; the project convention pins these tests to the canonical templates/ copy per ADR-001."
 origin_agent: business-analyst
 created: 2026-08-18
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-18)"
-    detail: "Criteria untouched. Complexity held at S. Authored six policy-level it_requirements, three of which turn on a fact measured after the BA wrote this AC and recorded as KI-GE-001 in docs/known-issues/guardrail-engine.md: the existing high-entropy exemption is file-level over a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source. The requirements name the known-issue id explicitly, fence it as out of scope, and forbid the specific reuse that would widen it — sharing the location list without sharing the kind gate. Added a known-issues doc_link carrying the measured evidence. Authored a four-entry test_spec plus test_rationale, the fourth entry being a standing fence that the two exemptions reach different verdicts for the same path. readiness draft->reviewed; work_status and priority untouched."
+    detail: "Criteria untouched. Complexity held at S. Authored six policy-level it_requirements, three of which turn on a fact measured after the BA wrote this AC and recorded as KI-CG-004 in docs/known-issues/commit-guardian.md: the existing high-entropy exemption is file-level over a prefix list that includes the skill-prompt area, so a high-entropy token is already unreported in the scanner's own source. The requirements name the known-issue id explicitly, fence it as out of scope, and forbid the specific reuse that would widen it — sharing the location list without sharing the kind gate. Added a known-issues doc_link carrying the measured evidence. Authored a four-entry test_spec plus test_rationale, the fourth entry being a standing fence that the two exemptions reach different verdicts for the same path. readiness draft->reviewed; work_status and priority untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -124,13 +124,13 @@ notes: |
 
   CONFIRMED AND FILED, 2026-08-18. The hazard this AC anticipates is not only
   reachable — for the OTHER rule it has already happened, and it has now been
-  measured and recorded as KI-GE-001 in docs/known-issues/guardrail-engine.md:
+  measured and recorded as KI-CG-004 in docs/known-issues/commit-guardian.md:
   the high-entropy rule is exempted for whole files under a prefix list that
   includes the skill-prompt area, so a token of Shannon entropy 5.17 goes
   unreported in the secrets scanner's own source today while the same token is
   reported under the build scripts directory. That strengthens this AC's
   argument and changes none of its scope. The relationship is fenced in
-  it_requirements so the two are not later merged: KI-GE-001 is an existing
+  it_requirements so the two are not later merged: KI-CG-004 is an existing
   defect in an existing rule and is separate work; this AC is the guarantee that
   the NEW exemption does not acquire the same shape, and it must not be closed
-  by anything done to KI-GE-001.
+  by anything done to KI-CG-004.

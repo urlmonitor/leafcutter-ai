@@ -7,6 +7,9 @@ status: active
 component: knowledge-management
 level: L2
 title: "Artifact data map records missing relations explicitly instead of omitting them"
+parent: KM-ADM-100b
+depends_on:
+  - KM-ADM-100b
 origin_agent: BrainCandy
 criteria: |
   Given docs/reference/artifact-knowledge-graph.graph.json is the map a refactorer reads
@@ -36,5 +39,10 @@ notes: |
   Note the renderer consequence: adding these entries makes them drawable, so the Atlas
   view must style status:"absent" distinctly (tracked separately) or they read as real
   links.
+
+  PARENT ADDED 2026-08-18 (product-owner). Home is KM-ADM-100b ("a connection the
+  project does not have shows up as a gap you can see"), under the L0 KM-ADM-100. The
+  "tracked separately" renderer consequence above is KM-ADM-003, now a declared sibling
+  under the same L1 — the two must ship together (see KM-ADM-100b notes).
 change_target: docs
 risk_surface: internal
