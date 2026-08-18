@@ -125,3 +125,40 @@ notes: |
   re-creating the string somewhere. That would preserve, at a new address, precisely the
   test that let a dead reference read as alive for a month. The assertion has to go, or
   be replaced by one that runs the lane.
+
+  SCOPE CORRECTION, found 2026-08-18 while starting this work — this criterion is a test
+  MIGRATION, not a deletion, and whoever picks it up should size it accordingly.
+
+  Two whole test files point at the orphan and nothing else:
+  unit_tests/workflows/test_bo2400a_runner_wiring.py (513 lines) and
+  unit_tests/workflows/test_bo2400a_runner_structure.py (574 lines). Between them they
+  carry the only `# covers:` proof for EIGHT criteria — BO-2400a-1, -2, -3, -4, -5,
+  BO-2400b-3, BO-2400c-1 and BO-2400d-1 — several of which are done. Deleting the orphan
+  and its tests in one move therefore strips the done-proof from all eight and fails
+  "Proof-of-done", a REQUIRED merge check. The deletion cannot land on its own.
+
+  The likely-cheap path, to be confirmed rather than assumed: the criteria those tests
+  cover describe the runner, and the runner is now fast-lane-ship.js, so re-pointing each
+  file's module-level path constant may preserve most proofs with no rewrite — the live
+  lane inlines the same gates the orphan only named. Two things that must NOT be swept
+  along with it: the assemble_context_bundle assertion must be DELETED rather than
+  re-pointed (BO-2400c-1's proof now comes from the behavioural suite in
+  test_bo2400c_prompt_cache_wiring.py, and re-pointing a name-presence grep at the live
+  file is exactly the prohibition above); and every re-pointed assertion that still only
+  greps source is inherited debt, not new coverage — see KI-BO-007.
+
+  Also in the blast radius, all currently accurate and all describing a file that would
+  no longer exist: three architecture diagrams
+  (docs/architecture/diagrams/c2-fast-lane-build-path-components.md,
+  c2-fast-vs-heavy-lane-phases.md, c3-fast-lane-build-loop-sequence.md) and
+  docs/build-dataflow.json.
+
+  Explicitly NOT in scope, and it would be wrong to touch them: changelog entries,
+  already-done acceptance criteria that mention the orphan as historical context, and the
+  CLAUDE.md phantom-done lesson that cites it by name. Those are records of what happened.
+  Rewriting history to make a grep come back clean is the same instinct this criterion's
+  test clause exists to refuse.
+
+  Deferred out of the branch that wired the caching (2026-08-18) on that basis: bundling a
+  thousand-line test migration into an already-large pull request risks the delivered work
+  for a cleanup that is sequenced, not blocked.

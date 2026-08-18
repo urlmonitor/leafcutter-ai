@@ -7,7 +7,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: high
 roadmap_phase: phase_1
@@ -108,7 +108,8 @@ created: 2026-08-18
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-ship.js"
 change_target: pipeline
 risk_surface: internal
 notes: |
