@@ -2149,8 +2149,12 @@ def _build_frontmatter(
         ac_store_path: Repo-root-relative path to the source AC YAML file.
             When provided, an ``ac_traceability`` entry is added to the
             frontmatter carrying both the AC id and the store path, enabling
-            ac-validator and ac-fulfillment-gate to locate the source AC
-            directly without scanning the whole store.
+            ac-fulfillment-gate to locate the source AC directly without
+            scanning the whole store. NOTE (ACD-1900b-5-i): ac-validator does
+            NOT read ``ac_traceability`` at all -- an earlier version of this
+            docstring claimed both agents used it, which was false for
+            ac-validator. ac-fulfillment-gate is the sole consumer, via the
+            shared ``ac_coverage_resolver`` module.
         tickets_root: Root directory to search for co-located sibling tickets
             when translating the AC's ``depends_on`` (TKT-600a-1). When
             ``None`` (the default — preserves prior callers' behaviour),
@@ -3258,5 +3262,11 @@ DECISION HISTORY
   declares_side_effect from the source AC to the ticket frontmatter so downstream
   tools can read the declaration directly. Both call sites in main() updated to
   extract and pass declares_side_effect from the AC record.
+- 2026-08-18 [python-coder]: Corrected the _build_frontmatter docstring's false
+  claim that ac_traceability enables "ac-validator and ac-fulfillment-gate" to
+  locate the source AC. ac-validator does not read ac_traceability at all;
+  ac-fulfillment-gate (via the new ac_coverage_resolver module) is the sole
+  consumer. The producer's emitted two-key {id, path} shape is unchanged
+  (ACD-1900b-5-i). (#ACD-1900b-5-i)
 ====================================================================
 """
