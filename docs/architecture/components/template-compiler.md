@@ -45,6 +45,46 @@ safely). `install_shims()` (scripts/build_helpers.py) then creates a
 relative-symlink shim at `<target>/scripts/<name>` for each, resolving to
 the deployed copy (AC BP-900a-2).
 
+## Deployed ac_store Import Contract (AC BP-900a-3)
+
+Once `build_ac_store` has deployed the ac_store scripts to a consumer project
+(AC BP-900a-1), the deployed `<output_root>/scripts/ac_store/` directory is
+guaranteed **importable** as a Python package by any process that adds it to
+`sys.path` — this is the contract the agent templates rely on at runtime.
+`templates/agents/build-ac.md` embeds the exact mechanism twice (its
+`readiness-check-drift` and `dry-run` steps), and
+`templates/skills/ac-scanner/SKILL.md` documents the underlying script the
+same templates shell out to:
+
+```python
+import sys
+sys.path.insert(0, "{{config.output_root}}/scripts/ac_store")
+from scan_ac_store import traverse_ac_tree
+```
+
+Two properties make this importable:
+
+- **`__init__.py` is present.** `build_ac_store`'s `deploy_map` deploys all
+  13 ac_store files, including `scripts/ac_store/__init__.py`, so the
+  deployed directory is a valid Python package rather than a bare directory
+  of scripts. `__init__.py` is intentionally empty (zero bytes) — it
+  introduces no import-time side effects, so importing the package (or any
+  of `ac_prioritizer`, `generate_ticket_from_ac`, `scan_ac_store` from
+  within it) never runs unexpected code as a side effect of the `sys.path`
+  insert.
+- **No broken internal cross-module imports.** None of `ac_prioritizer.py`,
+  `generate_ticket_from_ac.py`, or `scan_ac_store.py` import each other via a
+  path that only resolves when `ac_store`'s *parent* directory (rather than
+  `ac_store` itself) is on `sys.path`, so inserting
+  `<output_root>/scripts/ac_store` directly — as the templates above do — is
+  sufficient for all three modules to import without `ImportError`.
+
+Regression coverage for this contract runs the real `build.py --target-dir`
+into a fresh directory, then imports the three named modules from a fresh
+subprocess seeded only with the deployed `scripts/ac_store` path — reproducing
+the templates' own `sys.path.insert` pattern rather than importing from the
+source tree, which would mask a deploy-manifest gap (`unit_tests/test_bp_900a_3.py`).
+
 ## Compiled-Output Script Reference Scan (AC BP-900b-1)
 
 `build_referential_integrity.extract_compiled_script_path_refs(compiled_root)`
