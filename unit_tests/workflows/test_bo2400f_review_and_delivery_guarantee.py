@@ -182,6 +182,21 @@ _GREEN_LABELS: dict = {
         "uncovered_ac_ids": [],
         "message": "implementation green",
     },
+    # The changelog phase must be stubbed with a SCHEMA-CONFORMING positive
+    # reply (status ok + entry_added true). An unstubbed label falls through to
+    # the harness default, whose shape is {passed: true, ...}; the changelog
+    # guard deliberately does not accept that, because a bare `passed: true`
+    # carries no evidence an entry was actually written. Omitting this entry
+    # would make every "green run reaches commit" assertion below fail on the
+    # changelog halt instead — which is what happened when this fixture was
+    # first written, and was briefly papered over by a `|| passed === true`
+    # escape hatch in the workflow itself before being fixed here instead.
+    "fastlane-changelog": {
+        "status": "ok",
+        "entry_added": True,
+        "entry_path": "changelogs/2026-08-18-0000-stub-entry.md",
+        "message": "entry emitted",
+    },
     "fastlane-commit": {
         "status": "ok",
         "branch": "fast-lane/bo-stub-1",

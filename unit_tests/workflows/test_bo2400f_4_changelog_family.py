@@ -355,6 +355,30 @@ _BASE_RESPONSES: dict = {
         "uncovered_ac_ids": [],
         "message": "green",
     },
+    # These two phases were added to the workflow by the KI-BO-001 work and are
+    # stubbed here with SCHEMA-CONFORMING positive replies (verdict_obtained /
+    # entry_added), not the harness's generic default.
+    #
+    # Why this matters: an unstubbed label falls through to the harness default,
+    # whose shape is {passed: true, ...}. If these entries were omitted, the only
+    # way the workflow could reach the commit dispatch would be for its guards to
+    # accept a bare `passed: true` as a review verdict — i.e. to treat a reply
+    # carrying no verdict at all as a clean review. That is precisely the
+    # fail-open BO-2400f-11 forbids ("no default-true, no || true"). The fixture
+    # is the right place to say "review passed", not the guard.
+    "fastlane-review": {
+        "verdict_obtained": True,
+        "high_findings": [],
+        "medium_findings": [],
+        "low_suppressed_count": 0,
+        "message": "no high-confidence findings",
+    },
+    "fastlane-changelog": {
+        "status": "ok",
+        "entry_added": True,
+        "entry_path": "changelogs/2026-08-18-0000-stub-entry.md",
+        "message": "entry emitted",
+    },
     "fastlane-commit": {
         "status": "ok",
         "branch": "fast-lane/bo-stub-1",
@@ -808,4 +832,55 @@ def test_ac_v_halt_releases_claimed_acs_naming_built_ac_ids():
     assert "BO-STUB-1" in release_prompt, (
         "The release dispatch must name the built AC id(s) it is releasing, so the "
         f"operator can finish delivery by hand. Prompt: {release_prompt[:400]}"
+    )
+
+
+def test_ac_i_js_exempt_mirror_matches_the_gate_module():
+    # covers: BO-2400f-4-i
+    """The workflow's JS exempt-prefix mirror must equal the gate's own list.
+
+    fast-lane-ship.js decides whether to dispatch the changelog phase at all
+    from a JS array, because the E2 engine has no filesystem access and cannot
+    import the Python gate module to make that topology call (ADR-024). The
+    requirement decision itself is single-source — compute_changelog_requirement
+    re-reads check_changelog_presence.EXEMPT_PREFIXES at call time — but the
+    dispatch gate is a hand-copied duplicate, and a duplicate that can drift is
+    exactly what BO-2400f-4-i exists to prevent.
+
+    The dangerous direction is specific: if the gate module gains a new exempt
+    prefix and this mirror does not, the lane merely dispatches a changelog
+    phase it did not need — harmless. If the gate module REMOVES a prefix (or
+    narrows one) and this mirror keeps it, the lane skips the changelog phase
+    for a change that in fact owes an entry, and opens an unmergeable PR. That
+    is KI-BO-001 returning through a side door, and it would be silent.
+
+    This test makes that drift impossible to land quietly.
+    """
+    workflow_src = _FAST_LANE_SHIP_JS.read_text(encoding="utf-8")
+
+    marker = "const CHANGELOG_EXEMPT_PREFIXES = ["
+    start = workflow_src.find(marker)
+    assert start != -1, (
+        "fast-lane-ship.js must declare CHANGELOG_EXEMPT_PREFIXES. If the "
+        "dispatch decision was redesigned to avoid the mirror entirely (e.g. "
+        "always dispatch and let the Python layer decide), delete this test "
+        "along with the array — do not leave it asserting a stale shape."
+    )
+    end = workflow_src.find("]", start)
+    body = workflow_src[start + len(marker) : end]
+
+    js_prefixes = sorted(
+        segment.strip().strip(",").strip('"').strip("'")
+        for segment in body.split("\n")
+        if segment.strip().strip(",").strip()
+    )
+    py_prefixes = sorted(check_changelog_presence.EXEMPT_PREFIXES)
+
+    assert js_prefixes == py_prefixes, (
+        "The JS exempt-prefix mirror in fast-lane-ship.js has drifted from "
+        "check_changelog_presence.EXEMPT_PREFIXES, the rule the required CI "
+        "check actually applies. Update the JS array in the same edit as the "
+        "Python list.\n"
+        f"  JS:     {js_prefixes}\n"
+        f"  Python: {py_prefixes}"
     )

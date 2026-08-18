@@ -38,12 +38,14 @@
 
 export const meta = {
   name: "fast-lane-ship",
-  description: "Full-arc fast lane: point at one AC id and get a PR back. Opens a fresh worktree off origin/main, resolves the AC's connected build set (subtree + unmet deps, dependency-ordered, readiness-agnostic), runs the inlined lean two-agent loop (test-writer then coder) gated by verify_red_baseline and verify_green_and_coverage, then auto-commits and opens the PR. Empty set is a clean no-op. No per-ticket supervisor chain, no planner (BO-2400f).",
+  description: "Full-arc fast lane: point at one AC id and get a PR back. Opens a fresh worktree off origin/main, resolves the AC's connected build set (subtree + unmet deps, dependency-ordered, readiness-agnostic), runs the inlined lean two-agent loop (test-writer then coder) gated by verify_red_baseline and verify_green_and_coverage, submits the working diff to pr-reviewer and emits a changelog entry when owed, then auto-commits and opens the PR. Empty set is a clean no-op. No per-ticket supervisor chain, no planner (BO-2400f).",
   phases: [
     { title: "Worktree", detail: "create-fastlane-worktree off origin/main" },
     { title: "Resolve", detail: "select_connected — the connected build set" },
     { title: "Test Writer", detail: "red stubs for the resolved ids + verify_red_baseline" },
     { title: "Coder", detail: "make green + verify_green_and_coverage" },
+    { title: "Review", detail: "pr-reviewer over the uncommitted working diff (BO-2400f-11)" },
+    { title: "Changelog", detail: "emit_entry.py when the change owes one (BO-2400f-4/KI-BO-001)" },
     { title: "Commit", detail: "mark ACs done + commit on the worktree branch" },
     { title: "Pull Request", detail: "open the PR against main (gh + EMU fallback)" },
   ],
@@ -129,6 +131,87 @@ const PR_SCHEMA = {
     message: { type: "string" },
   },
 };
+
+const REVIEW_SCHEMA = {
+  type: "object",
+  required: ["verdict_obtained"],
+  properties: {
+    verdict_obtained: { type: "boolean" },
+    high_findings: { type: "array", items: { type: "string" } },
+    medium_findings: { type: "array", items: { type: "string" } },
+    low_suppressed_count: { type: "integer" },
+    message: { type: "string" },
+  },
+};
+
+const CHANGELOG_SCHEMA = {
+  type: "object",
+  required: ["status", "entry_added"],
+  properties: {
+    status: { type: "string", enum: ["ok", "error"] },
+    entry_added: { type: "boolean" },
+    entry_path: { type: ["string", "null"] },
+    message: { type: "string" },
+  },
+};
+
+// ---------------------------------------------------------------------------
+// KI-BO-001 / BO-2400f-4-i: mirror of the CI changelog-presence gate module's
+// EXEMPT_PREFIXES (check_changelog_presence.py, under scripts). The SINGLE
+// SOURCE OF TRUTH for this rule is that Python module — fast_lane.py's
+// compute_changelog_requirement() reads its EXEMPT_PREFIXES attribute at call
+// time (never a frozen copy) and is what the changelog-payload/emit step
+// below actually runs through the dispatched agent. This JS-side array
+// exists ONLY because the E2 workflow engine has no filesystem access
+// (ADR-024) and therefore cannot import that Python module itself to decide
+// dispatch TOPOLOGY (whether to bother calling the changelog agent at all)
+// from the coder's already-known files_modified list. If the gate module's
+// EXEMPT_PREFIXES changes, this array must be updated in the same edit.
+const CHANGELOG_EXEMPT_PREFIXES = [
+  "changelogs/",
+  "tickets/",
+  "docs/acceptance-criteria/",
+  "docs/known-issues/",
+];
+
+/**
+ * buildFastLaneDeliveryOutcome — the SINGLE construction site for the run's
+ * terminal delivery payload (BO-2400f-4-vi). `status: "ok"` is reachable
+ * ONLY when unsatisfiedRequiredChecks is empty; a non-empty list always
+ * forces `status: "blocked"`, distinguishable from a pre-commit `"halt"` —
+ * the work is committed and the pull request exists, so the operator's next
+ * action is to satisfy the named check(s), never to rebuild. pr_url is
+ * always carried through, including on the blocked path.
+ *
+ * Pure function: no agent(), no I/O — safe to extract and execute directly.
+ *
+ * @param {string|null} prUrl - The pull request URL the run opened.
+ * @param {string[]} unsatisfiedRequiredChecks - Required checks the run
+ *   itself knows are unsatisfied (e.g. "changelog entry present"). Empty
+ *   when every check the run can evaluate is satisfied.
+ * @returns {{status: string, pr_url: (string|null), unsatisfied_required_checks: string[], message: string}}
+ */
+function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
+  var unsatisfied = unsatisfiedRequiredChecks || [];
+  if (unsatisfied.length === 0) {
+    return {
+      status: "ok",
+      pr_url: prUrl,
+      unsatisfied_required_checks: [],
+      message:
+        "Pull request opened and landable: no required check is, to the run's own knowledge, unsatisfied.",
+    };
+  }
+  return {
+    status: "blocked",
+    pr_url: prUrl,
+    unsatisfied_required_checks: unsatisfied,
+    message:
+      "Pull request opened but blocked: the following required check(s) are not satisfied: " +
+      unsatisfied.join(", ") +
+      ". The work is committed and the pull request exists — satisfy the named check(s) before merge; do not rebuild.",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Phase 0 — Argument validation
@@ -479,6 +562,215 @@ if (!coderResult.green || !coderResult.coverage_ok) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4.5 — Review: pr-reviewer over the uncommitted working diff (BO-2400f-11)
+//
+// Runs BEFORE commit so a finding is a correction to the change about to be
+// delivered, never a follow-up commit stacked on a defect already in the
+// delivered history. The commit dispatch below is unreachable on any path
+// that has not first read a usable verdict from this dispatch.
+// ---------------------------------------------------------------------------
+
+phase("Review");
+
+const reviewResult = await agent(
+  `You are the review phase agent for a fast-lane build. Review the run's own ` +
+  `uncommitted working diff BEFORE any part of it is committed — a finding here is a ` +
+  `correction to the change about to be delivered, not a follow-up commit stacked on a ` +
+  `defect already in the delivered history.\n\n` +
+  `Worktree: ${worktreePath}\n` +
+  `Branch: ${branch}\n\n` +
+  `Run this single Bash command to see the actual uncommitted diff to review — do NOT ` +
+  `review a written summary, a files_modified list, or an account of what the coder ` +
+  `believes it did:\n` +
+  `   git -C "${worktreePath}" diff\n\n` +
+  `Classify every finding as high, medium, or low confidence using your own judgement ` +
+  `(escalate a medium cluster to a second opinion as usual — your own promotion rules ` +
+  `apply unchanged).\n\n` +
+  `Return JSON: { "verdict_obtained": true, "high_findings": ["<finding text>", ...], ` +
+  `"medium_findings": ["<finding text>", ...], "low_suppressed_count": <int>, ` +
+  `"message": "<summary>" }.\n` +
+  `If you cannot reach a classified verdict (the diff could not be read, or the review ` +
+  `could not be completed), return { "verdict_obtained": false, "high_findings": [], ` +
+  `"medium_findings": [], "low_suppressed_count": 0, "message": "<why no verdict>" } — ` +
+  `never fabricate a clean verdict.`,
+  {
+    agentType: "pr-reviewer",
+    schema: REVIEW_SCHEMA,
+    label: "fastlane-review",
+    phase: "Review",
+  }
+);
+
+// Fail closed on an unusable verdict — the same plain-falsy read already used
+// for the red-baseline gate_passed key (BO-2400f-11). `verdict_obtained` is
+// the ONLY positive signal. A missing key, a null, an unparseable reply, or
+// any other shape takes the not-committed branch.
+//
+// Deliberately NOT accepted: a generic `passed: true`. An earlier cut allowed
+// it so that a test fixture which never stubbed this phase could still reach
+// the commit dispatch — the harness default reply carries `passed: true`. That
+// is a fail-open backdoor wearing a test-compatibility disguise: in production
+// it would let a reply carrying no verdict at all count as a clean review,
+// which is the exact defect this criterion exists to prevent. The fixture was
+// corrected to stub a real verdict instead.
+const reviewVerdictUsable = !!(
+  reviewResult && reviewResult.verdict_obtained === true
+);
+const reviewHighFindings =
+  reviewResult && Array.isArray(reviewResult.high_findings)
+    ? reviewResult.high_findings
+    : [];
+
+if (!reviewVerdictUsable) {
+  await agent(
+    `You are the release-phase agent. No usable review verdict was obtained before commit.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-review-fail", phase: "Review" }
+  );
+  return {
+    status: "blocked",
+    message:
+      "No review verdict was obtained from pr-reviewer before commit — an unread review " +
+      "is never treated as a clean pass. The run halts rather than committing on an " +
+      `unusable verdict. Detail: ${JSON.stringify(reviewResult)}`,
+    failing_phase: "review",
+    worktree_path: worktreePath,
+    branch,
+    built_ac_ids: acIds,
+    classification: "halt",
+  };
+}
+
+if (reviewHighFindings.length > 0) {
+  await agent(
+    `You are the release-phase agent. A high-confidence review finding blocked the run before commit.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n` +
+    `   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: "status-checker", label: "release-on-review-fail", phase: "Review" }
+  );
+  return {
+    status: "blocked",
+    message:
+      "Review blocked the run before commit — high-confidence finding(s): " +
+      reviewHighFindings.join(" | "),
+    high_findings: reviewHighFindings,
+    failing_phase: "review",
+    worktree_path: worktreePath,
+    branch,
+    built_ac_ids: acIds,
+    classification: "halt",
+  };
+}
+
+const reviewMediumFindings =
+  reviewResult && Array.isArray(reviewResult.medium_findings)
+    ? reviewResult.medium_findings
+    : [];
+const reviewLowSuppressedCount =
+  (reviewResult && reviewResult.low_suppressed_count) || 0;
+
+// ---------------------------------------------------------------------------
+// Phase 4.6 — Changelog: emit_entry.py when the change owes one (KI-BO-001 /
+// BO-2400f-4-i..v). Runs BEFORE Commit so an emitted entry is written to disk
+// while still uncommitted and is picked up by the Commit phase's own
+// `git add -A`, landing inside the pull request's own diff rather than a
+// follow-up commit.
+// ---------------------------------------------------------------------------
+
+phase("Changelog");
+
+const filesModified = (coderResult && coderResult.files_modified) || [];
+const releasablePaths = filesModified.filter(
+  (p) => !CHANGELOG_EXEMPT_PREFIXES.some((prefix) => p.startsWith(prefix))
+);
+const changelogRequired = releasablePaths.length > 0;
+
+let changelogResult = null;
+
+if (changelogRequired) {
+  const changelogPayloadInvocation =
+    `python3 ${gateScript} changelog_payload --target-ac ${targetAc} ` +
+    `--built-ac-ids ${batchIdsCsv} --files-modified "${filesModified.join(",")}" ` +
+    `--branch ${branch} --ac-root ${acStoreRoot}`;
+
+  changelogResult = await agent(
+    `You are the changelog phase agent for a fast-lane build. The delivered change touches ` +
+    `at least one non-exempt (releasable) file, so a changelogs/ entry is REQUIRED before ` +
+    `this run may open its pull request (KI-BO-001: a PR without one fails the required ` +
+    `"Changelog entry present" CI check and cannot merge).\n\n` +
+    `Worktree: ${worktreePath}\n` +
+    `Releasable files that triggered this requirement: ${releasablePaths.join(", ")}\n\n` +
+    `Step 1 — Assemble the entry payload (single Bash command):\n` +
+    `   ${changelogPayloadInvocation}\n` +
+    `Parse the printed JSON payload verbatim — do not hand-edit any of its fields.\n\n` +
+    `Step 2 — Write the entry through the repository's own emitter (never hand-compose a ` +
+    `markdown file):\n` +
+    `   python3 {{config.output_root}}/scripts/changelog/emit_entry.py ` +
+    `--changelog-dir "${worktreePath}/changelogs" --payload '<the JSON payload from Step 1>'\n\n` +
+    `Step 3 — Verify INDEPENDENTLY of your own report: re-read the delivered change (not ` +
+    `your own memory of Step 2) to confirm an added changelogs/*.md file is actually present, ` +
+    `e.g.:\n` +
+    `   git -C "${worktreePath}" status --porcelain -- changelogs/\n\n` +
+    `Return JSON: { "status": "ok", "entry_added": <bool, from the Step 3 re-read, not from ` +
+    `Step 2's own report>, "entry_path": "<path or null>", "message": "<summary>" }. ` +
+    `If Step 1 or Step 2 errors, return { "status": "error", "entry_added": false, ` +
+    `"entry_path": null, "message": "<what failed>" }.`,
+    {
+      agentType: "python-coder",
+      schema: CHANGELOG_SCHEMA,
+      label: "fastlane-changelog",
+      phase: "Changelog",
+    }
+  );
+
+  // Fail closed exactly like the review verdict above. entry_added must be
+  // true from the same response for the entry to count as present — a status
+  // "ok" with entry_added false/absent is the exact silent-failure mode
+  // (changelog_entry_absent_from_change) KI-BO-001 exists to catch, and it
+  // halts exactly like an outright emit error (changelog_emit_failed) — never
+  // a warning alongside a reported success.
+  //
+  // A generic `passed: true` is deliberately NOT accepted here either; see the
+  // review guard above for why that escape hatch was removed.
+  const changelogEntryOk = !!(
+    changelogResult &&
+    changelogResult.status === "ok" &&
+    changelogResult.entry_added === true
+  );
+
+  if (!changelogEntryOk) {
+    await agent(
+      `You are the release-phase agent. The changelog phase failed after claiming.\n\n` +
+      `Release all claimed ACs back to todo by running this single Bash command:\n` +
+      `   ${releaseInvocation}\n\n` +
+      `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+      { agentType: "status-checker", label: "release-on-changelog-fail", phase: "Changelog" }
+    );
+    const changelogHaltReason =
+      changelogResult && changelogResult.status === "ok"
+        ? "changelog_entry_absent_from_change"
+        : "changelog_emit_failed";
+    return {
+      status: "blocked",
+      message:
+        `Changelog phase did not produce a verified entry (reason: ${changelogHaltReason}). ` +
+        "No pull request is opened — the built work is committed nowhere and the claim is " +
+        `released; built ACs: ${batchIds} on branch ${branch}. ` +
+        `Detail: ${JSON.stringify(changelogResult)}`,
+      failing_phase: "changelog",
+      reason: changelogHaltReason,
+      built_ac_ids: acIds,
+      branch,
+      worktree_path: worktreePath,
+      classification: "halt",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Phase 5 — Commit: mark ACs done + commit on the worktree branch (BO-2400f-4)
 // ---------------------------------------------------------------------------
 
@@ -547,13 +839,25 @@ if (!commitResult || commitResult.status !== "ok") {
 phase("Pull Request");
 
 const prTitle = `feat: fast-lane build of ${targetAc} connected set`;
+// BO-2400f-4-iv: this notice is emitted UNCONDITIONALLY — regardless of
+// whether a changelog entry was required or emitted for this run — because a
+// notice that appears only sometimes trains reviewers to treat its absence
+// as a determination, which is the silent-constant failure mode in a
+// different costume. The run never infers breaking from risk_surface or any
+// other AC metadata (compute_next_version.py maps breaking=true to an
+// automatic, unrecoverable MAJOR release tag on merge).
+const breakingUndeterminedNotice =
+  `- **Breaking change:** Not determined by this run. The emitted changelog entry (if any) ` +
+  `records breaking: false as a default, not a determination — the breaking flag was not ` +
+  `determined by the run and must be confirmed by a human before merge.`;
 const prBody =
   `## Summary\n\n` +
   `One-command fast-lane build of ${targetAc} and its connected set.\n\n` +
   `- **Built ACs (dependency order):** ${batchIds}\n` +
-  `- **Gates:** verify_red_baseline + verify_green_and_coverage (both green)\n\n` +
+  `- **Gates:** verify_red_baseline + verify_green_and_coverage + pr-reviewer (all green)\n` +
+  `${breakingUndeterminedNotice}\n\n` +
   `## Test plan\n\n` +
-  `- [ ] Required CI checks pass (Lint, vocab, pytest, done-proof).\n` +
+  `- [ ] Required CI checks pass (Lint, vocab, pytest, done-proof, Changelog entry present, AC store valid).\n` +
   `- [ ] Every built AC has a passing '# covers:' test.`;
 
 const prResult = await agent(
@@ -608,19 +912,33 @@ if (!prResult || prResult.status !== "ok") {
 }
 
 // ---------------------------------------------------------------------------
-// Done
+// Done — BO-2400f-4-vi: the terminal payload is built at the ONE site
+// (buildFastLaneDeliveryOutcome) that enforces "ok is reachable only when no
+// known required check is unsatisfied". Every required check this run can
+// evaluate (today: the changelog-presence check) was already gated to a halt
+// above before reaching this point, so the known-unsatisfied list is empty
+// here — but a future step that discovers another unsatisfied check reports
+// it through this same list rather than bypassing the invariant with its own
+// success payload.
 // ---------------------------------------------------------------------------
 
+const deliveryOutcome = buildFastLaneDeliveryOutcome(prResult.pr_url || null, []);
+
 return {
-  status: "ok",
+  ...deliveryOutcome,
   message:
-    `Fast-lane build of ${targetAc} complete. Built ${acIds.length} AC(s) in ` +
-    `dependency order, gates green, committed on ${branch}, PR opened.`,
+    `${deliveryOutcome.message} Fast-lane build of ${targetAc} complete. Built ` +
+    `${acIds.length} AC(s) in dependency order, gates green (red-baseline, ` +
+    `green+coverage, review), committed on ${branch}, PR opened.`,
   target_ac: targetAc,
   worktree_path: worktreePath,
   branch,
   ac_ids: acIds,
   tests_written: (testWriterResult && testWriterResult.tests_written) || [],
   files_modified: (coderResult && coderResult.files_modified) || [],
-  pr_url: prResult.pr_url || null,
+  review_medium_findings: reviewMediumFindings,
+  review_low_suppressed_count: reviewLowSuppressedCount,
+  changelog_required: changelogRequired,
+  changelog_entry_path:
+    (changelogResult && changelogResult.entry_path) || null,
 };
