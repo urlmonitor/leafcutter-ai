@@ -1,0 +1,196 @@
+id: GE-113c-3-v
+components:
+  - commit_guardian
+title: "An allowlist entry with a zero-segment file path suppresses nothing and is reported as malformed"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: critical
+criteria: |
+  Given the security allowlist contains the entry "GENERIC_SECRET:" whose file
+    path field is empty and therefore yields zero path segments,
+  And the secrets scanner detects GENERIC_SECRET findings in the files:
+    - "secrets.py"
+    - "src/config/foo.py"
+  When the scanner evaluates whether the allowlist entry suppresses each finding,
+  Then NEITHER finding is suppressed and both are reported,
+  Because a zero-segment allowlist path is vacuously a suffix of every finding
+    path, so honouring it would silently disable the GENERIC_SECRET rule for the
+    whole repository.
+
+  Given the security allowlist contains an entry whose file path field yields zero
+    path segments in any of these forms — an empty field, ".", "./", or a field
+    consisting only of whitespace,
+  And the secrets scanner detects findings for that entry's rule anywhere in the
+    repository,
+  When the scanner evaluates suppression for each finding,
+  Then no finding is suppressed by that entry, for every one of the four forms,
+  And repository-wide suppression remains available only by writing the literal
+    wildcard "*" as the file path.
+
+  Given the security allowlist contains the entry "*:" — a wildcard rule with a
+    zero-segment file path,
+  And a file "secrets.py" contains four findings across four distinct rules,
+  When the scanner scans that file,
+  Then all four findings are still reported,
+  Because a single malformed entry must never be able to disable the scanner
+    across every rule.
+
+  Given the security allowlist contains the entry "GENERIC_SECRET:*" on one line
+    and the entry "ENTROPY_HIGH:src/config/foo.py:*" on another,
+  And the secrets scanner detects a GENERIC_SECRET finding in "secrets.py" and an
+    ENTROPY_HIGH finding in "src/config/foo.py",
+  When the scanner evaluates suppression for each finding,
+  Then both findings ARE suppressed,
+  Because the literal wildcard "*" and the segment-suffix forms established by
+    GE-113c-3 continue to work unchanged.
+
+  Given the security allowlist file's third line is "GENERIC_SECRET:" and its
+    fifth line is "ENTROPY_HIGH:./:*",
+  When the scanner loads the allowlist,
+  Then a warning is emitted on the error stream for each of those two lines,
+  And each warning names the allowlist file it came from, states the 1-based line
+    number of the offending line (3 and 5 respectively), and quotes the offending
+    line text,
+  And each malformed line is skipped rather than applied,
+  And every other entry in the same allowlist file is still loaded and applied,
+  And the scan itself completes and reports its findings as normal — the malformed
+    line does not by itself abort the scan or block the commit,
+  Because skipping fails closed (the author sees the finding they were trying to
+    suppress) and the warning tells them why, whereas aborting would turn a typo
+    into a repository-wide commit outage.
+
+  Given the security allowlist's second line is "secrets.py" — a non-blank,
+    non-comment line containing no colon at all,
+  When the scanner loads the allowlist,
+  Then a warning is emitted on the error stream naming the allowlist file, the
+    line number 2, and the text "secrets.py",
+  And that line suppresses nothing,
+  And the scan completes and reports its findings as normal,
+  Because a colon-free line is malformed in the same way and must be surfaced
+    rather than dropped in silence.
+
+  Given the security allowlist contains only blank lines and lines beginning with
+    the comment marker "#",
+  When the scanner loads the allowlist,
+  Then no warning is emitted for any of those lines,
+  Because blank lines and comments are valid allowlist content, not malformed
+    entries.
+depends_on:
+  - GE-113c-3
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Two layers, both mandatory, both in the canonical template `templates/skills/security-scanner/scripts/scan_secrets.py`: (a) `_load_allowlist` rejects a zero-segment file-path field at parse time; (b) `_is_suppressed` guards with an early `continue` when an allowlist entry's path yields zero segments. Neither layer alone satisfies this AC — the loader guard protects the file-driven path, and the `_is_suppressed` guard keeps the invariant true for callers that construct allowlist tuples directly, which is exactly what every test in `unit_tests/commit_guardian/test_scan_secrets_suppression.py` does."
+  - "The `_is_suppressed` guard MUST be keyed on the emptiness of `Path(file_path).parts`, NOT on a literal blacklist of `\"\"` / `\".\"` / `\"./\"`. A blacklist misses `.//`, `././` and every other zero-segment spelling; the parts check catches them all by construction."
+  - "Whitespace-only paths need parse-time normalisation: `Path('   ').parts == ('   ',)` is NOT empty, so the parts-emptiness guard alone does not neutralise the whitespace form. `_load_allowlist` must strip the field before applying the zero-segment test. (At the `_is_suppressed` layer an unstripped whitespace path is already inert — a 1-segment path of literal whitespace can only suffix-match a file whose final segment is that same whitespace — but only the loader can emit the warning this AC requires, so the loader is the load-bearing enforcement point for that form.)"
+  - "Malformed lines must be non-fatal. `check_secrets` runs on every commit through pre-commit, so raising would escalate a one-character typo into a repository-wide commit outage. Warn and skip: the scan must still complete, still report its findings, and its exit status must be determined by the findings alone — never by the presence of a malformed allowlist line."
+  - "Warning content is part of the contract: the allowlist file path, the 1-based line number, and the verbatim offending line text. Emit on stderr, not stdout — stdout carries the findings report that `check_secrets` consumes."
+  - "Skipping is per-line, never per-file: every other entry in a file that contains a malformed line must still be loaded and applied."
+  - "Blank lines and `#` comment lines are valid allowlist content and MUST NOT warn. A non-blank, non-comment line containing no colon at all gets the same warn-and-skip treatment as a zero-segment path — today it is dropped in silence."
+  - "Regression guard is required, not optional: repository-wide suppression remains available only through the literal wildcard `*`, and the GE-113c-3 exact-match, segment-suffix and bare-filename contracts must still hold after the change. A fix that satisfies the negative arms by suppressing nothing is a regression, not a fix."
+  - "Testing departure (deliberate, scoped): the `_load_allowlist` tests require `tempfile`-backed file I/O. The existing suite does no I/O at all — it constructs allowlist tuples in memory — but `_load_allowlist` reads a path from disk and cannot be exercised any other way. Use `tempfile.TemporaryDirectory`, clean up, never write into the repository tree, and never create a `.security-allowlist` at any real project root during a test run."
+  - "Warning assertions must not depend on process-wide logging configuration: capture the scanner's error stream around the `_load_allowlist` call (`contextlib.redirect_stderr` or `assertLogs`, whichever matches the emission mechanism chosen) and assert the file path, the 1-based line number and the offending text as three separate substrings — not one formatted string — so message wording can evolve without breaking the test."
+  - "An end-to-end arm through `scan_files` (the entry point `check_secrets` imports) is mandatory, driving a real temp fixture file and a real temp allowlist file. A sibling audit of this AC family just found two ACs verified only at the `_is_suppressed` unit level that described scenarios unreachable through the real entry point; this AC must not repeat that. Unit-level `_is_suppressed` coverage alone does not discharge it."
+  - "Do NOT use env-named files as end-to-end fixtures: `scan_file` short-circuits those to a single ENV_FILE finding and never scans their content, which makes the four-findings-across-four-rules scenario unreachable. Use ordinary `.py` fixture filenames, as the criteria do."
+  - "ADR-001 template/build-output parity: edit the canonical `templates/` copy only; `build.py` propagates to the materialized copies. Do NOT hand-edit copies under `.claude/`, `.gemini/`, `.leafcutter/`, `EPIC-*/`, or `worktrees/**`."
+  - "Doc parity: `templates/skills/security-scanner/SKILL.md` documents the three suppression modes (wildcard / exact-path / path-suffix) and must gain a short note that a file-path field yielding zero path segments is rejected with a warning and skipped, and that `*` is the only repository-wide form. Kept inside this AC rather than split to `llm-expert` because it is a two-sentence prose addendum to a section the same change already invalidates; if it grows beyond that, raise a follow-up doc AC instead of expanding scope here."
+  - "Red-first: no separate test-authoring AC is wired for this AC (unlike the L2's GE-113c-3-iv). The `test_spec` below IS the contract — test-writer authors it red against the current parser and matcher before python-coder implements. Any entry that passes before the fix must be one of the explicitly labelled regression guards; a green-on-arrival negative arm is a TDD-order violation, not a pass."
+delivers_to: null
+expects_from:
+  ac_id: GE-113c-3
+  contract: "The corrected `_is_suppressed` in templates/skills/security-scanner/scripts/scan_secrets.py — segment-suffix matching via `al_parts == fp_parts[-len(al_parts):]` guarded by `len(fp_parts) >= len(al_parts)` — plus the existing unittest module `unit_tests/commit_guardian/test_scan_secrets_suppression.py` (module-level `_load_scan_secrets()` importlib loader against the canonical template per ADR-001, `_mod: ClassVar[ModuleType]` set in `setUpClass`, `_finding(file_path, rule_id)` helper, `# covers: <AC-ID>` as the first line of each test body). This AC's tests extend that module and must reuse its loader and helpers rather than introduce a second loading convention."
+test_spec:
+  - name: test_zero_segment_allowlist_path_suppresses_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "All four zero-segment forms ('', '.', './', whitespace-only) suppress neither 'secrets.py' nor 'src/config/foo.py' — the three Path.parts-empty forms asserted directly against _is_suppressed, all four asserted through _load_allowlist"
+  - name: test_wildcard_rule_with_zero_segment_path_does_not_disable_scanner
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The entry '*:' suppresses no finding for any of four distinct rule ids — one malformed line cannot disable the scanner repo-wide"
+  - name: test_valid_wildcard_and_suffix_entries_still_suppress
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Regression guard: 'GENERIC_SECRET:*' suppresses a finding in 'secrets.py' and 'ENTROPY_HIGH:src/config/foo.py:*' suppresses 'src/config/foo.py' — the GE-113c-3 wildcard and segment-suffix contracts are unchanged"
+  - name: test_load_allowlist_skips_zero_segment_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A tempfile allowlist whose third line is a rule id with an empty path field, and whose fifth line is a rule id with a dot-slash path, yields a loaded set containing neither entry"
+  - name: test_load_allowlist_skips_colon_free_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A non-blank non-comment line 'secrets.py' with no colon is skipped and contributes no suppression"
+  - name: test_load_allowlist_warning_names_file_line_and_text
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Each malformed-line warning on stderr contains the allowlist file path, the 1-based line number (3 and 5; 2 for the colon-free line) and the verbatim offending text, asserted as separate substrings"
+  - name: test_load_allowlist_silent_for_blank_and_comment_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An allowlist of only blank lines and '#' comments produces an empty stderr stream — no false-positive warnings"
+  - name: test_load_allowlist_keeps_valid_entries_from_same_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Every well-formed entry in a file that also contains malformed lines is still loaded and still suppresses — skipping is per-line, not per-file"
+  - name: test_load_allowlist_does_not_raise_on_malformed_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Loading an allowlist containing every malformed form returns normally and raises nothing — a typo must not become a repo-wide commit outage"
+  - name: test_scan_files_reports_all_findings_with_malformed_allowlist
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "End-to-end through scan_files (the entry point check_secrets imports): a temp .py fixture with four findings across four rules reports 4 with no allowlist, 4 with a wildcard-rule empty-path entry, and 4 with a rule-scoped empty-path entry — versus the measured broken baseline of 0 and 3"
+  - name: test_load_allowlist_emits_no_warning_for_the_repository_allowlist
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Loading the repository's own on-disk .security-allowlist emits no malformed-entry warning — guards against false positives on the real artifact; skips if the file is absent"
+test_rationale: "Two-layer fixes invite one-layer verification. Nine of the eleven descriptors are split deliberately across the two enforcement points — _load_allowlist (parse-time reject + warn) and _is_suppressed (runtime guard) — because a fix applied to only one layer still passes any suite that exercises only the other, and the existing suite exercises only _is_suppressed. The warning descriptors assert file, 1-based line number and offending text as separate substrings so the contract is the information, not the wording. test_scan_files_reports_all_findings_with_malformed_allowlist is the load-bearing entry: the whole defect was measured end-to-end (4 findings baseline, 0 with a wildcard-rule empty-path entry, 3 with a rule-scoped empty-path entry), a sibling audit in this same family found two ACs verified only at the _is_suppressed unit level that described scenarios unreachable through the real entry point, and a direct-import unit test on the matcher cannot distinguish 'the guard exists' from 'the guard runs on the pre-commit path'. test_load_allowlist_emits_no_warning_for_the_repository_allowlist covers the opposite failure — a reject rule strict enough to warn on the 30 real allowlists in the tree would be its own commit-time outage. The regression descriptor exists because every negative arm here is satisfiable by a rule that suppresses nothing at all."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): complexity S->M (two enforcement layers plus a doc addendum); authored it_requirements naming both enforcement points and the load-bearing one per form (whitespace-only requires parse-time stripping because Path('   ').parts is NOT empty, so the parts-emptiness guard alone does not cover it); wired expects_from GE-113c-3 carrying the existing test module's importlib/ADR-001 conventions; authored an 11-entry test_spec plus test_rationale, including a mandatory end-to-end arm through scan_files and a real-artifact no-false-warning arm. Deliberately NOT split into a test-writer/python-coder pair like GE-113c-3-iv: that split predates the test_spec contract, which is now the red-first mechanism the ticket generator reads. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/skills/security-scanner/scripts/scan_secrets.py
+  - templates/skills/security-scanner/SKILL.md
+  - unit_tests/commit_guardian/test_scan_secrets_suppression.py
+notes: "Distinct pre-existing defect in allowlist PARSING, not a regression from the GE-113c-3 suffix-match fix — the hole behaves identically in the pre-fix and post-fix code, which narrowed around it without closing it. Root cause: the allowlist line parser accepts a file path field that yields zero path segments (empty string, '.', './', whitespace-only), and an empty segment tuple is trivially a segment-suffix of EVERY finding path, so one malformed line silently suppresses that rule repository-wide. Verified end-to-end against the real pre-commit path (check_secrets imports scan_files from scan_secrets): against a file containing an AWS key, a password assignment, a PEM header and a high-entropy token, the baseline reported 4 findings; adding a wildcard-rule entry with an empty path field reported 0 (scanner fully disabled) and adding a rule-scoped entry with an empty path field reported 3 (that rule disabled repo-wide). Real-world exposure to date is nil — a live audit found zero occurrences across 30 .security-allowlist files on disk and across all 16 revisions of the tracked file's history — so the risk is prospective, from a future typo. The warn-and-skip disposition (rather than a hard error) is deliberate: check_secrets runs on every commit, so a hard error would escalate a cosmetic typo into a repository-wide commit outage, whereas skipping fails closed and is self-announcing because the author immediately sees the finding they were trying to suppress. Examples deliberately avoid env-filename files: a sibling audit found that scan_file short-circuits those to a single ENV_FILE finding and never scans their content, which made two sibling ACs describe unreachable scenarios."
+change_target: code
+risk_surface: contract_boundary

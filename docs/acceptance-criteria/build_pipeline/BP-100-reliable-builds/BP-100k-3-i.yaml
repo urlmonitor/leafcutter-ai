@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -29,6 +29,10 @@ doc_links:
   - path: "docs/build-drift-hook.md"
     relationship: describes
     status: exists
+  - path: "templates/scripts/commit_guardian/check_build_drift.py"
+    relationship: modifies
+    status: exists
+    relevance: "the sibling gate this guard also runs end to end; both gates must report clean and exit zero on a freshly built tree, so a false alarm introduced in either one fails this AC"
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -46,16 +50,44 @@ it_requirements:
     - "This is the regression guard for BP-100k-1, BP-100k-2 and BP-100k-3 taken together: it fails if manifest coverage is incomplete AND if the stricter reporting over-fires."
     - "The check must run over the real freshly built tree, not a synthesized subset, because the omitted artifacts are exactly the ones a hand-picked fixture would leave out."
     - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+    - "Bundle A2 (shared reviewable diff with BP-100k-3): both ACs edit the two drift gates under templates/scripts/commit_guardian/. They must land as one diff, and the gates must be exercised from their DEPLOYED copies under scripts/commit_guardian/ after build.py, not only from the templates/ source tree — a template-only edit leaves the running hook unchanged."
+    - "The zero-uncomparable assertion must be count-based over the gate's own summary, not an allowlist of expected artifact names; an assertion enumerating today's artifacts would pass while a newly added output silently escapes coverage."
+test_spec:
+  - name: test_freshly_built_tree_yields_zero_uncomparable_artifacts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "After running the real build over an unmodified checkout, each drift gate executed as a process over its full inspection set reports an uncomparable count of exactly zero — read from the gate's own summary, not from an allowlist of expected names."
+  - name: test_freshly_built_tree_reports_no_drifted_artifact
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same executed runs report no artifact as drifted on a tree in which no file has been modified since the build."
+  - name: test_both_gates_report_clean_and_exit_zero_on_a_freshly_built_tree
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "check_build_drift.py and check_output_drift.py each describe the run as clean and terminate with exit status zero on the freshly built tree."
+  - name: test_stricter_uncomparable_reporting_raises_no_false_alarm_on_the_real_tree
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The stricter uncomparable-artifact reporting introduced by BP-100k-3 produces no failure when the gates are run over the full real tree the build just produced — the deployed hook copies under scripts/commit_guardian/, not only the templates/ source."
+test_rationale: "This AC exists to catch two cheap shortcuts that a synthesized fixture cannot see: satisfying BP-100k-3 by failing every uncomparable artifact (which would block every commit), and satisfying BP-100k-1/-2 by recording fingerprints no gate consults. Only running both gates end to end, as processes, over the full freshly built real tree distinguishes those from a correct implementation, so every descriptor is a whole-tree behavioral run rather than a unit assertion over a hand-picked subset."
 delivers_to: null
 expects_from:
   ac_id: BP-100k-3
   contract: "The per-artifact verdict vocabulary and run summary whose zero-uncomparable, clean-exit case this edge case pins down."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added test_spec (4 whole-tree behavioral descriptors, one per Then-clause: zero uncomparable count from the gate's own summary; no artifact reported drifted; both gates clean and exit zero; the stricter reporting raises no false alarm on the full real tree) and test_rationale. Added two it_requirements constraints: the Bundle A2 shared-diff rule with BP-100k-3 plus the requirement to exercise the DEPLOYED hook copies under scripts/commit_guardian/ after build.py, and a rule that the zero-uncomparable assertion be count-based rather than an allowlist of today's artifact names. Added one edit-surface doc_link (check_build_drift.py) so files_touched covers both gates. criteria, assigned_agent (python-coder), estimated_complexity (S), reference_file_path, delivers_to, expects_from, readiness and work_status left unchanged."
+    by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md
 change_target: pipeline
 risk_surface: internal
 notes: "Paired negative case for the Gap A fix. Without it, the cheapest way to satisfy BP-100k-3 is to make every uncomparable artifact fail, which would block every commit on the current tree; and the cheapest way to satisfy BP-100k-1/2 is to record fingerprints that no gate actually consults. Running both gates end to end over a freshly built tree is the only check that catches either shortcut."

@@ -1,0 +1,172 @@
+id: TQ-400b-3
+components:
+  - testing_quality
+  - ac_store
+title: "Demoted work reappears in the backlog as work you can pick up"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record that the sweep has demoted,
+  When the backlog of pickable work is next listed by the means the team normally
+    uses to choose what to work on,
+  Then the demoted record appears in that listing as available work,
+  And it is not filtered out on the grounds that it was once finished,
+  And the reason it was knocked back is visible to whoever picks it up, without
+    them having to open the run's report,
+  And a record that the same sweep left finished does not appear in the listing.
+depends_on:
+  - TQ-400b
+  - TQ-400b-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The readiness / work_status / status fields that together decide whether a
+      record is pickable.
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      THE CONSUMER. This is the pickable-backlog listing. Its eligibility
+      predicate is _matches_work_status (:148, default todo) AND readiness ==
+      "approved" (:189) AND status/level filters, plus dependency gating that
+      counts a dependency as met only when it is work_status done (:229).
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Downstream of the listing: the reason must survive into the ticket
+      generated from a picked record, or it stops travelling with the work.
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      build_ac_store (:793, :852) deploys scan_ac_store.py to
+      <output_root>/scripts/ac_store/; the change must work in the deployed
+      layout, not only in the source tree.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    The pickable listing is scripts/ac_store/scan_ac_store.py. Its eligibility
+    predicate is work_status match (default todo) AND readiness == "approved"
+    AND status active, plus dependency gating. A demoted record must satisfy that
+    predicate unchanged: do NOT alter the record's readiness during demotion, and
+    do NOT loosen the scanner's approved-only rule to make demoted records
+    appear.
+  - >-
+    demotion_reason must be carried into the scanner's output payload for
+    demoted records, and onward into the ticket generated from one, so it reaches
+    whoever picks the work up without opening the run report.
+  - >-
+    Known consequence to handle deliberately, not silently: scan_ac_store treats
+    a dependency as met only when it is work_status done (:229), so demoting a
+    record blocks its dependents from selection on the next scan. That is correct
+    and must not be special-cased away — but the dependent's blocked reason must
+    name the demoted dependency, so the cascade is visible rather than a record
+    quietly vanishing from the backlog.
+  - >-
+    Must not introduce a second selection path or a parallel "demoted work"
+    listing; one pickable-work reader, extended.
+  - >-
+    Must not change the ordering or priority semantics of the existing listing
+    for records that were never demoted.
+  - >-
+    Changes must work in the deployed layout — scan_ac_store.py ships through
+    build_ac_store; if the reason is surfaced via a new helper module, that
+    module must be added to the same deploy map in the same change.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a
+    record carrying a malformed demotion field must still be listable, with the
+    malformation reported, rather than crashing the scan.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400d-4
+    contract: >-
+      Scanner output entries for demoted records, each carrying ac_id, path and
+      demotion_reason, so the triage list and the pickable backlog describe the
+      same population in the same terms.
+expects_from:
+  ac_id: TQ-400b-2
+  contract: >-
+    The demotion_reason (string) and demotion_date (YYYY-MM-DD) fields carried
+    on the demoted record on disk, surfaced into the pickable backlog listing so
+    the reason travels with the work.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_demoted_record_appears_in_scan_ac_store_cli_output
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Subprocess scan_ac_store.py over the demoted store; the demoted record's
+      id is present in its output, and a record the same sweep left proven is
+      absent from that same output (the negative control on the listing).
+  - name: test_real_demotion_feeds_the_real_selector
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      One test, one store: a real apply run followed by a real scanner run with
+      no hand-off fixture in between. The record the sweep demoted is the record
+      the scanner offers — producer and consumer wired, not each green alone.
+  - name: test_scanner_payload_carries_the_demotion_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The scanner's payload entry for the demoted record contains its
+      demotion_reason verbatim, and the reason survives into the ticket
+      generated from that entry.
+  - name: test_deployed_scanner_lists_the_demoted_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Run build.py into a temp target and exercise the DEPLOYED
+      scripts/ac_store/scan_ac_store.py there; the demoted record is listed with
+      its reason, proving the change is present in the deployed layout.
+test_rationale: >-
+  Asserting that the record's work_status field reads todo proves the write, not
+  the reappearance: the selector applies its own filters — readiness approved,
+  status active, dependency-met — and a demoted record can satisfy the state
+  field while still being excluded by them. This is the producer/consumer seam
+  class, so the contract drives a real demotion into the real selector in one
+  test. The deployed entry is included because scan_ac_store.py ships through
+  build.py and a source-tree-only test is structurally blind to a deploy gap.
+change_target: code
+risk_surface: internal
+notes: |
+  Closes the loop the product owner folded into this L1: demotion is only useful
+  if the work becomes pickable again. A record flipped back to unfinished that the
+  work-selection path never surfaces has been demoted in name only.
+
+  Test-angle constraint: drive the real work-selection path over the real store
+  after a real demotion. Asserting that the record's state field reads "to do"
+  proves the write, not the reappearance — the selection path applies its own
+  filters (readiness, status, priority) and a demoted record can satisfy the
+  former while still being excluded by the latter. This is the producer/consumer
+  seam class from docs/testing/test-angles.md: both sides green in isolation, never
+  wired together.
+
+  The final clause is the negative control on the listing itself, so a selector
+  that simply returns everything cannot pass.

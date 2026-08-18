@@ -1,0 +1,205 @@
+id: BO-2400g-2
+components:
+  - build_orchestration
+  - review_system
+title: "The fast lane's change is read before it is committed, and the reading has something real to read against"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has built the five requirements it resolved and its changes
+    are complete but not yet committed,
+  When the change is read for defects,
+  Then the reading happens after the work is built and before any commit for that run
+    exists,
+  And the reader is given the five requirements the run resolved and the changes the
+    run actually made, and its findings name which requirement a concern relates to
+    and which changed file it was found in,
+  And the reading needs no per-work ticket to exist anywhere on disk in order to
+    produce those findings,
+  And every examination the thorough path performs by consulting a ticket is either
+    performed here from those two inputs, or is named in the run's result as an
+    examination that was not performed and why — an examination that is quietly
+    skipped is not permitted.
+depends_on: [BO-2400g]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The gap this AC closes. Verified 2026-08-17: Coder (line 395) is followed immediately by Commit (line 471) — nothing runs between them. The two inputs this AC names are both already in hand at that point: the resolved id set (batchIds) and the working diff."
+  - path: templates/agents/pr-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "Why the fourth Then clause exists. Line 562 makes the sign-off conditional so the agent CAN run ticketless; but Contract-Aware Mode (line 102) keys off a '## Agent Contracts' section, line 193 skips the contract trace when it is absent, the delivers_to/expects_from cross-file trace (line 136) keys off ticket ACs, and the completion_manifest / scope_verified check (line 517) compares the change set against the ticket's files_touched. Dropped in unchanged, all of those degrade to nothing and say nothing about having done so."
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: related
+    status: exists
+    relevance: "The other ticket-frontmatter-bound reviewer on the thorough path, and the clearest example of an examination that must either be re-based on the resolved requirements or declared not performed. Note ACD-1600g-3 is independently moving its exclusion source from ticket frontmatter to the requirement itself — do not solve that problem here, but do not contradict it either."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "Source of the first input: resolve_connected_build_set (line 498) produces the connected set the reader must be bound to."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po 2026-08-17. fast-lane-ship.js is a workflow, not an agent template, so the prompt renderer cannot cover it. Assert on the CAPTURED DISPATCH SEQUENCE via this harness — never on meta.phases, which is a declaration consumed by the progress UI and stays correct on a workflow whose real dispatch order is wrong."
+assigned_agent: llm-expert
+estimated_complexity: L
+declares_side_effect: false
+it_requirements:
+  - "The reading must be dispatched by the run itself, occupying the space between the Coder phase (fast-lane-ship.js:395) and the Commit phase (:471). No commit for the run may exist at the moment the reading starts; ordering must be verifiable from observable git state, not from the position of a string in the workflow file."
+  - "The reader must be bound to the two inputs already in hand at that point — the resolved connected requirement set (batchIds, from resolve_connected_build_set at fast_lane.py:498) and the working diff — and must produce its findings from those alone. It must not require a ticket file to exist anywhere on disk."
+  - "Every ticket-keyed examination in templates/agents/pr-reviewer.md must be explicitly accounted for: Contract-Aware Mode (line 102), the contract trace (line 193), the delivers_to/expects_from cross-file trace (line 136), and the completion_manifest / scope_verified check (line 517). Each must either be re-based on the two available inputs or be named in the run's result as an examination that was not performed, with a reason. Silent degradation to a diff skim is prohibited — a review phase that is present but inert reads as coverage and is worse than no phase at all."
+  - "ticket files_touched has no equivalent on this lane. The two honest options are to derive an expected surface from the resolved requirements themselves, or to declare that examination not performed. Both satisfy the AC; silently doing neither does not."
+  - "Every finding must carry the requirement id it relates to and the repo-root-relative path of the changed file it was found in. A finding that names neither cannot be acted on by BO-2400g-4's severity ladder or rendered by BO-2400g-4-i."
+  - "The reader must not obtain any part of its examination by spawning a further sub-agent: sub-agents are hard-limited to depth 1 and a delegating reviewer would silently receive nothing back. The run's own dispatch is top-level and is the only level at which additional readers may be requested."
+  - "DO NOT solve the scope-boundary problem here. templates/agents/change-scope-reviewer.md reads out_of_scope from ticket frontmatter and ACD-1600g-3 is independently moving that source to the requirement itself. On this lane, scope adjudication is simply one of the examinations that must either run from the resolved requirements or be named as not performed. Do not contradict ACD-1600g-3's direction."
+  - "TESTS MUST NOT BE GREP-ONLY. This is a workflow-and-gate surface, and CLAUDE.md records that the fast lane itself once shipped a phantom-done runner which passed grep-only structural tests while never executing its gates. Assert ordering through real git state, and assert that the reading step executed via the captured dispatch sequence from unit_tests/_workflow_engine_harness.py — never via meta.phases."
+  - "Changes to templates/agents/pr-reviewer.md take effect only in the deployed layout (.claude/), so `python scripts/build.py --target-dir .` must run before any test that exercises the deployed reviewer; a template-only edit leaves the running lane unchanged while source-tree assertions pass."
+  - "The reading must add no more than one additional agent dispatch to the lane at this AC's scope (BO-2400g-3 adds the second reader deliberately). The lane's leanness claim in BO-2400 is about dropping ORCHESTRATION overhead, not scrutiny, but the cost must stay attributable."
+delivers_to:
+  - agent: pr-reviewer
+    contract: "Reader inputs assembled by the lane with no ticket on disk: {resolved_requirements: [{id, title, criteria}], diff: unified working diff of the run's uncommitted changes}. These two replace everything the thorough path supplies via a ticket."
+  - agent: pull-request
+    contract: "The run's review result: {reading_state: 'performed'|'not_performed', missing_input: str|null, findings: [{ac_id: str, file: str, severity: str, text: str}], not_performed_examinations: [{examination: str, reason: str}]}. BO-2400g-3 merges its two readers' findings into the same `findings` list; BO-2400g-4 consumes `severity` for its stop/proceed ladder; BO-2400g-4-i renders the advisory subset onto the pull request; BO-2400g-2-i constrains `reading_state` and `missing_input`."
+expects_from:
+  - ac_id: BO-2400f-1
+    contract: "The resolved connected build set for the run — the named id's subtree plus unmet prerequisites, in dependency order — surfaced to the workflow as batchIds. This is the first of the reading's two inputs and the only statement of intent that exists on this lane; consumed as given, not re-computed."
+test_spec:
+  - name: test_no_commit_exists_for_the_run_when_the_reading_starts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In a real temp git tree, a fast-lane run is driven to the reading step and the branch's commit count is asserted unchanged from the pre-run baseline at that moment. Ordering asserted by observable git state, not by the position of a string in the workflow file."
+  - name: test_findings_name_the_resolved_requirement_and_the_changed_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A run over five resolved requirements with a planted defect yields a finding whose text contains the specific requirement id it relates to and the path of the file it was found in."
+  - name: test_reading_produces_findings_with_no_ticket_file_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The same planted defect is found with no ticket file anywhere in the tree. A reader wired to ticket frontmatter returns an empty or generic result here and fails."
+  - name: test_examinations_that_could_not_run_are_named_in_the_result
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The run's result enumerates, by name, each ticket-bound examination that was not performed. Asserts the list is non-empty when an examination is genuinely unavailable and that it is absent when all examinations ran — a reader that silently degrades produces neither."
+  - name: test_reading_phase_is_reached_by_the_real_command_surface
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: invoke /fast-lane-build's real workflow against a temp store and assert from the run's own recorded step outcomes that the reading step executed. A reading that is implemented but never dispatched passes every other test here. Observe via unit_tests/_workflow_engine_harness.py and assert on the captured dispatch sequence, never on meta.phases."
+test_rationale: "This is the AC most exposed to the failure this repository exists to prevent, and the obvious test is the one that would ship it broken: asserting that a review phase is present in the lane passes on a phase whose every substantive mode is inert, which is phantom-done one level up and worse than no phase at all because it reads as coverage. The load-bearing assertions are therefore the no-ticket test (a frontmatter-bound reader cannot pass it) and the not-performed-examinations test (a silently degrading reader produces neither an examination nor a declaration, so it fails both halves). Ordering is asserted through real git state rather than by grepping the workflow for phase order, because the fast-lane runner has already once passed grep-only structural tests while never executing its gates (CLAUDE.md, 2026-07-22). The reachability test is separate because a correctly implemented reading that the workflow never dispatches is precisely that same defect wearing a different hat."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (llm-expert), estimated_complexity, declares_side_effect,
+    list-form it_requirements, delivers_to (two entries, defining the review-result
+    contract reused by g-3/g-4/g-4-i) and expects_from (BO-2400f-1 resolved set),
+    plus one doc_link to the workflow test harness. No depends_on edge to BO-2400g-1
+    was added, per this AC's explicit instruction. test_spec entries unchanged except
+    that the reachability entry's description now names the harness and the meta.phases
+    prohibition. criteria and title untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BO-2400g-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 2 OF BO-2400g, PART ONE OF THREE. This AC establishes that a reading happens
+  and that it is REAL. BO-2400g-3 adds the design half of the reading; BO-2400g-4
+  gives its findings a consequence. Keep them distinct: an implementation can satisfy
+  this AC with a code reading that halts nothing, and that is the intended increment.
+
+  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
+    - templates/workflows-js/fast-lane-ship.js: Coder at line 395, Commit at line 471,
+      Pull Request at line 539. Nothing between Coder and Commit. The ticket lane by
+      contrast runs pr-reviewer (priority 11), change-scope-reviewer,
+      user-surface-smoker (11.5), ac-validator (11.5), ac-fulfillment-gate (11.7),
+      live-surface-tester (11.8) and documentation-verifier (11.9) before commit (12).
+    - templates/agents/pr-reviewer.md: line 562 "Skip this section entirely if no
+      ticket_path was provided" (sign-off is conditional, so it CAN run ticketless);
+      line 193 "If '## Agent Contracts' is absent from the ticket body, skip the
+      contract trace"; Contract-Aware Mode at line 102 keys off that section; the
+      delivers_to/expects_from cross-file contract trace at line 136 keys off ticket
+      ACs; the completion_manifest and scope_verified check at line 517 compares the
+      change set against the ticket's files_touched.
+
+  WHY THE REQUIREMENT IS NOT "ADD A REVIEW PHASE". Every rich mode of the existing
+  reviewer is keyed to a ticket. On a lane with no ticket they all evaluate to "skip",
+  quietly, leaving a diff skim wearing the name of a review. A phase that is present
+  but inert is strictly worse than an absent one: the absent one is visible in the
+  phase list, the inert one reads as coverage. The fourth Then clause is the whole
+  point of this AC — an examination that cannot run must SAY SO in the result.
+
+  WHAT THE READING BINDS TO INSTEAD OF A TICKET. Both substitutes already exist in the
+  lane at the moment the reading would run: (1) the resolved connected requirement id
+  set — resolve_connected_build_set, scripts/build_orchestration/fast_lane.py:498,
+  surfaced to the workflow as batchIds; and (2) the working diff, which is by
+  definition present because the commit has not happened yet. Between them they cover
+  the substance of what the ticket supplied: what this work was supposed to be, and
+  what actually changed. Note that ticket files_touched has no direct equivalent — the
+  honest options are to derive an expected surface from the requirements themselves or
+  to declare that examination not performed. Both satisfy this AC; silently doing
+  neither does not.
+
+  DEPENDENCY DECISION — THIS AC DOES NOT DEPEND ON BO-2400g-1, DELIBERATELY.
+  They are independent protections attaching at different phases: g-1 acts before the
+  Test Writer phase (line 327) and shapes what is asked for; this AC acts between the
+  Coder (line 395) and Commit (line 471) and reads what was produced. Neither consumes
+  the other's output — the reading here binds to the resolved id set and the diff, not
+  to the test plan. Sequencing them would delay the protection the user asked for most
+  directly behind a planning-vocabulary change, for no technical reason. The one
+  genuine interaction is indirect and does not require an edge: once g-1 lands, the
+  diff this reading examines will contain a reachability test, which gives the reader
+  more to work with but changes none of its behaviour. Recorded explicitly so the IT
+  PO does not add the edge on aesthetic grounds.
+
+  DO NOT SOLVE THE SCOPE-BOUNDARY PROBLEM HERE. templates/agents/change-scope-reviewer.md
+  reads out_of_scope from ticket frontmatter, and ACD-1600g-3 is independently moving
+  that source to the requirement itself — its it_requirements already cite this very
+  lane ("the fast lane builds a single AC with no ticket file at all, so there is no
+  frontmatter to read") as the case that makes a frontmatter-only implementation
+  unsatisfiable. That work belongs to ACD-1600g. Here, scope adjudication is simply one
+  of the examinations that must either run from the resolved requirements or be named
+  as not performed.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The dependency instruction above was obeyed: no
+  edge to BO-2400g-1 was added. assigned_agent is llm-expert because the surface is
+  templates/workflows-js/fast-lane-ship.js (the new phase and its dispatch) plus
+  templates/agents/pr-reviewer.md (the ticketless binding and the not-performed
+  declaration) — both prompt/workflow surfaces. Note the registry gap this exposes:
+  `.js` appears in no agent's owns_file_extensions in config/agent_registry.json, and
+  llm-expert's own trigger names templates/workflows/*.md rather than
+  templates/workflows-js/*.js. The assignment follows the empirical convention already
+  set in this tree (BO-2400a-1, a-3, a-5 all touch workflows-js and are assigned
+  llm-expert) rather than the registry, and the registry gap is the ACD-1800g concern.
+  it_requirements is the LIST form because the schema's package-surface conditional
+  fires only for assigned_agent: python-coder; llm-expert does not trigger it.
+  declares_side_effect is false — the review result is in-run state, not a durable
+  artifact; the durable-artifact case on this chain is BO-2400g-4-i's pull-request body.
+  The review-result shape in delivers_to is deliberately defined ONCE here and cited by
+  g-3, g-4 and g-4-i, so the four ACs cannot drift into three incompatible findings
+  formats.

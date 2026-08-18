@@ -1,0 +1,149 @@
+id: TQ-400e-1
+components:
+  - testing_quality
+  - ac_store
+title: "A record with genuinely passing proof survives a whole-store sweep untouched"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store in which one finished record carries a coverage tag naming a test
+    that is present in the test tree and passes when that test is actually run,
+    alongside other finished records that have no covering test at all,
+  When the whole-store honesty sweep is run to completion over that store and
+    applies its outcome,
+  Then the proven record is reported as proven,
+  And its file on disk is byte-for-byte identical before and after the run — no
+    demotion, no reason text, and no date is written to it,
+  And the proven record is present in the run's report rather than omitted from
+    it, so "untouched" is distinguishable from "never looked at",
+  And the unproven records in the same run are acted on, proving the sweep was
+    live and discriminating during the run that left the proven record alone.
+depends_on:
+  - TQ-400e
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The real_artifact angle: fixture bytes must come from the real serializer or a verbatim on-disk file. This AC's central assertion is a byte-level comparison of a real record file, which is the strongest form of that angle available anywhere in this tree."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "verify_done_eligible is THE per-record oracle this sweep must reuse, and _classify_outcomes is already fail-closed on XFAIL / XPASS / SKIPPED / FAILED / ERROR / nodeid-not-found. The proven verdict must come from here, not from a second reader written for the sweep."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "check_all_done_acs (:403) is the existing whole-store walk. Note it currently only COLLECTS violations — it writes nothing back. The new write path (applying an outcome) is where the byte-stability guarantee has to be built in, and it must be per-record and discriminating, never a bulk rewrite of the store."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The record shape whose bytes must not change. Note that any round-trip through a YAML loader and dumper will reformat a file even when no value changes — the byte-stability requirement therefore forbids rewriting untouched records at all, not merely rewriting them with the same values."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "BYTE STABILITY MEANS DO NOT WRITE, NOT WRITE-THE-SAME. A YAML load-and-dump round trip reformats quoting, key order, and line wrapping even when every value is unchanged. The sweep must therefore not open a proven record for writing at all. Any implementation that rewrites the whole store and relies on the serializer producing identical bytes will fail, and will churn ~2,888 files on every run."
+  - "THE VERDICT MUST COME FROM THE EXISTING PER-RECORD ORACLE — verify_done_eligible in scripts/ac_store/done_proof.py — not from a second reader written for the sweep. Two readers of the same evidence drift; this repo has already hit that failure mode (EPIC-ComputedQualityGates FP-1 layer 3, disjoint vocabularies between a hook's constants and a config file's keys)."
+  - "THE WRITE PATH MUST BE PER-RECORD AND DISCRIMINATING BY CONSTRUCTION. The sweep applies outcomes to a computed subset, one record at a time. A design in which the whole store is loaded, mutated in memory, and written back cannot satisfy this AC no matter how careful the mutation is, and cannot be made to satisfy it later."
+  - "PROVEN RECORDS MUST BE REPORTED, NOT SKIPPED. 'Untouched' and 'never evaluated' must be distinguishable in the report — a skipped record is invisible, and invisibility is the defect the parent L0 exists to remove."
+  - "THE SAME RUN MUST ACT ON UNPROVEN RECORDS. This is a property of the guarantee, not just of its test: the no-false-positive claim is only meaningful about a sweep that is live and discriminating. An implementation whose outcome application can be globally disabled, or that no-ops when any record is proven, does not satisfy this AC."
+  - "PRECONDITION ORDERING — THIS MUST HOLD BEFORE ANY DEMOTION SHIPS. TQ-400b's demotion has no authority until this guarantee is established: a sweep that demotes a proven record destroys trust in every other verdict it produces, and trust once lost takes the whole cadence with it. Treat this as gating work for TQ-400b-1, not as a parallel concern."
+  - "Must handle errors gracefully per the project error handling policy, and must fail toward NOT WRITING: if the verdict for a record cannot be determined, the record must be left untouched and reported, never demoted on an uncertain verdict."
+delivers_to:
+  - agent: python-coder
+    contract: "The false-positive guarantee that TQ-400b-1's demotion is authorised by: (a) the proven/unproven verdict is verify_done_eligible's, unmodified; (b) the outcome-application write path touches only records whose verdict is unproven, one record at a time, leaving every other record's file byte-identical; (c) every evaluated record — proven, unproven, exempt, abstained — appears in the run's report. TQ-400b-1 and TQ-400b-2 write to records; they may only write to records this guarantee permits writing to."
+expects_from: null
+test_spec:
+  - name: test_tq_400e_1_proven_record_file_is_byte_identical_after_a_full_sweep
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "MANDATORY, THE CENTRAL ASSERTION. Build a real on-disk store with the project's real serializer; one finished record carries a covers tag naming a test that is present in the test tree and ACTUALLY PASSES when run. Hash the record file (sha256 of the raw bytes), run the whole sweep to completion with outcome application enabled, hash again, assert equal. Compare bytes, not parsed values — a load-and-dump round trip preserves values and changes bytes, and that is a real defect at 2,888 files."
+  - name: test_tq_400e_1_unproven_records_in_the_same_run_are_acted_on
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "THE ANTI-NO-OP CONTROL. In the SAME run as the byte-stability check, assert the unproven records were actually acted on — their files changed and their outcome was applied — via the production entry point as a subprocess. Without this, a sweep that does nothing at all satisfies 'proven record unchanged' perfectly."
+  - name: test_tq_400e_1_proven_record_appears_in_the_run_report_as_proven
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The proven record is PRESENT in the report with a proven outcome, not omitted. Assert presence explicitly: 'untouched' and 'never looked at' produce identical files and are only distinguishable in the report."
+  - name: test_tq_400e_1_sweep_verdict_equals_the_existing_per_record_oracle_verdict
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. For every record in the store, assert the sweep's outcome agrees with verify_done_eligible's verdict for that same record. Assert per-record agreement, not matching totals — matching totals hide two offsetting misclassifications, and offsetting misclassifications are exactly how a second reader drifts undetected."
+test_rationale: |
+  This is the negative control for the entire TQ-400 tree, and a negative control is worthless
+  if the thing it controls was inert. Hence two tests that must run together: byte-identity on
+  the proven record, and proof that the same run genuinely acted on the unproven ones. Either
+  alone is satisfied by a sweep that does nothing. The byte-level comparison is non-negotiable
+  and cannot be relaxed to a value comparison, because the realistic defect — load the store,
+  dump it back — preserves every value and rewrites every file. And the oracle-agreement test
+  exists because the cheapest way to build this sweep is to write a fresh verdict function,
+  which is how EPIC-ComputedQualityGates ended up with two disjoint vocabularies for the same
+  concept.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity L — not for the logic but because the guarantee
+    constrains the sweep''s entire write path (per-record, discriminating, never a
+    bulk rewrite) and is a PRECONDITION for TQ-400b''s demotion, which cannot ship
+    before it. it_requirements state that byte stability means not writing at all
+    (a YAML round trip reformats), mandate reuse of verify_done_eligible, and require
+    failing toward not-writing on an uncertain verdict. test_spec: real_artifact (sha256
+    byte identity) / reachability (anti-no-op control in the same run) / criterion
+    (reported, not skipped) / seam (per-record agreement with the oracle). criteria
+    untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE negative control for the whole TQ-400 tree. TQ-400b-1 (demotion) depends on
+  this AC: a sweep that demotes a proven record destroys trust in every other
+  verdict it produces, so this must hold before demotion has any authority.
+
+  Test-angle constraint: this cannot be satisfied by a test that greps a config
+  file or asserts a "skip proven records" branch exists. It requires a real store
+  on disk, a real test that really passes, a real sweep run, and a byte-level
+  before/after comparison of the record file. The final clause (unproven records
+  in the SAME run are acted on) is what stops a no-op sweep from passing — a
+  sweep that does nothing at all would otherwise satisfy "proven record
+  unchanged".
+
+  Reuse constraint: the proven/unproven verdict must come from the existing
+  per-record oracle (verify_done_eligible in scripts/ac_store/done_proof.py), not
+  from a second reader written for the sweep. Two readers of the same evidence
+  drift; this repo has already hit that failure mode (EPIC-ComputedQualityGates
+  FP-1 layer 3, disjoint vocabularies).
+
+  IT-PO ENRICHMENT NOTE (2026-08-17) — SEQUENCING AND THE DESIGN CONSTRAINT IT
+  IMPLIES. Per the product owner, TQ-400e is a precondition for TQ-400b and
+  TQ-400d, and this record is the sharpest edge of that: byte stability is not a
+  property that can be retrofitted onto a bulk-rewrite design. If the sweep is
+  built to load the store, mutate in memory, and write it back, every untouched
+  record is reformatted by the serializer and this AC becomes unimplementable
+  without a rewrite. That is why complexity is L and why the per-record
+  discriminating write path is stated as an it_requirement rather than left to the
+  implementer: it is a decision that must be made before any demotion code exists.
+
+  Also note what check_all_done_acs does NOT do today: it collects violations and
+  writes nothing. The entire write path is new, so there is no existing write
+  discipline to inherit — it has to be established here.

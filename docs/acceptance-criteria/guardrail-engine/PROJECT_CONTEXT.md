@@ -3,7 +3,7 @@ title: "guardrail-engine — AC store context"
 description: Conventions and standing notes for authoring/decomposing ACs in the guardrail-engine
   component (prefix GE).
 created: '2026-08-14'
-last_updated: '2026-08-14'
+last_updated: '2026-08-17'
 type: tutorial
 status: active
 components:
@@ -144,3 +144,101 @@ it run everywhere, ACS-1200a makes it enforce the right rule. A check that
 starts running reliably everywhere while still holding the wrong rule blocks
 every parked idea MORE consistently. Sequence ACS-1200a with or before GE-120b,
 or land them in the same release.
+
+## GE-119 is a DUPLICATED id — do not mint by "the next number looks free" (2026-08-17)
+
+Two unrelated ACs both claim `GE-119`: the L0 tree
+`GE-119-green-means-checked/GE-119.yaml` and a parentless L2 at
+`guardrail-engine/GE-119.yaml` (authored by `/quick-fix` from a different
+worktree, subject: the contract-shrinking guard distinguishing an edited test
+from a deleted one). Different levels, different subjects, same id; neither has
+been renumbered yet. When picking a new root id in this component, scan the FLAT
+files as well as the folders — `GE-114-*.yaml` and `GE-115.yaml` also sit loose
+at component root, so a folder-only listing under-reports the taken ids.
+
+**Update (2026-08-18, reconciliation after origin/main merge):** the sentence
+this note originally ended on — "`GE-120` was minted 2026-08-17; the next free
+root is `GE-121`." — is now wrong on both halves and is corrected here rather
+than silently rewritten. The parentless L2 above was renumbered to `GE-111f`
+under `GE-111`, resolving this collision from that side. Separately and
+concurrently, `origin/main` (PR #453) resolved the SAME collision from the other
+side by renaming the L0 tree `GE-119-green-means-checked/` itself to
+`GE-120-green-means-checked/`. `GE-119` is therefore now a RETIRED identifier,
+claimed by no record, and must never be reissued. The `GE-120` this note minted
+for the unrelated "numbers-mean-one-thing" tree was independently reused by that
+same main-side rename, so that tree was renumbered again, to `GE-122` — **not**
+`GE-121`, which that tree's own prose cites roughly twenty times as the rejected
+candidate for the `GE-111f` move and which would therefore resolve to the wrong
+thing if reused. Re-verify the next free root at time of use rather than trusting
+any number recorded in this note.
+
+## GE-122 numbers-mean-one-thing: framing note for the BA/IT-PO (2026-08-17, PO)
+
+New root L0 minted as `GE-120-numbers-mean-one-thing/`; renumbered 2026-08-18 to
+`GE-122-numbers-mean-one-thing/` after an identifier collision with origin/main
+(see the update note above this section) — five L1 children GE-122a..e,
+origin_agent BrainCandy, readiness draft, priority medium, roadmap_phase
+phase_1. Scope: id / number drift across FOUR namespaces — AC ids, ticket ids +
+lifecycle location, ADR numbers, diagram sequence numbers — enforced at three
+stages (authoring-time session hook, pre-commit, CI).
+
+L1 CUT — deliberate; do NOT re-cut per namespace. One-L1-per-namespace was the
+rejected alternative (four near-identical ACs that hide where the real
+differences are). The cut is by GUARANTEE, not by artifact type:
+
+- **GE-122a** — the invariant: one number, one thing. Covers BOTH the collision
+  shape and the one-id-two-lifecycle-copies shape, and all four namespaces,
+  because for this guarantee they genuinely are the same requirement applied
+  four times.
+- **GE-122b** — enrolment: an artifact that takes NO id can never collide, so
+  without this L1 the uniqueness promise has a silent opt-out.
+- **GE-122c** — remediation quality: you are told which two things collide and
+  what to do, not merely blocked.
+- **GE-122d** — strength of the promise: three stages, unskippable backstop.
+- **GE-122e** — one-time repair of the drift that already exists, so the guard
+  does not certify a broken state as clean.
+
+THREE DISTINCT DRIFT SHAPES — only the first is a collision. (1) two artifacts
+claim one id (GE-119 today; BO-2700 previously, renumbered to BO-2900);
+(2) an artifact takes no id at all — 11 unnumbered diagrams sit beside 12
+correctly-sequenced ones despite `scripts/next_diagram_seq.py` existing (drift by
+abandonment); (3) one id, two files in different lifecycle folders free to
+disagree — 5 tickets (4× 00_inbox+99_done, 1× 00_inbox+01_todo).
+Measured 2026-08-17: 2,969 AC files / 2,968 distinct ids; ADRs 1..33 contiguous,
+zero duplicates, zero gaps. Guarding ADR numbers LOCKS IN a good state — do not
+write them up as though a defect existed.
+
+ROOT CAUSE IS THE UNIT OF INSPECTION: the AC schema validator is PER-FILE, so it
+is structurally incapable of noticing that a second file elsewhere claims the
+same id. No gate in the repo runs a whole-store uniqueness pass. Another
+per-file rule cannot satisfy GE-122a.
+
+HONESTY CONSTRAINT ON THE "SPAWN A BA" REQUIREMENT (load-bearing, GE-122c):
+a git pre-commit hook is a plain subprocess — it can BLOCK and PRINT, it CANNOT
+spawn an agent. A CI job can FAIL and PRINT, it CANNOT spawn an agent. Only a
+Claude Code PostToolUse hook on Edit|Write runs inside the live session with its
+output fed back into the running agent's context; `ticket_frontmatter_guard.py`
+is the existing precedent for that hook point. ANTI-PRECEDENT that must not be
+repeated: `templates/scripts/commit_guardian/check_glossary_coverage.py` is
+documented in CLAUDE.md as "dispatches the glossary-triage agent automatically"
+and does not — its docstring says "Returns: Always 0 (fail-open contract)" and
+`_dispatch_triage_standalone` blacklists every novel term with reason
+"standalone-mode placeholder". A documented-but-dead remediation path is worse
+than none, because authors believe they are covered. Any L2 claiming an agent is
+dispatched needs a test that proves it actually happens.
+
+BOUNDARY WITH ACS-800a-3 — do NOT close either as a duplicate of the other.
+ACS-800a-3 (`ac-store/ACS-800-stable-ac-identity/`, readiness approved, priority
+high, work_status todo) already specifies store-wide AC-id uniqueness, but it
+depends on ACS-800a — a 38-file approved but entirely UNBUILT restructure that
+replaces today's position-encoded ids with opaque, position-independent UIDs.
+User decision: DECOUPLE. GE-122 enforces uniqueness on TODAY's position-encoded
+ids and ships now; ACS-800a-3 carries the same invariant forward to the future
+UID model. Complementary and sequential. The ACS-800 tree must NOT be edited,
+reopened, or re-authored by GE-122 work.
+
+INHERITED, NOT REPEALED: GE-119's "a check that cannot run says so" and this
+component's deliberate fail-open convention (GE-116a-1-iii) both apply to GE-122
+unchanged. The new hazard specific to a whole-store check is "I could not read
+the whole store, therefore it is fine" — decide block-vs-announce per stage
+explicitly at L2.

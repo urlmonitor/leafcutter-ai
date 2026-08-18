@@ -1,0 +1,149 @@
+id: TQ-400a-1-i
+components:
+  - testing_quality
+  - ac_store
+title: "A record that lapsed silently after mark time is caught by the sweep"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store containing a finished record that reproduces the historical lapse
+    case — marked finished, its stated criterion no longer true, and the tests it
+    named never written — and that record appears in no pending change,
+  When the honesty sweep runs over that store,
+  Then the record is reported as unproven,
+  And the reported cause names the absence of any passing test carrying its
+    coverage tag,
+  And the change-scoped check run over the same store does not report that record
+    at all, because it is in no pending change,
+  And the difference between the two results is attributable to scope alone, both
+    having been given the same store and the same test tree.
+depends_on:
+  - TQ-400a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The authenticity-gap catalogue: why the replay fixture must be written by
+      the real serializer and read in a cold process, not hand-typed.
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/
+    relationship: describes
+    status: exists
+    relevance: >-
+      Home of BO-2500d-2, the record this replay reconstructs. Read its current
+      on-disk shape and copy it; do not invent an approximation of it.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Both entry points under test live here — check_all_done_acs (--mode ci)
+      and check_changed_done_acs (--mode ci-changed). The side-by-side clause is
+      one store driven through both.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      Produces the cause string the test asserts on — "no linked test found for
+      <id>" (:899). Assert against the oracle's wording, not a paraphrase.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    The replay fixture must be built from the real on-disk BO-2500d-2 record
+    (copied, then its work_status forced to done and its named tests withheld),
+    serialized by yaml.safe_dump or copied verbatim — never hand-typed YAML.
+  - >-
+    Both the store-wide and the change-scoped runs must be driven through the
+    real CLI over the SAME temp store and the SAME test root, so the only
+    variable between the two results is scope.
+  - >-
+    The change-scoped run must be given a genuinely empty diff for the record
+    (no staging, no base-ref trickery that would make it appear changed); a
+    fabricated diff would make the contrast meaningless.
+  - >-
+    Must assert on the cause text the oracle actually emits rather than on a
+    substring so generic that any failure would match.
+  - >-
+    Adds no production behaviour of its own — this AC is satisfied only by a
+    regression test over TQ-400a-1's implementation. It must not be closed by a
+    code change that special-cases this record id.
+  - >-
+    Must handle errors gracefully per the project error handling policy; a
+    fixture the sweep cannot parse must fail the test loudly, not pass silently.
+delivers_to: null
+expects_from:
+  ac_id: TQ-400a-1
+  contract: >-
+    The whole-store verdict population — list[dict] of {ac_id, path, ok,
+    reason} — produced by check_all_done_acs via --mode ci. This AC asserts the
+    replay record is present in that list with ok false and a cause naming the
+    missing coverage tag.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_bo2500d2_replay_record_is_reported_unproven_by_the_sweep
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Reconstruct BO-2500d-2's historical state (work_status done, its named
+      tests absent from the test tree) as a real on-disk store written by the
+      real serializer, then run the sweep; the record is reported unproven.
+  - name: test_replay_reason_names_the_missing_covers_tag
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The cause reported for the replay record names the absence of any passing
+      test carrying its coverage tag and identifies the record, matching the
+      oracle's own wording rather than a generic "unproven".
+  - name: test_change_scoped_mode_does_not_report_the_replay_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Run --mode ci-changed via subprocess over the SAME store and test root
+      with an empty diff; the replay record is absent from its output, while
+      --mode ci reports it. The delta is attributable to scope alone.
+test_rationale: >-
+  This is the corpus's sharpest lapse case and the reason the L0 exists, so the
+  proof must be a replay of the real record rather than a synthetic "record with
+  no test". A hand-typed fixture would reproduce the authoring bias that hid the
+  files_touched no-op through two rounds of remediation; and without the
+  side-by-side ci/ci-changed contrast the test would still pass on a sweep that
+  never widened.
+change_target: code
+risk_surface: internal
+notes: |
+  The canonical regression fixture, from the L0's evidence block: BO-2500d-2 was
+  work_status done while its own criterion ("the LLM review, validator, and
+  fulfillment gate agents are still present in the heavy pipeline phase order")
+  was false from the day it was marked done until PR #451 corrected the phase
+  order on 2026-08-17. Its named tests were never written and nobody noticed for
+  the whole interval. It is the sharpest case in the corpus: the requirement
+  written specifically to keep those gates in the pipeline stayed green while
+  three of them sorted past commit.
+
+  Build the fixture as a real on-disk store written by the real serializer, not as
+  hand-typed YAML — docs/testing/test-angles.md records that hand-typed fixtures
+  reproduced the exact bias that hid the files_touched no-op through two rounds
+  of remediation.
+
+  The side-by-side clause is what proves the sweep adds something: it fails if the
+  sweep is quietly still change-scoped.

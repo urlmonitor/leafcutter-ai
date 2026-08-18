@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -55,16 +55,43 @@ it_requirements:
     - "The mapping must cover outputs deployed by every phase, not only the phases that happen to register today; a phase that writes an output without recording a mapping must be detectable."
     - "Verify behaviorally — run the build, then execute the output-drift gate against a real deployed output that is currently reported as unregistered and assert it now yields a match/drift verdict; do not grep the manifest writer's source."
     - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+    - "Bundle A1 (shared reviewable diff with BP-100k-1): both ACs edit scripts/build_helpers.py's write_build_manifest(). They must land as one diff. No other ticket in this epic may edit scripts/build_helpers.py concurrently."
+test_spec:
+  - name: test_output_mapping_names_the_deployed_output_and_its_source
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "After the build runs and deploys, the manifest's output-mapping section resolves a deployed agent definition under the deployed agents directory to the source artifact it was produced from."
+  - name: test_output_drift_gate_emits_match_then_drift_for_that_output
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Executing check_output_drift.py as a process against that staged deployed output yields a match verdict on an untouched copy and a drift verdict after the deployed copy is hand-edited — the gate is run, not read."
+  - name: test_gate_never_reports_a_build_produced_output_as_unregistered
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The executed gate's output for a build-produced deployed file contains no not-in-output_mappings notice; the unregistered branch is not taken for any output the build actually produces."
+  - name: test_output_mapping_covers_every_deploy_phase_output
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The set of paths recorded in output_mappings after a real build equals the set of files the deploy phases actually wrote — count- and phase-agnostic, so a phase that writes an output without registering a mapping is detected rather than tolerated."
+test_rationale: "Asserting output_mappings has entries, or importing the writer directly, stays green on a mapping that covers only the phases that already register today — which is the incumbent defect. Each descriptor runs the real build and then executes the output-drift gate as a process against a real deployed file, so the mapping is proved by the verdict the gate produces."
 delivers_to:
   agent: python-coder
   contract: "A build manifest whose output-mapping section resolves every deployed output to its source, consumed by the output-drift gate to produce a match/drift verdict per inspected output."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added test_spec (4 behavioral descriptors, one per Then-clause: output_mappings names the deployed output and its source; the executed gate emits match then drift for it; the gate never reports a build-produced output as unregistered; recorded mapping paths equal the set the deploy phases actually wrote) and test_rationale. Added one it_requirements constraint recording the Bundle A1 shared-diff/serialization rule with BP-100k-1 over scripts/build_helpers.py. Every descriptor runs the build and then executes the gate as a process — no grep over the writer's source. criteria, assigned_agent (python-coder), estimated_complexity (M), reference_file_path, delivers_to, expects_from, doc_links, readiness and work_status left unchanged."
+    by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/07_bp100k12_manifest_records_what_the_gates_compare.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-13. Found only after GE-118b made the drift hooks actually run. The output_mappings section of <package>/.build_manifest.json (written by write_build_manifest() in scripts/build_helpers.py) does not cover every deployed output currently on disk, so check_output_drift.py emits 'INFO — .claude/agents/<name>.md not in output_mappings (intentional one-off or newly added output; run build.py to register it)' for many real build outputs, which are therefore never drift-checked. Sibling of BP-100k-1 (template_hashes coverage); the two manifest sections fail independently and were split so each can be tested on its own."

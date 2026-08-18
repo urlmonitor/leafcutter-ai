@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -111,10 +111,17 @@ test_rationale: |
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Assigned python-coder. it_requirements in package-surface object form with n_location_rule zero; invariance, wording and no-paste-detection constraints under `constraints`. Added test_spec (criterion/real_artifact/reachability), expects_from and declares_side_effect. The accepted-paste behaviour is preserved exactly as authored and is NOT treated as a defect. criteria untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder. it_requirements in package-surface object form with
+    n_location_rule zero; invariance, wording and no-paste-detection constraints under
+    `constraints`. Added test_spec (criterion/real_artifact/reachability), expects_from
+    and declares_side_effect. The accepted-paste behaviour is preserved exactly as
+    authored and is NOT treated as a defect. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,128 @@
+id: TQ-400d-3-i
+components:
+  - testing_quality
+  - ac_store
+title: "Age is not a decision — an old record is triaged on the same terms as a new one"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two unproven finished records alike in every respect except that one was
+    marked finished long ago and the other recently,
+  When both are put through triage,
+  Then both appear in the pile on the same terms and both require a decision,
+  And neither is cleared, exempted, or hidden on the grounds of when it was marked
+    finished,
+  And no cut-off date removes records from the population,
+  And the older record's age is shown as information for whoever triages it, never
+    applied as an outcome.
+depends_on:
+  - TQ-400d-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The must_block modifier — the falsifiable form of 'age is not a decision' is that clearing an old record without a decision must be REFUSED on exactly the same terms as clearing a new one. A test that only observes both records in the pile cannot detect an age-based clearing path."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "check_changed_done_acs (:476-489) is the CONTRAST CASE: it legitimately ignores pre-existing records so it can be a required merge gate without failing on history. That scoping is correct there and forbidden here — the records it skips are exactly the ones this sweep exists to examine. Read both functions so the two scopings are not conflated in one code path."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Which date fields a record carries and what they mean. Needed to display age as triage information without accidentally making a date field an input to any decision."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "NO DATE FIELD MAY BE AN INPUT TO ANY OUTCOME. Age may be read and displayed; it may not appear in any predicate that decides whether a record is in the population, is exempt, is cleared, or is hidden. This is a structural constraint on the code, and the falsifiable form of it is TQ-400d-3's refusal: an old record with no decision must be refused clearing on exactly the same terms as a new one."
+  - "NO CUT-OFF, NO WINDOW, NO 'RECENT ONLY' MODE on the triage population. The pile is large (259 records) and mostly historical, so a cut-off looks like pragmatism; it is the grandfathering the parent L0 exists to prevent. The sharpest evidence against it is that the canonical lapse case, BO-2500d-2, was an OLD record — age says nothing about whether a criterion still holds."
+  - "DO NOT REUSE THE CHANGE-SCOPED GATE'S SCOPING. check_changed_done_acs (check_done_proof.py:476-489) deliberately evaluates only records changed in the current PR, which is correct for a required merge gate and exactly wrong for this sweep. Any code path shared between the two must keep the scoping decision at the caller, or this sweep silently inherits the grandfathering."
+  - "AGE MUST BE SHOWN. The criterion permits and expects display — omitting age is not the safe answer, because age is genuinely useful triage context. The forbidden thing is acting on it, not surfacing it."
+  - "Must handle errors gracefully per the project error handling policy: a record with a missing or unparseable finished-date must remain in the population with its age shown as unknown — never dropped, and never given an inferred date."
+delivers_to: null
+expects_from:
+  ac_id: TQ-400d-3
+  contract: >-
+    The clear-refusal gate and its single production entry point. The falsifiable
+    form of 'age is not a decision' is that this gate refuses an old record
+    exactly as it refuses a new one, so this AC is exercised through that same
+    entry point rather than through a separate age check.
+test_spec:
+  - name: test_tq_400d_3_i_old_and_new_records_both_enter_the_pile_requiring_a_decision
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Two unproven finished records identical except for their finished-date — one years old, one same-day. Assert both appear in the pile, both in the not_yet_decided state, and that the only difference between their entries is the displayed age. Assert the age is PRESENT (display is required, not merely permitted)."
+  - name: test_tq_400d_3_i_clearing_an_old_record_without_a_decision_is_refused_identically
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "MUST_BLOCK, AND THE FALSIFIABILITY THIS AC TURNS ON. Attempt to clear the OLD record with no decision recorded, through the same production entry point TQ-400d-3 guards, and assert the refusal is identical in kind and reason to the refusal for the new record. A record aged out without a recorded decision must be rejected — without this, 'age is not a decision' is an assertion nothing can contradict."
+  - name: test_tq_400d_3_i_population_size_is_invariant_to_the_age_distribution
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Build a store whose finished-dates span from the oldest in the real store to today, run the sweep, and assert the population count equals the total number of unproven finished records with no records missing at either extreme. Then shift every date years further back and assert the count is unchanged — a cut-off, window, or 'recent only' filter fails one of the two runs."
+test_rationale: |
+  The obvious test — both records appear in the pile — is satisfied by an implementation that
+  also offers an age-based clearing path, because that path is simply not exercised. The
+  criterion is a prohibition, and a prohibition is only falsifiable if something attempts the
+  prohibited thing: hence the must_block entry that tries to clear the old record on age
+  grounds and requires the same refusal a new record gets. The invariance entry exists because
+  a cut-off is invisible to any test whose fixture dates all fall on the same side of it, and
+  shifting every date is the cheapest way to make a hidden threshold observable.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity S. it_requirements state the structural
+    constraint (no date field in any outcome predicate), forbid reusing check_changed_done_acs''
+    deliberate change-scoping, and require age to be DISPLAYED rather than omitted.
+    test_spec makes the prohibition falsifiable: a must_block reachability entry that
+    attempts to clear the old record without a decision and requires the identical
+    refusal, plus a boundary entry that shifts every date to expose a hidden cut-off.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The product owner named this explicitly: "Nothing is quietly exempted just for
+  being old." It is a real and attractive shortcut — the pile is large (259
+  records) and mostly historical, so a cut-off looks like pragmatism. It is
+  precisely the grandfathering the L0 exists to prevent, and the sharpest evidence
+  against it is that the canonical lapse case (BO-2500d-2, see TQ-400a-1-i) was an
+  OLD record: the age of a record says nothing about whether its criterion still
+  holds.
+
+  Note the contrast with the change-scoped CI check, which legitimately ignores
+  pre-existing records so it can be a required gate without failing on history
+  (check_changed_done_acs, check_done_proof.py:476-489). That scoping is correct
+  for a merge gate and wrong for this sweep — the records it skips are exactly the
+  ones TQ-400 exists to examine.
+
+  Distinguish showing age from acting on it: age is genuinely useful triage
+  context, so the criterion permits displaying it and forbids only its use as an
+  outcome.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The criteria state a prohibition, and a
+  prohibition that nothing attempts is unfalsifiable — an implementation carrying
+  an age-based clearing path passes "both records appear in the pile" trivially.
+  test_spec therefore makes the attempt: clearing the old record without a
+  decision must be refused identically to clearing the new one, through the same
+  entry point TQ-400d-3 guards. The date-shift invariance test is the companion
+  control for a cut-off that every fixture happens to sit on one side of.

@@ -1,0 +1,70 @@
+id: BO-2400a-3-iii
+components:
+  - build_orchestration
+  - testing_quality
+title: "A test appended to a pre-existing test file does not reclassify that file's older tests"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test file that already existed at the worktree's merge-base with origin/main
+    and contained three test functions tagged "# covers: BO-2400g-1", all of which pass,
+  And the test-writer has appended two further test functions to that same file during
+    this run, both tagged "# covers: BO-2400g-1", neither of which exists at the
+    merge-base,
+  When the red-baseline gate classifies the batch's covering tests,
+  Then the two appended test functions are classified newly-added,
+  And the three test functions that were already present at the merge-base are classified
+    pre-existing,
+  And no test function is classified newly-added on the grounds that the file containing
+    it was modified during this run.
+depends_on: [BO-2400a-3, BO-2400a-3-ii]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_partition_granularity:
+      type: object
+      description: "Per-test-function classification: a covers-tagged test is newly-added iff its test function is absent from the merge-base version of the file it now lives in; file-level modification is not sufficient."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "A modified pre-existing test file must yield a mixed classification: its merge-base functions pre-existing, its appended functions newly-added."
+    - "The merge-base version of the file must be read from git object storage, not from the working tree."
+    - "The test that covers this criterion must use the mixed-file shape (pre-existing green functions plus appended red functions in one file) — a fixture with one test per file cannot distinguish function-level from file-level granularity."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-ii
+  contract: "The git-derived newly-added / pre-existing partition whose granularity this criterion pins to the test function rather than the file."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the exact shape of the live BO-2400g-1 halt: part of the acceptance criterion
+  had shipped earlier, so its three covering tests were already present and green, and
+  the test-writer appended the two new red tests to the same file. A file-level diff
+  would mark all five newly-added, which under the new verdict rule would still pass the
+  gate but would misreport three long-standing tests as green_at_baseline noise, and
+  would make BO-2400a-3-iv's pre-existing report permanently empty. Function-level
+  granularity is what makes the partition mean what it says.

@@ -30,6 +30,7 @@ from diagram_type_validators import (
     validate_diagram_type,
 )
 from doc_type_validators import (
+    is_component_exempt,
     validate_doc_type,
     validate_requires_documentation,
 )
@@ -97,6 +98,12 @@ def validate_required_fields(fm: dict[str, Any], filepath: str | None = None) ->
     ``commit_guardian.json``.  Callers that do not supply *filepath* fall back
     to the broadest ``docs/**`` required-field list (backward-compatible).
 
+    The ``components`` field is skipped when ``doc_types.json`` marks the
+    document's own ``type`` as not component-linked (see
+    ``doc_type_validators.is_component_exempt``) — the exemption follows the
+    declaring file rather than a second hardcoded type check here, so the two
+    statements about the property cannot drift apart (AC GE-120).
+
     Args:
         fm: Parsed frontmatter dictionary.
         filepath: Repo-relative file path used to select the per-glob required
@@ -106,8 +113,11 @@ def validate_required_fields(fm: dict[str, Any], filepath: str | None = None) ->
         list[str]: Error messages for each missing field.
     """
     required = _required_fields_for_path(filepath)
+    exempt_from_components = is_component_exempt(fm.get("type"))
     errors = []
     for field in required:
+        if field == "components" and exempt_from_components:
+            continue
         if field not in fm or fm[field] is None:
             errors.append(f"Missing required field: '{field}'")
     return errors
@@ -519,6 +529,17 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-18 [python-coder/GE-120]: Wired
+  ``doc_type_validators.is_component_exempt()`` into
+  ``validate_required_fields()`` so the ``components`` requirement is skipped
+  only for doc types the declaring file (config/doc_types.json) itself marks
+  as "Not component-linked" (e.g. ``card``). Previously the helper existed
+  but was unwired, so every generated agent card was rejected for a missing
+  ``components`` field even after ``type: card`` itself became accepted.
+  Deliberately did not add a second hardcoded ``card`` check here — the
+  exemption is derived from the declaring file so the two statements about
+  the property cannot drift (AC GE-120 it_requirements #4). Non-exempt types
+  are unaffected: the ``components`` field is still required for them.
 - 2026-05-15 00:00 [EPIC-EmbeddedArchDiagramsHardening/ticket 07]: Replaced
   inline validate_diagram_type implementation with an import delegation to
   diagram_type_validators.validate_diagram_type (diagram_types.json SSOT).

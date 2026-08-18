@@ -471,12 +471,12 @@ class TestRealStoreReachabilityFloor:
             f"real AC {ac_id} has an authored test_spec but produced "
             f"{len(reach)} reachability entries: {reach}"
         )
-        authored_names = {
-            item.get("name")
+        authored_names: set[str] = {
+            str(item["name"])
             for item in record["test_spec"]
             if isinstance(item, dict) and item.get("name")
         }
-        emitted_names = {e["name"] for e in entries}
+        emitted_names: set[str] = {str(e["name"]) for e in entries}
         assert emitted_names == authored_names, (
             f"generator invented or dropped test entries for {ac_id}.\n"
             f"authored: {sorted(authored_names)}\nemitted: {sorted(emitted_names)}"

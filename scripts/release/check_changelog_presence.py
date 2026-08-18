@@ -39,6 +39,7 @@ EXEMPT_PREFIXES: tuple[str, ...] = (
     "changelogs/",
     "tickets/",
     "docs/acceptance-criteria/",
+    "docs/known-issues/",
 )
 
 # Maximum number of releasable files printed in the failure message.
@@ -290,10 +291,18 @@ if __name__ == "__main__":
 #   - Three-dot diff (base...HEAD) is used for both helpers to capture
 #     exactly the commits introduced by the PR branch, consistent with the
 #     done-proof and component-vocab CI jobs.
-#   - EXEMPT_PREFIXES covers changelogs/, tickets/, and
-#     docs/acceptance-criteria/ — the three path families that carry
-#     metadata, AC definitions, and changelog entries themselves, none of
-#     which represent releasable code or config changes.
+#   - EXEMPT_PREFIXES covers changelogs/, tickets/,
+#     docs/acceptance-criteria/, and docs/known-issues/ — the path families
+#     that carry metadata, AC definitions, changelog entries themselves, and
+#     recorded-but-unfixed defects, none of which represent releasable code
+#     or config changes.
+#   - docs/known-issues/ added 2026-08-18: the known-issues registers are a
+#     capture surface for defects observed in passing. Requiring a changelog
+#     entry to record a defect that has NOT been fixed is both wrong (nothing
+#     shipped) and enough friction to stop the surface being used at all —
+#     the failure mode that already killed debugging/logs/feedback.jsonl.
+#     A changelog entry is still required for the commit that FIXES an issue,
+#     because that commit necessarily touches non-exempt code.
 #   - _MAX_FILES_IN_MESSAGE = 15 caps the failure output so CI logs
 #     stay readable even when a large refactor triggers the gate.
 #   - _resolve_repo_root() mirrors compute_next_version.py exactly,

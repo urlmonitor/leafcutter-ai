@@ -8,7 +8,7 @@ status: active
 req_status: approved
 readiness: approved
 priority: critical
-work_status: done
+work_status: todo
 criteria: |
   Given the guard has identified one or more broken script references
   (scripts referenced in templates but not present in the deployable set),
@@ -27,9 +27,34 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Must prevent any partial deployment when broken references are detected — fail-fast before writing to target"
-  - "Must integrate with the existing build.py exit code conventions"
-  - "Must handle errors gracefully per the project error handling policy"
+  config_schema_fragment: null
+  reference_file_path: scripts/build.py
+  n_location_rule: "1 — the guard's exit-code branch in main(), lines 1518-1520"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must prevent any partial deployment when broken references are detected — fail-fast before writing to target"
+    - "Must integrate with the existing build.py exit code conventions"
+    - "Must handle errors gracefully per the project error handling policy"
+  notes: |
+    The implementation exists; the TEST is what is missing — see this AC's top
+    level notes for the full audit finding. Do not re-implement the guard.
+
+    The test must NOT mock _check_script_reference_guard. Mocking it is exactly
+    why this AC was able to sit at work_status: done with no real coverage.
+test_spec:
+  - name: test_build_main_exits_nonzero_on_broken_script_reference
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "build.py main() returns non-zero when a template references an undeployable script, with the guard NOT mocked."
+  - name: test_build_writes_no_output_when_reference_guard_trips
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "The target directory receives no deployed files when the reference guard aborts the build."
 delivers_to: null
 expects_from:
   ac_id: BP-900b-2
@@ -39,8 +64,32 @@ created: 2026-06-11
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by:
-  - "unit_tests/test_build_guard_real_package.py"
+covered_by: []
+notes: |
+  DEMOTED done -> todo by ac-audit, 2026-08-17. The previous covered_by claim
+  ("unit_tests/test_build_guard_real_package.py") did not hold up.
+
+  The implementation IS present and wired: _check_script_reference_guard is
+  called from scripts/build.py main() at lines 1518-1520, before _run_phases,
+  so no output is written when it trips. What is missing is any test that
+  asserts it.
+
+  Every test that touches the guard at build level MOCKS it to return 0
+  (unit_tests/test_build_package_version.py,
+  unit_tests/test_build_version_wiring.py), so they stay green whether or not
+  the `return 1` propagation exists at all. The analogous wiring test,
+  test_main_calls_tracked_source_guard_when_sources_untracked, mocks the
+  sibling tracked-source guard (BP-900f), not this one.
+  test_guard_exits_1_on_broken_ref covers the guard function's own return value
+  but not the build-level exit code, and nothing asserts the AC's "no partial
+  deployment is written to the target" clause.
+
+  Delete the main() wiring today and the suite stays green — which is the
+  definition of the phantom-done this AC is supposed to prevent.
+
+  To close: assert build.py main() returns non-zero (without mocking the guard)
+  when a template references an undeployable script, and assert the target
+  directory receives no deployed output on that path. See this AC's test_spec.
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900b-3.md
 change_target: pipeline

@@ -1,0 +1,84 @@
+id: BO-2400a-3-v
+components:
+  - build_orchestration
+  - testing_quality
+title: "One red newly-added test establishes the baseline; a green newly-added test is surfaced, not fatal"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a batch containing acceptance criterion TKT-600a-1 whose four covering tests are
+    all newly-added, of which two are red and two pass because the slice of the criterion
+    they exercise is already implemented,
+  When the red-baseline gate produces its verdict,
+  Then the verdict is that a red baseline is established and the coder agent is
+    dispatched,
+  And the two passing newly-added tests are each reported individually as
+    green_at_baseline, named by test id together with their acceptance-criterion id,
+  And a green_at_baseline test neither changes the verdict nor halts the run,
+  And the same verdict is produced whether one, two, or all four of the newly-added tests
+    are red — one red newly-added covering test is sufficient.
+depends_on: [BO-2400a-3, BO-2400a-3-ii, BO-2400a-3-vi]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_red_baseline_verdict:
+      type: object
+      description: "Verdict is 'red baseline established' iff at least one newly-added covering test is classified red; newly-added green tests are emitted as a non-fatal green_at_baseline list (test id + AC id)."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The verdict is a fold over the newly-added partition, not an early return on the first green test — the pre-amendment implementation returned all_red=False on the first PASSED outcome and must not survive as a short-circuit."
+    - "green_at_baseline entries must be emitted individually (test id + AC id), never collapsed into a count, so the operator can act on them."
+    - "The coder-dispatch precondition stays a hard gate: an established red baseline is required, only its definition changes (BO-2400a-3)."
+    - "The covering test must use a mixed newly-added set (some red, some green) — an all-red fixture cannot distinguish the amended rule from the pre-amendment one."
+delivers_to:
+  agent: python-coder
+  contract: "The red-baseline verdict (established / halt) plus the green_at_baseline list; the halt path and its reasons are specified by BO-2400a-3-i."
+expects_from:
+  ac_id: BO-2400a-3-vi
+  contract: "The red / green / inconclusive classification of each newly-added covering test's reported pytest outcome."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-ship.js"
+  - "templates/workflows-js/fast-lane-build.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the change of intent, not a fidelity fix: it deliberately replaces the
+  "every newly added test must fail" rule that BO-2400a-3 states and the "a
+  green-at-baseline test is a hard halt, never a warning that proceeds" rule that
+  BO-2400a-3-i stated. Both of those are amended, not silently overridden — see the
+  amended_by entries on BO-2400a-3 and BO-2400a-3-i.
+
+  Why the weaker rule is still a real gate: the property the gate must prove is that
+  something in the batch's new tests constrains the implementation the coder is about to
+  write. One red newly-added test proves that. Requiring all of them to be red proves
+  something stronger that is simply not true of a partially-implemented acceptance
+  criterion, and blocks the majority of real work — observed live on TKT-600a-1, where
+  two of four newly-written tests were green because the depends_on half of the
+  criterion already existed.

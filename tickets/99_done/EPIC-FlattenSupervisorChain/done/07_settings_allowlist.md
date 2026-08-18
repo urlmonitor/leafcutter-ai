@@ -1,6 +1,8 @@
 ---
 title: "Ship comprehensive git/gh/python/npm allowlist in settings.json template"
-status: todo
+status: done
+change_target: config
+risk_surface: internal
 components:
   - build_pipeline
 created: 2026-06-01

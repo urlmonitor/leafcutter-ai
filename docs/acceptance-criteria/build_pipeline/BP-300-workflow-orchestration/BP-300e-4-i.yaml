@@ -12,11 +12,25 @@ work_status: todo
 criteria: |
   Given a helper agent returns an empty string or a reply consisting only of
     whitespace,
+  And the point in the run that reads that reply is not named in the workflow's
+    declared degradation register,
   When the workflow reads the agent's reply,
   Then the run stops with the same clear, typed error that names the stage and the
     agent,
   And the empty reply is never treated as an acceptable or skippable result — the
     failure is surfaced, not hidden.
+
+  Given the same empty or whitespace-only reply,
+  And the point that reads it IS named in the workflow's declared degradation
+    register,
+  When the workflow reads the agent's reply,
+  Then the run behaves exactly as it does for a prose-only reply at that same point
+    — it carries on with the substitute value that register entry declares, and its
+    account of what happened records that the stage carried on without a readable
+    reply,
+  And "nothing came back" is never given a gentler treatment than "something
+    unreadable came back", so an empty reply can never slip through a reading point
+    that a prose-only reply would have stopped.
 depends_on:
   - BP-300e-4
 assigned_agent: python-coder
@@ -25,12 +39,15 @@ it_requirements:
   - "Empty-string and whitespace-only replies must raise the SAME typed stage/agent error as the prose-only case (BP-300e-4); never returned as None/empty and never swallowed or treated as skippable."
   - "The tolerant reader stays a pure, synchronous, dependency-free function; confine try/except to the JSON.parse boundary only."
   - "Behavior must be verified by a runtime behavioral test through the vm.Script replay harness with '' and a whitespace-only string, not a source string-scan."
+  - "The declared degradation register is consulted by the CALLER, not by the reader: the reader's behaviour is identical for empty, whitespace-only and prose-only input, so there is no separate empty-reply code path that could diverge from the prose-only one."
 delivers_to: null
 expects_from:
   ac_id: BP-300e-4
   contract: >-
     Inline tolerant reader parseAgentJson whose typed stage/agent-named error path also
-    covers empty and whitespace-only inputs.
+    covers empty and whitespace-only inputs, and the caller-side declared degradation
+    register that decides whether that error halts the run or is degraded to the
+    entry's declared substitute.
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -49,9 +66,53 @@ test_spec:
     framework: unittest
     type: unit
     description: "Reader given a whitespace-only string raises the same typed stage/agent-named error, never a silent skip."
+  - name: test_empty_reply_at_unregistered_point_halts_the_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Executing the workflow under run_workflow_under_e2 with an empty reply substituted at a reading point absent from the declared degradation register, the run stops at that point with the named error and NO dispatch is observed after it — the same observed stopping behaviour the prose-only reply produces at that same point."
+  - name: test_empty_reply_at_registered_point_degrades_identically_to_prose_only
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Two executed runs of the same workflow — one with an empty reply, one with a prose-only reply, both substituted at the same registered reading point — are compared: the value carried forward and the recorded degradation outcome are identical, so empty is never treated more leniently."
 origin_agent: BrainCandy
 created: 2026-07-15
-amended_by: []
+amended_by:
+  - reason: "adjudication of BP-300e-4 against the step-0 baseline degradation exception"
+    by: business-analyst
+    entry: >-
+      2026-08-17. Carried the declared-degradation-register qualifier down from the amended
+      parent BP-300e-4 so this child cannot contradict it. The halt requirement is unchanged
+      and remains the default. Added the register qualifier to the existing Given, plus a
+      second scenario fixing the empty-reply case to behave IDENTICALLY to the prose-only
+      case at the same reading point — the gap this closes is an implementation that
+      registers a reading point for prose-only degradation and then treats "nothing came
+      back" as a separate, gentler path. Added one it_requirement placing the register on
+      the caller rather than in the reader, and two integration test_spec descriptors, both
+      provable only by executing the workflow. work_status left at todo; no other field
+      touched. Grounds for the adjudication are recorded in the parent BP-300e-4 notes.
+  - reason: "it-po-review-of-amended-test-contract"
+    by: it-po
+    entry: >-
+      2026-08-17. Reviewed the BA's extended test_spec as the technical owner of the test
+      contract; corrected the two new descriptors and left the two reader-level ones alone.
+      test_empty_reply_at_unregistered_point_halts_the_run and
+      test_empty_reply_at_registered_point_degrades_identically_to_prose_only were filed
+      under target_dir unit_tests/ with type integration, which sites them in the
+      reader-unit file rather than the workflow suite; retargeted to unit_tests/workflows/
+      and retyped behavioral. The first descriptor's "halts the run" was not pinned to an
+      observable, so it could have been satisfied by a direct-call assertion that never runs
+      the workflow — it now requires execution under run_workflow_under_e2 and pins the halt
+      to the absence of any dispatch after that point, matching the correction applied to
+      the parent's equivalent descriptor. The second descriptor was already correctly shaped
+      as a differential claim; its wording was made explicit that it compares TWO executed
+      runs rather than asserting a single property, since a one-run test cannot show that
+      empty and prose-only are treated the same. test_empty_string_raises_typed_stage_agent_error
+      and test_whitespace_only_raises_typed_stage_agent_error were left untouched: they are
+      reader-level unit tests correctly sited at unit_tests/ alongside the existing
+      parseAgentJson suite, where an equivalent assertion already passes. criteria,
+      it_requirements, assigned_agent, complexity and contracts untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -62,4 +123,9 @@ notes: >-
   and with a whitespace-only string, asserting each raises the same typed
   stage/agent-named error as the prose-only case (BP-300e-4) rather than returning
   None/empty or being swallowed. Closes the boundary case where "nothing came back"
-  could otherwise read as "nothing to do".
+  could otherwise read as "nothing to do". Since the 2026-08-17 adjudication it also
+  closes the second half of that boundary: at a reading point that IS registered for
+  degradation, an empty reply must degrade the same way a prose-only reply does, so
+  emptiness never becomes a quieter side door through a reading point that would have
+  stopped on unreadable prose. The adjudication itself — the two positions, the decision
+  and the grounds — is recorded in the parent, BP-300e-4.

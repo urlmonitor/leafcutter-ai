@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -45,7 +45,9 @@ amended_by:
     entry: "Set readiness: approved and priority: high per the final user gate. Recorded the decided ADR-016 direction (Approach 1) in the passing-path prerequisite it_requirement. Criteria unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_ci_test_gate.py::TestGreenSuiteDoesNotBlock
+implemented_by:
+  - .github/workflows/ci.yml
 change_target: pipeline
 risk_surface: contract_boundary

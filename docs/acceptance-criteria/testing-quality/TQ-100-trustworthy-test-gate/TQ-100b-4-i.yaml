@@ -1,0 +1,131 @@
+id: TQ-100b-4-i
+components:
+  - testing_quality
+  - ac_store
+title: "A real tag whose id is malformed is reported as malformed, never dropped"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given a test function in the repository's unit-test tree that carries a genuine
+    coverage tag in tag position — the comment line immediately above the test
+    definition, the first line of the test body, or the test's docstring — whose
+    captured value is not shaped like an acceptance-criterion id, for example
+    "# covers: TODO" or "# covers: TQ-100b_4" with an underscore where a hyphen
+    belongs,
+  When the coverage-tag reader scans that tree,
+  Then the reader reports that tag as a malformed coverage tag, naming the test
+    function, the file, and the captured value
+  And it does not omit the tag from its output on the grounds that the value
+    failed the id-shape test — a real tag with a typo'd id still surfaces, so the
+    false-positive narrowing in TQ-100b-4 does not become a false negative
+  And the malformed-tag report is a class distinct from the dangling-reference
+    report, so a reader of the output can tell "this tag names an AC that no
+    longer exists" apart from "this tag's value is not an id at all"
+  And the same reader run over the same tree with that one tag line removed does
+    not report it, so the report is driven by the tag being present rather than
+    by a fixed list of known values.
+depends_on:
+  - TQ-100b-4
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-1-ii.yaml
+    relationship: relates-to
+    status: exists
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "READER 1 of 2 — COVERS_TAG_RE at :57 is where TQ-100b-4's id-shape test lands. This AC constrains the direction of that same change: a shape-invalid capture in tag position must be routed to a malformed-tag report, not filtered out."
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "The application site (:370) and the owner of the output structure. The malformed-tag report is a NEW output class alongside the existing dangling-reference list; both must be emitted from the same scan pass."
+  - path: scripts/commit_guardian/check_test_ac_tags.py
+    relationship: relates-to
+    status: exists
+    relevance: "READER 2 of 2, and the existing implementation of 'tag position': it already resolves the comment line above the def, the docstring, and the first body line via AST. Reuse that definition of position instead of inventing a second one. Source of truth is templates/scripts/commit_guardian/check_test_ac_tags.py."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The failure angle and the negative-control rule this AC's test_spec applies — a narrowing that has only been observed removing things has not been shown to keep the things it must keep."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The fail-safe direction is the whole point of this AC and is non-relaxable: for a capture in tag position, the id-shape test may only change WHICH report the capture lands in, never WHETHER it is reported. A shape-invalid capture in tag position that produces no output at all is a defect, not a narrowing."
+  - "The malformed-tag report and the dangling-reference report must be separately addressable in the reader's output structure (two distinct keys/classes), so a consumer such as the TQ-100c-2 linkage-integrity check can act on 'this id no longer exists' differently from 'this is not an id at all'. A single flat list with a severity string does not satisfy this."
+  - "Every malformed-tag record must name the file, the test function, and the captured value verbatim. A count, or a message naming only the file, is not actionable and does not satisfy the criterion."
+  - "Detection must be driven by the tag's presence and position, never by a hard-coded list of known-bad values. A value never seen before (a fresh typo) must be reported on its first appearance with no code change."
+  - "Position determination must reuse the existing AST-based definition already implemented in scripts/commit_guardian/check_test_ac_tags.py (comment line immediately above the def, docstring, first body line) rather than a second, independently written one — two position rules is the same drift TQ-100b-5 guards."
+  - "The malformed-tag report must not, by itself, change the run's pass/fail outcome in this AC's scope. Whether a malformed tag blocks is TQ-100b-1-ii's and TQ-100c's decision; this AC only requires that the information reaches them. Do not silently couple the two."
+test_spec:
+  - name: test_malformed_tag_in_tag_position_is_reported_as_malformed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Plant '# covers: TQ-100b_4' (underscore where a hyphen belongs) in tag position above a real test function inside a real on-disk copy of the test tree, run the reader over that tree, and assert a malformed-tag record exists naming the file, the test function, and the captured value verbatim. Asserting against a hand-constructed input string handed to the pattern does not satisfy this entry."
+  - name: test_malformed_tag_is_a_distinct_report_class_from_dangling_reference
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In a single run over one tree containing both a shape-invalid tag ('# covers: TODO') and a well-shaped-but-unresolvable tag ('# covers: ACS-999z-9'), assert the two land in separately addressable output classes and that neither appears in the other's list. Covers the malformed-but-parseable shape boundary the id-shape test introduces."
+  - name: test_malformed_tag_survives_to_the_done_proof_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run the done-proof scan through its production entry point as a subprocess over the tree carrying the planted malformed tag and assert the malformed-tag record is present in the emitted output. Proves the report is not dropped between the scan and what the gate actually consumes — a report computed but never surfaced is indistinguishable from the false negative this AC exists to prevent."
+  - name: test_removing_the_planted_tag_line_removes_the_report_and_nothing_else
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Negative control through the same entry point: rerun over the identical tree with only the planted tag line deleted and assert the malformed-tag report is empty while every other record in the run is byte-identical to the previous run. This is what falsifies the false-negative inversion — it fails both if the reader silently drops shape-invalid tags (nothing reported in the first run) and if the report is driven by a fixed value list rather than by the tag's presence."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-4
+  contract: "The id-shape test that narrows the reader's output; this edge case pins the direction of that narrowing — only non-tags stop being reported, genuine tags never do."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: TQ-100b-4-i it-po technical enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Criteria untouched. Added assigned_agent (python-coder), estimated_complexity
+    (S), it_requirements, a four-angle test_spec (criterion / boundary / reachability
+    / failure) and reader doc_links; readiness draft -> reviewed. The failure-angle
+    entry is the run-twice negative control that actually falsifies the false-negative
+    inversion: it fails both when a shape-invalid tag is silently dropped and when
+    the report is driven by a hard-coded value list. Position determination is pinned
+    to the AST logic already implemented in check_test_ac_tags.py rather than a second
+    rule.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the fail-safe direction clause. Narrowing the reader without this
+  criterion converts a false-positive problem into a false-negative one, which is
+  strictly worse: a typo'd tag would silently stop being anybody's problem while
+  the test it sits on quietly detaches from its acceptance criterion. Position is
+  load-bearing here — a shape-invalid capture in tag position is a malformed tag
+  (reported), whereas the same shape-invalid capture inside prose or a string
+  literal is not a tag at all (not reported, per TQ-100b-4).
+
+  TEST ANGLE: the malformed tag must be planted in a real file inside the tree the
+  reader actually walks and the reader invoked over that tree; asserting against
+  a hand-constructed input string to the pattern proves nothing. The removal run
+  is the negative control and must go through the same entry point.
+change_target: code
+risk_surface: contract_boundary

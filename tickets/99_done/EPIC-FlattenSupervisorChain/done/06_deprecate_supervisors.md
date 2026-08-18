@@ -1,6 +1,8 @@
 ---
 title: "Mark epic-supervisor and ticket-supervisor as legacy_only in agent_registry.json"
-status: todo
+status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
 created: 2026-06-01

@@ -1,0 +1,72 @@
+id: BO-2400a-3-iv
+components:
+  - build_orchestration
+  - testing_quality
+title: "Pre-existing covering tests are excluded from the red-baseline verdict but still reported"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the batch's covering tests have been partitioned, and the pre-existing set holds
+    three tests that all pass while the newly-added set holds two tests of which at least
+    one is red,
+  When the red-baseline gate produces its verdict,
+  Then the verdict is that a red baseline is established and the coder agent is
+    dispatched,
+  And no pre-existing covering test contributes to that verdict — the verdict is
+    unchanged if a pre-existing covering test passes, fails, or is removed from the run
+    entirely,
+  And the gate's report still lists every pre-existing covering test by test id, with its
+    acceptance-criterion id and its observed outcome, in a group labelled as excluded
+    from the verdict.
+depends_on: [BO-2400a-3, BO-2400a-3-ii]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_pre_existing_tests_report:
+      type: object
+      description: "Pre-existing covering tests are reported (test id, AC id, observed outcome) under an excluded-from-verdict group and contribute nothing to the red-baseline decision."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The verdict computation must read only the newly-added partition; a pre-existing test's outcome must be incapable of changing it."
+    - "Exclusion is not suppression: pre-existing covering tests still appear in the gate's report with their outcomes, in a group the operator can see is excluded."
+    - "The covering test for this criterion must vary a pre-existing test's outcome (pass -> fail) and assert the verdict is byte-identical, rather than only asserting the happy path."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-ii
+  contract: "The pre-existing set of the git-derived partition, each entry carrying its test id and acceptance-criterion id."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Excluded-but-reported, not excluded-and-hidden. A partially-implemented acceptance
+  criterion legitimately arrives with green covering tests from the earlier slice; those
+  tests must not decide the gate, but an operator reading the halt-or-proceed report has
+  to be able to see them, otherwise the gate's reasoning is unauditable and a
+  misclassified test looks identical to an absent one.

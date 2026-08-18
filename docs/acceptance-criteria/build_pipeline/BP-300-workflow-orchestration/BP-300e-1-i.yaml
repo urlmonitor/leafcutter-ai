@@ -8,7 +8,7 @@ status: active
 req_status: draft
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Given a helper agent returns a valid JSON object that itself contains nested objects
     (braces within braces — for example a "contract" field whose value is another

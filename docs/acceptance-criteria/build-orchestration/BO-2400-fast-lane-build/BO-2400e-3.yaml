@@ -1,0 +1,199 @@
+id: BO-2400e-3
+components:
+  - build_orchestration
+  - ac_store
+title: "An interrupted update never destroys the work record it was updating"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement's record in the store, holding its wording, its links and its
+    accumulated notes, currently showing that work on it has not started,
+  And a lean build that is recording that work on it has now begun,
+  When that update is interrupted before it completes — the run is killed, or the
+    write fails partway through,
+  Then the record still contains everything it contained before the update, and can be
+    read back and understood,
+  And the record is never left empty,
+  And anyone reading the record while the update is in flight sees either the whole of
+    the old content or the whole of the new content, never a half-written mixture.
+depends_on: [BO-2400e]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The defect. Verified 2026-08-17, function _update_ac_work_status at lines 98-125 opens the record's file for writing and then serialises into it — the file is emptied at the moment it is opened, so anything that goes wrong between that moment and the end of the write leaves a zero-length record behind. It is called three times per requirement per run (line 203 in_progress, line 261 todo, line 376 done)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns WHEN the record is flipped at build start ('claim the resolved set: flip todo -> in_progress'). This AC owns whether that flip is safe to perform at all. Do not restate the claim protocol here."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-9.yaml
+    relationship: related
+    status: exists
+    relevance: "The mark-done flip at build finish — the third of the three writes per requirement per run, and therefore a second caller that inherits whatever durability this AC establishes."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10.yaml
+    relationship: related
+    status: exists
+    relevance: "The release flip on failure or abort — and the one most likely to be running at exactly the moment a run is being interrupted, which is precisely when a truncating write is most dangerous."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Call contract of the single durable record-update entry point that replaces the truncating write in _update_ac_work_status (fast_lane.py:98-125). Every progress write in the lane goes through this one function."
+    required:
+      - yaml_path
+      - work_status
+    properties:
+      yaml_path:
+        type: string
+        description: "Path to the requirement record being updated."
+      work_status:
+        type: string
+        enum:
+          - todo
+          - in_progress
+          - done
+  constraints:
+    - "All THREE existing call sites must route through the new durable entry point: fast_lane.py:203 (in_progress), :261 (todo), :376 (done). That is what n_location_rule 'all' means here. Leaving one call site on the truncating path is the specific partial implementation the AC's entry-point test exists to catch, and it is invisible to the other three tests."
+    - "The record must never be observable in a truncated or partially-written state, including when the process is killed between the open and the end of the write. The current `yaml_path.open('w')` truncates at open, so any design that keeps a truncate-then-write against the live path fails the criteria regardless of how the write is otherwise guarded."
+    - "A concurrent reader must always parse a complete record — the whole old content or the whole new content. This is a property of the file the reader opens, not of a lock the writer holds: the store is read by hooks, CI gates and humans that hold no lock, so a design relying on reader cooperation does not satisfy the third Then clause."
+    - "Any new helper module MUST live in scripts/build_orchestration/. That directory is deployed wholesale by build_build_orchestration_scripts (scripts/build_phases.py:2446-2524, which copies every .py in the directory), so a sibling module there is auto-deployed. A helper placed in scripts/ac_store/ or elsewhere needs an explicit hardcoded deploy_map edit and will otherwise raise ModuleNotFoundError in the deployed layout while source-tree unit tests stay green."
+    - "Tests must induce a REAL failure against a REAL file on disk in a temp store. A filesystem double or a patched open() is not acceptable evidence for this AC: the entire question is what the filesystem is left holding, and a double is free to model an atomic replacement the code does not perform."
+    - "Must not change the observable content of a successful update beyond the work_status value. The shape-preservation guarantee is BO-2400e-4 and lands on this same writer; a durable write that re-serialises the whole record satisfies this AC while making e-4 strictly worse."
+    - "Must add no more than a single additional filesystem metadata operation to a successful update; the lane performs three writes per requirement per run and an eleven-member build performs about thirty."
+delivers_to:
+  - agent: python-coder
+    contract: "A single durable record-update entry point in scripts/build_orchestration/ with the call contract in config_schema_fragment: succeeds and leaves a complete record, or fails leaving the previous record byte-identical. It is the shared write that BO-2400e-3-i (unwritable-store announcement and refusal to proceed) and BO-2400e-4 (shape preservation) attach their guarantees to, and that BO-2400f-7 / BO-2400f-9 / BO-2400f-10 inherit as callers."
+expects_from: null
+test_spec:
+  - name: test_record_survives_a_write_that_fails_partway
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A real on-disk requirement record in a temp store; the progress update is made to fail midway; the file is then read from disk and asserted byte-identical to its pre-update content."
+  - name: test_record_is_never_zero_length_after_a_failed_update
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "After the induced failure the record's size on disk is asserted greater than zero and the file still parses. Stated separately from the byte-identity assertion because an empty file is the specific observed outcome of the current behaviour."
+  - name: test_concurrent_reader_never_sees_a_partial_record
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A reader opening the record repeatedly while an update runs always parses a complete record — either the old or the new one — and never an incomplete document."
+  - name: test_interruption_during_a_real_run_leaves_every_record_readable
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: drive the lane's real progress-recording surface over a temp store of several requirements, interrupt it, then read every record back and assert all parse and none is empty. A durable write helper that the lane does not actually use passes every other test here."
+  - name: test_durable_writer_is_present_in_the_deployed_layout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "Added by it-po 2026-08-17. After a build into a temp target dir, the durable-write helper resolves and the deployed fast_lane.py imports it without ModuleNotFoundError. The lane runs from the deployed layout, so a helper that only exists in the source tree leaves the deployed lane still truncating while every source-tree test above passes."
+test_rationale: "The obvious test — update a record and assert the new value is there — passes today and says nothing, because the current behaviour works perfectly whenever nothing goes wrong. The defect only exists on the failure path, so every test here induces a real failure against a real file on disk. A test using a filesystem double is worthless for this AC: the whole question is what the filesystem is left holding, and a double is free to model an atomic replacement that the real code does not perform. The zero-length assertion is called out separately from byte-identity because an empty file is the actual observed failure mode and an implementation that leaves a short-but-parseable stub would slip past a looser check. The entry-point test exists because the natural implementation adds a safe-write helper, and the natural omission is leaving one of the three call sites (build start, release, build finish) still writing the old way. The deployed-layout test was added during technical enrichment for the reason recorded in CLAUDE.md: a new module under scripts/ is invisible to the deployed lane unless it is deployed, and the source-tree tests above cannot see that gap."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (python-coder), estimated_complexity, declares_side_effect,
+    it_requirements (package-surface object form mandated by config/ac_store_schema.json's
+    root if/then for python-coder + build-orchestration; policy constraints ride the
+    schema-permitted `constraints` key), and delivers_to. Extended test_spec by one
+    deployed-angle entry; the BA's four entries are unchanged. criteria and title
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BO-2400e-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP 3 OF THE 2026-08-17 FAST-LANE PASS, PART ONE OF TWO. Its twin is BO-2400e-4
+  (recording progress must not rewrite the record). Both are properties of the same
+  single write, which is why they sit together under BO-2400e; they are separate ACs
+  because one is about survival and the other about noise, and an implementation can
+  easily deliver one while worsening the other.
+
+  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
+  scripts/build_orchestration/fast_lane.py:98-125, function _update_ac_work_status:
+
+      with yaml_path.open("w", encoding="utf-8") as fh:
+          yaml.safe_dump(data, fh, allow_unicode=True)
+
+  Opening for writing TRUNCATES AT OPEN. An interrupted or failed run therefore leaves
+  a zero-byte requirement record behind. The function is called three times per
+  requirement per run — line 203 (in_progress), line 261 (todo), line 376 (done).
+
+  WHY THIS IS NOT A SMALL BUG. The YAML records under docs/acceptance-criteria/ are the
+  source of truth for the entire build system: what the work is, what depends on what,
+  what has been done. They are also, in this workspace, frequently untracked while being
+  authored (see the standing "no destructive one-liners" rule in CLAUDE.md, which exists
+  because a truncated store file in an untracked folder is unrecoverable). A build tool
+  whose ordinary progress-recording can empty one of them is one crash away from
+  destroying an author's work, and the most dangerous moment is exactly the abort path
+  BO-2400f-10 uses, which runs when things are already going wrong.
+
+  BOUNDARY WITH THE BO-2400f LEAVES. BO-2400f-7 (claim at start), BO-2400f-9
+  (coverage-gated mark-done at finish) and BO-2400f-10 (release on failure) all own
+  WHEN and WHY the record changes. This AC owns whether the change is safe to make at
+  all. They are the callers; this is the property their shared write must have. Do not
+  fold this into any of them, and do not restate their protocols here — but note that
+  all three inherit whatever is built for this AC, which is why the entry-point test
+  drives the real surface rather than a helper.
+
+  STATED AS BEHAVIOUR ON PURPOSE. The criteria say the record survives, is never empty,
+  and is never observed half-written. They do not name a technique. Several designs
+  satisfy them; choosing between them is the IT PO's call, and writing one into the
+  requirement would make the AC pass or fail on how it was built rather than on whether
+  the work record survives.
+
+  TESTABILITY WARNING. Do not accept a test that patches the filesystem. The entire
+  question is what is left on disk after a failure, and a filesystem double will happily
+  model the atomic replacement the code does not actually perform — the same
+  synthetic-fixture bias recorded in CLAUDE.md's "Real-artifact behavioral spot-check"
+  section, where hand-authored fixtures reproduced the bug-hiding bias and a hook that
+  was a complete no-op passed every test.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Assigned python-coder: the entire surface is
+  scripts/build_orchestration/fast_lane.py, so this AC has no mixed-surface problem —
+  unlike its BO-2400g siblings. it_requirements uses the package-surface OBJECT form
+  because config/ac_store_schema.json's root if/then makes it mandatory for
+  assigned_agent: python-coder + component: build-orchestration; a list of strings would
+  fail validation. n_location_rule is "all" rather than "1" because the hazard is not a
+  single registration point but the three existing call sites, one of which will be left
+  behind. declares_side_effect is true: the observable IS the requirement record on disk.
+  Note the standing irony recorded in BO-2400g's notes — the fast lane does not dispatch
+  user-surface-smoker at all today, so setting this flag correctly records the durable
+  side-effect but does NOT produce smoker routing on this lane; it will route only if and
+  when a ticket is generated for this AC through generate_ticket_from_ac.py.
+  Deployment: a new helper must go in scripts/build_orchestration/, which build.py
+  deploys wholesale, so no deploy_map edit is needed — but the deployed-angle test was
+  added because that is only true for that directory.

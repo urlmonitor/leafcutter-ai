@@ -8,7 +8,7 @@ status: active
 req_status: draft
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Given a helper agent's reply contains more than one top-level JSON block — for
     example a valid JSON object, then later in the same reply a second JSON object or

@@ -103,7 +103,7 @@ class TestMentionsAreNotWeakening(unittest.TestCase):
     """Prose and fixture text that names the tokens must not be flagged."""
 
     def test_docstring_mentioning_tokens_is_not_a_violation(self) -> None:
-        # covers: GE-119
+        # covers: GE-111f
         """A docstring listing the weakening patterns is documentation."""
         diff = textwrap.dedent(
             '''\
@@ -124,7 +124,7 @@ class TestMentionsAreNotWeakening(unittest.TestCase):
         )
 
     def test_string_literal_and_nested_fixture_diff_are_not_violations(self) -> None:
-        # covers: GE-119
+        # covers: GE-111f
         """Fixture text — including a diff INSIDE a string — is not weakening.
 
         The inner lines start with a second ``+`` because the fixture is itself
@@ -151,7 +151,7 @@ class TestMentionsAreNotWeakening(unittest.TestCase):
         )
 
     def test_changelog_prose_is_not_a_violation(self) -> None:
-        # covers: GE-119
+        # covers: GE-111f
         """A changelog sentence describing the guard is not weakening."""
         diff = textwrap.dedent(
             """\
@@ -170,7 +170,7 @@ class TestMentionsAreNotWeakening(unittest.TestCase):
         )
 
     def test_skip_unless_guard_is_not_a_disabled_test(self) -> None:
-        # covers: GE-119
+        # covers: GE-111f
         """``@unittest.skipUnless`` is a conditional guard, not a disabled test.
 
         ``@unittest.skip`` is a literal prefix of ``@unittest.skipUnless``, so a
@@ -199,7 +199,7 @@ class TestRealWeakeningStillFires(unittest.TestCase):
     """The guard must still catch genuine weakening — no neutering."""
 
     def test_real_decorators_and_skip_call_are_flagged(self) -> None:
-        # covers: GE-119
+        # covers: GE-111f
         """Genuine added decorators / skip calls are still violations."""
         diff = textwrap.dedent(
             """\
@@ -225,7 +225,7 @@ class TestRealWeakeningStillFires(unittest.TestCase):
         self.assertIn("pytest.skip added", labels)
 
     def test_real_weakening_fails_the_cli_end_to_end(self) -> None:
-        # covers: GE-119
+        # covers: GE-111f
         """The real CLI exits non-zero on genuine weakening.
 
         Guards the against-dead-code case: a guard neutered into never firing

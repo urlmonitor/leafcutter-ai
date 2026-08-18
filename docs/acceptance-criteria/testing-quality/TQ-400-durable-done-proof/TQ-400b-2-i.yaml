@@ -1,0 +1,133 @@
+id: TQ-400b-2-i
+components:
+  - testing_quality
+  - ac_store
+title: "The recorded reason is the record's own cause, not a generic label"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two finished records demoted in the same run — the first having no
+    covering test at all, the second having a covering test that ran and did not
+    pass,
+  When both records are read after the run,
+  Then their recorded reasons differ from one another,
+  And the first names the absence of a covering test,
+  And the second names the covering test that did not pass, identifying it,
+  And neither record carries only a generic statement that its proof lapsed.
+depends_on:
+  - TQ-400b-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where demotion_reason's contract (the oracle's cause, carried verbatim) is
+      documented for future readers and writers.
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The two distinct causes already exist for free — "no linked test found for
+      <id>" (:899) and "linked test non-passing: <nodeid>" (:962). Thread them
+      through; do not compose a new sentence at the write site.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The cheapest-green thesis: under this repo's TDD order, "a reason is
+      present" is most cheaply satisfied by one constant string.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    demotion_reason must be the oracle's own cause string threaded through
+    unchanged. done_proof.py already produces two distinct causes (:899 and
+    :962); do not construct a new sentence at the write site.
+  - >-
+    The written reason must carry the discriminating detail: the covering test's
+    pytest nodeid when one exists, the AC id when none does. Two records with
+    different causes carrying identical reason text is a defect.
+  - >-
+    No default or fallback constant. If the oracle returns no cause for an
+    unproven record, that is a bug in the verdict — the run must report it as an
+    error rather than writing a placeholder reason.
+  - >-
+    Reason text must not be truncated or normalized on the way to the record
+    (no shortening a nodeid to a filename); the reader must be able to run the
+    named test from the reason alone.
+  - >-
+    Must handle errors gracefully per the project error handling policy; an
+    unformattable cause is an error entry for that record, never a generic
+    string written silently.
+delivers_to: null
+expects_from:
+  ac_id: TQ-400b-2
+  contract: >-
+    The demotion_reason field and the single formatting site that populates it.
+    This AC constrains its content: the oracle's per-record cause, with its
+    discriminating detail intact.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_two_demotions_in_one_run_carry_different_reasons
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      One store, one apply run, two unproven records (no covering test / failing
+      covering test). Their demotion_reason values are not equal, and neither is
+      a generic lapse statement. A constant-string implementation fails here.
+  - name: test_failing_test_reason_names_the_real_nodeid
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The fixture's covering test is a real test file that really fails when
+      run; the second record's reason contains that test's actual pytest nodeid,
+      and the first record's reason names the missing coverage tag by AC id.
+  - name: test_reasons_survive_the_real_apply_run_to_disk
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Read both reasons out of the files after a subprocess apply run rather
+      than from an in-memory decision object, so a reason computed correctly but
+      written generically is caught.
+test_rationale: >-
+  Under this repo's TDD order the coder's contract is literally "make the red
+  baseline green", so a criterion requiring only that a reason exists is most
+  cheaply satisfied by one constant string on every demoted record — worthless
+  to whoever picks the work up and indistinguishable from no reason at all.
+  Requiring two demotions in ONE run to carry different, cause-specific text is
+  what makes that implementation fail, and asserting on a real failing test's
+  real nodeid is what stops the second reason degrading to "test failed".
+change_target: code
+risk_surface: internal
+notes: |
+  Kills the cheapest green. Under this repo's TDD order the coder's contract is
+  literally "make the red baseline green", so a criterion that only requires "a
+  reason is present" is most cheaply satisfied by writing one constant string onto
+  every demoted record — which is worthless to whoever picks the work up, and
+  indistinguishable from no reason at all.
+
+  Requiring two demotions in ONE run to carry different, cause-specific text makes
+  the constant-string implementation fail. The distinction is available for free:
+  the existing oracle already returns distinct causes — "no linked test found for
+  <id>" versus "linked test non-passing: <nodeid>" (done_proof.py:899 and :962).
+  The reason should carry that cause through rather than restate it.

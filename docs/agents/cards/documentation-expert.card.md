@@ -161,6 +161,7 @@ flowchart TD
 - ACD-1600d-3: Reference doc for the canonical-source pointer rule
 - ACD-1600e-3: Reference doc for the behaviour-only criteria rule
 - ACD-1600f-3: Reference doc for the AC-vs-supporting-artifact consistency gate
+- ACD-1600g-5: Reference doc describes the requirement boundary and its bundle composition rule
 - ACD-1700a-4: Reference doc for role-scoped context delivery
 - ACD-1700b-3: Reference doc for the surface-to-specialist assignment rule
 - ACD-1700c-5: How-to guide for previewing an agent's brief before a build
@@ -168,12 +169,18 @@ flowchart TD
 - ACD-1800b-3: Reference doc describes per-deliverable sign-off and requirement-level done
 - ACD-1800c-3: Reference doc describes the ticket-as-grouping model
 - ACD-1800d-2: Reference doc describes per-deliverable traceability back-references
+- ACD-1800f-5: Reference doc describes how a requirement declares an observable promise and states its proof
 - ACD-1900a-4: Reference doc describes schema_version and the new optional fields
 - ACD-1900c-4: How-to guide covers operating the flag and its kill-switches
 - ACD-1900d-5: How-to guide covers the advisory-to-required gate rollout
 - ACD-1900e-5: How-to guide covers running the opt-in backfill safely
 - ACD-1900f-4: How-to guide covers upgrade and the compatibility-window lifecycle
 - ACD-1900g-4: How-to guide covers the dogfood proof and the go/no-go checklist
+- ACD-2000a-4: Reference doc describes the requirement's adjudication trail and its retry budget
+- ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
+- ACS-1200a-3: The written back-link rule matches the enforced one
+- ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
+- ACS-500g-2-ii: A how-to guide walks a reader from a noticed repetition to a referenced pattern
 - ACS-900a-3: How-to guide and sequence diagram for the retirement-detection trigger
 - ACS-900b-3: How-to guide and sequence diagram for the retirement-blocks-commit behavior
 - ACS-900c-2: How-to guide documents the block message and how to act on it
@@ -202,6 +209,13 @@ flowchart TD
 - BO-2500b-4: How-to: local pre-commit proof-of-done feedback and the required CI gate
 - BO-2500c-4: How-to: author real-artifact fixtures and round-trip tests
 - BO-2500c-5: Reference: fixture policy and real-producer fixture rules
+- BO-2900a-4: How-to: prove a criterion done through the real way in, and what to do when the guard refuses
+- BO-2900b-4: How-to: keep capabilities and their automation connected in both directions
+- BO-2900c-3: How-to: the reverse-direction content of the connection guide — stale calls, renames and removals
+- BO-2900d-4: How-to: decide whether to wire code in or exempt it, and record the exemption
+- BO-2900d-5: Reference: the exemption contract — what is recorded, what it covers, and how it appears in output
+- BO-2900e-4: How-to: one table mapping every refusal the guard can emit to the action that clears it
+- BO-2900f-5: Reference documentation states the skipped-gate record contract and its boundary with the workflow-step record
 - BP-1000c-2: How-to guide for reading a parity failure and resolving the drift it names
 - BP-1000d-2: Reference doc defining which scripts are in scope for the parity check and which are exempt
 - BP-100b-10: Drift hook docs include a developer checklist for adding new template categories
@@ -236,6 +250,9 @@ flowchart TD
 - GE-117c-2: How-to guide: the extended decision-history tail-tag with ticket and AC references
 - GE-117d-4: How-to guide: understanding and clearing a declaration-guardrail block
 - GE-117e-3: How-to guide: fixing a missing declaration or deliberately opting out
+- GE-119a-5: The no-silent-pass rule is written where the next check author will find it
+- GE-119b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
+- GE-119d-5: The how-to states what a prepared working copy guarantees and how to confirm it
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface
@@ -246,6 +263,11 @@ flowchart TD
 - PER-100b-5: Reference doc for persona_for AC field
 - PER-100c-3: How-to guide for querying capabilities by persona
 - PER-100e-4: How-to guide for creating and refining personas with the persona expert
+- TQ-400a-5: Someone who has never run the store-wide sweep can run it and read its verdict unaided
+- TQ-400b-7: The field reference answers type, nullability, writer and never-rewritten for both demotion fields
+- TQ-400c-5: A reader can change the cadence and find the latest published verdict from the guide alone
+- TQ-400d-5: A first-time triager can work a record from the pile to a recorded decision using the guide alone
+- TQ-400e-6: The exemption reference states when a declaration is honoured, when refused, and which records may carry one
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view

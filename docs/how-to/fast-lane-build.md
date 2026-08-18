@@ -5,7 +5,7 @@ type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-08-11
+last_updated: 2026-08-17
 components:
   - build_orchestration
 related_docs:
@@ -257,35 +257,54 @@ This gate runs before the coder is dispatched. It is a deterministic Python
 script with no LLM involvement.
 
 **What it checks.** The gate scans the test root for files containing
-`# covers: <id>` annotations that match any AC id in the batch. For each linked
-test, it runs pytest and verifies that the test **fails**. A test that passes
-at baseline is a gate violation: it means either the production code already
-exists (and this AC may be a duplicate) or the test is under-specified and not
-actually asserting the behavior.
+`# covers: <id>` annotations that match any AC id in the batch, then
+partitions the linked tests into **newly-added** and **pre-existing** using
+git at test-function granularity — a test is newly-added when its function is
+absent from the worktree's merge-base with `origin/main` (or an explicit
+`--base-ref`), regardless of whether the file it lives in also contains
+older, already-passing tests. The gate passes when **at least one
+newly-added** test is red (`FAILED` or `XFAIL`); it does not require every
+linked test to fail, because a batch AC may already be partially implemented
+by an earlier slice. Pre-existing tests are reported but never affect the
+verdict. When the git partition cannot be resolved (no git worktree, no
+`origin/main`), the gate fails closed rather than falling back to a
+permissive default.
 
 **Gate invocation:**
 
 ```bash
 python3 <worktree_path>/scripts/build_orchestration/fast_lane.py verify_red_baseline \
-  --worktree <worktree_path>
+  --ac-ids <id1,id2,...> --test-root <worktree_path> [--base-ref <ref>]
 ```
 
-**Pass condition.** `all_red: true` — every test linked to any AC id in the
-batch fails.
+**Pass condition.** `gate_passed: true` — at least one newly-added test
+linked to any AC id in the batch is classified red.
 
-**Failure output.** When a test passes at baseline, the gate returns:
+**Failure output.** When no newly-added test is red, the gate returns a named
+`reason` plus every newly-added test it inspected:
 
 ```json
 {
-  "all_red": false,
-  "offender": "tests/test_my_module.py::test_feature_x",
-  "offender_ac_id": "ACS-042"
+  "gate_passed": false,
+  "reason": "all_new_tests_green_at_baseline",
+  "red": [],
+  "green_at_baseline": [
+    {"nodeid": "tests/test_my_module.py::test_feature_x", "ac_id": "ACS-042", "outcome": "PASSED"}
+  ],
+  "inconclusive": [],
+  "preexisting": []
 }
 ```
 
-The coder is NOT dispatched when `all_red` is false. Investigate why the
-offending test already passes and either fix the test stub or confirm that
-the AC is already implemented (see `docs/how-to/prove-ac-done.md`).
+`reason` is exactly one of `no_new_covering_tests` (the batch has no
+newly-added covering test at all), `all_new_tests_green_at_baseline` (every
+newly-added test is green), `no_red_outcome_among_new_tests` (the newly-added
+tests are green and inconclusive, with at least one inconclusive), or
+`baseline_partition_unavailable` (the git partition could not be resolved).
+
+The coder is NOT dispatched when `gate_passed` is false. Investigate the
+`green_at_baseline` entries and either fix the test stub or confirm that the
+AC is already implemented (see `docs/how-to/prove-ac-done.md`).
 
 ---
 
@@ -386,11 +405,17 @@ partial result.
 YAML is malformed, the test file target directory is missing, or the test suite
 itself is broken before the stubs were written.
 
-**verify_red_baseline finds a passing test.** The stub is not genuinely failing.
-Either (a) the production code already implements this behavior — confirm with
-`docs/how-to/prove-ac-done.md` and flip the AC to `work_status: done` — or
-(b) the test stub asserts a condition that is trivially true and needs to be
-sharpened.
+**verify_red_baseline halts (no newly-added test is red).** Read `reason` in
+the halt payload. `no_new_covering_tests` means no covers-tagged test was
+newly-added for the batch — write one. `all_new_tests_green_at_baseline` or
+`no_red_outcome_among_new_tests` means every newly-added stub is not
+genuinely failing: either (a) the production code already implements this
+behavior — confirm with `docs/how-to/prove-ac-done.md` and flip the AC to
+`work_status: done` — or (b) the test stub asserts a condition that is
+trivially true and needs to be sharpened. `baseline_partition_unavailable`
+means the gate could not resolve the worktree's git merge-base — this
+signals a broken environment, not a normal case; the fast lane always opens
+a fresh worktree off `origin/main`.
 
 **python-coder returns non-ok.** The implementation is incomplete. Read the
 `coderResult.message` field in the halt payload. Re-run the coder manually
