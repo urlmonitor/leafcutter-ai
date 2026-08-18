@@ -1,0 +1,174 @@
+id: GE-122c-2
+title: "At commit and in the shared build you are told both claimants and what to do yourself"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a commit whose changes introduce a record claiming an identifier that another artifact
+    in the collection already claims,
+  When the commit-time guard runs,
+  Then the commit does not complete,
+  And the printed output states the contested identifier, the path of EVERY artifact claiming
+    it, and the remediation the author must carry out themselves — which artifact is expected to
+    move, and how to obtain a free identifier,
+  And the printed output makes NO statement that any agent, specialist, or automated process
+    will perform the renumbering on the author's behalf,
+
+  And given the same contested identifier reaching the shared build,
+  When the build's numbering gate runs,
+  Then the build fails,
+  And its printed output carries the same three elements — contested identifier, every claimant
+    path, author-performed remediation — and likewise promises no automated renumbering,
+
+  And a reader holding only that printed output, with no access to the collection and no further
+    commands run, has every fact needed to act: they can name the other claimant and state which
+    identifier the moving artifact will take.
+
+  Coverage note: covered only by a test that executes each stage against a real contested
+  collection and asserts on the captured output text — that both claimant paths appear, that a
+  free identifier appears, and that no dispatch or automated-fix promise appears. Asserting that
+  a message template contains placeholders does not cover it.
+depends_on:
+  - GE-122c
+  - GE-122a-1
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: context
+    status: exists
+  - path: .pre-commit-config.yaml
+    relationship: modifies
+    status: exists
+    relevance: "Where the commit-time stage is registered. Note that check_adr_collision.py is absent from this file today, which is why the decision-number namespace has an unregistered guard rather than an enforced one. IT PO 2026-08-17: this file is a BUILD OUTPUT — see it_requirements for the canonical edit target."
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Where the shared-build stage is registered. The 'AC store valid' job is the closest structural precedent, including its reset --soft technique for making a pull request's files visible to guards that read the index."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "IT PO 2026-08-17 — the CANONICAL commit-time registry. scripts/build_precommit.py renders .pre-commit-config.yaml from this file's hooks_manifest.hooks on every build, stripping and re-emitting every @package-managed block. This is the file to edit; .pre-commit-config.yaml is its output."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Template-is-canonical, build-deploys — the rule that makes .pre-commit-config.yaml an output rather than a source."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "REGISTRATION TARGET, stated exactly because getting it wrong produces the defect this AC describes. `.pre-commit-config.yaml` is a BUILD OUTPUT: `scripts/build_precommit.py` strips every `@package-managed` block and re-renders it from `hooks_manifest.hooks` in `templates/scripts/commit_guardian/commit_guardian.json`. The canonical edit is that manifest; then run `python scripts/build.py --target-dir .` and commit the regenerated `.pre-commit-config.yaml`. A hand-added entry in `.pre-commit-config.yaml` passes locally and is STRIPPED in CI, because the CI jobs run build.py before invoking any hook — the gate would then be green everywhere and enforcing nothing."
+  - "Registration must be VERIFIED BY EXECUTION, not by observing the entry. Run the deployed hook against a staged contested pair and assert it fails; `templates/scripts/commit_guardian/check_adr_collision.py` is written, tested, deployed and registered nowhere, and has never run — a file's existence and a manifest line are both things a dead guard also has."
+  - "The shared-build gate inherits the staged-index trap documented on the `AC store valid` job: hooks that read their file set from `git diff --cached` see nothing in a CI checkout, where the PR's files are committed rather than staged, and therefore pass while validating nothing. If the gate reuses any staged-index reader it MUST reproduce the `git reset --soft origin/<base>` step, and the test must prove a deliberately contested pair fails the job — the same both-ways verification that job's own comment records."
+  - "The CI job NAME is a stable external contract referenced by the branch's required-check set (see the note on the existing test job). Choose it once, and do not rename it after GE-122d-2 adds it to the required set."
+  - "The negative clause is the honesty constraint and must be asserted as an absence, not inferred: the output must contain no statement that any agent, specialist or automated process will renumber. Assert against the actual captured text, including any shared message header, so a helper that appends a dispatch line cannot slip past."
+  - "Both stages must render from GE-122a-1's single verdict via one shared message renderer. Two renderers is the drift the BA merged these two stages into one AC to prevent, and GE-122d-1 forbids a second definition of the rule."
+  - "Self-containment is testable as written and must be tested that way: capture the output and assert the other claimant's literal path and the target identifier are present. At the moment of the block the author usually does not know which other artifact claims the number — an output that omits it converts a block into an investigation."
+  - "The which-artifact-moves statement must match the per-namespace rule documented by GE-122a-3. A block message and a reference document giving different answers is worse than either alone, because the author has to adjudicate between them under time pressure."
+  - "DEPLOY MANIFEST: any module the hook or the CI gate imports must be in the matching build deploy list before the gate is registered, or the deployed hook raises ModuleNotFoundError. Once GE-122d-2 makes the CI gate required, that crash blocks every merge — the done_proof.py precedent."
+  - "Error handling per CLAUDE.md Rules 1-4, with the dispositions GE-122d-3 and GE-122d-3-i set: unreadable collection blocks at commit and fails the build; internal defect after a complete read announces and permits the commit but fails the build."
+test_spec:
+  - name: test_commit_stage_blocks_and_names_every_claimant
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the commit-time gate against a real contested collection produces a blocking result whose captured output contains the contested identifier and the literal path of every claimant."
+  - name: test_commit_stage_output_states_author_performed_remediation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The captured output names which artifact is expected to move and how to obtain a free identifier, and the named mover matches the per-namespace rule the reference document states."
+  - name: test_output_promises_no_automated_renumbering
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Neither stage's captured output contains any statement that an agent, specialist or automated process will renumber on the author's behalf — asserted as an absence over the whole emitted text including shared headers."
+  - name: test_ci_stage_fails_on_the_same_contested_pair
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "The shared-build gate's own command, run against a checkout that really contains the contested pair, fails and emits the same three elements as the commit stage."
+  - name: test_ci_stage_sees_committed_pr_files_not_only_staged_ones
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "In a checkout where the contested files are COMMITTED rather than staged — the real CI condition — the gate still fails. Run both with and without the reset --soft step so a gate that silently validates nothing is caught, exactly as the AC store valid job's comment records verifying."
+  - name: test_both_stages_render_from_one_message_renderer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Given one verdict, the commit-stage and build-stage outputs carry identical contested-identifier, claimant-path and remediation content, so the two stages cannot drift into two messages."
+  - name: test_registered_gate_actually_executes_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "After build.py regenerates .pre-commit-config.yaml from the manifest, invoking the gate through pre-commit on a staged contested pair fails — proving registration survived the build and the gate runs, rather than proving a manifest line exists."
+test_rationale: |
+  The coverage note forbids asserting on a message template, so every descriptor executes a
+  stage and asserts on captured output. Two descriptors exist for defects this repository has
+  already shipped rather than for completeness: the committed-not-staged descriptor reproduces
+  the trap the AC store valid job documents (a staged-index reader in a CI checkout passes while
+  validating nothing, and the job's own comment records verifying it both ways), and the
+  after-build registration descriptor exists because .pre-commit-config.yaml is regenerated on
+  every build, so an entry that is present in the working tree can be absent in CI. The
+  no-automated-renumbering descriptor must be an assertion over the whole emitted text rather
+  than over the message body alone, since the failure mode is a shared header or helper
+  appending a promise the stage cannot keep.
+delivers_to: null
+expects_from:
+  ac_id: GE-122a-1
+  contract: "The collection-wide uniqueness verdict this criterion renders into a self-contained message."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Corrected the registration target: .pre-commit-config.yaml is a build output
+    regenerated by scripts/build_precommit.py from hooks_manifest.hooks in templates/scripts/commit_guardian/commit_guardian.json,
+    so a hand-added entry passes locally and is stripped in CI (which runs build.py
+    before any hook). Added that manifest as a doc_link with relationship modifies.
+    Added it_requirements: verify registration by executing the gate, not by observing
+    the entry (check_adr_collision.py is registered nowhere and has never run); reproduce
+    the reset --soft staged-index handling or the CI gate validates nothing; the CI
+    job name is a stable required-check contract; one shared message renderer for
+    both stages; deploy-manifest obligation. Added test_spec, test_rationale and two
+    doc_links. criteria, title, agent, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  TWO STAGES, ONE PROMISE — deliberately not split. The commit-time stage and the shared-build
+  stage differ in what they stop (a local commit versus a merge), and that difference is
+  GE-122d's subject. What they OWE the author is identical, and writing it twice would guarantee
+  the two copies drift. GE-122d-1 separately requires that all three stages evaluate one shared
+  rule, which is what makes a single message contract implementable.
+
+  THE EXPLICIT NEGATIVE — "makes no statement that any agent will perform the renumbering" — is
+  the honesty constraint from the L1 turned into a testable assertion, and it is the reason this
+  AC exists separately from GE-122c-1. The user's original request was for the gates to say a
+  specialist should be brought in. At these two stages that is not possible: a pre-commit hook
+  is a subprocess and a build job is a container, and neither can spawn an agent. An AC that
+  promised it here would be unbuildable, and an implementer trying to satisfy it would produce
+  exactly the documented-but-dead remediation path that already exists elsewhere in this
+  repository. Promising less, truthfully, is the point.
+
+  "SELF-CONTAINED" IS THE ACCEPTANCE SHAPE, and it is testable as written: capture the output,
+  and check that the other claimant's path and the target identifier are literally present in
+  it. At the moment of the block the author typically does not know which other artifact claims
+  the number — that is the whole complaint the L1 records — so an output that omits it converts
+  a block into an investigation.

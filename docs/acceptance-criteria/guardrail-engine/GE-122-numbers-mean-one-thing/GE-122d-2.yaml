@@ -1,0 +1,162 @@
+id: GE-122d-2
+title: "A clash that slipped past the commit check is still stopped before it reaches everyone"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an author commits a record claiming a contested number with the commit-time guards
+    bypassed, so the commit-time stage never ran at all,
+  And the resulting change is proposed for merge into the shared branch,
+  When the shared build's numbering gate runs on that proposed change,
+  Then the gate fails,
+  And its output names the contested number and every claimant path,
+  And the gate's name appears in the set of checks the shared branch requires to pass before a
+    merge is permitted, so the failing gate actually prevents the merge rather than merely
+    reporting on it,
+
+  And given a proposed change that contests no number,
+  Then the gate passes and states, per namespace, how many artifacts it inspected.
+
+  Coverage note: covered by executing the gate's own command against a checkout that really
+  contains the contested pair and asserting the failing result and the named paths — plus a check
+  that the gate's name is present in the shared branch's required-check set. A gate that fails
+  correctly but is not required is a report, not a backstop, and this criterion is not met by
+  either half alone.
+depends_on:
+  - GE-122d
+  - GE-122d-1
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Where the gate is defined. Note the comment on the existing test job: the job NAME is the stable contract referenced by the required-status-check list, so it must not be renamed once required."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: context
+    status: exists
+    relevance: "Documents the commit-time bypass this criterion assumes an author can perform. The bypass is a deliberate affordance, not a defect — which is exactly why an unskippable backstop is needed."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1200-ci-test-gate/BP-1200c-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The precedent for the required-check half. It decided settings-as-code via the GitHub branch-protection API with a documented manual fallback, and records the exact-name-match and EMU-account constraints. IT PO 2026-08-17: no settings-as-code script exists in the repository, so that decision was carried out manually — see it_requirements."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122e-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The repair-verification gate. Making this CI check REQUIRED before GE-122e's repair has landed makes every merge in the repository fail on pre-existing drift, so the two are ordered."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE REQUIRED-CHECK HALF IS AN OUT-OF-REPOSITORY OPERATION AND MUST BE PLANNED AS ONE. The shared branch's required-check set lives in a GitHub ruleset, not in any file in this repository — verified 2026-08-17: no settings-as-code script exists here, so BP-1200c-1's settings-as-code decision was in practice carried out by hand. Adding this gate means a `gh api` call against the ruleset under the non-EMU `urlmonitor` account with an admin-scoped token. Budget it as a deliberate ops step with recorded evidence, not as something the coder does incidentally."
+  - "Because the required-check set is not in the repository, a unit test CANNOT assert it, and a test that silently skips when no token is present is a false green of exactly the kind this tree exists to eliminate. Satisfy the second half with a recorded `gh api` query of the ruleset's required-check names, captured as evidence on the implementing ticket, and treat a skipped or unavailable query as NOT DONE rather than as passed."
+  - "The gate's job NAME in ci.yml is the string the ruleset matches, and the match is exact. Choose it at implementation time and never rename it afterwards — the existing test job carries the same warning in its own comment, and a renamed job silently becomes a non-required job that still reports green."
+  - "ORDERING IS LOAD-BEARING: do not make this gate required until GE-122e's repair has landed and GE-122e-3 passes. A required whole-collection gate over a collection that still holds the GE-119 collision and the five twice-held work items fails every merge in the repository on day one, and the documented response to that situation in this codebase has twice been to defer or diff-scope the gate."
+  - "REPRODUCE THE STAGED-INDEX HANDLING OR THE GATE VALIDATES NOTHING. The `AC store valid` job documents the trap in full: hooks reading from `git diff --cached` see an empty index in a CI checkout, where the PR's files are committed rather than staged, so invoking them naively passes. Its answer is `git reset --soft origin/<base>`, and its comment records verifying both ways — with the reset a malformed record fails, without it the same record passes. Any gate reusing a staged-index reader inherits this, and a false pass here defeats the entire backstop."
+  - "Verify the gate by executing its own command against a checkout that genuinely contains the contested pair — not by asserting the job exists in ci.yml. This repository already contains a written, tested, deployed decision-number collision guard that is registered nowhere and has never run; a job block in a YAML file is the same class of evidence."
+  - "The inspected-count output on the passing path is not decoration. A CI gate that passes over an empty or unreadable checkout looks identical to one that passed over the whole collection, and this is the stage where nobody is watching the output."
+  - "DEPLOY MANIFEST: the CI job runs `python scripts/build.py --target-dir .` before invoking the gate, as the existing AC-store and done-proof jobs do. Every module the gate imports must be in the matching deploy list, or the required gate crashes with ModuleNotFoundError and blocks every merge — the done_proof.py precedent, and the reason this it_requirement appears on every AC in this tree that touches a gate."
+test_spec:
+  - name: test_ci_gate_fails_on_a_contested_pair_in_a_real_checkout
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "The gate's own command, executed against a checkout that really contains the contested pair, fails and names the contested number and every claimant path."
+  - name: test_ci_gate_sees_committed_files_not_only_staged_ones
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "With the contested files COMMITTED rather than staged — the actual CI condition — the gate still fails. Run with and without the reset --soft step so a gate that silently validates nothing is caught, mirroring the both-ways verification the AC store valid job records."
+  - name: test_ci_gate_passes_with_per_namespace_inspected_counts
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "On a checkout contesting no number the gate passes AND emits a per-namespace inspected count matching the artifacts present, so a pass over an empty or unreadable checkout is distinguishable."
+  - name: test_bypassed_commit_stage_is_still_caught_by_the_build_stage
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    description: "A commit made with the commit-time guards bypassed, carrying a contested number, still fails the build gate — the end-to-end backstop claim, exercised rather than reasoned about."
+  - name: test_ci_job_name_matches_the_recorded_required_check_name
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    description: "The gate's job name in .github/workflows/ci.yml equals the name recorded as required in the ruleset evidence artifact, so a later rename is caught here rather than by a merge that should have been blocked and was not."
+test_rationale: |
+  This AC is the only one in the tree whose second half cannot be proved from inside the
+  repository: the required-check set lives in a GitHub ruleset. That asymmetry is handled
+  deliberately — the executable half is covered by four descriptors that run the gate's own
+  command, and the ruleset half is satisfied by a recorded gh api query treated as evidence,
+  with a skipped query counting as not done rather than as passed. The exact-name descriptor is
+  the durable bridge between the two: it fails when the job is renamed, which is the one way the
+  required-check binding silently dissolves while every check still reports green. The
+  committed-not-staged descriptor is included because the closest structural precedent in this
+  repository documents having verified exactly that, both ways, after finding that the naive
+  invocation validated nothing.
+delivers_to: null
+expects_from:
+  ac_id: GE-122d-1
+  contract: "The shared rule evaluation the gate invokes, so the gate cannot hold a different rule from the commit-time stage."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Made the required-check half explicit and buildable: verified that no settings-as-code
+    script exists in the repository despite BP-1200c-1 deciding on one, so adding
+    this gate to the required set is a manual gh api ruleset operation under the non-EMU
+    urlmonitor account with an admin-scoped token, satisfied by recorded evidence
+    and with a skipped or unavailable query counting as NOT DONE rather than passed.
+    Added the exact-job-name constraint and a test that binds the ci.yml job name
+    to the recorded required name so a later rename is caught. Added the ORDERING
+    requirement that this gate must not become required until GE-122e''s repair has
+    landed and GE-122e-3 passes, or every merge fails on pre-existing drift. Required
+    reproduction of the AC store valid job''s reset --soft staged-index handling.
+    Added test_spec, test_rationale and three doc_links. criteria, title, agent, complexity
+    and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE L1 IS EXPLICIT THAT THIS STAGE IS THE ONE THAT MAKES THE GUARANTEE REAL: the commit-time
+  stage is skippable on purpose by anyone who chooses to bypass the commit checks, so the shared
+  build is the only unskippable one. That framing is what makes the required-check clause part
+  of the criterion rather than a deployment detail — an optional gate leaves the guarantee
+  exactly as strong as the commit-time stage, which is to say voluntary.
+
+  THE OBSERVED PRECEDENT FOR THE FAILURE MODE THIS CLOSES is in this repository already: an
+  existing decision-number collision check is written, tested and deployed, but is not registered
+  in the commit-time configuration, so it has never run. A guard that exists and is not wired is
+  the same as no guard, and is worse because it appears in inventories as coverage.
+
+  A SECOND, SUBTLER TRAP THE IMPLEMENTER MUST AVOID, visible in the existing shared-build
+  configuration: the acceptance-criterion guards read their file set from the staged index, and
+  in a build checkout the proposed change's files are committed rather than staged — so invoking
+  them naively validates nothing and passes. The existing job solves this by moving the branch
+  pointer back to the base so the change's files appear staged. Any gate reusing a staged-index
+  reader inherits this trap, and a false pass here defeats the entire backstop.
+
+  ON THE INHERITED FAIL-OPEN CONVENTION: this criterion concerns a gate that RAN and found a
+  contested number. The cannot-run case is GE-122d-3 and is not weakened by anything here.
+
+  IT PO NOTE (2026-08-17) — the required-check half is the only acceptance clause in this tree
+  that cannot be evidenced from inside the repository, and it is also the clause most likely to
+  be quietly dropped. The branch's required-check set is a GitHub ruleset; BP-1200c-1 decided
+  settings-as-code for it and no such script exists, so in practice it is a manual gh api
+  operation. It is recorded as evidence on the ticket, and the ci.yml job name is bound to that
+  evidence by a test so a rename cannot silently unbind it.

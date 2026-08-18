@@ -1,0 +1,132 @@
+id: GE-122b-1-i
+title: "A name that carries the prefix but no sequence number counts as unnumbered"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the enrolled diagrams location already holds artifacts named
+    "c2-fast-vs-heavy-lane-phases.md" and "c3-done-proof-evaluation-sequence.md" — names that
+    carry the level prefix but no sequence number,
+  And it holds "df-001-dual-engine-workflow-build-transform.md", which carries a number under a
+    scheme the numbering convention does not define,
+  And it holds "gates-sequence.md", which carries neither a prefix nor a number,
+  When the enrolment check evaluates each of these four as if newly added,
+  Then each of the four is reported as carrying no valid sequence number,
+  And none of them is accepted as numbered on the strength of its prefix alone,
+  And the report distinguishes "prefix present, sequence number missing" from "no recognised
+    numbering scheme", because the remediation differs — the first needs a sequence inserted at
+    a known level, the second needs a level decided first,
+  And an artifact named with a valid level-and-sequence prefix is still accepted as numbered.
+
+  Coverage note: covered only by a test that runs the check against these four real name shapes
+  and asserts each is classified unnumbered and that the two shapes are reported distinctly. A
+  test using only a single all-or-nothing name shape cannot distinguish a correct implementation
+  from one that accepts any name beginning with a level letter.
+depends_on:
+  - GE-122b-1
+doc_links:
+  - path: scripts/next_diagram_seq.py
+    relationship: context
+    status: exists
+    relevance: "Its allocator regex `^c([1-4])-(\\d{3})-` already requires the sequence digits, so the correct classification is available; the hazard is an enrolment check written with a looser pattern than the allocator's."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The classification must be performed by the allocator's own pattern, imported from `scripts/next_diagram_seq.py`, not by a pattern restated in the check. A restated pattern is how the two diverge, and the divergence is invisible until the sixth half-enrolled name arrives. If the allocator does not currently expose its pattern importably, exposing it is part of this AC and must not fork it."
+  - "The classification vocabulary must carry at least three distinguishable values — valid level-and-sequence, prefix-present-sequence-missing, and no-recognised-scheme — as machine-readable values, not as differing prose in a message. GE-122c-2 renders the remediation from them, and the two remediations genuinely differ (insert a sequence at a known level, versus decide a level first)."
+  - "All four real name shapes named in the criteria exist in the repository today at `docs/architecture/diagrams/`. Use them as the test input rather than invented equivalents, per docs/reference/fixture-policy.md's real-artifact rule — an invented shape is chosen by the same person who wrote the pattern and inherits its blind spot."
+  - "This criterion governs CLASSIFICATION only. None of the four artifacts may be renamed or renumbered by this work — the user's binding scope trim in GE-122e's notes puts them out of repair scope, and GE-122e-3 asserts they are unchanged in name and location."
+  - "The `df-001-` shape must classify as no-recognised-scheme rather than as valid: it carries digits and would satisfy a pattern that merely looks for a number, which is the second way a loose implementation passes this criterion by accident."
+test_spec:
+  - name: test_prefix_without_sequence_classified_unnumbered
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "c2-fast-vs-heavy-lane-phases.md and c3-done-proof-evaluation-sequence.md — the real names in docs/architecture/diagrams/ — are each classified as carrying no valid sequence number when evaluated as newly added."
+  - name: test_foreign_numbering_scheme_classified_unnumbered
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "df-001-dual-engine-workflow-build-transform.md is classified as carrying no valid sequence number despite containing digits, so a pattern that merely looks for a number fails this test."
+  - name: test_no_prefix_no_number_classified_unnumbered
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "gates-sequence.md, which carries neither prefix nor number, is classified as carrying no valid sequence number."
+  - name: test_two_unnumbered_shapes_reported_distinctly
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "prefix-present-sequence-missing and no-recognised-scheme are reported as distinct machine-readable classifications, not as two phrasings of one value, because their remediations differ."
+  - name: test_valid_level_and_sequence_still_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A name carrying a valid level-and-sequence prefix (e.g. c2-004-build-ac-flow.md) is still accepted as numbered — the negative cases have not been over-tightened into rejecting everything."
+  - name: test_classification_pattern_is_the_allocators_own
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The check and scripts/next_diagram_seq.py agree on the classification of every name currently in docs/architecture/diagrams/, so a forked pattern is detected as a disagreement rather than by inspection."
+test_rationale: |
+  A single all-or-nothing name shape cannot distinguish a correct classifier from one that
+  accepts any name beginning with a level letter, which is why the coverage note demands all
+  four shapes. Four of the eleven currently-unnumbered artifacts carry a level prefix and one
+  uses a foreign scheme, so a loose implementation would report a smaller problem than exists
+  and would let a sixth such name through. The agreement descriptor is the durable form of the
+  one-pattern requirement: it fails when the check's pattern forks from the allocator's, which
+  is the specific way this classification rots after a later rewrite.
+delivers_to: null
+expects_from:
+  ac_id: GE-122b-1
+  contract: "The enrolment verdict whose numbered/unnumbered classification this criterion constrains."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: Added it_requirements requiring the classification to use the allocator's
+    own imported pattern rather than a restated one, requiring three machine-readable
+    classification values (not differing prose), requiring the four real on-disk names
+    as inputs per the fixture policy, restating that this AC classifies but never
+    renames (GE-122e's binding trim), and calling out the df-001- digits trap. Added
+    test_spec including a check-versus-allocator agreement test, test_rationale, and
+    a doc_link. criteria, title, agent and complexity unchanged.
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  NOT PADDING — this is a measured condition, not a hypothetical. Of the 11 unnumbered artifacts
+  in the diagrams location (BA re-measurement, 2026-08-17), FOUR carry a level prefix with no
+  sequence number (two c2-, two c3-) and ONE uses an entirely different scheme (df-001-). A
+  naive enrolment check that asks "does the name start with a level letter" would accept five of
+  the eleven as enrolled, so the guard would report a smaller problem than exists and would let
+  a sixth such name through unchallenged in future.
+
+  This condition is also the most likely one to be reintroduced, because a half-enrolled name
+  LOOKS conventional to a reviewer. It is kept as its own record so the classification rule
+  survives any later rewrite of GE-122b-1.
+
+  These four artifacts are NOT retro-numbered — see GE-122b-2 and the binding scope decision in
+  GE-122e's notes. This criterion governs how they are CLASSIFIED, not whether they are changed.
+
+  IT PO CONFIRMATION (2026-08-17): the BA's measurement is correct against the current tree —
+  docs/architecture/diagrams/ holds 12 numbered artifacts (c1-001, c2-001..006, c3-001..005) and
+  11 unnumbered ones, of which four carry a level prefix without a sequence and one uses the
+  df-001- scheme. All four names quoted in the criteria exist on disk and are usable directly as
+  test input.
