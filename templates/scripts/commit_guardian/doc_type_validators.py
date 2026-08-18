@@ -14,14 +14,14 @@ ARCHITECTURE: Resolves doc_types.json via a portable ``__file__``-ancestor
       both the source-tree layout ``templates/scripts/commit_guardian/`` and
       the deployed layout ``.leafcutter/scripts/commit_guardian/``).
 
-      NOTE ON RESOLVER CHOICE: AC GE-120's it_requirements name
+      NOTE ON RESOLVER CHOICE: AC GE-118c's it_requirements name
       ``_resolve_root.find_project_root()`` as "the established resolver ...
       reuse it rather than hand-counting parents[N]". That resolver prefers
       ``git rev-parse --show-toplevel`` — i.e. it resolves relative to the
       *invoking process's cwd*, not to where this script itself is installed.
       doc_types.json is a package-bundled declaring file tied to THIS
       script's own location, not to whichever git repo the caller's cwd
-      happens to be in (verified empirically: AC GE-120's own test 2/3 stage
+      happens to be in (verified empirically: AC GE-118c's own test 2/3 stage
       files in an isolated throwaway git repo and invoke the deployed hook
       with cwd set to that repo — using find_project_root() there resolves
       to the throwaway repo, which has no config/doc_types.json, and both
@@ -36,7 +36,7 @@ ARCHITECTURE: Resolves doc_types.json via a portable ``__file__``-ancestor
 
       An absent, unreadable, or malformed declaring file raises an observable
       error naming the file instead of silently substituting the narrower
-      DOC_FM_ALLOWED_TYPES fallback (AC GE-120).
+      DOC_FM_ALLOWED_TYPES fallback (AC GE-118c).
 """
 
 import json
@@ -92,7 +92,7 @@ def _load_doc_types() -> dict:
     is a configuration defect, not a degraded-but-usable state: this raises
     rather than silently substituting the narrower DOC_FM_ALLOWED_TYPES fallback.
     A guard that quietly answers a different question than the one it was
-    configured with is enforcing a rule nobody wrote (AC GE-120).
+    configured with is enforcing a rule nobody wrote (AC GE-118c).
 
     Returns:
         dict: Mapping of doc_type key to its definition dict. Each value has
@@ -141,7 +141,7 @@ def is_component_exempt(doc_type: str | None) -> bool:
     Derives the exemption from doc_types.json's own ``description`` field (e.g.
     the ``card`` entry reads "...Not component-linked.") rather than hardcoding
     a second list of exempt type names — a second hardcoded statement about the
-    same fact is how the two drift apart (AC GE-120 it_requirements #4). Callers
+    same fact is how the two drift apart (AC GE-118c it_requirements #4). Callers
     that enforce the ``components`` required-field check should consult this
     before flagging a doc as missing ``components``.
 
@@ -229,6 +229,16 @@ def validate_requires_documentation(fm: dict[str, Any]) -> list[str]:
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-18 [business-analyst/GE-118c]: IDENTIFIER CLARIFICATION ONLY -- no
+  behaviour change, no code touched. The requirement tracked in the entry below
+  as ``GE-120`` was renumbered to ``GE-118c`` (``docs/acceptance-criteria/
+  guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118c.yaml``) and parented
+  under GE-118, because ``GE-120`` was simultaneously claimed by an unrelated
+  goal-level record ("Trust that a green check actually checked something")
+  whose 43-file tree holds that id and whose claim on it is test-enforced. The
+  entry below keeps its own ``GE-120`` citations unchanged because they
+  accurately record the identifier in use on 2026-08-18; readers following them
+  today should resolve them to ``GE-118c``.
 - 2026-08-18 [python-coder/GE-120]: Replaced the hand-counted
   ``parents[2]`` path computation (resolved to the never-existent
   ``.leafcutter/leafcutter/config/doc_types.json`` in the deployed layout

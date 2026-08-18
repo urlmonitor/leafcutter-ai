@@ -154,8 +154,9 @@ doc_types.json` returns only `leafcutter-ai/config/doc_types.json`, inside the p
 repo. Running `build.py --target-dir <worktree>` so the worktree had its own deployed
 layout fixed it, because the walk then reaches `<worktree>/config/doc_types.json`.
 
-Note this is fail-**closed** and loud, which is the right choice (GE-120 deliberately
-removed the silent fallback to a narrower built-in list). The defect is the unreachable
+Note this is fail-**closed** and loud, which is the right choice (GE-118c — renumbered
+from `GE-120` on 2026-08-18 — deliberately removed the silent fallback to a narrower
+built-in list). The defect is the unreachable
 file, not the raised error.
 
 **Fix direction.** Either deploy `config/doc_types.json` alongside the hooks that read it —
@@ -168,7 +169,7 @@ candidate list and derive it.
 two-candidate walk with the same hardcoded `leafcutter/` directory name, so it is equally
 unreachable in this layout — but it returns `None` and `_load_diagram_types()` falls back
 **silently** to the `DOC_FM_DIAGRAM_TYPE_VALUES` constant. That is precisely the silent
-narrowing GE-120 removed from `doc_types` on 2026-08-18, still live in the file GE-120
+narrowing GE-118c removed from `doc_types` on 2026-08-18, still live in the file GE-118c
 copied its pattern from. Fixing the path resolution must cover both; see
 `docs/known-issues/commit-guardian.md` → KI-CG-002 for the fallback half.
 
@@ -212,8 +213,8 @@ $ HOOK_ROOT=<worktree> python <worktree>/.leafcutter/scripts/commit_guardian/che
 ✅ PASSED: 1 doc(s) passed frontmatter validation
 ```
 
-The deployed copy predated GE-120 entirely — it did not contain the resolver function at
-all, so it was falling back to the narrow constant that GE-120 had already deleted from the
+The deployed copy predated GE-118c entirely — it did not contain the resolver function at
+all, so it was falling back to the narrow constant that GE-118c had already deleted from the
 source. Rebuilding fixed it outright.
 
 **Why this is not KI-BP-003.** BP-003 is a *path-resolution* gap: current code that cannot

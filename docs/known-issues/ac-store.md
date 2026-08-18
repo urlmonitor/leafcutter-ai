@@ -187,4 +187,13 @@ reissued (see PR #453), which a pure uniqueness check would not catch on its
 own. It is not written out here because the GE-122e-1 guard fails the build on
 any live citation of it outside dated historical records.
 
+**Update — the duplicate is gone (2026-08-18); the validator gap is NOT.** The loose L2 was
+renumbered to `GE-118c` and moved under `GE-118`, so `GE-120` now resolves to exactly one
+record and `scan_ac_orphans.py` no longer reports the five false orphans quoted above. The
+reproduction commands and their output are left unchanged as the record of what the store
+looked like when this issue was filed. **This entry stays open**: `validate_ac_schema.py`
+still performs no store-wide uniqueness pass, so the next duplicate id will merge just as
+cleanly. Note also that the false-orphan symptom above is the strongest available argument
+for that pass — it is the only reason this particular duplicate was noticed at all.
+
 ---
