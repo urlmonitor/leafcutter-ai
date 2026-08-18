@@ -6,7 +6,7 @@ components:
 title: "Ticket creation failure is non-fatal and does not halt the workflow"
 level: L2
 component: finalize
-status: active
+status: superseded_by
 parent: FIN-100e
 criteria: |
   Given Step 6a is creating tracking tickets for pre-existing failures
@@ -37,7 +37,9 @@ doc_links:
     relevance: "Step 6 — non-fatal failure policy for ticket creation"
 depends_on: []
 superseded_by: null
-amended_by: []
+amended_by:
+  - reason: "python-coder-reconciliation (EPIC-BuildPipelinePhantomRemediation/04_fin100e_autoticketing_decision.md): RETIRED, no replacement AC authored. This AC described non-fatal error handling (try/catch + null sentinel in created_tracking_tickets) for the create-ticket dispatch loop this ticket retires via FIN-100e-1. Since the dispatch loop itself no longer exists (deliberately disabled under EPIC-FinalizeFeatureHardening, replaced by the untrackedFailures[] structured report -- see unit_tests/test_finalize_feature_step6a.py::TestStep6aNoFalseTicketClaim / TestWithFailuresPath), there is no dispatch call left for a non-fatal-failure contract to govern. Per this ticket's default (option b, endorsed by architect-review as lower-risk than re-enabling), superseded with no successor id -- the replacement (report-only, no dispatch, so no dispatch-failure path exists to specify) is already fully covered by the existing lock-in test rather than warranting a new AC."
+    by: python-coder
 covered_by: []
 implemented_by: []
 change_target: pipeline

@@ -5,7 +5,19 @@ GOAL: Verify that finalize-feature.js step 6a never falsely claims tracking
     failures (AC-1). Also verifies the step-map doc is consistent with the
     actual JS behaviour (AC-3).
 
-TICKET: EPIC-FinalizeFeatureHardening/08_fix_dead_auto_ticketing.md
+    Also locks in the FIN-100e-1 / FIN-100e-2 reconciliation decision: those
+    two AC records described a live create-ticket dispatch loop that was
+    deliberately DISABLED under EPIC-FinalizeFeatureHardening (see the
+    TestStep6aNoFalseTicketClaim / TestWithFailuresPath classes below for the
+    disabled-behaviour lock-in). Per
+    EPIC-BuildPipelinePhantomRemediation/04_fin100e_autoticketing_decision.md
+    (option b, the ticket's stated default), FIN-100e-1 and FIN-100e-2 are now
+    formally superseded (status: superseded_by, with an amended_by rationale)
+    rather than left contradicting this disabled code. See
+    TestStep6aContractMatchesDecision below.
+
+TICKET: EPIC-FinalizeFeatureHardening/08_fix_dead_auto_ticketing.md,
+    EPIC-BuildPipelinePhantomRemediation/04_fin100e_autoticketing_decision.md
 """
 
 from __future__ import annotations
