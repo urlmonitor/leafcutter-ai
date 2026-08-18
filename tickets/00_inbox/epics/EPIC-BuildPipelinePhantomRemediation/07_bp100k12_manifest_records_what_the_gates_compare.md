@@ -29,7 +29,7 @@ files_touched:
   - unit_tests/build_guards/test_bp_100k_1.py
   - unit_tests/build_guards/test_bp_100k_2.py
 agents:
-  architect-review: needed
+  architect-review: signed_off
   test-writer: needed
   python-coder: needed
   sql-coder: not_needed
@@ -222,7 +222,7 @@ constraints:
 
 ## Sign-offs
 
-- [ ] architect-review
+- [x] architect-review — 2026-08-18 14:00
 - [ ] test-writer
 - [ ] python-coder
 - [ ] test-runner
@@ -234,3 +234,11 @@ constraints:
 - [ ] pull-request
 
 ## Comments
+
+### 2026-08-18 14:00 — architect-review (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  blast_radius_analyzed: true
+  rubric_criteria_evaluated: true
+  small_large_classification: true
+Classified small: 3 touched files (scripts/build_helpers.py + 2 new test files), single component (build_pipeline), no cross-module boundary crossed, and no always-large trigger fired (no Alembic migration, no hypertable change, no FastAPI surface change, no ADR-contract file touched — confirmed no ADR references build_manifest/output_mappings). No research-agent/Agent tool was available in this invocation's toolset, so blast-radius analysis was performed directly via Read/grep against write_build_manifest(), _compute_output_mappings(), and the two drift-gate scripts (check_build_drift.py, check_output_drift.py) rather than by spawning research-agent — noting this as a process deviation for the record. requires_adr and requires_diagram remain false as already set in frontmatter.

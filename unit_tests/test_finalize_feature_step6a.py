@@ -11,10 +11,22 @@ TICKET: EPIC-FinalizeFeatureHardening/08_fix_dead_auto_ticketing.md
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
 _MD_PATH = _REPO_ROOT / "templates" / "workflows" / "finalize-feature.md"
+_AC_DIR = (
+    _REPO_ROOT
+    / "docs"
+    / "acceptance-criteria"
+    / "build_pipeline"
+    / "FIN-100-pre-merge-safety-gate"
+)
+_FIN_100E_1_PATH = _AC_DIR / "FIN-100e-1.yaml"
+_FIN_100E_2_PATH = _AC_DIR / "FIN-100e-2.yaml"
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +47,11 @@ def _md_text() -> str:
     if not _MD_PATH.exists():
         return ""
     return _MD_PATH.read_text(encoding="utf-8")
+
+
+def _load_ac(path: Path) -> dict[str, Any]:
+    """Read an AC YAML record straight off disk (real artifact, not a mock)."""
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -232,4 +249,130 @@ class TestWithFailuresPath:
         js = _js_text()
         assert "Auto-ticketing is disabled" in js or "auto-ticketing is disabled" in js, (
             "Step 6a must clearly state that auto-ticketing is disabled in its report"
+        )
+
+
+# ---------------------------------------------------------------------------
+# FIN-100e-1 / FIN-100e-2 reconciliation: the code, this test module, and the
+# two AC records must agree on ONE Step 6a contract. Today they do not: the
+# code/this-test-module already lock in the DISABLED behaviour (see the
+# classes above), but FIN-100e-1 ("one tracking ticket is created per
+# pre-existing or flaky failure") and FIN-100e-2 ("ticket creation failure is
+# non-fatal") are still `status: active` in the AC store, describing the
+# opposite (a live create-ticket dispatch loop). This is a live decision the
+# ticket asks the coder to resolve: either (a) re-enable the dispatch loop so
+# the ACs' `status: active` claim becomes true, or (b, the ticket's stated
+# default) formally supersede/retire the two ACs with a rationale and make
+# this test module traceably reference that decision.
+#
+# EPIC-BuildPipelinePhantomRemediation/04_fin100e_autoticketing_decision.md
+# ---------------------------------------------------------------------------
+
+class TestStep6aContractMatchesDecision:
+    """FIN-100e-1 / FIN-100e-2: the finalize-feature.js code, the Step 6a
+    lock-in test, and the two AC records must agree on a single contract.
+    Whichever option (a: re-enable, or b: supersede) the coder picks, the
+    store and the code must stop contradicting each other."""
+
+    def test_ac_status_matches_actual_js_dispatch_behaviour(self):
+        # covers: FIN-100e-1
+        # covers: FIN-100e-2
+        """If FIN-100e-1/e-2 still claim `status: active` (a live create-ticket
+        dispatch loop per pre_existing/flaky triage entry), finalize-feature.js
+        must actually implement that loop (option a). Otherwise, both ACs
+        must be formally retired -- `status` moved off `active` with a
+        recorded rationale -- rather than left contradicting the disabled
+        code (option b, the ticket's stated default).
+
+        This is currently RED: the ACs are `status: active` (see FIN-100e-1
+        line 9 / FIN-100e-2 line 9) but finalize-feature.js implements no
+        create-ticket dispatch loop -- it deliberately reports
+        untrackedFailures[] instead (see TestStep6aNoFalseTicketClaim above).
+        """
+        js = _js_text()
+        ac1 = _load_ac(_FIN_100E_1_PATH)
+        ac2 = _load_ac(_FIN_100E_2_PATH)
+
+        dispatch_loop_present = (
+            "create-ticket" in js
+            and "createdTrackingTickets" in js
+            and ("dispatch" in js.lower())
+        )
+
+        ac1_active = ac1.get("status") == "active"
+        ac2_active = ac2.get("status") == "active"
+
+        if ac1_active or ac2_active:
+            # Option (a) is implied by an unretired `status: active` AC --
+            # the dispatch loop the AC describes must actually exist.
+            assert dispatch_loop_present, (
+                "FIN-100e-1/FIN-100e-2 are still status:active (claiming "
+                "Step 6a dispatches create-ticket per pre_existing/flaky "
+                "entry, recording paths in created_tracking_tickets), but "
+                "finalize-feature.js implements no such dispatch loop. "
+                "Either re-enable the loop (option a) or formally supersede "
+                "both ACs with a rationale (option b, the ticket's default) "
+                "so the store stops asserting a behaviour the code was "
+                "deliberately built not to perform."
+            )
+        else:
+            # Option (b): both ACs must show a real retirement, not just an
+            # arbitrary non-active status with no explanation.
+            for ac_id, ac in (("FIN-100e-1", ac1), ("FIN-100e-2", ac2)):
+                assert ac.get("status") in ("superseded_by", "deprecated"), (
+                    f"{ac_id}.status is {ac.get('status')!r} -- neither "
+                    "'active' (option a) nor a recognised retirement status "
+                    "('superseded_by' / 'deprecated', option b). The "
+                    "decision must be recorded unambiguously."
+                )
+                has_rationale = bool(ac.get("amended_by")) or bool(
+                    ac.get("superseded_by")
+                )
+                assert has_rationale, (
+                    f"{ac_id} is retired but carries no amended_by rationale "
+                    "or superseded_by pointer explaining why Step 6a "
+                    "auto-ticketing was disabled"
+                )
+
+    def test_disabled_step6a_test_documents_ac_supersession(self):
+        # covers: FIN-100e-1
+        # covers: FIN-100e-2
+        """The ticket defaults to option (b) -- supersede FIN-100e-1/e-2 with
+        a rationale -- unless the assignee confirms re-enabling is trivial
+        and desired (no such confirmation is recorded on the ticket, and
+        architect-review's sign-off comment independently recommends option
+        (b) as lower-risk). This test locks in that default: this MODULE'S
+        TOP DOCSTRING (the `MODULE:`/`GOAL:`/`TICKET:` header at the very top
+        of this file) must be updated to name both FIN-100e-1 and FIN-100e-2,
+        so the intentional disablement of Step 6a auto-ticketing is traceable
+        from the lock-in test's own header back to the superseded AC records.
+
+        Deliberately checks ONLY the module's top docstring (via `__doc__`)
+        rather than the whole file: this test-writer phase's own explanatory
+        comments further down this file already mention both AC IDs for
+        readability, so scanning the whole file would pass trivially without
+        the coder ever touching the header. Checking `__doc__` isolates the
+        one piece of text only the implementing coder is expected to edit.
+
+        If the assignee instead chooses option (a) -- re-enabling the
+        dispatch loop, making FIN-100e-1/e-2 true again -- this specific
+        assertion no longer applies and the coder should amend/remove it as
+        part of that documented decision (see Source-of-Truth Discipline
+        Rule 1: production_drift/consumer_drift classification belongs in
+        `## Comments` before doing so).
+
+        This is currently RED: the top docstring's `TICKET:` line still
+        points at the old EPIC-FinalizeFeatureHardening ticket and names
+        neither FIN-100e-1 nor FIN-100e-2.
+        """
+        header = __doc__ or ""
+        assert "FIN-100e-1" in header, (
+            "This test module's top docstring must reference FIN-100e-1 so "
+            "the intentional Step 6a disablement is traceable to the "
+            "superseded AC from the lock-in test's own header"
+        )
+        assert "FIN-100e-2" in header, (
+            "This test module's top docstring must reference FIN-100e-2 so "
+            "the intentional Step 6a disablement is traceable to the "
+            "superseded AC from the lock-in test's own header"
         )

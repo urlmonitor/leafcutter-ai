@@ -405,47 +405,53 @@ class TestDeployedParity(unittest.TestCase):
         """Remove temporary directories."""
         self._tmp.cleanup()
 
-    def test_script_in_canonical_absent_from_deployed_emits_warning(self) -> None:
-        """M-3: canonical has script absent from deployed → warning (exit 0, no violations).
+    def test_ac_bp100i3_missing_deployed_scripts_block_commit(self) -> None:
+        """BP-100i-3: canonical has scripts absent from deployed -> BLOCKING violation.
 
-        After the M-3 fix, check_deployed_parity never blocks when the deployed dir
-        is present but stale (indistinguishable from genuine drift). It emits an
-        informational warning to stderr instead.
+        Reverses the M-3 downgrade decision. Given canonical has 5 scripts and
+        deployed has only 3 of them, the parity check must block: the violation
+        list must name each missing script and the deployed output directory
+        that was checked. This replaces the prior assertion (violations == [])
+        that encoded the opposite of BP-100i-3.
         """
-        # covers: M-3 (present-but-stale case — canonical has new script, deployed stale)
-        import io
-
+        # covers: BP-100i-3
         self.deployed.mkdir()
-        (self.canonical / "check_gamma.py").write_text("", encoding="utf-8")
+        for name in ("check_alpha.py", "check_beta.py", "run_hook.py"):
+            (self.canonical / name).write_text("", encoding="utf-8")
+            (self.deployed / name).write_text("", encoding="utf-8")
+        for name in ("check_gamma.py", "check_delta.py"):
+            (self.canonical / name).write_text("", encoding="utf-8")
+        # deployed intentionally missing check_gamma.py and check_delta.py
 
-        captured = io.StringIO()
-        original_stderr = sys.stderr
-        sys.stderr = captured
-        try:
-            violations = _mod.check_deployed_parity(
-                self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
-            )
-        finally:
-            sys.stderr = original_stderr
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
 
-        self.assertEqual(
+        self.assertNotEqual(
             violations,
             [],
-            msg="M-3: present-but-stale deployed dir must not block (downgraded to warning).",
+            msg="BP-100i-3: scripts present in canonical but absent from an "
+            "existing deployed dir must produce a BLOCKING violation.",
         )
-        stderr_output = captured.getvalue()
-        self.assertIn("check_gamma.py", stderr_output)
-        self.assertIn("INFO", stderr_output.upper())
+        combined = "\n".join(violations)
+        self.assertIn("check_gamma.py", combined)
+        self.assertIn("check_delta.py", combined)
+        self.assertIn(
+            str(self.deployed),
+            combined,
+            msg="BP-100i-3: violation must name the deployed output directory checked.",
+        )
 
-    def test_script_in_canonical_absent_from_deployed_genuine_drift_exits_0(self) -> None:
-        """M-3: genuine drift (canonical has script, deployed was built but is now stale) → exit 0.
+    def test_script_in_canonical_absent_from_deployed_genuine_drift_blocks(self) -> None:
+        """BP-100i-3 (M-3 reversed): genuine drift now blocks, not just an INFO warning.
 
-        Both present-but-stale and genuine-drift scenarios are indistinguishable from
-        the hook's perspective. Both result in exit 0 with an informational warning.
+        The prior M-3 decision treated present-but-stale and genuine-drift as
+        indistinguishable and downgraded both to non-blocking. BP-100i-3 requires
+        blocking regardless of which scenario produced the gap -- the deployed
+        dir's existence is the only signal available, and a missing script in an
+        existing deployed dir must block the commit.
         """
-        # covers: M-3 (genuine-drift case — same structural scenario, different semantic meaning)
-        import io
-
+        # covers: BP-100i-3
         self.deployed.mkdir()
         # Simulate: both scripts existed before, then canonical got an extra script
         (self.canonical / "check_alpha.py").write_text("", encoding="utf-8")
@@ -453,22 +459,44 @@ class TestDeployedParity(unittest.TestCase):
         (self.canonical / "check_new_hook.py").write_text("", encoding="utf-8")
         # deployed does NOT have check_new_hook.py yet (build.py not run)
 
-        captured = io.StringIO()
-        original_stderr = sys.stderr
-        sys.stderr = captured
+        violations = _mod.check_deployed_parity(
+            self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
+        )
+
+        self.assertNotEqual(
+            violations,
+            [],
+            msg="BP-100i-3: genuine-drift case must now block (M-3 downgrade reversed).",
+        )
+        self.assertIn("check_new_hook.py", "\n".join(violations))
+
+    def test_ac_bp100i3_unexpected_error_still_fails_open(self) -> None:
+        """BP-100i-3: an unreadable deployed dir must still fail open (exit 0).
+
+        Making the missing-scripts case blocking must not regress the fail-open
+        guarantee for genuine I/O errors -- an unreadable directory must not be
+        treated as "every canonical script is missing" and block the commit.
+        """
+        # covers: BP-100i-3
+        import os
+
+        self.deployed.mkdir()
+        (self.canonical / "check_alpha.py").write_text("", encoding="utf-8")
+        (self.deployed / "check_alpha.py").write_text("", encoding="utf-8")
+        os.chmod(self.deployed, 0o000)
         try:
             violations = _mod.check_deployed_parity(
                 self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
             )
         finally:
-            sys.stderr = original_stderr
+            os.chmod(self.deployed, 0o755)
 
         self.assertEqual(
             violations,
             [],
-            msg="M-3: genuine-drift case must also not block (exit 0).",
+            msg="BP-100i-3: an unreadable deployed dir is an I/O error, not a "
+            "parity violation -- it must fail open (no blocking violations).",
         )
-        self.assertIn("check_new_hook.py", captured.getvalue())
 
     def test_same_scripts_in_both_dirs_is_clean(self) -> None:
         """BP-100i-3: canonical and deployed have same scripts → no violations."""
@@ -1029,12 +1057,14 @@ class TestDeployedParityContentHash(unittest.TestCase):
         self.assertIn("check_beta.py", combined)
         self.assertIn("check_gamma.py", combined)
 
-    def test_only_in_canonical_missing_from_deployed_stays_nonblocking(self) -> None:
-        """AC-1: script in canonical but absent from deployed stays non-blocking (INFO only).
+    def test_only_in_canonical_missing_from_deployed_now_blocks(self) -> None:
+        """BP-100i-3 (M-3 reversed): script in canonical but absent from deployed now blocks.
 
-        Missing scripts in deployed remain a non-blocking INFO warning. Only
-        scripts present in BOTH locations with differing content block.
+        Previously this was a non-blocking INFO warning (M-3 downgrade). BP-100i-3
+        requires the missing-deployed-script case to block regardless of whether
+        other scripts also diverge in content.
         """
+        # covers: BP-100i-3
         (self.canonical / "check_new.py").write_text("# new script\n", encoding="utf-8")
         # deployed dir exists but does NOT have check_new.py
 
@@ -1042,11 +1072,12 @@ class TestDeployedParityContentHash(unittest.TestCase):
             self.canonical, self.deployed, _DEFAULT_PATTERNS, set()
         )
 
-        self.assertEqual(
+        self.assertNotEqual(
             violations,
             [],
-            msg="AC-1: script only in canonical (missing from deployed) must not block.",
+            msg="BP-100i-3: script only in canonical (missing from deployed) must block.",
         )
+        self.assertIn("check_new.py", "\n".join(violations))
 
     def test_compute_file_hash_returns_consistent_digest(self) -> None:
         """AC-1: _compute_file_hash returns a consistent hex digest for the same content."""
@@ -1106,4 +1137,21 @@ if __name__ == "__main__":
 #   violation; absent deployed dir → no violation (pre-build state); multiple
 #   diverged scripts → all reported; missing scripts in deployed → still non-
 #   blocking; _compute_file_hash consistency and differentiation.
+# - 2026-08-18 [test-writer/EPIC-BuildPipelinePhantomRemediation/03]: BP-100i-3
+#   requires the missing-deployed-script case to BLOCK (exit 1), reversing the
+#   M-3 downgrade-to-INFO decision. Replaced the three tests that asserted
+#   violations == [] for that scenario (they encoded the opposite of the AC):
+#   test_script_in_canonical_absent_from_deployed_emits_warning ->
+#     test_ac_bp100i3_missing_deployed_scripts_block_commit (AC scenario: 5
+#     canonical scripts, 3 deployed, asserts blocking + names both missing
+#     scripts + the deployed dir);
+#   test_script_in_canonical_absent_from_deployed_genuine_drift_exits_0 ->
+#     test_script_in_canonical_absent_from_deployed_genuine_drift_blocks;
+#   test_only_in_canonical_missing_from_deployed_stays_nonblocking ->
+#     test_only_in_canonical_missing_from_deployed_now_blocks.
+#   Added test_ac_bp100i3_unexpected_error_still_fails_open: an unreadable
+#   (chmod 0o000) deployed dir must still fail open (exit 0) -- the blocking
+#   fix must not conflate a genuine I/O error with "every script is missing".
+#   Left the BP-100i-3-i "deployed dir absent entirely" tests unchanged; that
+#   fail-open behaviour is untouched by this reversal.
 # ====================================================================
