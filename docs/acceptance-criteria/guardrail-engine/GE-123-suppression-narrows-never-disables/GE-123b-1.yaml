@@ -1,0 +1,194 @@
+id: GE-123b-1
+components:
+  - commit_guardian
+title: "A suppression that would leave a file with no rule able to report is refused for that file"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file "secrets.py" on disk containing four lines the scanner's content
+    rules recognise — a cloud access key in the AWS_KEY form, a private-key
+    header line, a quoted twelve-character value assigned to a field named
+    password, and a high-entropy token of at least twenty characters,
+  And the allowlist contains exactly one entry, which names every rule (the rule
+    field written as the wildcard), the path "secrets.py", and every line (the
+    line field written as the wildcard),
+  When the file is scanned through the scanner's multi-file entry point — the
+    same entry point the pre-commit secrets check calls,
+  Then all four findings for "secrets.py" are still reported,
+  And the run's exit status reports findings present,
+  Because that one entry would leave "secrets.py" with no rule still able to
+    report anything about it, and a suppression may narrow what a file is
+    reported for but may never take it to nothing.
+
+  Given the identical file and the identical single entry,
+  And a second file "helpers.py" containing the same four recognised lines,
+    named by no allowlist entry,
+  When both files are scanned in the same run,
+  Then eight findings are reported — four for each file,
+  Because refusing an entry for the one file it would have left unprotected
+    changes nothing about any other file in the run.
+
+  Given the same file "secrets.py",
+  And the allowlist instead contains exactly one entry naming the single rule
+    that recognises the password assignment, the path "secrets.py", and every
+    line,
+  When the run completes,
+  Then exactly three findings are reported for "secrets.py" — the cloud access
+    key, the private-key header and the high-entropy token — and the
+    password-assignment finding is not reported,
+  Because five of the scanner's six rules remain able to report on that file, so
+    this entry is a narrowing, and narrowing must go on working exactly as
+    written.
+
+  Given the same file "secrets.py",
+  And the allowlist instead contains exactly one entry naming every rule, the
+    path "secrets.py", and the single line number of the cloud-access-key line,
+  When the run completes,
+  Then exactly three findings are reported — the private-key header, the
+    password assignment and the high-entropy token — and the cloud access key
+    is not reported,
+  Because an entry that names every rule is not forbidden in itself; what is
+    refused is an entry whose effect is to leave the file with nothing able to
+    report on it.
+depends_on:
+  - GE-123b
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The scanner is a packaged template. templates/skills/security-scanner/scripts/scan_secrets.py is the canonical edited copy; build.py propagates it to the materialized copies. Edit the template only."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Its subject is an entry that is recognisably MALFORMED (a zero-segment target path, or a line with no separator). This criterion's entries are all well-formed and parse exactly as written; the trigger for refusal is the effect on the file, not the shape of the line. Reuse -v's warn-and-skip disposition and its warning contract; its scenarios are not restated here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ENFORCEMENT POINT, named before implementation because the wrong one is a no-op: the decision belongs in `scan_files` in the canonical `templates/skills/security-scanner/scripts/scan_secrets.py`, taken once per scanned file after the whole allowlist has been loaded and before the findings list is returned. `_is_suppressed` cannot host it — it sees one finding against one entry set and has no notion of what would remain able to report on the file. A guard added only to `_is_suppressed` satisfies no arm of this criterion. `check_secrets.main` calls `scan_files`, so this is also the point the real pre-commit path reaches."
+  - "WHAT EFFECTIVE COVERAGE IS COUNTED IN — the definition the whole L1 turns on; do not re-derive it and do not soften it. Coverage is the set of RULES still able to report on a file after every allowlist entry in force has been applied, never the findings the file happens to produce. A rule counts as silenced FOR A FILE only when some entry matches that rule id (literally or through the rule wildcard), matches that file path (through the literal path wildcard or the GE-113c-3 exact / segment-suffix forms), AND carries the wildcard in its line field. An entry pinned to a specific line number never removes a rule's ability to report on that file. A collapse is exactly: every declared rule silenced for that file."
+  - "THE RULE INVENTORY MUST HAVE ONE DECLARED SOURCE. The scanner has six rule ids: the four regex rules held in `_RULES`, plus the entropy rule and the env-filename rule, both of which exist today only as inline literals inside `scan_file`. The collapse check must count against a single declared inventory that all six come from. A hard-coded list, or a hard-coded count, inside the check is a defect: a seventh rule added later would silently stop being counted and the guarantee would weaken without anything failing. Counting is file-independent — do NOT compute which rules could match this particular file's content, which is precisely the findings reading this criterion exists to reject."
+  - "Disposition is REFUSE AND ANNOUNCE, never raise and never block. A declined entry must not abort the scan, must not by itself change the exit status, and must leave the exit status determined by the reported findings alone. The announcement contract belongs to GE-123b-1-i; reuse it rather than inventing a second one."
+  - "Arm 4 must be satisfied by RESULTING COVERAGE, never by the shape of the line. Do not reject the rule wildcard, and do not reject any entry judged too broad, at parse time or by pattern. An entry naming every rule but pinned to one line number is safe and must keep working; the only trigger for refusal is the state the allowlist would leave the file in. This arm exists specifically to block that cheap fix."
+  - "Refusal is scoped to the file it would have emptied. No other file in the same run may change its outcome, and no other entry in the same allowlist may be withdrawn — the per-line-not-per-file precedent established by GE-113c-3-v holds unchanged."
+  - "VERIFICATION STANDARD, non-negotiable: every arm must be exercised through `scan_files` with real files on disk and a real `.security-allowlist` written into the same temporary root. Calling `_is_suppressed` with hand-built tuples discharges nothing — an audit in the sibling GE-113c-3 family found two criteria that passed unit-level tests while describing scenarios the real entry point can never produce."
+  - "Fixture reachability: use ordinary `.py` filenames. `scan_file` short-circuits an environment-named path to a single name-based finding and returns before any content rule runs, so a four-findings-across-four-rules fixture at such a path is unreachable. The environment-filename collapse is GE-123a's subject, not this one's."
+  - "Commit hot path. This code runs on every commit. The check must add at most one pass over (scanned files x allowlist entries), must not re-read or re-scan any file, and must not add any filesystem access beyond the single allowlist read `scan_files` already performs."
+  - "SCOPE BOUNDARY so the coder does not chase the wrong surface: `check_secrets._filter_prose_findings` can still drop every entropy finding for a file AFTER `scan_files` has returned. That is a downstream prose exemption, not an allowlist suppression, and it is out of scope here. This guarantee is defined at the `scan_files` boundary."
+  - "ADR-001 parity: edit the canonical `templates/skills/security-scanner/scripts/scan_secrets.py` only and let `build.py` propagate. Never hand-edit the copies under `.claude/`, `.gemini/`, `.leafcutter/`, `EPIC-*/` or `worktrees/**`."
+  - "Doc parity: `templates/skills/security-scanner/SKILL.md` documents the suppression modes and must gain a short note that an entry which would leave a file with no rule able to report is declined for that file and announced, and that this is judged on effect and not on the shape of the line. Kept inside this AC because it is a two-sentence addendum to a section this change invalidates; if it grows beyond that, raise a follow-up documentation AC rather than expanding scope."
+  - "RED-FIRST LABELLING, so a TDD-order check does not misread the batch: arms 1 and 2 are the red ones (measured 0 and 4 today; target 4 and 8). Arms 3 and 4 are declared REGRESSION GUARDS and are GREEN ON ARRIVAL by design (measured 3 findings each today). Green on arrival for those two is expected and is not a TDD-order violation; without them the criterion is satisfied by an implementation that stops honouring suppressions, or that bans the rule wildcard outright."
+delivers_to:
+  agent: python-coder
+  contract: "A per-file decision helper in templates/skills/security-scanner/scripts/scan_secrets.py, called once per scanned file from scan_files with the file path being scanned and the loaded allowlist. For that file it yields (a) the set of rule ids still able to report on it after every entry in force has been applied, and (b) the entries declined for it, each carrying its source allowlist file path, its 1-based line number and its verbatim line text so GE-123b-1-i can announce them without re-parsing the allowlist. Note `_load_allowlist` returns an unordered set of 3-tuples today and discards all three pieces of provenance; carrying provenance through to this decision point is part of this contract. Every other criterion under GE-123b builds on this same decision point."
+expects_from: null
+test_spec:
+  - name: test_file_scoped_all_rules_entry_is_declined_and_all_findings_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 1, RED today (measured 0 findings). One entry naming every rule, the path secrets.py and every line; scan_files over a real fixture on disk reports all four findings — the cloud-access-key line, the private-key header line, the quoted value assigned to a field named password, and the high-entropy token"
+  - name: test_declining_an_entry_for_one_file_changes_no_other_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 2, RED today (measured 4). The same single entry with a second fixture file named by no entry in the same run reports eight findings, asserted as four per file path rather than as a bare total, so a refusal that leaked across files cannot pass"
+  - name: test_rule_scoped_whole_file_entry_still_narrows
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 3, REGRESSION GUARD, GREEN ON ARRIVAL by design (measured 3). An entry naming only the rule that recognises the password assignment, the path secrets.py and every line still suppresses exactly that one finding and leaves the other three reported"
+  - name: test_all_rules_entry_pinned_to_one_line_still_narrows
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Arm 4, REGRESSION GUARD, GREEN ON ARRIVAL by design (measured 3). An entry naming every rule but pinned to the single line number of the cloud-access-key line suppresses only that finding. Asserted on the resulting findings, never on the shape of the allowlist line, so a parse-time ban on the rule wildcard cannot pass it"
+  - name: test_exit_status_reports_findings_present_when_an_entry_is_declined
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Arm 1's exit-status clause, driven through the scanner module's CLI entry point with the temporary root as the working directory so the allowlist is read the way a real run reads it: the run exits findings-present. Working directory restored in cleanup"
+test_rationale: "The whole defect was measured end-to-end and only exists end-to-end: a single well-formed line takes an ordinary source file from four findings to zero through scan_files, while every existing test in unit_tests/commit_guardian/test_scan_secrets_suppression.py calls _is_suppressed with hand-built tuples and sees none of it. An audit in the sibling GE-113c-3 family found two criteria that passed unit-level tests while describing scenarios the real entry point can never produce, so every descriptor here drives scan_files with real files on disk and a real .security-allowlist in the same temporary root. The two regression descriptors are not optional hardening: arm 3 fails an implementation that stops honouring suppressions at all, and arm 4 fails the cheap fix of banning the rule wildcard at parse time, which is why arm 4 must assert the resulting findings and never the shape of the line. The exit-status descriptor exists because scan_files returns a list and the pre-commit consumer turns it into an exit code; a test that only counts findings cannot tell the two apart."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): named the enforcement point (scan_files, not _is_suppressed, which cannot see the file's remaining rule inventory); pinned the effective-coverage definition as rules-still-able-to-report with the silencing predicate spelled out (rule match AND path match AND wildcard line field), so a line-pinned entry is never a collapse; required a single declared source for the six-rule inventory because the entropy and env-filename rules exist only as inline literals in scan_file and a hard-coded count would silently weaken as rules are added; tightened delivers_to to name the provenance the loader currently discards (it returns an unordered set of 3-tuples with no allowlist path, line number or verbatim text); authored a 5-entry test_spec plus test_rationale, all arms driven through scan_files with real files and a real allowlist; labelled arms 3 and 4 as green-on-arrival regression guards. Baselines re-verified through the real entry point before authoring: 0 / 4 / 3 / 3, matching the BA's measurements exactly. Criteria unchanged."
+superseded_by: null
+covered_by:
+  - GE-123b-1-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE DISPOSITION DECISION, made explicitly as GE-123b's notes require rather
+  than by default. Three options were on the table: announce and proceed, refuse
+  the entry for that file and report the finding anyway, or block. CHOSEN:
+  REFUSE AND ANNOUNCE, never block. Announce-and-proceed was rejected because
+  this L1's promise is about the outcome, not only about silence — a file that is
+  announced as unprotected is still unprotected. Blocking was rejected because
+  this check runs on every commit, so a hard error over one too-broad line
+  becomes a repository-wide outage; that is the same reasoning GE-113c-3-v
+  recorded, and refusal already fails closed, because the author immediately
+  sees the findings they were trying to hide. GE-120's "a check that cannot run
+  says so" is satisfied by the announcement and is not repealed; its unit is
+  visibility, so it does not by itself demand blocking. The announcement's
+  contract is specified in the child GE-123b-1-i.
+
+  WHAT "EFFECTIVE COVERAGE" IS COUNTED IN — the definition the whole L1 turns on,
+  and the one that reconciles it with its sibling. Coverage is the set of RULES
+  still able to report on a file after the allowlist is applied, NOT the set of
+  findings the file happens to produce today. Under the findings reading, this
+  criterion would forbid GE-123a-2's third arm (suppressing the only finding a
+  file currently produces, which that AC establishes as legitimate) and the two
+  L1s would contradict each other. Under the rules reading they agree exactly.
+  GE-123b-3 is the criterion that makes this distinction testable in its own
+  right.
+
+  MEASURED TODAY, end-to-end through the multi-file entry point (2026-08-18),
+  with an ordinary source filename and no env-named file involved:
+    - arm 1 baseline: 0 findings, clean exit. Target: 4 findings, findings-present
+      exit. This is a WELL-FORMED single line collapsing an ordinary .py file to
+      nothing, and no warning is emitted on any stream.
+    - arm 2 baseline: 4 findings, all of them in "helpers.py". Target: 8.
+    - arm 3 baseline: 3 findings — ALREADY CORRECT. Labelled regression guard;
+      green on arrival here is expected and is not a TDD-order violation.
+    - arm 4 baseline: 3 findings — ALREADY CORRECT. Labelled regression guard.
+  Arms 3 and 4 are the mandatory paired positives: without them the criterion is
+  satisfied by an implementation that stops honouring suppressions, or that bans
+  the rule wildcard outright.
+
+  ARM 4 IS THE ONE THAT STOPS THE CHEAP FIX. The tempting implementation is to
+  reject the rule wildcard, or any entry that "looks too broad", at parse time.
+  Arm 4 is a rule-wildcard entry that is perfectly safe because it is pinned to
+  one line, and it must keep working. The test is the resulting coverage, never
+  the shape of the line.
+
+  VERIFICATION STANDARD (inherited from GE-123's notes, and non-negotiable here):
+  a sibling audit in this family found two criteria verified only against the
+  matching logic in isolation that described situations the real entry point
+  cannot produce. Every arm above was measured through the multi-file entry
+  point with real files on disk, and must be tested the same way. Coverage of the
+  suppression predicate in isolation does not discharge this criterion.
+
+  IT-PO RE-VERIFICATION (2026-08-18, before enrichment): all four baselines were
+  re-measured through scan_files with real files on disk and a real allowlist in
+  the same temporary root — 0, 4, 3, 3 — matching the BA's figures exactly. The
+  arm-4 run confirmed the reported rules are the private-key header, the
+  password assignment and the high-entropy token, with the cloud access key
+  suppressed, as the criterion states.

@@ -1,0 +1,215 @@
+id: GE-123d-2
+components:
+  - commit_guardian
+title: "In a named prose location, a credential-shaped line whose value is recognisably not a credential is not reported"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file staged for commit sits inside one of the five enumerated prose
+    areas — the ticket tree, the retrospectives area, the acceptance-criteria
+    store, the skill-prompt area, or the changelog area,
+  And the file is of one of the four admitted non-executing kinds — .md, .yaml,
+    .yml or .txt,
+  And it contains three separate lines that the generic-credential rule matches
+    today, whose quoted values are one each of these recognised non-credential
+    shapes:
+    - a value containing whitespace, that is, a run of ordinary words,
+    - a bracketed placeholder value — enclosed in angle brackets or in braces,
+      or containing an ellipsis of three or more dots,
+    - a value made only of masking characters, that is, asterisks or a single
+      letter repeated,
+  When the staged file is checked by the pre-commit secrets check,
+  Then none of the three lines is reported,
+  And the commit is not blocked.
+
+  Given a file in the acceptance-criteria store staged for commit contains a
+    credential-shaped line whose quoted value is a ticket identifier of the
+    form TICKET-YYYYMMDD-Name, and a second whose quoted value is an epic name
+    of the form EPIC-Name,
+  When the staged file is checked by the pre-commit secrets check,
+  Then neither line is reported,
+  Because the project already classes those two identifiers as benign for the
+    high-entropy rule, and two rules looking at the same token must not reach
+    opposite conclusions about it.
+
+  Given a ticket Markdown file staged for commit contains a credential-shaped
+    line whose quoted value matches NONE of the recognised non-credential
+    shapes — no whitespace, no placeholder brackets or ellipsis, no masking
+    characters, no recognised text-file extension, and not a project
+    identifier,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the finding IS reported and the commit is blocked,
+  Because the exemption is a closed list of shapes that are recognisably not
+    credentials, and a value that matches nothing on the list is treated as a
+    credential.
+
+  Given the same three exempt lines are moved, unchanged, into a file that sits
+    in one of the five prose areas but is of a kind outside the four admitted
+    kinds,
+  When the staged file is checked by the pre-commit secrets check,
+  Then all three findings ARE reported,
+  Because both conditions must hold together: a named location AND an admitted
+    non-executing kind. Neither alone grants the exemption.
+depends_on:
+  - GE-123d
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The pre-commit check and the scanner both live under templates/ as canonical copies; the copies under scripts/ and .leafcutter/ are build.py outputs and must not be hand-edited."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: related
+    status: exists
+    relevance: "KI-CG-004 records that the existing high-entropy prose exemption is file-level over the same location list. This AC deliberately does NOT copy that shape; the known issue is context for why, and is out of scope to fix here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The location gate must be anchored at the repository root and evaluated against the repository-relative path. The existing prose-prefix test in the pre-commit check accepts a prefix that appears at any depth, so a nested directory whose name happens to equal a prose-location name inherits the exemption today. Reusing that matching form for the new gate would import the same silent inheritance the AC forbids; the new gate must not."
+  - "The five locations and the four admitted kinds must each be held as named, closed data at a single site, separator-normalised once rather than enumerated twice for POSIX and Windows spellings. Extending either list must be a one-line deliberate edit."
+  - "The kind gate must be decided from the final extension of the staged path only, compared case-insensitively; a compound suffix resolves to its last component, and a file with no extension is never admitted. Unadmitted means reported — the closed list fails closed in both directions."
+  - "Location, kind and value shape must be evaluated as a conjunction per finding. No file-level short-circuit and no caching keyed on anything coarser than the individual finding: GE-123d-3 and GE-123d-4 both depend on the per-finding granularity and are unsatisfiable without it."
+  - "The exemption decision must carry the NAME of the shape that granted it back to the caller. A boolean-only decision does not satisfy the delivers_to contract, because GE-123d-5 has to report which shape was responsible."
+  - "The project-identifier shape must reuse the one recogniser the high-entropy path already applies to ticket-identifier and epic-name tokens, referenced from a single definition. A second, independently written recogniser is the mechanism by which two rules come to disagree about the same token, which the second scenario exists to prevent."
+  - "The path form must be normalised before the location gate runs. The hook receives repository-relative paths from git diff --cached, whereas the scanner CLI may be handed absolute or dot-slash-prefixed paths; the same file must receive the same verdict from either entry point."
+  - "The rule reports at most one finding per line, so when a line contains more than one credential-keyword match the exemption may be granted only if every match on that line is a recognised non-credential shape. Granting on the first match alone lets a real credential ride in beside a placeholder."
+  - "The value-shape decision must be computed from the full matched value, not from the 120-character-truncated finding excerpt the post-filter reads today (same constraint as GE-123d-1, and it must be satisfied by the same shared mechanism rather than solved twice)."
+  - "Adding the changelog area is a deliberate widening beyond the existing high-entropy location list. It must be introduced as a named entry in the location data with the reason recorded alongside it, not as an unremarked extra string."
+  - "Per-finding cost must stay proportionate to a pre-commit hot path: no extra file reads, and no matcher whose worst case is superlinear in line length."
+  - "ADR-001 parity: edit the canonical copies under templates/ and verify through the build.py round-trip; never hand-edit the deployed copies under scripts/ or .leafcutter/."
+delivers_to:
+  agent: python-coder
+  contract: "A per-finding exemption decision for the generic-credential rule, expressed as the conjunction of a closed location list, a closed file-kind list, and a closed value-shape list — never a file-level exemption. GE-123d-3 depends on the per-finding granularity; GE-123d-4 fixes the location boundary; GE-123d-5 announces each decision this makes."
+expects_from:
+  ac_id: GE-123d-1
+  contract: "The named value-shape vocabulary, of which this AC consumes the prose-scoped shapes (whitespace, bracketed placeholder, masking characters, project identifier) while GE-123d-1 owns the one file-reference shape that applies everywhere."
+test_spec:
+  - name: test_three_recognised_shapes_exempt_in_every_named_prose_location
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Five real admitted-kind files, one in each named prose area, each carrying the words-shaped, bracketed-placeholder and masking-character values, staged together in a temporary git repository, produce exit status 0 and no generic-credential line on stdout from the canonical pre-commit check"
+  - name: test_project_identifier_values_exempt_in_the_acceptance_criteria_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged store file whose two credential-shaped lines carry a ticket identifier and an epic name is not reported, and the same two tokens are treated as benign by the high-entropy path in the same run — one recogniser, one verdict"
+  - name: test_unrecognised_value_shape_in_prose_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged ticket Markdown file whose quoted value matches no recognised shape produces exit status 1 and a stdout line naming the file and its 1-based line number — the closed list defaults to reporting"
+  - name: test_prose_location_with_unadmitted_kind_reports_all_three_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same three exempt lines in a file of an unadmitted kind inside a named prose area produce three findings and exit status 1 — location alone never grants the exemption"
+  - name: test_location_gate_is_anchored_at_the_repository_root
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A file in a nested directory whose name equals a prose-location name, but which is not that location relative to the repository root, is reported and blocks — resemblance never grants the exemption"
+  - name: test_same_verdict_for_relative_and_absolute_path_forms
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The canonical scanner invoked directly with an absolute path and with a dot-slash-prefixed path returns the same generic-credential verdict as the hook does for the repository-relative form of the same file"
+  - name: test_second_credential_match_on_an_exempt_line_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A single line in a staged ticket file carrying both a recognised placeholder value and an opaque sixteen-character value is reported and blocks — the exemption is not granted on the first match alone"
+test_rationale: "All seven entries run the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository, with that repository as the working directory. The predicate-level alternative is specifically insufficient for this AC: the location gate operates on the repository-relative path that git diff --cached produces, and the failure this AC most needs to exclude — a same-named directory at another depth inheriting the exemption — is invisible to a test that hands the predicate a path string it chose itself. The repo-root-anchoring and absolute-versus-relative entries exist because the two entry points receive path forms of different shapes; only running both can show they agree. The multi-match entry covers the fact that the rule reports at most one finding per line, which is not visible from the criteria. The deployed angle is deliberately not charged: this project's convention pins these tests to the canonical templates/ copy per ADR-001, and source/deployed parity is enforced by build.py and the hook-parity check."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18)"
+    detail: "Criteria untouched. Complexity held at M. Authored twelve policy-level it_requirements, of which five are facts the BA could not see: the existing prose-prefix matcher accepts its prefixes at any depth (so the new location gate must be repo-root-anchored or it inherits the silent inheritance the AC forbids); the rule reports at most one finding per line, so a line with two matches must fail closed; the two entry points receive different path forms; the exemption decision must carry the granting shape name forward or GE-123d-5 cannot be satisfied; and the 120-character excerpt truncation must be solved once, shared with GE-123d-1, not twice. Added ADR-001 and known-issues doc_links. Authored a seven-entry test_spec plus test_rationale, all through the real pre-commit path. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE ASYMMETRY, STATED AS THE PRODUCT-OWNER REQUIRED — as a positive rule about
+  where the exemption applies, so a new location cannot silently inherit it.
+  The exemption is granted only by the conjunction of THREE closed lists:
+    LOCATION  — the ticket tree, the retrospectives area, the acceptance-criteria
+                store, the skill-prompt area, the changelog area.
+    KIND      — .md, .yaml, .yml, .txt.
+    VALUE     — whitespace-bearing, bracketed placeholder, masking characters,
+                project identifier (plus the file-reference shape from
+                GE-123d-1, which needs no location).
+  Anything not on all three lists is reported. Adding an entry to any list is a
+  deliberate edit, never an inference from resemblance.
+
+  TWO DELIBERATE DEPARTURES FROM THE EXISTING HIGH-ENTROPY EXEMPTION, both of
+  which are the point of this AC rather than incidental:
+  1. The changelog area is ADDED. It is not on the high-entropy list today, and
+     one of the three observed blocks was a changelog migration step. Adding it
+     is a decision recorded here, not an oversight corrected silently.
+  2. The exemption is PER FINDING, never per file. The high-entropy exemption
+     is file-level for the same locations: any line of a ticket file is exempt
+     from it outright. Copying that shape for the generic-credential rule would
+     be precisely the careless widening the product-owner warned against, and
+     GE-123d-3 exists to prove it was not copied.
+
+  A KIND LIST PER AREA WAS CONSIDERED AND REJECTED — record the reasoning so it
+  is not silently revisited. Restricting the acceptance-criteria store to .yaml,
+  and tickets, retrospectives, changelogs and skill prompts to .md, is tighter
+  than one shared kind list. It was rejected as over-fitting: it encodes today's
+  file layout into a security rule, so an ordinary layout change (a ticket
+  written as .txt, a changelog with a .yaml sidecar) silently reinstates the
+  false positives this AC exists to remove. The sharp case the per-area list was
+  meant to catch — an executable script inside a prose area — is caught by the
+  shared kind list on its own, and GE-123d-4-i proves it.
+
+  WHY NOT THE OTHER CANDIDATE DIRECTIONS, briefly, since the product-owner asked
+  for the choice to be stated rather than assumed:
+    - Distinguishing a quoted example from an assignment was rejected: in a YAML
+      or Markdown document the two are the same characters, so the distinction
+      cannot be drawn from the text at all.
+    - Treating a Markdown code fence or an inline-code span as exempt was
+      rejected as inverted: a fence is exactly where a real pasted credential
+      lands, so it is the LAST place to relax the rule.
+    - Requiring the value to "look like a real secret" was rejected as the wrong
+      polarity. It is a negative test, so any value the test fails to recognise
+      passes; the closed positive list used here fails the other way, which is
+      the safe way.
+
+  VERIFICATION STANDARD (inherited from the L0): exercise this through the
+  pre-commit secrets check against real staged files in each of the five areas,
+  not by calling the exemption predicate directly. Coverage of the predicate in
+  isolation does not discharge this AC.
+
+  IT-PO OBSERVATION, 2026-08-18, recorded because it bears directly on the
+  first closed list and was not visible from the criteria: the prose-prefix
+  test the existing high-entropy exemption uses accepts each prefix wherever it
+  occurs in the path, not only at the repository root. A directory named for a
+  prose area, nested anywhere in the tree, therefore inherits that exemption
+  today. The rejected alternatives recorded above rule out shapes that would
+  weaken the value list; this is the equivalent hazard on the LOCATION list, and
+  it is captured as an it_requirement rather than a criteria change. It is a
+  property of the existing matcher, adjacent to KI-CG-004 but not the same
+  defect, and repairing the existing high-entropy exemption is out of scope here.

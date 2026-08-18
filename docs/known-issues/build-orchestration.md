@@ -43,11 +43,11 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 ### KI-BO-002 — moved to `ac-store`
 
-Refiled 2026-08-18 as **KI-ACS-003** in
+Refiled 2026-08-18 as **KI-ACS-004** in
 [`docs/known-issues/ac-store.md`](ac-store.md): *an AC is marked `done` with no link
-to the code implementing it.* (Filed there as KI-ACS-001; renumbered to 003 on merge,
-when it turned out `ac-store.md` had been created independently on main with two
-entries already holding 001 and 002.)
+to the code implementing it.* (Filed there as KI-ACS-001, renumbered to 003 and then
+004 across two merges — `ac-store.md` was created independently on main and kept
+gaining entries while this branch was in review.)
 
 Found during a fast-lane run and the call site is in `fast_lane.py`, but what
 `implemented_by` must contain — and what a claim of "done" has to prove — is

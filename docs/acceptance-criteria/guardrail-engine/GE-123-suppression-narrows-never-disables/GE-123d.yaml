@@ -1,0 +1,104 @@
+id: GE-123d
+title: "Writing about a security problem is not treated as causing one"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Documenting a risk never gets mistaken for committing one.
+
+  Requirements, tickets and documentation can describe what a dangerous-looking
+  value looks like without being stopped, while real code is still held to the
+  full standard — so explaining a risk no longer costs rounds of rewording.
+depends_on:
+  - GE-123
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-123d-1
+  - GE-123d-2
+  - GE-123d-3
+  - GE-123d-4
+  - GE-123d-5
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS BELONGS IN THIS GOAL rather than in a usability ticket of its own:
+  it is the pressure that produces the behaviour the other three L1s defend
+  against. Every false positive is a reason to write another suppression line,
+  and every line written is an opportunity to switch something off. Fixing the
+  suppression machinery while leaving the noise that drives people to it
+  treats the symptom.
+
+  DIRECTLY OBSERVED, WITH COST: an exemption already exists for prose in
+  requirements and ticket text, but it applies to only one of the two kinds of
+  finding that prose realistically triggers. Documentation describing a
+  secret-shaped pattern is therefore blocked. Measured cost: three rounds of
+  rewording on one real change, on the day this was authored. The text being
+  rewritten was documentation ABOUT this very check, which is the sharpest
+  possible form of the problem — the guard makes itself harder to describe.
+
+  THE ASYMMETRY IS THE POINT, and the BA must keep it explicit. Widening the
+  exemption is a deliberate reduction in coverage over one class of file. It is
+  acceptable only because that class cannot execute and cannot be deployed. It
+  must NOT reach source, configuration, or anything that ships. State the
+  boundary as a positive rule about where the exemption applies, not as a list
+  of what it excludes, so a new location does not silently inherit it.
+
+  A NEGATIVE ARM IS MANDATORY, and it is the load-bearing one: a real
+  credential pasted into a requirement or a ticket is still a real credential
+  in the repository's permanent history. Widening what prose may contain must
+  not become a way to smuggle one in. The distinction the L2 has to draw is
+  between text that DESCRIBES a shape and text that CONTAINS a live value, and
+  if that distinction cannot be drawn reliably then the honest answer is a
+  narrower exemption, not a confident one. Say which was chosen and why.
+
+  RELATIONSHIP TO GE-123a: if the contents of name-recognised files start being
+  read, the volume of prose-adjacent findings may rise. That is a reason to
+  sequence this L1 with or before GE-123a, not a reason to soften either.
+
+  DECOMPOSED 2026-08-18 (business-analyst) into five L2 children — the hard cap
+  for this L1 — plus two L3 children under GE-123d-4:
+    GE-123d-1   the one GLOBAL narrowing: a quoted value ending in a recognised
+                text-file extension is a file reference, not a credential, in
+                any file. This is what relieves the observed code-comment block,
+                which no location-based exemption may reach.
+    GE-123d-2   the prose exemption proper, granted only by the conjunction of
+                three CLOSED lists — five named locations, four admitted
+                non-executing file kinds, and a positively recognised set of
+                non-credential value shapes. Unrecognised means reported.
+    GE-123d-3   the mandatory NEGATIVE arm, as its own criterion: a live
+                credential in a ticket or a requirement is still reported and
+                still blocks; the exemption is per finding, never per file; and
+                every other rule keeps full strength in prose.
+    GE-123d-4   the BOUNDARY, written as absence-from-the-list rather than as
+                three special cases, with GE-123d-4-i covering the reachable
+                hazard of an executable script inside a prose location and
+                GE-123d-4-ii satisfying this L1's reference-doc trigger.
+    GE-123d-5   the exemption is announced on the error stream and the notice
+                never echoes the matched value.
+  The chosen answer to the product-owner's distinction question is the narrower
+  one: a closed positive list of shapes that are recognisably NOT credentials,
+  defaulting to report. The residual cost — a prose author whose example value
+  resembles nothing on the list is still blocked — is accepted and named in
+  GE-123d-3's notes rather than engineered away with a confident test.

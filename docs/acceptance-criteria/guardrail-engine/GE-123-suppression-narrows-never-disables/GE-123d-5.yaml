@@ -1,0 +1,166 @@
+id: GE-123d-5
+components:
+  - commit_guardian
+title: "Every exemption granted is announced, and the announcement never echoes the value"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file in the acceptance-criteria store staged for commit contains two
+    credential-shaped lines that this feature exempts, on its 12th and 40th
+    lines,
+  When the staged file is checked by the pre-commit secrets check,
+  Then a notice is written to the error stream that names the check, states the
+    number of exempted findings as 2, and for each one gives the file path, the
+    1-based line number (12 and 40), and which recognised non-credential shape
+    granted the exemption,
+  And the notice does not reproduce the matched value or the matched line,
+  And the commit still succeeds — the notice leaves the exit status unchanged,
+  Because a widening that leaves no trace cannot be reviewed, while a notice
+    that echoed the value into a build log would recreate the exposure it
+    exists to guard against.
+
+  Given a file staged for commit produces no exempted findings,
+  When the staged file is checked by the pre-commit secrets check,
+  Then no notice is written to the error stream,
+  Because a line printed on every commit becomes the same noise this goal
+    exists to remove.
+
+  Given a file staged for commit produces one exempted finding and one reported
+    finding,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the reported finding appears on the output stream as findings always
+    have,
+  And the exemption notice appears on the error stream,
+  And the commit is blocked by the reported finding,
+  Because the notice is an audit trail and never an input to the verdict.
+depends_on:
+  - GE-123d
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Establishes this component's warning contract for a suppression-related announcement: the error stream, not the output stream that carries the findings report; the source file path; the 1-based line number. Reuse that contract here rather than inventing a second convention. The one deliberate departure is the verbatim offending text, which -v includes and this AC excludes — -v echoes an allowlist line the author wrote, whereas this notice would be echoing a value the check has just decided not to report."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The check that emits the notice is the canonical copy under templates/; the copies under scripts/ and .leafcutter/ are build.py outputs."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Stream discipline is a hard boundary, not a preference. The notice goes to the error stream only. The output stream carries the findings report in its existing format, which the hook's own summary text and any log scraper read; a single line of notice text on the output stream corrupts that report. This is the same stream split the allowlist warnings already observe."
+  - "The notice must not change the exit status under any circumstances. It is an audit trail, never an input to the verdict, and that must hold in both directions: it appears when the run succeeds, and it appears unchanged when the run is blocked by an unrelated finding."
+  - "The notice must never contain the matched value, the matched line, or the finding excerpt. This is the deliberate departure from the GE-113c-3-v warning contract and it must not be harmonised back: the notice concerns a value the check has just decided NOT to report, so echoing it into a stream that lands in build logs would turn each wrong decision into an exposure. File path, 1-based line number and the granting shape name are the whole payload. Everything else in the -v contract — the error stream, the file path, the 1-based line number — is reused as-is."
+  - "One notice per run: a header naming the check and the count, then one short line per exempted finding. Not one paragraph per finding — the acceptance-criteria store holds thousands of files whose text discusses these rules, and a verbose per-finding report would reproduce on the error stream exactly the noise this L1 exists to remove."
+  - "The count must include only findings exempted by THIS feature. Findings removed by a .security-allowlist entry are suppressed earlier, before the post-filter ever sees them, and findings dropped by the pre-existing file-level high-entropy prose exemption are a different mechanism (KI-CG-004). Folding either into the count makes the number unreviewable, which defeats the purpose of announcing it."
+  - "The granting shape must be reported by a stable name drawn from the shape vocabulary, not by a rendering of the value or a description generated per finding, so that the notices can be compared across runs."
+  - "Silence when nothing is exempted must be genuine silence on the error stream — no header, no zero count."
+  - "Anti-precedent, load-bearing: a guard in this component is documented as dispatching a specialist and does not, because its remediation path is a placeholder that always reports success. A test that asserts the message string exists in the source would repeat that failure exactly. The notice must be observed arriving on the error stream of a real run."
+  - "ADR-001 parity: edit the canonical copy under templates/ and verify through the build.py round-trip."
+delivers_to: null
+expects_from:
+  ac_id: GE-123d-2
+  contract: "The per-finding exemption decision and the name of the value shape that granted it, which this notice reports. A decision that does not carry the granting shape forward cannot satisfy this AC."
+test_spec:
+  - name: test_notice_names_the_check_the_count_the_file_and_both_line_numbers
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "A real acceptance-criteria-store file staged in a temporary git repository with exempted credential-shaped lines on its 12th and 40th lines makes the canonical pre-commit check exit 0 and write one error-stream notice naming the check, the count 2, the file path, both 1-based line numbers and the granting shape for each"
+  - name: test_notice_never_reproduces_the_matched_value_or_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A distinctive marker embedded in each exempted value appears in neither the error stream nor the output stream of the run, and neither stream carries the matched line"
+  - name: test_no_notice_when_nothing_is_exempted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A staged file producing no exempted findings leaves the error stream free of any notice — no header and no zero count"
+  - name: test_notice_and_blocking_finding_occupy_separate_streams
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged file with one exempted and one reported finding exits 1, prints the reported finding on the output stream in the existing format, prints the notice on the error stream, and the output stream carries no notice text"
+  - name: test_count_excludes_allowlist_suppressions_and_the_entropy_prose_exemption
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A run whose staged set also contains an allowlist-suppressed finding and a finding dropped by the pre-existing file-level high-entropy prose exemption still reports a count covering only the findings this feature exempted"
+  - name: test_notice_is_one_summary_per_run_across_multiple_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Several exempted findings spread across two staged files produce a single notice block with one short line per finding and one count, not a paragraph per finding and not one block per file"
+test_rationale: "The claim this AC makes is that an author is told something, and the component already has a guard that claims an announcement it never emits — so the only acceptable evidence is the notice arriving on the error stream of a real run. Each entry therefore runs the canonical templates/ copy of the pre-commit check as a subprocess against real files staged in a throwaway git repository and captures both streams separately; a test asserting the message string appears in the source, or asserting on a formatter's return value, would reproduce the exact anti-precedent the AC's notes cite. The two streams must be captured separately rather than merged, because the stream split is itself part of the contract — a merged capture cannot tell a correct notice from one that corrupts the findings report. The withheld-value entry is asserted positively, by embedding a distinctive marker in each exempted value and requiring its absence from both streams, rather than by matching the expected notice text: an assertion on the expected text passes even when extra text is present. The count entry exists because three separate mechanisms remove findings from this run — the allowlist, the pre-existing file-level high-entropy prose exemption, and this feature — and a count that silently pools them is not reviewable."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18)"
+    detail: "Criteria untouched. Complexity held at S. Authored nine policy-level it_requirements. The deliberate departure from the GE-113c-3-v warning contract is restated as an explicit instruction NOT to harmonise the matched value back into the notice, so a later reviewer aligning the two contracts cannot undo it. Two requirements come from the code rather than the criteria: allowlist suppressions are removed before the post-filter ever sees a finding, and the pre-existing file-level high-entropy prose exemption (KI-CG-004) is a third, separate removal mechanism — pooling any of them into the count makes it unreviewable. Added commit-guardian and ADR-001 doc_links. Authored a six-entry test_spec plus test_rationale; both streams are captured separately in every entry, and the withheld-value arm is asserted by the absence of an embedded marker rather than by matching expected notice text. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY VISIBILITY IS PART OF THE FEATURE AND NOT AN OPTIONAL EXTRA. Every other
+  L1 in this goal defends the same promise from the suppression side: narrowing
+  what a check reports must never happen silently. This L1 narrows what the
+  check reports too — by exemption rather than by suppression — so the same
+  promise applies to it. Without this AC, the widening authored in GE-123d-2 is
+  the one narrowing in the whole goal that nobody is told about.
+
+  THE VALUE IS DELIBERATELY WITHHELD from the notice, which is the one departure
+  from the GE-113c-3-v warning contract, and the reasoning matters. -v echoes the
+  verbatim text of a malformed allowlist line, which is a line the author wrote
+  and which contains nothing sensitive. Here the text is a line the check has
+  just decided not to report as a credential — and the whole risk of this feature
+  is that such a decision is occasionally wrong. Printing the value into a stream
+  that lands in build logs would turn each wrong decision into an exposure. File
+  path, line number and the granting shape are enough for an author to find the
+  line in their own working copy.
+
+  A PER-FINDING PARAGRAPH WAS REJECTED IN FAVOUR OF A SUMMARY. The
+  acceptance-criteria store contains thousands of files whose text discusses
+  these rules; a multi-line report per exempted finding would reproduce, on the
+  error stream, exactly the volume of noise that made this L1 necessary. One
+  notice per run, carrying a count and one short line per finding, is the
+  proportionate form.
+
+  ANTI-PRECEDENT, load-bearing and cited by two siblings in this component: a
+  guard here is documented as automatically dispatching a specialist and does no
+  such thing — its remediation path is a placeholder that always reports success.
+  A documented-but-dead announcement is worse than none, because authors believe
+  they are covered. This AC claims the author is told something, so it needs a
+  test proving the notice actually reaches the error stream on the real commit
+  path, not a test asserting the message string exists in the source.
+
+  IT-PO NOTE, 2026-08-18, on the count and on the departure. Three separate
+  mechanisms remove a finding from a run of this check: a .security-allowlist
+  entry, which is applied inside the scanner before the post-filter sees
+  anything; the pre-existing file-level high-entropy prose exemption, recorded
+  as KI-CG-004; and this feature. Only the third belongs in the count, and that
+  is now an it_requirement rather than an inference, because a pooled count is
+  not reviewable and reviewability is the entire justification for the notice.
+  The departure from GE-113c-3-v is also restated as an instruction rather than
+  an observation — a reviewer aligning the two announcement contracts would
+  otherwise reasonably add the verbatim text back, which is the one change this
+  AC exists to prevent.
