@@ -1,0 +1,92 @@
+id: TQ-200c-4-i
+components:
+  - testing_quality
+  - llm_authoring
+title: "A row that exists but that no run would ever reach is a gap, not coverage"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a judged proof that has been written as a row and placed on disk,
+  When eval coverage for its agent is reported,
+  Then a row that sits in a set the runner is not told about is reported as a gap
+    naming the agent and the unreferenced set, not counted as coverage,
+  And a registration that points at a set which is absent or empty is reported as a
+    gap naming the missing set, rather than the agent being reported as covered,
+  And a registered, non-empty set that no change to the agent's own material would
+    ever select for a run is reported as a gap naming the agent, so a set that can
+    never be triggered is not mistaken for a set that always passes,
+  And each of these is reported as a gap in its own right, so an agent with one
+    reachable row and one unreachable one is not reported as fully covered.
+depends_on:
+  - TQ-200c-4
+doc_links:
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+    relevance: "Both halves of the registration this L3 checks. Verified 2026-08-18: each of the three configured agents carries an `eval_set` path (the pointer that can dangle) and a `triggers` glob list (the reachability condition of the third clause). pt-classifier's triggers include its own template, its eval.jsonl, run_agent_eval.py and agent_eval_config.json itself; the artifact agents' lists are longer. A new entry whose triggers omit the agent's own template is registered and unreachable."
+  - path: scripts/evals/eval_selector.py
+    relationship: describes
+    status: exists
+    relevance: "The mechanism the third clause is stated against. TQ-200b-3 (done) computes the affected set by intersecting a change's file list against each agent's declared trigger globs; only affected evals run. A set whose globs match nothing the agent's own material touches is therefore never selected, and its absence from every run reads exactly like an unaffected pass."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The rule this L3 extends and must not contradict: an in-scope agent with no eval set is reported as a coverage gap rather than passing silently. This L3 says the same is true one step further in — a set that exists but cannot be reached is a gap by the same logic, because both produce the same observable (nothing ever fails)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The neighbouring guarantee and the boundary. TQ-200b-4 (in_progress) makes a MISSING or STALE result for a TRIGGERED agent a hard failure. It presupposes the agent gets triggered. This L3 covers the case its enumeration never reaches — an agent or set that is never in the affected list at all, so no result is ever expected and none is ever missed."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE THREE FAILURES ARE ONE OBSERVABLE. An orphaned set, a dangling registration and
+  an untriggerable set all produce the same thing: nothing ever runs and nothing ever
+  fails. That reads identically to full coverage from outside, which is why each is
+  named as its own gap in the criteria rather than left to be caught by a general
+  "the runner should find it" statement.
+
+  THE THIRD CLAUSE IS THE NON-OBVIOUS ONE AND THE MAIN REASON THIS L3 EXISTS. Verified
+  2026-08-18: eval selection is glob-driven. TQ-200b-3 (done) intersects a change's
+  file list against each agent's `triggers` in scripts/evals/agent_eval_config.json,
+  and only affected evals run. Registration and reachability are therefore separate
+  properties: an entry can be perfectly well-formed, point at a real non-empty set,
+  and still be selected by nothing, because its trigger globs do not cover the
+  agent's own template or the material its rows depend on. Compare the three
+  configured agents — every one of them lists its own template first in `triggers`.
+  An entry added without that line is invisible to every run and looks green forever.
+
+  WHY THIS IS NOT ALREADY COVERED BY TQ-200b-4. TQ-200b-4 makes a missing or stale
+  result a hard failure for a TRIGGERED agent, and its own criteria say the affected
+  agents are enumerated deterministically from the trigger manifest. Everything it
+  guarantees is downstream of being in that enumeration. The failures here are
+  failures to be in it at all, so b-4's guarantee is vacuously satisfied by them.
+  Recorded here so an implementer does not close this L3 by citing b-4.
+
+  WHY NOT COVERED BY TQ-200a-1 EITHER. a-1 reports an in-scope agent with NO set as a
+  gap. All three cases here have something on disk that a naive coverage count would
+  accept — a file of rows, or a config entry, or both. The extension is deliberate
+  and stated in the doc_link so the two rules stay one idea rather than drifting.
+
+  THE FOURTH CLAUSE PREVENTS PER-AGENT ROUNDING. Coverage reported per agent rather
+  than per set lets one reachable row mask an unreachable sibling. Given that
+  scripts/evals/agent_eval_config.json holds one entry per agent today, per-agent
+  reporting is the natural implementation and the natural bug.
+
+  BOUNDARY. This L3 reports gaps. It does not decide whether a gap blocks a merge —
+  that is TQ-200b-4's territory — and it does not create rows or sets, which is its
+  parent's.

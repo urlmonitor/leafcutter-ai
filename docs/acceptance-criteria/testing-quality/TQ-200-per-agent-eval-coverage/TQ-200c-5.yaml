@@ -1,0 +1,124 @@
+id: TQ-200c-5
+components:
+  - testing_quality
+  - ac_store
+  - ticket_creation_pipeline
+title: "A proof the pipeline cannot honour is announced, and never reported as a success"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose proof demand the pipeline cannot fully honour — a kind
+    of proof it has no way to ask for, a demand it can state but cannot deliver to
+    anyone able to satisfy it, or a judged demand with nowhere to land,
+  When the pipeline reports whether that work is ready to be built,
+  Then the report says which demanded kind of proof was not carried through and why,
+    naming the work,
+  And that outcome is not reported as a success: a report in which a demanded kind of
+    proof went uncarried cannot read as ready-to-build,
+  And the absence of any proof demand is itself only reportable as a success when the
+    work genuinely needs none, decided as TQ-200c-2 requires — never because the
+    question of what proof it needs was skipped,
+  And every check the pipeline performs on a proof demand is either performed for
+    this work, or named in the report as a check that was not performed and why — a
+    check that is silently not attempted is not permitted,
+  And this holds for the whole routed demand, not for any single field of it, so an
+    implementation that stops discarding one authored field still fails while another
+    demanded kind goes uncarried.
+depends_on:
+  - TQ-200c
+  - TQ-200c-1
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The exact behaviour this AC reverses, verified 2026-08-18. Line 2740 sets is_code_ac; line 2773 records `PASS` with `non-code AC — no test contract required`, so the omission of every proof demand is reported as a passing check. Worse for the fourth clause: check #4 at line 2776 (would the generated Test Requirements pass the ticket guard?) and check #5 at line 2783 (it_requirements present?) are BOTH gated on is_code_ac and are therefore not failed but never attempted, and the report does not say so. The verdict line at 2801 is computed from the recorded lines, so a report full of un-attempted checks reads as READY."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The first of the three unhonourable cases in the Given. Verified 2026-08-18: framework enum [\"unittest\", \"pytest\"] (line 401), angle enum without any judged value (line 411), additionalProperties: false at root (line 15) and on test_spec items (line 387). Until c-1 lands, a judged demand is literally unaskable — and an unaskable demand must be announced rather than absorbed."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The second case: a demand that can be stated but not delivered. Verified 2026-08-18: zero occurrences of \"eval\", framework choice unittest or pytest. Handing this template a judged demand is the concrete instance of a demand reaching a party that cannot satisfy it, and it would answer with a pytest file rather than reporting that it could not comply."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The precedent for the never-a-skip rule at the run layer: a triggering change with a missing or stale eval result is a HARD FAILURE, never a skip and never an implicit pass. This AC applies the same principle one layer earlier — at the moment the demand is decided and reported, before any result exists."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The same never-silent principle stated for coverage: an in-scope agent with no eval set is reported as a coverage gap rather than passing silently. Consistency across the three is deliberate — one rule about silence, applied at the demand layer, the coverage layer and the run layer."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE HIGHER-LEVEL STATEMENT, AND IT IS NOT THE ACD-400b ONE. A narrow,
+  generator-local requirement — "never silently discard an authored test_spec" — is
+  being authored concurrently under ACD-400b by another author. Assume it exists and
+  assume it stays generator-local. The two are related and neither substitutes for
+  the other:
+    - Theirs is about ONE FIELD inside ONE PROGRAM: an authored test_spec must not be
+      thrown away.
+    - Mine is about the ROUTING DECISION AS A WHOLE: whatever kinds of proof were
+      decided to be necessary, if the pipeline cannot carry one of them through, that
+      must be announced and must not be reported as readiness. It bites on demands
+      nobody authored a field for — including a judged demand the vocabulary cannot
+      yet express and a judged demand with no harness entry to land in.
+  The fifth clause exists specifically to keep the two from being collapsed: an
+  implementation that stops discarding authored test_spec entries and stops there
+  still fails, because a judged kind can go uncarried while the authored
+  deterministic field survives perfectly. An implementer must not close one and mark
+  the other done.
+
+  WHY THE FOURTH CLAUSE IS THE SHARPEST ONE. Verified 2026-08-18: the readiness
+  report's checks #4 (line 2776) and #5 (line 2783) are gated on `is_code_ac`, so for
+  judged work they are not failed — they are never attempted, and their absence is
+  invisible in the output. The verdict at line 2801 is derived from the lines that
+  were recorded, so a report missing half its checks still reads READY. An
+  un-attempted check that leaves no trace is indistinguishable from a passed one,
+  which is the identical failure BO-2400g-2 names for review phases: a check that is
+  present but inert reads as coverage and is worse than an absent one. The remedy is
+  the same — name what was not performed, and why.
+
+  WHY THE THIRD CLAUSE IS NOT REDUNDANT WITH c-2. c-2 governs how the answer is
+  DERIVED. This clause governs how a particular answer — "none required" — may be
+  REPORTED. They fail independently: a correctly derived "none required" that the
+  report cannot distinguish from "we never asked" leaves the operator with today's
+  green light, and a badly derived answer reported with perfect transparency is still
+  the wrong answer. Today the pipeline fails both, at the same line.
+
+  WHY THIS IS AN L2 AND NOT AN L3 UNDER c-2. It is not an edge case of the routing
+  decision; it is a separate obligation on the pipeline's reporting, and it applies to
+  demands c-2 never made — for instance a judged demand a human authored by hand
+  before any routing exists. It also has to hold while c-2 is unbuilt, which an L3
+  under c-2 could not.
+
+  DEPENDENCY REASONING.
+    - depends_on TQ-200c-1: "a demanded kind of proof was not carried through" is only
+      a statable finding once kinds exist. Before c-1 there is one kind and the
+      finding degenerates.
+    - No edge to c-2, c-3 or c-4, deliberately. This AC must hold for demands from any
+      source, including hand-authored ones, and is testable with a hand-authored
+      unhonourable demand. Making it depend on the router would leave the loudness
+      guarantee unbuilt for exactly the period in which half-built routing is most
+      likely to drop things quietly. Recorded so the it-po does not add the edges on
+      aesthetic grounds.
+
+  BOUNDARY. This AC produces a REPORT, not a merge gate. Whether an announced gap
+  blocks CI belongs to TQ-200b-4; whether an unreachable eval set is a gap belongs to
+  TQ-200c-4-i. What is required here is that the pipeline stops describing the absence
+  of a proof demand as a passing check.

@@ -1,0 +1,132 @@
+id: TQ-200c-4
+components:
+  - testing_quality
+  - llm_authoring
+title: "A judged proof that was asked for becomes a scorable row in the harness that already exists"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work that has been asked for a judged proof,
+  When that demand is satisfied,
+  Then what is produced is a real row in the eval set belonging to the agent whose
+    behaviour is in question — an input paired with the outcome expected of it — and
+    not a paragraph of prose in a plan that nothing executes,
+  And the row is registered where the shared runner already looks for that agent's
+    set, so a run of the existing runner picks it up and scores it without anyone
+    naming the row by hand,
+  And it is scored by the scoring the agent's set already declares, so the demand
+    joins the existing harness rather than standing up a second one alongside it,
+  And an agent that had no eval set before the demand arrives ends up with one that
+    the runner recognises, rather than the demand being dropped because there was
+    nowhere to put it,
+  And a judged demand that has been satisfied is distinguishable from one that has
+    only been written down, so a plan carrying the request is never mistaken for
+    proof that the request was met.
+depends_on:
+  - TQ-200c
+  - TQ-200c-1
+  - TQ-200a-1
+doc_links:
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+    relevance: "The registry the second clause means by \"where the runner already looks\". Verified 2026-08-18: it configures exactly THREE agents — pt-classifier (scoring_mode label, label_axes, derive_outcome, threshold 0.70), mock-data-author and flow-author (scoring_mode artifact, artifact_type, schema, sandbox_copy, tools, timeout 900, threshold 0.66) — each with an `eval_set` path and a `triggers` list. An agent absent from this file has no place for a row to land, which is what the fourth clause is about."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+    relevance: "The existing shared runner the third clause forbids duplicating. It is real and working, not greenfield, and it already stamps each result with its trigger SHAs (TQ-200b-4, verified via unit_tests/evals/test_trigger_sha_stamp.py)."
+  - path: scripts/evals/eval_selector.py
+    relationship: describes
+    status: exists
+    relevance: "How a newly registered row becomes reachable in practice: the selector computes the affected set by intersecting a change against each agent's declared trigger globs (TQ-200b-3, done). A row added to a set whose triggers do not cover it is registered but unreachable — the failure TQ-200c-4-i owns."
+  - path: docs/product-truth/classifier/eval.jsonl
+    relationship: relates-to
+    status: exists
+    relevance: "The concrete shape of a row — one per line, {id, input, expected} — which is the shape TQ-200a-1 fixes for every eval set and which the first clause of this AC inherits rather than redefining."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The likeliest party to be handed the judged demand and the reason the first clause is worded against prose. Verified 2026-08-18: zero occurrences of \"eval\" in this template; its framework choice offers unittest or pytest only; it does hold the Write tool, so it is physically capable of authoring a row and is simply never told such a thing exists."
+  - path: .github/workflows/agent-evals.yml
+    relationship: relates-to
+    status: exists
+    relevance: "The CI surface (\"Agent evals (affected)\") that consumes the runner's output. Named here only to establish that a registered row has a real path to being executed; the gating behaviour itself belongs to TQ-200b-4, not to this AC."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200c-4-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE FAILURE THIS AC EXISTS TO PREVENT IS THE ONE THE STORE HAS ALREADY SUFFERED,
+  ONE LEVEL OVER. 124 named test contracts exist on llm-expert requirements and 115
+  of those named tests do not exist anywhere in unit_tests/. A name in a plan is not
+  a proof. If routing (c-2) starts emitting judged demands and those demands become
+  sentences in ticket bodies, the store gains 444 new unwritten obligations and the
+  measurable state of the repository gets worse, not better, because the demand will
+  look satisfied on the page. Hence the first clause is about the ARTIFACT and the
+  second about its REGISTRATION, not about the demand being recorded.
+
+  WHY THE EXISTING HARNESS AND NOT A NEW ONE. This is not greenfield. Verified
+  2026-08-18: scripts/evals/run_agent_eval.py, scripts/evals/eval_selector.py,
+  scripts/evals/agent_eval_config.json (three agents configured), scripts/evals/
+  results/, .github/workflows/agent-evals.yml, and the tests unit_tests/evals/
+  test_eval_selector.py and test_trigger_sha_stamp.py are all present and working.
+  TQ-200b-3 is done and TQ-200b-4 is in_progress against this exact surface. A second
+  scoring path would immediately fork the scoring modes, the thresholds, the trigger
+  manifest and the freshness rules — and TQ-200b-4's staleness guarantee is keyed to
+  the recorded trigger SHAs of results produced by THIS runner, so a row scored
+  elsewhere would be invisible to it.
+
+  READ agent_eval_config.json BEFORE IMPLEMENTING. Its per-agent key sets are not
+  uniform and the variation is meaningful: label mode carries label_axes /
+  derive_outcome / response_label_field, artifact mode carries artifact_type / schema
+  / sandbox_copy / tools / timeout. That is TQ-200a-2's label / artifact / markup
+  distinction already made real in configuration. A registration mechanism that
+  assumes one uniform entry shape will not survive contact with the file.
+
+  THE FOURTH CLAUSE IS THE HARD ONE, AND IT IS NOT TQ-200a-1's JOB. Three agents are
+  configured today; 444 requirements are assigned to llm-expert alone. The realistic
+  case is a judged demand for an agent with no set and no config entry, and the
+  tempting behaviour is to drop it with a warning. The clause forbids that: the
+  demand must result in a set the runner recognises. Note the division of labour —
+  TQ-200a-1 owns WHICH agents are in scope for eval coverage and reports an in-scope
+  agent with no set as a coverage gap; this clause owns what happens when a demand
+  arrives for an agent that has no set YET. depends_on TQ-200a-1 is therefore a real
+  edge, not a courtesy: the row shape ({id, input, expected}) and the one-set-per-
+  agent rule are defined there, and a row authored before that shape is settled would
+  have to be re-authored.
+
+  THE FIFTH CLAUSE PROTECTS THE PARENT L1's OWN PREMISE. A written demand and a met
+  demand must be distinguishable, or the pipeline can once again report the request
+  as though it were the proof — which is exactly what generate_ticket_from_ac.py:2773
+  does today when it records `PASS  non-code AC — no test contract required`. Keep
+  this clause distinct from c-5: this one is about not CONFUSING a request with its
+  fulfilment; c-5 is about being LOUD when a request cannot be honoured at all.
+
+  DEPENDENCY REASONING.
+    - depends_on TQ-200c-1: the demand must be expressible as judged before there is
+      anything to land.
+    - depends_on TQ-200a-1: the row shape and the one-set-per-agent rule come from
+      there.
+    - No edge to TQ-200c-2. Landing a judged demand correctly is testable against a
+      hand-declared demand, and holding this behind the derivation work would delay
+      the half of the tree that produces an executable artifact. Recorded so the edge
+      is not added on aesthetic grounds.
+
+  BOUNDARY. This AC does not change how the runner scores (TQ-200a-2, TQ-200b), does
+  not decide which agents are in scope for eval coverage (TQ-200a-1), and does not
+  make anything a merge gate (TQ-200b-4). It requires only that a judged demand ends
+  up as a row the existing runner can find and score.

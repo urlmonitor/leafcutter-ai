@@ -1,0 +1,153 @@
+id: TQ-200c-2
+components:
+  - testing_quality
+  - ac_store
+  - agent_registry
+title: "Which kinds of proof a piece of work needs is derived from what the work says about itself, not from a list of names"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three pieces of work: one whose behaviour is settled entirely by assertion,
+    one whose behaviour is settled entirely by judgment about a model's output, and
+    one that needs both,
+  When the proof each will be asked for is decided,
+  Then each is asked for the kinds of proof its own description implies, derived
+    from what the work and its producer already declare about themselves,
+  And when a kind of producer that nobody anticipated is introduced — one that
+    exists in no enumeration the decision consults, and whose introduction changes
+    no enumeration — the kinds of proof asked of its work are still correct,
+  And two pieces of work that describe themselves identically are asked for the same
+    kinds of proof even when their producers are named differently, so that the
+    answer cannot be changed by renaming a producer and cannot be obtained by
+    recognising one,
+  And there is no piece of work for which the answer is "no proof of any kind is
+    required" arrived at by the work's producer being absent from an enumeration —
+    an answer of "no proof required" is reachable only from something the work
+    itself says.
+depends_on:
+  - TQ-200c
+  - TQ-200c-1
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The decision this AC replaces, and the exact shape of the defect. Verified 2026-08-18: line 2740 `is_code_ac = _computed_map_has_production_code_producer(agents)` (line 2068) resolves through `_agent_produces_production_code` (line 1055), whose `_FALLBACK_PRODUCERS` frozenset at line 1073 holds nine names (python-coder, sql-coder, frontend-coder and six sql-* specialists). On the normal path it calls `_load_production_code_agents` (line 658), which at line 684 reduces the registry's whole `produces` vocabulary to `== \"production_code\"`. Either way the answer is one boolean keyed on producer identity."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The self-description that already exists and is discarded at the point of use. Verified 2026-08-18: `produces` is populated across the registry with at least seven distinct values (production_code, test_artifact, documentation, review_verdict, orchestration, analysis, prompt); llm-expert (entry at line 3044) declares `produces: \"prompt\"` at line 3127. So `prompt` is currently treated identically to `orchestration` — a value that legitimately needs no proof. Appending llm-expert to the line-1073 frozenset would not even touch this path, because the frozenset is only the registry-unavailable fallback."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The pattern the second Then clause borrows, and the boundary. BO-2900g-1's third-route clause sits in its CRITERIA on purpose, because a route-local fix satisfies the first two clauses and re-creates the gap as soon as a third route exists; its notes state that explicitly. The clause here is the same device pointed at a list of producer names instead of a list of plan routes. BOUNDARY: BO-2900g-1 asks ONE kind of proof of every route inside one generator; this AC asks WHICH KINDS at all, of every piece of work. Satisfying one does not satisfy the other."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The source of the other half of what the work says about itself — the fields an author already fills in about a requirement. Also the home of the c-1 vocabulary this decision must emit into: a derived answer that cannot be written down is not an answer."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The existing per-proof vocabulary the derived answer has to be expressed in alongside c-1's judged/asserted distinction, so that a routed demand is a normal proof demand and not a parallel notation."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200c-2-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ROUTER. The other four children of TQ-200c make the routing decision
+  expressible (c-1), simultaneous (c-3), landable (c-4) and honest (c-5). This one is
+  the decision itself.
+
+  WHY "APPEND llm-expert TO THE FROZENSET" CANNOT SATISFY THIS AC — THE THREE CLAUSES
+  THAT KILL IT, IN ORDER.
+    - The second clause (unanticipated producer). A frozenset with one more name in
+      it answers correctly for llm-expert and wrongly for the next producer kind
+      anyone adds. The clause requires the answer to be correct for a producer that
+      is in no enumeration the decision consults AND whose introduction changes no
+      enumeration — which is unsatisfiable by any list, however long. It is testable
+      exactly the way BO-2900g-1's third-route clause is: introduce a new producer
+      kind in the test, do not tell the decision about it, and assert the demand is
+      still right.
+    - The third clause (rename invariance). If two identically-described pieces of
+      work get different demands because their producers are named differently, the
+      decision is keyed on identity. A set-membership test is keyed on identity by
+      construction, so it fails this clause even when its contents are complete.
+    - The fourth clause (no free pass by absence). Today's "no proof required" is
+      arrived at purely by the producer's name failing a membership test — the
+      generator then records `PASS  non-code AC — no test contract required` at
+      line 2773. This clause states that "no proof required" must be reachable only
+      from something the WORK says. Extending the list narrows the set of work that
+      gets the free pass; it leaves the mechanism that grants it untouched.
+  In short: the frozenset is the most visible symptom, not the disease. See the next
+  section for why the disease is one level up from where the request located it.
+
+  THE PREMISE CORRECTION THAT SHARPENS THIS AC (verified 2026-08-18, read the files).
+  The authoring request stated that no agent declares `produces`, so the registry
+  lookup cannot override the fallback frozenset. That is false in this worktree.
+  `produces` is populated across config/agent_registry.json — production_code,
+  test_artifact, documentation, review_verdict, orchestration, analysis, prompt —
+  and llm-expert declares `produces: "prompt"` (line 3127, entry at line 3044). The
+  frozenset at generate_ticket_from_ac.py:1073 is only reached when the registry
+  cannot be loaded (line 1092 and line 1097). The live defect is therefore at
+  line 684: `_load_production_code_agents` collapses that seven-value
+  self-description into one set — everything that is not `production_code` is
+  discarded, so `prompt` is handled exactly like `orchestration`. The material a
+  correct routing decision needs is ALREADY ON DISK and is being thrown away at the
+  point of use. This is good news for the AC and bad news for a cosmetic fix: the
+  criteria are written against derivation from self-description precisely because
+  self-description already partly exists, so "we cannot derive it, there is nothing
+  to derive from" is not available as an argument.
+
+  WHAT "WHAT THE WORK SAYS ABOUT ITSELF" DELIBERATELY DOES NOT PIN DOWN. The criteria
+  do not name the fields. Whether the derivation reads the registry's `produces`, the
+  requirement's own change_target / risk_surface, the surfaces the work touches, or
+  some combination, is the it-po's decision, and a good implementation will probably
+  use more than one. What the criteria fix is the PROPERTY that separates a real
+  router from a lookup table: the answer must survive a producer nobody anticipated
+  and must not move when a producer is renamed. Any mechanism with those two
+  properties is acceptable; no mechanism without them is, whatever it is built from.
+
+  DERIVED, NOT HAND-DECLARED PER AC — AND WHY THAT IS IN THE FIRST CLAUSE. An
+  alternative "fix" is to add a per-requirement field where the author states which
+  layers of proof this one needs. That is rejected by the first clause ("derived from
+  what the work and its producer already declare"). Hand-declaration reproduces the
+  present failure with extra steps: 444 llm-expert requirements would each need an
+  author to remember, and the 39 already-done ACs with 85 unwritten named tests are
+  the evidence of what happens when the demand depends on someone remembering. Note
+  the distinction from c-1: c-1 lets an author STATE a proof's kind, which stays
+  legitimate and necessary. What this clause forbids is the ROUTING DECISION — which
+  kinds are required at all — being a per-requirement declaration.
+
+  DEPENDENCY REASONING.
+    - depends_on TQ-200c-1 is load-bearing and non-negotiable: a router can only emit
+      requests the vocabulary can express. Built against today's vocabulary, the only
+      demand this decision could produce is "unittest or pytest, or nothing", so it
+      would be forced to re-implement the binary it exists to remove. This is the one
+      internal edge in the tree that is a hard ordering constraint rather than a
+      preference.
+    - No edge to c-3, c-4 or c-5. c-3 constrains the SHAPE of an answer that names two
+      layers, c-4 constrains where a judged answer LANDS, c-5 constrains what happens
+      when an answer cannot be HONOURED. None of them is an input to the decision, and
+      all three are testable against a hand-declared routing answer. Sequencing them
+      behind this AC would create a four-deep chain with no technical need. Recorded
+      so the it-po does not add the edges on aesthetic grounds.
+
+  BOUNDARY. This AC settles WHICH KINDS OF PROOF ARE ASKED FOR. It says nothing about
+  whether the proof is any good, produces no verdict, gate or done-state consequence,
+  and nothing it emits may be offered as evidence that any work has been proved. It
+  also does not enumerate agents — TQ-200a-1 owns which agents get eval sets — and it
+  must not be satisfied by an implementation that simply routes every llm-expert AC to
+  an eval, which TQ-200c-2-i forbids.

@@ -22,7 +22,7 @@ criteria: |
   And a reading that ran and found nothing wrong is recorded differently from a reading
     that never examined anything, so the two cannot be confused by a person or by a
     later step reading the result.
-depends_on: [BO-2400g-2]
+depends_on: [BO-2400g-2, TQ-200c-2]
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f.yaml
     relationship: related
@@ -33,7 +33,7 @@ doc_links:
     status: exists
     relevance: "The degradation source. Its ticket-keyed modes (lines 102, 136, 193, 517) already resolve to 'skip' silently; when the requirement ids are also unavailable there is nothing left, and the run must not treat that emptiness as a clean bill of health."
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "The lane records a per-step outcome for every phase; this AC constrains what the reading step is allowed to record. Note the release-on-failure pattern (release-on-coder-fail, line 424) exists for phases that fail outright — 'did not happen' is a distinct third state from passed and failed."
 assigned_agent: llm-expert

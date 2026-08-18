@@ -1,0 +1,117 @@
+id: TQ-200c-1
+components:
+  - testing_quality
+  - ac_store
+title: "A requirement can state that a proof is judged rather than asserted, in words both sides understand"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose behaviour can only be settled by a judgment about a
+    model's output — for example, whether a prompt elicits the intended behaviour —
+    and which today can only be written down as a deterministic assertion or not at
+    all,
+  When its author writes down the proof it needs,
+  Then the author can state that this proof is settled by judgment rather than by
+    assertion, and can do so in the same place, and in the same shape, as a
+    deterministic proof is stated,
+  And the same statement can also say that a proof is settled by assertion, so the
+    two are alternatives within one vocabulary rather than two unrelated notations,
+  And the word chosen for a judged proof means the same thing to whatever produces
+    the plan for the work and to whatever consumes that plan: a plan carrying a
+    judged proof is accepted by the consumer as a judged proof, without translation
+    and without either side inventing a private synonym,
+  And a proof statement using a word neither side recognises is refused at the point
+    it is authored, naming the unrecognised word, rather than being accepted and
+    ignored later,
+  And a deterministic proof written before this vocabulary existed still means
+    exactly what it meant, and still reads as a deterministic proof, with nothing
+    added to it and nothing required of its author.
+depends_on:
+  - TQ-200c
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The half of the vocabulary that cannot express the request today. Verified 2026-08-18: `test_spec[].framework` enum is [\"unittest\", \"pytest\"] (line 401); `test_spec[].angle` enum is [criterion, reachability, seam, real_artifact, deployed, boundary, failure] (line 411) — every value there names what a proof is FOR, never how it is SETTLED; and `additionalProperties: false` is set both at the schema root (line 15) and on test_spec items (line 387) and IS enforced, so the request cannot be smuggled in as an extra key on an existing entry."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The other half. Verified 2026-08-18 by direct count: the string \"eval\" occurs ZERO times in this template — it has no concept of an eval to receive. Its framework-choice section (\"2a — Choose the framework\") offers unittest or pytest only. It holds the Write tool, so it can physically author an eval row; nothing tells it that such a thing exists. This is why the AC says the word must mean the same thing on BOTH sides: adding an enum value alone leaves the consumer unable to act on it."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The existing shared vocabulary page for proofs, and the reference home the new word must appear on for it to be shared at all (see the L1's documentation_rationale). The judged/asserted distinction is ORTHOGONAL to the seven angles: an angle says which question a proof answers, the new word says how the answer is settled. A judged proof still has an angle."
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+    relevance: "Evidence that the concept already exists downstream under different words. Verified 2026-08-18: scoring_mode is `label` for pt-classifier and `artifact` for mock-data-author and flow-author, and the per-agent key sets differ by that mode. The authoring-side vocabulary must be reconcilable with this one rather than becoming a third dialect."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The producer side of the plan. Its ## Test Requirements descriptors are what a consumer reads; a judged proof must survive from the AC record into that plan intact, since a word that is dropped in transit is not shared."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200c-1-i
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary
+notes: |
+  FIRST IN THE ORDER, AND THE REASON THE ORDER EXISTS. Every other child of TQ-200c
+  depends on this one, because a router cannot emit a request the vocabulary cannot
+  express, a plan cannot carry both layers at once if only one is sayable, and a
+  judged request cannot reach the harness if there is no way to write it down. Build
+  the routing first and its only available output is today's binary — which is the
+  defect.
+
+  THE GAP, VERIFIED 2026-08-18 (do not re-derive).
+    - config/ac_store_schema.json: framework enum ["unittest", "pytest"] at line 401;
+      angle enum [criterion, reachability, seam, real_artifact, deployed, boundary,
+      failure] at line 411; additionalProperties: false at the root (line 15) AND on
+      test_spec items (line 387), enforced. There is no value in either enum that can
+      say "this proof is judged", and no side door.
+    - templates/agents/test-writer.md: zero occurrences of "eval". Its framework
+      choice is unittest or pytest. It has Write, so it CAN author an eval row; it
+      has no instruction that would ever lead it to.
+  So today a requirement cannot ASK for an eval even when a human wants one. Every
+  judged proof in the store is therefore either mis-stated as a deterministic test
+  (and then never written — see the L1's 115 missing named tests) or omitted.
+
+  WHY THE CRITERIA DO NOT NAME THE ENUM VALUES. Choosing the exact words, deciding
+  whether the distinction rides on the existing test_spec entry or on a sibling
+  field, and reconciling with scripts/evals/agent_eval_config.json's `scoring_mode`
+  are technical decisions for the it-po. What the criteria DO fix is the property
+  that makes the decision correct or not: ONE vocabulary, the same word meaning the
+  same thing to producer and consumer. Two coordinated changes that happen to work
+  today but can drift — an enum value on one side and a hand-maintained lookup on
+  the other — satisfy the letter and not the AC, which is why the shared-meaning
+  clause is written as a behaviour (the consumer accepts it without translation) and
+  not as a structural claim about where the words are stored.
+
+  WHY THE REJECT-UNKNOWN-WORDS CLAUSE IS HERE AND NOT IN c-5. c-5 is about the
+  ROUTING DECISION being loud when it cannot honour a contract. This clause is
+  narrower and earlier: a typo or a private synonym at authoring time must fail at
+  authoring time, where the author is still present to fix it. The two are testable
+  independently — the same implementation can reject unknown words while still
+  silently swallowing an unroutable-but-well-formed request, and vice versa.
+
+  BACKWARD COMPATIBILITY IS A CRITERION, NOT A COURTESY. Roughly 2,900 existing store
+  records carry deterministic proof statements written before this vocabulary. An
+  implementation that requires them all to be re-annotated, or that quietly
+  reinterprets an unannotated proof as judged, is refused by the last clause. The
+  default for existing records is unchanged meaning.
+
+  BOUNDARY. This AC does not decide WHO gets a judged proof (that is c-2), does not
+  require both kinds at once (c-3), does not register anything with the runner (c-4)
+  and produces no verdict or gate (c-5). It only makes the sentence sayable.

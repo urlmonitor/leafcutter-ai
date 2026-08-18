@@ -1,0 +1,96 @@
+id: TQ-200c-2-i
+components:
+  - testing_quality
+  - ac_store
+title: "Work that needs only one layer of proof is not made to carry the other"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of prompt-shaped work whose whole behaviour is settled by
+    deterministic checks — a declaration is well-formed, a rule is obeyed, two
+    records agree, a step really was dispatched — with no question about a model's
+    output remaining,
+  When the proof it will be asked for is decided,
+  Then it is asked only for deterministic proof, and no judged proof is demanded of
+    it,
+  And an existing deterministic proof of that kind is not rewritten, re-homed or
+    reclassified as judged in order to satisfy the new demand,
+  And in the mirror case — work whose whole behaviour is a question about a model's
+    output, with no deterministic surface to check — only judged proof is demanded,
+    and no deterministic proof is invented to accompany it,
+  And a demand that a piece of work carries no proof of any kind remains reachable
+    only in the way TQ-200c-2 permits, so preventing over-demand here does not
+    restore the free pass.
+depends_on:
+  - TQ-200c-2
+doc_links:
+  - path: unit_tests/agents/test_test_writer_seam_rule_scope.py
+    relationship: related
+    status: exists
+    relevance: "A live instance of the first clause. Verified present 2026-08-18: a hand-written deterministic test over prompt-surface behaviour. It is cheap, it works, and converting it to an eval would make a settled question expensive and non-deterministic. It is the concrete artifact the second clause protects."
+  - path: unit_tests/test_bo_2100a_3_phase_order_gates.py
+    relationship: related
+    status: exists
+    relevance: "Second live instance, verified present 2026-08-18: phaseOrder membership, a pure structural fact. Same protection applies. Between them these two files establish that the repository ALREADY writes the mechanically-checkable layer by hand — the capability being added is routing, not a replacement for these."
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+    relevance: "The cost side of the over-demand failure. Verified 2026-08-18: the artifact-mode agents each declare `timeout: 900` and a per-row /tmp sandbox copy, and every row is a live model invocation. Routing a deterministic question into this harness turns a millisecond assertion into a fifteen-minute-budget model call with a probabilistic outcome."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Where the routing answer is produced and therefore where over-demand would be introduced; also the source of the last clause's constraint, since the free pass it grants today (line 2773) must not come back as the remedy for over-demand."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE OVERCORRECTION THIS PREVENTS. The obvious over-reaction to "444 llm-expert
+  requirements were asked for nothing" is "route every llm-expert requirement to an
+  eval". That satisfies a naive reading of TQ-200c-2 and is wrong in three separate
+  ways, which is why it is written down as a criterion rather than left to judgment:
+    - It is keyed on the producer's name again — the exact defect TQ-200c-2's third
+      clause forbids — merely with the sign flipped.
+    - It is expensive and non-deterministic where the repository already has a cheap,
+      deterministic answer. Verified 2026-08-18: artifact-mode eval rows in
+      scripts/evals/agent_eval_config.json carry `timeout: 900` and a per-row sandbox
+      copy of the product-truth store, and every row is a live model call. Turning
+      unit_tests/test_bo_2100a_3_phase_order_gates.py — a structural membership check
+      — into an eval buys nothing and costs a model invocation plus a flake surface.
+    - It corrodes the distinction the whole L1 rests on. If everything prompt-shaped
+      is judged, "judged" stops carrying information and the routing decision is once
+      again a single boolean, just a different one.
+
+  THE MIRROR CLAUSE IS NOT SYMMETRY FOR ITS OWN SAKE. Demanding an accompanying
+  deterministic test of a purely judgment-shaped question is how the store filled up
+  with named tests nobody wrote: an author asked for a deterministic proof of
+  something no assertion can settle, and it stayed unwritten. Of the 124 named test
+  contracts on llm-expert requirements, 115 do not exist anywhere in unit_tests/.
+  Manufacturing a deterministic proof to satisfy a rule is the same failure being
+  re-introduced from the other side.
+
+  RELATIONSHIP TO c-3 — THESE ARE NOT IN TENSION. c-3 requires that BOTH layers CAN be
+  asked for at once and that neither displaces the other. This L3 requires that both
+  are not asked for when only one is needed. Together they say: the number of layers
+  demanded is a property of the work, and every value from one to two must be
+  reachable. An implementation that always demands both fails this L3; one that can
+  only ever demand one fails c-3. The pair is what makes the router a router.
+
+  THE LAST CLAUSE EXISTS BECAUSE THIS L3 IS THE OBVIOUS PLACE TO REINTRODUCE THE BUG.
+  "Do not over-demand" is one careless step from "when in doubt, demand nothing",
+  which is generate_ticket_from_ac.py:2773 again. Restraint here is bounded by
+  TQ-200c-2's fourth clause, and the boundary is stated so an implementer cannot cite
+  this L3 as licence for a default of silence.

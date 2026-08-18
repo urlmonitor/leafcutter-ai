@@ -1,0 +1,172 @@
+id: ACD-400a-5
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: high
+title: "A prerequisite that can itself be built still holds back its dependant, even when it also sits above it in the hierarchy"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the store holds a unit of work "P" that is buildable in its own right — it
+    carries its own criteria and its own single owner, a builder can be handed it
+    exactly as it stands, and it reaches a completed state by being built — and P
+    has not been completed,
+  And the store also holds a composite "C" that is never handed to a builder as it
+    stands and only reaches a completed state by the things beneath it reaching one,
+  And a refinement "R" that sits directly beneath P in the store's hierarchy names P
+    as the prerequisite it refines,
+  And a separate refinement "S" that sits directly beneath C names only C as its
+    prerequisite,
+  When the scanner is asked which work is ready to be picked up,
+  Then R is not offered as ready, and the account of what is holding R names P,
+  And S IS offered as ready, and nothing in the account of held work names C as
+    holding S,
+  And the only thing holding R is that P is not finished — R's position beneath P in
+    the hierarchy neither adds a reason to hold R nor removes one.
+depends_on: [ACD-400a, ACD-400a-3]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: "The surface. Verified 2026-08-18: _classify_ac (line 262) computes ancestors via _get_ancestor_ids (line 232, walking derive_parent_id at line 775 upward) and drops EVERY ancestor from the blocking set at lines 287-289 before the done-gate is applied. The dropped set is unconditional — it does not ask whether the ancestor is itself buildable. Marked 'modifies' deliberately, not 'describes': only the edit-surface relationships enter a generated ticket's files_touched (generate_ticket_from_ac.py:104-106), and this file IS the surface."
+  - path: scripts/ac_store/ac_prioritizer.py
+    relationship: related
+    status: exists
+    relevance: "Verified 2026-08-18: contains no ancestor logic of its own — it merges scan_ac_store's already-classified ready/blocked lists (lines 221-232). So it inherits whatever this AC changes and cannot diverge, which satisfies ACD-400a-3's consistency requirement without a second edit. Do not add a parallel rule here."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The rule this AC NARROWS, not reverses. ACD-400a-3 is correct about composites and must keep passing — its fixture (leaf whose only prerequisite is its non-done L1 parent) is the S/C half of this AC's criteria, restated so that a fix which simply deletes the ancestor exclusion fails here rather than passing silently."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the level vocabulary and the L0/L1-are-composite statement that makes 'never reaches a completed state on its own' a property of the record rather than a guess."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: [ACD-400a-5-i]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_buildable_prerequisite_above_in_hierarchy_still_holds_its_dependant
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [ACD-400a-5]
+    description: "Writes a real on-disk fixture store containing a buildable, not-done unit P and a refinement R beneath it whose only prerequisite is P, runs the real scanner entrypoint over that store, and asserts R is absent from ready, present in blocked, and that P is named as what holds it."
+  - name: test_composite_prerequisite_never_holds_its_dependant
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [ACD-400a-5]
+    description: "NEGATIVE CONTROL. The same fixture store also holds composite C (never independently completed) and refinement S beneath it whose only prerequisite is C; the same real scanner run must place S in ready and must name C nowhere in the held account. A fix that deletes the distinction instead of narrowing it fails this and only this assertion."
+  - name: test_real_store_stops_offering_an_edge_case_before_its_base_behaviour
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [ACD-400a-5]
+    description: "Runs the real scanner over the actual docs/acceptance-criteria store as it exists on disk and asserts that no refinement is offered as ready while the buildable unit it refines is simultaneously reported as held. Today this fails on BO-2400g-1-i and BO-2400g-4-i."
+  - name: test_classification_is_reached_by_the_real_command_surface
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [ACD-400a-5]
+    description: "PRODUCTION ENTRY POINT: invokes the scanner's real command-line surface (--level leaf --work-status todo --json against a temp store root) and asserts the ready/blocked split in its actual stdout, so a corrected rule that the entrypoint never consults cannot pass."
+test_rationale: |
+  TESTS MUST NOT BE GREP-ONLY, and for this AC the grep-shaped test is not merely weak,
+  it is actively misleading: the wrong behaviour and the right behaviour differ by a
+  single condition inside one list comprehension, so any test that asserts on the
+  presence of a helper, a level string, or an ancestor set will pass on both. The only
+  assertions that discriminate are made on the scanner's OBSERVABLE OUTPUT over a real
+  on-disk store: which ids come back ready, which come back held, and which ids are
+  named as holding them.
+  The two criterion tests are deliberately opposed and must be written as a pair,
+  because each of the three plausible implementations fails a different one. The
+  present code passes the composite test and fails the buildable test. A fix that
+  deletes the ancestor exclusion outright passes the buildable test and fails the
+  composite test — that is ACD-400a-3's original defect returning, and catching it here
+  is the whole reason the negative control exists. Only a rule that narrows the
+  exclusion to prerequisites which can never be independently built passes both.
+  The real-store test is separate from the fixture tests because the defect was found in
+  the real store and not by any fixture: hand-built fixtures reproduce the author's own
+  assumptions, and every fixture written for ACD-400a-3 was satisfied by the over-broad
+  rule. The reachability test is separate again because a correct rule that the command
+  surface never consults is the same phantom-done failure wearing a different hat.
+notes: |
+  THE DEFECT, OBSERVED LIVE (2026-08-18, do not re-investigate). Running
+  `scan_ac_store.py --level leaf --work-status todo --json` over the real store on this
+  branch returns:
+    - BO-2400g-1   -> HELD, blocked_by ['BO-2900g-1']
+    - BO-2400g-1-i -> READY          (its only prerequisite is BO-2400g-1)
+    - BO-2400g-4   -> HELD, blocked_by ['BO-2400g-2']
+    - BO-2400g-4-i -> READY          (its only prerequisite is BO-2400g-4)
+  Both refinements are offered to a builder while the L2 they refine is itself reported
+  as unbuildable. The scanner is handing out the edge case before the base behaviour it
+  refines exists. Store-wide totals at the time of the observation: 479 ready, 375 held.
+
+  WHERE IT COMES FROM. scan_ac_store.py:_classify_ac (line 262) builds the blocking set
+  as `[dep for dep in depends_on if dep not in ancestors and not _is_dep_done(dep, ...)]`
+  (lines 287-289). `ancestors` comes from _get_ancestor_ids (line 232), which walks
+  derive_parent_id (line 775) upward to the root. derive_parent_id("BO-2400g-1-i")
+  returns "BO-2400g-1" — an L2 with its own criteria, its own owner and its own buildable
+  work — so a genuine prerequisite edge is discarded as though it were structural noise.
+
+  THE ORIGINAL REASONING IS CORRECT AND MUST SURVIVE. The exclusion was introduced by
+  ACD-400a-3 and is recorded in that file's own DECISION HISTORY at lines 1054-1064: an
+  L0/L1 composite is never independently completed — it rolls up from its children — so a
+  child that listed its parent as a prerequisite would be held forever. That is true, and
+  this AC does not touch it. What is wrong is the REACH of the rule, not the rule.
+
+  THE ASYMMETRY THIS AC TURNS ON. Keeping the BO-2400g-1-i -> BO-2400g-1 edge cannot
+  deadlock anything, because an L2 reaches a completed state by being built. The deadlock
+  risk is exclusive to prerequisites that are never independently built at all. So the
+  correct behaviour is neither "ignore ancestors" nor "ignore nobody" — it is "ignore only
+  those prerequisites that can never themselves be built". The criteria are written around
+  that distinction and deliberately do not name a helper, a parent-id derivation, or a
+  level comparison: how the implementation recognises "can be built" is the IT PO's call
+  and may reasonably be the level field, the presence of an owner, or the composite/leaf
+  distinction already in the schema.
+
+  WHY THE NEGATIVE CONTROL IS INSIDE THE CRITERIA AND NOT ONLY IN A TEST. The cheapest
+  wrong fix is a one-line deletion of `dep not in ancestors`. That satisfies every
+  sentence about R and reinstates the exact bug ACD-400a-3 was written to remove, on a
+  store where nearly every freshly-authored leaf carries its parent in depends_on. The
+  S/C clauses exist so the requirement itself, not merely a downstream test, rejects that
+  fix.
+
+  CAP ARITHMETIC — CHECKED, AND THIS L1 IS NOW FULL. The default cap is 5 L2s per L1
+  (_MAX_L2_PER_L1 = 5, templates/scripts/commit_guardian/check_ac_limits.py:82, applied as
+  child_count > limit so exactly 5 passes). ACD-400a declares no child_limit_override.
+  Existing L2s on disk before this one: ACD-400a-1, -2, -3, -4 = 4. This AC is the fifth.
+  ACD-400a IS NOW AT THE CAP. A sixth L2 here will be blocked by check_ac_limits — the
+  next author must either split the tree (see the ac-tree-split skill) or place the work
+  under a different L1, and must NOT reach for child_limit_override, which the hook itself
+  describes as a temporary waiver. L3 refinements are unaffected: _MAX_CHILDREN is keyed
+  only for L0 and L1 (same file, lines 93-96), so L2 -> L3 fan-out is uncapped.
+
+  STALE PARENT BACK-LINK, REPAIRED IN THIS PASS. ACD-400a's covered_by read
+  [ACD-400a-1, ACD-400a-2] while ACD-400a-3.yaml and ACD-400a-4.yaml had both existed on
+  disk as real ACs since 2026-08-12 — ACD-400a-3 being the very AC that introduced the
+  exclusion this one narrows. The back-link was stale by two; all three ids (-3, -4, -5)
+  were added in the same pass. The drift survived because check_ac_parent_covered_by
+  validates only the files present in a commit's index: when -3 and -4 were committed the
+  parent was not staged alongside them, so there was nothing for the hook to compare and
+  it passed. A store-wide sweep, not a per-commit hook, is what finds this class of drift.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
+  assigned_agent, it_requirements, estimated_complexity, delivers_to and expects_from are
+  the IT PO's to set. The expects_from edge that reads naturally here is ACD-400a-3's
+  ancestor-aware classification, which this AC refines rather than replaces.

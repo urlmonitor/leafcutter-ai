@@ -1,0 +1,119 @@
+id: BP-1100a-4
+components:
+  - build_pipeline
+title: "A file the requirement mentions but never says will change is not named as the work's surface"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement whose record mentions a runnable file only as something to RUN
+  once the work is written — an instruction to invoke it before a check will be
+  meaningful, never a statement that the file itself changes,
+  And whose record separately names the file the work does change,
+  When a ticket is generated from that requirement,
+  Then the surface the generated ticket names contains the file the work changes,
+  And that surface does NOT contain the file that was only ever mentioned as something
+  to run,
+  And no path reaches that surface on the strength of appearing in the requirement's
+  prose: a file becomes part of the work's surface only where the requirement says that
+  file changes.
+depends_on:
+  - BP-1100a
+  - BP-1100a-3
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The surface, and the same function as BP-1100a-3 but its other half. Verified 2026-08-18: when it_requirements is the LIST form, _build_files_touched (lines 570-574) hands every prose bullet to _extract_paths_from_prose (line 496), which admits any token containing a '/' whose final component carries a known extension OR which starts a known path prefix. The extractor is purely lexical — it reads the token, never the sentence around it — so 'run this' and 'do not touch this' are indistinguishable from 'change this'."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The observed failure and the fixture to reproduce it. scripts/build.py appears in its record only as a command to run before a deployed-layout test is meaningful, yet it was emitted as the first entry of the generated files_touched. templates/agents/change-scope-reviewer.md is the prohibition case and is BP-1100a-4-i's subject."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "CITED, NOT DEPENDED ON — see this AC's notes for the reasoning. ACD-1600g-1 gives a requirement a structured home for the boundary it must not cross, alongside the surface it changes. That would make this AC mechanical rather than merely possible, so it is an enabler; the direction is compatible and must not be contradicted, but an edge would delay this fix behind a schema migration for no functional reason."
+  - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1100a-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE DEFECT, OBSERVED (2026-08-18). The ticket generated from the real AC BO-2400g-2
+  named this surface:
+      files_touched:
+      - scripts/build.py
+      - templates/agents/change-scope-reviewer.md
+      - templates/agents/pr-reviewer.md
+      - unit_tests/_workflow_engine_harness.py
+  BP-1100a-3 owns what is MISSING from that list. This AC owns what is INVENTED in it.
+  scripts/build.py appears in BO-2400g-2 only inside a bullet saying that
+  `python scripts/build.py --target-dir .` must RUN before a test exercises the deployed
+  reviewer — an instruction to invoke a command, in a requirement that changes nothing in
+  that file. templates/agents/change-scope-reviewer.md appears only inside a bullet that
+  begins "DO NOT solve the scope-boundary problem here"; that case is sharp enough to be
+  its own record, BP-1100a-4-i.
+
+  WHY IT HAPPENS. _extract_paths_from_prose (generate_ticket_from_ac.py:496) is a lexical
+  token scan: a token qualifies if it contains a '/' and either ends in a recognised
+  extension or starts with a known path prefix. It never sees the verb governing the
+  sentence. So "must run", "do not touch", "see also" and "must change" all produce
+  identical output. Combined with BO-2400g-2's all-'describes' doc_links — which make
+  Source 2 contribute nothing (lines 576-581) — prose scraping became the ONLY contributor
+  to that ticket's surface.
+
+  WHY THIS IS A SEPARATE AC FROM BP-1100a-3 AND NOT A CLAUSE OF IT. They fail
+  independently and can be fixed independently. Marking BO-2400g-2's primary doc_link as
+  an edit surface fixes the omission and leaves all four inventions in place. Teaching the
+  prose scraper to require a change-verb removes the inventions and still emits nothing at
+  all for an AC whose doc_links are all 'describes'. A single AC covering both would be
+  satisfiable by either half, which is how a requirement ships a fix that closes the
+  visible symptom and leaves the other one live. They are ordered — this AC depends on
+  BP-1100a-3 — because narrowing what may enter the surface is only safe once the surface
+  has a reliable positive source; narrowing first would produce empty surfaces.
+
+  WHY IT MATTERS. An invented surface is not a harmless extra. files_touched is what
+  change-scope-reviewer treats as in-bounds and what a done-check reads as the work's
+  footprint, so naming scripts/build.py grants a coder standing permission to edit the
+  build script under a requirement that never asked for it, and grants a done-check a file
+  it can find unchanged without complaint (CLAUDE.md, EPIC-PhantomDoneFilesTouched,
+  2026-07-07).
+
+  DECISION ON ACD-1600g — CITED, NOT DEPENDED ON. ACD-1600g is independently moving the
+  out-of-scope declaration from ticket frontmatter onto the requirement itself
+  (ACD-1600g-1 authors it there; ACD-1600g-3 changes the reader). This AC is satisfiable
+  without any of it: the distinction it needs is between "the requirement says this file
+  changes" and "the requirement merely mentions this file", and BO-2400g-2 already carries
+  both signals in its record today. A structured exclusion field would make the negative
+  case mechanical instead of merely readable, which makes ACD-1600g an enabler rather than
+  a prerequisite. Adding the edge would put this fix behind a schema migration for no
+  functional gain, and would also invert the sequencing: ACD-1600g-3's own reasoning cites
+  the ticketless fast lane as the case a frontmatter-only implementation cannot serve, so
+  it is solving a different problem at a different layer. Nothing here contradicts that
+  direction — if the structured field lands first, it becomes the cleanest source for this
+  AC's negative half rather than a change to its criteria.
+
+  TESTS MUST NOT BE GREP-ONLY. Assert the WRITTEN TICKET produced by the real generator
+  over a real on-disk AC fixture whose it_requirements bullets mention a runnable path
+  under a non-change verb. A test that asserts the extractor's regex, its prefix list, or
+  the presence of a verb check passes on every variant of this bug, including one that
+  filters the wrong verbs. Point the generator at a COPY of the store: it writes an
+  implemented_by back-reference into the source AC.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2. No
+  test_spec is authored because this tree's existing L2s (BP-1100a-1, BP-1100a-2) carry
+  none; the test shape the IT PO should encode is stated above. change_target is 'code'
+  rather than the siblings' 'pipeline' because the surface is a Python script, matching
+  ACD-400b-6/-7/-8 which own that same file.
