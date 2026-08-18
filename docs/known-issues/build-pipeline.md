@@ -174,3 +174,61 @@ copied its pattern from. Fixing the path resolution must cover both; see
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (a hook dependency missing
 from the deployed layout), though this one crashes rather than passing falsely.
+
+---
+
+### KI-BP-004 — A worktree's deployed hooks are frozen at build time, so after merging `main` the gates enforce the previous ruleset
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `scripts/build.py` deploy step / `<worktree>/.leafcutter/scripts/commit_guardian/`; no staleness check anywhere in the commit path
+
+**Symptom.** `build.py` copies hook code into `.leafcutter/`. Nothing re-runs it and nothing
+compares it against the source tree, so the deployed copy is a snapshot of whenever the
+worktree was built. Merge `origin/main` into a long-lived branch and the *source* advances
+while the *running gates* do not: every commit afterwards is judged by the older ruleset.
+Both directions are wrong. A rule fixed on `main` still fails here; a rule *added* on `main`
+does not run at all, and its absence is indistinguishable from a pass.
+
+**Evidence.** A worktree built on 2026-08-17 19:38, then merged with `origin/main` on
+2026-08-18. `check-doc-frontmatter` failed on seven generated agent cards with
+`unknown doc type: card; valid values: adr, architecture, explanation, how-to, reference,
+retro, tutorial` — a seven-value list. But `config/doc_types.json` at that same commit
+contains **ten** entries including `card`, and the file the hook is supposed to read was
+right there in the worktree.
+
+The deployed hook was simply old:
+
+```text
+$ grep -c "_find_doc_types_json" <worktree>/.leafcutter/scripts/commit_guardian/doc_type_validators.py
+0
+$ python <worktree>/scripts/build.py --target-dir <worktree> --force-breaking
+$ grep -c "_find_doc_types_json" <worktree>/.leafcutter/scripts/commit_guardian/doc_type_validators.py
+4
+$ HOOK_ROOT=<worktree> python <worktree>/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py \
+    docs/agents/cards/python-coder.card.md
+✅ PASSED: 1 doc(s) passed frontmatter validation
+```
+
+The deployed copy predated GE-120 entirely — it did not contain the resolver function at
+all, so it was falling back to the narrow constant that GE-120 had already deleted from the
+source. Rebuilding fixed it outright.
+
+**Why this is not KI-BP-003.** BP-003 is a *path-resolution* gap: current code that cannot
+find a reachable file. This is a *staleness* gap: code that is not current. They present
+almost identically — a hook complaining about something the source says is fine — and the
+first was mistaken for the second during this session. The distinguishing check is to diff
+the deployed file against its template, not to reason about paths.
+
+**Fix direction.** Make staleness detectable rather than relying on discipline. A cheap
+version: have the pre-commit entrypoint compare `.build_manifest.json` against the source
+templates' hashes and refuse (or warn loudly) when they diverge. `check_build_drift` already
+exists and already reasons about deploy parity — extending it to guard the hooks' own
+freshness is the natural home. Until then, treat `build.py --target-dir <worktree>` as a
+mandatory step immediately after every `git merge origin/main`, and distrust any hook
+verdict — pass or fail — taken from a worktree built before the merge.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in its staleness form rather than its missing-file form.

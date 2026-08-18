@@ -126,3 +126,53 @@ indistinguishable from a passing check.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a check that runs against
 less than it claims to, and reports success).
+
+---
+
+### KI-CG-003 — `check-contract-shrinking` has no merge-commit awareness, so it blames the base branch's history on the merge
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/scripts/commit_guardian/check_contract_shrinking.py:165-189` (`_get_staged_diff`)
+
+**Symptom.** The guard blocks when a diff deletes test functions *and* touches production
+files. It obtains that diff from a bare `git diff --cached`, with no check for `MERGE_HEAD`
+and no comparison against the merge base. During a merge commit the staged diff is not
+"what this commit changes" — it is everything the incoming branch changed since the fork
+point. So merging an up-to-date `main` into a feature branch presents every test deletion
+and every production edit `main` has accumulated as though the merging commit authored
+them, and the guard blocks a commit whose own content is unrelated.
+
+**Evidence.** Merging `origin/main` into `feat/bo-1500f-1-setup-dispatch-charter` on
+2026-08-18 was blocked with 9 deleted test functions and 9 modified production files:
+
+```text
+[contract-shrinking guard] BLOCKED
+  - test function deleted: 'test_ac3i_halts_when_a_batch_test_passes'
+  - test function deleted: 'test_h2_red_baseline_cli_exits_0_when_all_red'
+  ... (9 total)
+Production files modified:
+  - scripts/ac_store/done_proof.py
+  - scripts/build_orchestration/fast_lane.py
+  ... (9 total)
+```
+
+None of it belonged to the branch. Verified two ways: `git grep` for
+`test_ac3i_halt_names_offending_ac_id` on `origin/main` returns nothing (so `main` deleted
+it, in `#461`), and `git diff origin/main --stat -- scripts/` on the branch is **empty** —
+the branch touches zero production files. `git diff origin/main -- unit_tests/ | grep "^-" |
+grep "def test_"` is likewise empty: the branch deletes no test anywhere.
+
+**Why it matters beyond the annoyance.** The only way past it is `SKIP=check-contract-shrinking`,
+and the merge commit is exactly the commit where a genuine test deletion is easiest to hide.
+Training people to skip this guard on merges disarms it at its highest-value moment. This is
+the second guard in this file whose scope is "the git index" rather than "what changed here"
+— see KI-CG-001 for the same root confusion in the AC hooks.
+
+**Fix direction.** Detect a merge in progress (`.git/MERGE_HEAD` exists) and diff against
+the merge base (`git diff $(git merge-base HEAD MERGE_HEAD)`) so only the merging branch's
+own contribution is scanned — or skip the guard on merge commits explicitly and loudly,
+which is at least honest about what is not being checked. A silent `--cached` on a merge is
+neither.
