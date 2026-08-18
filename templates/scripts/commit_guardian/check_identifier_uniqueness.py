@@ -38,6 +38,10 @@ ARCHITECTURE: Thin orchestrator over three sibling modules (split out to keep
         reading tickets/ticket_lifecycle.json for the declared lifecycle
         folder list and reporting cross-folder identifier collisions
         together with each copy's declared status.
+      - _commit_disposition.py: the commit-time attribution filter
+        (``compute_commit_disposition``) that turns the whole-collection
+        verdict into a BLOCK/REPORT decision scoped to the current git
+        change set, without performing a second collection walk.
     Because this module can be loaded three different ways -- as a script
     (``python check_identifier_uniqueness.py``), as a subprocess target from
     the deployed layout, and via ``importlib.util.spec_from_file_location``
@@ -61,14 +65,29 @@ Public contract (consumed by six downstream ACs -- do not narrow):
                                            namespaces, populated for
                                            "work-items")
 
+Commit-time disposition contract (ADDITIVE, GE-122a-1-i; see
+_commit_disposition.py's own module docstring for the full rationale):
+    disposition = compute_commit_disposition(verdict, staged_paths)
+    disposition.blocking            -> bool
+    disposition.unattributed_count  -> int
+    disposition.findings            -> list[CommitFinding]
+    commit_finding.{namespace, number, paths, attributed}
+
 Exit codes (CLI usage -- ``python check_identifier_uniqueness.py``):
-    0 - every namespace passed (no contested numbers).
-    1 - at least one namespace reported a contested number.
+    0 - no finding is attributed to the current git change set (this
+        includes: every namespace passed; or every reported finding is a
+        pre-existing collision with no claimant in the staged set).
+    1 - at least one finding has a claimant in the current git change set,
+        OR the staged set could not be determined at all (e.g. not run
+        inside a git repository), in which case this falls back to the
+        whole-collection outcome (0 if every namespace passed, else 1) so an
+        unrelated git failure can never silently defeat the whole gate.
 
 DOC_LINKS:
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-1.yaml
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-2.yaml
+  - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-1-i.yaml
 
 DECISION HISTORY:
   - 2026-08-18 [python-coder/GE-122a-1]: Created. Single importable module
@@ -90,10 +109,25 @@ DECISION HISTORY:
     suite now does, to assert on emitted output) observes the outcome as a
     raised SystemExit -- the exit code is this module's real contract with
     both a pre-commit hook and any other caller, CLI or in-process.
+  - 2026-08-18 [python-coder/GE-122a-1-i]: Added compute_commit_disposition
+    (new sibling module _commit_disposition.py) and changed main()'s exit
+    code to be diff-scoped: a contested number with a claimant in the
+    current git change set BLOCKS; one with no claimant in the change set
+    is REPORTED (with a visible unattributed count) and does NOT block.
+    Inspection itself remains whole-collection -- run_uniqueness_pass is
+    still called exactly once; compute_commit_disposition only filters its
+    already-produced verdict, never re-walks the collection. When the
+    staged set cannot be determined at all (e.g. no git repository present,
+    as several of this module's own pre-existing tests exercise by running
+    main() against a bare tempdir), main() falls back to the prior
+    whole-collection pass/fail exit code rather than treating an unrelated
+    git failure as "nothing staged" -- the latter would silently let a
+    broken git invocation defeat the gate entirely.
 """
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -101,6 +135,11 @@ _THIS_DIR = str(Path(__file__).resolve().parent)
 if _THIS_DIR not in sys.path:
     sys.path.insert(0, _THIS_DIR)
 
+from _commit_disposition import (  # type: ignore[import]  # noqa: E402
+    CommitDisposition,
+    CommitFinding,
+    compute_commit_disposition,
+)
 from _uniqueness_scanners import (  # type: ignore[import]  # noqa: E402
     scan_acceptance_criteria,
     scan_decisions,
@@ -117,7 +156,10 @@ __all__ = [
     "Finding",
     "NamespaceVerdict",
     "UniquenessVerdict",
+    "CommitFinding",
+    "CommitDisposition",
     "run_uniqueness_pass",
+    "compute_commit_disposition",
     "main",
 ]
 
@@ -182,6 +224,61 @@ def _print_finding(finding: Finding) -> None:
     print(line, file=sys.stderr)
 
 
+def _get_staged_paths() -> list[str] | None:
+    """Return the current change set via ``git diff --cached --name-only``.
+
+    Wrapped per CLAUDE.md Rule 1 (external process I/O): a failure here
+    (git not installed, or the current directory is not a git repository)
+    is logged at WARNING and reported as ``None`` -- deliberately distinct
+    from an empty list, which means "git ran successfully and nothing is
+    staged". ``main()`` uses that distinction to fall back to the
+    whole-collection pass/fail outcome only when the diff-scoped attribution
+    decision genuinely cannot be made, so an unrelated git failure can never
+    silently turn the gate into a report-only, never-blocking no-op.
+
+    Returns:
+        List of staged file path strings (as printed by git, one per line,
+        relative to the git repository root), or ``None`` if the staged set
+        could not be determined.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: could not determine the staged change set via git: {exc}",
+            file=sys.stderr,
+        )
+        return None
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _print_unattributed_summary(disposition: CommitDisposition) -> None:
+    """Print the visible reported-but-unattributed count, when non-zero.
+
+    Per this module's own it_requirements: a silently-tolerated backlog of
+    pre-existing, unattributed collisions is how drift accumulates -- a
+    visible count is what makes the backlog shrink even while it does not
+    block unrelated commits.
+
+    Args:
+        disposition: The CommitDisposition returned by
+            compute_commit_disposition.
+    """
+    if not disposition.unattributed_count:
+        return
+    print(
+        f"{_HOOK_PREFIX} {disposition.unattributed_count} reported-but-unattributed "
+        "contested number(s) with no claimant in the current change set (not blocking)",
+        file=sys.stderr,
+    )
+
+
 def main() -> None:
     """Run the pass against the current working directory and print a report.
 
@@ -191,9 +288,17 @@ def main() -> None:
     raised ``SystemExit`` -- the exit code is this module's real contract
     with a pre-commit hook and with any other caller.
 
+    Inspection stays whole-collection: ``run_uniqueness_pass`` is called
+    exactly once here, regardless of the git change set. Only the exit code
+    is diff-scoped, via ``compute_commit_disposition`` filtering that single
+    verdict.
+
     Exits:
-        0 when every namespace passes; 1 when any namespace reports a
-        contested number.
+        0 when no finding is attributed to the current git change set
+        (including: every namespace passed; or every finding is a
+        pre-existing, unattributed collision). 1 when at least one finding
+        is attributed, or when the staged set itself could not be
+        determined (fails open to the whole-collection pass/fail outcome).
     """
     verdict = run_uniqueness_pass(Path.cwd())
     for ns_name, ns_verdict in verdict.namespaces.items():
@@ -206,7 +311,14 @@ def main() -> None:
         )
         for finding in ns_verdict.findings:
             _print_finding(finding)
-    sys.exit(0 if verdict.passed else 1)
+
+    staged_paths = _get_staged_paths()
+    if staged_paths is None:
+        sys.exit(0 if verdict.passed else 1)
+
+    disposition = compute_commit_disposition(verdict, staged_paths)
+    _print_unattributed_summary(disposition)
+    sys.exit(1 if disposition.blocking else 0)
 
 
 if __name__ == "__main__":
