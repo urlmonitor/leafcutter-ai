@@ -455,6 +455,78 @@ for (const currentPhase of neededPhases) {
     const resultStatus =
       phaseResult && (phaseResult.status || phaseResult.result_status);
 
+    // ------------------------------------------------------------------
+    // Handoff routing (BO-3000)
+    // ------------------------------------------------------------------
+    // `handoff` is a valid PHASE_RESULT_SCHEMA status meaning "another
+    // agent must act before I can proceed" — it is NOT a success and must
+    // never fall through to the completed-phase path below. Without this
+    // branch a handoff result was indistinguishable from `status: "ok"`:
+    // the loop advanced to the next phase in phaseOrder and the named
+    // agent was never re-dispatched (see BO-3000 for the live incident).
+    // Kept deliberately identical to the build-feature.js handler.
+    if (resultStatus === "handoff") {
+      const handoffTarget = phaseResult.handoff_target;
+      const normalizedTarget =
+        typeof handoffTarget === "string" ? handoffTarget.trim() : "";
+      const isKnownAgent =
+        normalizedTarget !== "" && phaseOrder.includes(normalizedTarget);
+
+      if (!isKnownAgent) {
+        return {
+          status: "blocked",
+          message:
+            `Phase '${phaseName}' returned 'status: handoff' but named no ` +
+            `recognizable handoff_target ('${handoffTarget}'). Refusing to ` +
+            `guess a re-dispatch target and refusing to advance to the ` +
+            `next phase in phaseOrder. Inspect '${phaseName}'’s message ` +
+            `and the ticket's ## Comments for the intended target agent, ` +
+            `then re-run /build-ticket.`,
+          ticket_path: ticketPath,
+          failing_phase: phaseName,
+          blocker_detail: phaseResult,
+          classification: "halt",
+        };
+      }
+
+      log(
+        `Phase '${phaseName}' returned 'status: handoff' naming ` +
+        `'${normalizedTarget}'. Re-dispatching '${normalizedTarget}' ` +
+        `before advancing to any later phase in phaseOrder.`
+      );
+
+      const handoffResult = await agent(
+        `You are the ${normalizedTarget} phase agent for ticket: ` +
+        `${ticketPath}. You are being RE-DISPATCHED because phase ` +
+        `'${phaseName}' returned 'status: handoff' naming you as the agent ` +
+        `that must act before it can proceed. Handoff message: ` +
+        `${JSON.stringify(phaseResult.message || "")}. Read the ticket ` +
+        `before starting. Execute your phase. Files touched: ` +
+        `${JSON.stringify(filesTouched)}. Return a JSON result with at ` +
+        `minimum { "status": "ok" | "blocker" | "failed" }.`,
+        {
+          agentType: normalizedTarget,
+          schema: PHASE_RESULT_SCHEMA,
+          label: normalizedTarget,
+          phase: 'Phase Dispatch',
+        }
+      );
+
+      return {
+        status: "blocked",
+        message:
+          `Phase '${phaseName}' returned 'status: handoff' naming ` +
+          `'${normalizedTarget}'. '${normalizedTarget}' was re-dispatched ` +
+          `to resolve the handoff; re-run /build-ticket to continue this ` +
+          `ticket's remaining phases once the handoff is resolved.`,
+        ticket_path: ticketPath,
+        failing_phase: phaseName,
+        handoff_target: normalizedTarget,
+        handoff_result: handoffResult,
+        classification: "cross_agent",
+      };
+    }
+
     if (resultStatus === "blocker" || resultStatus === "failed") {
       const classifyResult = await agent(
         `Classify this blocker for ticket ${ticketPath}, failing phase ${phaseName}. Retry count: ${retryCounts[phaseName]}/${MAX_RETRIES}. Blocker detail: ${JSON.stringify(phaseResult)}. Return classification as one of: mechanical | cross_agent | design | halt.`,
