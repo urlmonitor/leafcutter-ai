@@ -4,7 +4,7 @@ description: "Visualises how the leafcutter-ai agent ecosystem orchestrates code
 type: "reference"
 status: "active"
 created: "2026-05-11"
-last_updated: "2026-07-09"
+last_updated: "2026-08-18"
 flight_level: "L3-Component"
 diagram_type: agent_flow
 components:
@@ -1619,6 +1619,22 @@ to the lesson recorded in the MEMORY note "AC authoring needs isolated worktree"
 main checkout can be reset or branch-deleted by concurrent finalize flows mid-session, so
 authoring must run in isolation.
 
+**Pre-Phase-1 permission gate (`BO-1500f-1`).** Before the workflow fetches `origin/main` or
+creates the worktree, it resolves the dispatch target for this isolated-workspace setup step
+(the `worktree-setup` label) against the agent registry (`config/agent_registry.json`) and
+checks that agent's `permits_shell` field — a registry lookup, never a hardcoded agent name,
+so the guarantee survives an agent rename. The target defaults to `worktree-agent` and is
+overridable via `args.workspace_setup_agent`. Only when `permits_shell === true` does the
+workflow proceed to Phase 1 below; a missing, `false`, or unresolvable value fails closed.
+On denial, the workflow halts **before** `fetch origin`, before the worktree is created,
+before Stage 0 triage, and before any authoring agent (PO / BA / IT-PO) is ever dispatched —
+instead it dispatches a mis-assignment report naming both the step (`worktree-setup`) and the
+agent it was pointed at, and returns `status: "error"`, so the misconfiguration is visible
+without reading the source. This closes the incident where the isolated-workspace setup step
+was dispatched to a read-only reporting agent (`status-checker`) whose charter excludes
+running repository commands — see the field reference in
+[`docs/agent-registry.md`](../agent-registry.md#schema).
+
 The sequence below shows the ordered interactions from workflow start, through worktree and
 branch creation off `origin/main`, to the first authoring stage writing into the isolated
 worktree. The `Note over` block makes the isolation invariant explicit: **no interaction in
@@ -1635,6 +1651,16 @@ sequenceDiagram
 
     User->>WF: Start authoring workflow
     activate WF
+
+    Note over WF,Git: Phase 0 — workspace-setup dispatch permission gate (BO-1500f-1)
+    WF->>Git: read config/agent_registry.json; resolve permits_shell for target agent
+    Git-->>WF: permits_shell (true / false / unresolvable)
+    alt permits_shell is true
+        Note over WF: proceed to Phase 1
+    else permits_shell is false or unresolvable (fail closed)
+        WF-->>User: halt — report mis-assignment (step: worktree-setup, agent: <target>)
+        Note over WF: workflow returns status: "error" — no fetch, no worktree,<br/>no Stage 0 triage, no authoring agent is ever dispatched
+    end
 
     Note over WF,Main: Phase 1 — seed isolation from origin/main only
     WF->>Git: fetch origin
@@ -1668,7 +1694,9 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-vie
 > to seed the new branch), and the **Authoring Worktree** (the dedicated, freshly created
 > directory that all authoring stages write into). The user's original checkout and any
 > concurrent worktree are deliberately absent from the topology — they are never read from
-> nor written to.
+> nor written to. Phase 0 (the workspace-setup permission gate) reuses these same
+> participants — it reads the registry via **git**'s tooling and, on denial, reports to
+> **User** — so it does not add a sixth participant to this topology.
 
 ---
 

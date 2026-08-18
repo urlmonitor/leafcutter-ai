@@ -27,6 +27,21 @@ HARDENING (ticket 08):
     - run_e1_import_check() validates ESM compatibility using
       node --check --input-type=module (ES-module parse mode), which rejects
       top-level `return` statements unlike node --check (script mode).
+
+BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
+    - plan-feature.js dispatches an unconditional "resolve-workspace-setup-
+      permission" agent() call before Stage 0 on every invocation, and its
+      fail-closed default halts the run when that label's response is not a
+      real, parseable registry payload. A per-call-site test fix (mocking the
+      label at every run_workflow_under_e2(plan-feature.js, ...) call) was
+      applied twice and, both times, the same root cause resurfaced in a wider
+      set of caller files that were never updated. run_workflow_under_e2() now
+      merges a SCRIPT-SPECIFIC set of built-in defaults (see
+      _default_label_responses_for_script()) under any caller-supplied
+      label_responses, so every existing and future call — in any file — gets
+      a sane "permitted" default for that gate without having to know about it,
+      while a test that deliberately wants to exercise the denial path still
+      overrides the label explicitly (caller-supplied keys always win).
 """
 
 from __future__ import annotations
@@ -340,6 +355,82 @@ var args = Object.assign({
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+# BO-1500f-1: plan-feature.js's pre-Stage-0 workspace-setup permission gate
+# (see the module docstring's "REGRESSION HARDENING" note). Any caller that
+# drives this exact script gets a real, registry-backed "permitted" default
+# for this one label unless it supplies its own value for the same key.
+_PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
+_WORKSPACE_SETUP_PERMISSION_LABEL = "resolve-workspace-setup-permission"
+_AGENT_REGISTRY_RELATIVE_PATH = Path("config") / "agent_registry.json"
+
+
+def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
+    """Walk upward from `start` looking for an ancestor containing `relative_path`.
+
+    Returns the ancestor directory (not the joined path) the first time
+    ``ancestor / relative_path`` exists, or None if no ancestor up to the
+    filesystem root has it. Used to locate the worktree/repo root from an
+    arbitrary workflow script path without assuming a fixed nesting depth.
+    """
+    for ancestor in [start, *start.parents]:
+        if (ancestor / relative_path).exists():
+            return ancestor
+    return None
+
+
+def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
+    """Return baseline label_responses every caller of `script_path` implicitly needs.
+
+    Currently only plan-feature.js has an unconditional pre-Stage-0 gate
+    (BO-1500f-1's "resolve-workspace-setup-permission" dispatch) whose
+    fail-closed default halts the run for any caller that does not mock it.
+    Rather than requiring every test file that drives plan-feature.js to know
+    about that gate, this returns a real, registry-backed "permitted" default
+    for it, sourced from the actual config/agent_registry.json on disk (never
+    a hand-authored fixture) — mirroring the {output, exit_code} shape every
+    other status-checker "run this command, return JSON" dispatch in
+    plan-feature.js uses.
+
+    A test that wants to exercise the DENIAL path still can: caller-supplied
+    label_responses always take precedence over this default (see
+    run_workflow_under_e2()'s merge order), so an explicit override for this
+    same label replaces it entirely.
+
+    Returns an empty dict (no default) for any other script, or if the
+    registry cannot be located/parsed — in which case plan-feature.js's own
+    fail-closed behavior applies exactly as before this hardening pass, so
+    this is never a source of a false "permitted" verdict.
+    """
+    if script_path.name != _PLAN_FEATURE_SCRIPT_NAME:
+        return {}
+
+    repo_root = _find_ancestor_containing(
+        script_path.resolve().parent, _AGENT_REGISTRY_RELATIVE_PATH
+    )
+    if repo_root is None:
+        logger.warning(
+            "Could not locate config/agent_registry.json above %s; "
+            "no default resolve-workspace-setup-permission response supplied.",
+            script_path,
+        )
+        return {}
+
+    registry_path = repo_root / _AGENT_REGISTRY_RELATIVE_PATH
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Could not load default agent registry from %s: %s", registry_path, exc
+        )
+        return {}
+
+    return {
+        _WORKSPACE_SETUP_PERMISSION_LABEL: {
+            "output": json.dumps(registry),
+            "exit_code": 0,
+        }
+    }
+
 
 def _strip_exports(source: str) -> str:
     """Remove ES-module export keywords from a JS source string.
@@ -445,7 +536,12 @@ def run_workflow_under_e2(
             return specific decisions, enabling tests to reach code paths
             that the default stub would short-circuit past (e.g., the
             parallel() dispatch in build-epic.js requires the planner to
-            return non-empty batches).
+            return non-empty batches). Merged OVER
+            ``_default_label_responses_for_script(script_path)`` — any
+            script-specific built-in default (see that function; currently
+            only plan-feature.js's "resolve-workspace-setup-permission" gate)
+            is included automatically unless this argument supplies its own
+            value for the same label, in which case the caller's value wins.
         args: Optional mapping merged over the default stub ``args`` global.
             Use this to inject workflow inputs such as ``resume_answer`` and
             ``run_id`` so a second invocation can drive the resume path of a
@@ -468,9 +564,18 @@ def run_workflow_under_e2(
             f"Expected a .js file, got: {script_path}"
         )
 
+    # Script-specific built-in defaults (currently just plan-feature.js's
+    # workspace-setup permission gate) are merged UNDER caller-supplied
+    # label_responses, so an explicit caller value for the same label always
+    # wins (e.g. a test deliberately exercising the denial path).
+    merged_label_responses = {
+        **_default_label_responses_for_script(script_path),
+        **(label_responses or {}),
+    }
+
     try:
         shim_source = _build_shim(
-            script_path, label_responses=label_responses, args=args
+            script_path, label_responses=merged_label_responses, args=args
         )
     except OSError as exc:
         logger.warning("Failed to build shim for %s: %s", script_path, exc)

@@ -1730,6 +1730,66 @@ const sessionSlug = component
   ? component.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20)
   : null;
 
+// -------------------------------------------------------------------------
+// Pre-Stage-0 — Workspace-Setup Dispatch Permission Gate (AC BO-1500f-1).
+// -------------------------------------------------------------------------
+// The isolated-workspace setup step below runs repository-mutating commands
+// (fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
+// be dispatched only to an agent whose registered charter (config/agent_registry.json)
+// permits running repository/shell commands — resolved from the registry
+// itself, never from a hardcoded agent name, so the guarantee survives an
+// agent rename (and so a read-only reporting agent like status-checker,
+// the mis-assigned target of the original incident, can never receive it).
+const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
+
+let permissionResult;
+try {
+  permissionResult = await agent(
+    "Run the following command and return ONLY the raw stdout output:\n" +
+    "cat {{config.output_root}}/config/agent_registry.json\n" +
+    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
+    { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
+  );
+} catch (_permErr) {
+  permissionResult = null;
+}
+
+let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
+try {
+  const registryParsed = parseAgentJson(
+    permissionResult,
+    { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
+  );
+  if (registryParsed && typeof registryParsed.output === "string") {
+    const registryJson = JSON.parse(registryParsed.output);
+    const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
+    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+    permitsShell = !!(match && match.permits_shell === true);
+  }
+} catch (_parseErr) {
+  permitsShell = false; // fail closed on any parse error
+}
+
+if (!permitsShell) {
+  await agent(
+    "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
+    workspaceSetupAgentId + "', but that agent's registered charter (config/agent_registry.json) " +
+    "does not permit running repository-mutating shell commands. Halting before any authoring " +
+    "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
+    "agent='" + workspaceSetupAgentId + "'.",
+    { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+  );
+  return {
+    status: "error",
+    message:
+      "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
+      workspaceSetupAgentId + "', whose registered charter does not permit running " +
+      "repository/shell commands. Halting before any authoring agent is dispatched. " +
+      "Fix the workspace_setup_agent configuration or config/agent_registry.json's " +
+      "permits_shell field for that agent.",
+  };
+}
+
 let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
@@ -1740,7 +1800,7 @@ try {
     "python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree" +
     (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
     "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
-    { agentType: "status-checker", label: "worktree-setup" }
+    { agentType: workspaceSetupAgentId, label: "worktree-setup" }
   );
 } catch (wtErr) {
   return {
@@ -1754,7 +1814,7 @@ try {
 
 let wtParsed;
 try {
-  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: "status-checker" });
+  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: workspaceSetupAgentId });
 } catch (_parseErr) {
   wtParsed = null;
 }
