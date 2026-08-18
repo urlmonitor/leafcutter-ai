@@ -53,15 +53,44 @@ _TEST_PATH_RE = re.compile(
 # were reported as deletions, so every edited test and every merge commit was
 # blocked (GE-119). They are detected by _find_deleted_tests /
 # _find_deleted_test_files below, which correlate the two sides of the diff.
+# Each pattern anchors the token to the START of the added line (after the
+# diff's own "+" and the line's indentation) and requires real call/decorator
+# syntax. The previous `^\+.*<token>` form matched the token ANYWHERE in an
+# added line, so it fired on text that merely mentions these names:
+#
+#   +        \"\"\"A diff exercising pytest.skip, pytest.mark.xfail   <- docstring
+#   +            "pytest.mark.xfail                                    <- string literal
+#   +            +    @unittest.skip(                                  <- a diff INSIDE a
+#                                                                         fixture string, so
+#                                                                         the real line starts
+#                                                                         with a second "+"
+#   +description: "... check_contract_shrinking ... xfail ..."         <- changelog prose
+#
+# That made this guard unable to review its own test suite or any changelog
+# describing it, and it blocked merge commits that imported such files.
+# Anchoring keeps every genuine form (`+    @unittest.skip("flaky")`,
+# `+        pytest.skip("reason")`) while rejecting all of the above.
+#
+# Deliberate narrowing: a skip called mid-statement (`+  if x: pytest.skip(y)`)
+# is no longer flagged. Prose and fixtures mentioning these tokens are far more
+# common than mid-statement skips, and this guard is a backstop, not a parser —
+# a false block on every merge commit is worse than missing that rare form.
+#
+# `@unittest.skip\s*\(` does NOT match `@unittest.skipUnless(` / `skipIf(`,
+# because those have a letter, not `(` or whitespace, after "skip" — a
+# conditional guard is not a disabled test.
 _WEAKENING_PATTERNS: list[tuple[str, str]] = [
-    # pytest.skip call added
-    (r"^\+.*pytest\.skip\s*\(", "pytest.skip added"),
-    # pytest.mark.xfail decorator added
-    (r"^\+.*pytest\.mark\.xfail", "pytest.mark.xfail added"),
-    # @unittest.skip decorator added
-    (r"^\+.*@unittest\.skip\s*\(", "@unittest.skip added"),
-    # @unittest.expectedFailure decorator added
-    (r"^\+.*@unittest\.expectedFailure", "@unittest.expectedFailure added"),
+    # pytest.skip call added as its own statement
+    (r"^\+\s*pytest\.skip\s*\(", "pytest.skip added"),
+    # pytest.mark.xfail added as a decorator or a module-level pytestmark
+    (
+        r"^\+\s*(?:@|pytestmark\s*=\s*)pytest\.mark\.xfail\b",
+        "pytest.mark.xfail added",
+    ),
+    # @unittest.skip decorator added (not skipUnless / skipIf)
+    (r"^\+\s*@unittest\.skip\s*\(", "@unittest.skip added"),
+    # @unittest.expectedFailure decorator alone on its line
+    (r"^\+\s*@unittest\.expectedFailure\s*$", "@unittest.expectedFailure added"),
 ]
 _COMPILED_WEAKENING_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(pattern, re.MULTILINE), label)

@@ -1,0 +1,78 @@
+id: ACS-1200b-2-i
+components:
+  - ac_store
+title: "A record whose parent does not exist is still reported, even if the record marks itself parked"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2.yaml
+criteria: |
+  Given a record whose derived parent id resolves to no file anywhere in the
+    store,
+  And that record itself carries parked: true with a non-empty parked_reason,
+  When the store-wide orphan scan is executed as a process over the store,
+  Then the record is still reported as broken, naming the record id and the
+    parent id that resolves to no file,
+  And it is not listed in the parked section, because no existing parent record
+    granted it that state,
+  And the same record with the marker removed produces the identical report
+    entry, so the marker changed nothing about this verdict.
+depends_on:
+  - ACS-1200b-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Parent-derivation algorithm — the exemption is granted by a marker found on an existing derived parent, never by a marker a record sets on itself."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The exemption predicate is DIRECTIONAL: the marker is looked up on the record at the derived parent id, and grants that parent's missing back-links to its children. A marker on the record being judged grants that record nothing. The same directionality is asserted for the commit hook in ACS-1200a-2-i; both surfaces must implement it from the same shared reader so they cannot diverge."
+  - "A parent id that resolves to no file must remain a distinct verdict from 'parent exists but does not list me'. The dangling case must not be folded into the parked classification and must not be silently dropped when the marker lookup finds no file to read — a missing parent file is a genuinely broken tree, not an absent decision."
+  - "The report entry for the dangling case must name both the record id and the unresolvable parent id, so the reader can act without opening files."
+  - "The differential run (marker present vs absent) must produce an identical report entry, which is the assertion that proves the marker had no effect here rather than an effect that happened to cancel out."
+test_spec:
+  - name: test_dangling_parent_record_still_reported_as_broken
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Scan executed as a process reports the record whose derived parent resolves to no file, naming the record id and the parent id."
+  - name: test_self_marked_record_not_listed_in_parked_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The record's own parked marker does not place it in the parked section — no existing parent granted it that state."
+  - name: test_marker_removal_produces_identical_report_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The same record with the marker removed yields a byte-identical report entry, proving the marker changed nothing about this verdict."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200b-2
+  contract: "The parked-aware orphan scan and its report classification"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Closes the self-exemption hole. If a record could exempt ITSELF, the marker
+  would become a per-file mute switch for any structural complaint, which is the
+  suppression outcome the L0 rules out. The exemption is directional: a marker
+  on an existing parent excuses that parent's missing back-links to its
+  children, and nothing else.
+
+  A dangling parent is a genuinely broken tree, not a parked one — exactly the
+  class of breakage the recognition-not-suppression constraint exists to keep
+  visible.

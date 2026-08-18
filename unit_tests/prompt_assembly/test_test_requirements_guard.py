@@ -352,5 +352,181 @@ class TestDispatchRefusesCoderWithoutTestRequirements(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# AC-3 (behavioral) / BO-2000e-2 — EXECUTE the dispatch guard
+#
+# The two tests above grep build-ticket.js for a string. That cannot distinguish
+# a working guard from a broken one: both the deadlocking version (which read a
+# stale pre-drive snapshot and blocked the coder even after test-writer wrote a
+# verified-red suite) and the fixed version contain "Test Requirements" next to
+# "blocker". Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by
+# Grep", these tests run the real script under stubbed workflow globals and
+# assert on which phase agents it actually dispatched.
+# ---------------------------------------------------------------------------
+
+_HARNESS = os.path.join(
+    os.path.dirname(__file__), "harness_build_ticket_guard.mjs"
+)
+
+
+class TestDispatchGuardBehavior(unittest.TestCase):
+    """AC-3 (BO-2000e-2), behavioral: the coder guard must open when tests
+    demonstrably exist and stay closed when they do not."""
+
+    def _run_scenario(self, **scenario) -> dict:
+        """Execute build-ticket.js against stubbed globals; return
+        {"dispatched": [...], "result": {...}}."""
+        import json  # noqa: PLC0415
+        import shutil  # noqa: PLC0415
+        import subprocess  # noqa: PLC0415
+
+        if shutil.which("node") is None:
+            self.skipTest("node is not available on PATH")
+
+        try:
+            proc = subprocess.run(
+                ["node", _HARNESS, _BUILD_TICKET_JS, json.dumps(scenario)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.fail(f"harness invocation failed: {exc}")
+
+        if proc.returncode != 0:
+            self.fail(
+                f"harness exited {proc.returncode}.\n"
+                f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
+            )
+        return json.loads(proc.stdout)
+
+    def test_coder_dispatched_when_test_writer_reports_tests_written(self):
+        # covers: BO-2000e-2
+        # covers: BO-2000e-2-i
+        """The deadlock regression: ## Test Requirements is absent, but
+        test-writer derived tests from the AC store and wrote them. The coder
+        MUST run — blocking here strands every AC-generated ticket."""
+        out = self._run_scenario(
+            has_test_requirements=False,
+            phases=["test-writer", "python-coder"],
+            test_writer_result={
+                "status": "ok",
+                "tests_written": ["unit_tests/test_bp_900a_1.py"],
+                "red_baseline_verified": True,
+            },
+        )
+
+        self.assertIn(
+            "python-coder",
+            out["dispatched"],
+            "python-coder must be dispatched after test-writer reports it wrote "
+            "test files, even though ## Test Requirements is absent. Blocking "
+            "here is the deadlock that made every AC-generated ticket unbuildable.",
+        )
+        self.assertEqual(out["result"]["status"], "ok")
+
+    def test_coder_blocked_when_test_writer_wrote_nothing(self):
+        # covers: BO-2000e-2
+        # covers: BO-2000e-2-iii
+        """Fail-closed: test-writer self-skipped (empty tests_written), so the
+        original phantom-test protection must still fire."""
+        out = self._run_scenario(
+            has_test_requirements=False,
+            phases=["test-writer", "python-coder"],
+            test_writer_result={"status": "ok", "tests_written": []},
+        )
+
+        self.assertNotIn(
+            "python-coder",
+            out["dispatched"],
+            "python-coder must NOT be dispatched when test-writer wrote no tests.",
+        )
+        self.assertEqual(out["result"]["status"], "blocked")
+
+    def test_coder_blocked_when_test_writer_omits_evidence_field(self):
+        # covers: BO-2000e-2
+        # covers: BO-2000e-2-iii
+        """Absent evidence must never read as satisfied evidence. A phase agent
+        on an older template that omits tests_written entirely must leave the
+        guard closed, not open it by default."""
+        out = self._run_scenario(
+            has_test_requirements=False,
+            phases=["test-writer", "python-coder"],
+            test_writer_result={"status": "ok"},
+        )
+
+        self.assertNotIn(
+            "python-coder",
+            out["dispatched"],
+            "A missing tests_written field must leave the guard CLOSED.",
+        )
+        self.assertEqual(out["result"]["status"], "blocked")
+
+    def test_coder_blocked_when_no_test_writer_phase_scheduled(self):
+        # covers: BO-2000e-2
+        # covers: BO-2000e-2-iii
+        """No ## Test Requirements and no test-writer phase at all — the
+        original BO-2000e-2 refusal, unchanged."""
+        out = self._run_scenario(
+            has_test_requirements=False,
+            phases=["python-coder"],
+            test_writer_result={"status": "ok"},
+        )
+
+        self.assertNotIn("python-coder", out["dispatched"])
+        self.assertEqual(out["result"]["status"], "blocked")
+
+    def test_coder_dispatched_on_resume_when_prior_tests_exist_on_disk(self):
+        # covers: BO-2000e-2
+        # covers: BO-2000e-2-ii
+        """Resume case: a previous drive's test-writer is already signed_off, so
+        it is no longer in the needed set and cannot re-supply route 2 evidence.
+        The tests it wrote still exist on disk, so the coder MUST run — otherwise
+        the ticket deadlocks permanently on every re-run."""
+        out = self._run_scenario(
+            has_test_requirements=False,
+            existing_test_files=["unit_tests/test_bp_900a_1.py"],
+            phases=["python-coder"],
+            test_writer_result={"status": "ok"},
+        )
+
+        self.assertIn(
+            "python-coder",
+            out["dispatched"],
+            "python-coder must be dispatched on resume when a prior drive's test "
+            "files still exist on disk.",
+        )
+        self.assertEqual(out["result"]["status"], "ok")
+
+    def test_coder_blocked_on_resume_when_prior_tests_are_gone(self):
+        # covers: BO-2000e-2
+        # covers: BO-2000e-2-iii
+        """Route 3 is evidence-based, not status-based: if the previously written
+        test files no longer exist, the planner reports none and the guard closes."""
+        out = self._run_scenario(
+            has_test_requirements=False,
+            existing_test_files=[],
+            phases=["python-coder"],
+            test_writer_result={"status": "ok"},
+        )
+
+        self.assertNotIn("python-coder", out["dispatched"])
+        self.assertEqual(out["result"]["status"], "blocked")
+
+    def test_coder_dispatched_when_ticket_declares_test_requirements(self):
+        # covers: BO-2000e-2
+        """Route 1 is untouched: a populated ## Test Requirements section still
+        satisfies the guard on its own."""
+        out = self._run_scenario(
+            has_test_requirements=True,
+            phases=["python-coder"],
+            test_writer_result={"status": "ok"},
+        )
+
+        self.assertIn("python-coder", out["dispatched"])
+        self.assertEqual(out["result"]["status"], "ok")
+
+
 if __name__ == "__main__":
     unittest.main()

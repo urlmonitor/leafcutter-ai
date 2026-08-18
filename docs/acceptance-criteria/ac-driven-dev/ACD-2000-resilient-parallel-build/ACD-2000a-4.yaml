@@ -1,0 +1,123 @@
+id: ACD-2000a-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Reference doc describes the requirement's adjudication trail and its retry budget"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement carries a trail of attempts and a rework budget,
+  When an author or an operator consults the reference documentation for the
+    requirement record,
+  Then the documentation describes what an attempt record holds -- who, when,
+    which stage, what outcome, what was decided -- and states that the trail is
+    append-only and why,
+  And it states whether a spent budget is per-run or per-lifetime, and how a
+    person clears an exhausted one,
+  And it states that a declared budget of zero means escalate on the first
+    failure and is not the same as declaring nothing,
+  And an operator who has read only this documentation can look at a stuck
+    requirement and say how many attempts it has left and what to do next,
+    without reading any implementation.
+depends_on: [ACD-2000a, ACD-2000a-1, ACD-2000a-2, ACD-2000a-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The incumbent field reference for the AC record and the place the new fields belong. Extend this rather than starting a second reference."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2000-resilient-parallel-build/ACD-2000b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling reference doc for the claim lifecycle. Cross-link to it; do not restate the taken / handed-back / reclaimed story here."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "EXTEND docs/reference/ac-schema.md -- do NOT start a second reference. It is the incumbent field reference for the AC record; a field documented away from the schema reference is a field nobody finds. If the writer believes a standalone page is warranted, the burden is to move the whole field reference, not to fork it."
+  - "DO NOT PUBLISH THIS DOC BEFORE ACD-2000a-2 HAS SETTLED PER-RUN VS PER-LIFETIME. The second criterion requires a statement of fact, and a reference that says 'it depends' fails the operator use the fourth criterion names. The depends_on edges on ACD-2000a-1, -2 and -3 are load-bearing for this AC, not decorative."
+  - "IF THE SETTLED SCOPE IS PER-LIFETIME, DOCUMENT THE CLEARING PROCEDURE AS AN OPERATIONAL RUNBOOK STEP -- who does it, exactly what they write, and where. Without it the first exhausted budget becomes a support incident. State explicitly that clearing is an APPEND (a recorded decision) and never a deletion of the earlier attempts."
+  - "STATE THE APPEND-ONLY RULE TOGETHER WITH ITS CONSEQUENCE, not just the rule. The consequence is the load-bearing half: the trail IS the retry budget, so any rewrite silently resets the cap and turns a crash into an infinite retry loop. A doc that states the rule without the consequence produces the next author who tidies up the log."
+  - "STATE EXPLICITLY THAT A DECLARED BUDGET OF ZERO MEANS ESCALATE ON THE FIRST FAILURE AND IS NOT THE SAME AS DECLARING NOTHING. Readers collapse that distinction by default, and collapsing it silently doubles the budget of every requirement that asked for none."
+  - "INCLUDE A WORKED DIAGNOSTIC EXAMPLE, not only a field table: a real stuck requirement's trail as it appears on disk, and the two sentences an operator reads off it -- how many attempts remain, and what to do next. The fourth criterion is a comprehension test and a field table alone does not pass it. Use a real record from the store, per CLAUDE.md's real-artifact convention, not an invented minimal one."
+  - "DOCUMENT THE FIELDS BY THE IDENTIFIERS THE STORE ACTUALLY USES, so a reader can match what they see in a YAML file to a section. Reconcile with the slot names ACD-1900a registers -- if this doc and the schema disagree on a name, the schema wins and the disagreement is a defect to report, not to paper over."
+  - "LINK, DO NOT RESTATE. The claim / hand-back / reclaim lifecycle is ACD-2000b-5's reference doc and the state machine is ACD-2000a-5's diagram. Duplicating either creates the stale second copy this migration keeps producing."
+  - "Must pass the repository doc gates: check-doc-frontmatter, check-doc-length and check-doc-index. Register the change in docs/INDEX.md if the guide's index entry changes."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2000a-2
+    contract: "The SETTLED answer to per-run vs per-lifetime, plus the clearing procedure if per-lifetime, plus the verdict vocabulary { verdict, attempts_counted, budget_in_force, scope, reason } the doc teaches an operator to read."
+  - ac_id: ACD-2000a-1
+    contract: "The attempt-record shape { actor, timestamp, stage, outcome, decision, reason } and the append-only guarantee, as the fields the doc enumerates."
+  - ac_id: ACD-2000a-3
+    contract: "The declared-budget field name, its default, and the declared-zero semantics the third criterion requires the doc to state."
+test_required: false
+test_rationale: "This AC's whole artifact is prose added to docs/reference/ac-schema.md; it adds no executable surface, so there is nothing a test could drive. Its correctness gates are the repository doc hooks (check-doc-frontmatter, check-doc-length, check-doc-index), which run at commit time rather than as unit tests, and its acceptance is comprehension -- a reader answering the diagnostic question the fourth criterion poses -- which no automated assertion can stand in for. Asserting that a heading exists would be exactly the presence-only check the fourth criterion was written to rule out. The behaviours the doc describes are covered by the executing tests on ACD-2000a-1, ACD-2000a-2 and ACD-2000a-3. Recording the intent explicitly rather than leaving the contract absent, so test-writer skips with an accurate reason instead of the silent auto-skip documented in CLAUDE.md."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC, produced because ACD-2000a declares
+  `documentation_triggers: [reference-doc, state-diagram]`. This is the
+  reference-doc half; ACD-2000a-5 is the state-diagram half. Craft deliberately
+  LEFT UNSET this pass (assigned_agent / it_requirements / estimated_complexity /
+  contracts are the IT PO's); the intended craft is the documentation surface.
+  ACD-1800a-3 is the sibling precedent.
+
+  THE AUDIENCE HERE IS AN OPERATOR, NOT ONLY AN AUTHOR -- and that is why the
+  final Then clause is phrased as a diagnostic capability. This trail's reason
+  for existing is that somebody picks up stalled work and needs to know how many
+  attempts have already been made "without reconstructing it from memory"
+  (ACD-2000a's own criteria). Documentation that explains the field shapes but
+  not how to read a stuck requirement misses the actual use.
+
+  THE PER-RUN vs PER-LIFETIME SENTENCE IS THE MOST IMPORTANT ONE IN THE DOC.
+  ACD-2000a's hazard 2 is that persisting the counter silently changes the
+  semantics: "two flaky-infrastructure failures a week apart would become a
+  permanent halt". Whichever ACD-2000a-2 settles on, an operator who does not
+  know which one is in force will misdiagnose every halt they see. And if it is
+  per-lifetime, the clearing procedure is an operational runbook item, not an
+  implementation detail -- without it documented, the first exhausted budget
+  becomes a support incident.
+
+  THE ZERO-BUDGET SENTENCE is documented for the same reason it is specified in
+  ACD-2000a-3: "declared zero" versus "declared nothing" is a distinction that
+  readers collapse by default, and collapsing it silently doubles the budget of
+  every requirement that asked for none.
+
+  WHY APPEND-ONLY NEEDS ITS "WHY" IN THE DOC, not just its "what": the rule looks
+  like bookkeeping fussiness until you know that the trail IS the retry budget,
+  so any rewrite is a silent cap reset. A doc that states the rule without the
+  consequence produces the next author who "tidies up" the log.
+
+  ACCEPTANCE IS COMPREHENSION, NOT PRESENCE -- verify by having a reader answer
+  the diagnostic question, not by checking that a heading exists.
+
+  2026-08-17 (IT PO enrichment). Assigned documentation-expert per the S7b
+  documentation-gate mapping for the `reference-doc` trigger and the BA's recorded
+  intent. Complexity S: an extension to one existing reference page.
+
+  PLACEMENT DECISION MADE THIS PASS: extend docs/reference/ac-schema.md. It is the
+  incumbent field reference for the AC record (43 KB, already the canonical
+  description of every slot), and every field this tree adds is an AC-record field.
+  Verified there is no existing adjudication or retry-budget reference to compete
+  with -- docs/reference/ holds no such page -- so the risk here is forking the
+  field reference, not colliding with a peer.
+
+  SEQUENCING FLAG. This AC's depends_on list is not decorative. The second
+  criterion cannot be satisfied until ACD-2000a-2 settles per-run vs per-lifetime,
+  and the third cannot be satisfied until ACD-2000a-3 fixes the declared-budget
+  field name and its zero semantics. Writing this doc early produces a confident
+  wrong reference, which for an operator-facing diagnostic guide is worse than an
+  absent one.

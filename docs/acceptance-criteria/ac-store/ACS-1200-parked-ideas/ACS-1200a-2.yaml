@@ -1,0 +1,146 @@
+id: ACS-1200a-2
+components:
+  - ac_store
+  - commit_guardian
+title: "The commit-time back-link check passes a parked tree with nothing skipped"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given a parent record KM-200.yaml carrying parked: true and a non-empty
+    parked_reason, with covered_by set to an empty list,
+  And six child records KM-200a.yaml through KM-200f.yaml, none of which is
+    listed in KM-200's covered_by,
+  And all seven files staged for commit,
+  When the parent-back-link check is executed as a process against that staged
+    set, with no SKIP variable set for it and no hook disabled,
+  Then the process exits 0,
+  And it reports no violation for any of KM-200a through KM-200f,
+  And its output names KM-200 once as a recognised parked record, together with
+    the reason recorded on that record, so the exemption is visible in the run
+    rather than silent,
+  And the run is distinguishable from a run in which the check did not execute:
+    the same staged set with the parked marker removed from KM-200.yaml exits
+    non-zero and reports six violations,
+  And a test that only inspects the check's source text for the word "parked",
+    or for the presence of an exemption branch, does not satisfy this criterion:
+    coverage requires executing the check as a process and asserting its exit
+    code and its output.
+depends_on:
+  - ACS-1200a
+  - ACS-1200a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Documents the back-link protocol this check enforces; amended by ACS-1200a-3."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120b.yaml
+    relationship: related
+    status: exists
+    relevance: "SEQUENCING HAZARD. GE-120b makes this same check run reliably in every working copy. Landing GE-120b first, while the check still enforces the uncorrected rule, blocks every parked idea MORE consistently. This AC must land before GE-120b or in the same release."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The hook family this check belongs to: manifest, run_hook.py dispatch, tiering and fail-open policy."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Source is templates/scripts/commit_guardian/; the commit actually runs the deployed .leafcutter/ copy. A template-only change is a no-op for real commits."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1403.yaml
+    relationship: related
+    status: exists
+    relevance: "CONFLICT. ACD-1403 (status active, readiness reviewed) asserts this hook was removed under ACD-1100 and requires its test file be deleted. All three of its premises are false as of 2026-08-14. Must be reconciled before either is built."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ADR-001 SOURCE-AND-DEPLOY: the change lands in templates/scripts/commit_guardian/check_ac_parent_covered_by.py, but the wired gate at .pre-commit-config.yaml:294 executes 'python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ac_parent_covered_by.py'. A template-only change is a no-op for every real commit. python3 scripts/build.py must run and the acceptance evidence must come from executing the DEPLOYED copy, not the template."
+  - "The exemption must not be reachable through a degraded path. This hook resolves derive_parent_id through a private _get_derive_parent_id() with a graceful fail-open fallback (around line 377), rather than through the shared templates/scripts/commit_guardian/_resolve_root.py that 27 other guardian files use — because scripts/ac_store/ac_parent_id.py is not in the build deploy_map. Whatever the existing fail-open policy for parent derivation, a FAILURE TO READ THE MARKER must never be treated as 'parked': an unreadable marker is not a decision, and a fail-open marker read turns any resolution error into a silent universal exemption."
+  - "Name every enforcement point, and say which is load-bearing. The rule is described in three places that must not drift: the hook source, the deployed copy, and the hooks_manifest entry for check-ac-parent-covered-by in templates/scripts/commit_guardian/commit_guardian.json (id at line 866, with name/_comment/entry). That manifest is deployed twice — to scripts/commit_guardian/ and to config/commit_guardian/ (scripts/build_phases.py:1334-1342) — and its description must state the exemption. The load-bearing gate is the deployed hook invoked by run_hook.py; the manifest text is documentation of it."
+  - "PERFORMANCE / no second store walk: the existing suite pins single-walk behaviour (unit_tests/commit_guardian/test_check_ac_parent_covered_by.py::TestStoreWalkedExactlyOnce). The exemption lookup must reuse the store index already built for the run (templates/scripts/commit_guardian/_ac_store_index.py) rather than re-scanning the store per staged file. The hook runs on every commit that touches the AC store."
+  - "PREREQUISITE RECONCILIATION — ACD-1403. ACD-1403 (status: active, readiness: reviewed, level: null, work_status: null) asserts that check_ac_parent_covered_by.py 'was removed as part of ACD-1100' and requires unit_tests/commit_guardian/test_check_ac_parent_covered_by.py be deleted. Verified 2026-08-14: the hook exists, the test exists, and the hook is wired at .pre-commit-config.yaml:294 and blocked a real commit with 6 violations. If ACD-1403 is built as written it deletes the coverage ACS-1200a-2, ACS-1200c-1 and ACS-1200c-2 depend on. ACD-1403 must be reconciled (retired or corrected by its owner) BEFORE this AC is implemented. Do not amend ACD-1403 from this tree."
+  - "The exemption message must go to stdout as well as stderr and must be emitted once per parked parent, not once per exempted child — the criterion asks for KM-200 named ONCE. This is the same output stream contract ACS-1200c-2 asserts for the block message."
+  - "Coverage must execute the hook as a subprocess and assert exit code plus captured output. The existing test file drives the module in-process via importlib.util plus unittest.mock.patch (lines 26-32); in-process patching can satisfy the assertions while the deployed fail-open path is what actually runs. Add process-level differential coverage rather than extending the in-process style."
+  - "Staged-set determination is done through git, so the differential runs must be performed against a real git index in a temporary repository — passing file paths to the hook without staging them exercises a different code path from the one pre-commit uses."
+test_spec:
+  - name: test_parked_tree_staged_set_exits_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Hook executed as a subprocess against the seven staged records, with no SKIP set, exits 0."
+  - name: test_no_violation_reported_for_any_exempted_child
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "None of KM-200a..KM-200f appears in the violation output of the passing run."
+  - name: test_output_names_parked_parent_once_with_its_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The run's stdout names KM-200 exactly once as a recognised parked record and includes the recorded parked_reason, so the exemption is visible rather than silent."
+  - name: test_marker_removed_differential_exits_nonzero_with_six_violations
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Identical staged set with the parked marker removed from KM-200.yaml exits non-zero and reports six violations — the passing run is attributable to recognition, not to the check not running."
+  - name: test_unreadable_marker_does_not_grant_exemption
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "When the parent record cannot be parsed or the parent id cannot be derived, the hook does NOT treat the tree as parked — a failed marker read never becomes a silent exemption."
+  - name: test_store_walked_exactly_once_with_exemption_enabled
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The exemption lookup adds no additional store walk; the existing single-walk invariant still holds."
+  - name: test_deployed_hook_exercises_exemption
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    description: "After build.py, the hook executed from the deployed .leafcutter/ path via run_hook.py produces the same two verdicts as the source copy — no ModuleNotFoundError, no fail-open fallback taken."
+delivers_to:
+  agent: python-coder
+  contract: "A parked-aware parent-back-link check. ORDERING CONTRACT: must land before, or in the same release as, GE-120b — GE-120b increases how reliably this check runs, so shipping it first amplifies the wrong rule."
+expects_from:
+  ac_id: ACS-1200a-1
+  contract: "The parked / parked_reason field pair on the parent record, and the rule that a record with an empty covered_by and no marker is not parked"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by:
+  - ACS-1200a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The core behaviour change. The differential clause (marker removed => six
+  violations) is not decoration: it is what separates "the check passed because
+  the tree is recognised" from "the check passed because it never ran", which is
+  exactly the failure GE-120 exists to close. Without it a fail-open regression
+  in this check would read as a green result for this AC.
+
+  The grep-only exclusion is repo convention (CLAUDE.md, "Gate / Workflow ACs —
+  Verify Behaviorally, Not by Grep"): a structural test asserting the exemption
+  branch exists passes on dead code.
+
+  SEQUENCING WITH GE-120b — recorded here because it belongs on the AC that
+  changes the rule. The reciprocal link cannot be written from this tree
+  (GE-120b is authored in the guardrail-engine tree); the IT PO or the
+  coordinator should add the matching ordering note to GE-120b, or land both in
+  one release.
+
+  IT-PO ENRICHMENT (2026-08-14). Verified ground truth carried into
+  it_requirements: the hook is live and wired at .pre-commit-config.yaml:294; it
+  resolves derive_parent_id via a private fail-open _get_derive_parent_id()
+  rather than the shared _resolve_root.py, because scripts/ac_store/ac_parent_id.py
+  is not in the build deploy_map. The ACD-1403 conflict is recorded here as a
+  prerequisite reconciliation, per the coordinator's instruction not to edit
+  ACD-1403 from this tree.

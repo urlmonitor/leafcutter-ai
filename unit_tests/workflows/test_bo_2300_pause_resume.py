@@ -1098,3 +1098,111 @@ def test_finalize_merge_gate_noop_when_record_absent():
     assert len(pauses) == 0, (
         f"exists:false must stop cleanly — no pause-persist. Got {len(pauses)} dispatch(es)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Pause-persist verification + edit-feedback preservation.
+#
+# Both guard defects found live on 2026-08-17 while a backgrounded /plan-feature
+# run died at gate-ba with no way to resume:
+#   * pauseAtGate dispatched the persist and DISCARDED the result, then reported
+#     "paused_awaiting_input" unconditionally. Nothing was written, resolveGate
+#     fails closed on read, so every later answer bailed out.
+#   * applyAnswerByType returned {action} only, dropping `feedback`, so a resumed
+#     `edit` re-ran the author blind and burned the single MAX_EDIT_RETRIES try.
+# ---------------------------------------------------------------------------
+
+
+def _verify_calls(result: HarnessResult) -> list:
+    """Return all agent() calls whose label is 'pause-persist-verify'."""
+    return [c for c in result.agent_calls if c.label == "pause-persist-verify"]
+
+
+def test_pause_persist_is_verified_by_readback():
+    """A pause must be VERIFIED, not assumed.
+
+    pauseAtGate must follow its write with a read-back through the same
+    pause_store.py command resolveGate uses, so a silently-failed write cannot be
+    reported as a resumable pause. Asserts the verify dispatch happens, that it
+    happens AFTER the write, and that its prompt actually carries the read
+    command (a bare-object or write-only dispatch is phantom verification).
+    """
+    result = run_workflow_under_e2(
+        _PLAN_FEATURE_JS,
+        timeout=_TIMEOUT,
+        label_responses={},
+    )
+    assert result.error == "", f"Harness error: {result.error}"
+
+    labels = [c.label for c in result.agent_calls]
+    pauses = _pause_calls(result)
+    verifies = _verify_calls(result)
+
+    assert len(pauses) > 0, f"Expected a pause-persist dispatch. Labels: {labels}"
+    assert len(verifies) > 0, (
+        "Expected a pause-persist-verify dispatch — a pause that is never read "
+        f"back is the phantom-persistence defect. Labels: {labels}"
+    )
+
+    # Ordering: verification must follow the write it is verifying.
+    assert labels.index("pause-persist") < labels.index("pause-persist-verify"), (
+        f"pause-persist-verify must come AFTER pause-persist. Labels: {labels}"
+    )
+
+    prompt = verifies[0].prompt
+    assert isinstance(prompt, str), (
+        f"pause-persist-verify prompt must be an INSTRUCTION STRING, got {type(prompt)}"
+    )
+    assert "pause_store.py read" in prompt, (
+        "The verify dispatch must actually run the read command; a prompt without "
+        f"'pause_store.py read' verifies nothing. Prompt: {prompt[:300]}"
+    )
+
+
+def test_edit_answer_preserves_feedback_through_resume():
+    """A resumed `edit` must carry the user's feedback to the re-dispatched author.
+
+    applyAnswerByType dropped `feedback`, so the mid-pipeline gate read undefined
+    and re-ran the author with an EMPTY feedback string — consuming the single
+    permitted retry and then aborting uncommitted. The user's words must reach the
+    author prompt.
+    """
+    feedback_text = "ADD-A-PER-RUN-WORKSPACE-IDENTITY-CRITERION"
+    result = run_workflow_under_e2(
+        _PLAN_FEATURE_JS,
+        timeout=_TIMEOUT,
+        label_responses={
+            "read-pause-record": {"exists": True, "stale": False},
+            # Force the behavioral route so the BA stage — and therefore gate-ba —
+            # is actually reached. Without this the harness routes to `technical`,
+            # which skips straight to the IT-PO stage and gate-ba never occurs.
+            "stage-0-triage": {
+                "route": "behavioral",
+                "existing_acs": [],
+                "parent_l1_id": "BO-1500a",
+                "rationale": "test fixture — force the BA stage",
+            },
+        },
+        args={
+            "run_id": "test-bo2300-edit-feedback",
+            "resume_answer": {
+                "gate_id": "gate-ba",
+                "type": "single_choice",
+                "action": "edit",
+                "feedback": feedback_text,
+            },
+        },
+    )
+    assert result.error == "", f"Harness error: {result.error}"
+
+    # The feedback must appear in SOME dispatched author prompt — proving it was
+    # consumed in control flow rather than merely accepted and discarded.
+    carrying = [
+        c.label for c in result.agent_calls
+        if isinstance(c.prompt, str) and feedback_text in c.prompt
+    ]
+    assert carrying, (
+        "The edit feedback never reached any dispatched prompt — applyAnswerByType "
+        "is dropping it again. Dispatched labels: "
+        f"{[c.label for c in result.agent_calls]}"
+    )

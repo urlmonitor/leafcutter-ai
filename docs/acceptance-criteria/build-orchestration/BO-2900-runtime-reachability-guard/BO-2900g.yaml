@@ -1,0 +1,145 @@
+id: BO-2900g
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "Every piece of work is asked to prove it really runs, before a single test is written"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Proof that work is wired in is demanded up front, not hoped for afterwards.
+
+  Whenever a piece of work is planned, the plan itself asks for proof that the
+  finished work is reached the way people actually use the product — not only proof
+  that it produces the right answer when called directly. That demand reaches every
+  piece of work, including work that arrived with a hand-written plan of its own, so
+  no route into the system quietly skips it. Work that changes something real is
+  pointed at the check that confirms the change really happened, automatically,
+  because the work record says what kind of work it is. And there is exactly one set
+  of words for describing a required proof, so what the plan asks for means the same
+  thing to everyone and everything that reads it.
+depends_on:
+  - BO-2900
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The taxonomy, evidence base and vocabulary this L1 makes binding. Read it before decomposing — it names the two-of-seven angles currently represented and the 80/20 split between the two planning routes."
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "One of the two competing vocabularies for describing a required test. It also advertises a validator that does not exist — see notes for the ordering constraint."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Already delivers the routing GIVEN the declaration is present. Its own enrichment note flags that nothing sets the declaration. This L1 is the authoring half; do NOT re-derive the routing."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g.yaml
+    relationship: related
+    status: exists
+    relevance: "The consumer-side sibling: this L1 is what the plan ASKS FOR; BP-1100g is what the doer UNDERSTANDS and RECORDS. Authored together 2026-08-17."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The verdict layer's method constraint (never decide reachability by reading source text). This L1 is planning-time only and must never be read as satisfying it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2900g-1
+  - BO-2900g-2
+  - BO-2900g-3
+  - BO-2900g-4
+  - BO-2900g-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target:
+  - pipeline
+  - schema
+risk_surface: contract_boundary
+notes: |
+  Added 2026-08-17 as the SEVENTH and final L1 under BO-2900 (tree is now a–g and at
+  the hard cap of 7 L1s per L0). Any further sibling requires a tree split or a
+  child_limit_override on BO-2900.yaml — do not silently add an eighth.
+
+  PARENT BACK-LINK RESOLVED — BO-2900.yaml's `covered_by` lists BO-2900g (added
+  after BO-2900f). The authoring agent had no edit capability for existing files in
+  that run, so the link was applied separately.
+
+  WHY THIS IS A NEW L1 AND NOT LEAVES ON AN EXISTING ONE. BO-2900a–f are the VERDICT
+  layer: given a finished piece of work and a finished test, decide whether the proof
+  went in the real way (a, d, e), whether every advertised capability has a caller
+  (b, c), and whether a check that did not run is recorded as such (f). This L1 is the
+  DEMAND layer, one step earlier: what the work is ASKED for before any test exists.
+  All six existing L1s were at or near the 5-L2 cap, and none of them is about
+  authoring. Confirmed by exhaustive store search: no AC anywhere carries
+  `declares_side_effect`, mentions the angle vocabulary, or governs which planning
+  route gets a reachability floor.
+
+  WHY BO-2900 AND NOT BP-1100. BO-2900's L0 states that proof of completion must come
+  from running the work the way it is really used. This L1 is that same sentence moved
+  to planning time: the demand-side counterpart of BO-2900a's verdict. BP-1100 is the
+  ticket/epic-level phantom-done tree and now carries the consumer-side sibling
+  (BP-1100g) — see the split rationale in BP-1100g's notes.
+
+  THE THREE GAPS THIS L1 COVERS — keep them distinct at L2. Each is a confirmed,
+  zero-coverage gap found by the 2026-08-14 test-angle investigation:
+
+  - GAP A — THE DEMAND HAS A PRIVILEGED EXEMPTION. The reachability floor is attached
+    only to the planning route used when a piece of work brought no plan of its own.
+    The 394 records that authored their own plan bypass it entirely. The rule to state
+    at L2 is universal and route-independent: the floor is a property of the work, not
+    of which route produced its plan. A route-specific fix re-creates the gap the next
+    time a third route is added.
+
+  - GAP B — THE ROUTING DATA IS NEVER AUTHORED. The check that proves a real,
+    observable change actually happened is selected by a declaration on the work
+    record. That declaration is now legal to write and is set on zero of 2,888
+    records, while 460 leaf records assert a durable observable effect in their own
+    terms. Neither authoring agent mentions it. This is EPIC-ComputedQualityGates
+    FP-1 layer 2 repeating exactly — the mechanism shipped, the store never carried
+    the data. STATE THE RULE AS DERIVED, NOT BACKFILLED: the L2 must make the
+    declaration fall out of what the work already says about itself, so newly authored
+    work inherits it. A one-off sweep of the 460 leaves an identical hole tomorrow.
+    Note the recursion — the work that closes this gap must itself carry the
+    declaration.
+
+  - GAP C — TWO VOCABULARIES FOR THE SAME THING. Two independent definitions of how a
+    required test is described disagree on the permitted kinds and on which extra
+    facts are mandatory, and the shape actually produced today satisfies neither. Pick
+    ONE and make every producer and reader use it. Recommendation carried from
+    docs/testing/test-angles.md: keep the entry-point field, retire the older name for
+    the reachability kind in favour of the taxonomy's name, and reconcile the older
+    definition to the store's — one vocabulary, not a translation layer.
+
+  HARD ORDERING CONSTRAINT — DO NOT REORDER. GAP C must land BEFORE anyone builds the
+  validator that the older definition advertises. Building the validator first freezes
+  the wrong vocabulary into an enforcement point and makes the reconciliation a
+  breaking change instead of an edit. Encode this as a depends_on edge at L2.
+
+  DELIBERATELY EXCLUDED — NOT AN AC AT THIS LEVEL. The older definition is advertised
+  as a shipped, portable check in the package boundary manifest while the file does
+  not exist. That is a real defect, but the general benefit ("capabilities promised in
+  a registry are actually shipped") is ALREADY OWNED by BP-900e. Do not author a new
+  AC for it. Route it as (1) a one-line remediation — delete the entry or write the
+  file — and (2) if the existing guard does not read that particular manifest, an L2
+  widening under BP-900e. It is not L0/L1 work.
+
+  BOUNDARY — READ BEFORE DECOMPOSING. This L1 is planning-time only. It settles what
+  is ASKED FOR. It never decides whether anything was achieved. BO-2900a-2 forbids the
+  verdict from being derived by reading source text; nothing authored here may be
+  offered as evidence that a piece of work is done, and no L2 here may describe a
+  gate, a block, or a done-state consequence. The consequence layer already exists:
+  BO-2900a (the verdict), BO-2900e (the refusal wording), BO-2900f (the never-ran
+  record), BP-1100f-5 (the routing). Cite them; do not restate them.

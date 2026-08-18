@@ -1,0 +1,115 @@
+id: ACD-2000b-3-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "State diagram shows a requirement's claim lifecycle including the reclaim path"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement moves between being available, taken, handed back, and
+    taken over after abandonment,
+  When the architecture documentation for the requirement's claim lifecycle is
+    consulted,
+  Then a state diagram shows each state a requirement can be in with respect to
+    being taken, and every transition between them,
+  And each transition names what causes it -- an effort taking the requirement,
+    an effort handing it back, an effort finishing it, a later effort judging the
+    claim abandoned,
+  And the diagram shows the reclaim transition out of the taken state that no
+    action by the original owner causes,
+  And the diagram shows the losing side of two efforts reaching for the same
+    requirement returning to looking for other work, rather than entering any
+    state on this requirement,
+  And a reader can trace the path from available, through an abandoned claim, to
+    available again, without consulting any other document.
+depends_on: [ACD-2000b-3]
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The one home for this diagram -- the component page that already owns the requirement lifecycle."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "ONE HOME, AND IT IS docs/architecture/components/ac-driven-dev.md -- the component page that already owns the requirement lifecycle. Fixing the destination here means ACD-2000b-5's reference doc can link to a stable anchor instead of the writer and the diagram author independently guessing the same page."
+  - "Take the diagram id from scripts/next_diagram_seq.py rather than inventing one, and satisfy the repository diagram gates: check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming and check-mermaid-complexity (all registered in scripts/commit_guardian/commit_guardian.json)."
+  - "DRAW ONLY STATES THE RECORD CAN ACTUALLY REPRESENT. The states must be the ones ACD-2000b-1's claim record can hold and the transitions must be the ones ACD-2000b-3's staleness rule can actually reach. A diagram drawn ahead of those two, or not revisited after them, is a confident wrong picture -- worse than none. Draw it last."
+  - "THE RECLAIM EDGE MUST NAME ITS ACTOR, and that actor is a third party acting on state it does not own, on the strength of a judgement about a process it cannot see. Label it so it is visibly unlike every other transition, all of which are caused by the owner. This edge is the reason the diagram is worth drawing."
+  - "THE LOSING CONTENDER LEAVES; IT DOES NOT WAIT. Do not draw a blocked, queued or waiting state on this requirement for the loser of a contest -- that implies a queue which does not exist and invites someone to build one. Show it departing to select other work."
+  - "DO NOT MERGE WITH ACD-2000a-5's ADJUDICATION MACHINE (attempted / reworked / escalated / resolved). The two machines run on the same requirement simultaneously and independently -- a requirement can be taken and mid-escalation at once. Add an explicit note saying so; merged, the picture implies transitions that do not exist and states that are actually pairs."
+  - "Satisfy check-doc-frontmatter and update docs/INDEX.md if the component page's index entry changes."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2000b-1
+    contract: "The claim record's representable states -- available (no owner, no instant) and taken (owner, instant, entry-point kind) -- which bound what the diagram may draw."
+  - ac_id: ACD-2000b-3
+    contract: "The reclaim transition: the staleness verdict { abandoned, owner, claimed_at, threshold_applied } and the takeover that installs a new owner while recording the previous one."
+test_required: false
+test_rationale: "The artifact is a Mermaid state diagram on an architecture page; it has no executable surface for a test to drive. Its mechanical properties are gated at commit time by the repository diagram hooks (check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming, check-mermaid-complexity), and every behaviour it depicts is covered by the executing tests on ACD-2000b-1, ACD-2000b-2 and ACD-2000b-3 -- in particular the reclaim edge, whose SIGKILL-and-take-over test is the diagram's subject. Recorded explicitly so test-writer skips with an accurate reason rather than silently."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC, produced because ACD-2000b declares
+  `documentation_triggers: [reference-doc, state-diagram]`. This is the
+  state-diagram half; ACD-2000b-5 is the reference-doc half.
+
+  WHY THIS IS AN L3 AND NOT A SIXTH L2. ACD-2000b's L2 cap is 5
+  (`_MAX_L2_PER_L1` in scripts/commit_guardian/check_ac_limits.py, tested as
+  `child_count > limit`) and the four behavioural leaves plus the reference doc
+  fill it exactly. Placing the diagram as a fine-grained leaf under ACD-2000b-3
+  keeps the tree legal AND puts it under the behaviour it depicts -- the reclaim
+  path is the only transition in this machine that is not caused by the actor who
+  owns the state, and it is the reason the diagram is worth drawing at all. This
+  is a tree-position choice, not a downgrade: both triggered documentation types
+  are delivered. Craft LEFT UNSET this pass; the intended craft is the
+  architecture-diagram surface and the IT PO fills the rest.
+
+  THE FIFTH THEN CLAUSE (the reclaim edge) IS THE POINT OF THE DIAGRAM. Every
+  other transition here has an obvious actor: the effort takes, hands back, or
+  finishes. Reclaim is performed by a THIRD party on state it does not own, on
+  the strength of a judgement about a process it cannot see. That is the
+  transition operators will misread, and prose has consistently failed to convey
+  it -- ACD-2000b's hazard 1 exists because the current release-only design was
+  understood as sufficient.
+
+  THE SIXTH THEN CLAUSE prevents a common modelling error: drawing the losing
+  contender of ACD-2000b-2's race as entering a "blocked" or "waiting" state on
+  this requirement. It does not -- it goes and finds other work. Modelling it as
+  waiting implies a queue that does not exist and invites someone to build one.
+
+  DO NOT CONFLATE WITH ACD-2000a's LIFECYCLE. ACD-2000a-5 covers the adjudication
+  machine (attempted / reworked / escalated / resolved). The two machines run on
+  the same requirement simultaneously and are independent -- a requirement can be
+  taken and mid-escalation at once. Merging them into one diagram would imply
+  transitions that do not exist and states that are actually pairs.
+
+  CONSISTENCY OBLIGATION: the states drawn must be the states the claim record
+  from ACD-2000b-1 can actually represent and the staleness rule from ACD-2000b-3
+  can actually reach. A diagram drawn ahead of those, or not revisited after
+  them, is a confident wrong picture -- worse than none.
+
+  2026-08-17 (IT PO enrichment). Craft set to `architecture-diagram-author` per
+  the S7b documentation-gate mapping for the `state-diagram` trigger and the BA's
+  recorded intent. The L3 placement is deliberate and is left as authored.
+
+  PLACEMENT FIXED at `docs/architecture/components/ac-driven-dev.md`. The BA left
+  the home implicit; fixing it here gives ACD-2000b-5 a stable anchor to link,
+  and the consistency obligation above means the diagram is the LAST artefact in
+  this L1 to be produced, not the first.

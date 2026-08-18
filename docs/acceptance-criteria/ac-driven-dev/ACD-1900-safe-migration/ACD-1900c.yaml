@@ -17,7 +17,7 @@ criteria: |
   produced, then the checks begin to require them -- and the stricter stage can only be switched
   on once no old-style requirements remain. If anything goes wrong, flipping the control back
   restores the previous behaviour in a single commit, with no code to unwind.
-depends_on: [ACD-1900]
+depends_on: [ACD-1900, ACD-1900a]
 doc_links:
   - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
 assigned_agent: null
@@ -25,7 +25,9 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+  - "2026-08-14 sequencing pass: added depends_on ACD-1900a. The flag is a new config surface and config/ac_store_schema.json now enforces additionalProperties:false via jsonschema.Draft7Validator, so no new field can be authored before ACD-1900a declares its slot."
+  - "2026-08-14 ORDERING CONFLICT RESOLVED — read before re-ordering. This file's notes said 'Depends on ACD-1900b being in place first (the kill-switch is only safe because dual-read exists)'. A 2026-08-14 sequencing analysis reached the opposite conclusion (dual-read needs a flag to branch on). Both are half-true, and encoding both would be a depends_on CYCLE that check_ac_circular_deps rejects. Resolution: split the two senses. DECLARING the flag (both stages off, inert) is a prerequisite of ACD-1900b, so the edge runs 1900c -> 1900b. DEMONSTRATING the kill-switch guarantee (flipping back restores green) genuinely requires dual-read to exist, but that is an ordering constraint on this L1's ACCEPTANCE, not on its implementation, and belongs at L2. Do not add a 1900c -> 1900b depends_on edge; it would close the cycle."
 superseded_by: null
 covered_by:
   - ACD-1900c-1

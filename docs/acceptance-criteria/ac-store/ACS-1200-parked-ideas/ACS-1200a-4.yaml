@@ -1,0 +1,101 @@
+id: ACS-1200a-4
+components:
+  - ac_store
+  - commit_guardian
+title: "The tree that forced the bypass commits cleanly with no bypass"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+criteria: |
+  Given the seven KM-200 records exactly as they exist on disk in the store —
+    KM-200.yaml plus KM-200a.yaml through KM-200f.yaml, not a hand-authored
+    fixture — with the parked marker and a reason added to KM-200.yaml only,
+  And those seven paths staged for commit,
+  When the parent-back-link check is executed as a process in a fresh process
+    against exactly those staged paths, with no SKIP variable set and no hook
+    bypass of any kind,
+  Then the process exits 0,
+  And the same execution over the same seven on-disk files with the parked
+    marker removed from KM-200.yaml exits non-zero and reports six violations,
+    naming KM-200a through KM-200f,
+  And the difference between the two runs is the marker alone, so the passing
+    run is attributable to recognition of the parked state and not to the check
+    having stopped running.
+depends_on:
+  - ACS-1200a
+  - ACS-1200a-1
+  - ACS-1200a-2
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: context
+    status: exists
+    relevance: "The real on-disk tree. Merged 2026-08-14 in PR #433; the commit only landed with SKIP=check-ac-parent-covered-by set, which is the defect this AC closes."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Why a real-artifact run is required: a hook that passes every synthetic fixture and no-ops on real files is the repo's documented phantom-done failure mode."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The seven records under docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/ (KM-200.yaml plus KM-200a..KM-200f.yaml, merged in PR #433) are REAL on-disk records produced by the actual authoring path with real PyYAML serialisation — they are the fixture this AC requires, and the CLAUDE.md 'Real-artifact behavioral spot-check' convention is what makes them mandatory rather than optional. The known failure this guards against is a hook whose parser matched only the indentation style of hand-typed fixtures and was a complete no-op on the real column-0 block-list serialisation."
+  - "The records must be exercised as they exist, not copied into a test fixture directory with hand-applied edits. Copy the seven files verbatim into a temporary git repository preserving their relative store path, and apply exactly one mutation between the two runs: adding, then removing, the marker on KM-200.yaml. The committed store records must be unchanged when the test finishes."
+  - "Both runs must be fresh OS processes. In-process re-execution and importlib.reload() mask cold-import bugs and the hook's fail-open module-resolution fallback, which is exactly the path this AC is meant to prove was not taken."
+  - "The staged set must be established through a real git index (git add in the temporary repo), because the hook determines its input from git rather than from argv. Passing the seven paths directly exercises a different code path from the one pre-commit uses."
+  - "Evidence must come from the DEPLOYED hook where possible (python3 scripts/build.py, then run .leafcutter/scripts/commit_guardian/run_hook.py against the staged set) — a source-tree-only run cannot detect a missing deploy_map entry, which is the standing deployment hazard for this hook's dependencies."
+  - "This AC asserts the two runs and their difference only. It must not assert anything about the other pre-existing orphans in the store; that boundary belongs to ACS-1200b-3."
+test_spec:
+  - name: test_real_km200_records_pass_with_marker
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The seven real on-disk KM-200 records, staged in a temporary repo with the marker on KM-200.yaml only, produce exit 0 from a fresh hook process with no SKIP set."
+  - name: test_real_km200_records_blocked_without_marker
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The identical seven files with the marker removed exit non-zero and report six violations naming KM-200a through KM-200f."
+  - name: test_marker_is_the_only_difference_between_the_two_runs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A byte-level diff of the two staged sets differs only in the marker lines on KM-200.yaml, so the passing run is attributable to recognition and not to the check having stopped running."
+  - name: test_committed_store_records_unmodified_by_the_test
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "After the test completes, the seven records in the real store are byte-identical to their committed content."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200a-2
+  contract: "The parked-aware parent-back-link check, exercised here against the real store records rather than a fixture"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  REAL-ARTIFACT SPOT-CHECK, per CLAUDE.md ("Real-artifact behavioral spot-check
+  before declaring done"). ACS-1200a-2 proves the behaviour against a
+  purpose-built fixture; this one proves it against the exact records that
+  forced the bypass, written by the real authoring path with real YAML
+  serialisation. The repo has already shipped a hook that passed every synthetic
+  fixture and was a complete no-op on real files, for precisely the
+  fixture-shape reason.
+
+  Deliberately narrow: this AC asserts the two runs and their difference. It
+  does NOT assert anything about the other 54 pre-existing orphans in the store
+  — that boundary is ACS-1200b-3.

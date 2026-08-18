@@ -153,6 +153,21 @@ jobs:
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
 
+      # --- JS/TypeScript toolchain (BO-2500e-6) -------------------------------
+      # The oracle recognises `// covers:` tags in .ts/.tsx tests and proves them
+      # by running vitest. It fails CLOSED when the runner is unavailable
+      # (BO-2500e-3-i), so the JS toolchain MUST be installed here — otherwise
+      # every JS-covered AC would be judged ineligible and block the merge.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install leafcutter-web dependencies (provides vitest)
+        run: npm ci --prefix leafcutter-web
+
       - name: Build — run install_shims to create scripts/ symlinks
         # Required before invoking check_done_proof.py: install_shims() creates
         # the symlinks at scripts/commit_guardian/ etc. so the hook's imports
@@ -160,7 +175,84 @@ jobs:
         run: python scripts/build.py --target-dir .
 
       - name: Run proof-of-done check (CI-changed mode)
-        run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }}
+        # --test-root . scans the whole repository so BOTH Python (`# covers:`
+        # under unit_tests/) and JS/TS (`// covers:` under leafcutter-web/)
+        # proofs are discovered by the one gate (BO-2500e-6). Without it the
+        # default root is unit_tests/, which contains no .ts files, so every
+        # JS-covered AC would be reported as having no proof. node_modules/,
+        # .next/ and dist/ are excluded by the scanner.
+        run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }} --test-root .
+
+  ac-store-valid:
+    name: AC store valid
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    # BLOCKING (ACS-200g). Until this job existed, NOTHING in CI read
+    # docs/acceptance-criteria/ — the AC guardrails lived only in
+    # .pre-commit-config.yaml, so a contributor whose local hooks were absent
+    # (see setup_ticket_worktree.py, which installs shims into the main repo
+    # rather than the new worktree) could merge a structurally invalid
+    # acceptance criterion with every required check green. The AC store is the
+    # input to the whole build pipeline, so a bad record there propagates into
+    # tickets, code and sign-offs.
+    #
+    # Diff-scoped to the PR (ACS-200g-2): the store currently has 57 orphaned
+    # children, so a whole-store gate applied per-PR would fail every
+    # contributor on day one and get switched off. Touch a broken record and
+    # you own it; leave it alone and it is not your failure.
+    #
+    # NOT YET IMPLEMENTED — ACS-200h (whole-store run on push to main as a
+    # merge-vector backstop). It is deliberately omitted rather than added
+    # informationally: it would be red from the first run because of those 57
+    # pre-existing orphans. Land it once the store is reconciled.
+    #
+    # WHY THE reset --soft: these hooks read their file set from
+    # `git diff --cached --name-only --diff-filter=AM` (see
+    # _get_staged_ac_paths in check_ac_schema.py) and are documented fail-open
+    # — with a clean index they validate NOTHING and exit 0. In a CI checkout
+    # the PR's files are committed, not staged, so `git add` is a no-op and
+    # invoking the hooks with file arguments silently checks nothing. Moving
+    # HEAD back to the base ref makes exactly the PR's added/modified files
+    # appear staged; the working tree is untouched. Verified both ways: with
+    # the reset a deliberately malformed record fails the job, without it the
+    # same record passes.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history required so the base ref is reachable for the reset.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so the guardian hooks resolve
+        # install_shims() creates .pre-commit-config.yaml and the
+        # scripts/commit_guardian symlink, both of which the hooks below need
+        # on a fresh checkout (ADR-016).
+        run: python scripts/build.py --target-dir .
+
+      - name: Stage the PR's changes so the guardians can see them
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          git reset --soft "origin/${{ github.base_ref }}"
+
+      - name: Check AC store (PR — changed records only)
+        # Run through pre-commit rather than calling the scripts directly, so
+        # the merge-time and commit-time rule sets are literally the same
+        # config and cannot drift apart (ACS-200i). Each hook applies its own
+        # files: filter, so non-AC files in the diff are ignored.
+        run: |
+          pre-commit run check-ac-schema
+          pre-commit run check-ac-tree-limits
+          pre-commit run check-ac-governance
+          pre-commit run check-ac-parent-covered-by
+          pre-commit run check-ac-circular-deps
+          pre-commit run check-ac-pattern-refs
 
   changelog-presence:
     name: "Changelog entry present"

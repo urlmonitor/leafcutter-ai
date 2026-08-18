@@ -1,0 +1,177 @@
+id: BO-2400e-4
+components:
+  - build_orchestration
+  - ac_store
+title: "Recording progress on a requirement changes the progress and nothing else"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement's record written in a deliberate order — its identity first, its
+    wording next, its links and its long accumulated notes at the end,
+  When a lean build records that work on it has begun, and later that it is finished,
+  Then the only difference between the record before and after each update is the value
+    that says how far the work has got,
+  And every other part of the record keeps its original text and its original position
+    within the record,
+  And a build that carries eleven requirements, each recorded three times as the build
+    progresses, changes exactly those thirty-three values and nothing else in the store.
+depends_on: [BO-2400e, BO-2400e-3]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The defect. Verified 2026-08-17: _update_ac_work_status (lines 98-125) re-serialises the whole record with the serialiser's default key ordering, so every update alphabetically re-keys the entire file. With three writes per requirement per run (lines 203, 261, 376), an eleven-member build produces roughly thirty whole-file rewrites — each a large spurious change that buries the one value that actually moved."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling and motive: the lane must record 'incremental, logical commits' whose 'claims are verifiable in that commit's diff'. A commit whose diff is dominated by re-ordered record fields cannot be verified by reading it, so this AC is what makes BO-2400e-2's guarantee usable in practice."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-9.yaml
+    relationship: related
+    status: exists
+    relevance: "The mark-done flip that produces the third write per requirement; one of the three callers whose output this AC constrains."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Post-condition contract of a progress update, stated as a property of the record's TEXT rather than of its parsed value. This is the shape the durable writer from BO-2400e-3 must additionally satisfy."
+    required:
+      - changed_lines
+      - preserved
+    properties:
+      changed_lines:
+        type: array
+        description: "Exactly the line(s) carrying the work_status value. No other line in the file may differ, including whitespace and blank lines."
+        items:
+          type: string
+      preserved:
+        type: array
+        description: "Everything else: key order, block-scalar style, quoting style, indentation, comments and trailing newline, all byte-identical to the pre-update file."
+        items:
+          type: string
+  constraints:
+    - "The guarantee is TEXTUAL, not structural. yaml.safe_dump sorts keys by default and normalises quoting and block scalars, so any design that loads-and-re-dumps the record fails the criteria even when the parsed mapping is equal. A round-trip-preserving loader or a targeted in-place edit of the single value are both acceptable; a plain safe_dump with sort_keys=False is NOT sufficient, because it still normalises block scalars, quoting and comments."
+    - "Must preserve the store's real record features, not just simple ones: multi-line block scalars (the `criteria` and `notes` fields), blank lines inside those blocks, mixed quoting styles, unicode, and the file's trailing newline. These are the features a hand-written fixture lacks and a re-serialising writer mangles."
+    - "This behaviour lands on the SAME writer BO-2400e-3 introduces, at all three call sites (fast_lane.py:203, :261, :376). Do not build a second, shape-preserving writer alongside the durable one: two writers will drift and one of them will stop preserving. That is why this AC depends_on BO-2400e-3 rather than the other way round."
+    - "Fixtures must be REAL records copied from docs/acceptance-criteria/ into a temp tree, per CLAUDE.md's real-artifact rule. A short, uniformly-quoted hand-written record survives re-serialisation almost unchanged, so a synthetic fixture reproduces the bug-hiding bias and will false-green this AC — the store's actual records, with block-scalar notes and mixed quoting, are what expose the defect."
+    - "Comparing parsed records is explicitly insufficient evidence for this AC and must not be accepted as coverage: a re-keyed record parses to an equal mapping, so a parsed-value assertion passes on the current defective behaviour."
+    - "An eleven-member build performs about thirty writes; the preserving write must not make a single update more than marginally slower than the current whole-file dump."
+delivers_to:
+  - agent: python-coder
+    contract: "The durable record-update entry point from BO-2400e-3, additionally guaranteeing that a progress update alters only the work_status line and leaves every other byte of the record — key order, block scalars, quoting, blank lines, trailing newline — unchanged. BO-2400e-2's 'claims verifiable in the commit diff' guarantee depends on this property holding for every progress commit the lane produces."
+expects_from:
+  - ac_id: BO-2400e-3
+    contract: "The single durable record-update entry point in scripts/build_orchestration/, used by all three call sites. This AC constrains the serialisation that writer performs; it must not introduce a second writer alongside it."
+test_spec:
+  - name: test_only_the_progress_value_differs_after_an_update
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A real on-disk record is captured as text before and after a progress update; the textual difference is asserted to be confined to the progress value. Comparing parsed records instead of text is explicitly insufficient — see the rationale."
+  - name: test_field_order_and_untouched_text_are_preserved
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The order of the record's parts, and the exact text of a long multi-line notes block including its blank lines, are unchanged after the update."
+  - name: test_eleven_member_build_changes_only_its_progress_values
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Copies eleven REAL records from the store into a temp tree, drives the build's progress recording through begin/finish for each, and asserts the total textual change across the tree is confined to the progress values. Real records are required: they carry the long notes, block scalars and quoting styles that a hand-written fixture will not reproduce."
+  - name: test_progress_recording_preserves_the_record_via_the_real_surface
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: drive the lane's real progress-recording surface rather than any helper, so a preserving writer that exists but is not the one the lane calls fails here."
+test_rationale: "The test an implementer will reach for first — load the record after the update and assert its values are correct — passes on the current, defective behaviour, because a re-keyed record parses to exactly the same mapping. The defect is invisible at the parsed level and visible only in the file's text, so every assertion here is textual. The real-records case matters for the same reason the project's real-artifact rule exists: hand-written fixtures are short, uniformly quoted and free of block scalars, which is precisely the shape that hides serialisation differences; the store's actual records carry long notes blocks, mixed quoting and multi-line criteria, and those are what a re-serialising writer mangles. The entry-point test is separate because adding a preserving writer while leaving one of the three call sites on the old path is the most likely partial implementation, and it would be undetectable from the other three tests."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent (python-coder), estimated_complexity, declares_side_effect,
+    it_requirements (package-surface object form mandated by the schema's root if/then;
+    policy constraints under `constraints`), delivers_to and expects_from pairing
+    to BO-2400e-3. test_spec unchanged. criteria and title untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  GAP 3 OF THE 2026-08-17 FAST-LANE PASS, PART TWO OF TWO. Twin of BO-2400e-3. Both are
+  properties of one write; they are separate ACs because survival and noise are
+  different guarantees and an implementation can deliver either alone. Note the
+  sequencing: this AC depends on BO-2400e-3 because whatever durable-write design lands
+  there is the mechanism that must also preserve the record's shape. Landing this one
+  first would specify the shape of a writer that BO-2400e-3 then replaces.
+
+  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
+  scripts/build_orchestration/fast_lane.py:98-125, function _update_ac_work_status:
+
+      with yaml_path.open("w", encoding="utf-8") as fh:
+          yaml.safe_dump(data, fh, allow_unicode=True)
+
+  The serialiser sorts keys by default, so every write alphabetically re-keys the whole
+  record. It is called three times per requirement per run — line 203 (in_progress),
+  line 261 (todo), line 376 (done) — so an eleven-member build set produces roughly
+  thirty whole-file rewrites.
+
+  WHY THIS IS WORTH AN AC AND NOT JUST A TIDY-UP. Three compounding consequences:
+    - It buries the real change. A reviewer looking at a fast-lane commit sees a record
+      reshuffled from top to bottom and cannot tell that one value moved. BO-2400e-2
+      requires that each commit's claims be verifiable in its diff; this behaviour makes
+      that impossible for every progress commit the lane produces.
+    - It manufactures conflicts. Whole-file rewrites of shared store records collide
+      with any concurrent authoring in the same folder — a recurring hazard in this
+      workspace, where requirement authoring routinely runs alongside builds.
+    - It multiplies the blast radius of BO-2400e-3's defect. A write that rewrites every
+      line is a write with far more to lose when it is interrupted.
+
+  STATED AS BEHAVIOUR ON PURPOSE. The criteria describe what the record looks like
+  before and after, and say nothing about serialiser options, round-trip loaders or
+  in-place editing. Any of those may be the right answer; that is the IT PO's call.
+
+  TESTABILITY WARNING — THIS IS THE ONE THAT WILL BE FALSE-GREENED. A test that loads
+  the record after the update and compares parsed values passes on the current
+  behaviour, because a re-keyed record parses to an equal mapping. The assertion must be
+  textual, and the fixtures must be real records copied from the store, for the reason
+  CLAUDE.md's real-artifact rule records: synthetic fixtures reproduce the bug-hiding
+  bias. A short, uniformly-quoted hand-written record survives re-serialisation almost
+  unchanged; the store's actual records, with their block-scalar notes and mixed
+  quoting, do not.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The IT PO's call the notes invite, recorded
+  explicitly: `safe_dump(..., sort_keys=False)` is NOT an acceptable answer. It fixes the
+  alphabetical re-keying — the most visible symptom — while still normalising block
+  scalars, quoting and comments, so it would pass a key-order assertion and fail the real
+  records in the eleven-member case. The acceptable designs are a round-trip-preserving
+  loader or a targeted in-place edit of the single value; the constraint is written that
+  way rather than naming one, because both satisfy the criteria. Assigned python-coder
+  (single surface, no mixed-surface caveat); object-form it_requirements is mandated by
+  the schema's root if/then for python-coder + build-orchestration.

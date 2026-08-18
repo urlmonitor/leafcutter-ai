@@ -1,0 +1,168 @@
+id: ACD-1600g-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A scope review with no boundary to read says so loudly instead of falling back to guesswork"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement that carries no declared boundary at all,
+  And a build of that requirement whose pending changes include a file the
+    requirement never named,
+  When the change under review is compared against the requirement's boundary,
+  Then the review reports that it had no boundary to compare against, as part of
+    the outcome a person reads,
+  And the outcome states which requirement had none,
+  And the review does not report a clean scope on the strength of an absent
+    boundary,
+  And a requirement that declares an explicitly empty boundary produces a
+    different outcome from one that declares none, so the two are never
+    conflated.
+depends_on: [ACD-1600g, ACD-1600g-1, ACD-1600g-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "Safety rule 3 (advisory before required) and rule 4 (tolerant readers -- absence of a new field is legacy mode, derive, never fail) are the two rules that make this announcement advisory rather than blocking."
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "The degradation site. Verified 2026-08-17: Step 1.1 (~line 74) says the list 'may be absent -- treat as empty list'; Tier 1's second condition (~line 110) is then trivially satisfied; Tier 2's FIRST clause (~line 120) becomes unreachable while its SECOND clause still fires; Tier 3 (~line 131) already routes 'out_of_scope is absent AND the component overlap is partial' to ambiguous. The uncovered gap is absence with FULL component overlap, which silently takes Tier 1 soft."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "NEVER COLLAPSE ABSENT INTO EMPTY. Every consumer reads through the ACD-1600g-1 three-state seam; defaulting a missing boundary key to an empty list is forbidden anywhere in the call path. It is a one-line convenience and it destroys the entire guarantee of this AC."
+  - "THE ANNOUNCEMENT GOES IN THE OUTCOME A PERSON READS -- the reviewer's Step 4 comment body in templates/agents/change-scope-reviewer.md -- and it must name the AC id(s) that carried no boundary. A log line, a debug print, or a field only a machine reads does not satisfy the third Then clause."
+  - "ADVISORY, NOT FATAL. ADR-026 rule 4 forbids failing on an absent new field and rule 3 requires new gates to ship advisory before required, so absence alone must not escalate the sign-off status to blocker. The requirement is that the absence is ANNOUNCED, not that it stops the build."
+  - "PRECISION ABOUT WHAT IS ACTUALLY DEGRADED TODAY, verified 2026-08-17 -- carry it into the fix rather than re-deriving it. With the list treated as empty: Tier 2's FIRST clause ('the file's top-level directory or component is listed in out_of_scope') is unreachable, but Tier 2's SECOND clause (a wholly different top-level component) still fires and must keep firing. Tier 1's second condition ('the file is NOT named in out_of_scope') is trivially satisfied, so an unexpected file in a SIBLING directory downgrades to a [scope-extension] tag and the review continues. Tier 3 already routes the absent-plus-partial-overlap case to ambiguous. The genuine uncovered gap is therefore absence with FULL component overlap, which today takes Tier 1 soft with no signal at all -- that is the case the announcement must cover."
+  - "DO NOT 'FIX' THIS BY MAKING ABSENCE A TIER 2 BLOCK. That contradicts ADR-026 rule 4 and would stall every commit in the store during the cutover window, since no AC carries the field yet. The middle path is deliberate: the component PROJECT_CONTEXT.md classifies a stalled repo as a lesser risk than a false green, but this AC is not the place to take either extreme."
+  - "DECLARED-AND-EMPTY MUST NOT TRIGGER THE ANNOUNCEMENT. It is the author's positive statement that nothing is excluded and is a fully migrated record. The two states must produce materially different outcomes and both must be asserted in the same test run."
+  - "THE ANNOUNCEMENT MUST BE COUNTABLE, not prose-only: emit the list of un-migrated AC ids and a count alongside the human-readable line, so the backfill queue can be measured over time. An announcement nobody can aggregate turns a measurable migration gap back into a vibe."
+  - "Canonical source only -- scripts/ac_store/scope_boundary.py and templates/agents/change-scope-reviewer.md in the source tree, never the deployed .claude/ copies (ADR-001). Deploy-manifest first if a hook comes to depend on the module (ADR-026 rule 2; scripts/build_phases.py ~line 794)."
+delivers_to:
+  agent: change-scope-reviewer
+  contract: "Undeclared-boundary advisory: { undeclared_members: [ac_id], count: int, message: str }, rendered as its own section in the Step 4 comment body of templates/agents/change-scope-reviewer.md and countable for the migration backfill queue. Never escalates the sign-off status on its own; an AC that declared an empty boundary is absent from this list."
+expects_from:
+  ac_id: ACD-1600g-1
+  contract: "read_boundary(ac_record) -> { declared: bool, paths: list[str] }. The `declared` flag is the entire input to this AC -- if the seam collapses absent into empty, there is nothing left here to implement."
+test_spec:
+  - name: test_absent_boundary_is_announced_and_names_the_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real adjudication over a staged diff in a temp git tree against a real on-disk AC record with no boundary key; asserts the emitted outcome contains the advisory and the AC id."
+  - name: test_declared_empty_boundary_produces_no_announcement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Identical staged diff and harness, AC record carrying an explicitly empty boundary: asserts no advisory is emitted and the outcome differs from the absent case. The pair must be asserted in one run so an unconditional-warning implementation fails."
+  - name: test_absent_boundary_does_not_report_clean_scope
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With an unexpected file that fully overlaps the change surface's component -- the case that silently takes Tier 1 soft today -- asserts the outcome is not reported as clean."
+  - name: test_absent_boundary_does_not_escalate_to_a_blocking_status
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Absence alone yields an advisory, never a blocker sign-off status -- the ADR-026 rule 4 guard against over-correcting into a stalled repository."
+  - name: test_component_mismatch_still_blocks_when_no_boundary_is_declared
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A file in a wholly different top-level component still yields a hard finding on a boundary-less AC -- Tier 2's second clause is untouched by the advisory path."
+  - name: test_undeclared_members_are_counted_for_the_backfill_queue
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A five-member bundle in which three members declare no boundary yields a count of three and exactly those three ids, so migration progress is measurable rather than narrative."
+test_rationale: "This AC is defined by a DIFFERENCE between two runs, so no single-case test can verify it: a test that only exercises the absent case passes on an implementation that emits the advisory unconditionally, and a test that only exercises the declared-empty case passes on one that never emits it. The absent and empty records are therefore driven through the same harness over the same staged diff and their outcomes compared. A direct-import unit test of the three-state reader would prove the reader distinguishes the states while leaving completely unproven the thing the AC is about -- that the distinction reaches the outcome a person reads. That is the same shape as a gate whose condition is computed and then discarded, which is the failure this whole tree was written against. The two guard tests exist because both natural over-corrections are invisible to the four main assertions: escalating absence to a blocker (stalls every commit during the cutover, since no AC carries the field yet) and replacing the Tier 2 condition wholesale while rewiring it (deletes the only block clause that works today)."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE QUIET-DEGRADATION LEAF. ACD-1600g's verified notes ask for this explicitly:
+  "It already treats an absent `out_of_scope` as tolerable, so the migration will
+  not break it loudly -- it will silently lose half its signal and fall back to
+  component-overlap guessing. That is a quiet-degradation risk, not a crash:
+  budget an explicit test for it."
+
+  VERIFIED MECHANISM. templates/agents/change-scope-reviewer.md Step 1.1 reads
+  `out_of_scope` from ticket frontmatter and instructs: "may be absent -- treat as
+  empty list". With an empty list, Tier 2's block condition ("the file's top-level
+  directory or component is listed in out_of_scope") can never fire on the
+  exclusion clause, and Tier 1's soft condition ("the file is NOT named in
+  out_of_scope") is trivially satisfied, so unexpected files in a sibling
+  directory downgrade to `[scope-extension]` tags and the review continues. The
+  reviewer then adjudicates on component-overlap heuristics alone -- half its
+  signal, with no indication that half is missing.
+
+  WHY THIS IS THE MIGRATION-CRITICAL LEAF, NOT A NICETY. During the cutover
+  window the store will contain ACs written before ACD-1600g-1's slot existed
+  (ADR-026 rule 4: absence of a new field = legacy mode, derive, never fail). If
+  "legacy mode" is implemented as "empty boundary", every legacy AC silently
+  reports clean scope forever and nobody learns the migration is incomplete.
+  Distinguishing the two states is what turns a silent regression into a
+  measurable backfill queue.
+
+  TOLERANT READER, NOT A HARD FAIL. Note the criteria deliberately do NOT say
+  "blocks". ADR-026 rule 4 forbids failing on an absent new field, and rule 3
+  ("advisory before required") applies. The requirement is that the absence is
+  ANNOUNCED in the outcome a person reads -- loud, not fatal. Whether that is a
+  warning line, a distinct status, or a counted advisory is the IT PO's call.
+  Compare `check_ticket_signoff_parity`, which fails loud and blocks: the
+  component PROJECT_CONTEXT.md classifies a stalled repo as a different -- and
+  lesser -- risk than a false green, and this AC picks the middle path.
+
+  THE FOURTH THEN CLAUSE is the one that will be dropped by a careless
+  implementation. "Declared and empty" is an author's positive statement that
+  nothing is excluded; "not declared" is an unmigrated record. Collapsing them is
+  a one-line convenience (`data.get("out_of_scope", [])`) and destroys the
+  distinction ACD-1600g-1's third Then clause was written to preserve.
+
+  TESTABILITY. Run the reviewer twice over the same staged diff -- once against
+  an AC with no boundary key, once against an AC with an explicitly empty
+  boundary -- and assert the two outcomes differ and that the first names the
+  requirement. A test that only checks the absent case passes on an
+  implementation that reports the warning unconditionally.
+
+  2026-08-17 (IT PO enrichment). The deferred shape decision is made, plus one
+  correction of precision to the mechanism above.
+
+  - THE ANNOUNCEMENT IS A COUNTED ADVISORY, not a warning line and not a distinct
+    status. Reason: the point of distinguishing absent from empty is to convert a
+    silent regression into a MEASURABLE backfill queue, and prose cannot be
+    aggregated. A new status value would also collide with the reviewer's existing
+    Step 5 status table, which maps exactly three conditions onto ok / blocker /
+    question; adding a fourth would force every caller of the sign-off contract to
+    learn it. So: a named section in the Step 4 body plus a machine-readable
+    { undeclared_members, count } payload, with the sign-off status unchanged.
+
+  - PRECISION CORRECTION to "Tier 2's block condition can never fire". Verified
+    against the template: Tier 2 has TWO clauses joined by ANY, and only the first
+    depends on the exclusion list. The second (a wholly different top-level
+    component) still fires today and is currently the ONLY working block path.
+    Likewise Tier 3 already routes "out_of_scope absent AND component overlap
+    partial" to ambiguous, so absence is half-announced in that one case already.
+    The genuinely uncovered gap -- and therefore the real content of this AC -- is
+    absence with FULL component overlap, which takes Tier 1 soft with no signal
+    whatsoever. Two tests were added to pin both edges of that correction.
+
+  - THE PUSH IS TOWARD "PASS", NOT A NEUTRAL LOSS, and the corrected reading does
+    not soften that: for the sibling-directory and same-component cases -- the
+    overwhelming majority of real unexpected files -- the degradation actively
+    downgrades findings into the continue bucket rather than merely failing to
+    upgrade them.

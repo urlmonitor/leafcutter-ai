@@ -1,0 +1,76 @@
+id: BP-900h-3
+components:
+  - build_pipeline
+title: "A broken consumer install blocks the merge, it does not just report"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the consumer-simulation job from BP-900h-1 and BP-900h-2 exists,
+  When a pull request introduces a change that breaks the clean install
+    (for example a script referenced by a template but not added to any deploy
+    phase),
+  Then the consumer-simulation job reports a failing conclusion for that pull
+    request
+  And the job carries no continue-on-error and no conditional that would let it
+    pass on failure
+  And the job is registered among the repository's required status checks, so the
+    pull request cannot merge while it is red
+depends_on:
+  - BP-900h
+  - BP-900h-1
+  - BP-900h-2
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: .github/workflows/ci.yml
+  n_location_rule: "1 — the consumer-simulation job definition"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The job must not set continue-on-error, and must not be guarded by a condition that skips it on pull_request events."
+    - "Registering the check as required is a repository ruleset change (ruleset require-ci-lint, id 17810993) and needs an admin:write token — it is NOT achievable from the workflow file alone. Surface this to the user as a manual step rather than silently marking the AC done."
+    - "Cover the blocking behaviour by asserting on the workflow definition AND by demonstrating a red run on a deliberately broken install; a definition-only assertion passes on a job that never executes."
+  notes: |
+    Split from BP-900h-1 deliberately. A job that runs and reports is not a gate —
+    the repository has shipped that mistake before, which is why CLAUDE.md carries
+    the rule "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and why the
+    fast-lane runner's red/green gates were found never to execute.
+
+    Ordering note for whoever drives this: make the job green on main FIRST, then
+    add it to the required-checks ruleset. Marking a job required while it is red
+    on main blocks every merge in the repository.
+test_spec:
+  - name: test_consumer_simulation_job_is_not_soft_failing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    description: "Parses ci.yml and asserts the consumer-simulation job declares no continue-on-error and no condition excluding pull_request."
+  - name: test_consumer_simulation_job_fails_on_broken_install
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    description: "Runs the job's underlying check against a deliberately broken install fixture and asserts a non-zero exit, since a definition-only assertion passes on a job that never executes."
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-2
+  contract: "A consumer-simulation job that performs the install and the idempotency comparison, and exits non-zero when either fails."
+origin_agent: BrainCandy
+created: 2026-08-17
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

@@ -406,6 +406,11 @@
                                 "enum": ["unit", "integration", "e2e", "behavioral"],
                                 "description": "Test level. Guides where the test runs and how heavy its fixtures are."
                             },
+                            "angle": {
+                                "type": "string",
+                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec is taken as-is and gets no generator-added entries. Omit when the angle has not been classified."
+                            },
                             "description": {
                                 "type": "string",
                                 "minLength": 1,
@@ -632,6 +637,17 @@
                 "privacy",
                 "safety",
                 "cost"
+            ]
+        },
+        "declares_side_effect": {
+            "description": "Declares that this AC's work produces a durable, observable side-effect on a user-facing surface (a file written, a record persisted, a command that changes state) rather than only returning a value. Authored by it-po (or business-analyst) during enrichment; set it to true whenever the AC's Then clause asserts something observable outside the process. Effect: generate_ticket_from_ac.py reads this field and automatically routes the user-surface-smoker phase agent into the generated ticket's agents map as 'needed', and propagates declares_side_effect: true to the ticket frontmatter (BP-1100f-5). The gate is NON-OVERRIDABLE — an explicit user-surface-smoker: not_needed override is ignored while this field is true (BP-1100f-5, mirroring the BO-550-1-i protection for the TDD agents). Absence (or false/null) means the AC makes no durable side-effect claim and is NOT force-routed to the smoker (BP-1100f-5-i); the exemption is data-driven, never by item name. This is the repo's one automatic guard against 'the code was built but is not wired into anything'.",
+            "oneOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
             ]
         },
         "product_truth": {

@@ -1,0 +1,102 @@
+id: GE-120d-5
+title: "The how-to states what a prepared working copy guarantees and how to confirm it"
+component: guardrail-engine
+components:
+  - documentation_system
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who has just had a working copy prepared for them,
+  When they consult the how-to for managing commit-time checks,
+  Then it states what set-up guarantees — that the checks are active and reach the same
+    verdicts as the main checkout,
+  And it states what set-up does when it cannot establish that: it names the missing part and
+    refuses, rather than handing over an unprotected copy,
+  And it gives the one command the reader runs to confirm protection is active in the copy in
+    front of them, and what its output looks like in both the healthy and the unhealthy case,
+  And it does not instruct the reader to establish any part of the protection by hand,
+  And it does not reintroduce the manual layout-link step that GE-120b-5 removes.
+depends_on:
+  - GE-120d
+  - GE-120d-2
+  - GE-120b-5
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/verify-precommit-active.md
+    relationship: related
+    status: exists
+    relevance: "The existing home of the confirm command; use it rather than inventing a second command, and keep it consistent with GE-120b-5's replacement text."
+  - path: templates/scripts/commit_guardian/verify_precommit_active.py
+    relationship: related
+    status: exists
+    relevance: "The script behind the confirm command, verified present in the package."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "DOCUMENT: docs/how-to/managing-pre-commit-hooks.md, edited AFTER GE-120b-5's removal has landed on the same file. RE-READ the file as GE-120b-5 left it before editing — do not work from a copy taken before that edit. Two agents editing one document in sequence from separate ACs is the named hazard here."
+  - "THE CONFIRM COMMAND IS THE SUBSTANTIVE ADDITION and it already exists: docs/how-to/verify-precommit-active.md and templates/scripts/commit_guardian/verify_precommit_active.py are both present (verified 2026-08-14). Use that command rather than inventing a second one, and cross-link the two documents so a reader is not offered two ways to check the same thing."
+  - "Show the command's output in BOTH the healthy and the unhealthy case, quoting the message GE-120d-2's refusal path actually emits. Do not paraphrase it — a paraphrased error message is one a reader cannot match against what they see, and it silently rots when the real message changes."
+  - "State the set-up guarantee and the refusal behaviour AS GE-120d-2 IMPLEMENTS THEM. Sequence this AC after GE-120d-2 lands so the documented behaviour is the one that exists rather than one the author expected."
+  - "ANTI-REINTRODUCTION: the file must not regain the manual layout-link step GE-120b-5 removed, in ANY wording — including the 'if you are on WSL/NTFS, copy instead of symlink' variant and any 'if the checks seem to be skipped, link .leafcutter' troubleshooting note. Run GE-120b-5's absence guard before sign-off; a reviewer reading a diff will not reliably catch a re-added variant phrased differently from the deleted one."
+  - "No instruction anywhere in this document may tell the reader to establish any part of the protection by hand. Removing the layout-link step while leaving a different manual step satisfies the letter and not the criterion."
+  - "The file is a tracked how-to subject to check_doc_frontmatter, check_doc_length and check_doc_links; edit in place and keep it passing in the same commit."
+test_spec:
+  - name: test_ge120d5_howto_states_setup_guarantee_and_confirm_command
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The how-to states the set-up guarantee, the refusal behaviour, and names the confirm command that verify_precommit_active.py provides."
+  - name: test_ge120d5_manual_layout_link_step_not_reintroduced
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    description: "The document does not contain the manual layout-link instruction in any wording, including the NTFS copy variant — the anti-reintroduction guard shared with GE-120b-5."
+test_rationale: "change_target is docs, but two clauses here are textual invariants spanning two ACs that edit the SAME file in sequence: GE-120b-5 removes the manual step and this AC adds new text immediately afterwards. The anti-reintroduction clause is only enforceable by a mechanical absence scan — a reviewer reading this AC's diff sees an addition and has no way to know it restores text the previous AC deleted. This is the narrow case where a text scan IS the behaviour under test rather than a proxy for it."
+delivers_to: null
+expects_from:
+  ac_id: GE-120d-2
+  contract: "The set-up refusal behaviour and its message, to document as it actually is."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in GE-120d's documentation_triggers.
+
+  DELIBERATELY DISTINCT FROM GE-120b-5, which edits the same document. GE-120b-5 REMOVES the
+  obsolete manual workaround for the check family; this AC ADDS the set-up guarantee and the
+  confirmation command. They are separate ACs because they have different preconditions —
+  b-5 waits on GE-120b-4, this waits on GE-120d-2 — and because a single AC covering both
+  would let an author satisfy it by doing whichever half was easier.
+
+  The ordering is recorded in depends_on: GE-120b-5 first. Both edits touch the same document
+  and the final clause here is what stops the second edit restoring text the first deleted —
+  a real hazard when two agents edit one how-to in sequence from separate ACs.
+
+  The confirm-command clause is the substantive addition. A reader who has been told for months
+  to link the layout by hand will not stop doing it because a sentence was deleted; they stop
+  when they are given something to run that tells them they do not need to.
+
+  IT-PO (2026-08-14): the confirm command already exists —
+  templates/scripts/commit_guardian/verify_precommit_active.py with
+  docs/how-to/verify-precommit-active.md as its home. Use it rather than inventing a second
+  one. The anti-reintroduction clause is backed by the same mechanical absence guard
+  GE-120b-5 introduces; run it before sign-off.

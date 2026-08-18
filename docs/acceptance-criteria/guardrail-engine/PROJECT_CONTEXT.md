@@ -1,7 +1,15 @@
 ---
-description: "Conventions and standing notes for authoring/decomposing ACs in the guardrail-engine component (prefix GE)."
+title: "guardrail-engine — AC store context"
+description: Conventions and standing notes for authoring/decomposing ACs in the guardrail-engine
+  component (prefix GE).
+created: '2026-08-14'
+last_updated: '2026-08-14'
+type: tutorial
+status: active
+components:
+  - commit_guardian
+  - precommit_hooks
 ---
-
 # guardrail-engine — AC store context
 
 Conventions and standing notes for authoring/decomposing ACs in the
@@ -24,6 +32,12 @@ authoring agents across runs.
   `assigned_agent`, `estimated_complexity`, `it_requirements`, `delivers_to`,
   `expects_from`). Mirror an existing sibling file's field set rather than the
   bare schema.
+
+> **Amendment (2026-08-14):** the "no L0 root file" convention above describes
+> the ORIGINAL GE-1xx family only. Newer trees (GE-113, GE-116, GE-118, GE-120)
+> are authored as a proper L0 root + L1 children in a `GE-NNN-<slug>/` folder.
+> Follow the newer pattern for new work; the note above is retained because the
+> older GE-100/GE-107 files still have the flat shape.
 
 ## Exception-handling guard lineage (GE-107 / GE-108)
 
@@ -62,3 +76,71 @@ leaf (likely `GE-108a` / `GE-108b` / `GE-108c`):
   `origin_agent: business-analyst`.
 - Priority is finalised at the workflow's final gate, not at authoring time —
   new L0/L1 ACs are written `priority: medium`, `readiness: draft`.
+
+## GE-120 green-means-checked: framing note for the BA/IT-PO (2026-08-14, PO)
+
+GE-120 ("Trust that a green check actually checked something") is a NEW root L0
+in guardrail-engine, slug folder `GE-120-green-means-checked/`, four L1 children
+GE-120a..d, origin_agent BrainCandy, readiness draft, priority medium,
+roadmap_phase phase_1. It generalises a defect class: a commit-guardian check
+that cannot reach what it needs exits 0 and reports success, so "green" is
+indistinguishable from "did not run".
+
+PLACEMENT PRECEDENT (reuse this reasoning): triage suggested grafting onto
+GE-118a. Rejected — GE-118a is an L1 whose SUBJECT is one check (check-secrets)
+and whose only child is done; hanging a cross-cutting policy under a
+single-instance L1 inverts containment and reopens a complete node. GE-118's L0
+was also rejected as parent: its scope is dependency RESOLUTION from the
+deployed layout, while two of GE-120's L1s cover degrade paths that are not
+resolution failures. Standing rule for this component: **GE-118 = the point
+fixes that landed (GE-118a-1, GE-118b, both done); GE-120 = the class they are
+instances of.** GE-118 was deliberately NOT amended or superseded.
+
+FAIL-OPEN CONTRADICTION — load-bearing, do NOT let decomposition flatten it:
+this component has a deliberate fail-open convention (internal error → exit 0 +
+stderr warning so a script bug never blocks an unrelated commit), documented in
+the ac-store PROJECT_CONTEXT and approved as GE-116a-1-iii ("Unparseable agent
+definition fails open and does not block the commit"). GE-120 does NOT repeal
+it. The line it draws: fail-open on ONE bad input while the check still ran is
+fine; reporting SUCCESS for a check that never ran is not. The unit of the rule
+is **visibility**, not blocking. Whether a cannot-run condition should also
+BLOCK is a per-check L2 decision — there is no blanket default.
+
+L1 split (decompose each into L2; do NOT re-cut at L1):
+
+- **GE-120a** — the POLICY: a check that cannot run says so. Cross-cutting over
+  the 18 checks sharing the `_find_project_root` / `parents[]` root-walk
+  pattern. `documentation_triggers: [reference-doc]` — the opposite rule is what
+  is currently written down.
+- **GE-120b** — PARITY: same work, same verdict from any working copy. The
+  acceptance shape is the observed pair — `check_ac_parent_covered_by.py`
+  exiting 0 with "skipping check (fail-open)" without the deployed-layout link
+  vs. blocking with 6 violations WITH it, on identical staged files. The how-to
+  trigger is a REPLACEMENT: the manual "link `.leafcutter` into your worktree"
+  pre-drive step must be deleted, not left beside the fix.
+- **GE-120c** — PROOF: verified by running the deployed checks from a separate
+  working copy. Today's unit tests import from the source tree — the one layout
+  where the bug cannot reproduce — so they are not evidence.
+  `[component-diagram]` for the new harness.
+- **GE-120d** — SET-UP: `setup_ticket_worktree.py`'s own "graceful no-op" on
+  `verify_precommit_active.py` / `install_pre_commit_shims.py`. Different
+  script, so it is its own L1; may be folded into GE-120b ONLY if decomposition
+  proves the same root cause — and say so explicitly rather than dropping it.
+
+EVIDENCE CONFIDENCE (carry the labels through — do not upgrade them): the
+`check_ac_parent_covered_by` pair is DIRECTLY OBSERVED AND REPRODUCIBLE. The
+"26 schema-violating files looked clean" figure from `check_ac_schema.py`'s
+silent degrade to manual field validation is REPORTED BY A PARALLEL SESSION AND
+UNVERIFIED — GE-120c is what makes it checkable.
+
+REPEAT-DEFECT HISTORY: GE-112 already fixed an adjacent defect in
+`check_ac_schema.py`. Three prior point patches exist in this area (GE-112,
+GE-118a-1, GE-118b). Favour a structural fix; a fourth point patch is the
+failure mode to avoid.
+
+SEQUENCING WITH ac-store: GE-120b and ACS-1200a touch the same file
+(`check_ac_parent_covered_by.py`) for opposite-direction reasons — GE-120b makes
+it run everywhere, ACS-1200a makes it enforce the right rule. A check that
+starts running reliably everywhere while still holding the wrong rule blocks
+every parked idea MORE consistently. Sequence ACS-1200a with or before GE-120b,
+or land them in the same release.

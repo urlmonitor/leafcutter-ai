@@ -1,0 +1,145 @@
+id: ACD-1800f-4-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "One requirement's proof cleanup cannot destroy another requirement's uncommitted effect"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a feature that bundles two requirements that each promise an observable
+    effect,
+  And the first requirement's proof leaves a new uncommitted file behind as the
+    very thing to be observed,
+  And the second requirement's proof modifies an unrelated file and is checked
+    afterwards,
+  When the observable promises of the feature are checked in one run,
+  Then the first requirement's proof is observed successfully,
+  And the second requirement's proof is observed successfully,
+  And running the two proofs in the opposite order produces the same two
+    outcomes,
+  And the run does not refuse to start on the grounds that the working area was
+    left untidy by an earlier proof.
+depends_on: [ACD-1800f-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where the isolation guarantee is stated for authors (ACD-1800f-5's third Then clause)."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "Failure mode (2) below -- a sibling's restore making an assertion hold for an unrelated reason -- is a false green, and this is the component that owns that axis."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ORDER-INDEPENDENCE IS THE SPECIFICATION, NOT AN EXTRA. Isolation cannot be asserted directly; 'the same two outcomes in either order' can be, and it fails loudly on every shared-tree implementation. It also closes the tempting shortcut of ordering members so the destructive proof runs last -- which works until membership changes, and membership changing without revalidation is the whole argument for moving the proof onto the requirement."
+  - "BOTH COLLIDING MECHANISMS MOVE TOGETHER. templates/agents/user-surface-smoker.md Step 5 (~163) restores the whole tree unconditionally after every stanza, and Step 1 (~119-121) refuses to start on a dirty tree. Scoping only the cleanup converts failure mode (1), destruction, into failure mode (3), refusal -- which the fourth Then clause explicitly forbids. Both the cleanup and the pre-check must be evaluated against the individual proof's own baseline."
+  - "THE OBSERVATION MUST BE CAPTURED BEFORE ANY CLEANUP RUNS, whatever isolation technique is chosen. A proof whose observable effect IS an uncommitted file cannot be judged after a restore, and the assertion must not be re-evaluated against a post-cleanup tree."
+  - "NO NAME-BASED OR ORDER-BASED EXEMPTIONS. Isolation must derive from a data property of each proof (its declared paths, or its own worktree), never from a hard-coded member ordering, an allowlist of 'destructive' proofs, or an AC id. A new member must inherit isolation automatically."
+  - "THE HARNESS MUST BE SELF-VALIDATING AND FAIL LOUD. An isolation harness that silently fails to establish a baseline makes every proof look isolated and restores the original defect invisibly. Report an unavailable baseline as a distinct outcome, never as a successful observation -- the same reasoning that gives ACD-1800f-3 three outcomes rather than two."
+  - "Canonical source only: scripts/ac_store/ and scripts/build_orchestration/, never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001). The prose half of the collision lives in templates/agents/user-surface-smoker.md and is outside python-coder's surface -- see ACD-1800f-4's mixed-surface flag; this AC's Python harness must be drivable without it."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800f-4
+  contract: "The bundle observation runner and its per-proof isolation baseline: per_requirement entries carrying {ac_id, proof_index, status, reason, isolation_baseline}. This AC constrains the isolation_baseline semantics -- it must be per-proof and must be established before the proof runs, not derived from the tree state at run time."
+test_spec:
+  - name: test_a_proof_whose_observable_effect_is_an_uncommitted_file_survives_a_siblings_cleanup
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "In a real temporary git repository, runs a two-member bundle where member A's proof genuinely writes a new untracked file as the thing to be observed and member B's proof modifies an unrelated tracked file; asserts both are observed successfully. Failure mode (1), destruction, fails this outright on the incumbent unconditional whole-tree restore."
+  - name: test_the_same_two_outcomes_are_reached_when_the_proofs_run_in_the_opposite_order
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Re-runs the identical fixture with the member order reversed and asserts the two per-requirement outcomes are equal to the first run's. This is the decisive assertion: it is what isolation buys, it is observable, and it rules out the order-the-destructive-member-last shortcut."
+  - name: test_the_run_does_not_refuse_to_start_because_an_earlier_proof_left_the_tree_dirty
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the second proof executes rather than aborting with a dirty-worktree refusal after the first proof legitimately left an artefact. Failure mode (3) reads to an operator as an environment problem, so a run that aborts cleanly must not be allowed to satisfy this AC."
+  - name: test_a_siblings_cleanup_cannot_make_an_assertion_hold_for_an_unrelated_reason
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Constructs the symmetric false-pass case -- member B's assertion would match the restored baseline tree but not the tree B's own proof produces -- and asserts B is reported as not observed. Failure mode (2) is worse than destruction because nobody investigates a pass, and it is invisible to the first three descriptors."
+test_rationale: "The three failure modes this AC forbids only exist in the interaction between a real git working tree and a real surface invocation, so a mocked invocation removes the unconditional `git restore .` from the picture entirely and the test then passes on the broken implementation -- the same synthetic-fixture bias that let a hook ship as a no-op on every real ticket. Every descriptor therefore runs in a real temporary git repository with proofs that really write and modify files. The order-reversal descriptor is separated from the success descriptor because a shared-tree implementation with a lucky member ordering passes the first and fails the second, and the false-pass descriptor is separated again because destruction and false-pass are opposite verdicts that no single assertion can cover."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE DESTRUCTIVE-INTERFERENCE CASE, spelled out because it is invisible to any
+  test that runs one proof.
+
+  THE TWO VERIFIED MECHANISMS THAT COLLIDE
+  (templates/agents/user-surface-smoker.md):
+    - Step 1 refuses to start when the worktree has staged changes
+      ("Pre-smoke worktree has staged changes").
+    - Step 5 runs `git restore .` unconditionally after every stanza.
+  Run N members' proofs in one pass and these two produce three distinct
+  failures, all of which this AC forbids:
+    1. DESTRUCTION -- member A's proof produces an uncommitted artefact as its
+       observable effect; member B's stanza-end restore wipes it before A is
+       checked. A false FAIL that looks like a real defect in A.
+    2. FALSE PASS -- the symmetric case, where the restore returns the tree to a
+       state in which B's assertion holds for a reason unrelated to B's change.
+       Worse than (1) because nobody investigates a pass.
+    3. REFUSAL -- member A's proof leaves the tree dirty and member B's Step 1
+       pre-check aborts the whole run. Reads to the operator as an environment
+       problem, not as a design flaw in the aggregation.
+  The fourth Then clause names case (3) explicitly so an implementation cannot
+  satisfy this AC by making the run abort cleanly.
+
+  THE ORDER-INDEPENDENCE CLAUSE is the actual specification. Isolation is hard to
+  assert directly; "the same two outcomes in either order" is observable, is
+  exactly what isolation buys, and fails loudly on every shared-tree
+  implementation. It also rules out the tempting shortcut of ordering members so
+  the destructive one runs last, which works until membership changes -- and
+  membership changing without revalidation is the core argument for moving the
+  proof to the requirement in the first place (ACD-1800f notes).
+
+  IMPLEMENTATION SPACE (IT PO's call, not constrained here): a fresh worktree per
+  proof; a restore scoped to only the paths that proof declared; or capturing the
+  observation before cleanup rather than after. Any of these satisfies the
+  criteria; the current unconditional whole-tree restore satisfies none.
+
+  TESTABILITY. This must be driven in a REAL git worktree with a proof that
+  really writes a file. A mocked invocation removes the `git restore .` from the
+  picture and the test then passes on the broken implementation -- the same
+  synthetic-fixture bias that let EPIC-PhantomDoneFilesTouched ship a hook that
+  was a no-op on every real ticket (CLAUDE.md, "Real-artifact behavioral
+  spot-check before declaring done").
+
+  2026-08-17 (IT PO enrichment).
+
+  TECHNIQUE STILL LEFT OPEN, but two constraints are added that the criteria do
+  not state and that every listed technique must satisfy:
+    (a) the observation is captured BEFORE any cleanup runs. A proof whose
+        observable effect is an uncommitted file cannot be judged after a
+        restore, whichever restore is used.
+    (b) the dirty-worktree PRE-CHECK moves to the per-proof baseline alongside
+        the cleanup. Scoping only the cleanup converts failure mode (1) into
+        failure mode (3) -- a clean abort -- which the fourth Then clause was
+        written to forbid. This is the single most likely partial implementation.
+
+  FAILURE MODE (2) NEEDS ITS OWN TEST, and it is the one an implementer will
+  leave out. Modes (1) and (3) are loud; (2) is a pass. A suite that asserts only
+  "both proofs are observed" is satisfied by an implementation in which B's
+  assertion happened to match the restored baseline -- which is the false green
+  the whole ACD-1800f tree exists to remove, reproduced inside its own fix. The
+  fourth test descriptor exists solely for it.
+
+  HARNESS SELF-VALIDATION, added by analogy with BO-2900a-2's observation_ok
+  flag: an isolation harness that silently fails to establish a baseline makes
+  every proof look isolated. An unavailable baseline must be a distinct reported
+  outcome, never a successful observation.

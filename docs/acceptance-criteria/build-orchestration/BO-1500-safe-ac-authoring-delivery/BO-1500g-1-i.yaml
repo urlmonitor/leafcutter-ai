@@ -1,0 +1,65 @@
+id: BO-1500g-1-i
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "A run halted at setup leaves the invoking checkout exactly as it was"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given the checkout an authoring run is invoked from contains uncommitted acceptance-criteria
+    drafts belonging to another session,
+  And the isolated-workspace setup for the new run ends without a confirmed workspace,
+  When the run halts,
+  Then no acceptance-criteria file has been created, modified, or deleted in the invoking
+    checkout,
+  And the invoking checkout's staged content and current branch are the same as before the
+    run started,
+  And no commit has been created in the invoking checkout,
+  And the other session's uncommitted drafts are still present and unmodified.
+depends_on:
+  - BO-1500g-1
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    halt_side_effect_budget:
+      type: object
+      description: "{ files_written: 0, commits_created: 0, branch_changed: false } observed in the invoking checkout after a halted run. The assertion set for the failed-setup path."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Verify against a real checkout containing real uncommitted AC YAML, not a synthetic temp directory — the incident's blast radius was another session's in-flight drafts."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500g-1
+  contract: "The absolute-or-nothing write rule this halt case exercises"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-6-i; moved with its parent L2 (BO-1500a-6 -> BO-1500g-1)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Distinct from BO-1500a-2, which asserts the invoking checkout is untouched on the
+  SUCCESSFUL path. This asserts the same invariant on the FAILED-setup path, which is
+  the path that actually caused the collision incident.
+
+  Re-homed 2026-08-14 from BO-1500a-6-i to BO-1500g-1-i by the Pattern C intermediate
+  split of BO-1500a. Criteria text is unchanged. BO-1500a-2 stays under BO-1500a.

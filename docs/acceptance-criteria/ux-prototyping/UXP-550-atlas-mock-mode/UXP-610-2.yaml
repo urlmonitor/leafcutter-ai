@@ -9,7 +9,7 @@ component: ux-prototyping
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a CI / non-production build of the Atlas,
   When the mock-mode CI checks call /api/drift-guard and /api/mock-toggle-check,

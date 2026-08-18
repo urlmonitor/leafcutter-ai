@@ -6,7 +6,7 @@ components:
 title: "Retry cap on test-failure rework loop prevents infinite cycling"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
@@ -49,8 +49,15 @@ expects_from:
   contract: "Rework loop that re-dispatches the coder on test failure"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: [it-po-v3]
-superseded_by: null
+amended_by:
+  - "it-po-v3"
+  - "2026-08-17 superseded by the ACD-2000a adjudication-trail subtree. Mapped scenario by scenario rather than wholesale: this AC's FIRST Given/When/Then (cap reached, no re-dispatch, escalate) is now ACD-2000a-2; its escalation-payload clauses (blocker_summary, failing_tests, rework_history) are ACD-2000a-2-i; its SECOND block (the cap is configurable, and the message states the configured value) is ACD-2000a-3. No single successor covers it, which is why superseded_by lists three."
+  - "2026-08-17 WHY IT WAS SUPERSEDED RATHER THAN BUILT. The requirement is sound; its FOUNDATION was not. templates/skills/building-epics/SKILL.md (~789) states the retry counters are in-memory and not persisted, and justifies that BECAUSE the on-disk agents map and comment log already encode the history. ACD-1800c-1 removes both halves of that justification by making the ticket a grouping container with no per-phase records, so this AC could not be built as written once the migration lands — it had no durable place to count attempts. ACD-2000a supplies that place first, then restates the behaviour on top of it. Also verified: test_failure_rework_cap, the frontmatter key this AC's it_requirements call configurable, has exactly one occurrence repo-wide (that SKILL.md line) and is read by no code on any path — so 'configurable' was never true."
+  - "2026-08-17 TEST HANDLING — read before deleting anything. unit_tests/test_generate_ticket_from_ac.py::test_bo530_3i_building_epics_documents_test_failure_rework_cap carries `# covers: BO-530-3-i` and asserts only that the cap phrase, the default of 2, and the frontmatter key appear in SKILL.md's TEXT. Its own docstring is explicit that no Python script reads the cap and that it deliberately does not assert enforcement. The test is LEFT IN PLACE deliberately. Store convention, verified against 10 existing precedents (KM-VIS-013, KM-KQS-015/016/017/018/023/025, ACD-400b, ACD-400b-5, FIN-100c-3): superseding an AC does NOT delete its tests. done_proof._collect_dangling_tags will now report this tag as dangling because it requires status == 'active', but nothing gates on dangling tags and main is green with all 10 precedents in place. Deleting it now would remove the only check that the documentation exists, with no replacement, because ACD-2000a-3 is still readiness: draft. ACD-2000a-3's it_requirements already bind the replacement: when the cap becomes mechanically real, that presence-only test must be retargeted at the resolver or replaced by a behavioural one IN THE SAME CHANGE. Do not delete it before then; do not mark this AC done to silence the dangling report."
+superseded_by:
+  - ACD-2000a-2
+  - ACD-2000a-2-i
+  - ACD-2000a-3
 covered_by: []
 implemented_by: []
 change_target: prompt

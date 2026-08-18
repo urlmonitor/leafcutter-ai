@@ -1,0 +1,84 @@
+id: BO-1500f-2
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Every authoring run gets a workspace no other run can resolve to while it is running"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given two authoring runs are started for the same component, on the same day, from the
+    same request wording,
+  When each run obtains its isolated authoring workspace,
+  Then each run obtains a workspace that no other run resolves to for as long as that run
+    is still going,
+  And the two runs never share one workspace or one line of work,
+  And neither run's acceptance-criteria files ever appear inside the other run's workspace,
+  And a third run started while both are still going obtains a workspace distinct from both,
+  And each run states, in the output the user sees, which workspace it obtained, so a person
+    with several runs open can tell them apart,
+  And the run that resumes after being interrupted resolves back to the same workspace it
+    obtained the first time, rather than to a new one.
+depends_on:
+  - BO-1500f
+  - BO-1500a-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: scripts/setup_ticket_worktree.py
+    relationship: models
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    run_identity:
+      type: object
+      description: "{ run_id: '<value unique to one authoring run>', workspace_path: '<absolute path>', branch: '<branch name>' }. run_id is minted once when the run starts and is recorded so the same run can re-resolve it after an interruption. Two runs must never mint the same run_id, and no two distinct run_id values may resolve to the same workspace_path or branch."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "The identity must not be derived solely from the component name, nor solely from the calendar date, nor from any combination of only those two — that derivation is the defect being fixed, because it makes two same-day or same-component runs collide."
+    - "Reconcile with BO-1500g-2-i (formerly BO-1500a-7-i, renamed by the 2026-08-14 split): the feature_key notion recorded there must be narrowed to a per-run identity, so resuming ONE run reuses its workspace while a second run for the same feature does not. This constraint now spans the BO-1500f / BO-1500g boundary and must be honoured across both trees."
+    - "Uniqueness must be verified behaviorally by starting two runs with identical component, date, and request text and asserting two distinct workspaces — a test that varies the inputs cannot detect the collision."
+delivers_to:
+  agent: python-coder
+  contract: "A per-run workspace identity that ownership checking (BO-1500f-3) and delivery scoping (BO-1500g-3) both key on"
+expects_from:
+  ac_id: BO-1500a-1
+  contract: "The dedicated authoring workspace-and-branch setup that this per-run identity parameterises"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-9; re-parented to BO-1500f."
+superseded_by: null
+covered_by:
+  - BO-1500f-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Design-review gap 1. Today the authoring workspace is identified by the component being
+  worked on, falling back to the current date, so two runs on one component -- or any two
+  runs on one day -- resolve to the same workspace and the same line of work. That
+  reproduces the collision this feature exists to prevent, one level removed. The
+  requirement is stated as observable behavior (no two live runs resolve to one workspace),
+  not as a naming scheme, so the implementation is free to choose how identity is minted.
+
+  Re-homed 2026-08-14 from BO-1500a-9 to BO-1500f-2 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged. Its dependency on BO-1500a-1 is deliberately
+  retained across the f/a boundary, and the delivers_to consumers named above now sit one
+  in BO-1500f and one in BO-1500g.

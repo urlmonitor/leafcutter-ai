@@ -1,0 +1,105 @@
+id: GE-120e-2-i
+title: "A check whose recorded change-set source disagrees with what it actually inspects is named by running it, not by believing it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a check whose manifest entry records that the commit path hands it the files to
+    inspect, so it is outside the set GE-120e-2 governs,
+  And a commit whose staged tree holds carried-in work that would trip that check, and whose
+    author wrote nothing that would,
+  When that check is executed as a process against that commit,
+  Then it raises no objection,
+  And a check that does raise one is named, together with the content it objected to and the
+    state that content came in from, and the determination reports a failure,
+  And the same is asserted for every manifest entry recorded as being handed its files, so a
+    recorded source that is not what the check does is caught by running the check rather
+    than by reading the record.
+
+  Coverage note: the record is a claim, and this AC is the only thing that tests the claim.
+  Cover it by planting a check whose entry claims it is handed its files while it derives
+  its own change set, and asserting the sweep names that check and fails. A sweep that
+  cannot be made to fail this way is not evidence.
+depends_on:
+  - GE-120e-2
+doc_links:
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "The recorded change-set source under test; this AC is what stops that record drifting from behaviour."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "THE SWEEP EXECUTES CHECKS AS PROCESSES. Reuse GE-120c-1's out-of-process harness (unit_tests/portability/) so each check runs from the deployed layout with the source tree off its import path. The record is a claim about runtime behaviour; importing the check module to inspect it is exactly the reading-the-record move this AC exists to replace."
+  - "SELF-DEMONSTRATION IS A DELIVERABLE. Plant a check whose manifest entry claims it is handed its files while it derives its own change set, and show the sweep FAILS on it. A sweep that has never been observed to fail is not evidence — the same standard GE-120c-1 sets for its harness. The planted check must be a fixture the sweep discovers through the manifest, not a special case coded into the assertion."
+  - "SUBJECT SET IS THE COMPLEMENT, DERIVED NOT LISTED. Iterate every manifest entry recorded as handed-its-files, read from GE-120e-2's manifest reader at run time. No hand-written check list and no hard-coded entry count — a new hook joins the sweep by being registered, not by anyone remembering."
+  - "THE FAILURE REPORT MUST NAME THREE THINGS: the check, the content it objected to, and the state that content arrived from. 'Check X failed' is not actionable and does not distinguish this defect from an unrelated check failure."
+  - "RUNTIME. Roughly fifty processes per sweep today. Build the fixture repository ONCE per sweep, never per check, and mark the sweep slow rather than letting it quietly narrow its subject list to stay fast."
+  - "DO NOT DUPLICATE GE-120e-3. That AC's differential pair covers the GOVERNED set; this sweep covers the complement. If the two ever iterate the same entries, one of them is reading the record wrongly — surface that as a failure rather than tolerating the overlap."
+  - "IF A SHARED REGISTRY-CONFORMANCE MECHANISM EMERGES from GE-120a-2-i or GE-120c-3, use it rather than adding a fourth private manifest sweep. Record which was chosen."
+  - "Error-handling policy applies to the sweep's own subprocess and filesystem calls: specific exceptions, logged at WARNING, never swallowed, and a setup failure is a reported failure rather than a skipped case (GE-120c-1-i)."
+test_spec:
+  - name: test_ge120e2i_handed_files_check_raises_no_objection_to_carried_in_work
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Each check recorded as handed its files, run as a process against a commit whose only trip-worthy content is carried in, exits clean."
+  - name: test_ge120e2i_misrecorded_check_is_named_and_the_sweep_fails
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A planted check that claims handed-its-files while deriving its own change set makes the sweep fail and be named — the self-demonstration."
+  - name: test_ge120e2i_sweep_covers_every_handed_files_manifest_entry
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The subject set is derived from the manifest at run time and covers the whole complement, with no hand-written list and no pinned count."
+  - name: test_ge120e2i_failure_report_names_objected_content_and_originating_state
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A failing entry's report identifies the check, the content it objected to, and the state that content came in from."
+  - name: test_ge120e2i_setup_failure_is_reported_as_a_failure_not_a_skip
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "When the fixture repository cannot be built the sweep fails loudly rather than silently skipping the entries it could not exercise."
+test_rationale: "The manifest record is a claim, and a test that reads the claim confirms only that someone typed it. The only evidence that a check recorded as handed-its-files really is handed its files is the check's behaviour on a commit whose only trip-worthy content is carried in — so every case here executes the check as a process out of the deployed layout. The planted-misrecord case is a test rather than a review convention because a sweep that has never been observed to fail proves nothing about the sweep, and this sweep's whole subject set is the entries no other AC in this L1 exercises: once the two observed checks are fixed, a misattributing check has nowhere else to hide. The skip case is included because a sweep that silently skips is indistinguishable from a sweep that passed."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-2
+  contract: "The recorded change-set source on each manifest entry, and the manifest-derived candidate set."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  GE-120e-2 converts a behaviour into a declaration, and a declaration can be wrong from the
+  moment it is written — including by an author who records "handed its files" because that
+  is the value that needs no further work. This AC closes that: the declaration is checked
+  against the check.
+
+  It is deliberately aimed at the entries OUTSIDE the governed set, because those are the
+  ones nothing else in this L1 exercises. The governed set is covered by GE-120e-3's
+  differential pair; the ungoverned set is covered only here, and it is where a
+  misattributing check would hide once the two observed ones are fixed.
+
+  This is the same insight as GE-120a-2-i and GE-120c-3 — a family-wide rule that is not
+  mechanically checked against the family's own registry decays one addition at a time —
+  applied to a third field. If a shared registry-conformance mechanism emerges from those
+  two, this should use it rather than adding a fourth private sweep.

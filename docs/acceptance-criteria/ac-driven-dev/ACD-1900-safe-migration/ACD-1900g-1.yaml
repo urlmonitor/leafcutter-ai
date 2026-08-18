@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: reviewed
 priority: medium
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given the new model has not yet been proven on the self-host project (no recorded
     full self-host epic driven end-to-end thin + AC-side sign-off),

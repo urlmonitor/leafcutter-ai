@@ -28,9 +28,34 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: XS
 it_requirements:
-  - "Allowlist must be configurable — not hardcoded inline in the guard logic"
-  - "Allowlist location must be discoverable from the project configuration"
-  - "Must handle errors gracefully if the allowlist file is missing or malformed"
+  config_schema_fragment:
+    type: array
+    items:
+      type: string
+    description: "Script paths referenced by templates that are external dependencies and must not be reported as broken references."
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — EXTERNAL_DEPENDENCY_ALLOWLIST and its resolution"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Allowlist must be configurable — not hardcoded inline in the guard logic"
+    - "Allowlist location must be discoverable from the project configuration"
+    - "Must handle errors gracefully if the allowlist file is missing or malformed"
+  notes: |
+    Coverage is real but INCIDENTAL (ac-audit 2026-08-17). Verified empirically:
+    five references in the real package — scripts/build.py, scripts/epic_lock.py,
+    scripts/inline_adr/append_entry.py, scripts/list_sql_helpers.py and
+    scripts/scaffold/new_arch_doc.py — resolve ONLY via the allowlist, so
+    deleting the allowlist union turns test_guard_exits_0_on_clean_package red.
+
+    There is no DEDICATED allowlist test: every test that calls
+    build_broken_ref_report passes allowlist=frozenset(), i.e. disables the
+    feature under test. The malformed/missing-allowlist constraint is unasserted.
+    A missing or malformed allowlist must fail loudly, not fail open — failing
+    open to an empty allowlist floods the report with false positives, and
+    failing open to allow-everything disables the guard entirely.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
@@ -39,7 +64,7 @@ created_by_ticket: null
 amended_by: []
 superseded_by: null
 covered_by:
-  - "unit_tests/test_build_guard_real_package.py"
+  - "unit_tests/test_build_guard_real_package.py::test_guard_exits_0_on_clean_package"
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900b-1-1.md
 change_target: pipeline

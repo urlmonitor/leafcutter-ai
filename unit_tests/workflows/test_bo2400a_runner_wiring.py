@@ -200,9 +200,12 @@ class TestRedBaselineGateConsumed(unittest.TestCase):
         uses it.  The gate verdict is discarded.
 
         The fix must include a branch that acts on the result:
-            if (redVerdictOrResult.all_red !== true) {
+            if (redVerdictOrResult.gate_passed !== true) {
                 return { status: "blocked", ... };
             }
+        (AMENDED 2026-08-17, BO-2400a-3-v: the gate's field is `gate_passed`,
+        not the pre-amendment `all_red` — the amended pass rule requires only
+        one newly-added covering test to be red, not every batch test.)
         A conditional keyword (if|else if|throw|return) must appear adjacent
         to a reference to the red-baseline variable or its result variable
         between the test-writer dispatch and the coder dispatch.
@@ -228,9 +231,13 @@ class TestRedBaselineGateConsumed(unittest.TestCase):
 
         # A guard must exist in this region that references the red result.
         # Look for any conditional keyword followed by a reference to the
-        # red-baseline concept (either the variable name or 'all_red').
+        # red-baseline concept (either the variable name or its `gate_passed`
+        # field — AMENDED 2026-08-17, BO-2400a-3-v).  The pre-amendment
+        # `all_red` spelling is deliberately NOT in this alternation: that key
+        # was removed from the contract outright, so accepting it here would
+        # leave this guard blind to a regression back to the old field name.
         guard_pattern = re.search(
-            r"\b(if|else\s+if|throw|return)\b[^;{]*\b(redBaseline|all_red|red_baseline|red_result)",
+            r"\b(if|else\s+if|throw|return)\b[^;{]*\b(redBaseline|gate_passed|red_baseline|red_result)",
             between,
             re.DOTALL | re.IGNORECASE,
         )
@@ -240,8 +247,8 @@ class TestRedBaselineGateConsumed(unittest.TestCase):
             "DEFECT H-1: No conditional guard referencing the red-baseline result was "
             "found between the test-writer dispatch and the coder dispatch. "
             "The coder is dispatched UNCONDITIONALLY. "
-            "Fix: add 'if (!redVerdict.all_red) { return {..., status: \"blocked\"} }' "
-            "between the two agent() calls (BO-2400a-3).",
+            "Fix: add 'if (!redVerdict.gate_passed) { return {..., status: \"blocked\"} }' "
+            "between the two agent() calls (BO-2400a-3, amended BO-2400a-3-v).",
         )
 
 
@@ -442,7 +449,7 @@ class TestGatesPassedClaimMatchesReality(unittest.TestCase):
 
         Fix: gates_passed must be constructed from the actual gate results:
             const gatesPassed = ["select_batch"];
-            if (redVerdict.all_red) gatesPassed.push("verify_red_baseline");
+            if (redVerdict.gate_passed) gatesPassed.push("verify_red_baseline");
             if (greenVerdict.green && greenVerdict.coverage_ok) gatesPassed.push("verify_green_and_coverage");
         OR the return must be inside a branch that only runs when the gates passed.
 
@@ -475,7 +482,7 @@ class TestGatesPassedClaimMatchesReality(unittest.TestCase):
         # Look for the last occurrence of a green-result conditional before gates_passed.
         last_guard = max(
             (m.end() for m in re.finditer(
-                r"\b(if|else\s+if)\b[^{]*\b(green|coverage|all_red|red)",
+                r"\b(if|else\s+if)\b[^{]*\b(green|coverage|gate_passed|red)",
                 text_before_match,
                 re.IGNORECASE,
             )),

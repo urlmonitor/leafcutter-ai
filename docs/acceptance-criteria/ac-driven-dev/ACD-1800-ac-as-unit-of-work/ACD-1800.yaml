@@ -9,7 +9,7 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2a_unit_of_work
 criteria: |
   One requirement, its own deliverable checklist, done when all are signed off.
 
@@ -40,6 +40,8 @@ covered_by:
   - ACD-1800c
   - ACD-1800d
   - ACD-1800e
+  - ACD-1800f
+  - ACD-1800g
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
@@ -73,3 +75,15 @@ notes: |
   skill / supervisor sign-off machinery, which may also implicate `infrastructure`
   or the build-orchestration surface -- kept in ac-driven-dev to keep the goal
   cohesive; flagged for IT-PO / the user.
+  2026-08-17 GAP-ANALYSIS ADDITION: ACD-1800f (observable-behaviour proof travels
+  with the requirement -- the `## Smoke Fixture` gap). Takes this L0 to 6 of the
+  7-child cap; one L1 slot remains. The two other gap-analysis items about the
+  MECHANICS of building (adjudication trail, parallel-safety claims) were placed
+  under the new sibling L0 ACD-2000 rather than here, because neither is about
+  proving doneness.
+  2026-08-17 GAP-ANALYSIS ADDITION 2: ACD-1800g (the readers follow the writers --
+  every craft that acts on a requirement is repointed at the new content and
+  verified to read it, via the effective-prompt renderer rather than a grep).
+  This takes the L0 to 7 of 7 -- ACD-1800 IS NOW FULL. Any further L1 requires an
+  ac-tree-split or an explicit child_limit_override; place new gap items under
+  ACD-2000 or a new sibling L0.

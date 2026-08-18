@@ -1,0 +1,128 @@
+id: GE-120a-1
+title: "A check that could not perform its inspection reports a degraded outcome, not a clean pass"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the AC-parent-covered-by pre-commit check is invoked on 6 staged AC YAML files
+    that each violate the parent covered_by rule,
+  And the working copy it runs from does not expose the deployed layout, so the check
+    cannot reach the parent-id derivation helper it needs to evaluate any of those files,
+  When the check finishes,
+  Then its output states that it did not inspect the staged files, names the prerequisite
+    it could not reach, and names what was consequently left unverified — for example
+    "parent covered_by links were not evaluated for 6 staged files",
+  And the outcome is emitted in a form a caller can distinguish from a clean run without
+    reading prose: a distinct could-not-check result value, not the same success value a
+    clean run produces,
+  And the behaviour observed today — a single stderr line reading "cannot import
+    derive_parent_id ...; skipping check (fail-open)" followed by an ordinary success
+    result — no longer satisfies the check's contract,
+  And this criterion does not by itself decide whether the commit is blocked; the
+    per-check block-or-announce decision is governed by GE-120a-2.
+
+  Coverage note: this criterion is covered only by a test that EXECUTES the check under a
+  genuine cannot-reach condition and asserts on the observed result value and output text.
+  A test that searches the check's source for a warning string does not cover it — a
+  grep-only test passes on dead code (CLAUDE.md, "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep").
+depends_on:
+  - GE-120a
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+    relevance: "The check whose observed cannot-run behaviour this criterion pins."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The template-is-canonical / build.py-deploys rule. A template-only fix is a no-op in the layout the hook actually runs from."
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Currently documents the unlimited fail-open convention this AC bounds; corrected by GE-120a-5."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Target is concrete: templates/scripts/commit_guardian/check_ac_parent_covered_by.py. The cannot-run branch to replace is its PRIVATE _get_derive_parent_id() fallback (~line 377), which today prints 'cannot import derive_parent_id ...; skipping check (fail-open)' and returns an ordinary success. VERIFIED 2026-08-14: this check does NOT import the shared templates/scripts/commit_guardian/_resolve_root.py that 27 other files in the family already use."
+  - "The could-not-check outcome must be machine-readable INDEPENDENTLY of the exit code. GE-120a-2 permits an announce disposition that still exits 0, so exit status alone cannot carry the distinction. Callers (pre-commit, the GE-120b-4 sweep, the GE-120c-1 harness) must tell could-not-check from clean-pass without parsing prose."
+  - "Declare the outcome vocabulary ONCE in a shared module under templates/scripts/commit_guardian/ that every check imports. Do not re-declare the values per check: a per-check copy reproduces the 19-instance private-root-walk pattern that GE-120b-2 exists to remove."
+  - "Any new shared module a hook imports MUST be added to the build deploy manifest (deploy_map in scripts/build_phases.py). An undeployed hook dependency raises ModuleNotFoundError at hook runtime from the deployed layout and blocks every commit (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ (canonical), then run 'python scripts/build.py --target-dir .' so scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ match. check_hook_parity enforces all four locations (config section hook_parity: runtime_dir scripts/commit_guardian, canonical_template_dir templates/scripts/commit_guardian, legacy_template_dir templates/commit-guardian, deployed_output_dir .leafcutter/scripts/commit_guardian). A template-only fix is a NO-OP in the deployed layout, which is the exact defect class this tree closes."
+  - "The message must name BOTH the unreachable prerequisite AND the unverified scope (for example '6 staged files not evaluated'). Naming only the failed import is insufficient; GE-120b-1-i requires reader-actionable wording."
+  - "Main-checkout behaviour must be unchanged: with the prerequisite reachable, the same staged set still blocks with the same 6 violations (the GE-118a-1 backward-compatibility precedent)."
+  - "Error-handling policy: the cannot-run branch catches a SPECIFIC exception (ImportError / OSError), logs at WARNING, and converts to the could-not-check outcome. No bare except, no silent swallow (CLAUDE.md Error Handling Rules 1-3)."
+test_spec:
+  - name: test_ge120a1_cannot_run_emits_could_not_check_not_success
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Deployed check run out of process from a working copy with no deployed layout, against 6 violating staged AC files, reports the could-not-check value and not the ordinary success value."
+  - name: test_ge120a1_output_names_prerequisite_and_unverified_scope
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Same run: the output names the unreachable prerequisite AND the number of staged files left unevaluated."
+  - name: test_ge120a1_legacy_failopen_shape_no_longer_satisfies_contract
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The observed skipping-check fail-open line followed by an ordinary success result is no longer produced by the cannot-run path."
+  - name: test_ge120a1_reachable_prerequisite_still_blocks_with_six_violations
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Main checkout, identical staged set: the blocked verdict naming the same 6 violations is unchanged."
+test_rationale: "The observed defect is a path-resolution failure that does not reproduce when the check module is imported from the source tree, which is the layout every existing unit test for this check runs in. Coverage therefore requires out-of-process execution of the DEPLOYED check from a working copy with the source tree off the import path (the GE-120c-1 harness). An in-process test that monkey-patches the import tests a different condition, and a test that greps the source for the warning string passes on dead code."
+delivers_to:
+  agent: python-coder
+  contract: "A could-not-check outcome value that GE-120a-2 reads to decide block vs announce."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by:
+  - GE-120a-1-i
+  - GE-120a-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  SCOPE — visibility only. This is the general form of the policy L1. It says a
+  cannot-run condition must be VISIBLE and machine-distinguishable; it deliberately does
+  NOT say the commit must fail. Blocking is decided per check in GE-120a-2. Do not merge
+  the two — collapsing them re-creates the blanket "never fail open" rule that GE-120
+  explicitly refuses (see GE-120 notes and the guardrail-engine PROJECT_CONTEXT
+  "FAIL-OPEN CONTRADICTION" section).
+
+  BOUNDARY against the approved fail-open convention: the contrast case is GE-120a-1-i.
+  A check that ran and merely skipped one unparseable input is an ORDINARY PASS and stays
+  that way — GE-116a-1-iii (readiness: approved) is not repealed.
+
+  EVIDENCE — DIRECTLY OBSERVED AND REPRODUCIBLE (do not upgrade or downgrade this label):
+  check_ac_parent_covered_by.py, run from a working copy lacking the .leafcutter deployed
+  layout link, printed the fail-open line and exited 0; with the link present the SAME
+  check on the SAME staged files blocked with 6 violations. That pair is the fixture this
+  criterion should be tested against.
+
+  IT-PO (2026-08-14) — technical enrichment note, criteria untouched.
+  Verified against the tree: check_ac_parent_covered_by.py is one of 19 files under
+  templates/scripts/commit_guardian/ that still carry a private _find_project_root /
+  parents[] walk, while 27 files in the same directory already import the shared
+  _resolve_root.py. The shared outcome vocabulary this AC introduces belongs beside that
+  existing shared helper, not in a new parallel location.

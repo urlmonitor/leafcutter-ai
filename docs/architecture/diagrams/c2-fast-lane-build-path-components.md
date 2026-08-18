@@ -6,7 +6,7 @@ diagram_type: component
 flight_level: L3-Component
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-08-17
 source_ticket: null
 parent: agent_delivery_workflows.md
 components:
@@ -76,7 +76,7 @@ flowchart TD
 
         TW["test-writer agent\n──────────────────────────────────\nLLM Dispatch 1 of 2\nRuns select_batch as its first Bash call\nWrites minimal failing stubs for all batch ACs\nNo production code written\nReturns: status, tests_written"]:::llm
 
-        RB["verify_red_baseline gate\n──────────────────────────────────\nfast_lane.py :: verify_red_baseline()\nDeterministic Python — no LLM\nScans test root for covers: tags\nAll batch tests must FAIL before coder runs\nReturns: all_red, offender, offender_ac_id"]:::gate
+        RB["verify_red_baseline gate\n──────────────────────────────────\nfast_lane.py :: verify_red_baseline()\nDeterministic Python — no LLM\nScans test root for covers: tags\nPartitions newly-added vs pre-existing via git\n(merge-base with origin/main, or --base-ref)\nat test-function granularity\nAt least one NEWLY-ADDED test must be RED\n(FAILED or XFAIL) before coder runs\nReturns: gate_passed, reason, red,\ngreen_at_baseline, inconclusive, preexisting"]:::gate
 
         PC["python-coder agent\n──────────────────────────────────\nLLM Dispatch 2 of 2 — final dispatch\nImplements minimum production code\nto make every failing stub GREEN\nReturns: status, files_modified"]:::llm
 
@@ -124,7 +124,7 @@ flowchart TD
     WR --> SB
     SB -->|"ordered AC id list\n(up to batch_size N)"| TW
     TW -->|"stubs written\nstatus: ok"| RB
-    RB -->|"all_red: true\ncoder dispatched"| PC
+    RB -->|"gate_passed: true\ncoder dispatched"| PC
     PC -->|"tests green\nstatus: ok"| GC
     GC -->|"green: true\ncoverage_ok: true"| CS
     TW -.->|"telemetry event"| TEL
@@ -157,7 +157,7 @@ Parent: [Agent Code Delivery Workflows](../agent_delivery_workflows.md)
 | Gate | Script function | Guard condition |
 |---|---|---|
 | **select_batch** | `fast_lane.py::select_batch(ac_root, limit)` | Deterministic. Filters: `level L2/L3`, `status active`, `readiness approved`, `work_status todo`, `depends_on` resolved. Returns `[]` on empty store. |
-| **verify_red_baseline** | `fast_lane.py::verify_red_baseline(ac_ids, test_root)` | Blocks coder dispatch if any batch test currently PASSES. A passing test before coder runs = green-at-baseline error. |
+| **verify_red_baseline** | `fast_lane.py::verify_red_baseline(ac_ids, test_root, base_ref=None)` | Partitions the batch's covering tests into newly-added vs pre-existing using git at test-function granularity (merge-base with `origin/main`, or an explicit `base_ref`). Passes iff at least one **newly-added** covering test is red (`FAILED` or `XFAIL`). A newly-added test that is green is reported as `green_at_baseline` — surfaced, non-fatal. Pre-existing tests are reported but never affect the verdict. Blocks coder dispatch with exactly one named `reason`: `no_new_covering_tests`, `all_new_tests_green_at_baseline`, `no_red_outcome_among_new_tests`, or `baseline_partition_unavailable` (fail-closed when git metadata is unresolvable). |
 | **verify_green_and_coverage** | `fast_lane.py::verify_green_and_coverage(ac_ids, test_root, ac_root)` | Blocks commit staging if any test FAILS or any AC id has zero `# covers: <id>` tags. Delegates per-AC to `done_proof.verify_done_eligible()`. |
 
 ---
@@ -170,7 +170,7 @@ Parent: [Agent Code Delivery Workflows](../agent_delivery_workflows.md)
 | **fast-lane-build.js** | Workflow Runner | Orchestrates the two-agent loop. Halts immediately on `status: blocked` from either agent. |
 | **select_batch gate** | Deterministic Python | Mirrors `scan_ac_store` filter/sort helpers so readiness semantics track the scanner exactly. |
 | **test-writer agent** | LLM dispatch 1 | Runs `select_batch` as its first Bash call, then writes minimal failing test stubs. Returns `{status, tests_written}`. |
-| **verify_red_baseline gate** | Deterministic Python | Scans test root for `# covers: <id>` tags, runs linked tests via pytest, verifies every tagged test fails before coder is dispatched. |
+| **verify_red_baseline gate** | Deterministic Python | Scans test root for `# covers: <id>` tags, partitions the linked tests into newly-added vs pre-existing via git, runs them via pytest, and verifies at least one newly-added test is red before coder is dispatched. Outcome classification is three-way: `FAILED`/`XFAIL` = red, `PASSED`/`XPASS` = green, `SKIPPED`/`ERROR`/unknown = inconclusive (XFAIL counts as red because every AC in a fast-lane batch is not-yet-done, so the AC enforcement plugin rewrites its assertion failures to xfail). Requiring *all* covering tests to be red made every partially-implemented AC unbuildable — observed live on two unrelated ACs. |
 | **python-coder agent** | LLM dispatch 2 | Reads the failing stubs, implements minimum production code. Returns `{status, files_modified}`. |
 | **verify_green_and_coverage gate** | Deterministic Python | Both `green: true` AND `coverage_ok: true` required. Commit staging is blocked until both pass. |
 | **Commit Staging** | Workflow output | Final state of fast-lane-build.js. The actual `git commit` is external to the fast-lane workflow. |

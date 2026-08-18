@@ -1,0 +1,126 @@
+id: GE-120e-1
+title: "A check that works out its own change set works out the author's change, not everything the staged tree happens to hold"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a commit whose staged content includes work the author did not write — carried in
+    from another line of development where it is already recorded,
+  And a check that works out for itself which changes to inspect, because the commit path
+    hands it no list of files,
+  When that check runs on the commit,
+  Then the change set it inspects holds only content that differs from every state this
+    commit is built on, so the carried-in work is absent from it,
+  And the check reaches its verdict from that change set alone,
+  And a check whose verdict was previously driven by the carried-in work now raises no
+    objection to it, while its verdict on the same commit's own content is unchanged,
+  And every check that works out its own change set takes it from one shared source rather
+    than computing a private one, so the answer to "what did the author change" is the same
+    for all of them.
+
+  Coverage note: cover this by executing the check as a process against a real repository
+  standing in that state and asserting the result status and the text it wrote for the
+  reader; reading the check's source does not cover this criterion (CLAUDE.md, "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep"). The observed case to reproduce is a
+  large mainline merge into a working branch whose own change set touched none of the files
+  the check objected to.
+depends_on:
+  - GE-120e
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_contract_shrinking.py
+    relationship: modifies
+    status: exists
+    relevance: "Observed instance one — derives its own diff at line 180 and blocked a 479-file mainline merge with a test-deletion objection the branch's own change set could not have caused."
+  - path: templates/scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: modifies
+    status: exists
+    relevance: "Observed instance two — derives its own name-status diff at line 287 and reported frontmatter faults in three incoming tickets while the branch's own diff against tickets/ was empty."
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: related
+    status: exists
+    relevance: "Precedent for the shared-source clause: the family already has one shared facility for locating prerequisites (GE-120b-2). The change set is a second thing every check currently works out privately."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "TEMPLATE/DEPLOYED PARITY (ADR-001). The change lands in templates/scripts/commit_guardian/ and must be deployed by build.py. build_commit_guardian() in scripts/build_phases.py rglob-copies the WHOLE templates/scripts/commit_guardian/ directory, so a new shared module placed there is deployed with no deploy_map edit. A module placed anywhere else (e.g. scripts/ac_store/) needs an explicit deploy_map entry in scripts/build_phases.py or the deployed hook dies with ModuleNotFoundError at commit time — the failure mode CLAUDE.md records for done_proof.py. Never edit the deployed copy: the next build.py overwrites it and the fix silently disappears."
+  - "MIGRATE BOTH OBSERVED CONSUMERS IN THE SAME CHANGE. templates/scripts/commit_guardian/check_contract_shrinking.py line 180 runs git diff --cached; templates/scripts/commit_guardian/check_doc_frontmatter.py line 287 runs git diff --cached --name-status. Migrating one and leaving the other produces exactly the split verdict the last criterion forbids — one check blocking a commit the other passed."
+  - "THE SHARED SOURCE MUST SERVE BOTH DIFF SHAPES. git diff --cached is HEAD-to-index, i.e. it compares against ONE state. The two known consumers need different shapes (full text diff, and name-status). If the shared source offers only one shape, the other consumer is driven straight back to a private git call and the single-source clause is defeated in the first week. Serve both from the one derivation."
+  - "RETURN THE DERIVATION, NOT JUST THE PATHS. The result must carry the change set AND the states it was derived against, so a consumer's objection text can name what it inspected. GE-120e-3's last clause compares WHAT each arm objected to, not only whether it objected, and it cannot do that if the shared source discards the provenance."
+  - "SHAPE IT LIKE _resolve_root.py. templates/scripts/commit_guardian/_resolve_root.py is the family's existing precedent for one shared facility with many importers (27 today). One module in the same package, imported by the checks. Do not satisfy this AC by pointing at _resolve_root.py itself — that facility resolves PREREQUISITES, this one derives the CHANGE SET (see the AC notes)."
+  - "ERROR-HANDLING POLICY APPLIES TO THE GIT CALLS. Wrap the subprocess calls in specific exceptions, log at WARNING or higher, never swallow. A git failure must NOT degrade to using the whole staged tree — that silently restores the defect on the exact commits where git is under stress. A derivation that cannot be computed is a could-not-check outcome in GE-120a-1's vocabulary, not a wider change set."
+  - "NO BEHAVIOUR CHANGE ON THE ORDINARY COMMIT. Where the commit is built on exactly one state, the derived change set must equal today's git diff --cached output byte for byte. This is the regression budget for the other manifest checks and for every ordinary commit in the repository."
+  - "LATENCY BUDGET. This runs inside every pre-commit. Derive once per process and memoise; do not issue one git invocation per consuming check. On a staged tree of ~500 changed files (the observed merge was 479) the shared source must add under 500 ms to the commit."
+  - "WORKTREE-SAFE. Drives in this repository run inside git worktrees, where there is no .git DIRECTORY. Resolve the git directory with git rev-parse --git-dir (or equivalent plumbing) rather than assuming <root>/.git; a hard-coded path is a silent no-op in a worktree, which is where the observed defect was hit."
+test_spec:
+  - name: test_ge120e1_carried_in_work_absent_from_inspected_change_set
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "On a real merge repository, the check runs as a process, exits clean, and its output names none of the carried-in files."
+  - name: test_ge120e1_verdict_on_the_authors_own_content_is_unchanged
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The same authored content committed ordinarily and committed alongside the merge yields the same result status and the same objected-to content."
+  - name: test_ge120e1_ordinary_commit_change_set_equals_full_staged_diff
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "With one state to compare against, the check inspects the author's entire staged content — the narrowing costs nothing on the common path."
+  - name: test_ge120e1_both_self_deriving_checks_inspect_the_same_authored_set
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "check_contract_shrinking and check_doc_frontmatter, run as processes against one merge repository, agree on which content is the author's."
+  - name: test_ge120e1_git_failure_does_not_widen_to_the_whole_staged_tree
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "When the derivation cannot be computed the check reports a could-not-check outcome rather than falling back to inspecting everything staged."
+test_rationale: "Every clause here is about what a check DOES on a real repository, and the observed defect is invisible to a direct-import unit test of the shared source: a green test of the helper says nothing about whether the two checks actually call it, and calling it is the entire last criterion. The tests therefore execute the deployed check as a separate process against a real git repository standing in the merge state, and assert on exit status and output text only — the standard CLAUDE.md sets in 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'. They live in unit_tests/portability/ alongside GE-120c-1's out-of-process harness rather than in unit_tests/commit_guardian/, whose tests import the check modules from the source tree and so cannot observe the deployed behaviour."
+delivers_to:
+  agent: python-coder
+  contract: "One shared authored-change source that every self-deriving check consumes in place of its private diff, and that GE-120e-2 enumerates consumers of."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120e-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE ROOT-CAUSE AC. Framed on the faulty assumption the PO named — "the staged diff is the
+  author's change" — not on merges. A merge is where the assumption is loudest, but the
+  criterion says nothing about merges: it says the change set is what differs from every
+  state the commit is built on. On an ordinary commit there is exactly one such state and
+  the answer is unchanged, which is why this narrowing costs nothing on the common path.
+  GE-120e-4 carries the operations where the number of such states is not the discriminator.
+
+  DELIBERATE PARALLEL, DIFFERENT SUBJECT, to GE-120b-2. That AC makes the family resolve
+  PREREQUISITES through one shared facility; this one makes it derive the CHANGE SET through
+  one shared source. Same anti-pattern (fifty-odd private copies of one decision), different
+  decision. Do not merge them and do not let an implementer satisfy this one by pointing at
+  the resolution facility.
+
+  WHY "one shared source" is in the criteria rather than left to the IT-PO: two checks that
+  each narrow their own diff will narrow it differently, and the difference will surface as
+  one check blocking a merge the other passed — which reads to the author exactly like the
+  defect this AC removes. The PO did not prescribe the mechanism and neither does this AC;
+  it prescribes that there is one of it.

@@ -216,7 +216,15 @@ authoring with an empty block. If you nonetheless encounter a code ticket whose
 2. Derive the failing tests from the AC directly (the AC is the source of
    truth): read the `source_ac` frontmatter field, load that AC's YAML from the
    store, and use its `test_spec` (preferred) or its `criteria` Gherkin
-   Then-clauses as the test contract.
+   Then-clauses as the test contract. When you fall back to the Then-clauses,
+   add one further test on top of them — a reachability test that invokes the
+   production entry point (CLI via subprocess, hook via its real runner, slash
+   command, workflow dispatch, or `main()` with real argv) and asserts the new
+   behaviour actually occurs. Importing the function and calling it directly
+   does NOT satisfy it. Then-clauses on their own only ever assert the AC
+   literal, which is how code ships unit-tested but wired into nothing; this is
+   the same floor `generate_ticket_from_ac.py` appends to every criteria-derived
+   contract, so a hand-derived contract must not be weaker.
 3. If the AC itself has neither a usable `test_spec` nor `criteria`, append a
    `(status: blocker)` comment naming the AC and stop — do not fabricate tests.
 
@@ -228,6 +236,11 @@ is only meaningful when tests were actually written.
 These rules fire whenever you are repairing, updating, or rewriting tests for
 existing production code. They prevent test-repair work from silently narrowing
 production contracts. See [ADR-003](../../../docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md).
+
+**Scope exception — Rule 3 is not repair-only.** Rule 3 (cross-layer seam test)
+fires on ALL work: newly-written code and test repair alike. New code at a layer
+boundary is exactly where the seam goes untested, so the repair-only scope above
+does NOT limit Rule 3. Do not skip it because the ticket is a new feature.
 
 ### Rule 1 — A failing test is a question, not an answer.
 
@@ -256,14 +269,25 @@ function. List every consumer in `## Comments`. If any consumer reads a field
 the proposed fix would remove, the change is **blocked** — emit
 `(status: handoff)` and stop. Do not proceed without human review.
 
-### Rule 3 — Cross-layer seam test required.
+### Rule 3 — Cross-layer seam test required (ALL work — new and repair alike).
 
-If the function under repair sits at a layer boundary (data layer → chart/UI
-layer, SQL → ORM, API handler → frontend, agent producer → agent consumer),
-add or update at least one integration-style test that pipes a representative
-producer output directly into the consumer and asserts the consumer's
-observable behavior (e.g. trace names, field presence, rendered labels). Unit
-tests that mock both sides of the seam are insufficient as the sole coverage.
+**This rule is not repair-only.** It applies to every function you write tests
+for, whether it is brand-new code being specified for the first time or existing
+code under repair.
+
+If the function you are writing tests for — newly written or under repair — sits
+at a layer boundary (data layer → chart/UI layer, SQL → ORM, API handler →
+frontend, agent producer → agent consumer, script → hook, workflow step →
+workflow step), add or update at least one integration-style test that pipes a
+representative producer output directly into the consumer and asserts the
+consumer's observable behavior (e.g. trace names, field presence, rendered
+labels). Unit tests that mock both sides of the seam are insufficient as the
+sole coverage.
+
+For new work this means: a unit test of the producer plus a unit test of the
+consumer is NOT sufficient on its own. If no test ever feeds the producer's real
+output into the real consumer, the seam is unverified and the legacy or
+never-invoked path can survive a fully green suite.
 
 ### Rule 4 — Test-repair commits must not change production behavior.
 

@@ -1,0 +1,130 @@
+id: ACD-1800f-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Reference doc describes how a requirement declares an observable promise and states its proof"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement can declare an observable promise and carry the proof of
+    it,
+  When an author consults the reference documentation for the requirement
+    record,
+  Then the documentation describes the declaration, the kinds of observation it
+    can request, and the parts of a proof -- what to act on, what to feed it,
+    what must be observed, and what would be observed if the promise were
+    unimplemented,
+  And the documentation states that a declared promise with no proof is reported
+    as unproven and never as passed, and explains why an empty set of proofs is
+    the dangerous case,
+  And the documentation states that proofs are run in isolation from one another
+    and that a bundled check reports which requirement's proof failed,
+  And an author who has read only this documentation can author a declaration
+    and a proof that the observation craft executes, without reading any
+    implementation.
+depends_on: [ACD-1800f, ACD-1800f-1, ACD-1800f-2, ACD-1800f-3, ACD-1800f-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The document this AC extends. It is the normative AC-record reference and already the surface authors consult for field semantics -- the declaration and the proof belong here, not in a new page."
+  - path: docs/INDEX.md
+    relationship: related
+    status: exists
+    relevance: "The doc index the new sections must be reachable from; check-doc-index gates this."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: related
+    status: exists
+    relevance: "Source of the legacy-mode rule the doc must state: a requirement with no declaration is not judged, and absence is never an error."
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: related
+    status: exists
+    relevance: "Where the unproven outcome intersects done eligibility. Cross-link rather than restate, so the two do not each grow a stale copy."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Extend docs/reference/ac-schema.md -- do not create a competing page. That file is the normative AC-record reference and the surface authors already consult for field semantics; a separate observable-promise page splits the audience from the record it describes. If the writer disagrees, the burden is to consolidate, not to add a third surface."
+  - "THIS FORMAT HAS NEVER HAD AN AUTHOR-FACING DESCRIPTION. The stanza shape is documented only inside the consuming agent template (templates/agents/user-surface-smoker.md ~lines 95-107), and every stanza that has ever existed was hand-typed by someone who had read that template. Write for an author who has not and will not read it; do not link to the agent template as the field reference."
+  - "DOCUMENT ONE DECLARATION SLOT AND SAY EXPLICITLY THAT THERE IS NO SECOND ONE. Name the two observation kinds it can request and state that requesting a new kind means a new value, never a new field. Without that sentence the next author faced with a third craft adds a third field -- which is exactly how the repo arrived at three orphaned triggers."
+  - "EXPLAIN THE FOURTH PART OF A PROOF, DO NOT MERELY LIST IT. `placeholder_signature` -- what you would see if the promise were unimplemented -- is what separates a proof from an exit-code check. A doc that lists it as a field without explaining the placebo it defeats produces authors who leave it blank, and the store fills with proofs that pass on stubs. State that it is required, and give the reason in the same paragraph."
+  - "THE EMPTY-SET SECTION MUST EXPLAIN, NOT STATE. Give the mechanism as a worked counter-example: a loop over zero items with an all-must-pass aggregation emits a pass having verified nothing, which is how the mandatory smoke gate behaves today. The rule alone does not stop the next author reintroducing it in a different aggregation."
+  - "USE THE VOCABULARY THE TOOL ACTUALLY EMITS. Document `proven`, `unproven` and `refuted` by the identifiers in the emitted outcome, alongside the prose, so a reader can match the text in their terminal to the section -- and state the different clearing action for each (author a proof vs fix the surface)."
+  - "SHOW A COMPLETE, COPYABLE EXAMPLE AGAINST A REAL REPOSITORY SURFACE, not a placeholder. The last Then clause is a reader capability, so the example must be one an author can adapt and have the craft execute; a fabricated surface makes the section untestable against the real-artifact convention in CLAUDE.md."
+  - "LINK, DO NOT RESTATE. Done eligibility lives in docs/how-to/done-proof-enforcement.md and the migration rules live in ADR-026. Duplicating either creates the stale copy this tree exists to avoid."
+  - "Must pass the repository doc gates: check-doc-frontmatter, check-doc-length and check-doc-index. Register the new sections in docs/INDEX.md if the file's index entry changes."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1800f-3
+  contract: "The emitted outcome vocabulary and its identifiers -- status values 'proven' | 'unproven' | 'refuted' plus the proofs_declared / proofs_executed / proofs_observed counts and the per_requirement attribution shape -- so the documentation quotes the real output rather than an invented paraphrase."
+test_required: false
+test_rationale: "This AC's entire artifact is prose in docs/reference/ac-schema.md; it adds no executable surface, so there is nothing a test could drive, and a test asserting the file contains a heading named X would be a grep test wearing a documentation costume -- the shape the BA explicitly rejected in the criteria. Coverage of the behaviours the prose describes lives on ACD-1800f-1 (the declaration slot), ACD-1800f-2 (the proof parts), ACD-1800f-3 (the unproven outcome and its counts) and ACD-1800f-4 (isolation and attribution), each of which specifies an executing test. Recorded explicitly rather than left absent so test-writer skips with an accurate reason instead of the silent auto-skip documented in CLAUDE.md."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC, produced because ACD-1800f declares
+  `documentation_triggers: [reference-doc]`. Craft deliberately LEFT UNSET this
+  pass (assigned_agent / it_requirements / estimated_complexity / contracts are
+  the IT PO's); the intended craft is the documentation surface. ACD-1800a-3 is
+  the sibling precedent.
+
+  THIS DOC HAS AN UNUSUAL BURDEN: THE FORMAT IT DOCUMENTS HAS NEVER HAD A
+  PRODUCER. The `## Smoke Fixture` stanza format is described only inside the
+  consuming agent template (user-surface-smoker.md ~lines 95-107) -- there is no
+  author-facing description of it anywhere, and ZERO occurrences of "Smoke
+  Fixture" in scripts/ac_store/generate_ticket_from_ac.py. Every stanza that has
+  ever existed was hand-typed by someone who had read the agent template. That is
+  why the last Then clause is "can author a proof that the craft executes"
+  rather than "understands the fields": the documentation is the first
+  author-facing surface this format will have.
+
+  THE FOURTH PART OF A PROOF IS THE EASIEST TO OMIT AND THE MOST IMPORTANT TO
+  EXPLAIN. `placeholder_signature` -- what you would see if the promise were
+  unimplemented -- is what separates a proof from an exit-code check. A doc that
+  lists it as a field without explaining the placebo it defeats will produce
+  authors who leave it blank, and the store will fill with proofs that pass on
+  stubs.
+
+  THE SECOND THEN CLAUSE MUST EXPLAIN, NOT JUST STATE. "Empty proof set is not a
+  pass" is a rule; the reason -- a loop over zero items with an all-must-pass
+  aggregation emits `ok` having verified nothing, which is how the mandatory
+  smoke gate behaves TODAY (ACD-1800f-3) -- is what stops the next author
+  re-introducing it in a different aggregation. Same reasoning as ACD-1600g-5's
+  worked counter-example.
+
+  ACCEPTANCE IS COMPREHENSION, NOT PRESENCE. The last Then is written as a reader
+  capability on purpose: a doc AC verified by "the file contains a heading named
+  X" is a grep test wearing a documentation costume.
+
+  2026-08-17 (IT PO enrichment).
+
+  CRAFT: documentation-expert, per the S7b documentation-gate mapping for the
+  parent L1's `reference-doc` trigger and the BA's recorded intent. This is the
+  batch's only documentation AC and it satisfies the only trigger ACD-1800f
+  declares, so the documentation gate passes for the ACD-1800f subtree.
+
+  PLACEMENT DECIDED: extend docs/reference/ac-schema.md. Both new fields are AC
+  RECORD fields, and that file is where an author already goes to learn what a
+  field means. A dedicated observable-promise page would separate the field
+  reference from the record it belongs to and would compete with ac-schema.md the
+  first time either is updated.
+
+  test_required: false, with a rationale string (never a list -- a list-valued
+  test_rationale is schema-invalid and has blocked commits in this repo before).
+
+  ONE CONTENT ADDITION BEYOND THE CRITERIA, and it is worth the words: the doc
+  must state that a requirement declaring NO observable promise is not judged at
+  all and that absence is never an error. Without it the unproven rule reads as
+  "every requirement now needs a proof", authors add empty or token declarations
+  defensively, and the backfill queue ACD-1800f-3 makes measurable is polluted at
+  the source.

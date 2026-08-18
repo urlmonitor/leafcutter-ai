@@ -32,7 +32,7 @@ origin_agent: BrainCandy
 created: 2026-06-24
 amended_by: []
 superseded_by: null
-covered_by: [BO-1500a, BO-1500b, BO-1500c, BO-1500d, BO-1500e]
+covered_by: [BO-1500a, BO-1500b, BO-1500c, BO-1500d, BO-1500e, BO-1500f, BO-1500g]
 implemented_by: []
 change_target: infrastructure
 risk_surface: safety

@@ -28,10 +28,31 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Must derive the deployable script manifest from the actual build phase functions — not a hardcoded list"
-  - "Must account for both .leafcutter/scripts/ paths and shimmed scripts/ paths when resolving references"
-  - "Must not produce false positives for scripts that are legitimately deployed via existing build phases"
-  - "Must be idempotent — repeated runs with the same compiled output produce the same result"
+  config_schema_fragment: null
+  reference_file_path: scripts/build.py
+  n_location_rule: "1 — _get_source_deployable_scripts, the manifest derivation"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must derive the deployable script manifest from the actual build phase functions — not a hardcoded list"
+    - "Must account for both .leafcutter/scripts/ paths and shimmed scripts/ paths when resolving references"
+    - "Must not produce false positives for scripts that are legitimately deployed via existing build phases"
+    - "Must be idempotent — repeated runs with the same compiled output produce the same result"
+  notes: |
+    "Derive, do not hardcode" is ONLY PARTLY MET (ac-audit 2026-08-17).
+    _manifest_workflow_tool_scripts and _manifest_knowledge_scripts in
+    scripts/build.py still carry hardcoded filename tuples duplicated from
+    build_phases.py, and test_guard_source_paths_match_deployable_set only
+    checks cardinality between two manifest functions — not against the deploy
+    phases themselves. A hand-maintained list drifting from what the build
+    actually deploys is precisely the defect class behind the BP-900g-4/-5/-6
+    hotfixes, so this residue is worth closing.
+
+    Behavioural backstop today:
+    unit_tests/test_bp_900g_4.py::test_deployed_templates_reference_only_deployed_scripts,
+    which runs a real build.py --target-dir into a tmp dir.
 delivers_to:
   agent: python-coder
   contract: "list[dict] — list of broken references, each {'missing_path': str, 'referencing_template': str}; empty list means all references resolved"
@@ -44,7 +65,7 @@ created_by_ticket: null
 amended_by: []
 superseded_by: null
 covered_by:
-  - "unit_tests/test_build_guard_real_package.py"
+  - "unit_tests/test_build_guard_real_package.py::test_guard_exits_1_on_broken_ref"
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900b-2.md
 change_target: pipeline
