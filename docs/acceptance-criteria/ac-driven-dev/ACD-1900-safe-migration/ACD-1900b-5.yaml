@@ -53,7 +53,8 @@ origin_agent: BrainCandy
 created: 2026-08-12
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-1900b-5-i
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary

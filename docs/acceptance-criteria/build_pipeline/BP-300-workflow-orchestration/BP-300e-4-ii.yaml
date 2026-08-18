@@ -1,0 +1,206 @@
+id: BP-300e-4-ii
+components:
+  - build_pipeline
+title: "Every reply-reading point in a run either halts or is a declared register entry — there is no third behaviour"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+readiness: draft
+priority: high
+work_status: todo
+criteria: |
+  Given a delivery workflow that reads a structured result from every helper agent
+    it dispatches,
+  And a run of that workflow is exercised once per reply-reading point, each time
+    with a prose-only reply substituted at exactly one of those points and every
+    other point replying normally,
+  When each of those runs is carried out,
+  Then for every reply-reading point the run does one of exactly two things: it
+    stops with the typed error naming that stage and agent, or it carries on with
+    the substitute value declared for that point in the workflow's declared
+    degradation register and records in its account of what happened that the
+    stage carried on without a readable reply,
+  And no reply-reading point produces a third outcome — a run that carries on with
+    a substitute value while reporting nothing, or while presenting the stage as
+    having produced the result it was asked for, is a failure of this criterion.
+
+  Given the same sweep over a workflow,
+  When it is carried out,
+  Then every entry in that workflow's declared degradation register is reached by
+    at least one of the runs,
+  And an entry that no run reaches is reported, so a register entry left behind by
+    a stage that no longer exists cannot sit there granting an exception to
+    nothing.
+
+  Given a change that adds a new reply-reading point to a delivery workflow, or
+    changes an existing one so that it carries on without a readable reply,
+  And that point is not added to the declared degradation register,
+  When the sweep is carried out against the changed workflow,
+  Then the sweep reports that point as an undeclared degradation, naming the
+    workflow and the stage,
+  And the report distinguishes it from the points that halt and from the points
+    that are declared, so the count of undeclared degradations is readable as a
+    single number that a change is not allowed to increase.
+depends_on:
+  - BP-300e-4
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Every claim in this AC must be proved by EXECUTING the workflow body under the E2 workflow harness (run_workflow_under_e2) — one real run per reply-reading point, with the prose-only reply substituted at exactly that one point and every other point replying normally. No part of this AC may be satisfied by reading, grepping or AST-parsing workflow source text: a catch block's presence is not evidence of which branch runs, which is the defect class BP-1100b-5 exists to reject."
+  - "The set of reply-reading points must be derived from what a clean baseline run actually does — the dispatches an executed run produces — never from a hand-maintained list inside the sweep. A hand-maintained list silently stops covering the points a later change adds, which is the exact failure this AC is built to prevent."
+  - "If any dispatch observed in the baseline run cannot be addressed individually (it carries no stable identifier the sweep can substitute a reply at), the sweep must FAIL loudly naming that dispatch. Silently skipping unaddressable points lets the sweep report full coverage of a subset."
+  - "Halt and continue must be distinguished by observed run behaviour, not by the absence of an error string: a halt is evidenced by the run stopping at that point with the typed stage/agent error and no later dispatches occurring; a continue is evidenced by later dispatches occurring, and must additionally be checked against the exact substitute value the register entry declares AND against the run's own reported outcomes for a recorded degradation."
+  - "The sweep must report three separately-countable classes per workflow — halting points, declared degradations reached, and undeclared degradations — plus the set of register entries that no run reached. A report that collapses a stale entry or an undeclared degradation into a pass is a failure of this AC."
+  - "The undeclared-degradation total must be a single integer asserted against a checked-in baseline, and the assertion must be one-directional: the total may fall, never rise. A change that lowers the observed total must lower the recorded baseline in the same change, so the ratchet cannot be left slack after remediation."
+  - "The swept workflow set must be data-driven, not a hard-coded pair: a newly added delivery workflow comes under the sweep automatically, and a workflow whose register is empty is still swept (it simply has no entries to reach) rather than exempted by name."
+  - "This AC owns the sweep only — it must not modify any workflow body. If a workflow's register entries or its degradation records are not readable from an executed run, that is an upstream gap in BP-300e-4 and must be raised as a blocker, never worked around by parsing the workflow source."
+  - "The sweep runs one Node subprocess per reading point (on the order of 50 across the delivery workflows). It must complete within 5 minutes on CI or be explicitly marked as a slow test, and must not depend on wall-clock time, network access, or a `claude` binary."
+delivers_to: null
+expects_from:
+  ac_id: BP-300e-4
+  contract: >-
+    The declared degradation register carried in each delivery workflow — the enumerable
+    list of reply-reading points permitted to carry on without a readable reply, each
+    entry naming its stage, its substitute value and its written reason — together with
+    the typed stage/agent error raised at every point not in that list. For this AC to be
+    provable, two further properties must hold of that delivery: the register's entries and
+    each recorded degradation must be readable from an EXECUTED run under the E2 harness
+    (surfaced in the run's reported outcomes), not merely present as a literal in the
+    workflow text; and every reply-reading point must carry a stable identifier the harness
+    can substitute a single reply at. Anything in that not delivered by BP-300e-4 is an
+    upstream blocker for this AC, never a licence to parse workflow source instead.
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100b-5.yaml
+    relationship: describes
+    status: exists
+    relevance: "Sibling rule that rejects presence-only assertions over workflow source. It is the reason this AC's criteria are written as an executed per-point sweep rather than as an inventory of catch blocks read out of the .js text: a catch block's presence proves nothing about which branch runs."
+  - path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100a-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "The store AC behind the finalize step-0 baseline exception (the site whose in-source comment cites the ticket-local label 'AC-4'). Its degrade-on-parse-failure behaviour is the first entry the register must carry, and it is the calibration case for an admissible degradation."
+  - path: unit_tests/workflows/test_bp_300e_4_ii.py
+    relationship: creates
+    status: planned
+    relevance: "The behavioural sweep itself, and the SOLE edit surface of this AC: the per-point executed sweep, the stale-register-entry report and the undeclared-degradation ratchet baseline all live here. Path deliberately matches the file name the ticket generator derives for this AC's test_spec, so files_touched and the Test Requirements block name the same file. The register mechanism the sweep exercises belongs to BP-300e-4 and is not edited by this AC."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: describes
+    status: exists
+    relevance: "Supplies run_workflow_under_e2 and HarnessResult (captured agent calls with their labels, stdout, returncode). label_responses is JSON-serialised, so a prose-only reply is injected as a plain string at exactly one label — the substitution mechanism this sweep is built on. Read-only for this AC."
+  - path: unit_tests/workflows/test_finalize_baseline_recovery.py
+    relationship: describes
+    status: exists
+    relevance: "The in-repo model for a genuinely behavioural workflow suite: it executes the finalize workflow under the E2 harness and asserts on the value forwarded into a later dispatch's prompt. Build the sweep in this shape — and explicitly NOT in the shape of the read_text() source-grep suite covering the finalize pre-flight, which is the counter-example."
+test_spec:
+  - name: test_every_reading_point_either_halts_or_uses_its_declared_substitute
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Executing one run per reply-reading point with a prose-only reply substituted at that point only, every point lands in exactly one of two observed states: the run stops with the typed stage/agent error and issues no later dispatch, or it continues and the value carried forward equals the substitute its register entry declares."
+  - name: test_no_reading_point_continues_without_recording_the_degradation
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "For every point whose executed run continued, the run's reported outcomes contain a degradation record naming that stage; a run that continued while reporting nothing, or while reporting that stage as having produced its result, fails the assertion — this is the third-behaviour prohibition."
+  - name: test_every_register_entry_is_exercised_by_the_sweep
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "Each entry in a workflow's declared degradation register is matched to at least one executed run that actually degraded at that entry's stage, so register coverage is measured by observed degradations rather than by counting entries."
+  - name: test_unreached_register_entry_is_reported_as_stale
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "With a register entry naming a stage no run reaches, the sweep reports that entry as stale and names it, and the stale count is reported separately from the pass count, so the sweep cannot go green on a register entry granting an exception to nothing."
+  - name: test_undeclared_degradation_is_reported_with_workflow_and_stage
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "A reply-reading point whose executed run continues on a substitute while absent from the register is reported as an undeclared degradation carrying both the workflow name and the stage name, and is not reported as a halting point or as a declared entry."
+  - name: test_undeclared_degradation_count_is_one_number_that_cannot_increase
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "The sweep yields the undeclared-degradation total as a single integer asserted one-directionally against the checked-in baseline: a run observing more undeclared degradations than the baseline fails, and a run observing fewer fails until the baseline is lowered in the same change."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    by: it-po
+    entry: >-
+      2026-08-17. Added assigned_agent (python-coder — the sweep is a Python behavioural
+      suite over the JS workflow bodies, and python-coder is this repo's settled owner of
+      workflow-body surfaces per the FIN-100a-4 reassignment and per the parent BP-300e-4
+      and sibling BP-300e-4-i), estimated_complexity (L — a data-driven sweep of roughly 50
+      executed Node runs across the delivery workflows, three separately-counted report
+      classes, stale-entry detection and a ratchet baseline), nine it_requirements, six
+      behavioral test_spec descriptors (one per Then), and three doc_links. SURFACE
+      DECISION: the sole edit surface is the new sweep suite; this AC deliberately does NOT
+      declare the workflow bodies, because the register mechanism they carry is BP-300e-4's
+      surface. The corresponding obligation was pushed into expects_from instead — the
+      register entries, the degradation records and a stable per-point identifier must all
+      be readable from an EXECUTED run, and anything missing there is an upstream blocker on
+      BP-300e-4 rather than a licence for this AC's implementer to parse workflow source.
+      GREP-PROOF: every descriptor asserts on an executed run under run_workflow_under_e2
+      (halt versus continue, the substituted value carried forward, or the run's reported
+      outcomes); none is satisfiable by reading the workflow text. No path-shaped token was
+      placed in it_requirements, so files_touched derives solely from the single `creates`
+      doc_link, whose name matches the generator-derived test file. Criteria, readiness,
+      work_status and priority untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: >-
+  WHY THIS IS A NEW AC AND NOT AN AMENDMENT. Amendment was preferred and was tried
+  first. BP-300e-4 and BP-300e-4-i were both amended in place on 2026-08-17 and they
+  now carry the whole per-reply rule: what one reading point does with one unreadable
+  reply, whether it is registered or not, and which substitutes the register may admit.
+  What they cannot carry is the property this AC states, because it is not a property
+  of a reply at all. It quantifies over EVERY reading point in a run and over the
+  register as a whole: that the two permitted behaviours are exhaustive across the run,
+  that no register entry is stale, and that the number of undeclared degradations cannot
+  be increased by a change. A Given/When/Then scoped to "a workflow reads an agent's
+  reply" has no place to put a claim about all the other reading points, and folding a
+  whole-run sweep into BP-300e-4 would have made a single AC that no single test can
+  fail cleanly. This is the inventory-and-ratchet half; BP-300e-4 is the per-reply half.
+
+
+  ORIGIN. Authored as part of the 2026-08-17 adjudication between BP-300e-4 (a reply with
+  no recoverable structured result must stop the run) and the deliberate degradation at
+  the finalize step-0 baseline site, whose in-source comment cites "AC-4" — a
+  ticket-body-local label from tickets/99_done/EPIC-FinalizeFeatureHardening-2/
+  09_finalize_p2_hygiene.md, carried in the store by FIN-100a-2. The full argument, the
+  two positions and the grounds for the decision are recorded in the notes of BP-300e-4,
+  which is the AC that carries the exception mechanism. This AC exists because that
+  decision is worthless without a way to tell a declared exception from the roughly fifty
+  undeclared ones the audit found — 26 reading points in plan-feature.js and 24 in
+  finalize-feature.js, each a bare catch with a safe default.
+
+
+  WHY THE SWEEP IS THE PROOF, NOT AN INVENTORY OF CATCH BLOCKS. The tempting
+  implementation is to parse the workflow source, count catch blocks around the reader,
+  and check each against the register. That is the exact defect class BP-1100b-5 is being
+  built to reject: it stays green on unreachable code, it cannot see a reading point
+  reached through a helper, and it cannot tell a catch that degrades from a catch that
+  rethrows. The criteria are therefore written as a behavioural sweep — one executed run
+  per reading point, under the E2 harness (run_workflow_under_e2), with a prose-only
+  reply injected at one point and the run's halt/continue behaviour, substitute value and
+  reported outcomes asserted. The audit that produced this adjudication used exactly that
+  method: a prose-only pre-flight reply injected into finalize-feature.js produced
+  dispatch_count=6 and no error.
+
+
+  CALIBRATION. The finalize step-0 baseline point is the positive case — it must appear in
+  the register, its substitute must be the parse_failed baseline that FIN-100a-2 requires,
+  and the run must record the degradation. The AC-authoring point in plan-feature.js
+  (currently stepResultObj = {}, so acs_written becomes an empty list and the stage reports
+  success having written nothing) is the negative case — it must halt, and BP-300e-4's
+  third scenario forbids admitting it to the register at all.
