@@ -13,6 +13,18 @@ ARCHITECTURE: Standalone script. Accepts file paths as CLI args. Returns exit
 #   Shannon entropy threshold 4.5 chosen to minimize false positives on
 #   base64 test data while catching 36+ char API keys. (#TICKETLESS reason=initial-skill-implementation)
 # - 2026-06-03 00:00 [ticket-supervisor]: Append tail-tag to initial-implementation DECISION HISTORY entry to satisfy check_documentation hook. (#EPIC-TemplateDocViolations/01)
+# - 2026-08-18 12:00 [python-coder]: A zero-segment allowlist file-path
+#   field (empty, ".", "./", or whitespace-only) was trivially a
+#   segment-suffix of every finding path, so one malformed line could
+#   silently suppress a rule (or, with "*:", the whole scanner) repo-wide.
+#   Fixed at two layers: `_load_allowlist` now rejects any entry whose
+#   file-path field is not the literal "*" and yields zero `Path(...).parts`
+#   segments (and any non-blank, non-comment line with fewer than two
+#   colon-separated fields), warning on stderr with the allowlist file path,
+#   1-based line number, and offending line text, then skipping the line
+#   (never raising); `_is_suppressed` independently guards with an
+#   `if not al_parts: continue` so the invariant holds for callers that
+#   construct allowlist tuples directly. (#GE-113c-3-v)
 """
 
 from __future__ import annotations
@@ -64,6 +76,23 @@ class Finding(NamedTuple):
 def _load_allowlist(root: Path) -> set[tuple[str, str, str]]:
     """Load suppression entries from .security-allowlist.
 
+    A file-path field that yields zero `Path(...).parts` segments (empty,
+    ".", "./", or whitespace-only — the latter reaches this state only
+    because the whole line is stripped before splitting) never suppresses
+    anything: repository-wide suppression must be written as the literal
+    wildcard "*". Any line whose file-path field is zero-segment, or that
+    is non-blank, non-comment, and has fewer than two colon-separated
+    fields, is skipped and reported via a WARNING on stderr (never stdout,
+    which carries the findings report `check_secrets` consumes). The
+    warning names the allowlist file path, the 1-based line number, and the
+    verbatim offending line text. Skipping is warn-and-skip, never fatal —
+    `check_secrets` runs on every commit, so raising would turn a cosmetic
+    typo into a repository-wide commit outage; skipping fails closed
+    because the author still sees the finding they were trying to
+    suppress. Blank lines and "#" comment lines are valid content and never
+    warn. Skipping is per-line: every other, well-formed entry in the same
+    file is still loaded and applied.
+
     Args:
         root: Project root directory containing the .security-allowlist file.
 
@@ -74,15 +103,34 @@ def _load_allowlist(root: Path) -> set[tuple[str, str, str]]:
     path = root / _ALLOWLIST_FILE
     if not path.exists():
         return entries
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for lineno, raw in enumerate(lines, start=1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
         parts = line.split(":", 2)
+        if len(parts) < 2:
+            print(
+                f"WARNING: {path}: line {lineno}: malformed allowlist "
+                f"entry (missing rule_id:file_path separator), skipping: "
+                f"{line!r}",
+                file=sys.stderr,
+            )
+            continue
+        file_path = parts[1].strip()
+        if file_path != "*" and not Path(file_path).parts:
+            print(
+                f"WARNING: {path}: line {lineno}: allowlist entry has a "
+                f"zero-segment file path and suppresses nothing (write "
+                f"'*' for repository-wide suppression), skipping: "
+                f"{line!r}",
+                file=sys.stderr,
+            )
+            continue
         if len(parts) == 3:
-            entries.add((parts[0], parts[1], parts[2]))
-        elif len(parts) == 2:
-            entries.add((parts[0], parts[1], "*"))
+            entries.add((parts[0], file_path, parts[2]))
+        else:
+            entries.add((parts[0], file_path, "*"))
     return entries
 
 
@@ -107,6 +155,17 @@ def _is_suppressed(
     contains a path separator — only a genuine segment-suffix match
     suppresses in that case.
 
+    A zero-segment allowlist path (one whose `Path(...).parts` is empty —
+    e.g. an empty string, ".", or "./") never matches: an empty tuple is
+    trivially a suffix of every finding path, so honouring it would
+    silently suppress the rule (or, with a "*" rule_id, the whole scanner)
+    repository-wide. Repository-wide suppression is available only through
+    the literal wildcard file path "*", handled separately above. This
+    guard is keyed on `Path(...).parts` emptiness, not on a blacklist of
+    specific spellings, and is independent of `_load_allowlist`'s
+    parse-time rejection — callers (including this module's own test
+    suite) may construct allowlist tuples directly, bypassing the loader.
+
     Args:
         finding: The Finding to check.
         allowlist: Set of suppression tuples from _load_allowlist.
@@ -120,6 +179,8 @@ def _is_suppressed(
             continue
         if fp != "*":
             al_parts = Path(fp).parts
+            if not al_parts:
+                continue
             fp_parts = finding_path.parts
             is_suffix_match = len(fp_parts) >= len(al_parts) and (
                 al_parts == fp_parts[len(fp_parts) - len(al_parts):]

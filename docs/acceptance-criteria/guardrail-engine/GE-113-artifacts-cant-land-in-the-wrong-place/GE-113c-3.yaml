@@ -83,12 +83,14 @@ origin_agent: business-analyst-v3
 created: 2026-08-11
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+  - reason: "Added GE-113c-3-v to covered_by (2026-08-18). This L2's criteria say suppression happens ONLY under wildcard / exact-match / segment-suffix, but an allowlist path with ZERO segments (empty, '.', './') is a VACUOUS suffix of every finding path — so it satisfies the letter of the third mode while defeating the intent, silently disabling a rule repo-wide. The hole is pre-existing and behaves identically before and after this L2's suffix-match fix, so this L2 stays work_status: done; -v narrows the edge case its wording did not contemplate rather than reopening it. Criteria unchanged."
 superseded_by: null
 covered_by:
   - GE-113c-3-i
   - GE-113c-3-ii
   - GE-113c-3-iii
   - GE-113c-3-iv
+  - GE-113c-3-v
 implemented_by:
   - templates/skills/security-scanner/scripts/scan_secrets.py
   - unit_tests/commit_guardian/test_scan_secrets_suppression.py

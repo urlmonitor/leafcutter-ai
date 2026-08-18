@@ -10,28 +10,28 @@ work_status: done
 readiness: approved
 priority: critical
 criteria: |
-  Given the security allowlist contains the entry "ENTROPY_HIGH:.env:*"
-    where the path component ".env" is a bare filename (no path separator),
-  And the secrets scanner detects ENTROPY_HIGH findings in the files:
-    - ".env" (root level)
-    - "src/.env"
-    - "deploy/prod/.env"
+  Given the security allowlist contains the entry "GENERIC_SECRET:secrets.py:*"
+    where the path component "secrets.py" is a bare filename (no path separator),
+  And the secrets scanner detects GENERIC_SECRET findings in the files:
+    - "secrets.py" (root level)
+    - "src/secrets.py"
+    - "deploy/prod/secrets.py"
   When the scanner evaluates whether the allowlist entry suppresses each finding,
   Then ALL three findings are suppressed,
   Because the allowlist path is a bare filename and a single-segment path is
     always a suffix of any finding path that shares that basename.
 
-  Given the security allowlist contains the entry "ENTROPY_HIGH:config/.env:*"
-    where the path component "config/.env" is path-qualified (contains a separator),
-  And the secrets scanner detects ENTROPY_HIGH findings in the files:
-    - "config/.env"
-    - "src/config/.env"
-    - "deploy/.env"
+  Given the security allowlist contains the entry "GENERIC_SECRET:config/secrets.py:*"
+    where the path component "config/secrets.py" is path-qualified (contains a separator),
+  And the secrets scanner detects GENERIC_SECRET findings in the files:
+    - "config/secrets.py"
+    - "src/config/secrets.py"
+    - "deploy/secrets.py"
   When the scanner evaluates whether the allowlist entry suppresses each finding,
-  Then the findings at "config/.env" and "src/config/.env" ARE suppressed,
-  And the finding at "deploy/.env" is NOT suppressed,
-  Because "config/.env" is a segment-by-segment suffix of "config/.env" (exact)
-    and "src/config/.env" (suffix match), but NOT of "deploy/.env".
+  Then the findings at "config/secrets.py" and "src/config/secrets.py" ARE suppressed,
+  And the finding at "deploy/secrets.py" is NOT suppressed,
+  Because "config/secrets.py" is a segment-by-segment suffix of "config/secrets.py"
+    (exact) and "src/config/secrets.py" (suffix match), but NOT of "deploy/secrets.py".
 depends_on:
   - GE-113c-3
 doc_links:
@@ -47,9 +47,10 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Covers the bare-filename suppression contract. Test fixture: allowlist entry `ENTROPY_HIGH:.env:*` vs findings at root `.env`, `src/.env`, `deploy/prod/.env` — all three must be suppressed."
+  - "Covers the bare-filename suppression contract. Test fixture: allowlist entry `GENERIC_SECRET:secrets.py:*` vs findings at root `secrets.py`, `src/secrets.py`, `deploy/prod/secrets.py` — all three must be suppressed. The test must assert ALL THREE depths (root, 1-segment, 2-segment); asserting only a deeply-nested path leaves the root-level case — the one most likely to regress — unproven."
   - "Corresponding test function: `test_bare_filename_suppresses_any_depth` in `unit_tests/commit_guardian/test_scan_secrets_suppression.py`."
-  - "Contrast case: path-qualified `config/.env` must NOT suppress `deploy/.env` — validates that path-qualified entries still require segment-suffix match."
+  - "Contrast case: path-qualified `config/secrets.py` must NOT suppress `deploy/secrets.py` — validates that path-qualified entries still require segment-suffix match. Test: `test_path_qualified_does_not_degrade_to_basename`."
+  - "Filenames and rule_id in the criteria are the literal fixtures the two named tests use. Do NOT reintroduce `.env` paths here — see notes."
 delivers_to: null
 expects_from: null
 test_spec:
@@ -67,11 +68,12 @@ origin_agent: business-analyst-v3
 created: 2026-08-11
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+  - reason: "Reachability correction (2026-08-18): both scenarios named ENTROPY_HIGH findings in .env files, which scan_file can never produce — it short-circuits env-filename paths to a single ENV_FILE finding and returns without scanning content. Run end-to-end, scenario 1's 'ALL three findings are suppressed' was zero-of-three: the three findings that exist are ENV_FILE, which an ENTROPY_HIGH allowlist entry does not match. Swapped to the scannable filenames and rule_id the covering tests use, and tightened it_requirements to demand all three depths rather than the single deeply-nested path the test asserted. The suffix-matching behaviour under test is unchanged and was already implemented and green."
 superseded_by: null
 covered_by: []
 implemented_by:
   - templates/skills/security-scanner/scripts/scan_secrets.py
   - unit_tests/commit_guardian/test_scan_secrets_suppression.py
-notes: "Clarifies the distinction between bare-filename and path-qualified allowlist entries per the scan_secrets.py docstring contract ('may be a bare filename, a relative path, or an absolute path'). Bare-filename matching is the INTENDED behavior — the bug is that path-qualified entries ALSO degrade to basename matching due to the self-comparison defect."
+notes: "Clarifies the distinction between bare-filename and path-qualified allowlist entries per the scan_secrets.py docstring contract ('may be a bare filename, a relative path, or an absolute path'). Bare-filename matching is the INTENDED behavior — the bug is that path-qualified entries ALSO degrade to basename matching due to the self-comparison defect. — .env-family filenames are deliberately excluded from this scenario space: scan_file matches them against _ENV_FILENAME_RE, appends a single ENV_FILE finding and returns before any content rule runs, so no ENTROPY_HIGH / GENERIC_SECRET finding can exist for such a path. Any future author illustrating this AC must use a scannable filename."
 change_target: code
 risk_surface: contract_boundary

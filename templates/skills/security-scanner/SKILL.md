@@ -58,6 +58,12 @@ ENTROPY_HIGH:tests/fixtures/test_data.py:42
 API_KEY_GENERIC:docs/external-api.md:*
 ```
 
+The `<file_path>` field is **mandatory** and must contain at least one path
+segment. A field that is empty, `.`, or `./` (yields zero `Path(...).parts`
+segments) is rejected at load time with a WARNING on stderr and suppresses
+nothing — it is never treated as a repository-wide wildcard. Write the
+literal `*` as the file path for a deliberate repository-wide suppression.
+
 ### How path matching decides suppression
 
 `_is_suppressed` in `scripts/scan_secrets.py` compares an allowlist entry's `file_path`
