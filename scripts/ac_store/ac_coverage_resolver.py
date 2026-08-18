@@ -44,12 +44,6 @@ Public API:
     verify_ticket_coverage(ticket_path) -> {ok, verified_count, resolved_acs,
         block_keys_found, block_interpretable, failures, message}
     compute_verdict(resolved_acs, ac_results) -> {ok, verified_count}
-
-DECISION HISTORY:
-    2026-08-18 [ACD-1900b-5-i/python-coder]: Created as the seed AC-store
-    coverage resolver. Resolution is read-only and deterministic (no ticket or
-    AC YAML file is ever mutated here — auto-fix stays downstream in the
-    gate's own Step 3).
 """
 
 from __future__ import annotations
@@ -468,3 +462,33 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+"""
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-08-18 [python-coder]: Created as the seed AC-store coverage resolver
+  (ACD-1900b-5-i). Producer (generate_ticket_from_ac.py) emits a two-key
+  ac_traceability: {id, path} block on every generated ticket; the
+  ac-fulfillment-gate agent template historically only extracted the legacy
+  three-key l2/l3/ac_path list form, so its working list was ALWAYS empty on
+  a generator-produced ticket and its ok-rule ("every AC in the working list
+  passed or skipped") was vacuously true over that empty list. Added
+  resolve_coverage (block-first, then source_ac fallback, never silent about
+  unrecognised keys), verify_ticket_coverage (loads each resolved AC's
+  work_status/implemented_by/covered_by and builds a verdict + per-field
+  failures), and compute_verdict, whose load-bearing invariant is that
+  ok=True is structurally impossible when resolved_acs is empty regardless of
+  ac_results content. Resolution is read-only and deterministic -- no ticket
+  or AC YAML file is ever mutated here; auto-fix stays downstream in the
+  gate template's own Step 3. Reuses generate_ticket_from_ac._find_worktree_root
+  and _find_ac_by_id rather than re-implementing root discovery or AC lookup
+  (EXACTLY ONE RESOLVER constraint -- this module is that resolver's seed).
+  Also exposed as a CLI (--ticket <path>, prints the verdict as JSON) so the
+  ac-fulfillment-gate template -- which has only Bash/Read/Edit tools, not a
+  Python interpreter of its own -- can invoke it via Bash. Registered in
+  build_ac_store's deploy_map (scripts/build_phases.py) so the deployed
+  layout carries this module alongside its AC-store siblings.
+  (#ACD-1900b-5-i)
+"""
