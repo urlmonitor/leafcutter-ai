@@ -84,14 +84,6 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     # (SKILL.md says "surface to the user and DO NOT improvise" — not a graceful
     # skip). A separate authoring ticket is required to create and deploy this script.
     "scripts/scaffold/new_arch_doc.py",
-    # scripts/commit_guardian/known_failing_tests.py — a commit-guardian companion
-    # script referenced by agents/commit.md to read the known-failing-tests
-    # allowlist. The script does not yet exist as a package deliverable. Allowlisted
-    # so the guard does not block; however, commit.md has no documented fallback when
-    # the script is absent and explicitly forbids --no-verify as an escape path — so
-    # absence causes a hard failure. A separate authoring ticket is required to either
-    # create and deploy this script or add a graceful-skip guard to commit.md.
-    "scripts/commit_guardian/known_failing_tests.py",
     # scripts/onboard_hook_opt_in.py — referenced in agents/onboard.md as an
     # optional standalone helper ("You can also run this step via the standalone
     # script"). The reference is advisory — onboard.md describes the same
@@ -511,4 +503,16 @@ def propagation_audit(
 #   a hard failure when absent: commit.md has no documented fallback and explicitly forbids
 #   --no-verify as an escape path. Separate authoring tickets are required for the latter
 #   two before they can be deployed. (#EPIC-BuildGuardFalsePositive/03)
+# - 2026-08-18 [python-coder/test-authoring]: Removed the
+#   scripts/commit_guardian/known_failing_tests.py allowlist entry (added
+#   2026-06-17 above). The 2026-06-17 justification ("does not yet exist as a
+#   package deliverable") had gone stale: the script DID exist as a tracked
+#   template and was deployed, but was never registered in any pre-commit
+#   config and its baseline file was never created, so it never actually ran.
+#   TQ-100d-1 specifies its replacement (config/known_failing_tests.yaml +
+#   expiry/staleness checks) under a settled design, so the dead script was
+#   deleted outright rather than wired up as a weaker competitor. commit.md
+#   no longer references it as a live invocation (only as historical prose),
+#   so the allowlist entry is no longer needed to keep the broken-reference
+#   guard green. (#TQ-100d-1)
 # ===========================================================================
