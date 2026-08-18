@@ -106,11 +106,23 @@ def _build_ac_id_to_path_index(ac_root: Path) -> dict[str, Path]:
 
 
 def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
-    """Overwrite only the *work_status* field of an AC YAML file on disk.
+    """Overwrite only the *work_status* line of an AC YAML file on disk.
 
-    Status-only change: reads the full YAML (via yaml.safe_load so no extra
-    metadata is injected), sets work_status to *new_status*, and writes back
-    with yaml.safe_dump so every other field is preserved unchanged.
+    KI-BO-003 fix: this used to round-trip the whole document through
+    ``yaml.safe_load`` -> ``yaml.safe_dump``, which is true of VALUES but
+    false of FORMATTING — it alphabetises every top-level key, reflows
+    hand-authored ``criteria: |`` / ``notes: |`` block scalars into
+    folded/quoted strings, and drops comments (a one-field change produced a
+    161-line diff on a real AC file). This instead performs a targeted text
+    edit of exactly the column-0 ``work_status:`` line, so every other byte
+    of the file — formatting, comments, and key order — is preserved
+    byte-identically; only the value on that one line changes.
+
+    The match is anchored at column 0 (start of line, no leading
+    whitespace) so an indented occurrence of the literal string
+    ``work_status`` inside a block-scalar's prose (e.g. an ``amended_by``
+    reason narrating "Reset to work_status todo:") is never mistaken for the
+    real key.
 
     Args:
         yaml_path: Absolute path to the AC YAML file.
@@ -119,17 +131,58 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
 
     Raises:
         OSError: When the file cannot be read or written.
+        ValueError: When the file contains more than one column-0
+            ``work_status:`` line. Which of them is the real key is genuinely
+            ambiguous, so this raises rather than editing the first and
+            leaving a contradictory record behind. Zero matches is NOT an
+            error: the key is created (see below).
+
+    A file with no ``work_status:`` line gains one, appended as a single new
+    line. That is not a guess — satisfying the contract "work_status is now
+    *new_status*" has exactly one meaning when the line is missing — and it
+    matches what the pre-KI-BO-003 round-trip did. 143 of the 3012 real ACs
+    in this repo's store have no such key, so refusing them would crash the
+    fast lane on 4.7% of the store.
     """
     try:
         with yaml_path.open(encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            original = fh.read()
     except OSError as exc:
         _LOG.warning("_update_ac_work_status: cannot read %s: %s", yaml_path, exc)
         raise
-    data["work_status"] = new_status
+
+    lines = original.splitlines(keepends=True)
+    match_indices = [
+        i for i, line in enumerate(lines) if line.startswith("work_status:")
+    ]
+    if len(match_indices) > 1:
+        msg = (
+            f"_update_ac_work_status: expected at most one column-0 "
+            f"'work_status:' line in {yaml_path}, found {len(match_indices)}"
+        )
+        raise ValueError(msg)
+
+    if match_indices:
+        index = match_indices[0]
+        newline_suffix = "\n" if lines[index].endswith("\n") else ""
+        lines[index] = f"work_status: {new_status}{newline_suffix}"
+    else:
+        # Key absent: create it. This is not a guess — the function's whole
+        # contract is "work_status is now *new_status*", and appending is the
+        # single way to satisfy it when no such line exists. 143 of the 3012
+        # real ACs in this repo's store carry no work_status (the /quick-fix
+        # authored records, e.g. ACD-1400); the pre-KI-BO-003 round-trip added
+        # the key silently, so refusing here would crash the lane on 4.7% of
+        # the store. Appending keeps the edit minimal — one added line, every
+        # existing byte untouched.
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] = lines[-1] + "\n"
+        lines.append(f"work_status: {new_status}\n")
+    updated = "".join(lines)
+
     try:
         with yaml_path.open("w", encoding="utf-8") as fh:
-            yaml.safe_dump(data, fh, allow_unicode=True)
+            fh.write(updated)
     except OSError as exc:
         _LOG.warning("_update_ac_work_status: cannot write %s: %s", yaml_path, exc)
         raise
@@ -1438,3 +1491,40 @@ if __name__ == "__main__":
     except (OSError, ValueError) as exc:
         print(f"[fast-lane] unexpected error: {exc}", file=sys.stderr)
         sys.exit(1)
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-08-18 18:00 [python-coder]: Replaced the yaml.safe_load ->
+#   yaml.safe_dump round-trip in _update_ac_work_status with a targeted
+#   single-line text edit of the column-0 `work_status:` line (KI-BO-003:
+#   the round-trip was true of VALUES but false of FORMATTING -- it
+#   alphabetised every top-level key, reflowed hand-authored `criteria: |`
+#   / `notes: |` block scalars into folded/quoted strings, and dropped
+#   comments, producing a 161-line diff for a one-field change on a real
+#   AC file). The new implementation reads the file as text, finds the
+#   line that starts with `work_status:` at column 0 (never an indented
+#   occurrence of the same literal string inside block-scalar prose, e.g.
+#   an `amended_by` reason narrating "Reset to work_status todo:"), and
+#   raises ValueError rather than guessing when that line is absent or
+#   appears more than once -- silently adding the key or silently editing
+#   the first of several matches is exactly the failure class this fix
+#   closes. Trailing-newline presence is preserved from the original
+#   line. Docstring updated to name the byte/formatting/comment/key-order
+#   guarantee actually tested, replacing the prior overclaim ("every
+#   other field is preserved unchanged", true of values, false of
+#   formatting). (#TICKETLESS reason=known-issue-fix-no-ticket-KI-BO-003)
+# - 2026-08-18 19:15 [review correction]: The first cut of the above raised
+#   ValueError on ZERO matches as well as on many. A real-artifact
+#   spot-check over the whole store found 143 of 3012 AC files carry no
+#   column-0 `work_status:` key at all (the /quick-fix authored records,
+#   e.g. ACD-1400 — `status: active`, reachable by claim_build_set). The
+#   round-trip being replaced added the key silently, so raising would have
+#   converted a working path into a crash on 4.7% of the store — a
+#   regression invisible to the unit suite, whose fixtures all happened to
+#   have the field. Zero matches now APPENDS the key as one new line;
+#   only the ambiguous many-matches case still raises. Covered by
+#   TestWorkStatusKeyAbsent.
+#   (#TICKETLESS reason=known-issue-fix-no-ticket-KI-BO-003)
+# ====================================================================

@@ -78,49 +78,6 @@ retired here rather than reused, so the numbering gap is intentional.
 
 ---
 
-### KI-BO-003 — AC YAML is reformatted on every claim/mark-done, producing huge diffs
-
-- **Severity:** medium
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `scripts/build_orchestration/fast_lane.py:108` — `_update_ac_work_status`
-
-**Symptom.** The helper round-trips the whole file through `yaml.safe_load` →
-`yaml.safe_dump`. A one-field change alphabetises every key and reflows hand-authored
-block scalars into folded strings.
-
-**Evidence.** TKT-600a-1.yaml changed **161 lines** in `19eca859a` for what is
-semantically `work_status: todo → done`. The docstring's claim that "every other field
-is preserved unchanged" is true of values and false of formatting.
-
-**Fix direction.** Do a targeted single-line edit of the `work_status:` line rather
-than a YAML round-trip. This also matters for review integrity — a 161-line diff on a
-requirements file hides real changes among reformatting noise.
-
----
-
-### KI-BO-004 — Gate `reason` serialises as the string `"null"`
-
-- **Severity:** low
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/fast-lane-ship.js` — `TEST_WRITER_SCHEMA`
-
-**Symptom.** The schema declares `reason: { type: "string" }`, but
-`verify_red_baseline` returns `null` for `reason` when the gate passes. The agent
-coerces it, so the recorded value is the four-character string `"null"`.
-
-**Evidence.** Journal entry for the TKT-600a-1 run: `"gate_passed": true,
-"reason": "null"`.
-
-**Fix direction.** Allow `["string", "null"]` in the schema. Harmless today because
-the workflow branches on `gate_passed`, but it is a trap for anything that later
-branches on `reason`.
-
----
-
 ### KI-BO-005 — `injection_builders.py` is invoked as a CLI but has no CLI
 
 - **Severity:** high
@@ -162,3 +119,20 @@ which dispatches `fast-lane-ship`.
 
 **Fix direction.** Delete it, or document why it is kept. This needs a deletion
 decision, not a behaviour promise — do not drag a `test_spec` behind it.
+
+**Do not delete it blind — read this first (found 2026-08-18).** The orphan holds the
+only production reference to `assemble_context_bundle`, the prompt-caching layer built
+by BO-2400c-1. That function is fully implemented, has ~25 unit tests and a reference
+doc (`docs/reference/fast-lane-prompt-caching.md`), and `fast-lane-ship.js` — the lane
+that actually runs — never mentions it. So the caching feature is not partly wired, it
+is **entirely unwired**, and this orphan is the last thread attaching it to the
+codebase. Deleting the file silently retires a tested, documented capability.
+
+Two honest options, and this is a capability decision for the owner rather than a
+defect fix: wire `assemble_context_bundle` into `fast-lane-ship`, or delete both and
+state plainly that prompt caching is gone.
+
+One trap either way: `unit_tests/workflows/test_bo2400a_runner_wiring.py:401` asserts
+the literal string `assemble_context_bundle` appears in `fast-lane-build.js`. A plain
+deletion breaks the suite — and that test pins the orphan in place while proving
+nothing about behaviour, which is the grep-only failure class `CLAUDE.md` documents.

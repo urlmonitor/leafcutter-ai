@@ -1,0 +1,110 @@
+id: BO-2400f-11
+components:
+  - build_orchestration
+title: "The green change is reviewed before it is committed, and the reviewer's own high-confidence findings stop the run"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run whose connected set has reached green (the batch tests pass and
+    every acceptance criterion in the set has a passing covers test),
+  When the run moves on from the coding loop,
+  Then it submits its own change to the repository's existing pr-reviewer agent before
+    any part of that change is committed,
+  And what it submits for review is the run's actual working diff — the uncommitted
+    change as it stands in the worktree — not a written summary, a list of touched
+    files, or an account of what the run believes it did,
+  And the review is complete and its verdict is in hand before the commit step begins,
+    so a finding is a correction to the change that will be delivered rather than a
+    follow-up commit stacked on a defect that is already in the delivered history: a
+    review that runs after the commit does not satisfy this criterion.
+
+  Given the review returns one or more findings that the pr-reviewer agent itself
+    classifies as high-confidence — including any finding its own medium-cluster
+    escalation promotes to high-confidence,
+  When the run reaches the point at which it would commit,
+  Then it does not commit and does not open a pull request,
+  And the reported outcome names each finding that blocked it, so the operator reads
+    what must be corrected rather than only that review failed.
+
+  Given the review returns no high-confidence findings and returns only findings the
+    pr-reviewer agent classifies as medium- or low-confidence,
+  When the run reaches the point at which it would commit,
+  Then the run proceeds to commit and open the pull request,
+  And the non-blocking findings the reviewer surfaced are carried into the reported
+    outcome without stopping the run, so reviewer noise cannot halt an otherwise-green
+    run.
+
+  Given the run applies no confidence or severity judgement of its own: the decision to
+    block is taken solely on the class the pr-reviewer agent assigned to each finding,
+  When a finding carries no class the run can read — the reviewer was not reached, it
+    returned without a classified verdict, or the verdict cannot be parsed,
+  Then the run treats the review as not performed: it does not commit, and it reports
+    that no review verdict was obtained, rather than inferring a class, inferring a
+    verdict from any other signal, or proceeding on an assumed-clean review.
+depends_on: [BO-2400f, BO-2400f-4]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/pr-reviewer.md
+    relationship: specifies
+    status: exists
+    relevance: "The reviewer this criterion names. Its own high / medium / low confidence classification, its medium-cluster escalation to Opus, and its review-the-working-diff action surface are the classification the run must defer to rather than reinvent."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: implements
+    status: exists
+    relevance: "The fixed, code-defined phase order the review must be inserted into: today Worktree, Resolve, Test Writer, Coder, Commit, Pull Request. The review belongs between Coder and Commit."
+estimated_complexity: M
+delivers_to:
+  agent: commit
+  contract: "A review verdict for the run's working diff, obtained before the commit step. The commit step runs only on a verdict that carries no high-confidence findings; a verdict with high-confidence findings, or no verdict at all, stops the run short of committing."
+expects_from: null
+test_required: true
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored from BrainCandy's requirement that the fast lane "must also use a review
+  agent in the process to catch any silly things that should not be shipped". The
+  changelog half of the same requirement is already covered by BO-2400f-4-i..v; this
+  criterion is only the review half.
+
+  The ordering is the point, not a detail. Placed after Commit, a review turns every
+  finding into a follow-up commit on top of a defect that has already entered the
+  delivered history — which is what the lane exists to avoid. Placed before Commit,
+  the same finding is a correction to a change nobody has seen yet.
+
+  Deliberately no new classification is introduced. pr-reviewer already sorts findings
+  into high / medium / low confidence, suppresses low-confidence noise, and escalates a
+  medium cluster of more than three findings to an Opus second opinion that can promote
+  findings to high. Reusing that verdict is what keeps low-confidence noise from
+  halting a green run without the lane inventing a threshold that would drift from the
+  reviewer's.
+
+  The last scenario exists because of a defect authored in this same family: a
+  release-critical boolean was derived from an unrelated metadata field on the argument
+  that over-reporting is cheap. It was neither accurate nor cheap. A run that cannot
+  obtain a verdict must say it has no verdict; it must never manufacture one.
+
+  This criterion does not by itself relax BO-2400f-4-vi: a run stopped by review has
+  opened no pull request, so it reports neither a landable one nor a blocked one.
+
+  assigned_agent is deliberately left for the IT-PO layer. The store schema's
+  package-surface rule makes assigned_agent: python-coder on a build-orchestration AC
+  compel a five-field it_requirements block, and that technical spec is IT-PO work, not
+  BA work — the sibling BO-2400f-10 was authored the same way. The two fields should be
+  added together.

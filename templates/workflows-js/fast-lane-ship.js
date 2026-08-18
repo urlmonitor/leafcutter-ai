@@ -85,7 +85,13 @@ const TEST_WRITER_SCHEMA = {
     // the individual green_at_baseline entries (never collapsed into a
     // count). The pre-amendment keys are REMOVED, not kept as aliases.
     gate_passed: { type: "boolean" },
-    reason: { type: "string" },
+    // KI-BO-004: `reason` is null on a passing gate — verify_red_baseline only
+    // names a reason when it halts. Declaring it string-only made the agent
+    // coerce the null, so the journal recorded the four-character string
+    // "null" (observed on the TKT-600a-1 run). Harmless while the workflow
+    // branches on gate_passed, but a trap for anything that later branches on
+    // reason, where "null" is truthy and matches no named halt reason.
+    reason: { type: ["string", "null"] },
     green_at_baseline: { type: "array" },
     message: { type: "string" },
   },
