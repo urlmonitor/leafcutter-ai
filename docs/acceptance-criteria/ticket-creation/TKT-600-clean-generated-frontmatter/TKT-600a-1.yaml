@@ -30,7 +30,8 @@ doc_links:
 estimated_complexity: M
 expects_from: null
 id: TKT-600a-1
-implemented_by: []
+implemented_by:
+- scripts/ac_store/generate_ticket_from_ac.py
 it_requirements:
   config_schema_fragment: null
   n_location_rule: '2'
