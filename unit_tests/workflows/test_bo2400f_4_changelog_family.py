@@ -124,6 +124,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -157,11 +158,11 @@ _FAST_LANE_SHIP_JS = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship
 
 _FUNC_IMPORT_OK = False
 _FUNC_IMPORT_ERR = ""
-compute_changelog_requirement = None  # type: ignore[assignment]
-build_changelog_payload = None  # type: ignore[assignment]
+compute_changelog_requirement: Any = None
+build_changelog_payload: Any = None
 
 try:
-    from fast_lane import (  # noqa: E402
+    from fast_lane import (  # noqa: E402  # type: ignore[no-redef]
         build_changelog_payload,
         compute_changelog_requirement,
     )

@@ -398,9 +398,8 @@ class TestTestWriterSchemaNullableReason(unittest.TestCase):
         # covers: KI-BO-004
         """The declared type for `reason` includes null, not string alone."""
         content = _read(_WORKFLOW_PATH)
-        self.assertIsNotNone(
-            content, f"fast-lane-ship.js not found at {_WORKFLOW_PATH}."
-        )
+        if content is None:
+            self.fail(f"fast-lane-ship.js not found at {_WORKFLOW_PATH}.")
 
         schema_start = content.find("const TEST_WRITER_SCHEMA")
         self.assertGreater(
@@ -409,11 +408,11 @@ class TestTestWriterSchemaNullableReason(unittest.TestCase):
         schema_block = content[schema_start : content.find("};", schema_start)]
 
         reason_match = re.search(r"reason:\s*\{([^}]*)\}", schema_block)
-        self.assertIsNotNone(
-            reason_match,
-            "TEST_WRITER_SCHEMA must declare a `reason` property. "
-            f"Searched:\n{schema_block}",
-        )
+        if reason_match is None:
+            self.fail(
+                "TEST_WRITER_SCHEMA must declare a `reason` property. "
+                f"Searched:\n{schema_block}"
+            )
         reason_decl = reason_match.group(1)
 
         self.assertIn(

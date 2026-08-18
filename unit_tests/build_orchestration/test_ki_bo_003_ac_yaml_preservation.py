@@ -58,6 +58,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -96,7 +97,7 @@ _AC_FIXTURE_SOURCE_WITH_COMMENT = _AC_STORE_DIR / "BO-2400a.yaml"
 
 _IMPORT_OK = False
 _IMPORT_ERR = ""
-_update_ac_work_status = None  # type: ignore[assignment]
+_update_ac_work_status: Any = None
 
 try:
     from fast_lane import _update_ac_work_status  # type: ignore[no-redef]
