@@ -1,0 +1,147 @@
+id: GE-122b-2
+title: "The artifacts that were never numbered do not block unrelated work"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the enrolled diagrams location holds 11 artifacts that carry no sequence number and
+    predate the enrolment rule,
+  And the current change set adds no artifact to that location,
+  When the enrolment check runs,
+  Then it terminates with a passing result,
+  And it reports none of the 11 as a violation,
+
+  And when the change set MODIFIES the content of one of the 11 without renaming it,
+  Then the check still terminates with a passing result and reports no violation for it,
+
+  And when the change set ADDS a twelfth unnumbered artifact to the same location,
+  Then the check terminates with a failing result and names only that twelfth artifact,
+
+  And when the change set RENAMES one of the 11 to another unnumbered name,
+  Then the check terminates with a failing result and names it, because a rename is the moment
+    its name is being chosen again,
+
+  And in every one of these runs the check states how many pre-existing unnumbered artifacts it
+    observed and did not flag, so the size of the exemption is visible on every run rather than
+    silently absorbed.
+
+  Coverage note: covered only by a test that executes the check with each of these four change
+  sets against a tree that really contains the pre-existing unnumbered population, asserting the
+  result value and exactly which paths are named. A test run against a tree with no pre-existing
+  unnumbered artifacts cannot distinguish this behaviour from one that flags everything.
+depends_on:
+  - GE-122b
+  - GE-122b-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: context
+    status: exists
+    relevance: "The 'AC store valid' job records the identical trade-off and its resolution: a whole-collection rule applied to a collection with 57 pre-existing violations 'would fail every contributor on day one and get switched off'. Its answer — scope the ATTRIBUTION to the change set while leaving the rule whole — is the pattern this criterion requires."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-time stage this attribution rule runs at, and the bypass affordance that makes a permanently-red gate self-defeating rather than merely annoying."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ADD-OR-RENAME MUST BE DETECTED FROM RENAME-AWARE GIT STATUS, not from a name-set difference. `git diff --cached --name-status -M` reports a rename as a single `R<score>` entry with source and destination; without `-M` the same change reads as one delete plus one add, and the criteria's third and fourth cases become indistinguishable. `templates/hooks/check_ticket_no_branch_move.py` already parses exactly this format and is the shape to follow."
+  - "A content-only modification must be classified from the same rename-aware status (`M`), never inferred from the file being present in the diff — an artifact appearing in the diff is precisely the condition the second criterion says must NOT flag."
+  - "The pre-existing population must be DERIVED at run time from the collection minus the change set, never recorded as a hard-coded list of eleven paths or a count constant. A hard-coded list is an allowlist by another name and would fail GE-122e-3's no-known-bad-entries clause; it also silently stops matching as the tree moves."
+  - "The observed-and-not-flagged count must be printed on EVERY run including passing ones, and must be the real count for the tree the check just walked. A count that is only printed on failure makes the exemption invisible on exactly the runs where it is growing."
+  - "This is the same attribution-versus-inspection asymmetry GE-122a-1-i settles for uniqueness, applied in the opposite direction and for a stated reason: enrolment is a property of one artifact with no second party to find, so whole-collection inspection buys nothing and costs a permanently red gate. Implement both from one shared change-set resolution helper so the two rules cannot drift on what counts as added or renamed."
+  - "Must not renumber, rename or move any of the eleven. GE-122e-3 asserts they are unchanged in name and location, and the user's scope trim in GE-122e's notes is binding."
+  - "Error handling per CLAUDE.md Rules 1-4. A git invocation that fails to produce a change set is a cannot-establish condition under GE-122d-3, not an empty change set — treating a failed `git diff` as 'nothing was added' passes every case silently and is the most likely false-green here."
+test_spec:
+  - name: test_untouched_pre_existing_unnumbered_population_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Against a tree that really holds the eleven pre-existing unnumbered artifacts, with a change set touching none of them, the check passes and flags none of the eleven."
+  - name: test_content_modification_without_rename_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Modifying the content of one of the eleven without renaming it still passes and produces no violation for it."
+  - name: test_twelfth_unnumbered_addition_fails_and_names_only_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Adding a twelfth unnumbered artifact fails the check and names that artifact and no other — the eleven pre-existing ones must not appear in the finding list."
+  - name: test_rename_of_pre_existing_to_another_unnumbered_name_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Renaming one of the eleven to another unnumbered name fails the check and names it, exercised through a real staged git rename so the R-status path is the one under test."
+  - name: test_exemption_count_printed_on_every_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "All four runs print the number of pre-existing unnumbered artifacts observed and not flagged, and the number equals the population the tree actually holds."
+  - name: test_pre_existing_population_is_derived_not_hard_coded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Against a tree whose unnumbered population differs from eleven, the reported count tracks that tree — proving the exemption is derived from the collection rather than from a constant or an allowlist."
+test_rationale: |
+  Every descriptor runs against a tree that genuinely contains the pre-existing unnumbered
+  population, because the coverage note is explicit that a tree without one cannot distinguish
+  this behaviour from a check that flags everything. The rename descriptor must stage a real git
+  rename rather than simulate one: without `-M` a rename reads as delete-plus-add, and the third
+  and fourth criteria then produce the same verdict for different reasons — the defect is
+  invisible to any test that constructs the change set by hand. The derived-not-hard-coded
+  descriptor is what makes the exemption survive the tree moving, and it is the executable form
+  of GE-122e-3's no-allowlist assertion at this layer.
+delivers_to: null
+expects_from:
+  ac_id: GE-122b-1
+  contract: "The per-artifact enrolment verdict, which this criterion filters by whether the artifact is new or renamed in the change set."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added it_requirements pinning the mechanism the criteria''s third and fourth
+    cases depend on: add-versus-rename must come from rename-aware `git diff --cached
+    --name-status -M` (without -M a rename reads as delete-plus-add and the two cases
+    become indistinguishable), with templates/hooks/check_ticket_no_branch_move.py
+    as the existing parser precedent; the pre-existing population must be derived
+    per run, never a hard-coded list or count (which would be an allowlist and fail
+    GE-122e-3); the exemption count must print on passing runs; a failed git invocation
+    is a cannot-establish condition, not an empty change set. Added test_spec, test_rationale
+    and a doc_link. criteria, title, agent, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS AC IS WHAT MAKES THE USER'S SCOPE TRIM IMPLEMENTABLE. GE-122e's binding scope decision
+  puts the 11 unnumbered diagrams OUT of repair scope: they are not ambiguous, they break no
+  reference, and renaming them to add numbers would risk exactly the dangling-reference damage
+  the repair is meant to avoid. But an enrolment check with no notion of "pre-existing" would
+  then fail on every single commit until someone renamed them anyway — which would either force
+  the retro-numbering the user rejected, or get the check disabled. Without this AC, GE-122b and
+  GE-122e contradict each other in practice.
+
+  NOTE THE DIRECTION OF SCOPING HERE VERSUS GE-122a-1-i, which look opposed but are not.
+  Uniqueness is inspected over the WHOLE collection, because a collision's second claimant may
+  be anywhere. Enrolment is ATTRIBUTED to the change set, because enrolment is a property of a
+  single artifact and there is no second party to find. Whole-collection inspection buys nothing
+  for enrolment and costs a permanently red gate.
+
+  THE VISIBLE EXEMPTION COUNT is the safeguard against this becoming permanent invisible drift.
+  If the count grows, someone sees it grow. A silent exemption is how the current population
+  reached 11 in the first place.

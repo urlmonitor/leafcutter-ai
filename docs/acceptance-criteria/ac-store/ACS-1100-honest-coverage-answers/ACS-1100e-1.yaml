@@ -1,7 +1,7 @@
 id: ACS-1100e-1
 components:
   - ac_store
-title: "One reference section defines the answer contract, the method record, the halt, and the verdict cap"
+title: "One reference section defines the answer contract, the method record, the halt, the verdict cap, the worked example, and who inherits it"
 component: ac-store
 level: L2
 status: active
@@ -29,13 +29,16 @@ criteria: |
     that an exemption withholds the independent total only and never authorises forking
     the rule applied per record,
   And it lists every field of the method record — the enumerated root, the inclusion
-    rule, and each exclusion as a count plus a stated ground — states the arithmetic the
-    record must satisfy (covered plus declared exclusions equals the total), lists the
-    grounds an exclusion may currently be recorded under including deprecated records,
-    superseded records, files that are not requirement records, and records outside the
-    requested scope, states that a ground not on that list must be added to the list
-    before it may be used, and states that a scoped answer reports both its scope total
-    and the store total,
+    rule, the measurement provenance (computed at answer time, or a recorded constant
+    with the date it was measured), the normalisation applied when joining records to
+    what was observed, and each exclusion as a count plus a stated ground — states the
+    arithmetic the record must satisfy (covered plus declared exclusions equals the
+    total), lists the grounds an exclusion may currently be recorded under including
+    deprecated records, superseded records, files that are not requirement records, and
+    records outside the requested scope, states that a ground not on that list must be
+    added to the list before it may be used, states that a scoped answer reports both its
+    scope total and the store total, and states that a stale measurement is declared by
+    the method record and never halts,
   And it states the reconciliation arithmetic and the halt: what a halt report contains
     (the total, the covered count, the declared exclusion total, the number of records
     unaccounted for, and the number of records the measurement could not classify), the
@@ -49,12 +52,38 @@ criteria: |
     policy,
   And it states what a consuming tool must carry through to its own result — the
     inherited coverage figure and the upstream answer it came from — that dropping it
-    makes the tool's own result unaccounted for, the cap rule with a worked example
-    showing 40 of 180 and 180 of 180 producing a verdict of clear for 40 of 180, the
-    conditions under which an unqualified all-clear is available and that a halted or
-    unclassifiable input yields no pass verdict at all, and it distinguishes this
-    coverage guarantee from the phantom-done guarantees, which prove that work is done
-    rather than that a query was complete,
+    makes the tool's own result unaccounted for, that a consuming hop includes human-read
+    surfaces (a rendered rating, a badge, a legend entry, a dashboard tile) and not only
+    machine payloads, the cap rule with a worked example showing 40 of 180 and 180 of 180
+    producing a verdict of clear for 40 of 180, the conditions under which an unqualified
+    all-clear is available and that a halted or unclassifiable input yields no pass
+    verdict at all, and it distinguishes this coverage guarantee from the phantom-done
+    guarantees, which prove that work is done rather than that a query was complete,
+  And it presents the SHIPPED WORKED EXAMPLE as an instance of that vocabulary: the
+    artifact map's test-covers edge note, which declares its diff scope, names its
+    enforcing test, carries its measurement date, states an explicit "do not read this as
+    store-wide", and reports 244 of 607 — quoted as written and mapped field by field
+    onto the method record, so the next author copies a real self-describing answer
+    instead of inventing a fifth phrasing,
+  And a vocabulary in which that note cannot be expressed without loss does not satisfy
+    this criterion: the note is the acceptance test for the vocabulary rather than an
+    illustration of it, so a thing the note says that the vocabulary has no field for is a
+    missing field in the vocabulary and never a non-conforming note,
+  And it carries the INHERITANCE REGISTER in this one place, naming each tree that
+    INHERITS the standing contract and what it inherits it for — KM-200 for artifact
+    census figures, KM-ADM-100 for the map's trust ratings and the first shipped instance
+    of the contract — and each tree that is merely ADJACENT and does not inherit it —
+    TQ-400, which governs whether the proof for finished work still holds over time
+    rather than how an answer describes its own coverage, and whose TQ-400d owns retiring
+    the untagged-finished pile,
+  And the register states the rule it exists to enforce: an inheriting tree does not
+    re-specify the contract and is not re-homed under it, and the register names the
+    surface each inheritor has already shipped against the contract,
+  And a register distributed across the notes of the records it describes does not
+    satisfy this criterion — the bug symptom being five separate AC notes each stating a
+    fragment of the relationship, so a reader who finds one of them cannot tell whether
+    the tree they are standing in inherits the contract, owns it, or merely sits beside
+    it,
   And a reader who has consulted only this one section can produce a conforming answer
     and a conforming consumer without reading any of the ACS-1100 records themselves.
 depends_on:
@@ -77,13 +106,46 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The mandate the documented exemption record must name."
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: related
+    status: exists
+    relevance: "Carries the worked example verbatim — the test-covers edge note. Read the note as shipped and quote it; do not paraphrase it into a fifth phrasing, and do not edit it from this AC."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "The AC that shipped the worked example, and the first entry in the inheritance register. Its vocabulary (scope / measurement date / enforcing test / explicit do-not-read-as) is the starting point the reference section must be able to express."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-100.yaml
+    relationship: related
+    status: exists
+    relevance: "Register entry — INHERITS the standing contract for the artifact map's trust ratings; owns KM-ADM-005 and is not re-homed under ACS-1100."
+  - path: docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml
+    relationship: related
+    status: exists
+    relevance: "Register entry — INHERITS the standing contract for artifact census figures. Its notes already state the reading the register must consolidate ('a STANDING principle every figure here must obey, not a home for it ... Inherited, not duplicated')."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400.yaml
+    relationship: related
+    status: exists
+    relevance: "Register entry — ADJACENT, does NOT inherit. Governs whether proof for finished work still holds over time; TQ-400d owns retiring the untagged-finished pile. The register must say this once so the distinction stops being reconstructed from five AC notes."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: scope-addition
+    by: business-analyst
+    at: 2026-08-18
+    note: >-
+      Added the two non-optional scope additions the PO recorded on ACS-1100e (2026-08-18)
+      as criteria clauses - (a) cite the shipped test-covers edge note as the worked
+      example, with the vocabulary falsifier that a note the vocabulary cannot express
+      means the vocabulary is wrong, and (b) carry the inheritance register in ONE place
+      (KM-200 and KM-ADM-100 inherit, TQ-400 is adjacent), with a negative clause against
+      a register distributed across AC notes. Also folded the provenance/normalisation
+      fields, the never-halt-on-staleness rule, and the human-read hop into the existing
+      method-record and consuming-tool clauses so the section documents the amended
+      contract. Title extended; five doc_links added. No existing clause was removed.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -112,3 +174,34 @@ notes: |
 
   Intended agent is documentation-expert; assigned_agent is deliberately left null in this
   authoring pass per the run's constraints, for the IT PO to set at enrichment.
+
+  ==========================================================================
+  TWO NON-OPTIONAL ADDITIONS (2026-08-18, BA) — from ACS-1100e's PO note.
+  ==========================================================================
+  1. THE WORKED EXAMPLE IS AN ACCEPTANCE TEST, NOT A DECORATION. The section must quote
+     the shipped test-covers edge note and map it field by field onto the vocabulary it
+     defines. The falsifier is deliberate and is the whole point: if the vocabulary
+     cannot express something the note says, the VOCABULARY is wrong and gains a field —
+     the note is not rewritten to fit. A real, reviewed, self-describing answer exists
+     and predates the contract; a vocabulary that cannot hold it would be theory.
+  2. THE REGISTER GOES IN ONE PLACE. Five records currently each state a fragment of the
+     inheritance relationship: ACS-1100's notes, ACS-1100e's notes, KM-200's notes,
+     KM-ADM-100's notes and KM-ADM-005's doc_links. Every one of them is correct and none
+     of them is complete, so a reader landing on any single one cannot tell inheritance
+     from ownership from adjacency. That is the same defect this L0 governs, applied to
+     the contract's own documentation. Inheritors: KM-200 (artifact census figures),
+     KM-ADM-100 (map trust ratings; shipped the first instance). Adjacent, does not
+     inherit: TQ-400 (proof over time, and TQ-400d owns the untagged-finished pile).
+
+  WHY THIS AMENDS e-1 RATHER THAN ADDING A SIBLING OR AN L3. ACS-1100e has exactly one
+  child by design, because everything it governs lands in ONE file and the file-touch
+  parallelism gate would serialise any split into sequential tickets over the same
+  document. A second doc AC would recreate precisely the problem this AC was consolidated
+  to solve, and an L3 would imply an edge case where these are core content.
+
+  KNOCK-ON FROM THE OTHER AMENDMENTS IN THIS PASS. The method-record clause now also
+  lists measurement provenance and join normalisation and states that staleness never
+  halts (ACS-1100b-1, ACS-1100a-2), and the consuming-tool clause now names human-read
+  hops (ACS-1100d-1). These are not new scope — they are the section documenting the
+  contract as it now reads. If any of those amendments is reverted, drop the matching
+  phrase here too.

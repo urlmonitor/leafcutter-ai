@@ -1,0 +1,91 @@
+id: ACD-2000
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Building a requirement is safe to retry and safe to run alongside others"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Nothing is lost when work stalls, and nothing collides when work runs at once.
+
+  Getting a requirement built is a process that can go wrong: an attempt fails,
+  it is tried again, and eventually somebody has to decide what to do. That
+  history belongs to the requirement, so anyone -- or anything -- picking the
+  work up later can see what has already been tried and knows when trying again
+  is pointless and a person needs to be asked. At the same time, more than one
+  piece of work can be in flight at once without two efforts landing on the same
+  requirement, and an interrupted effort hands its work back instead of leaving
+  it looking permanently taken. The result is a build process you can safely run
+  in parallel and safely walk away from.
+depends_on: []
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+  - docs/reference/ac-schema.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000a
+  - ACD-2000b
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP ANALYSIS ORIGIN (2026-08-17, BrainCandy): this L0 collects two of the five
+  ticket-carried responsibilities found to have NO successor in the
+  AC-as-unit-of-work model (ADR-026 / ACD-1800).
+
+  WHY A NEW L0 AND NOT MORE CHILDREN UNDER ACD-1800 (placement decided by the
+  user; recorded here so it is not re-litigated):
+    ACD-1800 is "every requirement is a SELF-CONTAINED UNIT OF WORK THAT PROVES
+    WHEN IT'S DONE" -- it governs what a requirement IS: its grain, its
+    deliverable checklist, and its done-accounting. Neither child here is about
+    proving doneness. They are about the MECHANICS OF BUILDING one: what happens
+    while a requirement is being worked on, how failure is adjudicated, and how
+    concurrent workers stay out of each other's way. A requirement can be
+    perfectly self-contained and perfectly provable and still have nowhere to
+    record "this is retry 2 of 3" or "this one is currently taken". Distinct
+    theme -> distinct L0. Secondary reason: ACD-1800 has one L1 slot left (it is
+    at 6 of the 7-child cap after ACD-1800f) and spending it on unrelated theme
+    would strand the migration's real remaining child.
+
+  THE TWO CHILDREN:
+    ACD-2000a -- THE ADJUDICATION TRAIL. The failure/retry/escalation history and
+      the counters that drive escalation live with the requirement.
+    ACD-2000b -- PARALLEL SAFETY BY CLAIM. A requirement in flight is visibly
+      taken; an interrupted run releases it. Generalises the EXISTING
+      claim_build_set/release_claim primitive in
+      scripts/build_orchestration/fast_lane.py -- see ACD-2000b's notes. Do NOT
+      let this become a second, competing locking mechanism.
+
+  RELATIONSHIP TO EXISTING ACs:
+    - DEPENDS conceptually on ACD-1800c (ticket = grouping container). Both
+      children are consequences of that demotion: the ticket body is where both
+      responsibilities live today. `depends_on` is deliberately EMPTY at L0 and
+      the ordering constraint is recorded per-child, matching the ACD-1600g /
+      ACD-1800f convention (read-side before write-side; do not create an edge
+      that inverts the safe migration order).
+    - Does NOT overlap ACD-1800b (per-deliverable sign-offs recorded on the AC).
+      Sign-offs record SUCCESS of a deliverable; ACD-2000a records the FAILURE
+      history and the adjudication that followed. An AC can have zero sign-offs
+      and a long adjudication trail, or vice versa.
+    - Does NOT overlap ACD-1900 (safe migration). ACD-1900 governs HOW new fields
+      land without breaking the store; ACD-2000 governs WHAT the build process
+      needs. Every new field implied here still lands under ACD-1900a's
+      additive-first rule.
+
+  COMPONENT NOTE: both children touch the supervisory layer
+  (templates/skills/building-epics/SKILL.md) and the build-orchestration surface
+  (scripts/build_orchestration/fast_lane.py) as much as the AC store. Kept in
+  ac-driven-dev to keep the goal cohesive; RE-HOME CANDIDATE for IT-PO / the user
+  (same caveat ACD-1800 carries for the sign-off machinery).

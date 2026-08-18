@@ -1,0 +1,174 @@
+id: BP-1100g-1
+components:
+  - build_pipeline
+  - testing_quality
+  - llm_authoring
+title: "Every kind of proof the plan can ask for is a kind the test writer has been taught"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the planning side can request a proof by any name drawn from its own set of
+      kinds,
+    And the instructions the test-writing side works from define some set of names,
+  When the two sets are compared against each other,
+  Then they are the same set — no name the planning side can emit is undefined for
+    the test-writing side, and no name the test-writing side is taught is one the
+    planning side can never emit,
+    And for each name, the instructions state what distinguishes a proof of that
+      kind from a proof of the behaviour alone, in terms the writer can act on
+      without further interpretation,
+    And when a name is added to either side while the other is left alone, the
+      mismatch is reported naming that specific name and the side that lacks it,
+    And the comparison reads both sets from where they really live, so a copy of
+      either set made for the comparison's own convenience cannot make the two
+      agree while the real sources disagree.
+depends_on:
+  - BP-1100g
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The doer, and the taught side of the comparison. Contains zero occurrences of the word 'angle' at HEAD while the generator already emits it — the taught set is currently empty and the emitted set is not. Read the working-tree version; Rule 3 was rescoped 2026-08-14 and is uncommitted."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "Where the emittable set currently lives (the seven-value test_spec[].angle enum). After BO-2900g-3 there is one such set; before it there are two, which is why this AC depends on that reconciliation for a well-defined left-hand side."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies what each name means, including the one-question test ('if I deleted the single line that wires this in, would this test go red?') and the explicit prompt-design note: give the writer a set-cover checklist over decidable predicates, never a ratio model."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Makes 'the set of kinds the plan can ask for' single. Until it lands there are two candidate sets and this comparison has no well-defined left-hand side."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Carries the third copy of the emittable set (_TEST_ANGLES, ~line 77) and is what actually emits a kind onto a ticket. The comparison's left-hand side must resolve to the single definition, not to this frozenset."
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "THE TAUGHT SET MUST BE MACHINE-EXTRACTABLE. Write it into templates/agents/test-writer.md behind one stable anchor (a single fenced block or a table under a fixed heading) so the comparison can read the real source. Prose that merely mentions the names is not a set and cannot be compared; a taught set the checker cannot find is the same as no taught set."
+  - "The comparison must read BOTH sides from where they really live — the single definition established by BO-2900g-3, and templates/agents/test-writer.md — never a fixture copy of either. A comparison against a convenience copy reproduces exactly the EPIC-ComputedQualityGates FP-1 layer-3 defect it exists to catch (a hook's allow-list and the config it mirrored were disjoint, each tested against its own copy)."
+  - "A reported mismatch must name the specific missing name AND the side that lacks it. 'The sets differ' is unactionable."
+  - "The teaching must be a set-cover checklist over decidable predicates, never a ratio model. docs/testing/test-angles.md 'Prompt-design note' is binding here: a pyramid/trophy framing plus a cheapest-green optimiser collapses reliably to zero high-level tests."
+  - "The template ships through build.py. The taught set must be present in the DEPLOYED copy (.claude/agents/test-writer.md), not only in templates/ — a template edit that does not survive deployment teaches nobody."
+  - "NOT MACHINE-CHECKABLE, DELIBERATELY UNCOVERED: the second Then clause ('for each name, the instructions state what distinguishes a proof of that kind from a proof of the behaviour alone, in terms the writer can act on') is a judgement about prose quality. It is NOT to be tested by grepping the template for keywords — that asserts presence, not actionability, and is the Neverfail Test smell. It is assigned to human/pr-reviewer review against the llm-expert Prompt-Quality Checklist. See caveat in the enrichment note."
+  - "Nothing here reads a test. A reported mismatch is a mismatch between two declarations of a vocabulary, never a verdict about any piece of work."
+delivers_to:
+  - agent: test-writer
+    contract: "templates/agents/test-writer.md carries the taught kind set behind one stable, documented anchor, one entry per permitted kind, each with its distinguishing rule. The anchor and the value shape are the contract the set-equality check and BP-1100g-3's tag validation both read."
+expects_from:
+  - ac_id: BO-2900g-3
+    contract: "One authoritative statement of the permitted kinds, resolvable from a single file path — the well-defined left-hand side of this comparison. Until it lands there are two candidate sets and no comparison is decidable."
+test_spec:
+  - name: test_bp_1100g_1_taught_set_equals_the_emittable_set
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Set-equality between the kinds the planning side may emit and the kinds templates/agents/test-writer.md teaches: no emittable name is undefined for the writer, and no taught name is unemittable."
+  - name: test_bp_1100g_1_both_sets_are_read_from_their_real_sources
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Both sets are parsed from the actual on-disk files (the single definition file and templates/agents/test-writer.md) in a fresh subprocess — no fixture copy of either side, and the test fails if either source path is missing rather than falling back to a literal."
+  - name: test_bp_1100g_1_one_sided_name_addition_is_reported_by_name_and_side
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Add a name to a temp copy of one source only, run the comparison, and assert the report names that specific name and states which side lacks it — then repeat with the sides swapped."
+  - name: test_bp_1100g_1_deployed_test_writer_template_carries_the_taught_set
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python scripts/build.py --target-dir <tmp>` as a subprocess, then read the DEPLOYED .claude/agents/test-writer.md that the agent runtime actually loads and assert its taught set equals the definition. Source-tree reads are structurally blind to deploy-manifest gaps."
+test_rationale: |
+  A test asserting "the template mentions the angles" is satisfied by pasting a paragraph
+  and decays silently the first time a name is added on the emitting side — that is the
+  failure this AC exists to prevent, so it cannot be the test. The falsifiable shape is
+  cross-source set-equality over the two REAL files plus a one-sided-drift negative
+  control. The deployed read is separate because the harness loads the built copy, not
+  templates/. The prose-quality clause is deliberately excluded from this contract; see
+  the last it_requirement.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned llm-expert (surface is templates/agents/test-writer.md). Added it_requirements,
+    test_spec (criterion/real_artifact/failure/reachability) and contracts. The prose-quality
+    Then clause is explicitly flagged as not machine-checkable and left uncovered
+    rather than proxy-tested, per the BA's instruction. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  GAP D of BP-1100g, first half: the teaching, made CHECKABLE rather than merely
+  present.
+
+  THE OBSERVED STATE. Every plan the generator produces on the criteria-derived
+  route now carries a named kind for each requested proof. The agent that writes
+  those tests contains the word zero times. An instruction the doer cannot parse
+  is not an instruction.
+
+  WHY SET-EQUALITY AND NOT A PROSE CHECK. "The template mentions the vocabulary"
+  is satisfiable by pasting a paragraph, and it decays silently the first time a
+  name is added on the emitting side. Set-equality between the emittable names
+  and the taught names is a machine-decidable predicate over two real sources,
+  and it fails loudly on exactly the drift that matters. This is the shape of
+  EPIC-ComputedQualityGates FP-1 layer 3, where a hook's allowed-targets list and
+  the config it was meant to mirror were DISJOINT vocabularies: each side was
+  tested against its own copy and no cross-source set-equality contract existed.
+  The final Then clause exists because of that incident specifically — a
+  comparison that reads a convenience copy reproduces the defect it is checking
+  for.
+
+  WHAT THIS AC DOES NOT CLAIM. Set-equality proves the writer has been told the
+  words, not that it acted on them. The acting half is split deliberately:
+  BP-1100g-2 covers the hardest judgement (resolving a way in when none is
+  named), and BP-1100g-3 makes the writer state which kind each test answers.
+  Do not fold any of the three together — each has a different producer and a
+  different observable.
+
+  BOUNDARY. Nothing here reads a test. A reported mismatch is a mismatch between
+  two declarations of a vocabulary, not a verdict about any piece of work.
+
+  IT-PO JUDGEMENT CALL, 2026-08-17 — THE PROSE-QUALITY CLAUSE IS NOT TESTED.
+  The second Then clause asks that the instructions state, per name, what
+  distinguishes that kind of proof from a proof of the behaviour alone "in terms
+  the writer can act on without further interpretation". The honest
+  machine-checkable content of this AC is the set-equality (clauses 1, 3, 4)
+  only. Per the BA's explicit instruction, no test_spec entry greps the template
+  for keywords and calls that coverage: a keyword grep asserts presence, not
+  actionability, and passes on a paragraph nobody can act on. The clause is
+  carried instead as an it_requirement and routed to pr-reviewer / the llm-expert
+  Prompt-Quality Checklist. If a checkable form is wanted later, the only honest
+  one is an eval: give a model a plan requesting a named kind and the template,
+  and measure whether the test it writes exercises a production entry point —
+  which is an eval harness, not a unit test, and is not in this AC's scope.
+
+  IT-PO ENRICHMENT NOTE — SPLIT CONSIDERED AND REJECTED. Clauses 3 and 4 imply a
+  .py comparison, which is python-coder surface, while clauses 1 and 2 are
+  templates/agents/*.md, which is llm-expert surface. A split was rejected for
+  two reasons: (a) the BA's own notes frame the comparison as the missing
+  "cross-source set-equality contract TEST", which test-writer authors from
+  test_spec in the normal flow rather than as production code; and (b) BP-1100g
+  is at child_limit_override: 7, so two L2 children would breach the cap. The
+  coupling that a split would have made explicit is instead pinned as the
+  delivers_to contract: a stable anchor in the template that the check reads.

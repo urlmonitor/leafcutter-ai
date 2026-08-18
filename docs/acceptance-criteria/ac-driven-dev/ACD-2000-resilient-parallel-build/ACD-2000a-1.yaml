@@ -1,0 +1,160 @@
+id: ACD-2000a-1
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Every attempt at a requirement is appended to that requirement's trail, and nothing may rewrite an earlier entry"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose first build attempt failed with a test failure and
+    whose second attempt failed for the same reason,
+  When the requirement is inspected,
+  Then the requirement carries two attempt records, in the order they happened,
+  And each record states who made the attempt, when, at which stage of the work,
+    what the outcome was, and what was decided about it,
+  And recording a third attempt leaves the first two records exactly as they
+    were,
+  And no way exists to shorten or rewrite the trail as part of recording a new
+    attempt -- an entry that corrects an earlier one is itself a new entry.
+depends_on: [ACD-2000a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The runbook whose adjudication ladder (sections 3 and 4) is the sole consumer of the history this trail replaces. Canonical source, not the deployed .claude copy."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The architecture page that owns blocker-adjudication flows; the trail is the durable state that page today describes only as an in-memory ladder."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1900-safe-migration/ACD-1900a.yaml
+    relationship: related
+    status: exists
+    relevance: "The hard ordering gate. additionalProperties:false is enforced today, so the trail field cannot be authored on any AC until ACD-1900a lands it as an optional slot."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "SCHEMA SLOT IS A HARD PREREQUISITE, NOT A NICETY. config/ac_store_schema.json sets additionalProperties:false at the top level and it is enforced today by jsonschema.Draft7Validator in scripts/ac_store/validate_ac_schema.py and in the commit hook scripts/commit_guardian/check_ac_schema.py. The trail field cannot be authored on any AC, not even as a hand-written pilot, before ACD-1900a registers it as an optional slot. Sequence accordingly."
+  - "The trail is ONE list-valued optional field on the AC record, one entry per attempt, each entry an object carrying the five attributes the criteria name: actor, timestamp, stage, outcome, decision. Absence of the field means 'no recorded attempts' and must never be an error, per ADR-026 rule 4 (tolerant readers)."
+  - "Do NOT repurpose `notes` (config/ac_store_schema.json ~line 505). It is a plain string with no per-entry structure, it is human-authored prose, and every write to it would be a whole-field rewrite. Verified: the store today has zero vocabulary for comment / blocker / adjudicat / escalat, so this is a genuinely new slot and not a rename."
+  - "APPEND-ONLY MUST BE ENFORCED BY THE WRITER, NOT BY CONVENTION. The only supported mutation is append-one-entry. There must be no code path -- public or internal -- that rewrites, reorders, shortens, merges or removes an existing entry, including the correct-an-earlier-verdict-in-place case. A correction is a new entry. A retry count that any writer can silently reset is not a cap, and ACD-2000a-2's stop condition is only as trustworthy as this property."
+  - "THE APPEND MUST NOT BE A WHOLE-RECORD REWRITE. Insert the entry without re-emitting the rest of the record. Verified hazard: `_update_ac_work_status()` in scripts/build_orchestration/fast_lane.py (lines 98-125) ALREADY whole-record round-trips the file via yaml.safe_load then yaml.safe_dump, with sort_keys left at its default True, so every key is reordered and every block scalar re-emitted on each claim and each release. Adding a second whole-record writer doubles that damage rather than containing it."
+  - "NAME EVERY VALIDATION POINT AND IDENTIFY THE LOAD-BEARING ONE. Shape validation must be mirrored into all three: scripts/ac_store/validate_ac_schema.py (the jsonschema path), scripts/commit_guardian/check_ac_schema.py (the commit gate), and its manual fallback scripts/commit_guardian/_ac_schema_validators.py. State in the implementation which of these actually gates a commit for this field -- a rule added only to a branch that never executes is a no-op that reads as enforcement."
+  - "Appending N entries must yield exactly N entries. Re-invoking the writer with identical input must neither coalesce nor duplicate; if de-duplication is wanted it must be an explicit, documented decision rather than an emergent property of the serialiser."
+  - "Must complete in under 50ms per append for a trail of up to 200 entries. The trail is written on the hot path of every failed phase, and a slow writer will be routed around."
+  - "Must log every append at INFO and every rejected mutation attempt at WARNING per the project error handling policy, carrying the AC id and the entry's stage, so a silent reset is diagnosable from the log even once it has reached disk."
+  - "DEPLOY-MANIFEST RULE. Any NEW module that the commit-guardian hook or a CI gate imports must be added to build_ac_store's deploy_map in scripts/build_phases.py in the same change, or the deployed hook raises ModuleNotFoundError once the gate is required. See CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest', and the done_proof.py precedent."
+delivers_to:
+  - agent: python-coder
+    contract: "The trail slot and its append-only writer API. Record shape -- <trail_field>: [ { actor: str, timestamp: ISO-8601 str, stage: str, outcome: str, decision: str, reason: str|null } ], ordered oldest-first, optional, absent-means-empty. Public surface is append-one-entry plus read-all; no mutate, no delete, no truncate. Consumed by ACD-2000a-2 (budget resolution), ACD-2000a-3 (budget override) and ACD-2000a-2-i (escalation summary)."
+  - agent: python-coder
+    contract: "CONSTRAINT ON THE ACD-2000b CLAIM PATH (ACD-2000b-1 / -2 / -3), delivered as a requirement rather than as data: the claim and release writers must not whole-record rewrite an AC file. `_update_ac_work_status()` (scripts/build_orchestration/fast_lane.py:98-125) is the incumbent violation and is fixed under ACD-2000a-1-i. Whichever of ACD-2000a and ACD-2000b lands second must run ACD-2000a-1-i's tests."
+expects_from:
+  - ac_id: ACD-1900a
+    contract: "An optional, additive slot for the trail field registered in config/ac_store_schema.json, with absence treated as legacy/empty by every reader. Without it, additionalProperties:false rejects the field at commit time and nothing in this AC can be authored."
+test_spec:
+  - name: test_three_attempts_append_in_order_to_a_real_ac_file
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Drives the real writer three times against a real on-disk AC YAML copied from the store (block-scalar notes and multi-line criteria intact), reloading the file after each call; asserts three entries in the order written, each carrying actor, timestamp, stage, outcome and decision."
+  - name: test_appending_a_fourth_leaves_the_first_three_byte_identical
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Captures the file bytes after three appends, appends a fourth through the real writer, and asserts the region holding the first three entries is unchanged byte-for-byte -- not merely that three equivalent entries are still parseable."
+  - name: test_no_public_mutation_path_can_rewrite_or_remove_an_existing_entry
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Enumerates the writer module's public mutation surface and executes every one of them against a real file holding three entries; asserts each leaves all three intact, so a correct-in-place or resequencing path added later fails this test instead of passing a source scan."
+  - name: test_absent_trail_reads_as_no_attempts_and_is_not_an_error
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Reads a legacy AC file carrying no trail field through the real reader; asserts it returns an empty attempt list, raises nothing, and that appending to it creates the field rather than failing validation."
+test_rationale: "A direct-import unit test of an append helper is handed an in-memory list and asked to append to it. EVERY implementation passes that test, including one that later re-serialises the whole record and drops, reorders or re-flows the earlier entries -- because the helper under test never touches disk and the damage is done by the serialiser, not by the append. The property this AC promises is not that an entry can be written but that an earlier entry survives every subsequent write, and that is only observable on the file. Each test therefore drives the real writer against a real on-disk AC YAML copied from the store -- with a block-scalar notes and a multi-line criteria, not a hand-typed minimal fixture, per CLAUDE.md's real-data-format rule -- and asserts on the file bytes rather than on the return value. A writer that returns the right list and writes the wrong file is precisely the failure mode. The append-only test enumerates and executes the module's whole mutation surface rather than grepping the source for a del or a slice assignment, because the realistic violation is a faithful-looking yaml.safe_dump, which no grep for destructive syntax would catch."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000a-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE TRAIL ITSELF -- successor to the ticket's `## Comments` section.
+
+  VERIFIED: THE STORE HAS NO VOCABULARY FOR THIS AT ALL (do not re-investigate).
+  config/ac_store_schema.json has ZERO matches for `comment`, `blocker`,
+  `adjudicat` and `escalat`. The only free-text slot is `notes` (~line 505),
+  typed as a plain `"type": "string"` -- an unstructured blob with no per-entry
+  author, timestamp, phase or status. The five attributes named in the second
+  Then clause (who / when / which stage / outcome / decision) are exactly the
+  attributes `notes` cannot carry, and they are chosen to match what the
+  adjudication ladder actually reads, not to be thorough for its own sake.
+
+  WHY PER-REQUIREMENT AND NOT PER-CONTAINER (the load-bearing argument, from
+  ACD-2000a): adjudication is per-attempt-at-a-requirement. Under ACD-1800c a
+  ticket groups N requirements, so a container-level log conflates N independent
+  retry budgets into one stream -- two failures on two different requirements
+  read as "retry 2" on both, tripping caps early, while a bundle re-run resets
+  all N at once. The trail must be at the same grain as the thing being retried.
+  Grain-invariance matters too: the fast lane
+  (scripts/build_orchestration/fast_lane.py) builds a single AC with no ticket at
+  all, and today that path has no adjudication record whatsoever.
+
+  APPEND-ONLY IS A BEHAVIOURAL REQUIREMENT, NOT A STYLE PREFERENCE (third and
+  fourth Then clauses). A retry count that any writer can silently reset is not a
+  cap -- ACD-2000a-2's stop condition is only as trustworthy as this property.
+  The fourth clause deliberately forbids "correct in place" because that is the
+  natural thing to do when a later phase learns the earlier verdict was wrong,
+  and it is indistinguishable from a reset.
+
+  THE YAML ROUND-TRIP HAZARD IS THE IMPLEMENTATION TRAP, and it is why
+  ACD-2000a-1-i exists as a separate leaf: `_update_ac_work_status()` in
+  scripts/build_orchestration/fast_lane.py (~lines 113-125) does a full
+  `yaml.safe_load` -> `yaml.safe_dump` rewrite of the ENTIRE AC record on every
+  claim and every release. Any trail added here is round-tripped through that on
+  every ACD-2000b claim; key order and comments are not preserved and a partial
+  write truncates the log.
+
+  SCHEMA CONSTRAINT: a new structured field, so
+  additionalProperties:false (enforced today -- see ACD-1800f's verified notes)
+  makes ACD-1900a's additive-first, optional-field landing a hard prerequisite.
+  Absence = legacy mode: a requirement with no trail has made no recorded
+  attempts, which must not be an error. Mirror any shape validation into
+  scripts/commit_guardian/check_ac_schema.py, its manual fallback
+  scripts/commit_guardian/_ac_schema_validators.py, and
+  scripts/ac_store/validate_ac_schema.py.
+
+  TESTABILITY. Append three attempts to a real on-disk requirement through the
+  real writer and assert the file's contents after each. Asserting the schema
+  permits a list would pass on a list nothing ever appends to.
+
+  2026-08-17 (IT PO enrichment). Assigned python-coder: the deliverable surface is
+  a JSON schema slot plus a Python writer/reader and three Python validation
+  points -- all extensions python-coder owns. No cross-craft surface, so no split.
+  Complexity L: a new module plus edits to config/ac_store_schema.json,
+  scripts/ac_store/validate_ac_schema.py, scripts/commit_guardian/check_ac_schema.py,
+  scripts/commit_guardian/_ac_schema_validators.py and, if a hook imports the new
+  module, scripts/build_phases.py.
+
+  ONE FINDING ADDED BY THIS PASS, against the code. The BA's notes say the round
+  trip does not preserve key order; verified more precisely -- line 122 is
+  `yaml.safe_dump(data, fh, allow_unicode=True)` with sort_keys left at its
+  PyYAML default of True, so the whole record is re-keyed ALPHABETICALLY on every
+  claim and release, and line 121 opens the LIVE path in mode "w", which truncates
+  before a single byte is written. Both are stated as verified facts in
+  it_requirements rather than as risks, and the atomicity half is ACD-2000a-1-i's.

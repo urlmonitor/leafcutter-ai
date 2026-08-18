@@ -1,0 +1,175 @@
+id: TQ-400b-4
+components:
+  - testing_quality
+  - ac_store
+title: "Re-running the sweep does not re-demote or stack duplicate reasons"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record already demoted by an earlier sweep and still without proof,
+  When the sweep runs again over the unchanged store,
+  Then the record is not demoted a second time,
+  And exactly one reason and one date are present on it — the second run appends
+    no duplicate and overwrites no original,
+  And the record's file is unchanged by the second run,
+  And the run's report distinguishes records newly demoted in this run from
+    records already in that state, rather than presenting the whole standing
+    population as new findings.
+depends_on:
+  - TQ-400b
+  - TQ-400b-1
+  - TQ-400e-5
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The run-twice-and-diff discipline for any store-writing operation, and why
+      a counter assertion is not idempotence.
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The promotion side's idempotency guard (:144-146, "no-op ... already
+      work_status=done") — the symmetric shape for the demotion side.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the never-rewritten rule for demotion_date must be documented, since
+      that rule is invisible from the field's type alone.
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The run report the new-versus-standing partition is emitted from; it must
+      agree with the inventory (TQ-400a-4) rather than counting separately.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    A second run over an unchanged store must be a byte-level no-op. Verify by
+    running the apply path twice and diffing every record file in the store —
+    run-twice-and-diff, not a counter assertion.
+  - >-
+    demotion_date must record the FIRST demotion and must never be rewritten by a
+    later run. An implementation that refreshes the date passes a naive "one date
+    present" check while destroying exactly the lapse-duration information the
+    reports need.
+  - >-
+    The original demotion_reason must be preserved even when the cause changes
+    between runs (for example a missing test now exists but fails). Report the
+    new cause in the run output; do not rewrite the record.
+  - >-
+    Exactly one reason and one date per record. Both fields are scalars, so
+    appending must be structurally impossible; the guard is that an
+    already-demoted record is skipped at the write site, not that duplicates are
+    de-duplicated afterwards.
+  - >-
+    The already-demoted test must be a property of the record itself
+    (work_status already todo AND demotion_reason present), never a memory of a
+    previous run — the sweep holds no state between runs.
+  - >-
+    The report and the inventory must partition the population into newly
+    demoted in this run and already standing. With 259 of 641 done records
+    currently unproven, the standing population is large from day one, and a
+    report that re-lists all of it every cycle will stop being read within two
+    cycles.
+  - >-
+    The new-versus-standing counts in the report must be derived from the same
+    inventory the sweep wrote (TQ-400a-4), not counted independently.
+  - >-
+    Must handle errors gracefully per the project error handling policy: a
+    record whose demotion fields are present but malformed must be reported, not
+    silently re-demoted (which would overwrite the original date).
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-400c-3
+    contract: >-
+      A per-run partition of the unproven population into newly_demoted and
+      already_standing lists of ac_ids, carried in the inventory, so the cadence
+      report can state direction of travel without recomputing it.
+expects_from:
+  ac_id: TQ-400e-5
+  contract: >-
+    Cross-cycle stability for records the sweep has already settled. This AC
+    applies the same stability requirement to demoted records that TQ-400e-5
+    applies to exempt ones: an unchanged store must produce an unchanged store.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_second_apply_run_leaves_every_record_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Two consecutive subprocess apply runs over an unchanged store; a
+      whole-store byte diff after the second run is empty. Driven through the
+      production invocation, not a helper.
+  - name: test_original_demotion_date_is_preserved_across_runs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      With the two runs given different clock dates, the record's demotion_date
+      after run two equals the run-one date. An implementation that refreshes
+      the date fails here but would pass a "one date present" check.
+  - name: test_exactly_one_reason_and_one_date_after_repeated_runs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      After three consecutive runs the record carries scalar demotion_reason and
+      demotion_date — not lists, not duplicated keys, not concatenated text —
+      and still passes validate_ac_schema.py.
+  - name: test_report_distinguishes_new_demotions_from_standing_ones
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Run two, with one freshly lapsed record added, classifies the run-one
+      record as already standing and the new one as newly demoted; the report's
+      counts are read from the inventory the sweep wrote, not recomputed.
+test_rationale: >-
+  Without this the first sweep over the real store demotes a large population
+  and every subsequent sweep re-reports all of it, so the cadence emits an
+  identical alarm every cycle and stops being read. The date clause is where a
+  naive implementation passes while destroying information, so the tests inject
+  two different run dates rather than asserting presence — and correctness is
+  proven by a byte diff of the whole store after a second real run, because
+  "nothing changed" is not observable from a return value.
+change_target: code
+risk_surface: internal
+notes: |
+  Without this, the first sweep over the real store demotes a large population and
+  every subsequent sweep re-reports all of it, so the cadence in TQ-400c emits an
+  identical alarm every cycle and stops being read. Measured baseline at authoring
+  time: 259 of 641 finished L2/L3 records carry no test bearing their coverage
+  tag, so the standing demoted population will be large from day one and the
+  new-versus-standing distinction is what keeps each report actionable.
+
+  The date field makes correctness here observable: preserving the ORIGINAL
+  demotion date is what tells you how long a record has been lapsed. An
+  implementation that rewrites the date each cycle passes a naive "one date
+  present" check while destroying exactly the information the report needs — hence
+  the explicit "overwrites no original" clause.
+
+  Prove with two consecutive real runs and a byte comparison of the record after
+  the second.

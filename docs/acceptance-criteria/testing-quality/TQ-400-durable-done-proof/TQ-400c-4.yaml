@@ -1,0 +1,136 @@
+id: TQ-400c-4
+components:
+  - testing_quality
+title: "A scheduled run that does not complete shows as failed, not as an absent report"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a scheduled occurrence in which the sweep cannot complete,
+  When the team looks at the place the verdict is published,
+  Then that occurrence is shown as failed, naming the occurrence and the reason it
+    did not finish,
+  And the previous run's figures are not presented as though they were current,
+  And a failed occurrence is distinguishable at a glance from an occurrence that
+    completed and found nothing wrong,
+  And the next occurrence that does complete replaces the failure with its own
+    figures.
+depends_on:
+  - TQ-400c
+  - TQ-400c-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The must_block modifier and the Lost Test smell, with both precedents this AC guards against recorded in the failure catalogue: the continue-on-error CI pytest job (the gate fires and merges proceed anyway) and the six drives that committed with zero pre-commit hooks because pre-commit exits 0 under PRE_COMMIT_ALLOW_NO_CONFIG=1."
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "Read the existing job definitions for how failure is (and is not) made visible here — including which jobs are informational. Whatever surface publishes the sweep verdict must not repeat the continue-on-error pattern that makes a firing gate invisible."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Its main() already returns a distinct exit code per mode; the non-zero path is the existing precedent for signalling a real problem out of this tool. The new state — 'the run itself did not finish' — is different from 'the run finished and found violations' and must be representable separately."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SILENT NON-RUN IS THE FAILURE MODE. 'No report' must never be the representation of a failed occurrence. The published surface must carry an explicit failed state for that occurrence; a cadence whose failures are invisible degrades into no cadence at all while continuing to look healthy, and this repo has that precedent twice over (continue-on-error CI job; six hook-less drives)."
+  - "THREE STATES MUST BE MUTUALLY DISTINGUISHABLE ON THE PUBLISHED SURFACE, machine-checkably and not only by prose: (a) completed and clean, (b) completed with unproven records found, (c) did not complete. An implementation in which (a) and (c) render alike, or in which (c) is inferred from the absence of (a), is a violation."
+  - "STALE FIGURES MUST NOT BE PRESENTED AS CURRENT. When the most recent occurrence failed, the previous occurrence's figures must not appear as the current verdict. They may be shown as explicitly historical and attributed to their own date; they may not sit in the current-verdict position."
+  - "FAIL LOUD, NOT FAIL OPEN. The incomplete run must surface a non-zero signal out of the scheduled job itself, so the scheduler's own status also reflects the failure. A job that catches its own error, publishes nothing, and exits zero is exactly the continue-on-error pattern recorded in docs/testing/test-angles.md."
+  - "RECOVERY MUST BE AUTOMATIC. The next occurrence that completes replaces the failure state with its own figures, with no manual clearing step. A latched failure state that must be dismissed by hand is a second way the cadence dies."
+  - "Must handle errors gracefully per the project error handling policy — every failure path must log at WARNING or higher and either re-raise or convert to the published failed state; none may be swallowed. The reason published must name what stopped the run, not a generic 'sweep failed'."
+delivers_to:
+  - agent: python-coder
+    contract: "A published per-occurrence status carrying three mutually exclusive machine-checkable states — completed_clean, completed_with_findings, did_not_complete — plus, for did_not_complete, the occurrence identity and a specific reason string. TQ-400c-2's surface renders this; TQ-400c-3's trend must skip a did_not_complete occurrence rather than treat it as a population of zero."
+expects_from:
+  ac_id: TQ-400c-1
+  contract: >-
+    The scheduled occurrence and its dated report identity. A failed occurrence
+    must still be identifiable as that occurrence, which requires the occurrence
+    identity to exist independently of a successfully written report.
+test_spec:
+  - name: test_tq_400c_4_incomplete_scheduled_run_publishes_a_failed_state_with_a_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "MUST_BLOCK NEGATIVE CONTROL. Induce a real incomplete run through the SAME scheduled entry point a healthy run uses — make the store unreadable partway, not by injecting a mock — and assert the published surface shows that occurrence as failed, naming the occurrence and a specific reason. Asserting that an error handler exists proves nothing about what a reader sees."
+  - name: test_tq_400c_4_failed_occurrence_exits_non_zero_and_does_not_republish_stale_figures
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT, CONSUMPTION ASSERTED. Run a healthy occurrence, then an incomplete one, both as subprocesses through the scheduled entry point. Assert the incomplete occurrence returns a non-zero exit code (the failure is consumed by the scheduler, not swallowed) AND that the first occurrence's figures no longer occupy the current-verdict position on the published surface."
+  - name: test_tq_400c_4_failed_is_machine_distinguishable_from_completed_and_clean
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Produce all three outcomes — completed clean, completed with findings, did not complete — and assert the published state differs on a machine-checkable field for each pair. Assert explicitly that did_not_complete is NOT represented by the absence of a report: a test that only checks the happy states passes on an implementation where failure means silence."
+  - name: test_tq_400c_4_next_completing_occurrence_clears_the_failure_unaided
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After a failed occurrence, fire the scheduled entry point again against a healthy store and assert the failed state is replaced by the new figures with no intervening manual step. A latched failure that must be dismissed by hand fails here."
+test_rationale: |
+  Every defect this AC guards against is invisible to a test of the error handler. The
+  handler can exist, be correct, and still leave the surface silent — which is precisely
+  the continue-on-error CI job and the PRE_COMMIT_ALLOW_NO_CONFIG drives recorded in
+  docs/testing/test-angles.md, where the gate fired and nobody could tell. The negative
+  control therefore has to induce a genuine incomplete run through the real scheduled entry
+  point and then READ THE PUBLISHED SURFACE, and the non-zero exit assertion has to ride
+  alongside it, because a surface that shows failure while the job exits zero still lets the
+  scheduler report a healthy cadence. The three-way distinguishability test exists because
+  "failed" and "clean" are the pair a lazy implementation renders identically.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements name the silent-non-run
+    failure mode, require three mutually distinguishable machine-checkable states,
+    forbid stale figures in the current-verdict position, and require a non-zero signal
+    out of the job itself (fail loud, not fail open). test_spec is the must_block
+    negative control: failure + reachability (non-zero exit consumed) + two criterion
+    entries for distinguishability and unaided recovery. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The failure angle, and the single most likely way this whole L1 quietly dies. A
+  cadence whose failures are invisible degrades into no cadence at all while
+  continuing to look healthy — the report simply stops updating and the last good
+  figures sit there looking current.
+
+  This repo has the exact precedent twice over, both recorded in
+  docs/testing/test-angles.md: the CI pytest job running with
+  continue-on-error: true so the gate fires and merges proceed anyway, and the six
+  drives that committed with zero pre-commit hooks because pre-commit exits 0
+  under PRE_COMMIT_ALLOW_NO_CONFIG=1 — an ungated drive indistinguishable from a
+  gated one. Meszaros' "Lost Test" smell.
+
+  Test-angle constraint: induce a real incomplete run through the scheduled entry
+  point and observe the published surface. Asserting that an error handler exists
+  proves nothing about what a reader sees.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Two additions the criteria imply but do not
+  state, now in it_requirements. First, the non-zero exit: the criteria describe
+  what a reader sees, but a surface showing failure while the job exits zero still
+  lets the scheduler itself report a healthy cadence — which is the
+  continue-on-error precedent exactly. Second, the interaction with TQ-400c-3: a
+  did_not_complete occurrence must be SKIPPED by the trend computation, not
+  differenced as a population of zero, or one failed run renders as the entire
+  finished population lapsing.

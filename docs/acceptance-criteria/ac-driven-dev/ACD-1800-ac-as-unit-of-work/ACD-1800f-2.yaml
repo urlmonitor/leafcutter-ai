@@ -1,0 +1,175 @@
+id: ACD-1800f-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The requirement itself states what to invoke and what should then be observed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement that promises a person will see a warning line naming the
+    offending record when a malformed record is checked,
+  When the proof of that promise is inspected,
+  Then the requirement itself carries the proof -- the surface to act on, the
+    input to feed it, and what must be observed afterwards,
+  And it also carries what would be observed if the promise were unimplemented,
+    so that a run cannot be counted as proof merely because it produced output,
+  And a requirement may carry more than one such proof, each independently
+    stated,
+  And the proof is readable from the requirement alone, without opening any
+    container the requirement is later bundled into.
+depends_on: [ACD-1800f, ACD-1800f-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Normative home for the proof field and its four parts; ACD-1800f-5 writes that section."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "Safety rules 1 and 4 (optional additive field, absence = legacy) and the dual-write window that lets the ticket keep a derived copy while the store is the source."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component page for the AC-as-unit-of-work surface the proof content moves onto."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "Owns the proof-of-done honesty axes. placeholder_signature is the anti-placebo axis applied to observable surfaces and belongs in that family."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Add ONE new optional AC field, `observation_proofs`: absent/null when nothing is authored, otherwise a list with minItems 1. Each item carries exactly the four keys the consuming craft already reads -- `surface`, `fixture_input`, `assertion`, `placeholder_signature` -- so migrating a hand-typed stanza is a copy, not a translation."
+  - "`placeholder_signature` IS REQUIRED ON EVERY PROOF, not optional. templates/agents/user-surface-smoker.md Step 4.2 currently checks it '(if present)', and that optionality is the placebo hole: without it a smoke check degenerates into an exit-code check that passes on an unimplemented stub. Enforce presence and non-emptiness at authoring time in the schema and in both commit-guardian validators."
+  - "`surface` is per-proof, never on the declaration. Its value set is the one the craft already understands: slash_command, pre_commit_hook, agent_orchestrated, cron. This is what lets one requirement carry several proofs against different surfaces (third Then clause), and it is where the legacy `user_facing_surface` value is derived from."
+  - "THE STORE IS THE SOURCE; ANY TICKET COPY IS DERIVED. Expose a resolver from canonical source under scripts/ac_store/ that returns the ordered proof list for a work item given only AC ids -- no ticket path argument, no ticket read. The fourth Then clause is unsatisfiable by any design whose only reader path goes through a ticket body, and ACD-1800f-4's grain-invariance clause depends on this resolver existing."
+  - "During the ADR-026 dual-write window the generator MAY additionally render the resolved proofs into the ticket body's `## Smoke Fixture` block so the unmodified craft keeps working. If it does, the block must be marked generated and must be re-derived from the store on every generation -- never hand-edited, never the source. scripts/ac_store/generate_ticket_from_ac.py contains ZERO occurrences of 'Smoke Fixture' today, so this is a new emitter, not a repoint."
+  - "MIXED SURFACE -- FLAGGED, NOT SILENTLY ABSORBED (S2.8 partial flag). The Python-side portion of this work (schema slot, validators, resolver, generator emitter) is python-coder's. Repointing templates/agents/user-surface-smoker.md to take its stanzas from the resolver instead of the ticket body is a `.md` agent-template edit that python-coder and pytest cannot act on; it needs an llm-expert pass. Do not let the Python half be signed off as if the craft had been repointed -- see the caveat in notes."
+  - "Land the field OPTIONAL and additive; absence is legacy mode -- derive nothing, never fail (ADR-026 rules 1 and 4). ACD-1800f-1's declaration slot is a hard prerequisite because additionalProperties:false is enforced today."
+  - "Mirror the shape validation into scripts/commit_guardian/check_ac_schema.py, its manual fallback scripts/commit_guardian/_ac_schema_validators.py, and scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is a no-op on the branch that actually gates a commit when jsonschema is unavailable."
+  - "Canonical source only (config/ac_store_schema.json, scripts/ac_store/, scripts/commit_guardian/); never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001). Any new module imported by a hook must be added to build_ac_store's deploy_map (scripts/build_phases.py ~794) in the same change."
+delivers_to:
+  agent: python-coder
+  contract: "AC-record field `observation_proofs: null | [{surface: 'slash_command'|'pre_commit_hook'|'agent_orchestrated'|'cron', fixture_input: str, assertion: str, placeholder_signature: str}, ...]` (minItems 1 when present; all four keys required), plus a store-only resolver exported from scripts/ac_store/ with signature `resolve_observation_proofs(ac_ids: list[str], *, ac_root) -> list[{ac_id: str, proof_index: int, surface: str, fixture_input: str, assertion: str, placeholder_signature: str}]` that takes no ticket path. Consumed by ACD-1800f-3 (the unproven verdict and the proofs-executed count), ACD-1800f-4 (bundle union, isolation and attribution) and by templates/agents/user-surface-smoker.md once repointed."
+expects_from:
+  ac_id: ACD-1800f-1
+  contract: "The `observable_effect` declaration slot and its accessors. A requirement that carries observation_proofs must also declare observable_effect; the pairing rule (declared-with-no-proof) is ACD-1800f-3's verdict, not a validation error here."
+test_spec:
+  - name: test_requirement_carrying_two_proofs_validates_and_both_are_resolvable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Writes a real AC record with two observation_proofs entries against different surfaces, runs the real store validator (exit 0), then calls the resolver with only the AC id and asserts it returns both proofs in authored order with their four keys intact. Multiplicity is asserted at the resolver, because a single-proof design silently drops stanzas from any migrated multi-stanza ticket."
+  - name: test_proof_missing_placeholder_signature_is_rejected_at_all_three_enforcement_points
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A proof carrying surface, fixture_input and assertion but no placeholder_signature is rejected by scripts/ac_store/validate_ac_schema.py, by check_ac_schema.py, and by check_ac_schema.py with jsonschema forced unavailable so the manual fallback branch runs. The three-of-four migration is the failure mode that silently weakens every proof in the store."
+  - name: test_proofs_resolve_from_the_store_with_no_ticket_in_existence
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Resolves the proofs for an AC in a temp store where no ticket file exists anywhere on disk, and asserts the full proof set comes back. This is the fourth Then clause, and it is the assertion no ticket-body implementation can pass."
+  - name: test_generated_ticket_block_is_rederived_from_the_store_not_preserved
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Generates a ticket for an AC with two proofs, edits the rendered ## Smoke Fixture block by hand, regenerates, and asserts the block matches the store again -- the dual-write copy is derived and cannot become a second source."
+  - name: test_empty_proof_list_is_rejected_so_absence_is_the_only_no_proof_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "observation_proofs: [] fails validation; the declared-but-unproven case is expressed by absence and adjudicated by ACD-1800f-3, never by an empty list that a downstream loop would read as satisfied."
+test_rationale: "The format this AC gives an AC-side home has never had a producer -- generate_ticket_from_ac.py contains zero occurrences of 'Smoke Fixture' -- so the tempting shape of test is 'the field parses'. A parsed stanza that nothing runs is exactly the state the ticket-body block is in today, which is why every descriptor here drives the real validator or the real resolver over a real on-disk record. The no-ticket-on-disk descriptor is the decisive one: it is the only assertion that distinguishes a store-sourced proof from a ticket-sourced one, and it is what ACD-1800f-4's grain-invariance clause rests on. Execution of the resolved proofs is deliberately covered by ACD-1800f-3 and ACD-1800f-4 rather than restated here."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE PROOF CONTENT -- the successor to the ticket body's `## Smoke Fixture`
+  block.
+
+  VERIFIED SHAPE OF WHAT IT REPLACES (ACD-1800f notes, re-verified 2026-08-17):
+  templates/agents/user-surface-smoker.md reads the block from the TICKET BODY
+  (extraction ~lines 92-93) as one or more YAML stanzas separated by `---`, each
+  with four keys (~lines 95-107): `surface`, `fixture_input`, `assertion`,
+  `placeholder_signature`. The four Then clauses above map onto those four keys
+  deliberately -- surface / fixture_input / assertion in the first clause, and
+  `placeholder_signature` in the second.
+
+  THE SECOND THEN CLAUSE IS THE ONE PEOPLE DROP, AND IT IS THE ANTI-PLACEBO
+  CLAUSE. `placeholder_signature` is what distinguishes "the surface ran and
+  produced the promised observation" from "the surface ran and produced its
+  unimplemented-stub output". Without it a smoke check degenerates into an
+  exit-code check, which passes on a stub. It is authored content, not derivable,
+  so it must move with the rest of the stanza; a migration that carries three of
+  the four keys silently weakens every proof in the store.
+
+  THE PRODUCER SIDE IS EMPTY TODAY. scripts/ac_store/generate_ticket_from_ac.py
+  contains ZERO occurrences of "Smoke Fixture" and ZERO of "actuation_contract".
+  Nothing in the AC path emits the block the gate reads. So this is not a
+  "move the content" change -- there is no producer to repoint, and the content
+  has only ever existed when a human typed it into one particular ticket body.
+
+  WHY IT MUST BE ON THE REQUIREMENT (ACD-1800f's load-bearing argument): under
+  ACD-1800c the ticket groups N requirements, so a ticket-level stanza is an
+  assertion nobody owns and nobody revalidates when membership changes. Authoring
+  the proof at the same grain as the promise also makes the check
+  grain-invariant -- ACD-1800f-4 asserts that consequence.
+
+  MULTIPLICITY (third Then) matters because the smoker's algorithm is literally
+  "for each stanza in the block" (~line 111) and its aggregation is "if ALL
+  stanzas PASS: emit (status: ok)" (~line 171). A single-proof-per-requirement
+  design would silently drop stanzas from any migrated multi-stanza ticket.
+
+  SCHEMA CONSTRAINT: this content is a new AC field and
+  additionalProperties:false is enforced today, so ACD-1800f-1's slot (or the
+  same additive landing) is a hard prerequisite -- hence the depends_on edge.
+  Optional, absence = legacy mode (ADR-026 rules 1 and 4).
+
+  TESTABILITY. Author a real requirement with two proofs, run the observation
+  craft against a real surface, and assert both proofs were executed and their
+  observations checked. Do NOT assert only that the field parses -- a parsed
+  stanza that nothing runs is the state the `## Smoke Fixture` block is in today.
+
+  2026-08-17 (IT PO enrichment).
+
+  PLACEHOLDER_SIGNATURE PROMOTED FROM OPTIONAL TO REQUIRED. The craft treats it
+  as optional today ("if present", user-surface-smoker.md Step 4.2 ~line 153).
+  Carrying that optionality onto the requirement would reproduce the weakening
+  the BA warns about by default rather than by accident, so the field is
+  required at authoring time. Note the consequence for migration: any hand-typed
+  stanza that omitted it cannot be copied verbatim and must be completed by its
+  author -- that is intended, and the uninferable ones belong in a review report,
+  never a guessed regex.
+
+  MIXED SURFACE -- PARTIAL FLAG (S2.8, BP-1100f-3-i). The declared surface of
+  this AC is not uniformly Python:
+    - MATCHED (python-coder / pytest): config/ac_store_schema.json,
+      scripts/ac_store/*.py, scripts/commit_guardian/*.py.
+    - UNMATCHED: templates/agents/user-surface-smoker.md -- a prose agent
+      template. A Python implementer checked by pytest cannot meaningfully author
+      or verify it, and no pytest assertion proves an LLM craft now reads the
+      resolver instead of the ticket body.
+  Only the unmatched portion is flagged; the matched portion passes unflagged. No
+  split was made -- ACD-1800f is at its 5-L2 cap and ACD-1800 is at 6 of 7 L1, so
+  a split is the user's call. The recommendation recorded for the user is a
+  companion llm-expert AC that repoints user-surface-smoker.md and
+  live-surface-tester.md at the resolver. Until it exists, the risk is precise
+  and should not be papered over: the store can hold correct proofs that the
+  craft never reads, which is the same shape as today's defect with the arrow
+  reversed.
+
+  RESOLVER SIGNATURE IS DELIBERATELY TICKET-FREE. resolve_observation_proofs
+  takes AC ids and an ac_root, and no ticket path. That is not a style choice --
+  a signature that accepts a ticket path will acquire a ticket-body fallback, and
+  the fourth Then clause then becomes untestable. The no-ticket-on-disk test
+  descriptor exists to hold the signature honest.

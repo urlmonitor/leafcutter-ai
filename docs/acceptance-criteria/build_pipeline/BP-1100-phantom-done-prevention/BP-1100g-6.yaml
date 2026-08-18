@@ -1,0 +1,119 @@
+id: BP-1100g-6
+components:
+  - documentation_system
+  - build_pipeline
+  - testing_quality
+title: "Reference documentation states what a claimed kind of proof does and does not mean"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the kind-of-proof claim and the promise-versus-claim check are in place,
+  When a reader consults the project's reference documentation for them,
+  Then one reference page states how a test states which kind of proof it was
+    written to give, and that this axis sits alongside the existing coverage
+    statement on the same tests rather than replacing it,
+    And it states the two consequences separately and side by side: the existing
+      axis decides which FAILING tests are treated as blocking, and the new axis
+      causes a refusal only when a promised kind has no test claiming it,
+    And it states in its own words that a claim is evidence a proof was PROMISED
+      and ANSWERED and is never evidence that the work is reached when the product
+      runs, naming where that question is settled instead,
+    And it states that a claim pasted onto an unrelated test is accepted by the
+      check by design, and why closing that hole here would be the wrong place to
+      close it,
+    And it states that the seam rule's answer, including the reasoned "no seam
+      applies", is a required part of the hand-off record.
+depends_on:
+  - BP-1100g
+  - BP-1100g-3
+  - BP-1100g-4
+  - BP-1100g-5
+doc_links:
+  - path: docs/reference/proof-claims-and-completeness.md
+    relationship: describes
+    status: planned
+    relevance: "PINNED BY IT-PO: this is the page to author, under docs/reference/, which is the reference-author's surface."
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "The taxonomy and its evidence base. Cross-link; do not restate the failure catalogue — that page explains why the angles exist, this one states what a claim means and what it does not."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "The component page that owns the surrounding guarantees; the new page must be reachable from it and must not contradict its statement of what a written signal is worth."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The prohibition the third and fourth clauses restate for readers: whether a proof went in the real way is decided by watching the run, never from text."
+  - path: docs/reference/required-proof-vocabulary.md
+    relationship: related
+    status: planned
+    relevance: "The producer-side reference page BO-2900g-5 authors (the ASK side). The two pages must cross-link and must not state different permitted kinds; this one is the CLAIM side."
+assigned_agent: reference-author
+estimated_complexity: M
+it_requirements:
+  - "Pin the path: docs/reference/proof-claims-and-completeness.md. It must carry the project reference-doc frontmatter (title / type: reference / status / created / last_updated / components / description) or check_doc_frontmatter blocks the commit."
+  - "THE PAGE'S JOB IS THE NEGATIVE. How to write a tag is two lines; what the tag is NOT is the reason the page exists. The third and fourth clauses must be prominent, not footnotes."
+  - "The two consequences must appear side by side, not in separate sections: the existing axis decides which FAILING tests block; the new axis refuses only when a promised kind has no claim. They sit on the same test records and will otherwise be conflated by anyone reading the tests alone."
+  - "The accepted paste must be stated as a deliberate design decision with its reason (closing it here would require deciding from a test's text whether it does what it claims — the phantom-done-guard-inside-the-phantom-done-guard BO-2900a-2 prohibits), and must name BO-2900a's execution observer as where it is actually caught."
+  - "Cross-link with the ASK-side page (docs/reference/required-proof-vocabulary.md, BO-2900g-5) and reconcile: the two pages must not state different permitted kinds. Both must be reachable from docs/architecture/components/phantom-done-prevention.md."
+  - "Cross-link, do not restate: docs/testing/test-angles.md keeps the failure catalogue; this page states what a claim means and what it does not."
+test_required: false
+test_rationale: |
+  Genuinely test-free: change_target is docs and the AC's entire observable is the prose
+  content of one reference page. There is no executable behaviour to assert. The
+  mechanical properties nearby are covered elsewhere and must not be re-tested here by
+  proxy — frontmatter validity by the check-doc-frontmatter hook, the enforcement
+  separation by BP-1100g-3-i, and the accepted-paste invariance by BP-1100g-4-i. A test
+  that greps this page for the phrase "promised and claimed" would assert prose presence,
+  not correctness, which is exactly the Neverfail Test smell this tree exists to avoid.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned reference-author (registry: ''requires a new reference document
+    in docs/reference/''), pinned the page path, added it_requirements including reconciliation
+    with BO-2900g-5''s page, and test_required: false with rationale. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc half of BP-1100g's documentation_triggers.
+
+  THE PAGE'S JOB IS THE NEGATIVE, NOT THE POSITIVE. How to write a tag is two
+  lines. What the tag is NOT is the whole reason the page exists: the moment
+  these claims are visible in a diff, someone will read a reachability claim as
+  reachability. The third and fourth clauses put the boundary and the accepted
+  paste on the page, where the readers who would otherwise widen it will see
+  them, rather than only in AC notes they will never open.
+
+  THE TWO-CONSEQUENCE CLAUSE IS THERE BECAUSE THE TWO AXES SIT ON THE SAME TESTS
+  and will be conflated by anyone reading the tests alone. Stating them side by
+  side is cheaper than the incident.
+
+  AGENT ASSIGNMENT DELIBERATELY OMITTED — BA-authored L2 with no technical
+  enrichment; the IT PO assigns it and pins the real page path.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Assigned reference-author rather than
+  documentation-expert, on the evidence of config/agent_registry.json: both are
+  phase agents, but reference-author's selection_criteria is specifically "a new
+  reference document in docs/reference/" while documentation-expert's is the
+  broader docs-only / docs/*.md trigger. documentation-expert is additionally
+  routed post-coder by the documentation_gates canonical-order path and will
+  still review. Page path pinned to docs/reference/proof-claims-and-completeness.md,
+  and a reconciliation requirement with BO-2900g-5's ASK-side page was added —
+  two new reference pages authored in the same window that state different
+  permitted kinds would recreate GAP C one layer up.

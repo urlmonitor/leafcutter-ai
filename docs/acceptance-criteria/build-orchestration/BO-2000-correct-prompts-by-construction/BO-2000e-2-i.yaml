@@ -1,0 +1,62 @@
+id: BO-2000e-2-i
+components:
+  - build_orchestration
+title: "The coder is dispatched when the test-writer produced tests earlier in the same drive"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a code ticket whose Test Requirements section is absent,
+    and the test-writer phase has already run earlier in the same drive for that ticket
+    and reported the test files it wrote,
+  When the supervisor reaches the point where it would spawn the coder phase,
+  Then it spawns the coder,
+  And the ticket is not held back for missing tests,
+  So a ticket whose tests were derived from its acceptance criteria instead of from a
+    Test Requirements section is still buildable.
+depends_on:
+  - BO-2000e-2
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "2 -- the pre-coder gate in build-ticket.js and its twin in build-feature.js, which must stay identical"
+  required_skills:
+    - python-coder
+    - test-writer
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_test_requirements_guard.py"
+  notes: |
+    The gate must decide whether tests exist at the moment the coder phase is reached,
+    so evidence produced by a test-writer phase earlier in the same drive is visible to
+    it; a verdict computed once before any phase ran can never observe that evidence.
+    Test-writer evidence counts only when it names the test files actually written for
+    the ticket.
+    Test coverage: drive a code ticket with no Test Requirements through a run in which
+    test-writer reports written test files, and assert the coder phase IS dispatched --
+    behaviorally, by recording which phase agents the workflow actually dispatched, not
+    by grepping the workflow source.
+delivers_to: null
+expects_from:
+  ac_id: BO-2000e-2
+  contract: "The pre-coder gate whose test-writer-evidence satisfaction route this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/prompt_assembly/test_test_requirements_guard.py
+implemented_by: []

@@ -1,0 +1,163 @@
+id: BP-1100g-5-i
+components:
+  - build_pipeline
+  - testing_quality
+  - ticket_lifecycle
+title: "A missing, reasonless, or contradictory seam answer is reported, while a reasoned no is not"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four hand-off records for four pieces of work:
+      record W, which answers the seam rule with "no seam applies" and gives the
+        reason no seam applies,
+      record X, which answers "no seam applies" and gives no reason,
+      record Y, which contains no answer to the seam rule at all,
+      and record Z, which answers the seam rule twice for the same piece of work
+        with two different answers,
+  When the four records are read,
+  Then record W is not reported, because a reasoned negative is a valid answer,
+    And records X, Y and Z are each reported as a shortfall, and each report says
+      which of the three it is — reasonless, absent, or answered more than once,
+    And the number of answers found for each piece of work is established from the
+      records the hand-off actually produced, not from whether the writing side
+      was observed to have been asked for one,
+    And a run that stops before a piece of work is handed on leaves that work with
+      no record at all, which is not reported as a reasonless or contradictory
+      answer.
+depends_on:
+  - BP-1100g-5
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1000-live-automation-progress/BO-1000b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The analogue whose implementation shipped the double-recording bug this AC's record-Z case exists to catch, and whose structural test was blind to it."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The completion-manifest format, where an item is recorded either as satisfied or as a nested object carrying a reason — the existing shape record X fails to use and record W uses correctly. Also the source of the Legacy Compatibility rule: pre-epoch sign-offs carry no manifest at all and must not be treated as shortfalls."
+  - path: scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: "PINNED BY IT-PO as the natural host: it already parses a ticket's ## Sign-offs section at commit time. It does NOT parse the ## Comments completion_manifest block today — grep confirms completion_manifest has zero code readers anywhere under scripts/, so this AC's reader is new."
+  - path: scripts/commit_guardian/check_ticket_signoff_parity.py
+    relationship: describes
+    status: exists
+    relevance: "The registered hook entry point through which that parser reaches a commit. A reader that is not reachable from a registered hook is inert."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "THE READER IS NEW. completion_manifest has ZERO code readers today — grep over scripts/ returns no occurrences; it is parsed only by the supervisor LLM. scripts/commit_guardian/_signoff_parity_checks.py already parses a ticket's ## Sign-offs section and is the natural host, but it does not parse the ## Comments block. Extend it rather than adding a second ticket parser."
+  - "THE ANTI-GREP CLAUSE IS BINDING. Cardinality must be established from the records the run ACTUALLY EMITTED. A test asserting that the writing side was told to answer, or that a call to record the answer is present in the source, passes on an implementation that never records anything. Assert over emitted records, never over source presence."
+  - "CARRY BO-1000b-1-i's TRAP FORWARD: its double-recording defect survived because a count-guard regex matched only quoted-string first arguments and was blind to template-literal calls. Do not implement or test the answered-twice case by pattern-matching call sites."
+  - "The three shortfall kinds must be distinguishable BY NAME in the output — reasonless, absent, answered-more-than-once. Detecting all three needs three different mechanisms: presence for absent, a required (not merely permitted) reason for reasonless, and cardinality for answered-twice. An implementation commonly gets one or two."
+  - "A reasoned negative must never be reported. False shortfalls have exactly one natural remedy — weakening the check until they stop — so the valid case is as load-bearing as the invalid ones."
+  - "NO RECORD AND A BAD RECORD ARE DIFFERENT STATES. A run that stopped before a piece of work was handed on produced no record for it and must not be reported as reasonless or contradictory. Same carve-out discipline as BO-2900f-2-i."
+  - "LEGACY COMPATIBILITY: pre-epoch sign-offs carry no completion_manifest at all, and the signoff SKILL explicitly accepts that absence. Those must fall in the no-record state, not the absent-answer shortfall, or the check false-fails every historical ticket on its first run."
+  - "Must be reachable through the deployed hook path (python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py) and registered in scripts/commit_guardian/commit_guardian.json. Any new module it imports must be in the build deploy manifest."
+  - "The report is a record-shape observation, not a verdict about any test. It must not consult a test file, a test result, or a coverage record."
+delivers_to:
+  - agent: pr-reviewer
+    contract: "Per work item, zero or one shortfall record: {work_item_id, kind: 'reasonless' | 'absent' | 'answered_more_than_once', detail}. A conforming answer and a work item with no record at all both produce nothing."
+expects_from:
+  - ac_id: BP-1100g-5
+    contract: "One completion_manifest key per work item under a single fixed token, in one of two conforming shapes (covered, naming producing and consuming side; or not-applicable with a non-empty reason). The token is what makes this reader buildable."
+test_spec:
+  - name: test_bp_1100g_5_i_four_records_produce_three_named_shortfalls_and_no_report_for_w
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Records W/X/Y/Z from the criteria: W produces no report; X, Y and Z each produce exactly one shortfall whose kind is reasonless, absent and answered-more-than-once respectively."
+  - name: test_bp_1100g_5_i_records_are_parsed_from_real_ticket_files_written_by_the_signoff_recipe
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Build the four ticket files on disk with the project's own writer (yaml.safe_dump into the ## Comments block per the signoff SKILL recipe) rather than hand-typed markdown, then parse them. Hand-typed fixtures reproduce the indentation bias that hid the files_touched parser no-op through seven green sign-offs."
+  - name: test_bp_1100g_5_i_cardinality_is_counted_per_work_item_across_two_items_and_a_halted_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Zero / one / two answers for one work item, two work items in one run each with their own answer, and a run halted before hand-off leaving no record — the halted case yields nothing, not a reasonless or contradictory report."
+  - name: test_bp_1100g_5_i_shortfalls_are_reported_through_the_deployed_signoff_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ticket_signoff_parity.py <staged ticket paths>` as a subprocess against the four real ticket files and assert the three shortfalls appear by name in the hook's output, and that the hook id is registered in scripts/commit_guardian/commit_guardian.json."
+test_rationale: |
+  Three of the four risks are invisible to a hand-built-record unit test. The
+  real-artifact test exists because a hand-typed fixture already hid a parser no-op
+  through seven green sign-offs in this repo. The boundary test exists because
+  BO-1000b-1-i shipped exactly the answered-twice defect and its structural test was
+  blind to it. The deployed-hook test exists because a reader that is not reachable from
+  a registered hook reports to nobody, which is the same inertness the fast-lane runner
+  shipped. A single unit test over four dicts would pass on all three.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder — the criteria require a mechanical reader over emitted
+    records, which is code, not prompt. Added it_requirements (new reader, anti-grep,
+    legacy carve-out, registration), test_spec (criterion/real_artifact/boundary/reachability),
+    contracts and declares_side_effect. change_target is left as the BA authored it
+    but is flagged as wrong for this AC — see caveat in the notes. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  The enforceability half of BP-1100g-5. Without it the parent states a shape
+  nobody has to produce, which is the same silence GAP F is about.
+
+  WHY FOUR RECORDS AND NOT TWO. The three failure shapes are distinct and an
+  implementation commonly gets one or two: absent is caught by a presence check,
+  reasonless needs the reason to be required rather than merely allowed, and
+  answered-twice needs cardinality rather than presence. BO-1000b-1-i shipped
+  exactly the third defect and its test was structurally blind to it. Naming all
+  three, alongside a valid record that must NOT be reported, makes the scenario
+  adversarial rather than illustrative.
+
+  THE THIRD CLAUSE IS THE ANTI-GREP CLAUSE, carried forward from BO-2900f's
+  standing instruction. A test that asserts "the writing side was told to answer"
+  passes on an implementation that never records anything. Assert over the
+  records the run emitted.
+
+  THE FOURTH CLAUSE BOUNDS THE RULE THE WAY BO-2900f-2-i BOUNDS ITS CARVE-OUT. A
+  run that never reaches a piece of work has produced no record for it, and
+  reporting that as a reasonless answer generates false shortfalls, whose natural
+  remedy is to weaken the check until they stop. No record and a bad record are
+  different states.
+
+  IT-PO CAVEAT (2026-08-17) — change_target IS WRONG ON THIS AC. It reads
+  `prompt`, inherited from the parent BP-1100g-5, but every Then clause here
+  describes a mechanical reader over emitted hand-off records: reporting three
+  named shortfall classes, counting answers per work item, and distinguishing no
+  record from a bad record. That is code, and the assigned agent is python-coder.
+  change_target is a BA/PO axis (it drives guardrail_gates agent routing), so it
+  has NOT been changed during enrichment. RECOMMENDED FIX for the user to apply:
+  set `change_target: [code]` (or `[prompt, code]` if the reader's output wording
+  is also to be authored in a template). Left as-is, guardrail_gates will route
+  this AC's ticket as a prompt change and will not mandate architect-review /
+  test-runner.
+
+  IT-PO ENRICHMENT NOTE. Verified during enrichment: completion_manifest has zero
+  code readers anywhere under scripts/ — it is parsed only by the supervisor. The
+  natural host, _signoff_parity_checks.py, parses ## Sign-offs but not the
+  ## Comments manifest block, so the parser is new work rather than a widening.
+  declares_side_effect is true: the shortfall report is user-facing commit-time
+  output.

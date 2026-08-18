@@ -18,3 +18,9 @@ psutil>=5.9
 pytest>=8.0
 ruff==0.15.15
 mypy>=1.8
+
+# Runs the AC guardrail hooks in the ac-store-valid CI job. The job invokes the
+# same .pre-commit-config.yaml the local guardrails use so the two rule sets
+# cannot drift (ACS-200i); those hooks are language: system, so pre-commit
+# provisions no environments and only dispatches the commands.
+pre-commit>=3.5

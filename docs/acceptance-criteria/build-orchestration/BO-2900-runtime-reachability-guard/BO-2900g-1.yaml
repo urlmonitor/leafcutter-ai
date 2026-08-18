@@ -1,0 +1,193 @@
+id: BO-2900g-1
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "The demand for proof-of-wiring reaches every piece of work, including work that arrived with a plan of its own"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two pieces of work of the same kind, both to be built by a coding agent:
+    work X, which arrived with no test plan of its own, so its plan is derived
+      from the behaviour it states,
+    and work Y, which arrived with a hand-authored test plan naming three proofs,
+  When a test plan is produced for each,
+  Then each plan contains a request for a proof that the finished work is reached
+    the way the product is really used,
+    And work Y's three authored proofs are all still present, unaltered and in
+      their authored order, alongside that request,
+    And when a third way of producing a plan is introduced without being told
+      about this rule, the plans it produces carry the request as well,
+    And there is no piece of work for which the request is absent because of how
+      its plan was produced.
+depends_on:
+  - BO-2900g
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Names the floor (criterion + reachability, never negotiable) and records the observed split: the floor is attached only to the criteria-derived route, and 394 of 2,888 store records author their own plan and bypass it."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Where the two planning routes diverge today: the criteria-derived fallback appends the reachability descriptor, the authored-test_spec path is taken as-is and gets no generator-added entries."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The test_spec field's own description states the asymmetry this AC removes ('an authored test_spec is taken as-is and gets no generator-added entries') — the schema text is a second place the exemption is written down."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The verdict-layer prohibition. This AC only settles what is ASKED FOR at planning time; nothing here may be offered as evidence that any work was reached."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Component page for the surrounding guarantees; the planning-time floor must be described there without being read as a completion signal."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Shape of every descriptor emitted into a ticket's ## Test Requirements block, on every planning route."
+    required:
+      - name
+      - file
+      - covers
+      - angle
+      - asserts
+    properties:
+      name:
+        type: string
+      file:
+        type: string
+      covers:
+        type: array
+        items:
+          type: string
+      angle:
+        type: string
+        enum:
+          - criterion
+          - reachability
+          - seam
+          - real_artifact
+          - deployed
+          - boundary
+          - failure
+      asserts:
+        type: string
+  constraints:
+    - "The floor must be attached at the ONE place a plan is finalised for a piece of work (the single return path that produces the ## Test Requirements descriptor list), not added a second time on the authored-spec route. A route-local fix satisfies the first two Then clauses and re-creates the gap the moment a third route exists. That single attachment point is what n_location_rule: '1' means here."
+    - "The discriminating check is route-agnostic: a newly introduced descriptor-producing route must inherit the floor WITHOUT that route being modified. If satisfying the criteria requires editing every route, the attachment point is wrong."
+    - "An authored test_spec must survive byte-identical and in authored order through the change: same entries, same key order within each entry, same sequence. Re-deriving or normalising an authored plan discards a human test contract to satisfy a mechanical rule and is a worse defect than the one being fixed."
+    - "The floor is exactly two named kinds (criterion + reachability) and no more. The change must not promote authored plans to the full seven-value taxonomy."
+    - "Planning-time only. Nothing this AC emits may be consumed as evidence that any work is reached — see BO-2900a-2. The generator must not gain any read of a test file, a test result, or a coverage record on this path."
+    - "Generation must remain a single pass over one AC record: no additional read of the AC store, and single-AC generation must stay under 2 seconds on a cold process."
+    - "Must be idempotent: generating a ticket twice for the same AC produces byte-identical ## Test Requirements output."
+delivers_to:
+  - agent: test-writer
+    contract: "The generated ticket's ## Test Requirements YAML block always contains exactly one descriptor with angle: reachability, whose asserts string either names the production entry point (when one was authored upstream) or states that the entry point is not declared and must be resolved before the test is written. Shape per descriptor: {name: str, file: str, covers: list[str], angle: str, asserts: str}."
+expects_from: null
+test_spec:
+  - name: test_bo_2900g_1_authored_spec_plan_gains_reachability_request
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An AC carrying a hand-authored test_spec of three entries, none of them reachability, yields a plan containing exactly one angle: reachability descriptor alongside the three."
+  - name: test_bo_2900g_1_authored_entries_survive_unaltered_and_in_order
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The three authored descriptors appear in the emitted plan in their authored order with every authored field unchanged; only the appended reachability entry is new."
+  - name: test_bo_2900g_1_reachability_floor_present_via_generator_cli
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python scripts/ac_store/generate_ticket_from_ac.py --ac <id> --ac-root <tmp store> --tickets-root <tmp>` as a subprocess against a real on-disk AC YAML that authors its own test_spec, then read the ticket file the CLI wrote and assert its ## Test Requirements block carries the reachability entry. Must not import _build_test_requirements_section or any other internal."
+  - name: test_bo_2900g_1_new_plan_route_inherits_floor_unmodified
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Introduce a third descriptor-producing route in the test (a plan source that is neither the criteria-derived fallback nor an authored test_spec), pipe its real output through the real finalisation path, and assert the reachability request is present without that new route having been given any knowledge of the rule."
+test_rationale: |
+  A direct unit test of _derive_tests_from_criteria cannot see this AC's defect: that
+  function already appends the floor and is already green. The defect lives on the OTHER
+  route and at the attachment point, so the discriminating tests are (a) the seam test
+  that adds a third route and asserts inheritance, and (b) the CLI test that reads the
+  ticket the real entry point actually wrote. A test that calls the internal builder
+  directly would pass on a route-local fix that re-creates the gap.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Added assigned_agent, complexity, it_requirements (package-surface object
+    form; policy constraints under `constraints`), test_spec (angles: criterion/reachability/seam),
+    delivers_to and declares_side_effect. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BO-2900g-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP A of BO-2900g. The rule is stated as a property of the WORK, not of the
+  route, on purpose.
+
+  THE OBSERVED STATE (2026-08-14 investigation, recorded in
+  docs/testing/test-angles.md). The reachability floor is attached on the
+  criteria-derived planning route only. 1,509 of the 1,886 coder-assigned ACs
+  (80%) take that route and get the floor; the 394 store-wide records that author
+  their own plan bypass it entirely and receive a privileged exemption nobody
+  ever decided to grant. The exemption is not a policy — it is an artifact of
+  where the append happens.
+
+  WHY THE THIRD-ROUTE CLAUSE IS IN THE CRITERIA AND NOT IN THE NOTES. A fix that
+  adds the same append to the second route satisfies the first two Then clauses
+  and re-creates the gap the moment a third route exists. The third-route clause
+  is the discriminating one: it is satisfiable only by attaching the request
+  where a plan is finalised for a piece of work, and it is testable by
+  introducing a new plan-producing route in a test and asserting the request is
+  present without that route having been modified.
+
+  ORDER PRESERVATION IS NOT DECORATION. Work Y's authored proofs must survive
+  unaltered and in order. An implementation that satisfies the floor by
+  rewriting or re-deriving an authored plan has silently discarded a human's
+  test contract to satisfy a mechanical rule, which is a worse defect than the
+  one being fixed.
+
+  BOUNDARY. Planning-time only. This AC does not say the proof is any good, does
+  not read a test, and produces no gate, block or done-state consequence. The
+  consequence layer is BO-2900a (the verdict), BO-2900e (the refusal wording),
+  BO-2900f (the never-ran record).
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Attachment point today:
+  _build_test_requirements_section returns the spec-derived descriptors and only
+  falls through to _derive_tests_from_criteria (which appends the floor) when the
+  spec path yielded nothing. That early return IS the exemption. declares_side_effect
+  is true because the observable is a ticket file written to disk by the CLI.
+  it_requirements uses the package-surface OBJECT form because
+  config/ac_store_schema.json's root if/then makes it mandatory for
+  assigned_agent: python-coder + component: build-orchestration; the policy-level
+  constraints ride the schema-permitted additional `constraints` key.

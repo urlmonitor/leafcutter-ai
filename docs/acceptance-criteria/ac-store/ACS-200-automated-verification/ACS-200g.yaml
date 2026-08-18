@@ -1,0 +1,83 @@
+id: ACS-200g
+components:
+  - ac_store
+title: "Every pull request that changes the requirements store has those changes checked against the store's own rules before merge"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the continuous-integration configuration for the repository,
+  When a pull request is opened or updated and one or more of its changed files
+    are acceptance-criterion records,
+  Then a dedicated acceptance-criteria check runs automatically over those
+    changed records and applies the same structural and schema rules the
+    commit-time guardrails apply — record schema and required fields, the
+    parent/child back-link, the per-parent child limit, absence of dependency
+    cycles, resolvable shared-pattern references, and authorship governance,
+  And the check reports a failing (non-passing, blocking) result whenever a
+    changed record breaks any of those rules,
+  And the check reports a passing result only when every changed record
+    satisfies all of them,
+  And the verdict does not depend on whether the contributing author's local
+    guardrails were installed — a record committed while the local guardrails
+    were absent is checked here exactly as one committed with them present,
+  And the check is a hard, blocking check — not an advisory or informational one
+    that a pull request can be merged despite,
+  And the symptom ("a structurally invalid acceptance criterion reaches the
+    protected branch with every check reporting green") must not occur.
+depends_on: []
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "The rule set this check applies — field requirements, identifier format, parent derivation."
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A named, blocking acceptance-criteria result reported on every pull request that changes the requirements store. The check name is the string a repository administrator adds to the required-status-checks list; that administrative act is out of scope here."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-200g-1
+  - ACS-200g-2
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Gap this closes (verified 2026-08-14 in this worktree): nothing in continuous
+  integration reads the requirements store. The pipeline's checks cover linting,
+  the component vocabulary, the test suite, proof-of-done coverage, changelog
+  presence, and an informational type-check; none of them looks at the store.
+  The schema validator does run in the fixture-drift pipeline, but only over the
+  web-app fixture set, never over the real store. The only enforcement is six
+  local commit-time guardrails, and those are environment-dependent — a freshly
+  created worktree can be missing them entirely and commit with the guardrails
+  silently absent. The store is also exempt from the changelog gate, so a
+  store-only pull request currently faces no store-aware scrutiny at all.
+  Shape deliberately mirrors the existing, correctly specified pipeline gate
+  BP-1200b-1 (a blocking check that runs on every pull request and fails when
+  the thing it guards is wrong). Making the check a required status check in
+  branch protection is OUT OF SCOPE here — that is a repository-administration
+  act already covered in spirit by BP-1200c-1.
+  PLACEMENT: the ACS-200 root record is absent from the store, and the folder's
+  only L1 (ACS-200d, ticket source_acs) is a different subject, so this record
+  takes a letter slot as an L2 — the same slot shape its siblings ACS-200e and
+  ACS-200f occupy, per the reasoning recorded in ACS-200f-1.

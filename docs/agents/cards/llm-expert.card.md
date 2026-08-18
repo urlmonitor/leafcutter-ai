@@ -212,6 +212,15 @@ flowchart TD
 - ACS-300k-2: Agent templates referencing index.yaml for component metadata are migrated to components.json
 - ACS-500c-1: BA agent checks for existing pattern before writing new behavioral AC
 - ACS-500c-2: IT PO agent preserves implements_pattern when enriching an AC
+- ACS-500g-1: A pattern-steward scans the whole store and surfaces recurring behavior as pattern candidates
+- ACS-500g-1-i: A pattern candidate is a proposal — existing ACs are never rewritten by the scan
+- ACS-500g-2: An authoring-patterns skill states the pattern-worthiness rules as decidable tests
+- ACS-500g-2-i: A newly promoted pattern is recognised as a pattern by both the authoring scan and the commit-time check
+- ACS-500g-3: Producer and consumer decide 'is this a pattern?' from one shared source that cannot drift
+- ACS-500g-4: Recurrence noticed while authoring is promoted in that same authoring run
+- ACS-500g-4-i: A below-threshold repetition is recorded so the next occurrence can trip the threshold
+- ACS-500g-5: A retrospective sweep over the existing store seeds the first patterns and ends the cold start
+- ACS-500g-5-i: Re-running the sweep reports already-covered behavior instead of proposing a duplicate pattern
 - ACS-800f: The authoring guidance reflects the new model
 - ACS-800f-1: The tree-split guidance describes re-home as a single metadata change
 - ACS-800f-1-i: Guidance documents the child-limit override as removable once tooling reads metadata
@@ -279,7 +288,7 @@ flowchart TD
 - BO-200c-3: Commit message is written by a dedicated agent, not inline by the supervisor
 - BO-200c-4: An approved commit message subject line is never rewritten by hooks or subsequent staging
 - BO-2100a-1: Ticket authoring adds live-surface-tester to the agents map when both toggles are on
-- BO-2100a-1-i: live-surface-tester is absent from the agents map unless both toggles are on
+- BO-2100a-1-i: live-surface-tester is absent from the agents map unless both toggles are on, and a requested-but-disabled check is recorded as skipped
 - BO-2100a-2: ticket-supervisor Spawn Allowlist permits live-surface-tester
 - BO-2100a-4: building-epics canonical dispatch order documents live-surface-tester at 11.8
 - BO-2100b-1: Project toggle off means the check never runs, even when the ticket opts in
@@ -315,7 +324,7 @@ flowchart TD
 - BO-2300e-1-iii: A stale or expired pause is handled gracefully
 - BO-2400a-1: Exactly one test-writer and one coder agent per batch
 - BO-2400a-3: Red-baseline verification is a deterministic script gate before the coder runs
-- BO-2400a-3-i: Red-baseline gate halts when a batch test will not go red
+- BO-2400a-3-i: Red-baseline gate halts when the batch will not go red
 - BO-2400a-4-i: Green gate refuses commit staging when the coder cannot make all tests pass
 - BO-2400a-5: No heavy-path coordination constructs are used in the fast lane
 - BO-2400b-1: Scoped interactive work routes to the fast lane
@@ -323,6 +332,11 @@ flowchart TD
 - BO-2400b-3: A single documented rule deterministically decides the lane
 - BO-2400b-3-i: Ambiguous scope defaults to the heavy pipeline
 - BO-2400b-3-ii: An explicit lane override wins over the decision rule
+- BO-2400g-2: The fast lane's change is read before it is committed, and the reading has something real to read against
+- BO-2400g-2-i: A reading that examined nothing is recorded as a reading that did not happen
+- BO-2400g-3: The fast lane's change is read for design problems, not only for local mistakes
+- BO-2400g-4: What the reading finds decides the run: serious findings stop it before anything is committed, minor ones ride along
+- BO-2400g-4-i: Findings that did not stop the run arrive with the pull request, not only in the session that produced them
 - BO-2500b-1-i: Work whose local pre-commit check was skipped is still caught by the CI gate
 - BO-2500b-2: The final proof-of-done check runs on a fresh clean checkout in CI
 - BO-2500b-3: The CI proof-of-done check is required and blocks merge
@@ -353,7 +367,6 @@ flowchart TD
 - BO-530-1-i: Ticket with change_type doc_change skips TDD injection entirely
 - BO-530-2: test-runner is injected after every coder-class agent in the computed chain
 - BO-530-3: Test failure hands context back to the implementation agent for rework
-- BO-530-3-i: Retry cap on test-failure rework loop prevents infinite cycling
 - BO-540-1: flow_change injects architect-review before any coder in the computed chain
 - BO-540-1-i: Coder dispatch is blocked if architect-review has not signed off
 - BO-540-2: flow_change injects documentation-expert before any coder in the computed chain
@@ -392,6 +405,9 @@ flowchart TD
 - BP-1100f-2-i: Asserting the artifact path was passed as an argument is topology, not effect coverage
 - BP-1100f-3: A work item whose stated intent contradicts its declared surface is caught before implementation
 - BP-1100f-3-i: A mixed-surface work item flags only the portion its stated intent cannot handle
+- BP-1100g-1: Every kind of proof the plan can ask for is a kind the test writer has been taught
+- BP-1100g-2: When the plan cannot name the way in, the writer is told how to resolve one and records the one it resolved
+- BP-1100g-5: The cross-layer seam rule leaves exactly one answer per piece of work, and an honest no is one of them
 - BP-200a-1: Agent template frontmatter declares all required fields for a phase agent
 - BP-200a-2: Agent template body contains the six-item Prompt-Quality Checklist with detection heuristics
 - BP-200a-3: Agent template defines stop-and-ask boundaries deferring infrastructure edits

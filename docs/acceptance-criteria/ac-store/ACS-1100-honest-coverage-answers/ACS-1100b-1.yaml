@@ -1,7 +1,7 @@
 id: ACS-1100b-1
 components:
   - ac_store
-title: "An answer names its scope, its inclusion rule, and every exclusion with a ground"
+title: "An answer names its scope, its inclusion rule, its measurement age, and every exclusion with a ground"
 component: ac-store
 level: L2
 status: active
@@ -34,9 +34,32 @@ criteria: |
   And an answer that reports only its scope total, with no store total alongside it,
     does not satisfy this criterion, because a scope total alone is the very "40 of 40"
     shape ACS-1100a-2 forbids,
+  And the method names the PROVENANCE of the figure: whether it was computed during
+    this run or is a recorded constant carried from an earlier measurement, and, for a
+    recorded constant, the date that measurement was taken — "244 of 607 finished
+    records, measured 2026-08-13, recorded constant" declares both, and a recorded
+    constant reported with no measurement date does not satisfy this criterion,
+  And a figure recomputed on every run declares itself as computed at answer time rather
+    than leaving the provenance field absent, so an answer showing no date can never mean
+    either "fresh" or "unknown" depending on who is reading it,
+  And the age of a recorded constant is stated with the figure and in the same place as
+    the figure, so a reader learns the figure is five days old without leaving the answer
+    to find out,
+  And the method names any normalisation applied when matching records to what was
+    observed — for instance that identifiers are stripped of surrounding quotes before
+    they are joined against a bare token, per ACS-1100a-2 — so a second measurement of
+    the same population can reproduce the join rather than producing a different number,
+  And a stale measurement is DECLARED here and never halts here: a correctly reconciled
+    answer whose recorded constant is old is still returned with its age attached,
+    because age is a property of the method and not an arithmetic shortfall, and
+    ACS-1100c's halt trigger stays exactly the reconciliation arithmetic,
+  And the bug symptom this criterion forbids is a figure hand-typed into prose with its
+    date buried in a sentence, read a year later as a current count, while a second
+    measurement of the same population reports a different number and no reader can tell
+    which one is newer or whether the population moved at all,
   And the method travels with the answer to its caller rather than being written only
-    to an operator-facing log, so a consumer of the answer can read the exclusions it
-    inherited.
+    to an operator-facing log, so a consumer of the answer can read the exclusions and
+    the measurement age it inherited.
 depends_on:
   - ACS-1100b
 doc_links:
@@ -51,13 +74,27 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Declares the eight AC hooks whose work set is resolved from git diff --cached. They are the motivating scoped callers for the outside-the-requested-scope ground and the dual scope/store total."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "The worked example of a method record, and the reason the provenance clauses exist. Its shipped edge note declares scope, enforcing test and measurement date (2026-08-13) — everything this criterion asks for — and it is still the record whose figure has since been contradicted by a second count nobody could reconcile against it. Declared age is the gap it left; this AC closes it. Do NOT re-implement that surface here: it is owned by KM-ADM-100 and inherits this contract."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: scope-addition
+    by: business-analyst
+    at: 2026-08-18
+    note: >-
+      Resolved the previously unowned measurement-staleness question in favour of this
+      L1. Added four provenance clauses (computed-versus-recorded, measurement date on a
+      recorded constant, age stated with the figure, normalisation named) plus an
+      explicit negative stating that staleness is declared here and never halts here, and
+      a bug-symptom clause. Title extended to name measurement age. ACS-1100c's notes
+      carry the matching negative. No existing clause was altered or removed.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -84,3 +121,50 @@ notes: |
 
   The "travels with the answer" clause exists because a method written only to a log
   cannot be inherited by a downstream verifier (ACS-1100d-1).
+
+  ==========================================================================
+  STALENESS RULING (2026-08-18, BA) — THIS L1 OWNS IT. ACS-1100c DOES NOT.
+  ==========================================================================
+  The question the PO left open on ACS-1100b (2026-08-18 notes: "the AGE of the figure
+  is declared but nothing acts on it ... decide at L2 whether staleness is a b-concern
+  or a c-concern. Do not leave that unassigned.") is settled here: STALENESS IS A
+  b-CONCERN. The method record must declare the age; nothing halts on it. The matching
+  negative is recorded ONCE, in ACS-1100c's notes — deliberately in one place, because an
+  unowned question between two L1s is exactly how this stayed unowned for five days.
+
+  Four reasons, in order of weight:
+
+  1. ACS-1100c's trigger set is deliberately singular and has already been defended
+     once. ACS-1100d-1's notes record the identical decision on the identical pressure:
+     a missing coverage figure "does not type-check" as an ACS-1100c-1 halt because
+     c-1's only trigger is an arithmetic shortfall, and rather than widen that trigger
+     set the BA gave d-1 its own halt. Age is a third, TIME-based trigger with no
+     arithmetic to fail. Routing it to c would repeat the mistake that was already
+     rejected, and would blur the reconciliation contract ACS-1100c-2 mirrors.
+
+  2. A stale figure is not a violation, and c's posture is halt-on-a-REAL-violation. A
+     recorded constant measured five days ago may be exactly right. Halting on it would
+     withhold a correct, fully reconciled answer on the strength of a clock.
+
+  3. Any halt needs a threshold, and there is no defensible number. Whatever is chosen,
+     every consumer of a static recorded figure trips it eventually with no way to clear
+     it at read time — a reader of a prose note cannot re-measure. That is the same
+     "constant noise, so it gets switched off" failure ACS-1100c-1-i argues against for
+     the could-not-classify bucket. Declaring the age costs nothing and never has to be
+     switched off.
+
+  4. Age is definitionally part of the method: b's subject is what was counted, how, and
+     under what rule. "As of when" belongs beside "over what root" and "under what
+     inclusion rule", not in a separate gate.
+
+  WHAT THE RULING DOES NOT SAY. It does not forbid a future consumer from deciding that
+  a figure of a given age is unusable — a verdict cap on an old figure would be an
+  ACS-1100d concern (what a downstream verdict may claim), not an ACS-1100c one. It is
+  not authored here and must not be assumed.
+
+  Evidence the clauses are grounded, not hypothetical: KM-ADM-005 reports 244 of 607
+  (2026-08-13, all levels, identifiers quote-stripped before joining); TQ-400 reports
+  240 of 641 (2026-08-17, finished L2/L3 records only); TQ-400d-1's own scale note
+  reports 259 of 641 (2026-08-17). Three figures for one pile. Every one of them is
+  defensible; none of them is reproducible from what is written next to it. Provenance
+  plus inclusion rule plus normalisation is precisely the missing set.

@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given ac_unit_of_work.enforce = true AND zero in-flight fat (legacy) tickets remain,
   When the ac-fulfillment-gate encounters a ticket with no ac_traceability whose
@@ -57,7 +57,7 @@ notes: |
   Step 1. This is the ENFORCE-side twin of the read-side dual-read gate ACD-1900b-5 (hence
   depends_on) and is gated on the enforce precondition ACD-1900c-3. The flip condition is EXACTLY
   ADR rule 5: enforce=true AND zero in-flight fat tickets. Placed under ACD-1900c (the two-stage
-  flag / enforce-time flip) rather than 1900b because it is a phase_acbuild_2_cutover enforce
+  flag / enforce-time flip) rather than 1900b because it is a phase_acbuild_2b_ticket_demotion enforce
   behaviour, not read-side foundation.
   Per CLAUDE.md (gate/workflow ACs verify BEHAVIORALLY): the covering check MUST run the gate under
   both flag/inventory states and assert blocker vs advisory -- never grep-only. IT-PO to add

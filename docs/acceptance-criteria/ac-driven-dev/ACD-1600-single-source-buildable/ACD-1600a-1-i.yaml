@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given the ticket generator is invoked for an AC id that cannot be resolved to a store file,
   When it runs,

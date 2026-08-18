@@ -2,7 +2,8 @@
 MODULE: build_referential_integrity
 GOAL: Post-build validation that every file/directory path referenced in
     skills_config.json actually exists on disk, and pre-build extraction
-    of all script path references embedded in source agent and skill templates.
+    of all script path references embedded in source agent, skill, and
+    workflow templates.
 BUSINESS CONTEXT: skills_config.json references paths like testing_context.readme_path,
     precommit_autofix_config_path, changelog_folder, and changelog_categories_path.
     Downstream agents (test-planner, precommit-autofix, changelog) fail silently when
@@ -10,14 +11,26 @@ BUSINESS CONTEXT: skills_config.json references paths like testing_context.readm
     The extract_script_path_refs function implements AC BP-900b-1: before build.py
     runs phases, this function scans source agent and skill templates and extracts
     all script path references for the broken-reference guard.
+    AC BP-900g-6 extends the same scan to workflow sources
+    (``templates/workflows-js/*.js`` and ``templates/workflows/*.md``): a workflow
+    that shells out to an undeployed script was previously invisible to the guard,
+    the same defect class BP-900g-4/BP-900g-5 closed for agent and skill templates.
 ARCHITECTURE: Three public functions. check_referential_integrity() validates path-valued
     fields in the config dict and is wired into build.py as a post-build warning phase
-    (non-blocking). extract_script_path_refs() scans source .md template files and returns
-    a set of all script paths referenced via python/python3 invocations and sys.path.insert
-    calls, enabling the pre-build validation phase (BP-900b-1).
+    (non-blocking). extract_script_path_refs() scans source .md/.js template files and
+    returns a set of all script paths referenced via python/python3 invocations and
+    sys.path.insert calls, enabling the pre-build validation phase (BP-900b-1).
     extract_script_path_refs_with_sources() is the richer variant that returns a mapping
     from each script path to the set of template files referencing it, used by the JSONL
     report phase (BP-900c-1).
+    Both functions scan ``templates_dir/agents/`` and ``templates_dir/skills/`` (``.md``),
+    plus ``templates_dir/workflows/`` (``.md``) and ``templates_dir/workflows-js/``
+    (``.js``) as of BP-900g-6. The scan is text-based and language-agnostic — the same
+    compiled regexes match a Python invocation whether it appears in prose, Markdown, or
+    a JavaScript string literal — so adding a directory/glob pair is sufficient; no new
+    pattern was required for the ``.js`` file type itself. See the DECISION HISTORY at
+    the tail of this module for why JS template-literal interpolation prefixes
+    (``${worktreePath}/scripts/...``) are deliberately NOT extracted.
 """
 
 from __future__ import annotations
@@ -86,6 +99,34 @@ _SCRIPT_PATTERNS: tuple[re.Pattern[str], ...] = (
     _SYSPATH_DOUBLE_RE,
 )
 
+# ---------------------------------------------------------------------------
+# Scan targets (AC BP-900g-6)
+# ---------------------------------------------------------------------------
+# Each entry is (subdirectory-under-templates_dir, glob-pattern). The scan is
+# text-based and language-agnostic: the same _SCRIPT_PATTERNS above match a
+# Python invocation whether it sits in Markdown prose or inside a JavaScript
+# string literal, so no JS-specific pattern is needed here — only the
+# directory/extension pair changes per source kind.
+#
+# workflows/ (.md) and workflows-js/ (.js) are the sources for the
+# workflow-orchestration layer (slash-command bodies and JS workflow engines
+# respectively). Before BP-900g-6 neither was scanned, so a workflow that
+# shells out to an undeployed script was invisible to
+# _check_script_reference_guard() — the same defect class BP-900g-4/BP-900g-5
+# closed for agent and skill templates.
+_SCAN_TARGETS: tuple[tuple[str, str], ...] = (
+    ("agents", "*.md"),
+    ("skills", "*.md"),
+    ("workflows", "*.md"),
+    ("workflows-js", "*.js"),
+)
+
+
+def _scan_targets(templates_dir: Path) -> tuple[tuple[Path, str], ...]:
+    """Return the (directory, glob-pattern) pairs to scan under *templates_dir*."""
+    return tuple((templates_dir / subdir, glob) for subdir, glob in _SCAN_TARGETS)
+
+
 _PATH_KEYS: list[str] = [
     "tickets_inbox_path",
     "tickets_inbox_epics_path",
@@ -105,11 +146,12 @@ _NESTED_PATH_KEYS: dict[str, list[str]] = {
 
 
 def extract_script_path_refs(templates_dir: Path) -> set[str]:
-    """Extract all script path references from source agent and skill .md templates.
+    """Extract all script path references from source templates.
 
-    Scans every ``.md`` file under ``templates_dir/agents/`` and
-    ``templates_dir/skills/`` (recursive) and returns the set of all script
-    paths that match any of these patterns:
+    Scans every ``.md`` file under ``templates_dir/agents/``,
+    ``templates_dir/skills/``, and ``templates_dir/workflows/`` (recursive),
+    plus every ``.js`` file under ``templates_dir/workflows-js/``, and returns
+    the set of all script paths that match any of these patterns:
 
     - ``python3 scripts/<path>``
     - ``python scripts/<path>``
@@ -121,33 +163,31 @@ def extract_script_path_refs(templates_dir: Path) -> set[str]:
     more than once across all scanned files it is deduplicated in the returned
     set.
 
-    This function is the pre-build validation phase for AC BP-900b-1.  It
-    is intentionally read-only and never raises: unreadable files are silently
-    skipped so the audit is always fail-open.
+    This function is the pre-build validation phase for AC BP-900b-1, extended
+    to workflow sources by AC BP-900g-6.  It is intentionally read-only and
+    never raises: unreadable files are silently skipped so the audit is
+    always fail-open.
 
     Args:
         templates_dir: Path to the templates directory in the package root.
-            The function looks for ``.md`` files under ``templates_dir/agents/``
-            and ``templates_dir/skills/``.
+            The function looks for ``.md`` files under ``templates_dir/agents/``,
+            ``templates_dir/skills/``, and ``templates_dir/workflows/``, and
+            ``.js`` files under ``templates_dir/workflows-js/``.
 
     Returns:
         Set of ``scripts/<path>`` strings extracted from all matching
         references.  Returns an empty set when no matching references are
-        found or when neither ``agents/`` nor ``skills/`` exist.
+        found or when none of the scanned directories exist.
     """
     refs: set[str] = set()
-    dirs_to_scan = [
-        templates_dir / "agents",
-        templates_dir / "skills",
-    ]
-    for scan_dir in dirs_to_scan:
+    for scan_dir, glob_pattern in _scan_targets(templates_dir):
         if not scan_dir.exists():
             continue
-        for md_file in scan_dir.rglob("*.md"):
+        for source_file in scan_dir.rglob(glob_pattern):
             try:
-                text = md_file.read_text(encoding="utf-8")
+                text = source_file.read_text(encoding="utf-8")
             except OSError:
-                _log.debug("Skipping unreadable template: %s", md_file)
+                _log.debug("Skipping unreadable template: %s", source_file)
                 continue
             for pattern in _SCRIPT_PATTERNS:
                 for match in pattern.finditer(text):
@@ -163,7 +203,8 @@ def extract_script_path_refs_with_sources(
     Identical scanning logic to ``extract_script_path_refs()``, but instead of
     returning a flat set of script paths this function returns a mapping from
     each script path to the set of relative template paths (e.g.
-    ``"agents/build-ac.md"``) in which that script path was found.
+    ``"agents/build-ac.md"`` or ``"workflows-js/finalize-feature.js"``) in
+    which that script path was found.
 
     This richer shape is required by the broken-reference report (AC BP-900c-1)
     which must name the referencing template alongside the missing script path
@@ -171,33 +212,30 @@ def extract_script_path_refs_with_sources(
 
     Args:
         templates_dir: Path to the templates directory in the package root.
-            The function looks for ``.md`` files under ``templates_dir/agents/``
-            and ``templates_dir/skills/``.
+            The function looks for ``.md`` files under ``templates_dir/agents/``,
+            ``templates_dir/skills/``, and ``templates_dir/workflows/``, and
+            ``.js`` files under ``templates_dir/workflows-js/``.
 
     Returns:
         Dict mapping ``"scripts/<path>"`` strings to a set of relative
         template path strings (e.g. ``{"scripts/ac_store/ac_prioritizer.py":
         {"agents/build-ac.md"}}``).  Returns an empty dict when no matching
-        references are found or when neither ``agents/`` nor ``skills/`` exist.
+        references are found or when none of the scanned directories exist.
     """
     refs_to_sources: dict[str, set[str]] = {}
-    dirs_to_scan = [
-        templates_dir / "agents",
-        templates_dir / "skills",
-    ]
-    for scan_dir in dirs_to_scan:
+    for scan_dir, glob_pattern in _scan_targets(templates_dir):
         if not scan_dir.exists():
             continue
-        for md_file in scan_dir.rglob("*.md"):
+        for source_file in scan_dir.rglob(glob_pattern):
             try:
-                text = md_file.read_text(encoding="utf-8")
+                text = source_file.read_text(encoding="utf-8")
             except OSError:
-                _log.debug("Skipping unreadable template: %s", md_file)
+                _log.debug("Skipping unreadable template: %s", source_file)
                 continue
             try:
-                rel_path = md_file.relative_to(templates_dir).as_posix()
+                rel_path = source_file.relative_to(templates_dir).as_posix()
             except ValueError:
-                rel_path = md_file.name
+                rel_path = source_file.name
             for pattern in _SCRIPT_PATTERNS:
                 for match in pattern.finditer(text):
                     script_path = match.group(1)
@@ -270,3 +308,54 @@ def format_integrity_report(missing: list[dict[str, str]]) -> str:
     lines.append("These may cause downstream agents to fail. Run the onboard agent")
     lines.append("or create the missing files manually.")
     return "\n".join(lines)
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-08-14 [BrainCandy/BP-900g-6]: extract_script_path_refs() and
+#   extract_script_path_refs_with_sources() scanned ONLY templates/agents/ and
+#   templates/skills/ (.md). Workflow sources — templates/workflows-js/*.js
+#   (JS orchestration engines) and templates/workflows/*.md (slash-command
+#   bodies) — were completely unscanned, so a workflow that shells out to a
+#   script the build never deploys was invisible to
+#   _check_script_reference_guard(). This is the same defect class BP-900g-4
+#   and BP-900g-5 closed for agent/skill templates, just in the workflow layer.
+#   Fix: both functions now iterate a shared (subdirectory, glob) target list
+#   (_SCAN_TARGETS) that adds ("workflows", "*.md") and ("workflows-js", "*.js")
+#   alongside the existing ("agents", "*.md") and ("skills", "*.md") pairs. No
+#   new regex was needed: _SCRIPT_PATTERNS is plain text matching and does not
+#   care whether the surrounding syntax is Markdown prose or a JavaScript
+#   string/backtick literal — only the directory and file extension differ per
+#   source kind.
+#
+#   Template-literal decision: templates/workflows-js/*.js builds several script
+#   paths with JS template-literal interpolation, e.g.
+#   `${worktreePath}/scripts/build_orchestration/fast_lane.py` or
+#   `${baselineTmpPath}/scripts/build.py`. These are DELIBERATELY NOT extracted.
+#   A `${...}` prefix is not an output-root token — it is a JS variable holding
+#   an arbitrary RUNTIME path (a worktree checkout, a temp baseline clone, a
+#   caller-supplied script path) that need not be, and often is not, the
+#   deployed package's output root. Treating any `${...}/` as equivalent to
+#   `{{config.output_root}}/` or a dot-prefixed root would reopen the exact
+#   over-wide-prefix failure mode _PYTHON_INVOKE_RE's bound was written to
+#   prevent (EPIC-BuildGuardFalsePositive): e.g. `${baselineTmpPath}` legitimately
+#   points at a full clone of the SOURCE repo, not the deployed output, so
+#   resolving `${baselineTmpPath}/scripts/build.py` against the deployable
+#   manifest would produce a false positive (build.py is a source-tree tool,
+#   never a deployed artifact) — failing the build for a reference that was
+#   never broken. Verified empirically: even leaving `${...}` prefixes
+#   unextracted, adding the bare-form scan of templates/workflows-js/*.js
+#   surfaces `scripts/pause_store.py` (referenced via the plain
+#   `python scripts/pause_store.py ...` form in finalize-feature.js and
+#   plan-feature.js) as a genuinely undeployed script — see the python-coder
+#   BP-900g-6 sign-off comment for the exact list. That is a true positive this
+#   ticket intentionally surfaces and does not fix (out of scope; the deploy
+#   phase is another agent's job). Residual gap: a `${...}`-prefixed reference
+#   to a genuinely undeployed script (e.g. `scripts/injection_builders.py` via
+#   `${worktreePath}/scripts/injection_builders.py` in fast-lane-build.js)
+#   remains invisible to this guard. Closing that gap needs a way to distinguish
+#   "this JS variable mirrors the output root" from "this JS variable is an
+#   arbitrary runtime path" — real static analysis, not a text regex — so it is
+#   left as a documented follow-up rather than bolted on here. (#BP-900g-6)
+# ====================================================================

@@ -1,0 +1,184 @@
+id: BO-2900g-4
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "What is actually asked for is expressed in the one set of words, and anything that reads it reads that one"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project's single definition of how a required proof is described,
+    And a plan produced for a piece of work that brought no plan of its own,
+    And a plan authored by hand for a piece of work that brought its own,
+  When each plan is read against that definition,
+  Then every proof each plan requests uses a kind the definition permits,
+    And every proof each plan requests carries the facts the definition requires
+      for that kind, including the way in for a reached-the-real-way proof, or
+      states that the way in is not yet resolved,
+    And the two plans read the same way against the definition, so a reader
+      cannot tell from the vocabulary alone which route produced which,
+    And anything introduced later that reads a required-proof description reads
+      it against this same definition, there being no second definition for it to
+      read instead.
+depends_on:
+  - BO-2900g
+  - BO-2900g-3
+doc_links:
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "The definition a produced plan is measured against on the ticket side, and the one that advertises a checker for these descriptions. The reconciliation must land before that checker exists — this AC's depends_on edge on BO-2900g-3 is that ordering."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The producer whose emitted shape satisfies neither definition today (6+ counts, 2026-08-14). This AC is what makes the emitted shape conform rather than the definitions bend to it."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Records that the appended reachability request cannot name a way in for the ~80% fallback population, which is why 'states that the way in is not yet resolved' is a conforming value rather than a violation."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g.yaml
+    relationship: related
+    status: exists
+    relevance: "The consumer-side sibling. BP-1100g-1 requires the kinds the plan can ask for and the kinds the doer is taught to be the same set — which is only decidable once this AC has made 'the kinds the plan can ask for' a single set."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "After BO-2900g-3 this is the single definition the emitted plan must validate against. Its test_spec item schema is additionalProperties: false, so a conforming emitted entry can carry no key the definition does not declare."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "Every descriptor the producer emits, on either route, validated against the single definition established by BO-2900g-3."
+    required:
+      - name
+      - file
+      - covers
+      - angle
+    properties:
+      angle:
+        type: string
+        description: "Drawn from the single permitted-kind set — read from the definition file, never restated in the producer."
+      surface_invoked:
+        type: string
+        minLength: 1
+        description: "Required on a reachability descriptor. Holds either a named production entry point or the single unresolved sentinel, which is a CONFORMING value."
+  constraints:
+    - "ORDERING IS A HARD CONSTRAINT, NOT A PREFERENCE. This AC must not be started before BO-2900g-3 has landed. Making the producer conform to an unreconciled vocabulary bakes one of the two competing definitions into the emitted shape and turns the reconciliation from an edit into a breaking change. The depends_on edge on BO-2900g-3 must not be reversed or dropped."
+    - "The two routes must validate identically. The acceptance evidence is a single validation function applied to a criteria-derived plan and to an authored plan, producing the same verdict — not two route-specific validators that happen to agree. n_location_rule: 'all' means every descriptor-emitting path in the reference file, not one of them."
+    - "The 'way in is not yet resolved' value must be one stable, named sentinel emitted from a single constant, and must be a CONFORMING value under the definition rather than an accepted violation. BP-1100g-2 hands that exact value to the doer to resolve and BP-1100g-4 must be able to distinguish it from a named entry point without parsing prose."
+    - "Conformance must be established against the definition file read from disk, never against a re-statement of the enum in the producer or in the test. Reconciling the definitions and then measuring the producer against a copy re-creates the drift BO-2900g-3 exists to remove."
+    - "Conformance of a DESCRIPTION to a vocabulary only. No gate, no block, no done-state consequence, and no statement about whether any proof was achieved (BO-2900a-2)."
+    - "DO NOT create config/package_boundary.json's advertised check_test_requirements_refs.py under this AC — that remediation is routed to BP-900e by the parent L1. 'Anything introduced later reads this same definition' is satisfied by there being exactly one definition to read, not by building the reader."
+    - "Generation must stay idempotent and within its existing budget: two runs over the same AC produce byte-identical ## Test Requirements output, single-AC generation under 2 seconds cold."
+delivers_to:
+  - agent: python-coder
+    contract: "Every descriptor in a generated ticket's ## Test Requirements block validates against the single definition: its kind is drawn from the permitted set, and a reachability-kind descriptor carries the entry-point field holding either a named production entry point or the single unresolved sentinel. This is the PROMISE side that BP-1100g-4's promise-versus-claim check reads and does not reinterpret."
+expects_from:
+  - ac_id: BO-2900g-3
+    contract: "One authoritative statement of the permitted kinds, resolvable from a single file path, plus the single name of the entry-point field and the rule that a reachability-kind description must carry it."
+test_spec:
+  - name: test_bo_2900g_4_every_emitted_descriptor_validates_against_the_single_definition
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Each descriptor a produced plan contains uses a permitted kind and carries the facts the definition requires for that kind, including the entry-point field on reachability descriptors."
+  - name: test_bo_2900g_4_derived_and_authored_plans_validate_identically
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Pipe the real criteria-derived route's output and the real authored-test_spec route's output through the same real validator and assert identical verdicts and identical field vocabulary — a reader cannot tell from the vocabulary alone which route produced which."
+  - name: test_bo_2900g_4_emitted_plan_conforms_when_read_from_the_real_definition_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Validate the emitted block against the definition loaded from its real on-disk file with json.load in a fresh subprocess, never against an enum restated in the test."
+  - name: test_bo_2900g_4_generated_ticket_conforms_via_the_generator_cli
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python scripts/ac_store/generate_ticket_from_ac.py --ac <id> --ac-root <tmp store> --tickets-root <tmp>` as a subprocess for one AC on each route, parse the ## Test Requirements YAML out of the ticket files the CLI actually wrote, and validate both against the real definition file."
+test_rationale: |
+  The 2026-08-14 investigation found the generator's emitted shape violating the
+  ticket-side definition on 6+ counts, so a test that validates a hand-built descriptor
+  dict proves nothing about the real output. The two shapes that matter are the seam test
+  (both routes through one validator — the clause that catches a reconciliation quietly
+  legalising whatever the fallback happens to emit) and the CLI test that reads the file
+  the real entry point wrote.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, complexity, it_requirements (package-surface object
+    form; ordering strengthened under `constraints`), test_spec (criterion/seam/real_artifact/reachability),
+    delivers_to, expects_from on BO-2900g-3 and declares_side_effect. depends_on and
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - schema
+risk_surface: contract_boundary
+notes: |
+  GAP C of BO-2900g, second half, and the carrier of the HARD ORDERING
+  CONSTRAINT the parent L1 requires to be encoded as a depends_on edge.
+
+  THE ORDERING, EXPLICITLY. depends_on lists BO-2900g-3. The reconciliation of
+  the two definitions is a prerequisite of this AC, and this AC is where any
+  reader of a required-proof description is held to the single definition. A
+  checker for these descriptions is advertised as shipped in the package
+  boundary manifest while the file does not exist; building it first would
+  freeze the unreconciled vocabulary into an enforcement point and turn the
+  reconciliation from an edit into a breaking change. That is why the edge runs
+  this way and must not be reversed.
+
+  THE PRODUCED SHAPE IS THE DEFECT, NOT ONLY THE DEFINITIONS. The 2026-08-14
+  investigation found the generator's emitted shape violating the ticket-side
+  definition on 6+ counts. Reconciling the two definitions and leaving the
+  producer alone therefore satisfies BO-2900g-3 and still leaves every real plan
+  non-conforming. The third Then clause — the two routes read the same way — is
+  the one that catches a reconciliation that quietly legalises whatever the
+  criteria-derived route happens to emit while leaving authored plans behind.
+
+  THE 'NOT YET RESOLVED' VALUE IS DELIBERATE, NOT A LOOPHOLE. For the ~80% of
+  work that brings no plan of its own, nothing upstream knows the way in, and a
+  definition that forbids saying so forces either a fabricated way in or a plan
+  that cannot be produced. Saying it out loud is what BP-1100g-2 then hands to
+  the doer to resolve, with a recorded answer.
+
+  BOUNDARY. Conformance of a DESCRIPTION to a vocabulary. No gate, no block, no
+  done-state consequence, and no statement about whether any proof was achieved.
+
+  DELIBERATELY NOT AN AC HERE (carried from the parent L1): the package boundary
+  manifest advertising a portable check whose file does not exist. Route it as a
+  one-line remediation plus, if needed, an L2 widening under BP-900e. It is not
+  L0/L1 work and it is not this tree's.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The ordering constraint is now carried in
+  three places that all have to be edited to break it: the depends_on edge, a
+  constraint inside it_requirements, and the expects_from contract on
+  BO-2900g-3. it_requirements uses the package-surface OBJECT form mandated by
+  the schema's root if/then.

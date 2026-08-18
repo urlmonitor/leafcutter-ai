@@ -6,7 +6,7 @@ diagram_type: sequence
 flight_level: L3-Component
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-08-17
 parent: docs/architecture/components/build-orchestration.md
 source_ticket: null
 components:
@@ -73,13 +73,13 @@ sequenceDiagram
 
         Note over Workflow,RedBaseline: Gate 2 — Red Baseline (deterministic Python, BO-2400a-3)
         Workflow->>RedBaseline: run verify_red_baseline gate
-        Note right of RedBaseline: Scans test_root for # covers:&lt;id&gt; tags matching batch ACs<br/>Runs pytest on linked test files<br/>Verifies every linked test FAILS (all_red must be True)
+        Note right of RedBaseline: Scans test_root for # covers:&lt;id&gt; tags matching batch ACs<br/>Partitions them into newly-added vs pre-existing via git, at test-function<br/>granularity (merge-base with origin/main, or an explicit --base-ref)<br/>Runs pytest on linked test files; classifies FAILED/XFAIL as red,<br/>PASSED/XPASS as green, SKIPPED/ERROR as inconclusive<br/>Passes iff at least one NEWLY-ADDED test is red; pre-existing tests<br/>are reported but never affect the verdict
 
-        alt all_red == False (a test passed at baseline — coder must NOT run)
-            RedBaseline-->>Workflow: {all_red: false, details: "..."}
+        alt gate_passed == False (no newly-added covering test is red — coder must NOT run)
+            RedBaseline-->>Workflow: {gate_passed: false, reason: no_new_covering_tests / all_new_tests_green_at_baseline / no_red_outcome_among_new_tests / baseline_partition_unavailable, red: [], green_at_baseline: [...], inconclusive: [...], preexisting: [...]}
             Workflow-->>Operator: {status: "blocked", failing_phase: "verify_red_baseline", classification: "halt"}
-        else all_red == True
-            RedBaseline-->>Workflow: {all_red: true}
+        else gate_passed == True
+            RedBaseline-->>Workflow: {gate_passed: true, reason: null, red: [...], green_at_baseline: [...], inconclusive: [...], preexisting: [...]}
 
             Note over Workflow,Coder: LLM Dispatch 2 of 2 — python-coder (one flat dispatch, whole batch)
             Workflow->>Coder: dispatch(implement batch ACs to make stubs GREEN)
@@ -119,7 +119,7 @@ See also: [Interactive Pause/Resume — Pause, Ask, Answer, Resume Sequence](c3-
 | Gate | Runs | Pass Condition | Halt Condition |
 |------|------|----------------|----------------|
 | `select_batch` | Before test-writer | Returns a non-empty ordered AC id list | Argument validation fails (`worktree_path` absent) |
-| `verify_red_baseline` | After test-writer, before coder | Every tagged test FAILS (`all_red == True`) | Any linked test passes at baseline — coder is NOT dispatched |
+| `verify_red_baseline` | After test-writer, before coder | At least one **newly-added** covering test is red — `FAILED` or `XFAIL` (`gate_passed == True`). Newly-added tests that are green are reported as `green_at_baseline` (non-fatal); pre-existing tests are reported but never affect the verdict | No newly-added covering test is red — coder is NOT dispatched. The halt carries exactly one named `reason`: `no_new_covering_tests`, `all_new_tests_green_at_baseline`, `no_red_outcome_among_new_tests`, or `baseline_partition_unavailable` (fail-closed when the git partition is unresolvable) |
 | `verify_green_and_coverage` | After coder, before commit staging | All tagged tests PASS **and** every AC id has ≥1 covering test | Either condition fails — commit is NOT staged |
 
 ## Actors
@@ -130,7 +130,7 @@ See also: [Interactive Pause/Resume — Pause, Ask, Answer, Resume Sequence](c3-
 | `fast-lane-build.js` | Workflow (E2 top-level body) | Orchestrates the two-dispatch sequence; holds no LLM state between gates |
 | `select_batch` | Python gate (BO-2400a-2) | Deterministic: reads AC YAML store, filters approved+unimplemented, orders batch — no LLM |
 | `test-writer` | LLM agent — dispatch 1 of 2 | Writes failing test stubs for the whole batch in one flat dispatch |
-| `verify_red_baseline` | Python gate (BO-2400a-3) | Deterministic: confirms every new stub actually FAILS before coder is dispatched |
+| `verify_red_baseline` | Python gate (BO-2400a-3) | Deterministic: partitions covering tests into newly-added vs pre-existing via git, then confirms at least one newly-added test is red before coder is dispatched. Requiring *every* covering test to be red made partially-implemented ACs unbuildable, so the rule was amended to one-red-is-enough (BO-2400a-3-v) |
 | `python-coder` | LLM agent — dispatch 2 of 2 | Implements production code for the whole batch in one flat dispatch |
 | `verify_green_and_coverage` | Python gate (BO-2400a-4) | Deterministic: confirms all batch tests pass and every AC id has ≥1 covering test |
 

@@ -1,0 +1,185 @@
+id: ACD-2000a-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A fresh effort reads the trail and stops to ask a person once the budget is spent"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose trail records that its rework budget for the coding
+    stage is already spent,
+  And a completely new effort that has no memory of those earlier attempts,
+  When that new effort picks the requirement up and the coding stage fails
+    again,
+  Then the new effort stops and asks a person, rather than retrying,
+  And a requirement whose trail records one attempt against a budget of two is
+    retried by that same fresh effort rather than escalated,
+  And the trail states whether a spent budget refers to this run or to the
+    requirement's whole life, so that the two cannot be confused,
+  And when the budget is per-lifetime, a person can record a decision that makes
+    the requirement retriable again, and that decision is itself an entry in the
+    trail rather than an erasure of the earlier ones.
+depends_on: [ACD-2000a, ACD-2000a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The adjudication ladder itself -- section 3 rungs at lines 687/693/708/723/740, the retry-cap table at section 4 line 784, and the in-memory counter sentence at line 789 that this AC deletes the justification for. Canonical source, not the deployed copy."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The architecture page that owns blocker-adjudication flows; its Blocker Adjudication Ladder note (~line 362) describes the retry-vs-escalate behaviour this AC makes durable."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "TWO ENFORCEMENT POINTS, AND ONLY ONE OF THEM IS EXECUTABLE -- NAME BOTH AND BUILD THE EXECUTABLE ONE. The retry decision is made today by an LLM supervisor following templates/skills/building-epics/SKILL.md section 3 (line 687) and section 4 (line 784); NO Python code reads any cap. Verified: `test_failure_rework_cap` occurs exactly ONCE in the whole repository -- in SKILL.md prose at line 784 -- and is read by nothing. An AC whose only deliverable is a SKILL.md edit therefore cannot be covered by a test that executes the behaviour, which CLAUDE.md's gate/workflow rule forbids. The load-bearing deliverable is a CALLABLE RESOLVER that answers retry-or-escalate from the requirement's trail; the SKILL.md section 3 and section 4 repoint MUST land in the SAME change, or the supervisor keeps using its in-memory counter and the resolver is dead code that passes its own tests."
+  - "DELETE THE JUSTIFICATION, NOT ONLY THE COUNTER. SKILL.md line 789 states the counters are 'NOT persisted to the ticket file' and that this 'is acceptable because the on-disk `agents` map and comment log already encode the relevant history, and a re-spawned supervisor reading a `failed` row will route to section 3.4 on its own'. ACD-1800c-1 removes BOTH halves of that justification. That sentence must be rewritten in the same change; left standing, it tells the next supervisor author that volatility is sanctioned and the durable trail is optional."
+  - "THE BUDGET MUST BE RESOLVED FROM THE TRAIL ON EVERY DECISION, never from a value carried inside the deciding process. The observable requirement is that a process holding no prior state reaches the same verdict as one that watched every attempt. Any per-process cache must be derived on entry and must not survive across decisions."
+  - "PER-RUN VS PER-LIFETIME IS A PRODUCT DECISION THIS AC MUST SETTLE AND RECORD, NOT INFER. It is a semantic change hiding as a storage change: persisting today's counters silently converts 'one retry per run' into 'one retry ever', so two flaky-infrastructure failures a week apart become a permanent halt on a requirement with nothing wrong with it. Whichever scope is chosen, each trail entry must state which scope was in force when it was written, so the two can never be confused retrospectively."
+  - "IF THE SCOPE IS PER-LIFETIME, THE CLEARING PATH MUST EXIST BEFORE THE FIRST BUDGET CAN BE EXHAUSTED IN PRODUCTION. Shipping the durable cap without the human clearing path converts every exhausted budget into a support incident with no documented remedy."
+  - "THE HUMAN CLEARING DECISION MUST BE AN APPEND, NEVER A DELETION OR A COUNTER RESET (ACD-2000a-1). A clearing entry must be distinguishable in the trail from an attempt entry, so that 'this budget was cleared by a person on this date' is readable after the fact. The obvious implementation -- delete the attempt records -- breaks ACD-2000a-1's third and fourth criteria and is indistinguishable from the silent reset this whole tree exists to prevent."
+  - "FAIL CLOSED: ESCALATE ON AMBIGUITY. An unreadable trail, a trail whose entries contradict each other, or a trail that is absent where the record says one was expected must escalate rather than retry. The failure being prevented is an infinite retry loop, which costs far more than one unnecessary question."
+  - "ABSENCE OF A TRAIL MEANS NO ATTEMPTS RECORDED, WHICH MEANS THIS IS THE FIRST ATTEMPT -- the ADR-026 rule 4 tolerant-reader behaviour. It must NOT be conflated with 'budget spent': those are two different quiescent states with opposite remedies, and ACD-2000a-5's diagram exists because they are routinely read as one."
+  - "THE RESOLVER MUST NOT REQUIRE A TICKET. The fast lane (scripts/build_orchestration/fast_lane.py) builds a single AC with no ticket at all and must get the same verdict as a supervisor building a bundle. A resolver whose signature takes a ticket path reintroduces the container grain this tree removes."
+  - "Must return a verdict in under 50ms for a trail of up to 200 entries, and must log every verdict at INFO with the AC id, the stage, the attempts counted and the budget in force, so a wrong verdict is diagnosable from the log without re-deriving it."
+  - "DEPLOY-MANIFEST RULE. If any hook or CI gate imports the resolver, add it to build_ac_store's deploy_map in scripts/build_phases.py in the same change (CLAUDE.md, done_proof.py precedent)."
+delivers_to:
+  - agent: python-coder
+    contract: "The adjudication verdict, as one callable taking an AC id plus a stage and returning { verdict: 'retry'|'escalate', ac_id: str, stage: str, attempts_counted: int, budget_in_force: int, scope: 'per_run'|'per_lifetime', reason: str }. Consumed by ACD-2000a-2-i (which distils the escalation summary from `reason`) and by ACD-2000a-3 (which supplies `budget_in_force` from a declared override)."
+  - agent: llm-expert
+    contract: "The repointed adjudication ladder in templates/skills/building-epics/SKILL.md: section 3's 'when the latest comment status is blocker' trigger and section 4's retry-cap table must call the resolver above instead of consulting the in-memory counter dictionary described at line 789, and line 789's justification paragraph must be rewritten. Flagged as a co-deliverable of the same change rather than a separate AC -- see the notes; llm-expert review of the runbook wording is recommended but the change is python-coder's to land."
+expects_from:
+  ac_id: ACD-2000a-1
+  contract: "The trail read API over <trail_field>: [ { actor, timestamp, stage, outcome, decision, reason } ], oldest-first, absent-means-empty, with the append-only guarantee that makes counting entries a sound way to compute a spent budget."
+test_spec:
+  - name: test_fresh_process_escalates_when_the_trail_shows_the_budget_spent
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Writes a spent-budget trail to a real AC file, then runs the resolver in a NEW interpreter subprocess that never saw the attempts; asserts the verdict is escalate. The subprocess is the assertion -- a same-process call cannot distinguish a durable trail from a lucky in-memory counter."
+  - name: test_fresh_process_retries_when_the_trail_shows_one_attempt_against_a_budget_of_two
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Same fresh-subprocess harness with a one-of-two trail; asserts the verdict is retry, so the escalate result above is about the budget being spent and not about a resolver that refuses everything."
+  - name: test_each_trail_entry_states_the_scope_in_force_when_it_was_written
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Records attempts under the settled scope and asserts each written entry carries per_run or per_lifetime, and that the resolver's verdict reports the same scope -- so a later scope change cannot silently reinterpret old entries."
+  - name: test_a_recorded_clearing_decision_makes_the_requirement_retriable_and_is_itself_an_entry
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Exhausts a per-lifetime budget, records a human clearing decision through the real path, and asserts in a fresh subprocess that the verdict flips to retry AND that the earlier attempt entries are all still present -- proving the clearing was an append, not an erasure."
+  - name: test_an_unreadable_or_self_contradictory_trail_escalates_rather_than_retrying
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Feeds the resolver a corrupted and a contradictory trail on real files; asserts both escalate, so the fail-closed rule holds and a damaged trail cannot be read as a fresh budget."
+  - name: test_the_resolver_reaches_the_same_verdict_with_no_ticket_present
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Runs the resolver on a lone AC with no ticket file anywhere (the fast-lane shape); asserts the verdict matches the bundle case, proving the decision is at requirement grain."
+test_rationale: "The single behaviour this AC promises is that the budget survives the death of the process that was counting. A direct-import unit test cannot show that: it constructs the resolver, hands it a list, and asserts arithmetic -- and it passes identically on an implementation that keeps the counter in a module-level dict, because within one interpreter the dict and the file agree. Worse, importlib.reload does not clear that class of state reliably (see the project's test-isolation guidance), so even a reload-based test can pass on the broken implementation. The discriminating test therefore runs the adjudicating code in a FRESH INTERPRETER SUBPROCESS that never observed the attempts, with the trail on a real on-disk AC file as its only input. The escalate and retry cases are asserted in the same run so a resolver that refuses everything cannot pass. The clearing test asserts on the surviving earlier entries as well as on the flipped verdict, because the cheap way to make a requirement retriable is to delete its history -- which would pass a verdict-only assertion while destroying the durable cap. Note also that no test may assert this by grepping templates/skills/building-epics/SKILL.md for the resolver's name: the repository already carries such a test (unit_tests/test_generate_ticket_from_ac.py, test_bo530_3i_building_epics_documents_test_failure_rework_cap) and its own docstring concedes it asserts documentation rather than enforcement."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000a-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE STOP CONDITION -- ACD-2000a's hazard 4 states this leaf is mandatory:
+  "after the cap is exhausted, a FRESH supervisor process (not the same in-memory
+  one) must route to escalation rather than retry. A test that only checks the
+  field is written proves nothing about the cap being honoured." The Given clause
+  "a completely new effort that has no memory of those earlier attempts" is
+  therefore not colour -- it is the assertion.
+
+  THE LOAD-BEARING CODE FACT (verified, do not re-investigate).
+  templates/skills/building-epics/SKILL.md ~line 789 holds retry counters in "a
+  small in-memory counter dictionary keyed by (ticket_path, phase, cap_kind)",
+  explicitly "NOT persisted to the ticket file", and justifies that: "that is
+  acceptable BECAUSE the on-disk `agents` map and comment log already encode the
+  relevant history, and a re-spawned supervisor reading a `failed` row will route
+  to §3.4 on its own."
+  ACD-1800c-1 DELETES BOTH HALVES OF THAT JUSTIFICATION -- it requires the
+  grouping ticket to carry "no per-phase or per-deliverable sign-offs of its
+  own", so there is no `agents` map with a `failed` row, and a thin container has
+  no per-phase comment log. The counters remain volatile; the on-disk history
+  they were ALLOWED to be volatile because of is gone. After the cutover,
+  "retry 2 of 3" has nowhere to live and a re-spawned supervisor cannot tell a
+  first attempt from a fourth. This L2 is the successor to the deleted half.
+
+  THE LADDER THIS FEEDS (SKILL.md §3, all anchored on "When the LATEST COMMENT
+  STATUS is blocker", ~line 687): §3.1 respawn same agent, cap 1 per phase per
+  ticket (~693); §3.2 respawn a named sibling, cap 1 per phase pair (~708);
+  §3.3 spawn brainstorm-lead, cap 1 per ticket (~723); §3.4 halt and escalate
+  (~740). The criteria are written against the ladder's OBSERVABLE outcomes
+  (retry vs stop-and-ask) rather than against its rungs, so the ladder can be
+  restructured without invalidating this AC.
+
+  THE THIRD AND FOURTH THEN CLAUSES RESOLVE ACD-2000a's HAZARD 2, WHICH IS A
+  SEMANTIC CHANGE HIDING AS A STORAGE CHANGE. Today counters reset when a
+  supervisor is re-spawned. Persisting them silently converts "1 retry per run"
+  into "1 retry ever" -- two flaky-infrastructure failures a week apart become a
+  permanent halt on a requirement that has nothing wrong with it. The criteria do
+  NOT pick per-run or per-lifetime; they require the trail to SAY WHICH, and they
+  require a human clearing path if per-lifetime. That is a deliberate deferral of
+  a product decision to the IT PO / user, not an omission -- but leaving it
+  implied is what turns it into an outage.
+
+  THE FOURTH CLAUSE ALSO PROTECTS APPEND-ONLY. The obvious way to let a human
+  clear a budget is to delete the attempt records. That breaks ACD-2000a-1's
+  third and fourth Then clauses, so the clearing decision must be an entry.
+
+  TESTABILITY. Exhaust the budget, then run the adjudicating code in a FRESH
+  PROCESS (new interpreter, not a re-instantiated object -- see CLAUDE.md,
+  "Behavioral spot-check on REAL store" and the importlib.reload masking note in
+  the project's test-isolation guidance) and assert it escalates. A same-process
+  test cannot distinguish a durable trail from a lucky in-memory counter.
+
+  2026-08-17 (IT PO enrichment). Assigned python-coder, complexity L.
+
+  THE ASSIGNMENT IS THE ONE JUDGEMENT CALL IN THIS TREE, AND IT IS RECORDED HERE
+  RATHER THAN LEFT IMPLICIT. This AC spans two surfaces: a Python resolver and
+  the prose adjudication ladder in templates/skills/building-epics/SKILL.md
+  (normally llm-expert's craft). It is NOT split, for two reasons. First, the
+  ACD-2000a tree is at its 5-L2 cap, so a split is unavailable. Second, and more
+  importantly, splitting would produce a prose-only child that cannot be covered
+  by an executing test -- and CLAUDE.md's gate/workflow rule forbids covering a
+  workflow AC by a grep over its own runbook. The repository already contains
+  exactly that anti-pattern for exactly this cap (see ACD-2000a-3's enrichment
+  notes), so a split would reproduce the defect being fixed. python-coder can act
+  on both .py and .md, so there is no technology contradiction (S2.8 passes); the
+  SKILL.md repoint is recorded as a mandatory co-deliverable in it_requirements
+  and as a delivers_to contract naming llm-expert as the review craft.
+
+  THE PRODUCT DECISION THIS AC CARRIES FORWARD. The BA deliberately deferred
+  per-run vs per-lifetime. This enrichment does NOT pick it either -- picking it
+  is a product call for the user, not a technical one -- but it_requirements now
+  makes three things binding whichever way it goes: the scope must be recorded on
+  each entry, the clearing path must ship before the cap can be exhausted in
+  production, and clearing must be an append. Those three make either choice safe;
+  leaving them implicit is what turns the choice into an outage.
+
+  RECOMMENDED FOLLOW-UP (not authored here, since the tree is at its cap): once
+  the resolver exists, the three fixed ladder caps (SKILL.md §3.1, §3.2, §3.3,
+  all 1 today) become candidates for the same durable treatment. ACD-2000a-3's
+  scope note deliberately excludes them; that exclusion should be revisited as a
+  separate AC rather than absorbed into this one.

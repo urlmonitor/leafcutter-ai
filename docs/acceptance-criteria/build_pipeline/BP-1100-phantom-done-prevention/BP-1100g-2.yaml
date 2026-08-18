@@ -1,0 +1,141 @@
+id: BP-1100g-2
+components:
+  - build_pipeline
+  - testing_quality
+  - llm_authoring
+title: "When the plan cannot name the way in, the writer is told how to resolve one and records the one it resolved"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a request for a proof that the work is reached the way the product is
+      really used, whose own text says the way in is not declared and must be
+      resolved before the proof is written,
+    And the piece of work is one of the majority that brought no plan of its own,
+      so nothing upstream names a way in,
+  When the test-writing side answers that request and hands the work on,
+  Then its hand-off record names the way in it resolved — the command, the hook's
+    own runner, the slash command, the workflow dispatch, or the program's entry
+    invoked with real arguments,
+    And when it can find no way in at all, the record says so together with what it
+      looked for, rather than saying nothing,
+    And the instructions it works from state how to resolve a way in for the kinds
+      of work this project builds, so the judgement is guided rather than left to
+      the writer unaided,
+    And a request that DID name a way in is answered with that way in recorded
+      unchanged, not with one the writer chose for itself.
+depends_on:
+  - BP-1100g
+  - BP-1100g-1
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The doer, and where the resolution guidance has to live. Its fallback path already tells the writer to add a reachability test and lists candidate entry points, but gives no procedure for choosing one and requires no record of the choice."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "States this gap in terms: for the 80% with no authored plan the appended request 'cannot name an entry point — it says so in its own text', and 'hands the hardest judgement, what IS the production entry point, to test-writer'. Also lists what does NOT count: importing the module, asserting a symbol exists, asserting a value was passed as an argument."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the hand-off record the writer already produces (the completion manifest and the comment recipe). The resolved way in rides that existing record; do not introduce a second one."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The producer-side counterpart: it makes 'the way in is not yet resolved' a legitimate value in a request rather than a malformed one, which is precisely the input this AC hands to the writer."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "MANDATORY BOUNDARY. A recorded way in is a statement the writer wrote, never evidence that the test entered it. Whether the way in was actually entered is settled only by watching the run."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The only place in this tree that builds a mechanical reader over the hand-off record. The entry-point key must use a fixed token so that reader can be extended to it without a second convention — see it_requirements."
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The record must ride the EXISTING completion_manifest: block in the sign-off comment (templates/skills/signoff/SKILL.md §2b), placed after feedback-id: and before the prose summary. Do not introduce a second artifact — that is the asymmetry GAP F is about, one layer up."
+  - "The manifest key must be ONE fixed token, declared once and used verbatim in both templates/agents/test-writer.md and templates/skills/signoff/SKILL.md, so BP-1100g-5-i's reader can be extended to it without inventing a second convention. Two spellings of the same key is the same drift this tree exists to prevent."
+  - "The honest negative must use the existing nested shape ({result: false, reason, remediation}) rather than a bare false — the §2b Bare-False Rule makes a bare false a malformed manifest and triggers a supervisor retry. 'No way in found, here is what I looked for' must be expressible as a valid record, not as a failure."
+  - "The guidance must be a DECISION PROCEDURE over the surfaces this project actually builds — CLI via subprocess, pre-commit hook via run_hook.py, slash command, workflow dispatch, main() invoked with real argv — not a list of candidates with no rule for choosing. It must also restate what does NOT count: importing the module, asserting a symbol exists, assertIn('name', registry_json), and asserting a value was passed as an argument (dispatch topology, not execution)."
+  - "An entry point already named in the request must be copied through verbatim. The writer must not substitute one of its own, and must not overwrite a named entry point with the unresolved sentinel."
+  - "The recorded way in is a DECLARATION. It must contribute to no done, pass or eligibility decision, and nothing in this AC may inspect a test to check the declaration is true — that question belongs exclusively to BO-2900a's execution observer (BO-2900a-2)."
+  - "OBSERVED GAP, CARRIED FORWARD: completion_manifest has ZERO code readers today — grep over scripts/ returns no occurrences; it is read only by the supervisor. Until BP-1100g-5-i's reader exists and is extended to this key, this record has no forcing function. That is a known and accepted state for this AC, not a defect to fix here."
+delivers_to:
+  - agent: pr-reviewer
+    contract: "One completion_manifest key per work item carrying the resolved production entry point: either a non-empty string naming it (command line, hook runner invocation, slash command, workflow dispatch, or main() with real argv), or the nested {result: false, reason, remediation} form whose reason states what was looked for and why no entry point was found. Read by a human reviewer today and, once BP-1100g-5-i lands, by the same manifest reader that handles the seam answer."
+expects_from:
+  - ac_id: BO-2900g-4
+    contract: "A reachability request that either names the production entry point, or carries the single stable sentinel stating the entry point is not declared and must be resolved before the test is written. The writer must be able to tell the two apart without parsing prose."
+test_required: false
+test_rationale: |
+  Genuinely test-free at this AC's boundary, and saying so explicitly rather than
+  faking coverage. change_target is prompt: every Then clause here is a statement about
+  what an LLM agent writes into its own sign-off record, and no unit test can produce
+  that record — the only faithful check is an eval over agent output, which is not in
+  scope. The two proxy tests available are both dishonest: grepping
+  templates/agents/test-writer.md for the guidance text asserts prose presence, not
+  actionability (the same trap flagged on BP-1100g-1's second clause), and validating a
+  hand-typed sample manifest asserts the fixture, not the writer. The forcing function
+  this AC actually needs is BP-1100g-5-i's manifest reader extended to the entry-point
+  key; that extension is recommended as a follow-up rather than smuggled in here as a
+  test. Reviewing surfaces: pr-reviewer and the llm-expert Prompt-Quality Checklist.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned llm-expert (surfaces are templates/agents/test-writer.md and templates/skills/signoff/SKILL.md).
+    Added it_requirements pinning the record to the existing completion_manifest and
+    requiring one fixed key token, contracts, and test_required: false with an explicit
+    rationale. declares_side_effect deliberately NOT set — see notes. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  GAP D of BP-1100g, second half, and the part the parent L1 names as the hardest:
+  "Do not let an L2 assume the way in is given."
+
+  WHY THIS IS SEPARATE FROM BP-1100g-1. Teaching the writer the names
+  (BP-1100g-1) is a vocabulary contract between two static sources. Resolving a
+  way in is a judgement the writer makes per piece of work, on the ~80% of work
+  where nothing upstream can make it for them. They fail differently, they are
+  produced by different things, and they are observable in different places.
+
+  WHY A RECORDED ANSWER RATHER THAN A BETTER INSTRUCTION. An instruction with no
+  artifact is the exact asymmetry GAP F is about. The failure mode named in
+  docs/testing/test-angles.md is that "a reachability mandate can quietly be
+  satisfied by a renamed criterion test" — the writer, handed an unresolvable
+  request, does the cheapest thing and nothing downstream can tell. Recording the
+  resolved way in does not prove the test entered it; it makes the writer's
+  choice visible to a human reader and to the observer that later judges it.
+
+  THE HONEST NEGATIVE IS REQUIRED HERE TOO. Some work genuinely has no runtime
+  way in — that population is what BO-2900d's exemption exists for. A writer that
+  must name one will invent one. "No way in found, here is what I looked for" is
+  a valid recorded answer and a useful input to that exemption.
+
+  BOUNDARY. The record is a DECLARATION. It contributes to no done, pass or
+  eligibility decision, and nothing here inspects a test to check the declaration
+  is true. That question belongs exclusively to BO-2900a's execution observer.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). declares_side_effect is deliberately NOT
+  set: the durable artifact here is written by an LLM agent, not by code, so
+  routing user-surface-smoker would produce a phase agent with nothing runnable
+  to smoke. Verified during enrichment: completion_manifest has no code reader
+  anywhere under scripts/ — it is parsed only by the supervisor. That is why the
+  it_requirements insist on ONE fixed key token: it is the difference between
+  BP-1100g-5-i's reader being extendable to this key and a second convention
+  having to be built.

@@ -1,0 +1,144 @@
+id: ACD-2000b-2-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A set of requirements that cannot be taken whole leaves none of them taken"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given an effort that needs to take four requirements together in order to
+    build them as one set,
+  And the third of those four is already taken by another effort,
+  When the effort attempts to take the set,
+  Then it ends up holding none of the four,
+  And the first two, which it briefly took, are available again to anyone else,
+  And it is told which requirement of the set was unavailable,
+  And an effort that is interrupted part-way through taking a set leaves none of
+    that set taken by it, without needing the interrupted effort to tidy up
+    after itself.
+depends_on: [ACD-2000b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The per-AC sequential claim loop (~line 165 onwards) that returns success=False with a partially populated `claimed` list, and main()'s claim branch (~990-1012) whose refusal today fires only when the WHOLE set is already taken."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE CONTRACT IS ALL-OR-NOTHING FROM THE CALLER'S POINT OF VIEW, as the BA decided. Verified starting point: the claim loop is per-AC sequential (~line 165) and returns success=False with a PARTIALLY populated `claimed` list, leaving the caller obliged to release. That obligation is what this AC removes."
+  - "A try/finally DOES NOT SATISFY THE FOURTH CLAUSE and must not be offered as the implementation. Its correctness depends on the failing process still being alive, which is the entire class of bug this L1 exists to close. Satisfy it either by taking the set in one indivisible step, or by recording the set identity on each member so ACD-2000b-3's reclaim rule can clear a partial residue without the owner."
+  - "STAMP THE SET IDENTITY ON EVERY MEMBER as it is taken, so a partially-taken set is recognisable as one interrupted operation rather than as several unrelated claims. Without it a reclaim rule frees the members one at a time and a second effort can start on a member of a set it does not hold."
+  - "TAKE THE SET IN A DETERMINISTIC ORDER (sort the member ids before taking). Two efforts taking overlapping sets in opposite orders can each hold part of the other's set and neither can proceed -- a deadlock the criteria do not name and that an unordered implementation will produce as soon as bundles overlap."
+  - "NAME THE UNAVAILABLE MEMBER in the caller-facing failure. Today the error string embeds the full named_acs list (~line 196), which sends an operator to inspect every member. The contended id must be identifiable on its own -- it is also the input a scheduler needs to decide whether to wait or to re-plan around it."
+  - "THE CLI CONTRACT CHANGES AND MUST BE UPDATED IN THE SAME CHANGE. fast_lane.main()'s claim branch (~lines 990-1012) refuses only when target_refused -- every member already taken. Under all-or-nothing a SINGLE contended member must also yield none-taken, so the documented exit-code semantics in main()'s docstring (~lines 933-946) and the subparser help (~lines 850-857) become wrong the moment this lands."
+  - "EVERY MEMBER MUST BE TAKEN THROUGH ACD-2000b-2's ATOMIC TAKE. A set operation composed of non-atomic takes tears in a second way -- two set-claimers can both believe they hold the same member -- so this AC's guarantee is strictly on top of that one, never a substitute for it."
+  - "RELEASING THE BRIEFLY-HELD MEMBERS MUST BE ATTRIBUTABLE, per ACD-2000b-1-i: a set that unwinds leaves a record of the hand-back rather than requirements that quietly became free."
+  - "Follow the project error handling policy (Ruff E722/BLE001/TRY): typed except, log-or-reraise, no bare except; a failed unwind must be reported, never swallowed into a successful-looking refusal."
+delivers_to: null
+expects_from:
+  ac_id: ACD-2000b-2
+  contract: "The atomic single-requirement take returning granted|already_taken with the current holder. This AC composes that primitive into an all-or-nothing set operation and adds the set identity each member carries."
+test_spec:
+  - name: test_set_claim_with_one_contended_member_leaves_none_of_the_set_taken
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "A second real process holds the third of four requirements; the set claim runs and all four records are inspected afterwards -- none is held by the claiming effort."
+  - name: test_briefly_taken_members_are_available_to_another_effort_afterwards
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "After the failed set claim, a different effort successfully takes the first two members, proving they were genuinely released rather than left in a residual state that merely reads as unowned."
+  - name: test_failure_names_the_contended_member
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the reported failure identifies the third requirement specifically, not just that the set could not be claimed."
+  - name: test_sigkilled_mid_set_claim_leaves_the_set_takeable_by_a_fresh_process
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Starts a real set claim in a child process and SIGKILLs it part-way through so no cleanup handler can run; asserts a fresh process can subsequently take the whole set."
+  - name: test_two_efforts_taking_overlapping_sets_both_terminate_with_one_winner
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Two real processes claim overlapping four-member sets simultaneously, repeated; asserts one set is fully taken and the other holds none -- neither process ends up holding a fragment of the other's set."
+test_rationale: "A test whose claimer fails through its normal error path exercises the CALLER'S cleanup and therefore passes on an implementation whose correctness depends on the process being alive -- which is exactly what the fourth clause forbids. Only SIGKILL, which runs no finally and no atexit, can tell a genuine all-or-nothing guarantee from a diligent unwind. The contended member is likewise held by a real second process rather than by a pre-set field value, because a hand-written in_progress record does not exercise the take path the contention actually flows through. The overlapping-sets test is included because deterministic take order is an it_requirement the criteria do not name, and an unordered implementation deadlocks only under genuine simultaneity."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE PARTIAL-CLAIM LEAF -- ACD-2000b hazard 3, verified: "The loop is per-AC
+  sequential and returns `success=False` with a PARTIALLY populated `claimed`
+  list on failure -- the caller is obliged to release. State whether a build set
+  is all-or-nothing or explicitly partial, and make the contract testable; an
+  unstated contract here leaks half-claimed sets on every failed run."
+
+  THIS AC MAKES THE DECISION: ALL-OR-NOTHING, from the caller's point of view.
+  The reasoning is that the alternative — an explicitly partial claim — pushes
+  the cleanup obligation onto every caller, and the repo already has the evidence
+  that caller-obligation cleanup does not survive contact with reality:
+  `release_claim()` runs only on a graceful non-success exit, so a hard kill
+  leaks the whole set (ACD-2000b-3 covers that case). Adding a second
+  caller-obligation on top of the one that already fails is how half-claimed sets
+  become the normal state of the store.
+
+  THE FOURTH THEN CLAUSE IS THE STRONG ONE and is what distinguishes this AC
+  from "remember to call release in the failure branch". "Without needing the
+  interrupted effort to tidy up after itself" rules out any implementation whose
+  correctness depends on the failing process still being alive -- which is the
+  entire class of bug this L1 exists to close. It can be satisfied by a
+  reclaim rule (ACD-2000b-3) covering partial sets, or by a claim mechanism
+  where the set is taken in one indivisible step; it cannot be satisfied by a
+  try/finally.
+
+  THE THIRD THEN CLAUSE (naming the unavailable member) matters operationally:
+  "could not claim the build set" sends an operator to inspect four requirements.
+  It is also the input a scheduler needs to decide whether to wait or to re-plan
+  around the contended member.
+
+  RELATIONSHIP TO ACD-2000b-2. The parent covers contention over ONE requirement;
+  this covers the compound operation, where the failure mode is not a lost race
+  but a torn transaction. Both are needed: an atomic single claim composed
+  sequentially still tears.
+
+  TESTABILITY. Have a second real process hold the third requirement, then run a
+  real set-claim of four and inspect all four records afterwards. For the fourth
+  clause, kill the claiming process mid-set (SIGKILL, so no cleanup handler can
+  run) and assert the set is takeable by a fresh process. A test that lets the
+  claimer's failure path run normally cannot observe the leak.
+
+  2026-08-17 (IT PO enrichment). TWO HAZARDS THE CRITERIA DO NOT NAME, added as
+  it_requirements:
+
+  1. DETERMINISTIC TAKE ORDER. Two efforts taking overlapping sets in opposite
+     orders each hold part of the other's set and neither can proceed. Sorting
+     the member ids before taking removes the cycle. This becomes reachable the
+     moment ACD-1800c bundles share members, and it is invisible to any test
+     that claims one set at a time -- hence the fifth test.
+  2. SET IDENTITY ON EACH MEMBER. The fourth clause is satisfiable only by an
+     indivisible set take or by a reclaim rule that can recognise the residue.
+     The second route needs each member to carry which set operation took it;
+     without that, reclaim frees the members independently and a second effort
+     can start on a fragment.
+
+  THE CLI CONTRACT IS COLLATERAL. `main()`'s claim branch refuses only on
+  `target_refused` (every member already taken). All-or-nothing changes that to
+  "any contended member yields none taken", which makes the documented exit-code
+  semantics in `main()`'s docstring and the `claim` subparser help wrong on the
+  same commit. Recorded so the change is not shipped with its own documentation
+  contradicting it.

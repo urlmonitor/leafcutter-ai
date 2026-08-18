@@ -50,6 +50,7 @@ class TestCiTestGateIsBlocking(unittest.TestCase):
 
     def test_ac_bp1200b1_test_job_is_blocking(self) -> None:
         """The `test` job has the stable name and does NOT set continue-on-error."""
+        # covers: BP-1200b-1
         job = _test_job(_load_ci())
         self.assertIsNotNone(job, "ci.yml has no 'test' job")
         assert job is not None  # for type-checkers
@@ -72,6 +73,7 @@ class TestFailingTestBlocksMerge(unittest.TestCase):
 
     def test_ac_bp1200b1i_failing_test_blocks_merge(self) -> None:
         """No continue-on-error + a real pytest step => a failing test fails the job."""
+        # covers: BP-1200b-1-i
         job = _test_job(_load_ci())
         self.assertIsNotNone(job, "ci.yml has no 'test' job")
         assert job is not None
@@ -89,6 +91,7 @@ class TestGreenSuiteDoesNotBlock(unittest.TestCase):
 
     def test_ac_bp1200b1ii_green_suite_does_not_block(self) -> None:
         """One plain pytest step over tests/ + unit_tests/, no always-fail step."""
+        # covers: BP-1200b-1-ii
         job = _test_job(_load_ci())
         self.assertIsNotNone(job, "ci.yml has no 'test' job")
         assert job is not None

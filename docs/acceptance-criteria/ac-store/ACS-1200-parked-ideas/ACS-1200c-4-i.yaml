@@ -1,0 +1,114 @@
+id: ACS-1200c-4-i
+components:
+  - ac_store
+title: "An approved requirement with nothing under it is reported as a contradiction, not quietly parked"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+created_by: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-4.yaml
+criteria: |
+  Given BP-900d.yaml — a feature-level record at readiness: approved with an
+    empty covered_by and no descendants — carrying no parked marker,
+  When the store-wide orphan scan is executed as a process over the real store,
+  Then BP-900d is still reported, and it is reported as an approved requirement
+    with nothing under it rather than as a parked record or as an ordinary
+    orphan,
+  And the report names its id and its readiness so the contradiction is legible
+    without opening the file,
+  And when a parked marker is added to BP-900d while its readiness remains
+    approved, the validator rejects the record per ACS-1200c-4,
+  And the record only becomes validly parkable once its readiness is lowered
+    from approved.
+depends_on:
+  - ACS-1200c-4
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900d.yaml
+    relationship: context
+    status: exists
+    relevance: "The real record this criterion is written against: the single childless feature-level record in the store at readiness approved, found while calibrating the parked-stub population on 2026-08-14."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the orphan scan's report classification; this AC adds a state to that structure rather than a new independent branch."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "This AC adds a THIRD state to the report classification introduced by ACS-1200b-2 (orphan / parked / approved-with-nothing-under-it), not a separate branch in scripts/ac_store/scan_ac_orphans.py. The states must remain a partition: BP-900d must land in exactly one section per run, and must not appear as both an ordinary orphan and a contradiction."
+  - "The state must be derived from data properties — readiness value plus absence of descendants — never from the record id. A rule keyed to BP-900d by name does not generalise to the next record that reaches the same contradictory state, which is the whole point of naming a real record rather than inventing one."
+  - "BP-900d must not be modified by the implementation or by its tests. Its real path is docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900d.yaml; the marker-addition clause must be exercised against a temporary copy, and the committed record must be byte-identical afterwards. This AC requires that the record stays visible and correctly described, not that anyone repairs it."
+  - "The report entry must carry the id and the readiness value inline, so the contradiction is legible without opening the file — and must not carry a count or an age of the childless population, which is KM-200c's remit."
+  - "The validator half of the criterion is inherited from ACS-1200c-4 and must be exercised through the same predicate — this AC must not introduce its own second implementation of the approved-cannot-be-parked rule."
+test_spec:
+  - name: test_bp900d_reported_as_approved_with_nothing_under_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Orphan scan executed as a process over the real store reports BP-900d in the approved-with-nothing-under-it state, not as a parked record and not as an ordinary orphan."
+  - name: test_report_entry_names_id_and_readiness
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The report entry includes the record id and its readiness value so the contradiction is legible without opening the file."
+  - name: test_state_derived_from_data_not_from_record_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A second, synthetic record in the same contradictory state is classified identically — the rule is not keyed to BP-900d by name."
+  - name: test_marker_on_approved_record_rejected_by_validator
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Adding a parked marker to a copy of BP-900d while readiness remains approved is rejected by the validator, per ACS-1200c-4."
+  - name: test_record_becomes_parkable_once_readiness_lowered
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The same copy with readiness lowered from approved accepts the marker and validates."
+  - name: test_committed_bp900d_unmodified
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "After the test, the real BP-900d.yaml in the store is byte-identical to its committed content."
+delivers_to: null
+expects_from:
+  ac_id: ACS-1200c-4
+  contract: "The rule that an approved record cannot be parked, applied here to the one real record in that state"
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Calibration evidence, 2026-08-14: of the childless feature-level records in
+  the store, all but one sit at draft or reviewed. BP-900d is the lone approved
+  one. Approved means "ready to build" while an empty child list means "nothing
+  to build" — the record asserts both, so it is a data defect either way, and
+  the risk this AC guards against is that the parked convention absorbs it and
+  makes the defect permanent.
+
+  This AC does NOT fix BP-900d and does not require anyone to. It requires that
+  the record stays visible and correctly described. Deciding its fate is
+  ordinary store hygiene, out of scope here for the same reason the 54
+  pre-existing orphans are (ACS-1200b-3).
+
+  It also does not count or tabulate the childless population — that is
+  KM-200c's remit; this criterion names one record.
+
+  IT-PO ENRICHMENT (2026-08-14). Complexity raised S -> M: despite naming one
+  record, this AC adds a whole new state to the orphan scan's report
+  classification, plus the data-driven predicate that decides it. Sequenced
+  after ACS-1200b-2 it is cheaper; built before it, it forces the classification
+  design that ACS-1200b-2 owns.

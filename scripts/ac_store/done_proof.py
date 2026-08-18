@@ -66,6 +66,7 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -476,6 +477,21 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     subprocess.  The ``-v`` flag is required to produce per-test outcome lines;
     exit code alone cannot distinguish XFAIL/SKIP from PASSED.
 
+    The child runs with ``AC_ENFORCE_STRICT=1`` (ACS-200f).  The repo's
+    ``pytest.ini`` loads ``pytest_ac_enforcement`` into every pytest process,
+    and that plugin rewrites a failing test's outcome to XFAIL when the AC named
+    by its ``# covers:`` tag is not yet ``work_status: done``.  The AC this gate
+    is evaluating is, by definition, still not-done at this moment — so without
+    the override the gate would read a verdict the plugin downgraded *because
+    of* the very status the gate exists to decide, and would report a genuinely
+    FAILED test to the operator as an xfail.
+
+    This does not weaken the gate (ACS-200f-1).  ``AC_ENFORCE_STRICT`` disables
+    only the enforcement plugin's own not-yet-done downgrade; pytest's native
+    ``@pytest.mark.xfail`` / ``@pytest.mark.skip`` handling is untouched, so an
+    outcome that is non-passing on its own merits still reports XFAIL or SKIPPED
+    and is still rejected by :func:`_classify_outcomes` (BO-2500a-2-i).
+
     Args:
         test_files: Absolute paths to Python test files to execute.
 
@@ -488,12 +504,14 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
         return {}
     cmd = [sys.executable, "-m", "pytest", "-v", "--tb=no", "--no-header"]
     cmd.extend(str(f) for f in test_files)
+    child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     try:
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=60,
+            env=child_env,
         )
     except subprocess.TimeoutExpired as exc:
         print(
@@ -663,6 +681,28 @@ def _find_nodeid_for_test(
     return None
 
 
+def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
+    """Return a refusal phrase naming *why* a linked test is not proof of done.
+
+    The three refusal causes call for different operator actions — fix the
+    code, un-skip the test, write a test — so collapsing them into a single
+    "non-passing" verdict is not actionable (ACS-200f-1).  A nodeid absent from
+    *pytest_results* did not produce a result line at all (collection error, or
+    the run never reached it) and is reported as ``not run`` rather than being
+    guessed at.
+
+    Args:
+        nodeid: The pytest nodeid, or ``file::func`` when no nodeid was located.
+        pytest_results: ``{nodeid: outcome}`` from :func:`_run_pytest_and_parse`.
+
+    Returns:
+        A phrase such as ``"linked test failed: <nodeid>"``.
+    """
+    outcome = pytest_results.get(nodeid)
+    label = outcome.lower() if outcome else "not run"
+    return f"linked test {label}: {nodeid}"
+
+
 def _classify_outcomes(
     linked_tests: list[dict],
     pytest_results: dict[str, str],
@@ -779,8 +819,7 @@ def _verify_composite_eligible(
 
     if failing_tests:
         reasons = [
-            f"linked test {pytest_results.get(nid, 'non-passing').lower()}: {nid}"
-            for nid in failing_tests
+            _describe_non_passing(nid, pytest_results) for nid in failing_tests
         ]
         return {
             "eligible": False,
@@ -911,6 +950,7 @@ def verify_done_eligible(
     # --- Python path ---
     py_passing: list[str] = []
     py_failing: list[str] = []
+    pytest_results: dict[str, str] = {}
     if py_linked:
         py_files = list({t["file"] for t in py_linked})
         pytest_results = _run_pytest_and_parse(py_files)
@@ -958,8 +998,9 @@ def verify_done_eligible(
         reason_parts: list[str] = []
         if py_failing:
             for nid in py_failing:
-                # Keep existing pytest reason format for .py tests
-                reason_parts.append(f"linked test non-passing: {nid}")
+                # Name the real outcome (failed / skipped / xfail / not run) so
+                # the three refusal causes stay distinguishable — ACS-200f-1.
+                reason_parts.append(_describe_non_passing(nid, pytest_results))
         if ts_failing:
             ts_names = ", ".join(ts_failing)
             reason_parts.append(

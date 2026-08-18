@@ -1,0 +1,92 @@
+id: GE-111f
+readiness: reviewed
+priority: high
+components:
+  - commit_guardian
+status: active
+component: guardrail-engine
+level: L1
+depends_on:
+  - GE-111
+title: "The contract-shrinking guard distinguishes an edited test from a deleted one"
+origin_agent: BrainCandy
+criteria: |
+  Given check_contract_shrinking.py blocks a commit that both changes production code and
+    weakens tests, and it detects a weakened test by matching the raw diff line
+    `-\s*def test_`
+  When a commit edits the BODY of an existing test, or renames nothing but reformats it —
+    which git renders as a removed `-    def test_x` line AND a matching added
+    `+    def test_x` line for the same test name
+  Then the guard does not report that test as deleted, because a test name that is both
+    removed and re-added in the same diff still exists
+  And the guard still blocks a genuine deletion, where a test name is removed with no
+    matching addition anywhere in the diff
+  And the "test file deleted" pattern likewise fires only when the diff shows the file
+    going to /dev/null, not merely because a test file appears on the `--- a/` side of an
+    ordinary modification
+  And the bug symptom ("a merge commit or any body-edit to an existing test is blocked as
+    contract shrinking, so the guard must be bypassed with SKIP to land routine work —
+    training the team to skip the very gate that protects tests") must not occur
+notes: |
+  Authored by /quick-fix. Root cause: _scan_diff() applies each weakening pattern with a
+  bare finditer over the whole diff text and appends a violation per match. It never pairs
+  a removal with its corresponding addition, so it cannot tell "deleted" from "modified" —
+  every edited test body is a false positive.
+  Found live: merging origin/main into feat/atlas-artifact-knowledge-graph was blocked by
+  this guard. The single flagged line was
+    -    def test_drift_check_covers_shimmed_dirs(self):
+  whose matching
+    +    def test_drift_check_covers_shimmed_dirs(self):
+  sits in the same hunk — the test still exists at tests/test_build_artifact_parity.py:192.
+  That merge is net +4124/-19 across test files (main ADDED four test modules) and the full
+  suite is 3432 passed / 0 failed on the merged tree. Nothing was weakened.
+  Severity is about incentives, not just noise: because the guard cannot be satisfied on a
+  merge commit, the only way to land one today is SKIP=check-contract-shrinking — which
+  normalises bypassing a TDD gate. Fixing the detector is what makes the gate keepable.
+change_target: code
+risk_surface: internal
+amended_by:
+  - reason: number-drift-repair
+    entry: 'Renumbered from GE-119 to GE-111f (TICKET-20260817-GE-120e-1 / GE-120e-1).
+      GE-119 was claimed by two unrelated records: this parentless, single-file
+      detail-level record about the contract-shrinking guard, and an unrelated
+      goal-level record owning a 32-file tree at
+      docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/
+      (title: "Trust that a green check actually checked something"), which
+      keeps the GE-119 identifier. This record moves because it is the cheaper
+      direction (one file vs. a 32-file tree) and because GE-119 itself could
+      not become its parent without modifying the byte-identical goal folder.
+      Parented under GE-111 ("Refactoring can never silently break the link
+      between your requirements and your code") rather than the semantically
+      closer GE-119, because check_ac_parent_covered_by.py and
+      scan_ac_orphans.py both derive a record''s parent from its id SHAPE via
+      derive_parent_id() and never read the `parent:` field or `depends_on` for
+      root-shaped ids — a root-shaped id (e.g. a new GE-121) would have no
+      derivable parent, so the back-link this repair establishes would be
+      unenforced by the very gates meant to police it. GE-111f is a
+      suffix-shaped id under GE-111, so derive_parent_id("GE-111f") == "GE-111"
+      and the parent/covered_by link is natively enforced. Criteria and notes
+      are unchanged from the original GE-119 record; only id, level,
+      depends_on, and this amendment were added.'
+    by: python-coder
+  - reason: reconcile-with-concurrent-resolution-on-main
+    date: '2026-08-18'
+    by: human user
+    entry: 'CORRECTION TO THE ENTRY ABOVE, which is left intact because it
+      accurately records what was known when the move was made. Two of its
+      statements have since been overtaken by events and must not be read as
+      current fact. (1) It says the goal-level record "keeps the GE-119
+      identifier" — it does not. While this repair was in flight, PR #453
+      landed on main and resolved the same duplicate the opposite way,
+      renumbering that goal tree from GE-119 to GE-120. (2) The path it cites,
+      docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/,
+      no longer exists; that tree is now at GE-120-green-means-checked/.
+      NET RESULT OF THE TWO INDEPENDENT REPAIRS: GE-119 is now a RETIRED
+      identifier claimed by nothing, the former goal record claims GE-120, and
+      this record claims GE-111f with a mechanically enforced parent. The
+      duplicate is resolved and the store holds no colliding ids. GE-119 must
+      never be reissued — dated records still cite it, and reissuing it would
+      turn those into confidently wrong references rather than merely stale
+      ones. This collision — two sessions independently renumbering the same
+      identifier days apart, neither able to see the other — is itself the
+      clearest evidence for the goal this repair belongs to.'

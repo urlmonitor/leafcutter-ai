@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: reviewed
 priority: medium
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given the dogfood-first proof and the go/no-go cutover criteria,
   When the how-to guide is published,

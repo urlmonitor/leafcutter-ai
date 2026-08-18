@@ -1,0 +1,116 @@
+id: BO-2500b-5
+components:
+  - build_orchestration
+  - commit_guardian
+title: "The proof-of-done gate scans the same tree whether it runs locally or in CI"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given check_done_proof.py resolves its scan root from --test-root, falling back
+    to a built-in default when the flag is absent,
+  And the pre-commit hook entry in commit_guardian.json passes --test-root .
+    explicitly, because a Python-only default cannot see "// covers:" tags in
+    JS/TS tests (BO-2500e-5) and is wrong for consumer projects whose tests do
+    not live in that directory,
+  And the CI invocation passes no --test-root at all, so it silently takes the
+    built-in default,
+  When the gate runs with no --test-root supplied,
+  Then it scans the whole project from the repository root, exactly as the
+    pre-commit hook does with an explicit --test-root .,
+  And a "# covers:" tag placed in any test directory of the project — not only
+    the one named by the old default — is found and counted as proof,
+  And a "// covers:" tag in a JS/TS test is likewise found, so a JS-covered AC
+    is not reported unproven merely because the default directory holds no
+    .ts files,
+  And directories that are not source (node_modules, .next, dist, coverage,
+    .git, __pycache__, .venv) remain excluded from the scan,
+  And an explicit --test-root still overrides the default, so a caller that
+    wants a narrower scan can still ask for one,
+  And the bug symptom ("the local hook and the CI gate disagree about which
+    tests count as proof, because only one of them passes --test-root") must
+    not occur.
+depends_on:
+  - BO-2500b
+doc_links:
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    proof_of_done_default_scan_root:
+      type: object
+      description: "check_done_proof.py's built-in scan root, used when no --test-root is supplied, is the repository root — matching the --test-root . the pre-commit hook passes explicitly — so the CI gate and the local hook agree on which tests count as proof, and an explicit --test-root still overrides it."
+  reference_file_path: "templates/scripts/commit_guardian/check_done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py"
+  constraints:
+    - "Change the DEFAULT, not the CI command line — the fix must repair every caller that omits --test-root, including consumer installs, not only this repo's ci.yml."
+    - "An explicit --test-root must continue to override the default; do not remove or ignore the flag."
+    - "The scanner's existing exclusion set (node_modules, .next, dist, coverage, .git, __pycache__, .venv) must keep applying, since a repo-root scan would otherwise traverse non-source trees."
+    - "Deploy-manifest rule: this hook runs from the DEPLOYED layout. Verify the fix by running the deployed hook after python scripts/build.py, not only the source-tree unit tests."
+    - "Verify behaviourally against the REAL repository, not a synthetic fixture: assert that a '# covers:' tag under tests/ is found by a default-scope run. A fixture that only models unit_tests/ reproduces the bug's own assumption."
+test_spec:
+  - name: test_default_scan_root_is_repo_root_not_unit_tests
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    description: "With no --test-root supplied, the resolved scan root is the project root, so a covers tag outside unit_tests/ is discovered."
+  - name: test_explicit_test_root_still_overrides_default
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    description: "An explicit --test-root narrows the scan as before, proving the default change did not remove the override."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/commit_guardian/test_bo2500b5_done_proof_default_scan_root.py"
+implemented_by:
+  - templates/scripts/commit_guardian/check_done_proof.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Found 2026-08-14 while triaging why a done-proof failure appeared in CI but not
+  locally. The two callers disagree:
+
+    pre-commit (commit_guardian.json): check_done_proof.py --test-root .
+    CI (.github/workflows/ci.yml):     check_done_proof.py --mode ci-changed --base origin/<base>
+
+  Only the hook passes --test-root, so CI falls back to _DEFAULT_TEST_ROOT =
+  "unit_tests". The manifest's own comment on the hook entry documents why that
+  default is wrong — it "contains no .ts files, so JS-covered ACs would be
+  reported as unproven (BO-2500e-5); this also makes the hook correct in consumer
+  projects whose tests do not live under unit_tests/" — and in the same breath
+  calls CI mode "the authoritative backstop". The authoritative backstop is
+  therefore running with the scope the manifest calls incorrect.
+
+  Measured on this repo the same day: 21 files under tests/ carry "# covers:"
+  tags that the CI gate cannot see. Observed impact: BP-015's tests were written
+  to tests/ and the required gate reported "no linked test found"; they were
+  moved to unit_tests/ to get green, which treated the symptom.
+
+  Fixing the DEFAULT rather than the CI command line is deliberate: it repairs
+  every caller that omits the flag — CI, consumer installs, and ad-hoc runs —
+  instead of leaving the next caller to rediscover the same trap. The hook's
+  explicit --test-root . then becomes belt-and-braces rather than the only thing
+  holding the behaviour up.

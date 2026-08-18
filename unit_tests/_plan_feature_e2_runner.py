@@ -28,14 +28,39 @@ ARCHITECTURE: Two mechanisms.
        observe.
 
     No ``claude`` binary is required; only Node.js (a standard CI dependency).
+
+BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
+    plan-feature.js dispatches an unconditional "resolve-workspace-setup-
+    permission" agent() call before Stage 0 on every invocation; its
+    fail-closed default halts the run before Stage 0 (and therefore before
+    every behavior these test files actually exercise) when that label's
+    response is not a real, parseable registry payload. The per-test
+    ``mockAgent`` JS functions in every file that uses ``run_plan_feature_e2``
+    predate this gate and fall through to a generic stub for any unrecognised
+    ``status-checker`` call, which does not satisfy the gate's expected
+    ``{output, exit_code}`` shape. Rather than editing every existing
+    ``mockAgent`` in every caller file to add a branch for this one label (the
+    same per-call-site fix already applied twice to a different harness and
+    found not to scale — see _workflow_engine_harness.py's identical
+    hardening note), the agent shim itself now supplies a real,
+    registry-backed "permitted" default for this exact label whenever the
+    test's own ``mockAgent`` does not already return the shape this label
+    expects (see ``_build_agent_shim_js`` below). A test that wants to
+    exercise the denial path can still do so by having its ``mockAgent``
+    return ``{ output: '<json>', exit_code: 0 }`` for this label explicitly —
+    that shape is treated as a deliberate override and passed through
+    unchanged.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # The E2 runtime file is the ONLY plan-feature.js consumer surface. The legacy
 # scripts/workflows/plan-feature.js was deleted during foundation cleanup.
@@ -45,6 +70,38 @@ E2_PLAN_FEATURE_JS = (
     / "workflows-js"
     / "plan-feature.js"
 )
+
+# BO-1500f-1: the label plan-feature.js's workspace-setup permission gate
+# dispatches, and the real repo config it reads to resolve it. See the
+# module docstring's "REGRESSION HARDENING" note.
+_WORKSPACE_SETUP_PERMISSION_LABEL = "resolve-workspace-setup-permission"
+_AGENT_REGISTRY_PATH = (
+    Path(__file__).resolve().parents[1] / "config" / "agent_registry.json"
+)
+
+
+def _default_workspace_permission_response_json() -> str:
+    """Return the default {output, exit_code} response as a JSON/JS literal.
+
+    Reads the REAL config/agent_registry.json from disk (not a hand-authored
+    fixture), mirroring the {output, exit_code} shape every other
+    status-checker "run this command, return JSON" dispatch in
+    plan-feature.js uses. Falls back to an empty-agents registry (which
+    plan-feature.js's own fail-closed permission logic will correctly treat
+    as "not permitted") if the real registry cannot be read or parsed — this
+    function never manufactures a false "permitted" verdict from a read
+    failure.
+    """
+    try:
+        registry = json.loads(_AGENT_REGISTRY_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Could not load default agent registry from %s: %s",
+            _AGENT_REGISTRY_PATH,
+            exc,
+        )
+        registry = {"agents": []}
+    return json.dumps({"output": json.dumps(registry), "exit_code": 0})
 
 
 class NodeScriptError(Exception):
@@ -140,18 +197,42 @@ def _run_node(script_text: str, timeout: int) -> subprocess.CompletedProcess:
 # Shim that adapts the E2 positional agent(prompt, opts) call into the legacy
 # `call` object ({agentType, label, input:{instructions}}) the per-test mocks
 # were written against, so those mocks port unchanged.
-_AGENT_SHIM_JS = """
+#
+# BO-1500f-1: also supplies a real, registry-backed default for the
+# "resolve-workspace-setup-permission" label (see module docstring) unless
+# the test's own mockAgent already returned the {output, exit_code} shape
+# that label expects — an explicit, deliberate override.
+_AGENT_SHIM_JS_TEMPLATE = """
+const __workspacePermissionDefault = __DEFAULT_WORKSPACE_PERMISSION_RESPONSE__;
 const __agentShim = async (promptOrOpts, opts) => {
   const call = {
     agentType: (opts && opts.agentType) || '',
     label: (opts && opts.label) || null,
     input: { instructions: (typeof promptOrOpts === 'string') ? promptOrOpts : '' },
   };
-  return mockAgent(call);
+  const __mockResult = await mockAgent(call);
+  const __isDeliberateOverride = (
+    __mockResult &&
+    typeof __mockResult === 'object' &&
+    typeof __mockResult.output === 'string' &&
+    Object.prototype.hasOwnProperty.call(__mockResult, 'exit_code')
+  );
+  if (call.label === 'resolve-workspace-setup-permission' && !__isDeliberateOverride) {
+    return __workspacePermissionDefault;
+  }
+  return __mockResult;
 };
 const __phase = (name, fn) => (typeof fn === 'function' ? fn() : undefined);
 const __log = () => {};
 """
+
+
+def _build_agent_shim_js() -> str:
+    """Return the agent shim JS with the default workspace-permission response inlined."""
+    return _AGENT_SHIM_JS_TEMPLATE.replace(
+        "__DEFAULT_WORKSPACE_PERMISSION_RESPONSE__",
+        _default_workspace_permission_response_json(),
+    )
 
 _INVOCATION_JS = """
 __run__(__agentShim, __phase, __log, __args)
@@ -221,7 +302,7 @@ def run_plan_feature_e2(
         "globalThis.__capturedAllCalls = [];\n",
         mock_agent_js,
         "\n",
-        _AGENT_SHIM_JS,
+        _build_agent_shim_js(),
         "const __args = " + json.dumps(args_obj) + ";\n",
         "const __run__ = async (agent, phase, log, args) => {\n",
         source,

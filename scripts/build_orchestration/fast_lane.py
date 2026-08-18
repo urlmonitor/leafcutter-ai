@@ -10,8 +10,16 @@ BUSINESS CONTEXT: BO-2400a/f series — the fast-lane build loop selects a cohes
     success). Three deterministic, idempotent gate functions and five lifecycle
     functions with no LLM calls in the critical path.
 ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
-    semantics track the scanner exactly.  verify_red_baseline and
-    verify_green_and_coverage reuse done_proof helpers and verify_done_eligible
+    semantics track the scanner exactly.  verify_red_baseline derives a
+    newly-added / pre-existing partition of the batch's covers-tagged tests
+    from git (test-function granularity against the worktree's merge-base with
+    origin/main, or an explicit ``base_ref``) and passes when at least one
+    newly-added test is classified red (BO-2400a-3 amended 2026-08-17; see
+    docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/
+    BO-2400a-3*.yaml) — it reuses done_proof's covers-tag scanner,
+    ``_TEST_DEF_RE``, and pytest-output parser so the batch-membership and
+    outcome-classification semantics never drift from the done-proof gate.
+    verify_green_and_coverage reuses done_proof helpers and verify_done_eligible
     to keep coverage semantics in sync with the done-proof gate.  claim_build_set,
     release_claim, filter_already_claimed, mark_done_built_acs, and
     check_no_stale_todo perform status-only YAML mutations (work_status field only)
@@ -25,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import subprocess
 import sys
 from pathlib import Path
 
@@ -40,6 +49,7 @@ if str(_AC_STORE_DIR) not in sys.path:
     sys.path.insert(0, str(_AC_STORE_DIR))
 
 from done_proof import (  # noqa: E402
+    _TEST_DEF_RE,
     _find_nodeid_for_test,
     _run_pytest_and_parse,
     _scan_test_root_for_covers_tags,
@@ -631,54 +641,418 @@ def _topo_order_build_set(
     return order
 
 
-def verify_red_baseline(*, ac_ids: list[str], test_root: Path) -> dict:
-    """Check that every test covering any id in *ac_ids* is currently failing.
+class _RedBaselineGitError(Exception):
+    """Raised when a git query needed to resolve the red-baseline partition fails.
 
-    Scans *test_root* for ``# covers: <id>`` tags matching any id in *ac_ids*,
-    runs the linked tests via pytest, and verifies that every such test fails.
-    A passing test before the coder runs is a green-at-baseline error: it means
-    either the production code already exists or the test is under-specified.
-    The coder must NOT be dispatched unless all_red is True.  Idempotent.
+    Carries the failing query in its message so the caller can report a
+    fail-closed ``baseline_partition_unavailable`` verdict that names what
+    could not be answered (BO-2400a-3-vii), without ever falling back to a
+    permissive default (e.g. treating every covering test as newly-added).
+    """
+
+
+_RED_OUTCOMES: frozenset[str] = frozenset({"FAILED", "XFAIL"})
+_GREEN_OUTCOMES: frozenset[str] = frozenset({"PASSED", "XPASS"})
+
+
+def _run_git_in(cwd: Path, args: list[str]) -> str:
+    """Run a read-only git subcommand with ``cwd=cwd``; raise on any failure.
+
+    Used exclusively for the read-only queries (``rev-parse``, ``merge-base``,
+    ``show``) the red-baseline gate needs to resolve its newly-added
+    partition — never ``fetch`` or any ref-mutating command, so resolving the
+    partition never advances the worktree's git state (BO-2400a-3-viii).
 
     Args:
-        ac_ids: Batch of AC ids whose covering tests must all be red.
-        test_root: Root directory to scan for ``*.py`` test files.
+        cwd: Directory to run the git subcommand in.
+        args: git subcommand and its arguments (without the leading ``git``).
+
+    Returns:
+        The subprocess's stdout text.
+
+    Raises:
+        _RedBaselineGitError: git could not be launched, timed out, or
+            exited non-zero.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise _RedBaselineGitError(f"git {' '.join(args)}: {exc}") from exc
+    if proc.returncode != 0:
+        raise _RedBaselineGitError(f"git {' '.join(args)}: {proc.stderr.strip()}")
+    return proc.stdout
+
+
+def _resolve_git_baseline_context(
+    test_root: Path, base_ref: str | None
+) -> tuple[Path, str]:
+    """Resolve the repo root and the git ref to diff newly-added tests against.
+
+    Args:
+        test_root: Directory to resolve the containing git worktree from.
+        base_ref: Caller-supplied ref to diff against, or ``None`` to derive
+            the default (``git merge-base HEAD origin/main``).
+
+    Returns:
+        ``(repo_root, resolved_ref)`` — the worktree's top-level directory and
+        the ref whose tree newly-added tests are diffed against.
+
+    Raises:
+        _RedBaselineGitError: *test_root* is not inside a git worktree, or
+            (when *base_ref* is not supplied) the merge-base with
+            ``origin/main`` cannot be resolved.  Never falls back to a
+            permissive default (BO-2400a-3-vii).
+    """
+    toplevel = _run_git_in(test_root, ["rev-parse", "--show-toplevel"]).strip()
+    repo_root = Path(toplevel).resolve()
+    resolved_ref = (
+        base_ref
+        if base_ref is not None
+        else _run_git_in(test_root, ["merge-base", "HEAD", "origin/main"]).strip()
+    )
+    return repo_root, resolved_ref
+
+
+def _read_file_at_ref(repo_root: Path, ref: str, relpath: str) -> str | None:
+    """Return the content of *relpath* at git *ref*, or None if absent there.
+
+    *ref* has already been validated by :func:`_resolve_git_baseline_context`
+    before this is called, so a non-zero exit from ``git show <ref>:<relpath>``
+    is interpreted as "the path does not exist at that ref" — the normal case
+    for a newly-added test file or function — rather than a fatal error.
+
+    Args:
+        repo_root: The worktree's top-level directory (subprocess ``cwd``).
+        ref: A git ref or commit sha already confirmed to resolve.
+        relpath: POSIX-style path of the file relative to *repo_root*.
+
+    Returns:
+        The file's content at *ref*, or ``None`` when the path does not exist
+        there.
+
+    Raises:
+        _RedBaselineGitError: git itself could not be launched or timed out.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "show", f"{ref}:{relpath}"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise _RedBaselineGitError(f"git show {ref}:{relpath}: {exc}") from exc
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def _test_names_in_source(source: str) -> set[str]:
+    """Return the set of ``def test_*`` function names declared in *source*.
+
+    Reuses done_proof's :data:`_TEST_DEF_RE` so a test function counts as
+    "present" here under exactly the same rule the covers-tag scanner uses to
+    associate a tag with its enclosing function.
+
+    Args:
+        source: Python source text (as read from a git blob).
+
+    Returns:
+        Set of test function names found via ``_TEST_DEF_RE``.
+    """
+    return {
+        match.group(1)
+        for match in (_TEST_DEF_RE.match(line) for line in source.splitlines())
+        if match is not None
+    }
+
+
+def _partition_newly_added(
+    linked_tags: list[dict],
+    repo_root: Path,
+    base_ref: str,
+) -> tuple[list[dict], list[dict]]:
+    """Split *linked_tags* into newly-added and pre-existing lists.
+
+    Classification is at test-function granularity (BO-2400a-3-iii): a tag is
+    newly-added when its file is absent at *base_ref* or its function name is
+    absent from the *base_ref* version of that file — never merely because the
+    file as a whole was modified.
+
+    Args:
+        linked_tags: Covers-tag dicts (as produced by
+            :func:`~done_proof._scan_test_root_for_covers_tags`) already
+            filtered to the batch's AC ids.
+        repo_root: The worktree's top-level directory.
+        base_ref: The git ref already resolved by
+            :func:`_resolve_git_baseline_context`.
+
+    Returns:
+        ``(newly_added_tags, preexisting_tags)`` — the same tag dicts,
+        partitioned; each retains the scan order of *linked_tags*.
+
+    Raises:
+        _RedBaselineGitError: git itself could not be launched or timed out
+            while reading a file's content at *base_ref*.
+    """
+    newly_added: list[dict] = []
+    preexisting: list[dict] = []
+    base_names_by_relpath: dict[str, set[str] | None] = {}
+
+    for tag in linked_tags:
+        relpath = Path(tag["file"]).resolve().relative_to(repo_root).as_posix()
+        if relpath not in base_names_by_relpath:
+            base_content = _read_file_at_ref(repo_root, base_ref, relpath)
+            base_names_by_relpath[relpath] = (
+                _test_names_in_source(base_content) if base_content is not None else None
+            )
+        base_names = base_names_by_relpath[relpath]
+        if base_names is None or tag["function"] not in base_names:
+            newly_added.append(tag)
+        else:
+            preexisting.append(tag)
+
+    return newly_added, preexisting
+
+
+def _classify_outcome_bucket(outcome: str) -> str:
+    """Classify a raw pytest outcome token into ``"red"``, ``"green"``, or ``"inconclusive"``.
+
+    Total over the outcome vocabulary the pytest-output parser emits (PASSED,
+    FAILED, XFAIL, XPASS, SKIPPED, ERROR); any unrecognised token is treated as
+    inconclusive rather than silently dropped (BO-2400a-3-vi).
+
+    Args:
+        outcome: Raw outcome token (e.g. ``"XFAIL"``).
+
+    Returns:
+        One of ``"red"``, ``"green"``, ``"inconclusive"``.
+    """
+    if outcome in _RED_OUTCOMES:
+        return "red"
+    if outcome in _GREEN_OUTCOMES:
+        return "green"
+    return "inconclusive"
+
+
+def _resolve_tag_outcome(tag: dict, pytest_results: dict[str, str]) -> tuple[str, str]:
+    """Return ``(nodeid, outcome)`` for *tag*, fail-closed when unresolvable.
+
+    Args:
+        tag: A covers-tag dict with ``"function"`` and ``"file"`` keys.
+        pytest_results: ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
+
+    Returns:
+        The matched pytest nodeid and its outcome; when no run result can be
+        located for the tag, a synthetic ``"<file>::<function>"`` nodeid is
+        returned paired with outcome ``"ERROR"`` so the test is reported as
+        inconclusive rather than silently omitted.
+    """
+    func_name = tag["function"]
+    file_basename = Path(tag["file"]).name
+    nodeid = _find_nodeid_for_test(func_name, file_basename, pytest_results)
+    if nodeid is None:
+        return f"{tag['file']}::{func_name}", "ERROR"
+    return nodeid, pytest_results.get(nodeid, "ERROR")
+
+
+def _build_entry(tag: dict, nodeid: str, outcome: str) -> dict:
+    """Build a ``{"nodeid", "ac_id", "outcome"}`` report entry for *tag*."""
+    return {"nodeid": nodeid, "ac_id": tag["ac_id"], "outcome": outcome}
+
+
+def _classify_newly_added(
+    newly_added_tags: list[dict],
+    pytest_results: dict[str, str],
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Classify each newly-added tag's outcome into red / green / inconclusive.
+
+    Args:
+        newly_added_tags: Covers-tag dicts classified newly-added by
+            :func:`_partition_newly_added`.
+        pytest_results: ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
+
+    Returns:
+        ``(red, green_at_baseline, inconclusive)`` — three lists of report
+        entries (BO-2400a-3-vi classification), in *newly_added_tags* order.
+    """
+    red: list[dict] = []
+    green_at_baseline: list[dict] = []
+    inconclusive: list[dict] = []
+    for tag in newly_added_tags:
+        nodeid, outcome = _resolve_tag_outcome(tag, pytest_results)
+        entry = _build_entry(tag, nodeid, outcome)
+        bucket = _classify_outcome_bucket(outcome)
+        if bucket == "red":
+            red.append(entry)
+        elif bucket == "green":
+            green_at_baseline.append(entry)
+        else:
+            inconclusive.append(entry)
+    return red, green_at_baseline, inconclusive
+
+
+def _report_preexisting(
+    preexisting_tags: list[dict],
+    pytest_results: dict[str, str],
+) -> list[dict]:
+    """Build report entries for the pre-existing partition (BO-2400a-3-iv).
+
+    Args:
+        preexisting_tags: Covers-tag dicts classified pre-existing by
+            :func:`_partition_newly_added`.
+        pytest_results: ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
+
+    Returns:
+        Report entries — excluded from the verdict but still surfaced so the
+        operator can see them.
+    """
+    return [
+        _build_entry(tag, *_resolve_tag_outcome(tag, pytest_results))
+        for tag in preexisting_tags
+    ]
+
+
+def _red_baseline_verdict(
+    *,
+    gate_passed: bool,
+    reason: str | None,
+    red: list[dict] | None = None,
+    green_at_baseline: list[dict] | None = None,
+    inconclusive: list[dict] | None = None,
+    preexisting: list[dict] | None = None,
+) -> dict:
+    """Assemble the pinned verify_red_baseline return shape.
+
+    Args:
+        gate_passed: Whether the red baseline is established.
+        reason: ``None`` when passed, else one of the fixed halt-reason tokens.
+        red: Newly-added tests classified red.  Defaults to ``[]``.
+        green_at_baseline: Newly-added tests classified green.  Defaults to
+            ``[]``.
+        inconclusive: Newly-added tests classified inconclusive.  Defaults to
+            ``[]``.
+        preexisting: Pre-existing tests, excluded from the verdict.  Defaults
+            to ``[]``.
+
+    Returns:
+        Dict with exactly the keys ``gate_passed``, ``reason``, ``red``,
+        ``green_at_baseline``, ``inconclusive``, ``preexisting``.
+    """
+    return {
+        "gate_passed": gate_passed,
+        "reason": reason,
+        "red": red or [],
+        "green_at_baseline": green_at_baseline or [],
+        "inconclusive": inconclusive or [],
+        "preexisting": preexisting or [],
+    }
+
+
+def verify_red_baseline(
+    *, ac_ids: list[str], test_root: Path, base_ref: str | None = None
+) -> dict:
+    """Check that at least one newly-added test covering *ac_ids* is red.
+
+    Scans *test_root* for ``# covers: <id>`` tags matching any id in *ac_ids*,
+    partitions the linked tests into newly-added and pre-existing using git
+    at test-function granularity (BO-2400a-3-ii, -iii; the worktree's
+    merge-base with ``origin/main``, or *base_ref* when supplied), runs them
+    via pytest, and passes when at least one newly-added test is classified
+    red (BO-2400a-3-v, amended 2026-08-17 from "every newly-added test must
+    fail").  Pre-existing tests are reported but never affect the verdict
+    (BO-2400a-3-iv).  When the git partition cannot be resolved, the gate
+    fails closed rather than falling back to a permissive default
+    (BO-2400a-3-vii).  Idempotent (BO-2400a-3-viii): resolving the partition
+    performs read-only git queries only, never a fetch or ref update.
+
+    Args:
+        ac_ids: Batch of AC ids whose covering tests establish the baseline.
+        test_root: Root directory to scan for ``*.py`` test files; must be
+            inside a git worktree.
+        base_ref: Optional explicit git ref to diff newly-added tests
+            against.  Defaults to ``None``, which derives
+            ``git merge-base HEAD origin/main`` from *test_root*.
 
     Returns:
         Dict with keys:
 
-        ``all_red`` (bool)
-            True iff every test linked to any id in *ac_ids* fails.
+        ``gate_passed`` (bool)
+            True iff at least one newly-added covering test is red.
 
-        ``offender`` (str | None)
-            pytest nodeid of the first test that passed; None when all_red.
+        ``reason`` (str | None)
+            ``None`` when ``gate_passed`` is True; otherwise exactly one of
+            ``"no_new_covering_tests"``, ``"all_new_tests_green_at_baseline"``,
+            ``"no_red_outcome_among_new_tests"``, or
+            ``"baseline_partition_unavailable"`` (BO-2400a-3-i, -vii).
 
-        ``offender_ac_id`` (str | None)
-            The AC id from the covers tag of the offending test; None when
-            all_red.
+        ``red``, ``green_at_baseline``, ``inconclusive`` (list[dict])
+            Newly-added tests classified per BO-2400a-3-vi, each entry
+            ``{"nodeid": str, "ac_id": str, "outcome": str}``.
+
+        ``preexisting`` (list[dict])
+            Pre-existing tests in the same entry shape — reported but
+            excluded from the verdict (BO-2400a-3-iv).
     """
-    all_tags = _scan_test_root_for_covers_tags(test_root)
     batch_set = set(ac_ids)
+    all_tags = _scan_test_root_for_covers_tags(test_root)
     linked_tags = [t for t in all_tags if t["ac_id"] in batch_set]
 
-    if not linked_tags:
-        return {"all_red": True, "offender": None, "offender_ac_id": None}
+    try:
+        repo_root, resolved_base_ref = _resolve_git_baseline_context(test_root, base_ref)
+        newly_added_tags, preexisting_tags = _partition_newly_added(
+            linked_tags, repo_root, resolved_base_ref
+        )
+    except _RedBaselineGitError as exc:
+        _LOG.warning("verify_red_baseline: baseline partition unavailable: %s", exc)
+        return _red_baseline_verdict(
+            gate_passed=False, reason="baseline_partition_unavailable"
+        )
 
-    test_files = list({t["file"] for t in linked_tags})
+    test_files = list({t["file"] for t in newly_added_tags + preexisting_tags})
     pytest_results = _run_pytest_and_parse(test_files)
 
-    for tag in linked_tags:
-        func_name: str = tag["function"]
-        file_basename: str = Path(tag["file"]).name
-        nodeid = _find_nodeid_for_test(func_name, file_basename, pytest_results)
-        if nodeid is not None and pytest_results.get(nodeid) == "PASSED":
-            return {
-                "all_red": False,
-                "offender": nodeid,
-                "offender_ac_id": tag["ac_id"],
-            }
+    red, green_at_baseline, inconclusive = _classify_newly_added(
+        newly_added_tags, pytest_results
+    )
+    preexisting = _report_preexisting(preexisting_tags, pytest_results)
 
-    return {"all_red": True, "offender": None, "offender_ac_id": None}
+    if not newly_added_tags:
+        return _red_baseline_verdict(
+            gate_passed=False,
+            reason="no_new_covering_tests",
+            preexisting=preexisting,
+        )
+
+    if red:
+        return _red_baseline_verdict(
+            gate_passed=True,
+            reason=None,
+            red=red,
+            green_at_baseline=green_at_baseline,
+            inconclusive=inconclusive,
+            preexisting=preexisting,
+        )
+
+    reason = (
+        "all_new_tests_green_at_baseline"
+        if not inconclusive
+        else "no_red_outcome_among_new_tests"
+    )
+    return _red_baseline_verdict(
+        gate_passed=False,
+        reason=reason,
+        green_at_baseline=green_at_baseline,
+        inconclusive=inconclusive,
+        preexisting=preexisting,
+    )
 
 
 def verify_green_and_coverage(
@@ -822,15 +1196,28 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     # --- verify_red_baseline ---
     vrb = subparsers.add_parser(
         "verify_red_baseline",
-        help="Verify that all tests covering ac-ids are currently failing (red).",
+        help=(
+            "Verify that at least one newly-added (git-derived) test covering "
+            "ac-ids is currently red."
+        ),
     )
     vrb.add_argument(
         "--ac-ids",
         required=True,
         metavar="IDS",
-        help="Comma-separated AC ids whose covering tests must all be red.",
+        help="Comma-separated AC ids whose newly-added covering tests establish the baseline.",
     )
     vrb.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
+    vrb.add_argument(
+        "--base-ref",
+        required=False,
+        default=None,
+        metavar="REF",
+        help=(
+            "Git ref to diff newly-added tests against. Defaults to "
+            "'git merge-base HEAD origin/main' resolved from --test-root."
+        ),
+    )
 
     # --- verify_green_and_coverage ---
     vgc = subparsers.add_parser(
@@ -934,8 +1321,9 @@ def main(argv: list[str] | None = None) -> int:
 
     * ``select_batch``: always 0 (an empty list is a valid result).
     * ``select_connected``: always 0; 1 when the AC id is not found.
-    * ``verify_red_baseline``: 0 when all_red is True (gate passes); 1
-      otherwise (at least one test already passes — coder must not run).
+    * ``verify_red_baseline``: 0 when gate_passed is True (at least one
+      newly-added covering test is red); 1 otherwise — including the
+      baseline_partition_unavailable fail-closed case.
     * ``verify_green_and_coverage``: 0 when both green and coverage_ok are
       True; 1 when either condition fails.
     * ``claim``: 0 when ACs are claimed successfully; 1 when target_refused
@@ -973,19 +1361,23 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.subcommand == "verify_red_baseline":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
-        result = verify_red_baseline(ac_ids=ac_ids, test_root=Path(args.test_root))
-        print(json.dumps(result))
-        return 0 if result["all_red"] else 1
+        red_verdict = verify_red_baseline(
+            ac_ids=ac_ids,
+            test_root=Path(args.test_root),
+            base_ref=args.base_ref,
+        )
+        print(json.dumps(red_verdict))
+        return 0 if red_verdict["gate_passed"] else 1
 
     if args.subcommand == "verify_green_and_coverage":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
-        result = verify_green_and_coverage(
+        green_verdict = verify_green_and_coverage(
             ac_ids=ac_ids,
             test_root=Path(args.test_root),
             ac_root=Path(args.ac_root),
         )
-        print(json.dumps(result))
-        return 0 if (result["green"] and result["coverage_ok"]) else 1
+        print(json.dumps(green_verdict))
+        return 0 if (green_verdict["green"] and green_verdict["coverage_ok"]) else 1
 
     if args.subcommand == "claim":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]

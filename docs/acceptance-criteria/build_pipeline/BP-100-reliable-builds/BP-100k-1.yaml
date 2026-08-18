@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -55,16 +55,43 @@ it_requirements:
     - "Coverage must be derived, not enumerated by hand: adding a new template family to the build must extend manifest coverage without a separate edit, or the omission must fail the build."
     - "Verify behaviorally — run the build, then execute the template-drift gate against a real staged template outside the agent-template family and assert the gate emits a match/drift verdict rather than an absent-from-manifest notice; do not grep the manifest writer's source."
     - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+    - "Bundle A1 (shared reviewable diff with BP-100k-2): both ACs edit scripts/build_helpers.py's write_build_manifest(). They must land as one diff. No other ticket in this epic may edit scripts/build_helpers.py concurrently."
+test_spec:
+  - name: test_manifest_records_a_fingerprint_for_a_non_agent_template_family
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "After the build runs over an unmodified checkout, the written build manifest yields a recorded fingerprint for a commit-guardian hook template (a family other than templates/agents/*.md), looked up by its repo-relative template path."
+  - name: test_drift_gate_emits_match_then_drift_for_that_template
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Executing check_build_drift.py as a process against that staged non-agent template yields a match verdict on an unmodified copy and a drift verdict once the staged copy is mutated — the gate is run, not read."
+  - name: test_gate_never_reports_a_managed_template_as_absent_from_manifest
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The executed gate's output for that staged template contains no absent-from-manifest notice; the not-in-manifest branch is not taken for any template family the build copies."
+  - name: test_manifest_coverage_equals_the_build_copy_set
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The manifest's recorded template key set, after a real build, equals the set of template paths the build actually copies into the shipped surface — count-agnostic, so a newly added template family cannot silently escape coverage."
+test_rationale: "A direct-import unit test over the manifest writer would stay green on a writer that records fingerprints no gate consults. Every descriptor here runs the real build and then executes the drift gate as a process, so a recorded fingerprint is proved by the verdict it produces rather than by its presence in a JSON file."
 delivers_to:
   agent: python-coder
   contract: "A build manifest whose template-fingerprint section covers every managed template artifact, consumed by the template-drift gate to produce a match/drift verdict per inspected artifact."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "it-po-technical-enrichment"
+    entry: "Added test_spec (4 behavioral descriptors, one per Then-clause: manifest yields a fingerprint for a non-agent template family; the executed gate emits match then drift for it; the gate never reports it as absent from the manifest; the recorded key set equals the build's real copy set) and test_rationale. Added one it_requirements constraint recording the Bundle A1 shared-diff/serialization rule with BP-100k-2 over scripts/build_helpers.py. Every descriptor runs the build and then executes the gate as a process — no grep over the writer's source. criteria, assigned_agent (python-coder), estimated_complexity (M), reference_file_path, delivers_to, expects_from, doc_links, readiness and work_status left unchanged."
+    by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/07_bp100k12_manifest_records_what_the_gates_compare.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-13. Found only after GE-118b made the drift hooks actually run (they had been silently no-opping on an unresolvable manifest path). write_build_manifest() in scripts/build_helpers.py populates its Direction-A template_hashes section from templates/agents/*.md alone, so check_build_drift.py emits 'INFO — <path> not in manifest (new template — run build.py before committing built outputs)' for every other template it inspects, e.g. every templates/scripts/commit_guardian/*.py. Those templates are therefore never drift-checked. Distinct from GE-118b (manifest path resolution) and from BP-100b-6 (category-level parity across the four infrastructure layers, which does not assert per-artifact manifest records)."

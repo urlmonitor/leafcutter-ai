@@ -1,0 +1,64 @@
+id: ACS-200h
+components:
+  - ac_store
+title: "The whole requirements store is re-checked when changes land on the protected branch"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the continuous-integration configuration for the repository,
+  When a change lands on the protected main branch,
+  Then the acceptance-criteria check runs over every record in the requirements
+    store — not only over the records the landing change touched — applying the
+    same structural and schema rules it applies before merge,
+  And it reports a failing result when any record in the store breaks a rule,
+  And it reports a passing result only when the whole store satisfies every
+    rule,
+  And a problem that no single pull request introduced is caught here — for
+    example two pull requests that are each individually valid but that
+    together push one parent over its child limit, or that together close a
+    dependency cycle, or where one retires a record the other has just started
+    depending on.
+depends_on:
+  - ACS-200g
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/PROJECT_CONTEXT.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-200g
+  contract: "The same rule set and the same check, run over the whole store instead of over the changed records."
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The backstop that makes ACS-200g-2's change-scoped exemption safe. Several of
+  the store's rules are cross-record — the per-parent child limit, dependency
+  acyclicity, and the parent/child back-link all depend on records a single
+  pull request may never touch — so a purely change-scoped verdict can be green
+  on both sides of a merge and wrong after it. Running the full rule set on the
+  protected branch converts that class from "never detected" to "detected at
+  the merge that caused it".
+  Deliberately NOT specified here: whether the protected-branch run blocks
+  anything (nothing is left to block once the change has landed) versus raising
+  a visible failure. The observable outcome this AC owns is the failing result;
+  what is done with it is a follow-on decision. Flagged for the IT PO / user.

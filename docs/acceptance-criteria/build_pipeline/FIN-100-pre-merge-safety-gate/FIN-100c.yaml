@@ -7,6 +7,15 @@ title: "Test failures are triaged into regression, pre-existing, or flaky"
 component: finalize
 level: L1
 status: active
+# Temporary waiver, 2026-08-17. FIN-100c has carried 14 L2 children since before
+# the 2026-08-17 reconciliation; the default L1 cap is 5, so check-ac-limits
+# (ACS-100c-1) blocks ANY commit that stages one of them — including a
+# work_status-only reconciliation of a single child that adds no new child.
+# Scoped to this parent, and 14 is the current count, so a 15th child still blocks.
+# NOT a resolution. This L1 is genuinely overcrowded (the null-baseline recovery
+# family -4..-15 grew inside it) and wants ac-tree-split Pattern C. Remove this
+# line when that lands.
+child_limit_override: 14
 criteria: |
   Every test failure after the merge-main step is classified so that the halt
   decision is based on actual regressions, not noise.

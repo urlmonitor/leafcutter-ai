@@ -1,0 +1,135 @@
+id: BO-2900g-2-i
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "Work authored after the sweep carries the declaration too, so the hole does not reopen tomorrow"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every existing work record whose stated behaviour asserts a durable,
+      observable change already carries the declaration, because a one-off pass
+      has just been run across the whole store,
+  When a new leaf piece of work asserting a durable, observable change is
+    authored afterwards, by an author who was never told the declaration exists,
+  Then that new record carries the declaration,
+    And the number of records that assert a durable change without the
+      declaration is zero again, with no second pass having been run,
+    And the same holds for a record authored through a different authoring route
+      than the one used for the first,
+    And the same holds when the one-off pass is not run at all, so the guarantee
+      does not depend on the sweep having happened.
+depends_on:
+  - BO-2900g-2
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The 'authenticity gap' catalogue entry for EPIC-ComputedQualityGates FP-1 layer 2 — the mechanism was wired, the store carried the data on zero records, and every test fed hand-built inputs that already contained it."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The absence side of the same data-driven rule: no declaration means no forced routing, and the exemption derives from a data property rather than a name."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The proven two-run test shape this AC copies: assert a property across two runs that differ in exactly the suspected cause, rather than inspecting one run's output."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/commit_guardian/_ac_schema_validators.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/commit_guardian/ unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: boolean
+    description: "The same derived declares_side_effect value as BO-2900g-2, asserted as a property that holds for a record authored AFTER any sweep and with the sweep never run at all — the sweep must not appear in the causal chain."
+  constraints:
+    - "The guarantee must hold with the one-off sweep DISABLED entirely. An implementation that satisfies the first three clauses by re-running the sweep on every authoring pass fails the fourth, and must: re-deriving the whole store on every author is a different guarantee and does not survive the store growing."
+    - "The property must be asserted across two runs differing in exactly the suspected cause (sweep-run vs sweep-never-run), not by inspecting one run's output. Same shape as BO-2900f-1's entry-count invariance across an all-enabled and an all-disabled run."
+    - "The new record must be produced by a path that has no knowledge of the field: the test must not pre-seed declares_side_effect anywhere in its input, and must not call the derivation directly on the record it then inspects."
+    - "The guarantee must hold across at least two distinct routes by which a record enters the store, and adding a third route must not require that route to be modified — the same route-agnostic constraint as BO-2900g-1."
+    - "Per-record derivation cost must stay bounded: authoring or validating one record must not read more than that record plus its schema. A whole-store re-derivation on every authoring pass is explicitly disallowed by the fourth criterion and is also the performance failure mode."
+delivers_to: null
+expects_from:
+  - ac_id: BO-2900g-2
+    contract: "A derivation function over a single AC record's criteria text that returns the declaration value, invoked at the enforcement point chosen and recorded in BO-2900g-2's sign-off, and independent of any store-wide pass."
+test_spec:
+  - name: test_bo_2900g_2_i_record_authored_after_the_sweep_carries_the_declaration
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the sweep over a temp store, then add a new durable-effect record through the ordinary authoring path with no mention of the field anywhere in the input, and assert the count of durable-effect records lacking the declaration is zero again with no second sweep run."
+  - name: test_bo_2900g_2_i_guarantee_holds_with_the_sweep_never_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The discriminating two-run test: identical inputs, one run with the sweep executed and one with the sweep removed from the pipeline entirely. The post-authoring state of the new record must be identical in both, which no sweep-dependent implementation can satisfy."
+  - name: test_bo_2900g_2_i_second_authoring_route_inherits_the_derivation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: author the record through a second real route — `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ac_schema.py <new AC yaml>` as a subprocess (the pre-commit path), rather than the route used by the first case — and assert the same outcome without that route having been modified."
+test_rationale: |
+  The parent's property is invisible in any single record: a record set by a sweep three
+  weeks ago and a record derived at authoring time are byte-identical. So every test that
+  inspects one record passes on the sweep-only implementation. The two discriminating
+  observations are (a) a SECOND record authored after the sweep by an author with no
+  knowledge of the field, and (b) the same run with the sweep removed. A direct unit test
+  of the derivation function proves neither.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, complexity, it_requirements (package-surface object
+    form; policy constraints under `constraints`), test_spec (criterion/seam/reachability),
+    expects_from and declares_side_effect. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - schema
+risk_surface: contract_boundary
+notes: |
+  This L3 exists because the parent AC's central property — DERIVED, not
+  backfilled — is invisible in any single record. A record that carries the
+  declaration looks identical whether it was derived at authoring time or set by
+  a sweep three weeks ago, so every test that inspects one record passes on the
+  sweep-only implementation. The discriminating observation is a SECOND record
+  authored after the sweep, by an author with no knowledge of the field.
+
+  THE LAST CLAUSE IS THE ONE THAT CANNOT BE FAKED. Requiring the guarantee to
+  hold when the sweep was never run removes the sweep from the causal chain
+  entirely. An implementation that satisfies the first three clauses by running
+  the sweep on every authoring pass fails this one, and it should: re-deriving
+  the whole store on every author is not the same guarantee and does not survive
+  the store growing.
+
+  This is deliberately the same test shape as BO-2900f-1's entry-count
+  invariance across an all-enabled and an all-disabled run: assert a property
+  across two runs that differ in exactly the suspected cause, rather than
+  inspecting one run's output.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). it_requirements uses the package-surface
+  OBJECT form mandated by config/ac_store_schema.json's root if/then for
+  python-coder + component: build-orchestration; the policy constraints ride the
+  schema-permitted additional `constraints` key.

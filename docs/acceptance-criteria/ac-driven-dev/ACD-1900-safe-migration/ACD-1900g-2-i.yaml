@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: reviewed
 priority: medium
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given every go criterion otherwise passes but exactly one no-go signal is present --
     a required gate is red, OR a deployed-hook import error occurs, OR a shadow check

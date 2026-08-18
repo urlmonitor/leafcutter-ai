@@ -1,10 +1,14 @@
 ---
 description: 'AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 11.5,
-  before commit at 12). Verifies AC YAML store fields (work_status, implemented_by,
-  covered_by) are accurate and up-to-date before any commit is made. When verification
-  fails but diff evidence exists, auto-fixes the YAML store fields (append-only,
-  idempotent). Returns status: ok if all ACs pass or ac_traceability is absent;
-  status: blocker with per-AC details if any AC fails after auto-fix attempt.
+  before commit at 12). Resolves AC coverage via the shared ac_coverage_resolver
+  module (accepts both the two-key ac_traceability form the generator emits and
+  the legacy l2/l3/ac_path list form), then verifies AC YAML store fields
+  (work_status, implemented_by, covered_by) are accurate and up-to-date before
+  any commit is made. When verification fails but diff evidence exists, auto-fixes
+  the YAML store fields (append-only, idempotent). Returns status: ok only when at
+  least one AC was resolved and every resolved AC passes, or when ac_traceability
+  is absent entirely; status: blocker with per-AC details if any AC fails after
+  auto-fix attempt, or if a present ac_traceability block resolves to zero ACs.
   Use when: ticket-supervisor dispatches at priority 11.7 for any ticket that
   has ac_traceability frontmatter referencing L2/L3 AC YAML files. Skips silently
   for L0/L1 ACs (composite — fulfillment derived from children).
@@ -70,7 +74,7 @@ store files, and produce a verdict.
 
 ---
 
-## Step 1 — Check ac_traceability frontmatter
+## Step 1 — Resolve AC coverage via the shared resolver
 
 Read the ticket file at `ticket_path`. Locate the `ac_traceability:` key in
 the YAML frontmatter.
@@ -81,16 +85,52 @@ If `ac_traceability:` is **absent** from the frontmatter:
   ac_traceability absent from ticket frontmatter — no AC store fields to verify.
   ```
 - No YAML files are read or modified. Stop here.
+- This carve-out is scoped to the ABSENT-block case only (ADR-026 rule 5). A
+  ticket whose `ac_traceability:` key is **present** — in ANY shape, even one
+  this gate cannot interpret — does NOT qualify for this skip. Continue below.
 
-If `ac_traceability:` is present, extract:
-- `l2:` — list of L2 AC IDs (e.g. `[BO-201, BO-202]`)
-- `l3:` — list of L3 AC IDs (may be absent or empty)
-- `ac_path:` — base path for AC YAML files (e.g. `docs/acceptance-criteria/build_pipeline/`)
+If `ac_traceability:` is **present**, do NOT extract `l2`/`l3`/`ac_path`
+yourself. Instead, run the shared coverage resolver:
 
-Build the working list of ACs to check: combine `l2` and `l3` (if present).
-Skip any AC whose prefix indicates L0 or L1 (composite — fulfillment is derived
-from children, not directly verified). Level is determined by the AC YAML file's
-`level` field; if the file is absent, treat as L2/L3 (check it).
+```bash
+python3 {{config.output_root}}/scripts/ac_store/ac_coverage_resolver.py --ticket <ticket_path>
+```
+
+This prints a JSON verdict to stdout, and its own exit code mirrors `ok`:
+
+```json
+{
+  "ok": false,
+  "verified_count": 1,
+  "resolved_acs": [
+    {"ac_id": "<AC-ID>", "ac_yaml_path": "<abs path>", "resolved_via": "traceability_block"}
+  ],
+  "block_keys_found": ["id", "path"],
+  "block_interpretable": true,
+  "failures": [{"ac_id": "<AC-ID>", "field": "work_status"}],
+  "message": "..."
+}
+```
+
+The resolver accepts BOTH the two-key form (`{id, path}` — what the generator
+actually emits on every ticket it produces) and the legacy list form
+(`{l2, l3, ac_path}` — BO-201, still fully supported). It resolves block-first,
+then falls back to the ticket's `source_ac` field only when the block itself
+yields nothing, and it never silently rescues an unrecognised block: `message`
+still names any unrecognised keys it found in `block_keys_found` even when
+`source_ac` went on to resolve something.
+
+If `block_interpretable` is `false` AND `resolved_acs` is empty, treat this as
+its own **blocker** condition (see Step 5) — do NOT fall through to the
+absent-block skip message above. A present-but-uninterpretable block is never
+reported as "no AC store fields to verify".
+
+Build the working list of ACs to check from `resolved_acs` (each entry already
+carries its own `ac_yaml_path` — never reconstruct one from a base path
+yourself). Skip any AC whose `level` is `L0` or `L1` (composite — fulfillment
+is derived from children, not directly verified) per Step 2b below. Level is
+determined by the AC YAML file's `level` field; if the file is absent, treat
+as L2/L3 (check it).
 
 ---
 
@@ -100,9 +140,11 @@ For each AC ID in the working list:
 
 ### 2a. Load the YAML file
 
-Run:
+Use the `ac_yaml_path` already given for this AC by the resolver's
+`resolved_acs` entry (Step 1) — do not reconstruct the path yourself. Confirm
+it exists:
 ```bash
-ls <ac_path><AC-ID>.yaml
+ls <ac_yaml_path>
 ```
 
 If the file does not exist:
@@ -225,9 +267,17 @@ Classify each AC as:
 
 ## Step 5 — Emit verdict
 
-### All passed → ok
+**THE LOAD-BEARING PRECONDITION: an `ok` verdict requires `len(resolved_acs) >= 1`.**
+An empty resolved-AC list can NEVER be signed off `ok` — not even when the
+working list is vacuously empty. "Nothing to check" is a **blocker**, never a
+pass, for any ticket whose `ac_traceability:` key is present. (The only
+`ok`-on-nothing-checked path in this whole gate is the ABSENT-block skip in
+Step 1, which returns before this step is ever reached.)
 
-If every AC in the working list is `passed` or `skipped`:
+### All passed, and at least one AC was resolved → ok
+
+If `resolved_acs` is non-empty AND every AC in the working list is `passed`
+or `skipped`:
 
 Sign off `(status: ok)`:
 ```
@@ -235,9 +285,27 @@ All N L2/L3 ACs verified. work_status, implemented_by, and covered_by fields
 are accurate. <M auto-fixes applied.> Commit phase may proceed.
 ```
 
+### Zero ACs resolved → blocker (uninterpretable traceability block)
+
+If `resolved_acs` is empty (the traceability block was present but yielded no
+resolvable AC in any accepted form, and the `source_ac` fallback also failed):
+
+Sign off `(status: blocker)`:
+```
+Traceability block uninterpretable: found keys <block_keys_found> on this
+ticket's ac_traceability. Unable to resolve any AC to verify — neither the
+block (two-key id/path form, nor the l2/l3/ac_path list form) nor the
+source_ac fallback named a resolvable AC.
+Suggested remediation: correct the ticket's ac_traceability block to the
+two-key {id, path} form, or the list {l2, l3, ac_path} form.
+```
+Do NOT report this as "no AC store fields to verify" — that message is
+reserved exclusively for the ABSENT-block case in Step 1.
+
 ### Any blocker → blocker
 
-If any AC is still in `blocker` state after auto-fix:
+If `resolved_acs` is non-empty but any AC in it is still in `blocker` state
+after auto-fix:
 
 Sign off `(status: blocker)`:
 ```
@@ -305,10 +373,50 @@ Do NOT attempt to create AC YAML files — only read and edit existing ones.
   YAML file without running `check_ac_schema.py` (or logging a warning if the
   script is absent).
 
+## Machine-Parsed Dispatch Output Contract
+
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
+
+  ```json
+  {
+    "status": "ok",
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
+
 <!--
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-18 [python-coder]: Step 1 now calls the shared
+  scripts/ac_store/ac_coverage_resolver.py CLI instead of extracting
+  l2/l3/ac_path itself, so it resolves the two-key {id, path} form the
+  generator actually emits (previously the gate's working list was ALWAYS
+  empty on a generator-produced ticket). Step 5's ok condition now requires
+  len(resolved_acs) >= 1 -- an empty resolved-AC list is a blocker, never a
+  vacuous pass, for any ticket whose ac_traceability key is present. The
+  ABSENT-block skip-ok path in Step 1 is unchanged (ADR-026 rule 5).
+  (#ACD-1900b-5-i)
+- 2026-08-17 [general-purpose]: Added the ## Machine-Parsed Dispatch Output Contract
+  section. ac-fulfillment-gate was added to the build-ticket.js / build-feature.js
+  phaseOrder arrays at its registry priority 11.7 (previously it was absent, so
+  getPriority() sorted it after commit and pull-request). Being a phaseOrder
+  member means it is now dispatched with PHASE_RESULT_SCHEMA and its reply is
+  JSON-parsed, which the BP-300e-6 machine-parsed-producer guard requires this
+  section for.
 - 2026-06-05 [TICKET-20260605-ACFulfillmentGate]: Created ac-fulfillment-gate
   agent template. Complements ac-validator (priority 11.5) by verifying the AC
   YAML store fields (work_status, implemented_by, covered_by) at priority 11.7.

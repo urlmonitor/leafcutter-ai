@@ -1,0 +1,62 @@
+id: BO-2000e-2-ii
+components:
+  - build_orchestration
+title: "The coder is dispatched on resume when an earlier drive's tests are still on disk"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a code ticket whose Test Requirements section is absent,
+    and no test-writer phase is scheduled in this drive because an earlier drive already
+    signed test-writing off,
+    and the test files that earlier drive wrote for the ticket are still present on disk,
+  When the supervisor reaches the point where it would spawn the coder phase,
+  Then it spawns the coder,
+  And the ticket is not held back for missing tests,
+  So a resumed drive is not deadlocked by evidence only the first drive could have supplied.
+depends_on:
+  - BO-2000e-2
+doc_links:
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "2 -- the pre-coder gate in build-ticket.js and its twin in build-feature.js, which must stay identical"
+  required_skills:
+    - python-coder
+    - test-writer
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_test_requirements_guard.py"
+  notes: |
+    Once test-writing is signed off it leaves the set of phases still needed, so it can
+    never re-supply in-drive evidence; without a route that reads tests already on disk
+    a re-run of the same ticket deadlocks permanently. Evidence from an earlier drive
+    counts only when each recorded test file is confirmed present on disk at the time
+    the gate runs.
+    Test coverage: drive a code ticket with no Test Requirements and no scheduled
+    test-writer phase, with previously written test files present, and assert the coder
+    phase IS dispatched -- behaviorally, by recording which phase agents the workflow
+    actually dispatched.
+delivers_to: null
+expects_from:
+  ac_id: BO-2000e-2
+  contract: "The pre-coder gate whose previously-written-tests satisfaction route this scenario exercises"
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/prompt_assembly/test_test_requirements_guard.py
+implemented_by: []

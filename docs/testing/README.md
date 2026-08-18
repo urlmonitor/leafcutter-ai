@@ -3,13 +3,14 @@ title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-06-04
+last_updated: 2026-08-14
 components:
 - infrastructure
 related_docs:
 - docs/agents/coding/test-writer.md
 - docs/agents/coding/test-runner.md
-- leafcutter/config/skills_config.default.json
+- config/skills_config.default.json
+- docs/testing/test-angles.md
 description: Overview of Portable Testing Conventions.
 ---
 # Portable Testing Conventions
@@ -318,6 +319,7 @@ test files as part of its deliverable.
 
 ## Cross-Links
 
+- [docs/testing/test-angles.md](test-angles.md) — the test-angle taxonomy (`criterion` / `reachability` / `seam` / `real_artifact` / `deployed`, plus conditional `boundary` / `failure`): which angles an AC's red baseline must cover, and the observed incidents behind each
 - [docs/agents/coding/test-writer.md](../agents/coding/test-writer.md) — execution-phase test authoring agent
 - [docs/agents/coding/test-runner.md](../agents/coding/test-runner.md) — test execution agent
 - [leafcutter/config/skills_config.default.json](../../config/skills_config.default.json) — default `testing_context` values

@@ -1,0 +1,129 @@
+id: TQ-400d-3
+components:
+  - testing_quality
+  - ac_store
+title: "A record only leaves the pile with a decision recorded against it"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record in the unproven-finished population with no decision recorded
+    against it,
+  When an attempt is made to clear it from the pile without recording one,
+  Then the record is not cleared,
+  And the attempt is reported as refused, naming the record and the missing
+    decision,
+  And the record still appears in the next cycle's report as awaiting a decision,
+  And a record for which one of the fixed decisions IS recorded does leave the
+    pile in that same cycle, showing the refusal is about the missing decision and
+    not a blanket refusal to clear anything.
+depends_on:
+  - TQ-400d
+  - TQ-400d-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The must_block modifier, verbatim: feed known-bad input through the SAME entry point a valid operation uses and assert it blocks. A gate that cannot block is inert, and a positive-path test alone cannot tell the difference."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The nearest existing must-block precedent in this component — a gate that returns violations and drives a non-zero exit through main(). Follow its refusal shape (named record + specific reason) rather than inventing a new one."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The record identity a refusal must name, and where per-record state is legitimately written. Read before choosing how a clear attempt is expressed."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ONE ENTRY POINT FOR CLEARING, AND THE REFUSAL LIVES IN IT. The reasonless clear attempt and the valid clear must traverse the same production path; a separate validator exercised only from a unit test leaves the real path unguarded. This is the BO-1700 fail-open shape and the FIN-100h else-branch shape both, and both shipped."
+  - "FAIL CLOSED. Refusal is the default whenever a decision cannot be POSITIVELY CONFIRMED as one of the three fixed values. An unreadable, malformed, empty, or unrecognised decision must refuse, never clear. An implementation that clears when it cannot tell is the exact defect that lets the 259-record pile be emptied in one gesture."
+  - "THE REFUSAL MUST NAME THE RECORD AND SAY THE DECISION IS MISSING. A generic 'refused' is unactionable at a pile of this size, and an unnamed refusal cannot be distinguished from an unrelated failure."
+  - "THE REFUSAL MUST BE VISIBLE OUTSIDE THE PROCESS — a non-zero signal or an explicit refused status in the payload, not a logged warning followed by a success return. A gate whose refusal is only a log line is inert to every caller."
+  - "REFUSAL MUST NOT BE BLANKET. The paired positive path — a record carrying one of the three decisions leaves the pile in the same cycle — is part of this AC, not a separate concern. A refuse-everything implementation satisfies the negative control alone and makes the pile impossible to work, which fails TQ-400d-2 by making the remaining count permanently flat."
+  - "A REFUSED RECORD MUST PERSIST INTO THE NEXT CYCLE AS AWAITING A DECISION. The refusal must leave no residue that would let a second attempt succeed, and must not mark the record as touched, seen, or attempted in a way that any consumer treats as progress."
+delivers_to:
+  - agent: python-coder
+    contract: "A clear-attempt outcome per record: {ac_id, cleared: bool, refusal_reason: str | null}, with refusal surfaced outside the process (non-zero signal or explicit refused status). Consumed by TQ-400d-2, whose remaining-count arithmetic must count a refused record as still awaiting a decision."
+expects_from:
+  ac_id: TQ-400d-1
+  contract: >-
+    The triage entries and the closed decision set (prove | redo | retire |
+    not_yet_decided). The refusal predicate is 'the decision is not positively
+    one of the three fixed values', so the closedness of that set is what makes
+    this gate decidable.
+test_spec:
+  - name: test_tq_400d_3_clear_without_a_decision_is_refused_through_the_real_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "MUST_BLOCK NEGATIVE CONTROL. Feed a clear attempt with no recorded decision through the SAME production entry point a valid clear uses — subprocess, real argv — and assert it is refused with a non-zero signal (or explicit refused status in the payload) naming the record and the missing decision, and that the record is still in the pile afterwards. A validator called directly from the test leaves the production path unguarded, which is the BO-1700 fail-open shape."
+  - name: test_tq_400d_3_a_recorded_decision_does_clear_the_record_in_the_same_cycle
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "PAIRED POSITIVE, SAME RUN. In the same cycle as the refused attempt, a record carrying one of the three fixed decisions leaves the pile. Both outcomes must be observed together — a refuse-everything implementation passes the negative control alone and makes the pile unworkable."
+  - name: test_tq_400d_3_refused_record_reappears_next_cycle_as_awaiting_a_decision
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER, ACROSS CYCLES. After a refused attempt, run the next cycle and assert the record appears in that cycle's report as awaiting a decision — and that TQ-400d-2's remaining count still includes it. A refusal that leaves residue letting a retry succeed, or that marks the record as touched in a way a consumer reads as progress, fails here while passing the refusal test."
+test_rationale: |
+  A gate has exactly one interesting property — can it actually block — and that property is
+  invisible to every positive-path test. It is also invisible to a test that calls the
+  validator directly: BO-1700's gate was fail-open and FIN-100h's final else was the success
+  path, and both shipped green because nothing fed known-bad input through the production
+  entry point. Hence the negative control runs as a subprocess through the real path. The
+  paired positive rides in the same run because refuse-everything is a passing implementation
+  of the negative control alone, and the cross-cycle entry exists because a refusal that
+  leaves residue is a refusal that only works once.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements make the must_block
+    obligations explicit — one entry point, fail closed on any non-positively- confirmed
+    decision, refusal visible outside the process, refusal not blanket, and no residue
+    that would let a retry succeed. test_spec: reachability (must_block negative control
+    through the real path) / criterion (paired positive in the same run) / seam (refused
+    record persists into the next cycle). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by:
+  - TQ-400d-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The must_block modifier from docs/testing/test-angles.md applied to the triage
+  pile: known-bad input (a clear attempt with no decision) fed through the SAME
+  entry point that a valid clear uses, required to be refused. A gate that cannot
+  block is inert, and the positive path alone cannot tell the difference.
+
+  This is the mechanism that makes "never grandfathered into silence" real. Without
+  it the 259-record pile can be emptied in one gesture and the entire TQ-400 tree
+  reduces to theatre.
+
+  The paired positive clause is essential: a "refuse everything" implementation
+  would satisfy the negative control alone while making the pile impossible to
+  work. Both outcomes must be observed in one cycle.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Two failure shapes added to it_requirements
+  that the criteria imply but do not name. First, refusal must be visible OUTSIDE
+  the process: a gate whose refusal is only a logged warning followed by a success
+  return is inert to every caller, and this repo has shipped that exact shape
+  (BO-1700 fail-open; FIN-100h's final else being the success path). Second, a
+  refused attempt must leave no residue — a 'seen' or 'attempted' marker that lets
+  a second attempt succeed converts the gate into a speed bump.

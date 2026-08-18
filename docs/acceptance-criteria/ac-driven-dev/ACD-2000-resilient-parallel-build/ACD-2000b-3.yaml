@@ -1,0 +1,168 @@
+id: ACD-2000b-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement abandoned by a vanished effort becomes available again without that effort's help"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement taken by an effort that then vanished without handing it
+    back -- the machine was killed, the workspace was destroyed, the session was
+    lost,
+  When a later effort comes looking for work,
+  Then that later effort can determine, from the requirement alone, that the
+    claim has been abandoned,
+  And it can take the requirement over, with itself recorded as the new owner
+    and the moment updated,
+  And a requirement taken by an effort that is still working is not taken over,
+  And the takeover is recorded, so that the vanished effort returning later
+    cannot silently resume as though it still held the requirement.
+depends_on: [ACD-2000b, ACD-2000b-1, ACD-2000b-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "release_claim (~line 224) is the graceful-exit-only path this AC replaces as the sole recovery mechanism. It is called from the caller's failure branch and never runs on a hard kill."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Home of the claim-lifecycle state diagram (ACD-2000b-3-i), whose reclaim edge is the transition this AC introduces."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE EXISTING RELEASE PATH DOES NOT SATISFY THIS AC. Verified: release_claim (~line 224) runs only on a graceful non-success exit. A SIGKILL, a destroyed worktree, a lost shell or a host reboot never reaches it, and the current record carries neither owner nor instant, so nothing afterwards can tell a live claim from an abandoned one. Reclaim is not merely unimplemented -- it is currently impossible to express."
+  - "RECLAIM MUST BE DECIDABLE FROM THE REQUIREMENT RECORD ALONE, by a process unrelated to the owner. No supervisor must be alive, no external registry consulted, and no cooperation from the vanished effort required. Any design that needs the original effort to return, or a coordinator process to survive, fails the criteria outright."
+  - "THE STALENESS THRESHOLD IS A NAMED, CONFIGURABLE VALUE WITH A CONSERVATIVE DEFAULT -- not a literal buried at the comparison site. The default must exceed the longest realistic single-requirement build: fast-lane runs execute whole pytest suites, so the honest unit is minutes, not seconds. Under-setting it is the failure mode the third Then clause exists to catch."
+  - "NEVER JUDGE LIVENESS BY PROCESS ID ALONE. A pid is reused, and it is meaningless when the owner ran on another host or in a destroyed worktree -- exactly the scenarios in the Given. If a heartbeat is used, it must be refreshed by the same shared helper that performs the claim, or a long quiet build will be reclaimed out from under itself; if pure age is used, say so and state the age."
+  - "THE TAKEOVER IS RECORDED ON THE RECORD -- previous owner, new owner, and the moment -- so the question 'am I still the owner?' is answerable. Pair this with the enforcement half: a claimed-owner write must re-check ownership before it proceeds. Without that check, reclaim converts a visibly stuck requirement into an invisible concurrent double-build, which is a strictly worse failure than the one being fixed."
+  - "THE TAKEOVER ITSELF GOES THROUGH ACD-2000b-2's ATOMIC TAKE. Two reclaimers judging the same claim stale at the same moment must not both take over -- the reclaim path is a claim, and inherits the same exclusion rather than reimplementing one."
+  - "RECLAIM IS A STATE TRANSITION ON THE RECORD ONLY. It must not delete, clean up, or otherwise touch the vanished effort's worktree, branch, or files; a zombie owner that resumes must find its workspace intact so it can be diagnosed."
+  - "RECLAIM MUST COVER A PARTIALLY-TAKEN SET, using the set identity ACD-2000b-2-i stamps on each member -- that is how the interrupted-mid-set clause is satisfied without the interrupted effort tidying up."
+  - "Follow the project error handling policy (Ruff E722/BLE001/TRY): typed except, log-or-reraise, no bare except. A failed staleness read must not default to 'stale' -- fail closed, leave the claim alone, and log."
+delivers_to:
+  agent: python-coder
+  contract: "The reclaim rule and its verdict: for a claimed requirement, { abandoned: bool, owner, claimed_at, threshold_applied } plus the takeover operation that atomically installs a new owner and records the previous one. Consumed by ACD-2000b-2-i (partial-set residue), ACD-2000b-3-i (the state diagram's reclaim edge) and ACD-2000b-5 (the operator's manual-release procedure)."
+expects_from:
+  - ac_id: ACD-2000b-1
+    contract: "Owner identity and claim instant on the record -- the two inputs without which staleness cannot be judged at all."
+  - ac_id: ACD-2000b-2
+    contract: "The atomic take, reused unchanged for the takeover so two simultaneous reclaimers cannot both succeed."
+test_spec:
+  - name: test_requirement_claimed_by_a_sigkilled_process_becomes_takeable
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "A real child process takes a requirement and is SIGKILLed so no cleanup handler runs; a fresh process then determines the claim abandoned and takes it over, with itself recorded as owner and the moment updated."
+  - name: test_live_owner_within_the_threshold_is_not_taken_over
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The same scenario with the owner still alive and its claim inside the threshold; asserts no takeover occurs and the original owner is intact."
+  - name: test_takeover_records_the_previous_and_the_new_owner
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "After a takeover, asserts the record names both the vanished owner it displaced and the effort that took over, with the moment of the takeover."
+  - name: test_returning_original_owner_cannot_resume_after_a_takeover
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "A fresh process re-using the displaced owner identity attempts to proceed against the reclaimed requirement; asserts it is told it no longer holds the claim rather than writing as though it did."
+  - name: test_two_concurrent_reclaimers_yield_exactly_one_new_owner
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Two real processes judge the same abandoned claim stale simultaneously, repeated; asserts every round installs exactly one new owner."
+test_rationale: "Each half of this rule passes on the opposite broken implementation, so both must be asserted in the same suite: the abandoned case alone passes on a rule that reclaims everything, and the live case alone passes on a rule that reclaims nothing. Abandonment must be produced by SIGKILLing a real child process, because the whole point is the path where no finally, atexit or signal handler runs -- a test that simulates abandonment by calling release() exercises precisely the graceful path a vanished effort never reaches, and would pass on today's code. The zombie clause is tested by a fresh process re-using the displaced owner identity, since the killed process cannot literally return; that is the observable form of 'cannot silently resume'. The concurrent-reclaimer test is present because the takeover is itself a claim and would otherwise be the one claim path that skipped ACD-2000b-2's exclusion."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000b-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE PROMISE THE L1 MAKES AND THE CODE DOES NOT KEEP. ACD-2000b's criteria say a
+  requirement is "never stuck" as somebody else's unfinished business; hazard 1
+  records that this is NOT satisfied today and explains exactly why.
+
+  VERIFIED (do not re-investigate): `release_claim()`
+  (scripts/build_orchestration/fast_lane.py ~line 224) returns claimed-but-not-
+  done ACs to `todo` "on a non-success run exit". It is a graceful-exit path. A
+  hard kill (SIGKILL, crashed worktree, lost shell, host reboot) never calls it,
+  and because the claim carries no owner and no timestamp
+  (`work_status: in_progress` and nothing more), nothing afterwards can
+  distinguish a live claim from an abandoned one. The requirement is then stuck
+  as someone else's forever, and the only remedy is a human editing YAML.
+
+  A RECLAIM RULE A SECOND PROCESS CAN APPLY IS THE ONLY THING THAT MAKES THE
+  PROMISE TRUE. ACD-2000b's hazard 1 states it plainly: "graceful release alone
+  does not". That is why the criteria are written from the LATER effort's point
+  of view -- the recovering actor must be able to act unilaterally, using only
+  what is written on the requirement. Any design that needs the vanished effort
+  to come back, or needs an external supervisor to be alive, fails.
+
+  THE THIRD THEN CLAUSE IS THE COUNTERWEIGHT AND IS EASY TO LOSE. A reclaim rule
+  that is too eager is worse than none: it hands a live build's requirement to a
+  second builder, producing exactly the double-work the L1's first promise
+  forbids, and it does so silently. The staleness judgement therefore has to be
+  conservative, and the AC requires the live case to be tested alongside the
+  abandoned one.
+
+  THE FOURTH THEN CLAUSE COVERS THE ZOMBIE. A killed shell's process can outlive
+  its supervisor, or a hung machine can resume. On return it believes it still
+  holds the requirement. Recording the takeover gives the returning effort
+  something to notice; combined with ACD-2000b-1's owner field it means "am I
+  still the owner?" is an answerable question. Without it, reclaim converts a
+  stuck requirement into a concurrent double-build -- trading a visible failure
+  for an invisible one.
+
+  DEPENDS ON OWNER+TIMESTAMP: staleness cannot be judged without the two facts
+  ACD-2000b-1 introduces, which is why that edge is a real prerequisite and not
+  just sequencing. What counts as stale (a fixed age, a heartbeat, a liveness
+  probe on the owning process) is the IT PO's decision; the criteria constrain
+  the outcome, not the technique.
+
+  TESTABILITY. Take a requirement in a real second process, SIGKILL that process
+  so no cleanup handler can run, and assert a fresh process can determine the
+  abandonment and take over. Then repeat with the owner alive and assert it does
+  NOT take over. Both halves are required; either alone passes on a broken rule.
+
+  CHILD NOTE: ACD-2000b-3-i, the state-diagram deliverable for ACD-2000b's
+  `documentation_triggers`, is parented here because the reclaim transition is
+  the one edge in the claim lifecycle that no action by the state's owner causes
+  -- and because ACD-2000b's L2 cap of 5 is already full. See ACD-2000b-5's notes.
+
+  2026-08-17 (IT PO enrichment). THE TECHNIQUE IS LEFT OPEN, AS THE BA INTENDED,
+  BUT TWO OPTIONS ARE FENCED OFF because they look correct and are not:
+
+  - PID LIVENESS ALONE. A pid is reused and is meaningless across hosts and
+    destroyed worktrees -- the exact scenarios in the Given. It can only ever be
+    corroborating evidence, never the rule.
+  - A HEARTBEAT WRITTEN BY THE CALLER RATHER THAN BY THE SHARED HELPER. A long,
+    quiet build then looks abandoned and is reclaimed out from under itself,
+    which fails the third Then clause in the most damaging direction.
+
+  THE ENFORCEMENT HALF OF THE FOURTH CLAUSE IS EASY TO SHIP HALF-DONE. Recording
+  the takeover is only half the guarantee; the other half is that a write by a
+  claimed owner re-checks ownership first. Without it the record faithfully
+  documents a double-build nobody reads. Both halves are it_requirements, and the
+  returning-owner test asserts the second.
+
+  THE THRESHOLD IS THE ONE NUMBER OPERATORS WILL SEE. It must be named and
+  configurable, because ACD-2000b-5's diagnostic clause obliges the reference doc
+  to quote its default and say where it lives -- a literal at the comparison site
+  makes that documentation impossible to keep true.

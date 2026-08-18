@@ -26,9 +26,12 @@
  * supervisor chain, no LLM planner — the phase order is fixed and code-defined
  * (BO-2400a-5).
  *
- * Gate script:   scripts/build_orchestration/fast_lane.py
- * Worktree tool: scripts/setup_ticket_worktree.py
- * Done marker:   scripts/ac_store/mark_ac_done.py (coverage-gated)
+ * Gate script:   {{config.output_root}}/scripts/build_orchestration/fast_lane.py
+ *                (resolved inside the freshly-created worktree, once bootstrapped)
+ * Worktree tool: {{config.output_root}}/scripts/setup_ticket_worktree.py
+ *                (run from the consumer repo root, BEFORE any worktree exists)
+ * Done marker:   fast_lane.py's own `mark_done` subcommand (coverage-gated) —
+ *                not a direct call to scripts/ac_store/mark_ac_done.py
  *
  * E2 canonical form: top-level body, agent(prompt, opts), args global.
  */
@@ -76,8 +79,14 @@ const TEST_WRITER_SCHEMA = {
   properties: {
     status: { type: "string", enum: ["ok", "blocker", "failed"] },
     tests_written: { type: "array", items: { type: "string" } },
-    all_red: { type: "boolean" },
-    offender: { type: "string" },
+    // AMENDED 2026-08-17 (BO-2400a-3-v): the red-baseline gate no longer
+    // returns all_red/offender — it returns gate_passed (True when >=1
+    // newly-added covering test is red) plus a named `reason` on halt and
+    // the individual green_at_baseline entries (never collapsed into a
+    // count). The pre-amendment keys are REMOVED, not kept as aliases.
+    gate_passed: { type: "boolean" },
+    reason: { type: "string" },
+    green_at_baseline: { type: "array" },
     message: { type: "string" },
   },
 };
@@ -145,7 +154,7 @@ const worktreeResult = await agent(
   `You are the worktree phase agent for a fast-lane build. Create the isolated ` +
   `build worktree — do NOT ask for confirmation (creation is non-destructive).\n\n` +
   `Run this single Bash command from the repository root:\n` +
-  `   python3 scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
+  `   python3 {{config.output_root}}/scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
   `It fetches origin, creates a worktree on branch fast-lane/${slug} rooted at the ` +
   `latest origin/main, bootstraps it, and prints a single JSON line with keys ` +
   `worktree_path, branch, ac_store_path, created.\n\n` +
@@ -181,7 +190,7 @@ const branch = worktreeResult.branch || `fast-lane/${slug}`;
 // resolver looking in the wrong directory (observed 2026-08-11 on BO-2400f).
 // Deriving it removes the LLM from the trust path for this deterministic value.
 const acStoreRoot = `${worktreePath}/${acStoreRel}`;
-const gateScript = `${worktreePath}/scripts/build_orchestration/fast_lane.py`;
+const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
 
 // ---------------------------------------------------------------------------
 // Phase 2 — Resolve the connected build set (BO-2400f-1/f-2)
@@ -332,9 +341,13 @@ const testWriterResult = await agent(
   `comment. All stubs MUST be RED — do NOT write production code.\n\n` +
   `Step 2 — Run the red-baseline gate (single Bash command):\n` +
   `   ${redBaselineInvocation}\n` +
-  `Parse the JSON: { "all_red": <bool>, "offender": "<first-passing test or null>" }.\n\n` +
-  `Return JSON: { "status": "ok", "tests_written": ["<path>", ...], "all_red": <bool>, "offender": "<test or null>", "message": "<summary>" }\n\n` +
-  `CRITICAL: all_red MUST reflect the real gate output — do NOT fabricate it.`,
+  `Parse the JSON: { "gate_passed": <bool>, "reason": <string|null>, "red": [...], ` +
+  `"green_at_baseline": [...], "inconclusive": [...], "preexisting": [...] }.\n\n` +
+  `Return JSON: { "status": "ok", "tests_written": ["<path>", ...], "gate_passed": <bool>, ` +
+  `"reason": <string|null>, "green_at_baseline": [...], "message": "<summary>" }\n\n` +
+  `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate ` +
+  `them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, ` +
+  `report gate_passed: false.`,
   {
     agentType: "test-writer",
     schema: TEST_WRITER_SCHEMA,
@@ -362,7 +375,10 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
   };
 }
 
-if (!testWriterResult.all_red) {
+// gate_passed is read as a plain JS falsy check so a missing key (version
+// skew between this workflow and an older/newer fast_lane.py) fails closed
+// exactly like an explicit gate_passed: false — never treated as passing.
+if (!testWriterResult.gate_passed) {
   await agent(
     `You are the release-phase agent. The red-baseline gate failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
@@ -373,9 +389,10 @@ if (!testWriterResult.all_red) {
   return {
     status: "blocked",
     message:
-      "verify_red_baseline gate failed: test-writer reported all_red=false. " +
-      `Offender: ${testWriterResult.offender || "unknown"}. ` +
-      "Every scoped test must FAIL before the coder is dispatched.",
+      "verify_red_baseline gate failed: test-writer reported gate_passed=false. " +
+      `Reason: ${testWriterResult.reason || "unknown"}. ` +
+      `Green-at-baseline: ${JSON.stringify(testWriterResult.green_at_baseline || [])}. ` +
+      "At least one newly-added scoped test must be red before the coder is dispatched.",
     failing_phase: "test-writer",
     gate: "verify_red_baseline",
     worktree_path: worktreePath,

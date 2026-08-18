@@ -2302,6 +2302,13 @@ def run(
 
     print(f"EPIC folder created: {epic_folder}")
 
+    # --- target_epic stamping (ACD-1200d-1) ---
+    # Back-reference each included leaf AC to the epic it now belongs to. Use
+    # the actual assembled folder name (e.g. "EPIC-RecogniseEveryDetailPage…")
+    # so the stamp matches what /build-feature will resolve. Stamping happens
+    # after assembly so a failed assembly never leaves dangling back-refs.
+    stamp_target_epic(topo_order, epic_folder.name, ac_store_root)
+
     # --- Single-location write + correct implemented_by (ACD-1200a-9) ---
     # Build the old→new path mapping, then:
     #   1. Update implemented_by in each source AC YAML to point at the

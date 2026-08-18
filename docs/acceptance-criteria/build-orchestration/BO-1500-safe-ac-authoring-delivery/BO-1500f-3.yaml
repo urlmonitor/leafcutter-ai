@@ -1,0 +1,86 @@
+id: BO-1500f-3
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "A workspace that already exists is continued only when it belongs to this same run"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given the workspace an authoring run would use already exists,
+  When the run resolves that workspace, before it authors any criterion,
+  Then it establishes, from ownership evidence recorded with the workspace itself, whether
+    the workspace belongs to this same run resuming or to a different run,
+  And it continues into the workspace only when that evidence identifies this same run,
+  And when the evidence identifies a different run that is still going, the run refuses the
+    workspace, names the other run and when that run started in the refusal, and halts
+    before authoring any criterion,
+  And when the evidence identifies a different run that is no longer going, the run reports
+    the workspace to the user as recoverable -- naming the other run and what that run left
+    unfinished -- and halts without taking it over, leaving the decision to the person,
+  And when no ownership evidence can be found for an existing workspace, the run treats it
+    as not its own and reports it rather than continuing into it,
+  And in no case does the run continue into a workspace belonging to a different run without
+    the user having said to.
+depends_on:
+  - BO-1500f
+  - BO-1500f-2
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: scripts/setup_ticket_worktree.py
+    relationship: models
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    workspace_ownership:
+      type: object
+      description: "{ owner_run_id: '<run that holds the workspace>', owner_started_at: '<timestamp>', owner_state: active | ended | unknown, unfinished_items: ['<criterion id>', ...] }. Recorded with the workspace at the moment it is claimed and read back by any later run that resolves the same workspace. owner_state must be determined from durable evidence, not assumed."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "This narrows BO-1500a-1-i, which is already implemented as reuse-on-hit: reuse must now be conditional on same-run ownership. An unconditional adopt-if-present path is the defect being fixed and must be removed, not guarded — flag the amendment on BO-1500a-1-i when this lands. BO-1500a-1-i stays under BO-1500a and was not renamed by the 2026-08-14 split, so this amendment now spans the a/f boundary."
+    - "unknown ownership must fall to the report-and-halt branch, not the continue branch; an ownership check that fails open re-creates the incident."
+    - "Cover all four resolutions (same run, other run active, other run ended, no evidence) with behavioral tests that drive the real resolution path."
+delivers_to:
+  agent: python-coder
+  contract: "A resolution of an existing workspace into exactly one of: continue as its owner, refuse and name the active owner, report as recoverable and halt"
+expects_from:
+  ac_id: BO-1500f-2
+  contract: "The per-run identity that ownership evidence is written from and compared against"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-10; re-parented to BO-1500f."
+superseded_by: null
+covered_by:
+  - BO-1500f-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Design-review gap 2. Today an already-existing workspace whose name matches is adopted
+  silently, so a second run walks straight into another run's in-flight drafts. Silently
+  absorbing another run's unfinished work is the reported incident, which is why the
+  no-longer-going case is reported as recoverable rather than adopted automatically --
+  the person decides whether those drafts are salvaged, abandoned, or handed back.
+
+  Re-homed 2026-08-14 from BO-1500a-10 to BO-1500f-3 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged. The flagged amendment against BO-1500a-1-i is
+  preserved verbatim in the constraints above and is now a cross-tree obligation, because
+  BO-1500a-1-i stayed under BO-1500a.

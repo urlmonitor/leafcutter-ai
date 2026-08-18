@@ -1,0 +1,164 @@
+id: BP-1100g-3-i
+components:
+  - build_pipeline
+  - testing_quality
+title: "The kind-of-proof tag never changes which failing tests block, and never makes work look more complete"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two failing tests that differ in exactly one respect: the first carries a
+      tag naming the kind of proof it was written to give, and the second carries
+      none,
+    And both carry the same existing coverage tag for the same piece of work,
+  When the run's outcome is decided,
+  Then both tests are treated identically, and the run's outcome is the one it
+    would have had if neither tag were present,
+    And the existing coverage tag alone continues to decide which failing tests are
+      treated as blocking,
+    And a piece of work whose tests all carry kind tags is no closer to being
+      counted done than the same work with the tags removed,
+    And removing every kind tag from the suite changes no run outcome and no
+      completion decision anywhere.
+depends_on:
+  - BP-1100g-3
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The enforcement decision that must stay exactly as it is: an untagged failing test is enforced by default, and only a coverage tag resolving to a not-done AC may soften a test."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The prohibition this L3 keeps enforceable from the record side: a written statement is never evidence that anything was reached."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Holds both the scanner being extended and the eligibility computation (_classify_outcomes, verify_done_eligible) the new axis must stay out of. The negative control is asserted against these two together."
+  - path: scripts/ac_store/pytest_ac_enforcement.py
+    relationship: describes
+    status: exists
+    relevance: "The pytest plugin that applies the existing axis's enforcement decision at run time. The whole-suite strip-the-tags property has to hold through this path, not only through done_proof's library API."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "0 — negative control: no location in the reference file may be changed to consume the new axis, and the assertion is that none does"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/ac_store/ unit_tests/commit_guardian/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The invariance this AC asserts: the run outcome and the completion decision are functions of the coverage axis alone. The angles axis is an input that must not appear in either output."
+    required:
+      - run_outcome_inputs
+      - completion_decision_inputs
+    properties:
+      run_outcome_inputs:
+        type: array
+        items:
+          type: string
+          enum:
+            - covers
+        description: "The coverage axis only. 'angles' must never appear here."
+      completion_decision_inputs:
+        type: array
+        items:
+          type: string
+          enum:
+            - covers
+        description: "The coverage axis only. 'angles' must never appear here."
+  constraints:
+    - "The property is an ABSENCE and must be asserted across two runs differing in exactly the suspected cause — tag present vs tag absent, and whole-suite tags-stripped vs tags-present. A test that exercises only the new axis cannot observe an absence and will pass on an implementation that quietly consumes the tag."
+    - "Both consequences must be covered together: the run outcome (which failing tests block) and the completion decision (whether the work counts as done). An implementation can leave the first untouched and still leak the tag into the second."
+    - "The comparison must be over the real enforcement path — done_proof's eligibility computation and the pytest_ac_enforcement plugin — not over a re-implementation of the decision inside the test."
+    - "The strip-every-kind-tag run must operate on a real copied test subtree written to disk, not on in-memory records, so a tag consumed anywhere in the file-reading path is caught."
+    - "This AC must add no new enforcement of its own. It is a negative control: its only output is evidence that nothing changed, which is why n_location_rule is zero."
+delivers_to: null
+expects_from:
+  - ac_id: BP-1100g-3
+    contract: "A single-pass scanner returning both tag axes per test function, and an eligibility computation that consumes only the existing coverage axis."
+test_spec:
+  - name: test_bp_1100g_3_i_tagged_and_untagged_failing_tests_are_treated_identically
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Two failing tests carrying the same coverage tag and differing only in the presence of a kind tag produce the same treatment, and the run outcome equals the outcome with neither tag present."
+  - name: test_bp_1100g_3_i_kind_tag_never_reaches_the_enforcement_decision
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Pipe the real scanner's real output (both axes populated) into the real enforcement consumer and assert the coverage axis alone decides which failing tests block — the producer/consumer pair, not either side in isolation."
+  - name: test_bp_1100g_3_i_stripping_every_kind_tag_changes_no_outcome_and_no_completion_decision
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Copy a real test subtree to a temp dir, run the whole-suite outcome and the completion decision twice — once as written and once with every kind tag removed from the files on disk — and assert both results are identical."
+  - name: test_bp_1100g_3_i_enforcement_unchanged_through_the_deployed_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base <ref>` as a subprocess over a fixture store and test tree, with and without kind tags present, and assert byte-identical verdicts — the CI gate is where a leaked tag would actually change a merge decision."
+test_rationale: |
+  "The new axis does not affect enforcement" is a property of an absence, and absences are
+  invisible to any test that only exercises the new axis. Two shapes are load-bearing: the
+  pairwise run differing in exactly the tag, and the whole-suite strip, which is the one
+  no implementation that quietly consumes the tag anywhere can satisfy. The deployed-gate
+  variant is included because the CI path, not the library API, is where a leaked tag
+  would change a merge.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder. it_requirements in package-surface object form with
+    n_location_rule zero (negative control); policy constraints under `constraints`.
+    Added test_spec (criterion/seam/real_artifact/reachability) and expects_from.
+    declares_side_effect deliberately NOT set — this AC asserts that nothing changes.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The negative control for BP-1100g-3, and the clause that keeps the two tag axes
+  from merging.
+
+  WHY IT NEEDS ITS OWN SCENARIO. "The new axis does not affect enforcement" is a
+  property of the ABSENCE of an effect, and absences are not observable in any
+  test that only exercises the new axis. The discriminating observation is a pair
+  of runs differing in exactly the tag, plus the whole-suite form in the last
+  clause: strip every kind tag and nothing changes. That is a property no
+  implementation which quietly consumes the tag in a verdict can satisfy, and it
+  is invisible to any test that inspects a single tagged test.
+
+  THE PRESSURE THIS RESISTS IS REAL AND WILL COME FROM A GOOD PLACE. Once the
+  tags exist, "this work has a reachability-tagged test, so it is reachable" is
+  the obvious next inference and it is free to implement. It is also exactly the
+  phantom-done-guard-inside-the-phantom-done-guard that BO-2900a-2 exists to
+  prevent, and it is wrong for the mundane reason that the tag is trivially
+  pasteable — see BP-1100g-4-i, which accepts the paste on purpose.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Two consequence surfaces are named in the
+  constraints rather than one: the run outcome (pytest_ac_enforcement, the
+  plugin that applies TQ-100's decision) and the completion decision
+  (verify_done_eligible). An implementation can leave the first alone and still
+  leak the tag into the second, and the third Then clause is about the second.
+  it_requirements uses the package-surface OBJECT form because
+  scripts/ac_store/validate_ac.py classifies any python-coder AC whose components
+  list contains build_pipeline as package-surface.

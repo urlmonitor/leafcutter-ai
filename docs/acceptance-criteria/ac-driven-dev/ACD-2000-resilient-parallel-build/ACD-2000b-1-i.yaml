@@ -1,0 +1,157 @@
+id: ACD-2000b-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Routine lifecycle edits cannot silently steal or drop a live claim"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement currently taken by one effort,
+  When a routine housekeeping pass that marks finished requirements as complete
+    runs over the store,
+  Then the requirement is either left taken, or its release is recorded as a
+    deliberate hand-back naming what released it,
+  And it never becomes quietly available with no record that the claim ended,
+  And a person editing the requirement's lifecycle by hand while it is taken is
+    told the requirement is currently taken and by whom,
+  And a scan for work that is ready to pick up does not offer a requirement that
+    is taken by a live effort,
+  And that same scan distinguishes a requirement a machine has taken from one a
+    person has marked as being worked on.
+depends_on: [ACD-2000b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: scripts/commit_guardian/check_ac_governance.py
+    relationship: describes
+    status: exists
+    relevance: "The gate that actually runs on a hand edit. It classifies work_status as an OPEN field (_OPEN_FIELDS, ~lines 67-70, 'any agent may modify freely') and is fail-open on unexpected exceptions -- both facts are load-bearing for this AC."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The readiness scanner named by the last two Then clauses. _matches_work_status (~line 148) compares against exactly one value, so it cannot today tell a machine claim from a human in-progress."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The housekeeping pass of the first Then clause: mark_done_built_acs (~line 332) marks done on coverage alone through the same whole-record rewrite helper."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ENFORCE ON THE GATE THAT ACTUALLY RUNS. Verified: scripts/commit_guardian/check_ac_governance.py declares work_status in _OPEN_FIELDS (~lines 67-70) -- 'fields that any agent may modify freely'. While the claim rides on work_status the deployed governance gate explicitly AUTHORISES every writer to break it. Whichever design lands, that constant and its message are an enforcement point that must be updated in the same change; a claim defended only inside fast_lane.py is defended nowhere."
+  - "THAT HOOK IS FAIL-OPEN. Its own docstring records 'any unexpected exception exits 0' (ACS-400e-1-i). A claim check added there that raises is silently skipped and the gate reports green -- the exact phantom-green shape this repo exists to prevent. Any added check must handle its own failure explicitly rather than relying on the outer handler."
+  - "THE HOUSEKEEPING PASS IS mark_done_built_acs (scripts/build_orchestration/fast_lane.py ~line 332), which marks done on test coverage alone and writes through the same _update_ac_work_status helper. Over a requirement claimed by another effort it must either leave the claim intact or record a deliberate hand-back naming what released it. Silently clearing is the defect."
+  - "EVERY END OF A CLAIM IS ATTRIBUTABLE. Release, takeover and housekeeping hand-back each record what ended the claim. A claim that ends with no record is indistinguishable from a claim that was never made, and ACD-2000a's trail loses an attempt boundary."
+  - "THE SCANNER IS A READER THAT MUST ACT, NOT JUST A RECORD THAT MUST DIFFER. scan_ac_store's ready filter (_matches_work_status, ~line 148) compares work_status against exactly one target value. Representing the machine claim and the human in-progress separately on the record satisfies nothing until the ready-set computation consults the claim; implement both halves or the last two Then clauses are unobservable."
+  - "WATCH THE INVERSION THE FIX INTRODUCES. If the claim moves to its own field and work_status stops being flipped, a claimed requirement reads work_status: todo and the scanner OFFERS it -- double dispatch, caused by the fix. This is why ACD-2000b-1 requires the dual write; the scanner change here is the other half of the same guarantee."
+  - "THE HAND-EDITING PERSON IS TOLD, NOT SILENTLY BLOCKED. The message must name the current owner and the claim instant so the person can decide; a bare refusal sends them to read the implementation, and a silent pass is the failure this AC exists to close."
+  - "IF A NEW MODULE IS IMPORTED BY THE HOOK it must be added to the build deploy-manifest (scripts/build_phases.py deploy_map) in the same change. The hook runs from the deployed layout, and an undeployed dependency raises ModuleNotFoundError at hook runtime -- the done_proof.py precedent recorded in CLAUDE.md."
+  - "Follow the project error handling policy (Ruff E722/BLE001/TRY): typed except, log-or-reraise, no bare except."
+delivers_to: null
+expects_from:
+  ac_id: ACD-2000b-1
+  contract: "The claim record { owner identity, claim instant, entry-point kind } and the shared take/release helper. This AC constrains which OTHER writers may end a claim and what the readiness scan does with one, not the record shape itself."
+test_spec:
+  - name: test_mark_done_pass_does_not_silently_clear_a_foreign_claim
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real coverage-gated mark-done pass over a store whose requirement is claimed by a different owner; asserts the claim is either intact afterwards or ended with a recorded hand-back naming the releaser -- never quietly cleared."
+  - name: test_governance_gate_announces_a_hand_edit_over_a_live_claim
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executes the real check_ac_governance hook against a staged hand edit of a claimed requirement's lifecycle and asserts the emitted text names the current owner and the claim instant."
+  - name: test_governance_gate_is_silent_when_the_requirement_is_not_claimed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same hand edit against an unclaimed requirement produces no such finding, so the announcement above is about the live claim and not about lifecycle edits in general."
+  - name: test_ready_scan_does_not_offer_a_machine_claimed_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real readiness scan over a store containing one machine-claimed requirement and one free one; asserts only the free one is offered."
+  - name: test_ready_scan_tells_a_machine_claim_from_a_human_in_progress
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "With one machine-claimed and one human-marked-in-progress requirement in the same store, asserts the scan reports them distinguishably rather than collapsing both into one excluded bucket."
+test_rationale: "Two traps decide the shape of these tests. First, enumerating writers by grepping for assignments to the field cannot see a writer that reaches the value through a helper -- which is how every writer reaches it today, via _update_ac_work_status -- so each test runs the REAL housekeeping, hook and scan code over a real store and asserts the observable outcome. Second, check_ac_governance.py is fail-open on unexpected exceptions, so a unit test of a lookup predicate would pass while the deployed gate silently skipped the check; only executing the hook itself distinguishes a wired gate from an inert one. The unclaimed-requirement test is paired with the claimed one so a refuse-everything implementation cannot pass."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE OVERLOADED-FIELD LEAF -- ACD-2000b hazard 4, "the subtle one".
+
+  THE PROBLEM, RESTATED PRECISELY. `work_status: in_progress` is simultaneously
+  (a) a human-facing lifecycle value and (b) the lock. Locks and lifecycle values
+  have incompatible access rules: a lifecycle value is something any tool or
+  person may set, while a lock may only be released by its holder. Overloading
+  them means every writer of work_status is, unknowingly, a lock manipulator.
+
+  THE FOUR WRITER CLASSES THIS AC EXERCISES, each a real failure:
+    1. MARK-DONE FLOWS. `fast_lane.mark_done_built_acs()` marks ACs done on test
+       coverage alone. A done-marking pass over a requirement someone else is
+       mid-build on ends the claim with no record -- and note this same function
+       is separately flagged as a phantom-done regression risk once ACD-1800b's
+       all-deliverables-signed definition lands.
+    2. RECONCILIATION PASSES. Bulk store fixes that normalise work_status
+       (the repo has run several; see the AC-store reconciliation guidance in
+       CLAUDE.md) would strip live claims wholesale.
+    3. HAND EDITS. A person opening the YAML has no signal that the value is
+       load-bearing. Hence the third Then clause -- being TOLD, not merely
+       blocked.
+    4. THE READINESS SCANNER. It cannot today distinguish "a machine has claimed
+       this" from "a person is working on it", so it either offers claimed work
+       (double-dispatch) or hides human-in-progress work (invisible backlog).
+       The last two Then clauses split those apart.
+
+  EITHER DESIGN CAN SATISFY THIS AC, WHICH IS DELIBERATE. A separate claim field
+  satisfies it structurally (lifecycle writers simply do not touch the claim).
+  Keeping the overload satisfies it only by enumerating and gating every writer
+  -- which is strictly more work and strictly more fragile, but the criteria do
+  not forbid it. ACD-2000b's hazard 4 asks for the decision to be made
+  deliberately rather than left implied; this AC makes the CONSEQUENCES testable
+  either way, and the IT PO records the choice.
+
+  THE SECOND THEN CLAUSE ("never quietly available with no record") is the one
+  that connects to ACD-2000a: a claim that ends without a record is
+  indistinguishable from a claim that was never made, and the adjudication trail
+  loses an attempt boundary.
+
+  TESTABILITY. Run the REAL housekeeping and scanning code over a real store
+  containing a live claim and assert the observable outcomes. A test that
+  enumerates writers by grepping for assignments to the field is a grep test and
+  cannot see a writer that reaches the value through a helper -- which is how
+  `_update_ac_work_status()` is reached today.
+
+  2026-08-17 (IT PO enrichment). The choice this AC left open is recorded on
+  ACD-2000b-1: a DEDICATED claim record, with `work_status` still dual-written
+  until the `enforce` stage.
+
+  NEWLY VERIFIED AGAINST THE GATE THAT ACTUALLY RUNS.
+  `scripts/commit_guardian/check_ac_governance.py` does not merely fail to
+  protect `work_status` -- it lists it in `_OPEN_FIELDS` (~lines 67-70) and
+  prints "Open fields (any agent may change)" in its own diagnostic output. The
+  deployed hook currently DECLARES the opposite of what this AC requires, so the
+  third Then clause is a change to that constant and its message, not a new
+  gate. The same hook is fail-open on unexpected exceptions (its docstring,
+  ACS-400e-1-i), which is why the test contract executes the hook rather than a
+  predicate: a check that raises there is skipped in silence.
+
+  THE SCANNER CLAUSES CUT BOTH WAYS. Today a claimed requirement is hidden from
+  the drive only as a side effect of the `work_status` overload. Move the lock to
+  its own field without teaching `scan_ac_store` to read it and the fix itself
+  re-offers every claimed requirement. That inversion is recorded as an
+  it_requirement because it is invisible from the criteria alone.

@@ -1,0 +1,112 @@
+id: BP-1100g-7
+components:
+  - documentation_system
+  - build_pipeline
+  - testing_quality
+title: "A sequence diagram shows the promise, the claim, the refusal, and where the boundary to the observer lies"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the promise-versus-claim path spans the planning side, the test-writing
+      side, the hand-off check, and the separate judgement that watches tests run,
+  When a reader consults the architecture documentation for how a promised kind of
+    proof is answered,
+  Then a sequence diagram shows, in order, the plan promising a kind of proof for a
+    stated behaviour, the writer answering it with a test that claims that kind,
+    the writer recording the way in it resolved and its answer to the seam rule,
+    and the hand-off check comparing the promise against the claim,
+    And it shows the refusal path, returning to the writer, when a promised kind
+      has no claim,
+    And it shows the observer that watches tests run as a participant on the far
+      side of an explicitly drawn boundary, with no message crossing from the
+      hand-off check into it,
+    And a reader can tell from the diagram alone which participants exchange
+      written declarations and which one derives anything from a running test.
+depends_on:
+  - BP-1100g
+  - BP-1100g-2
+  - BP-1100g-4
+  - BP-1100g-5
+doc_links:
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The component page the diagram belongs on or is linked from; it already owns the surrounding phantom-done guarantees."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The boundary the diagram must draw. The observer is a participant so a reader can see where the correctness question goes; the absence of a message into it is the point of including it."
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "Names the participants and the vocabulary the diagram should label its messages with, so the diagram does not mint a third set of words."
+  - path: docs/architecture/diagrams/c3-006-promise-versus-claim-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "PINNED BY IT-PO (indicative sequence number). The c3-NNN-<slug>.md convention is in use for component-level sequences; c3-001..c3-005 are taken at the time of enrichment. Confirm the next free number with the diagram-sequence helper before writing — three other efforts are in flight in this working tree."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "Pin the path to docs/architecture/diagrams/, following the existing c3-NNN-<slug>.md convention for component-level sequences. c3-001..c3-005 are taken at the time of enrichment; confirm the next free number before writing rather than assuming 006, because three other efforts are in flight in this working tree. check_diagram_naming and check_mermaid_parent_link both gate this."
+  - "THE THIRD CLAUSE IS THE WHOLE DIAGRAM. The observer must be drawn as a participant on the far side of an explicit boundary, with NO message arrow crossing into it from the hand-off check. Everything else on the diagram is context for that absent arrow."
+  - "Label the messages with the vocabulary the single definition establishes (BO-2900g-3) — do not mint a third set of words on the diagram."
+  - "The diagram must make the declaration/execution distinction readable without the caption: a reader must be able to tell which participants exchange written declarations and which one derives anything from a running test."
+  - "It must be linked from docs/architecture/components/phantom-done-prevention.md and must carry the parent link the mermaid-parent-link check requires."
+  - "Keep it within the project's mermaid complexity budget (check_mermaid_complexity) — four or five participants, not the whole pipeline."
+test_required: false
+test_rationale: |
+  Genuinely test-free: change_target is docs and the observable is one mermaid sequence
+  diagram. There is no executable behaviour to assert, and the AC's central content — that
+  a particular arrow is ABSENT and that a boundary is legible to a human reader — is a
+  comprehension property no unit test can evaluate. The mechanical properties that do
+  exist are already enforced by dedicated hooks and must not be duplicated here:
+  check_diagram_naming (path/sequence convention), check_mermaid_parent_link (linkage
+  from the component page) and check_mermaid_complexity (participant budget).
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Confirmed architecture-diagram-author against config/agent_registry.json
+    (tier phase, is_ticket_phase true, ''authoring a C4 mermaid architecture diagram'').
+    Pinned an indicative diagram path under the c3-NNN convention, added it_requirements
+    naming the three gating hooks, and test_required: false with rationale. criteria
+    untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the sequence-diagram half of BP-1100g's documentation_triggers.
+
+  WHY A SEQUENCE DIAGRAM IS THE RIGHT FORM HERE AND NOT DECORATION. This L1's
+  central risk is a boundary being widened by someone who cannot see it. The
+  producer/consumer split runs across four participants and two trees
+  (BO-2900g plans, BP-1100g records, BO-2900a judges), and the one thing a reader
+  must take away is that no message crosses from the hand-off check into the
+  observer. An absent arrow between two drawn participants states that far more
+  legibly than a paragraph can.
+
+  THE THIRD CLAUSE IS THE WHOLE DIAGRAM. Everything else on it is context for it.
+
+  AGENT ASSIGNMENT DELIBERATELY OMITTED — BA-authored L2 with no technical
+  enrichment; the IT PO assigns it (architecture-diagram-author is the expected
+  owner, per the documentation-trigger convention).
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The suggested owner was VERIFIED against
+  config/agent_registry.json and kept: architecture-diagram-author is tier phase,
+  is_ticket_phase true, model opus, selection_criteria "Assign when the ticket
+  requires authoring a C4 mermaid architecture diagram." Unlike the two
+  reference-doc ACs, no better-matching specialist exists. The diagram sequence
+  number is indicative only — confirm the next free c3-NNN before writing.

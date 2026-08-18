@@ -1,0 +1,66 @@
+id: BO-1500g-2-i
+components:
+  - build_orchestration
+readiness: draft
+priority: high
+title: "Two authoring runs started at the same time get separate workspaces and never commit each other's drafts"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given one session starts the lean entry point for feature A and a second session starts
+    the full planning pipeline for feature B at overlapping times,
+  When both runs set up their workspaces and author their criteria,
+  Then each run's workspace is a distinct directory on a distinct branch,
+  And neither run's acceptance-criteria files appear inside the other run's workspace,
+  And the change each run commits contains only the acceptance-criteria files that run
+    authored, and none of the other run's in-flight drafts.
+depends_on:
+  - BO-1500g-2
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    workspace_identity:
+      type: object
+      description: "{ feature_key: '<stable per-feature key>', workspace_path: '<absolute path>', branch: '<branch name>' }. Two runs with different feature_key values must never resolve to the same workspace_path or branch."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "Reconcile with BO-1500a-1-i: prior-workspace REUSE must key on feature_key, so resuming the same feature reuses, while a different feature never collides."
+    - "Narrowed by BO-1500f-2 (formerly BO-1500a-9, renamed by the 2026-08-14 split): the feature_key notion recorded here must be narrowed to a per-run identity, so resuming ONE run reuses its workspace while a second run for the same feature does not. This obligation now spans the BO-1500g / BO-1500f boundary."
+    - "The commit for each run must stage an explicit path list scoped to that run's authored files, never a stage-everything sweep of the workspace."
+delivers_to: null
+expects_from:
+  ac_id: BO-1500g-2
+  contract: "The shared setup implementation both entry points call, which must yield a distinct workspace per run"
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-7-i; moved with its parent L2 (BO-1500a-7 -> BO-1500g-2)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Reproduces the reported incident end to end: two concurrent sessions wrote into one
+  checkout, the two copies of the store subtree drifted, and one session's pull request
+  carried the other session's in-flight drafts.
+
+  Re-homed 2026-08-14 from BO-1500a-7-i to BO-1500g-2-i by the Pattern C intermediate
+  split of BO-1500a. Criteria text is unchanged. The narrowing obligation recorded on
+  BO-1500f-2 against this AC's feature_key notion is preserved and restated in the
+  constraints above so it is not lost across the f/g boundary.

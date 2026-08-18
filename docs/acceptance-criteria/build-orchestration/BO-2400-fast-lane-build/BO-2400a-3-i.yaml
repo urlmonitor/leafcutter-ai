@@ -2,7 +2,7 @@ id: BO-2400a-3-i
 components:
   - build_orchestration
   - testing_quality
-title: "Red-baseline gate halts when a batch test will not go red"
+title: "Red-baseline gate halts when the batch will not go red"
 component: build-orchestration
 level: L3
 status: active
@@ -12,12 +12,19 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given the red-baseline script runs the batch's tests before any implementation and
-    finds at least one batch test that already passes,
+  Given the red-baseline gate has classified the batch's covering tests and no
+    newly-added covering test is classified red,
   When the red-baseline check completes,
-  Then the loop halts before the coder agent is dispatched
-  And the halt report names the offending test and its associated AC id.
-depends_on: [BO-2400a-3]
+  Then the loop halts before the coder agent is dispatched,
+  And the halt carries exactly one reason drawn from a fixed named set:
+    no_new_covering_tests, when no covering test for the batch is newly-added;
+    all_new_tests_green_at_baseline, when every newly-added covering test is classified
+    green;
+    no_red_outcome_among_new_tests, when the newly-added covering tests are green and
+    inconclusive with at least one inconclusive,
+  And the halt report names every newly-added covering test with its associated
+    acceptance-criterion id and its observed outcome.
+depends_on: [BO-2400a-3, BO-2400a-3-ii, BO-2400a-3-v, BO-2400a-3-vi]
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
@@ -25,28 +32,46 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
-  - "When any batch test passes before implementation, the loop must halt before dispatching the coder — a green-at-baseline test is a hard halt, never a warning that proceeds."
-  - "The halt report must name the offending test and its associated AC id so the operator can see which test failed to establish a red baseline."
+  - "A newly-added covering test that is green at baseline is NOT a halt: it is reported as green_at_baseline and the run proceeds, provided some other newly-added covering test is red. The hard halt fires only when NO newly-added covering test is classified red. This replaces the original requirement that 'a green-at-baseline test is a hard halt, never a warning that proceeds' — see amended_by and BO-2400a-3-v."
+  - "A pre-existing covering test never triggers this halt, whatever its outcome (BO-2400a-3-iv). Only the newly-added partition is consulted."
+  - "The halt report must name every newly-added covering test with its associated AC id and observed outcome, plus the single halt reason, so the operator can see why no red baseline was established."
+  - "The halt reason must be one of a fixed, named set (no_new_covering_tests, all_new_tests_green_at_baseline, no_red_outcome_among_new_tests) rather than free-form text, so callers and tests can branch on it. BO-2400a-3-vii adds baseline_partition_unavailable for the degraded-git case."
   - "The halt must be surfaced as a structured blocker result from the workflow (not a silent skip), mirroring the existing pre-dispatch guard abort shape."
 delivers_to: null
 expects_from:
   ac_id: BO-2400a-3
   contract: "The red-baseline verdict and the per-test pass/fail results for the batch that this halt path inspects."
 test_spec:
-  - name: test_loop_halts_when_batch_test_already_passes
+  - name: test_loop_halts_when_no_new_test_is_red
     target_dir: unit_tests/workflows/
     framework: unittest
     type: behavioral
-    description: "If any batch test passes before implementation, the loop halts before the coder is dispatched."
+    description: "If no newly-added covering test is red, the loop halts before the coder is dispatched."
+  - name: test_halt_reason_distinguishes_no_tests_from_all_green
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    description: "An empty newly-added set halts with no_new_covering_tests; an all-green newly-added set halts with all_new_tests_green_at_baseline."
   - name: test_halt_report_names_offending_test_and_ac
     target_dir: unit_tests/workflows/
     framework: unittest
     type: behavioral
-    description: "The halt report identifies the offending test and its associated AC id."
+    description: "The halt report identifies each newly-added covering test, its AC id and its observed outcome."
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: "amend (not supersede), 2026-08-17: the halt trigger is corrected from 'any batch test already passes' to 'no newly-added covering test is classified red', and the it_requirement 'a green-at-baseline test is a hard halt, never a warning that proceeds' is replaced. The criterion's identity — a hard halt before coder dispatch, with a report naming the offending test and its AC id — is unchanged and still enforced, so the record is amended rather than retired. Change of intent authorised by BrainCandy; the new pass rule lives in BO-2400a-3-v and the git-derived partition it reads in BO-2400a-3-ii. Reset to work_status todo: the implementation in fast_lane.py still enforces the pre-amendment trigger."
 superseded_by: null
 covered_by: []
 implemented_by:
   - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-ship.js"
+notes: |
+  Amended in place rather than superseded. Superseding would set status to superseded_by,
+  which excludes the record from check_ac_coverage enforcement — and the halt path this
+  criterion governs must stay enforced, not retired. The behaviour being removed is the
+  per-test trigger ("any green batch test halts"), not the halt itself; the outcome
+  contract (hard halt before coder dispatch, structured blocker, report naming test and
+  AC id) survives intact and is now sharper, carrying a named reason. Nothing about the
+  record's history is deleted: the superseded trigger and the withdrawn it_requirement
+  are quoted verbatim in the amended_by entry above.

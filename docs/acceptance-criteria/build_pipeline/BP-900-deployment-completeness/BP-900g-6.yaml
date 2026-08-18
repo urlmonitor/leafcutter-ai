@@ -1,0 +1,118 @@
+id: BP-900g-6
+components:
+  - build_pipeline
+title: "Workflow sources are scanned for script references, and the fast lane resolves its scripts in a consumer install"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given extract_script_path_refs in scripts/build_referential_integrity.py, which
+    feeds the broken-reference guard build.py runs as a preflight,
+  And that it scans only `templates/agents/` and `templates/skills/`, and only
+    `.md` files, so workflow sources under `templates/workflows-js/` (`.js`) are
+    outside the scan entirely,
+  When the extractor runs over the package templates,
+  Then script references in workflow sources are extracted and normalised to the
+    same `scripts/<path>.py` deploy-namespace key as agent and skill references,
+    so a workflow invoking a script no build phase deploys fails the build,
+  And the output-root prefix bound established by BP-900g-4/BP-900g-5 is preserved
+    exactly — only the `{{config.output_root}}/` token or a dot-prefixed root such
+    as `.leafcutter/` may precede `scripts/`, so host-project paths
+    (`debugging/scripts/...`) and package-development prose
+    (`leafcutter/scripts/build.py`) are still NOT captured,
+  And the fast-lane workflow's own script invocations resolve in a consumer
+    install: templates/workflows-js/fast-lane-ship.js addresses
+    build_orchestration/fast_lane.py, setup_ticket_worktree.py and
+    ac_store/mark_ac_done.py at the paths the build actually deploys them to,
+    rather than at a bare `scripts/...` path,
+  Because a consumer project's own `scripts/` directory holds only three shim
+    symlinks (commit_guardian, doc_compliance, feedback) — everything else lands
+    under the output root — so `${worktreePath}/scripts/build_orchestration/fast_lane.py`
+    resolves only inside the leafcutter package repo, where `scripts/` is tracked
+    source. /fast-lane-build therefore works for us and dies at its first command
+    for every consumer, and the guard cannot see it because workflows are unscanned.
+depends_on:
+  - BP-900g
+  - BP-900g-4
+  - BP-900g-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_referential_integrity.py
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Extend extract_script_path_refs to scan workflow sources (templates/workflows-js/*.js, and templates/workflows/*.md where present) in addition to agents/ and skills/ .md files. Do NOT widen the output-root prefix bound while doing so — the existing negative-control tests for debugging/scripts/... and leafcutter/scripts/build.py must stay green."
+  - "Decide deliberately how to treat template-literal paths in JS (`${worktreePath}/scripts/...`): a ${...} interpolation is NOT an output root. Record the decision and its rationale in the module DECISION HISTORY rather than leaving it implicit."
+  - "Repoint the fast-lane workflow's script invocations at the deployed locations. Note that fast-lane-ship.js resolves its gate script against a git worktree of the CURRENT repo, which is why the bug is invisible in the package repo: leafcutter-ai tracks scripts/ as real source, a consumer project does not."
+  - "Verify behaviorally against a real consumer install produced by build.py --target-dir, not against the package tree — resolving a path in the package repo proves nothing about a consumer, which is precisely how this shipped. Adding the workflow scan must NOT turn _check_script_reference_guard red; if it surfaces new broken references they must be fixed, not parked (KNOWN_UNDEPLOYED_ALLOWLIST was emptied by BP-900g-5 and a test asserts it stays empty)."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-5
+  contract: "The output-root-aware extraction pattern and its prefix bound, plus the emptied KNOWN_UNDEPLOYED_ALLOWLIST that this AC must not refill."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-14"
+    reason: |
+      Implementation notes and two acknowledged residual limits, recorded so this AC
+      is not read as closing more than it does.
+
+      (a) Workflow .js was deployed BYTE-VERBATIM — build_workflow_scripts ->
+      _emit_workflow_variant is an identity transform and inject_config was never
+      applied — so a {{config.output_root}} token in a .js file would not have
+      substituted. Hardcoding `.leafcutter/` was rejected because output_root is
+      documented as "Configurable per consumer project". The fix therefore enables
+      inject_config for workflow .js. Verified non-destructive: the only `{{` in
+      workflows-js are JSDoc annotations ({{ request: string }}, {{skip:boolean...}})
+      and _PLACEHOLDER_RE requires [a-zA-Z0-9_.]+ immediately after `{{`, so none match.
+
+      (b) RESIDUAL LIMIT — the static extractor deliberately does NOT extract JS
+      template-literal paths of the form `${var}/scripts/...`. Extracting them would
+      falsely flag `${baselineTmpPath}/scripts/build.py`, where the variable holds a
+      full source clone, reopening the over-wide-prefix false-positive class the
+      BP-900g-4 prefix bound exists to prevent. Consequence: injection_builders.py is
+      referenced ONLY via a ${worktreePath}/ prefix, so the guard cannot see it. It is
+      deployed here, but a future regression of that reference would NOT be caught
+      statically. Closing this properly needs real static analysis of the JS, not a
+      wider regex. The deployed-tree behavioral test in unit_tests/test_bp_900g_6_paths.py
+      resolves the rendered literal text and is the compensating control.
+
+      (c) OUT OF SCOPE, found while surveying: fast-lane-build.js invokes
+      injection_builders.py as a CLI (`... assemble_context_bundle`) but that module has
+      NO argparse and no __main__ block — verified zero occurrences in the deployed copy.
+      The path now resolves, but the invocation is a no-op. That is a functional defect
+      needing an entry point, not a path fix, and belongs in its own AC.
+
+      (d) Also out of scope and deliberately untouched: the
+      `.agents/agents/<name>/scripts/run.py` family (15 references across 11
+      templates/workflows/*.md, vestigial and not a deploy-namespace path), the
+      `leafcutter/` vs `leafcutter-ai/` vendoring ambiguity in close-worktree.md and
+      changelog.md, and the ${...}/scripts/build.py references in finalize-feature.js
+      (scripts/build.py is already in EXTERNAL_DEPENDENCY_ALLOWLIST).
+superseded_by: null
+covered_by:
+  - unit_tests/test_bp_900g_6.py
+  - unit_tests/test_bp_900g_6_paths.py
+implemented_by:
+  - scripts/build_referential_integrity.py
+  - scripts/build_phases.py
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/fast-lane-build.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/finalize-feature.js

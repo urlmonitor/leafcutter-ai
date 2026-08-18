@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -52,10 +52,22 @@ criteria: |
 depends_on:
   - BP-1100b
 doc_links:
+  - path: templates/scripts/commit_guardian/check_presence_only_assertions.py
+    relationship: creates
+    status: planned
+    relevance: "THE IMPLEMENTATION SURFACE. New staged-hunk-aware commit-guardian hook implementing this rule. It does not exist yet — the other entries in this list are calibration material, not edit surfaces, and must not be mistaken for the thing being built."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "the authoritative guardian config (holds hooks_manifest and every per-hook config key). Two edits are required here: the per-hook config key (enabled, scanned_source_globs, waiver_marker) and the hooks_manifest entry that makes the hook actually run. NOTE: this file is NOT at config/commit_guardian.json; templates/commit-guardian/commit_guardian.json is a different, much smaller file and is NOT the registration surface."
+  - path: docs/pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: "the hook documentation index — the third leg of the three-way hook registration (script + guardian config + doc index) required by the create-hook skill"
   - path: unit_tests/workflows/test_bo2400a_runner_wiring.py
     relationship: describes
     status: exists
-    relevance: "in-tree calibration example: class TestIntegrationReferencesNotDormant holds three substring-form instances of the shape this rule must catch (choose_lane, emit_agent_telemetry, assemble_context_bundle)"
+    relevance: "in-tree calibration example (NOT an edit surface): class TestIntegrationReferencesNotDormant holds three substring-form instances of the shape this rule must catch (choose_lane, emit_agent_telemetry, assemble_context_bundle)"
   - path: unit_tests/workflows/test_bo_1000c_1a.py
     relationship: describes
     status: exists
@@ -71,17 +83,119 @@ doc_links:
   - path: docs/retrospectives/EPIC-TrustworthyTestGate.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
+  - path: templates/skills/create-hook/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "the canonical three-way hook registration procedure (hook script + commit_guardian.json config key and hooks_manifest entry + hook documentation index) this AC must follow"
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    presence_only_assertion_guard:
+      type: object
+      description: "Per-hook config key for the new staged-hunk presence-only assertion gate. Declares whether the gate is enabled, the scanned-source glob set the rule applies to, and the waiver marker string. The globs are DATA, read by the hook from this key — the hook must not carry its own copy."
+      properties:
+        enabled:
+          type: boolean
+        scanned_source_globs:
+          type: array
+          items:
+            type: string
+        waiver_marker:
+          type: string
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+    - create-hook
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "IMPLEMENTATION SURFACE: a new hook script at templates/scripts/commit_guardian/check_presence_only_assertions.py. The doc_links entries under unit_tests/ are CALIBRATION EXAMPLES, not the thing being built; deriving the edit surface from them would point the coder at a test file."
+    - "REGISTRATION SURFACE: the guardian config is templates/scripts/commit_guardian/commit_guardian.json (the 1181-line file holding hooks_manifest). There is no config/commit_guardian.json in this repo, and templates/commit-guardian/commit_guardian.json is a different, much smaller file that is NOT the registration surface."
+    - "n_location_rule '2' means BOTH locations in that config: (a) the per-hook config key carrying enabled / scanned_source_globs / waiver_marker, and (b) the hooks_manifest entry. The config key alone is INERT — the hooks_manifest entry is the gate that actually runs. A hook registered in only one of the two is a no-op that reads as shipped."
+    - "THREE-WAY REGISTRATION per the create-hook skill: hook script + guardian config (both locations) + a row in the hook documentation index docs/pre-commit-hooks.md. The change must also keep check_hook_parity green."
+    - "DEPLOYED-LAYOUT VERIFICATION: the hook runs from the deployed layout under scripts/commit_guardian/, not from templates/. Any module it imports must be in the build deploy manifest for that directory, and acceptance must include running the DEPLOYED hook after build.py against a real staged diff. A templates-only edit leaves the running gate unchanged, and a missing deploy entry raises ModuleNotFoundError at hook runtime."
+    - "SCOPE IS STAGED HUNKS ONLY. A whole-file scan fires on the 46 pre-existing violations counted across unit_tests/workflows/ and unit_tests/commit_guardian/ and makes the hook's own introducing commit unmergeable. The rule is a ratchet: nothing new lands, and the backlog is cleaned by a separate sweep."
+    - "The rule must match BOTH the substring form (an assertion that a symbol name is contained in the file's contents) and the regular-expression declaration form (a match that a function of a given name is declared there). A substring-only implementation misses the second confirmed incumbent."
+    - "The rule must NOT report the named non-target at unit_tests/workflows/test_bo_1000a_2_i.py (~L166), which asserts the literal AC id 'BO-1000a-2-i' appears in finalize-feature.js — a documentation-marker requirement, not a behavioural claim. Any implementation that flags it has over-matched; calibrate against it explicitly."
+    - "The waiver is `# presence-only: <reason>` with a NON-EMPTY reason. A waiver with an empty or whitespace-only reason must not suppress the violation, or the marker degrades into a silent suppression list. Accepted waivers and their reasons must be listed in the check's own output so the accumulated waivers are readable in one place."
+    - "The scanned-source glob set must be read from the guardian config key, never hardcoded in the hook script. A hardcoded copy is free to drift from the declared set, and extending the scope would then require a code change rather than a config change."
+    - "SERIALIZATION: templates/scripts/commit_guardian/commit_guardian.json is also edited by BP-100k-3 (bundle A2, which adds the drift-gate exemption registry key). These two tickets MUST NOT run concurrently — the supervisor must serialize them, and whichever lands second must rebase onto the first rather than re-writing the whole config object."
+    - "SELF-CONSISTENCY: this hook's own coverage must execute the hook against a synthesized staged diff. A test asserting that a symbol appears in check_presence_only_assertions.py would be an instance of the exact defect the hook exists to reject."
+    - "Must follow the repo error-handling policy: specific-exception try/except around git, file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts."
+test_spec:
+  - name: test_unwaived_substring_presence_assertion_is_reported_with_file_symbol_and_source
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the hook against a synthesized staged diff that adds a substring presence assertion over a scanned-source file reports a violation naming the test file, the asserted symbol, and the source file the assertion scans."
+  - name: test_regex_declaration_presence_assertion_is_also_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The same executed hook reports the regular-expression declaration form (a match that a named function is declared in a scanned source), not only the substring form."
+  - name: test_report_states_the_unreachable_code_rationale_and_names_the_waiver
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The hook's emitted report states that a presence-only assertion over workflow or commit-guardian source stays green on unreachable code and is therefore not coverage, and names the waiver comment as the deliberate-acceptance route."
+  - name: test_waived_assertion_is_not_reported_and_its_reason_is_listed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An added assertion preceded by `# presence-only: <reason>` with a non-empty reason is not reported, and the waiver together with its reason appears in the executed hook's output."
+  - name: test_waiver_with_an_empty_reason_does_not_suppress_the_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A waiver comment carrying an empty or whitespace-only reason leaves the violation reported, so the marker cannot become a silent suppression list."
+  - name: test_presence_assertion_over_an_unscanned_file_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An added presence-only assertion over a file matched by none of the configured scanned-source globs produces no violation."
+  - name: test_preexisting_assertions_in_untouched_files_are_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Run against a repository that already contains presence-only assertions over the scanned sources, with a staged change touching none of them, the hook reports nothing — proving it reads staged hunks rather than whole files."
+  - name: test_new_violation_reported_regardless_of_author_or_source_co_modification
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A newly added presence-only assertion is reported whether or not the same staged change also modifies the source file the assertion scans, and irrespective of the authoring agent."
+  - name: test_documentation_marker_assertion_is_not_over_matched
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Calibration against the named non-target: an added assertion that a literal AC id appears in a workflow source (the documentation-marker shape at unit_tests/workflows/test_bo_1000a_2_i.py ~L166) is not reported."
+  - name: test_scanned_source_globs_are_read_from_the_guardian_config
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Changing the configured scanned_source_globs changes which files the executed hook reports on — proving the glob set is data read from the guardian config rather than a hardcoded copy in the hook."
+  - name: test_deployed_hook_runs_and_reports_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "After build.py deploys, the hook copy under scripts/commit_guardian/ is invoked as the pre-commit runner invokes it and reports the violation — proving the hooks_manifest entry and the deploy manifest are both wired, not just the templates/ source."
+test_rationale: "This AC's whole purpose is to outlaw proofs that read source text, so its own coverage must not be one. Every descriptor synthesizes a staged diff and executes the hook as the pre-commit runner does, asserting on the emitted report and on which inputs do and do not produce a violation. Two descriptors exist specifically to catch the ways a passing implementation can still be a no-op: the config-driven glob test (a hardcoded copy in the hook would pass a naive test) and the deployed-hook test (a templates-only edit leaves the running gate unchanged and would otherwise read as shipped)."
+delivers_to:
+  - agent: python-coder
+    contract: "A staged-hunk presence-only-assertion violation report — per finding: the test file path, the asserted symbol, and the scanned source file — plus a listing of the accepted `# presence-only: <reason>` waivers, emitted by a deployed commit-guardian hook and gating the commit via its exit status."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
 amended_by:
   - "2026-08-13 expert-review remediation: replaced the colliding 'guardrail-gate source file' term with explicit path globs; replaced the statically-undecidable accompanying-test exemption with an explicit waiver comment; scoped the check to staged hunks; added the named non-target and the dead-test inventory."
+  - reason: "it-po-technical-enrichment"
+    entry: "Filled the fields that made this AC non-ticket-generatable and fixed the mis-derived edit surface. assigned_agent was null -> python-coder (the generator was emitting a literal '- [ ] None' Sign-offs line that the parity guard rejects, and computing a docs-shaped agents map with no coder). estimated_complexity was null -> L (new hook script + two locations in the guardian config + hook doc index + calibration against three in-tree examples and one named non-target). it_requirements was absent -> structured package-surface spec keyed on templates/scripts/commit_guardian/commit_guardian.json with n_location_rule '2' (config key AND hooks_manifest entry). Resolved the 'deliberately left open for it-po' question in the notes in favour of a MECHANICAL staged-hunk pre-commit gate over a pr-reviewer checklist item, on the grounds the criteria already assume a diff-aware checker and the incumbent instances survived human review. Added doc_links naming the real surfaces — check_presence_only_assertions.py (creates/planned), commit_guardian.json (modifies), docs/pre-commit-hooks.md (modifies), create-hook SKILL.md — so files_touched no longer derives to a test file or to nothing; files_touched was EMPTY before this pass. Corrected the registration path: config/commit_guardian.json does not exist in this repo. Added 11 behavioral test_spec descriptors plus test_rationale, every one executing the hook against a synthesized staged diff — including a config-driven-globs descriptor and a deployed-hook descriptor to catch the two ways a passing implementation can still be a no-op. Recorded the SERIALIZATION constraint against BP-100k-3, which edits the same guardian config. criteria, readiness (draft), req_status and work_status left unchanged."
+    by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
@@ -152,6 +266,18 @@ notes: |
   the outcome, not the mechanism. A mechanical gate is the stronger reading given
   that the incumbent instances survived review — and note the staged-hunks
   scoping in the criteria already assumes a diff-aware checker.
+
+  IT-PO DECISION (2026-08-17) on that open question: MECHANICAL PRE-COMMIT GATE.
+  Grounds: (a) both confirmed incumbent instances passed human review, so a
+  reviewer checklist item is the mechanism already shown not to work here;
+  (b) the criteria's staged-hunks scoping presupposes a diff-aware checker, which
+  a checklist item is not; (c) a checklist item cannot produce the machine-readable
+  waiver listing the second scenario requires. The gate is registered in
+  templates/scripts/commit_guardian/commit_guardian.json in BOTH locations — the
+  per-hook config key and the hooks_manifest entry — because the config key alone
+  is inert and the manifest entry is what actually runs. Verification must exercise
+  the DEPLOYED copy under scripts/commit_guardian/ after build.py; a templates-only
+  edit leaves the running gate unchanged.
 
   Calibration constraint worth carrying into implementation: the rule must match
   both the substring form and the regular-expression declaration form.

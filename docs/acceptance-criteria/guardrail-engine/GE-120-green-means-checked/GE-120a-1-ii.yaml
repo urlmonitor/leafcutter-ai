@@ -1,0 +1,103 @@
+id: GE-120a-1-ii
+title: "A check that falls back to a weaker inspection reports its clean result as unverified"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a check that has an authoritative inspection and a reduced substitute it can fall
+    back to when the authoritative one is unavailable,
+  And the authoritative inspection is unavailable for this run,
+  And the reduced substitute finds nothing wrong with the staged files,
+  When the check reports,
+  Then the clean finding is labelled as produced by the reduced substitute and as not
+    authoritative,
+  And the output names which inspection did not happen,
+  And the result value is distinguishable from the value produced when the authoritative
+    inspection ran and found nothing wrong,
+  And a reader who sees only the final line can tell the two apart.
+
+  Coverage note: cover this by running the check twice on the same staged files — once
+  with the authoritative inspection available and once without — and asserting the two
+  results are distinguishable. Asserting only that both exit 0 does not cover it.
+depends_on:
+  - GE-120a-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Documents that check_ac_schema.py has exactly this authoritative-vs-manual fallback shape."
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "The concrete instance (GE-120a-3). Its GE-112 schema_validated flag is the existing field the third state maps onto."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The vocabulary must carry THREE states, not two: ordinary-success (authoritative instrument, nothing found), degraded-but-ran (reduced instrument, nothing found, NOT authoritative), and could-not-check (never ran). Add the third value to the shared outcome module GE-120a-1 introduces. Do not model it as a boolean bolted onto success — a boolean read by one caller and ignored by another is how the current family diverged."
+  - "An existing flag already models half of this: templates/scripts/commit_guardian/check_ac_schema.py carries a schema_validated flag introduced by GE-112 (see that file's DECISION HISTORY, ~lines 29-37, and the manual-validation fallback at ~line 623). Derive the degraded-but-ran state FROM that existing flag rather than adding a parallel indicator — two flags meaning the same thing is precisely how the GE-112 defect arose."
+  - "The non-authoritative label must appear on the FINAL reader-facing line, not only in a mid-run warning that scrolls past. The criterion is that a reader who sees only the last line can tell the two runs apart."
+  - "The label must appear even when the reduced instrument found NOTHING at all to report. An empty-findings degraded run is the most dangerous of the three states because it renders identically to a real pass; it must not print the same closing line."
+  - "Generalise, do not special-case: the third state belongs in the shared vocabulary so any check with an authoritative/reduced pair inherits it. A change confined to check_ac_schema.py would be the fourth point patch in this area (GE-112, GE-118a-1, GE-118b were the first three)."
+  - "ADR-001 deployed/template parity: edit templates/scripts/commit_guardian/ then run 'python scripts/build.py --target-dir .'; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ must match (check_hook_parity enforces). Any new shared module must also be added to deploy_map in scripts/build_phases.py or the hook raises ModuleNotFoundError at runtime."
+test_spec:
+  - name: test_ge120a1ii_degraded_clean_result_labelled_not_authoritative
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Authoritative inspection genuinely unavailable, reduced substitute finds nothing: the clean finding is labelled as reduced and not authoritative, and names the inspection that did not happen."
+  - name: test_ge120a1ii_degraded_and_authoritative_results_are_distinguishable
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Same staged files run twice, once with and once without the authoritative inspection: the two result values differ."
+  - name: test_ge120a1ii_label_present_when_reduced_run_reports_nothing
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A degraded run with zero findings still carries the non-authoritative label."
+  - name: test_ge120a1ii_final_line_alone_distinguishes_the_two_runs
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Comparing only the closing line of each run is sufficient to tell degraded from authoritative."
+test_rationale: "Both runs exit 0, so exit-code assertions cannot separate them; the whole criterion is that the RESULT VALUE and the closing line differ. And the unavailability must be real path unavailability from a second working copy — monkey-patching the loader in-process exercises a different condition from the observed path-resolution failure, and would pass on code that still degrades silently when the file is genuinely unreachable."
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The could-not-check result vocabulary, extended with a degraded-but-ran value."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The THIRD state. GE-120a-1 covers "could not run at all"; GE-120a-1-i covers "ran
+  fully, one input was bad". This covers the state between them: the check ran, but with
+  a weaker instrument than the one its contract promises. A clean result from a weaker
+  instrument is the most dangerous of the three because it looks exactly like a real pass.
+
+  GE-120a-3 is the concrete instance (the AC-schema check degrading to manual field
+  validation). This AC generalises it so a fourth point patch is not what ships — see the
+  repeat-defect history in GE-120 notes (GE-112 already patched an adjacent defect in the
+  same file).
+
+  IT-PO (2026-08-14): the third state maps onto the EXISTING schema_validated flag that
+  GE-112 introduced in check_ac_schema.py — see it_requirements. Reuse it; do not add a
+  parallel indicator.

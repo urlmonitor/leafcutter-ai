@@ -23,21 +23,35 @@ Subcommand 1 — select_batch:
     Exit code: 0 always (selection is deterministic; an empty store returns []).
     Example stdout: ["BO-2400a-1", "BO-2400a-2"]
 
-Subcommand 2 — verify_red_baseline:
+Subcommand 2 — verify_red_baseline (AMENDED 2026-08-17, see BO-2400a-3 and its
+decomposed children BO-2400a-3-i..viii):
 
     python3 fast_lane.py verify_red_baseline \\
         --ac-ids <id1,id2,...>   # comma-separated AC ids
-        --test-root <path>       # root dir to scan for test files
+        --test-root <path>       # root dir to scan for test files (must be a
+                                  # git worktree — the gate derives a
+                                  # newly-added / pre-existing partition from
+                                  # git and fails closed when it cannot)
+        [--base-ref <ref>]       # optional; defaults to
+                                  # `git merge-base HEAD origin/main`
 
     Output: one JSON-encoded line to stdout — a dict with keys:
         {
-            "all_red": bool,
-            "offender": str | null,          -- nodeid of first passing test
-            "offender_ac_id": str | null     -- covers tag of the offending test
+            "gate_passed": bool,
+            "reason": str | null,            -- None when passed, else one of
+                                              -- no_new_covering_tests,
+                                              -- all_new_tests_green_at_baseline,
+                                              -- no_red_outcome_among_new_tests,
+                                              -- baseline_partition_unavailable
+            "red": [...], "green_at_baseline": [...],
+            "inconclusive": [...], "preexisting": [...]
         }
+        Each list entry is {"nodeid": str, "ac_id": str, "outcome": str}.
+        The pre-amendment keys "all_red", "offender", "offender_ac_id" are
+        REMOVED — not kept as aliases.
     Exit code:
-        0  when all_red is True  (all linked tests are failing — coder may run)
-        1  when all_red is False (at least one test passes — coder MUST NOT run)
+        0  when gate_passed is True  (>=1 newly-added test is red — coder may run)
+        1  when gate_passed is False (no newly-added test is red — coder MUST NOT run)
 
 Subcommand 3 — verify_green_and_coverage:
 
@@ -175,6 +189,42 @@ def _run_cli(args: list[str]) -> tuple[int, str, str]:
         timeout=30,
     )
     return result.returncode, result.stdout, result.stderr
+
+
+def _run_git(args: list[str], cwd: Path) -> None:
+    """Run a git subcommand in *cwd*, raising AssertionError on failure."""
+    import subprocess
+
+    result = subprocess.run(
+        ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=15
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"git {' '.join(args)} failed in {cwd} (exit {result.returncode}): "
+            f"{result.stderr}"
+        )
+
+
+def _init_git_repo_with_head_commit(root: Path) -> None:
+    """Initialize a real git repo at *root* with one committed placeholder file.
+
+    verify_red_baseline (amended 2026-08-17) requires --test-root to be inside
+    a git worktree.  These CLI tests have no origin/main remote available, so
+    every call below passes --base-ref HEAD explicitly rather than relying on
+    the default `git merge-base HEAD origin/main` derivation — HEAD is this
+    initial commit, so any test file subsequently written and left uncommitted
+    is, by construction, absent from HEAD and classified newly-added.
+
+    Args:
+        root: Directory to initialize as a git repository.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    _run_git(["init", "-q"], cwd=root)
+    _run_git(["config", "user.email", "test-writer@example.com"], cwd=root)
+    _run_git(["config", "user.name", "Test Writer"], cwd=root)
+    (root / "README.md").write_text("placeholder\n", encoding="utf-8")
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(["commit", "-q", "-m", "base"], cwd=root)
 
 
 # ---------------------------------------------------------------------------
@@ -347,16 +397,27 @@ class TestSelectBatchCli(unittest.TestCase):
 class TestVerifyRedBaselineCli(unittest.TestCase):
     """CLI tests for the verify_red_baseline subcommand.
 
-    Contract: python3 fast_lane.py verify_red_baseline --ac-ids <ids> --test-root <path>
-      - Prints a JSON dict {all_red, offender, offender_ac_id} to stdout
-      - Exits 0 when all_red is True (all batch tests fail — gate passes)
-      - Exits 1 when all_red is False (a test passes — gate blocks coder)
+    AMENDED 2026-08-17 (BO-2400a-3, decomposed into BO-2400a-3-i..viii):
+    verify_red_baseline now requires --test-root to be a git worktree (it
+    derives a newly-added/pre-existing partition from git and fails closed
+    when it cannot).  These CLI tests init a real git repo per test and pass
+    --base-ref HEAD explicitly, since there is no origin/main remote in a
+    lone repo — HEAD is the commit made before any fixture test file is
+    written, so every subsequently-written file is newly-added relative to it.
+
+    Contract: python3 fast_lane.py verify_red_baseline --ac-ids <ids>
+        --test-root <path> --base-ref <ref>
+      - Prints a JSON dict {gate_passed, reason, red, green_at_baseline,
+        inconclusive, preexisting} to stdout
+      - Exits 0 when gate_passed is True (>=1 newly-added test is red)
+      - Exits 1 when gate_passed is False (no newly-added test is red)
     """
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.test_root = root / "tests"
+        self.root = Path(self._tmp.name)
+        _init_git_repo_with_head_commit(self.root)
+        self.test_root = self.root / "tests"
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
@@ -365,15 +426,12 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
         # covers: BO-2400a-3
         """verify_red_baseline CLI must print a JSON dict verdict to stdout.
 
-        DEFECT H-2: no CLI exists — the subprocess produces no JSON output.
-        JSONDecodeError on empty stdout is the current red state.
-
-        To make this green, add a CLI that:
-        1. Accepts 'verify_red_baseline' subcommand
-        2. Accepts --ac-ids (comma-separated) and --test-root arguments
-        3. Calls verify_red_baseline(ac_ids=[...], test_root=...) from the module
-        4. Prints json.dumps(result) to stdout
-        5. Exits 0 when all_red is True, exits 1 when all_red is False
+        To make this green, the CLI must:
+        1. Accept 'verify_red_baseline' subcommand
+        2. Accept --ac-ids (comma-separated), --test-root, and --base-ref
+        3. Call verify_red_baseline(ac_ids=[...], test_root=..., base_ref=...)
+        4. Print json.dumps(result) to stdout
+        5. Exit 0 when gate_passed is True, exit 1 when gate_passed is False
         """
         ac_id = "BO-CLI-RED-001"
         _write_test_file(
@@ -390,6 +448,7 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             "verify_red_baseline",
             "--ac-ids", ac_id,
             "--test-root", str(self.test_root),
+            "--base-ref", "HEAD",
         ])
 
         # The stdout must be valid JSON regardless of the verdict
@@ -399,24 +458,38 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             self.fail(
                 f"verify_red_baseline CLI must print a JSON dict to stdout. "
                 f"Current output is not valid JSON: {exc!r}\n"
-                f"stdout={stdout!r}\nstderr={stderr!r}\n"
-                f"DEFECT H-2: no CLI entry point in fast_lane.py"
+                f"stdout={stdout!r}\nstderr={stderr!r}"
             )
 
-        for key in ("all_red", "offender", "offender_ac_id"):
+        for key in (
+            "gate_passed",
+            "reason",
+            "red",
+            "green_at_baseline",
+            "inconclusive",
+            "preexisting",
+        ):
             self.assertIn(
                 key,
                 result,
                 f"verify_red_baseline JSON output must contain key '{key}'. "
                 f"Got keys: {list(result.keys())}",
             )
+        for removed_key in ("all_red", "offender", "offender_ac_id"):
+            self.assertNotIn(
+                removed_key,
+                result,
+                f"Pre-amendment key '{removed_key}' must be removed, not kept as "
+                "an alias.",
+            )
 
-    def test_h2_red_baseline_cli_exits_0_when_all_red(self) -> None:
+    def test_h2_red_baseline_cli_exits_0_when_new_test_is_red(self) -> None:
         # covers: BO-2400a-3
-        """verify_red_baseline CLI must exit 0 when all tests fail (gate passes).
+        """verify_red_baseline CLI must exit 0 when a newly-added test fails.
 
-        When all linked tests fail (as expected before implementation), the
-        gate passes and the coder may be dispatched.  Exit 0 signals gate-pass.
+        When at least one newly-added linked test fails (as expected before
+        implementation), the gate passes and the coder may be dispatched.
+        Exit 0 signals gate-pass.
         """
         ac_id = "BO-CLI-RED-002"
         _write_test_file(
@@ -433,6 +506,7 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             "verify_red_baseline",
             "--ac-ids", ac_id,
             "--test-root", str(self.test_root),
+            "--base-ref", "HEAD",
         ])
 
         try:
@@ -444,24 +518,25 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             )
 
         self.assertTrue(
-            result.get("all_red"),
-            "all_red must be True when all linked tests fail.",
+            result.get("gate_passed"),
+            "gate_passed must be True when a newly-added linked test fails.",
         )
+        self.assertIsNone(result.get("reason"))
         self.assertEqual(
             returncode,
             0,
-            "verify_red_baseline CLI must exit 0 when all_red is True "
+            "verify_red_baseline CLI must exit 0 when gate_passed is True "
             "(gate passes — coder may be dispatched). "
             f"Got exit code {returncode}.\nstdout={stdout!r}",
         )
 
-    def test_h2_red_baseline_cli_exits_1_when_test_passes(self) -> None:
+    def test_h2_red_baseline_cli_exits_1_when_only_new_test_passes(self) -> None:
         # covers: BO-2400a-3
-        """verify_red_baseline CLI must exit 1 when any test already passes (gate blocks).
+        """CLI must exit 1 when the only newly-added test already passes.
 
-        A passing test before implementation means the test is under-specified
-        or implementation already exists.  Exit 1 signals gate-block — the
-        coder must NOT be dispatched.
+        A passing newly-added test with no other newly-added test to
+        establish a red baseline means the gate must block. Exit 1 signals
+        gate-block — the coder must NOT be dispatched.
         """
         ac_id = "BO-CLI-RED-003"
         _write_test_file(
@@ -478,6 +553,7 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             "verify_red_baseline",
             "--ac-ids", ac_id,
             "--test-root", str(self.test_root),
+            "--base-ref", "HEAD",
         ])
 
         try:
@@ -489,23 +565,26 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             )
 
         self.assertFalse(
-            result.get("all_red"),
-            "all_red must be False when a test already passes before implementation.",
+            result.get("gate_passed"),
+            "gate_passed must be False when the only newly-added test already "
+            "passes before implementation.",
         )
+        self.assertEqual(result.get("reason"), "all_new_tests_green_at_baseline")
         self.assertEqual(
             returncode,
             1,
-            "verify_red_baseline CLI must exit 1 when all_red is False "
+            "verify_red_baseline CLI must exit 1 when gate_passed is False "
             "(gate blocks — coder must NOT be dispatched). "
             f"Got exit code {returncode}.\nstdout={stdout!r}",
         )
 
-    def test_h2_red_baseline_cli_names_offender_in_verdict(self) -> None:
+    def test_h2_red_baseline_cli_names_offender_in_green_at_baseline(self) -> None:
         # covers: BO-2400a-3
-        """verify_red_baseline CLI verdict must name the offending test when gate blocks.
+        """verify_red_baseline CLI verdict must name the offending test when blocked.
 
-        The JSON output must include a non-None 'offender' field with the
-        test function name when all_red is False.
+        The JSON output must include the offending (already-passing) test in
+        `green_at_baseline`, named by its test function, when gate_passed is
+        False.
         """
         ac_id = "BO-CLI-RED-004"
         _write_test_file(
@@ -522,6 +601,7 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
             "verify_red_baseline",
             "--ac-ids", ac_id,
             "--test-root", str(self.test_root),
+            "--base-ref", "HEAD",
         ])
 
         try:
@@ -529,15 +609,18 @@ class TestVerifyRedBaselineCli(unittest.TestCase):
         except json.JSONDecodeError:
             self.fail(f"verify_red_baseline CLI must print valid JSON. stdout={stdout!r}")
 
-        offender = result.get("offender")
-        self.assertIsNotNone(
-            offender,
-            "The 'offender' field must be set (non-None) when all_red is False.",
+        green_at_baseline = result.get("green_at_baseline") or []
+        self.assertTrue(
+            green_at_baseline,
+            "The 'green_at_baseline' list must be non-empty when gate_passed is False "
+            "due to the only newly-added test already passing.",
         )
-        self.assertIn(
-            "test_named_offender_passes",
-            str(offender),
-            "The offender field must name the test function that passed.",
+        self.assertTrue(
+            any(
+                "test_named_offender_passes" in str(entry.get("nodeid", ""))
+                for entry in green_at_baseline
+            ),
+            "A green_at_baseline entry must name the test function that passed.",
         )
 
 

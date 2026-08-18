@@ -17,7 +17,7 @@ criteria: |
   read the requirement from the store and falls back to the ticket copy when a new field is
   absent -- a missing new field means "old style", never "nothing to check", so a build can
   never look green while actually verifying nothing.
-depends_on: [ACD-1900]
+depends_on: [ACD-1900, ACD-1900c, ACD-1600b]
 doc_links:
   - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
   - docs/architecture/agent_knowledge_plane.md
@@ -26,7 +26,9 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+  - "2026-08-14 sequencing pass: added depends_on ACD-1900c (the flag this L1's dual-read branches on must exist first) and ACD-1600b (agent-side store read). Both orderings were already stated in this file's own notes and in ADR-026 but existed nowhere a machine could read them: depends_on listed only the parent L0, so a supervisor batching by depends_on saw an independent leaf and could dispatch these in any order. The notes are the rationale; these edges are the enforcement."
+  - "2026-08-14 SPLIT OF THE ADR-026 INVARIANT — do not merge with ACD-1600b. ADR-026's load-bearing rule is 'every agent AND gate must dual-read before the ticket is thinned'. ACD-1600b covers the AGENT half (its three children are all phase-agent-side); this L1 covers the GATE half. Neither alone satisfies the invariant and the two trees carried no edge between them until now."
 superseded_by: null
 covered_by:
   - ACD-1900b-1

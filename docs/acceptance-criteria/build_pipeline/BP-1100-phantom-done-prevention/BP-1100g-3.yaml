@@ -1,0 +1,199 @@
+id: BP-1100g-3
+components:
+  - build_pipeline
+  - testing_quality
+title: "Each test states which kind of proof it was written to give, on the same records the existing coverage tag uses"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test written to answer a specific requested kind of proof for a specific
+      piece of work,
+    And that test already carries the existing tag naming the piece of work it
+      covers,
+  When the test is written and the suite is read,
+  Then the test also carries a tag naming the kind of proof it was written to give,
+    And both tags are collected for the same test by one reader in one pass, so a
+      test cannot be present on one axis and absent from the other by accident,
+    And a test carrying a kind that is not one of the taught kinds is reported,
+      naming the test and the unrecognised kind,
+    And the new tag changes nothing about how any failing test is treated: it is a
+      statement of what the test was written for, and it feeds no pass, done or
+      eligibility decision anywhere.
+depends_on:
+  - BP-1100g
+  - BP-1100g-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing tag axis and its enforcement decision — which FAILING tests block. The new axis is a second axis on the same records with a different consequence; that decision is untouched here."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Already collects the existing coverage tags and already treats XFAIL / XPASS / SKIPPED / FAILED / ERROR / nodeid-not-found as non-passing. Extend that scanner with a second tag axis rather than building a parallel one."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Where the existing coverage tag is mandated, with its exact placement and format rules. The second tag should be mandated in the same place and in the same shape, so the writer learns one convention rather than two."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The set of kinds a tag may name, and the reason the axis is worth carrying: counting angles covered rather than tests written."
+  - path: scripts/commit_guardian/check_test_ac_tags.py
+    relationship: describes
+    status: exists
+    relevance: "THE SECOND LIVE READER of the same tags, found during enrichment: a pre-commit hook with its own COVERS_REGEX, currently in warn mode via the test_ac_tag_enforcement key. Any tag-format change has to keep both readers in agreement."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/done_proof.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ unit_tests/commit_guardian/ -q"
+  config_schema_fragment:
+    type: object
+    description: "One record per test function, collected in a single pass, carrying BOTH tag axes. A test present on one axis and absent from the other is representable and preserved, never dropped and never defaulted."
+    required:
+      - file
+      - function
+      - covers
+      - angles
+    properties:
+      file:
+        type: string
+      lineno:
+        type: integer
+      function:
+        type: string
+      covers:
+        type: array
+        items:
+          type: string
+      angles:
+        type: array
+        items:
+          type: string
+  constraints:
+    - "ONE SCANNER, TWO AXES. Extend _scan_test_root_for_covers_tags / _scan_single_test_file in the reference file so both tags are collected for the same test function in the same pass — that is the single location n_location_rule refers to. A parallel scanner over the same files WILL drift, and drift between two readers of one source is the EPIC-ComputedQualityGates layer-3 failure again. Extending also makes the one-reader-one-pass clause true by construction rather than by assertion."
+    - "NAME EVERY READER OF THIS TAG SURFACE. There are two live ones: done_proof.py's scanner (library, used by the check_done_proof hook and CI gate) and scripts/commit_guardian/check_test_ac_tags.py (pre-commit, its own COVERS_REGEX, currently warn mode). Any change to tag placement or format must keep both in agreement, and the new axis must not change check_test_ac_tags' enforcement mode or its verdict."
+    - "The new axis must not enter _classify_outcomes, verify_done_eligible, or any eligibility computation. BP-1100g-3-i makes that falsifiable; an implementation that consumes the kind tag in a verdict has converted a planning declaration into a verdict, which the parent L1 forbids."
+    - "An unrecognised kind must be REPORTED naming the test and the value, and must not be dropped silently and must not raise. The permitted set is the one BP-1100g-1 makes single — read it, do not restate it."
+    - "Tag placement and format must match the existing convention exactly (line above the def, first line of the body, or the docstring — the three positions check_test_ac_tags already accepts), so the writer learns one convention rather than two."
+    - "DEPLOY-MANIFEST OBLIGATION: done_proof.py backs a deployed pre-commit hook and a CI gate. Any new module it imports must be added to build_ac_store's deploy_map in scripts/build_phases.py, or the deployed hook raises ModuleNotFoundError and blocks every merge once the gate is required — the 2026-07-22 done_proof.py incident, verbatim."
+    - "Scanning must stay linear in the number of test files and must not add a second full walk of the test tree; the scanner runs on the pre-commit path."
+    - "COMPANION SURFACE THIS AGENT CANNOT WRITE: the first Then clause ('the test also carries a tag') is an authoring convention that lives in templates/agents/test-writer.md §2i, which is llm-expert surface, not python-coder surface. It is named here so it is not lost; see the caveat in the enrichment note for the recommended follow-up."
+delivers_to:
+  - agent: python-coder
+    contract: "For each test function, one record collected in a single pass carrying both axes: {file, lineno, function, covers: list[ac_id], angles: list[str]}. A test present on one axis and absent from the other is representable and preserved — never dropped, never defaulted. This is the CLAIM side that BP-1100g-4's promise-versus-claim check reads."
+expects_from:
+  - ac_id: BP-1100g-1
+    contract: "The single set of permitted kinds, resolvable from one source, against which an unrecognised tag value is decided."
+test_spec:
+  - name: test_bp_1100g_3_both_tag_axes_collected_for_the_same_test_in_one_pass
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "One scan of a test tree returns, per test function, both the covers ids and the declared kinds; a test carrying only one of the two axes appears with the other empty rather than being omitted from the results."
+  - name: test_bp_1100g_3_tags_are_collected_from_real_on_disk_test_files_in_every_accepted_position
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Scan actual .py files written to disk exactly as the project's own convention produces them — tag on the line above the def, on the first body line, and inside the docstring — rather than hand-typed source strings. The PhantomDoneFilesTouched lesson: a hand-typed fixture reproduces the bias that hides the bug."
+  - name: test_bp_1100g_3_unrecognised_kind_is_reported_naming_test_and_value
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A test tagged with a kind outside the permitted set produces a report naming that test and that value, and the scan completes without raising and without dropping the record."
+  - name: test_bp_1100g_3_second_axis_is_collected_through_the_deployed_done_proof_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_done_proof.py <staged AC yaml>` as a subprocess against a temp test tree carrying both axes, and assert the deployed hook path collects them — importing done_proof from the source tree is structurally blind to the deploy-manifest gap that broke this exact module on 2026-07-22."
+test_rationale: |
+  Three of the four risks here are invisible to a direct call of the scanner function.
+  The real-artifact test exists because hand-typed fixtures reproduced the exact bias that
+  hid the files_touched parser no-op. The deployed-hook test exists because done_proof.py
+  has already shipped once with a missing deploy_map entry. And the failure test is the
+  negative control the scanner otherwise lacks. A unit test that scans a hand-built source
+  string would pass on all three defects.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder (load-bearing surface is done_proof.py's scanner). it_requirements
+    in package-surface object form; both live readers of the tag surface and the deploy-manifest
+    obligation are named under `constraints`. Added test_spec (criterion/real_artifact/failure/reachability)
+    and contracts. The prompt half of the first Then clause is flagged as an llm-expert
+    companion surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BP-1100g-3-i
+implemented_by: []
+change_target:
+  - prompt
+  - code
+risk_surface: internal
+notes: |
+  GAP E of BP-1100g, first half: the axis itself. BP-1100g-4 is the forcing
+  function that stops it decaying to zero.
+
+  THE OBSERVED STATE. The repo carries 2,266 tags of the existing coverage axis
+  and zero of this one. The 2026-08-17 authoring pass objected that a declaration
+  nothing reads back has no forcing function and would decay to the same 0% that
+  the side-effect declaration sits at today. The user accepted the objection and
+  widened the scope exactly as far as BP-1100g-4 and no further. DO NOT
+  RE-LITIGATE.
+
+  ONE SCANNER, TWO AXES. The scanner that collects the existing coverage tags is
+  already fail-closed about non-passing outcomes and is already the place tests
+  are associated with work. A second scanner would drift from it, and drift
+  between two scanners of the same files is the EPIC-ComputedQualityGates layer-3
+  failure again. Extending it also makes the one-reader-one-pass clause true by
+  construction.
+
+  THE FOURTH CLAUSE IS THE BOUNDARY AND IT IS NOT NEGOTIABLE. The existing axis
+  decides which FAILING tests block. This axis must never touch that decision;
+  its consequence lands in BP-1100g-4 and is about a MISSING test, at commit
+  time, never about a failing one. An implementation that lets a kind tag change
+  which failures block has converted a planning declaration into a verdict, which
+  is the thing the parent L1 forbids. BP-1100g-3-i makes that clause falsifiable.
+
+  IT-PO CAVEAT (2026-08-17) — MIXED SURFACE, NOT SPLIT. change_target is
+  [prompt, code] and the two halves have different owners: clauses 2-4 are
+  scripts/ac_store/done_proof.py (python-coder, and the load-bearing observable),
+  clause 1 is the tag-authoring convention in templates/agents/test-writer.md §2i
+  (llm-expert). A split into two L2 siblings was rejected because BP-1100g is at
+  child_limit_override: 7. RECOMMENDED FOLLOW-UP for the user to apply: either an
+  L3 child BP-1100g-3-ii (llm-expert) carrying clause 1 alone, with
+  BP-1100g-3.covered_by extended to [BP-1100g-3-i, BP-1100g-3-ii]; or fold the
+  tag-authoring convention into BP-1100g-1's llm-expert template pass, which
+  already edits the same file. Until one of those happens, python-coder builds a
+  reader for a tag nothing is instructed to emit.
+
+  IT-PO ENRICHMENT NOTE. A second live reader of the same tag surface was found
+  during enrichment and is now doc_linked: scripts/commit_guardian/
+  check_test_ac_tags.py, a pre-commit hook with its own COVERS_REGEX running in
+  warn mode. It is named in the constraints so the extension does not silently
+  desync the two readers. it_requirements uses the package-surface OBJECT form:
+  the JSON schema's root if/then does not fire for component: build-pipeline
+  (kebab is absent from its enum), but scripts/ac_store/validate_ac.py's
+  is_package_surface_ac ALSO reads the components list and does classify this AC
+  as package-surface — the object form satisfies both.

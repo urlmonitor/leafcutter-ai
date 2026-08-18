@@ -1,0 +1,99 @@
+id: BO-1500f-1
+components:
+  - build_orchestration
+readiness: approved
+priority: high
+title: "The isolated-workspace setup step is dispatched only to an agent permitted to run repository commands"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
+criteria: |
+  Given an AC-authoring run reaches the step that sets up its isolated authoring workspace,
+  And that step must run repository commands (fetch, create a branch from the tip of the
+    shared main line, and add a separate working copy),
+  When the workflow dispatches the step,
+  Then it dispatches it to an agent whose registered charter permits running repository
+    and shell commands,
+  And it does not dispatch it to a read-only reporting agent whose charter excludes
+    running commands,
+  And when the configured target for that step is an agent whose charter excludes running
+    repository commands, the run stops before any authoring agent is dispatched and reports
+    the mis-assignment, naming both the step and the agent it was pointed at.
+depends_on:
+  - BO-1500f
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: reads
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    workspace_setup_dispatch:
+      type: object
+      description: "{ agent: '<registry agent id>', permits_shell: bool }. The dispatch target for the isolated-workspace setup step, resolved against the agent registry before spawn; permits_shell false must halt the run."
+  reference_file_path: "templates/workflows-js/plan-feature.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  constraints:
+    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
+    - "The permitted-agent decision must be resolved from config/agent_registry.json, not from a hardcoded agent name, so the guarantee survives an agent rename."
+delivers_to:
+  agent: python-coder
+  contract: "A workspace-setup dispatch whose target agent is charter-verified to run repository commands, so its result can be trusted as a real setup attempt rather than a refusal"
+expects_from: null
+test_spec:
+  - name: test_workspace_setup_dispatches_to_a_shell_permitted_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Runs plan-feature under the E2 workflow harness and captures the agent the workspace-setup step is actually dispatched to; resolves that agent id against config/agent_registry.json and asserts its registered charter permits shell/repository commands. Asserts on the dispatch the run really made, not on a name found in the source."
+  - name: test_setup_dispatch_to_a_read_only_agent_halts_before_any_authoring_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Points the workspace-setup step at a registry agent whose charter excludes running commands (the status-reporting agent of the original incident), runs the workflow, and asserts the run halts AND that no authoring agent label (product-owner / business-analyst / it-po) appears anywhere in the harness agent_calls. Absence of the authoring dispatch is the assertion that matters — a halt message alone does not prove nothing was authored."
+  - name: test_mis_assignment_halt_names_both_the_step_and_the_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "On the read-only-agent halt above, asserts the user-visible output contains both the name of the workspace-setup step and the id of the agent it was pointed at, so a person reading the run can see what was mis-wired without opening the source."
+  - name: test_permitted_agent_is_resolved_from_the_registry_not_a_hardcoded_name
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Drives the same code path twice against two fixture registries that differ only in which agent id carries the shell permission; asserts the accept/halt verdict follows the registry in both runs. A hardcoded agent name passes the first run and fails the second, so this test distinguishes registry lookup from a name literal."
+test_rationale: "The regression was a dispatch that succeeded at the workflow level while the receiving agent refused the work, so every test here must observe a real dispatch under the harness rather than a string in plan-feature.js. The critical assertion is the negative one — that no authoring agent ran — because the incident's damage came from authoring proceeding, not from the refusal itself. The two-registry test exists because the constraint explicitly forbids a hardcoded agent name, and only a test that varies the registry can tell the two implementations apart."
+origin_agent: business-analyst
+created: 2026-08-14
+amended_by:
+  - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-4; re-parented to BO-1500f."
+superseded_by: null
+covered_by:
+- unit_tests/workflows/test_bo_1500f_1.py
+implemented_by:
+- tickets/00_inbox/TICKET-20260817-BO-1500f-1.md
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Regression origin: the setup step was dispatched to a status-reporting agent that
+  refused it as out of scope. The refusal was not an execution failure, so the run
+  continued with no workspace. Adjacent-but-distinct: BO-1900c covers charter-vs-task
+  matching for TICKET dispatch; this AC covers a workflow-internal step dispatch and
+  must not be folded into that tree.
+
+  Re-homed 2026-08-14 from BO-1500a-4 to BO-1500f-1 by the Pattern C intermediate split
+  of BO-1500a. Criteria text is unchanged. BO-1500a-5 and BO-1500a-8 remain under
+  BO-1500a and now depend on this AC across the f/a boundary.

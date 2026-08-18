@@ -1,0 +1,164 @@
+id: BP-1100g-4-i
+components:
+  - build_pipeline
+  - testing_quality
+title: "A claim is taken at face value: the promise-versus-claim check never judges whether a test does what it says"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose plan promised a proof that the work is reached the
+      way the product is really used,
+    And the only test claiming that kind is a pre-existing test of the stated
+      behaviour, which imports the unit directly and was given the claim without
+      being changed in any other respect,
+  When the promise is compared against the claim at hand-off,
+  Then the work is NOT refused, because a promise was made and a claim was made,
+    And the outcome is identical to the outcome for a piece of work whose claiming
+      test does invoke the way in, so the two are indistinguishable to this check,
+    And no part of reaching that outcome opens, reads, parses, tokenizes, imports
+      for inspection, or pattern-matches the body of the claiming test,
+    And the outcome is reported as "promised and claimed" and never as reached,
+      proven, verified, or done, so nothing downstream can read it as evidence
+      that the work is wired in.
+depends_on:
+  - BP-1100g-4
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The prohibition this L3 exists to keep on the right side of. Its grounds are the decisive ones: a source scan inside a phantom-done guard is itself phantom-done. Read its notes in full before implementing anything here."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a.yaml
+    relationship: related
+    status: exists
+    relevance: "The only mechanism that can catch the lie this AC deliberately accepts: the execution observer that watches the run."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "States the failure mode plainly — 'a reachability mandate can quietly be satisfied by a renamed criterion test' — and is the reason this L3 is written as an accepted outcome rather than a defect to close."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "0 — no registration change; this AC constrains the behaviour and the wording of the hook BP-1100g-4 registers"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/commit_guardian/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The success outcome's wording contract. Byte-identical for a pasted claim and a genuine one, and free of any execution vocabulary."
+    required:
+      - outcome
+    properties:
+      outcome:
+        type: string
+        const: "promised and claimed"
+      forbidden_substrings:
+        type: array
+        items:
+          type: string
+          enum:
+            - reached
+            - proven
+            - verified
+            - done
+        description: "None of these may appear in the success wording — a comparison of two strings must not report an execution fact."
+  constraints:
+    - "NOTE ON reference_file_path: this AC modifies no file of its own; it constrains the hook BP-1100g-4 creates and registers. commit_guardian.json is named because the field must resolve to a real path, and n_location_rule is zero for the same reason it is zero on a negative control."
+    - "THE MECHANISM CONSTRAINT IS TESTABLE AS AN INVARIANCE, AND MUST BE IMPLEMENTED SO IT HOLDS: the outcome for a pasted claim must be byte-identical to the outcome for a genuine one, and must STAY identical when the claiming test's body is replaced wholesale with an unrelated body carrying the same tag. No text-inspecting implementation can satisfy that, which is the point."
+    - "No path to the outcome may open, read, parse, tokenize, import-for-inspection or pattern-match the BODY of the claiming test. Collecting the tag via BP-1100g-3's scanner is the permitted read; anything beyond the tag is not."
+    - "THE WORDS GOVERN, AND ARE WHERE THE WIDENING WILL ACTUALLY HAPPEN. The output must say 'promised and claimed'. The strings reached, proven, verified, and done must not appear in the success wording. A check reporting 'reachability verified' for a pasted tag has made a claim about execution from a comparison of two strings, and the next reader to build on that output will believe it."
+    - "DO NOT ADD PASTE DETECTION, and do not author a sibling that tries to. Detecting the paste requires deciding from the test's text whether it does what it claims, which is exactly what BO-2900a-2 prohibits. The lie is caught downstream by BO-2900a's execution observer, which is the only mechanism that can catch it."
+    - "This accepted outcome must be documented on the reference page BP-1100g-6 produces, in the reader's words, so the hole is visibly deliberate rather than looking like an oversight someone should close."
+delivers_to: null
+expects_from:
+  - ac_id: BP-1100g-4
+    contract: "An outcome computed from exactly two inputs — the promised kinds from the plan and the claimed kinds from the tag scanner — with the success wording under this AC's control."
+test_spec:
+  - name: test_bp_1100g_4_i_pasted_claim_is_not_refused_and_is_worded_as_promised_and_claimed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A promise answered only by a pre-existing direct-import test that was given the tag and nothing else is NOT refused, and the reported outcome contains 'promised and claimed' and none of reached / proven / verified / done."
+  - name: test_bp_1100g_4_i_outcome_is_byte_identical_under_a_wholesale_body_swap
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Write two real test files to disk carrying the same tag — one a genuine entry-point test, one an unrelated body — run the check against each, and assert the outcome bytes are identical. Then replace the claiming test's body wholesale a third time and assert the bytes are still identical. Any implementation that inspects the body fails this."
+  - name: test_bp_1100g_4_i_invariance_holds_through_the_deployed_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/<hook>.py <staged paths>` as a subprocess for the pasted-claim case and the genuine case and assert identical exit codes and identical output — the invariance must hold on the path that actually gates a commit, not only in the library."
+test_rationale: |
+  This AC's content is an invariance, and invariances are only observable by comparing two
+  runs. The discriminating shape is the wholesale body swap: the claiming test's source is
+  replaced entirely while the tag stays, and the outcome must not move by a single byte.
+  No text-inspecting implementation survives that, which is why it is the test rather than
+  an assertion that the code contains no regex. The deployed-hook variant is included
+  because the invariance has to hold where the commit is actually gated.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder. it_requirements in package-surface object form with
+    n_location_rule zero; invariance, wording and no-paste-detection constraints under
+    `constraints`. Added test_spec (criterion/real_artifact/reachability), expects_from
+    and declares_side_effect. The accepted-paste behaviour is preserved exactly as
+    authored and is NOT treated as a defect. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS AC ACCEPTS A LIE ON PURPOSE. Read the parent L1's adversarial note before
+  changing a word of it.
+
+  The promise-versus-claim check is trivially satisfiable by pasting a kind tag
+  onto an existing happy-path test. That is ACCEPTED and is NOT a defect of this
+  tree. What the check buys is that the gap between a promise and an artifact can
+  no longer be left silently empty; the lie is caught downstream by BO-2900a's
+  execution observer, which is the only mechanism that can catch it.
+
+  DO NOT AUTHOR A SIBLING THAT TRIES TO DETECT THE PASTE. Any such AC needs to
+  decide, from the test's text, whether the test does what it claims — which is
+  exactly what BO-2900a-2 prohibits, on the grounds that a source scan inside a
+  phantom-done guard is itself phantom-done. This L3 exists so that the
+  prohibition is expressed as a falsifiable behaviour inside this tree rather
+  than as a warning in a notes field that a later decomposer will not read.
+
+  THE THIRD CLAUSE IS A MECHANISM CONSTRAINT AND IS DELIBERATELY WORDED THE SAME
+  WAY BO-2900a-2 WORDS ITS PROHIBITION. It is testable in the same style: the
+  outcome for the pasted-claim case must be byte-identical to the outcome for a
+  genuine case, and must stay identical when the claiming test's body is replaced
+  wholesale with an unrelated one carrying the same claim. No text-inspecting
+  implementation can satisfy that.
+
+  THE FOURTH CLAUSE GOVERNS THE WORDS, WHICH IS WHERE THE WIDENING WILL ACTUALLY
+  HAPPEN. A check that reports "reachability verified" for a pasted tag has made
+  a claim about execution from a comparison of two strings, and the next reader
+  to build on that output will believe it. Report what was actually established:
+  a promise, and a claim.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The accepted paste was NOT "fixed" during
+  enrichment and no constraint narrows it. declares_side_effect is true for the
+  same reason as on BP-1100g-4: the observable is user-facing commit-time output
+  whose exact wording is load-bearing, which is precisely what a smoke test with
+  a placeholder negative control is for.

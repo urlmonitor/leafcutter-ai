@@ -24,7 +24,10 @@ documentation_triggers: []
 documentation_rationale: "Internal build-time deploy-integrity guardrail — surfaces only as a build error; no new user-facing capability or command is introduced."
 origin_agent: product-owner-v3
 created: 2026-07-07
-amended_by: []
+amended_by:
+  - reason: "child_limit_override raised 5 -> 10 to admit BP-900g-7..10 (two fail-open deployment-completeness holes found at HEAD 339b0981c). BP-900's L0 is at the 7-L1 hard cap and BP-900e is at the 5-L2 cap, so neither a new sibling L1 nor redistribution under BP-900e was available; the override is the ac-tree-split skill's sanctioned short-lived exception. Remove once a PO-owned split rebalances this tree."
+    by: business-analyst
+    at: 2026-08-17
 superseded_by: null
 covered_by:
   - BP-900g-1
@@ -32,4 +35,10 @@ covered_by:
   - BP-900g-3
   - BP-900g-4
   - BP-900g-5
+  - BP-900g-6
+  - BP-900g-7
+  - BP-900g-8
+  - BP-900g-9
+  - BP-900g-10
 implemented_by: []
+child_limit_override: 10

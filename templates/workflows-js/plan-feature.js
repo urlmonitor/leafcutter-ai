@@ -1503,7 +1503,13 @@ function validateAnswerShape(answer, expectedType, validOptions) {
 function applyAnswerByType(answer, type) {
   if (type === "priority_choice") { return { action: "approve", priority: answer.priority }; }
   if (type === "free_text") { return { action: "approve", text: answer.text }; }
-  return { action: answer.action || answer.choice };
+  const decision = { action: answer.action || answer.choice };
+  // Carry `feedback` through. The mid-pipeline gate reads gateDecision.feedback to
+  // thread the user's notes into the re-dispatched author prompt; dropping it here
+  // re-ran the author with EMPTY feedback and burned the single MAX_EDIT_RETRIES
+  // attempt, so a resumed `edit` aborted the pipeline uncommitted.
+  if (typeof answer.feedback === "string") { decision.feedback = answer.feedback; }
+  return decision;
 }
 
 /**
@@ -1543,7 +1549,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
     const _readPrompt =
       "Read the durable pause record for this run. Run exactly:\n" +
-      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
     let recCheck;
@@ -1616,9 +1622,50 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
-    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
     "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
+
+  // VERIFY THE PERSIST — do not take the write on trust.
+  // Previously this function discarded the dispatch result and unconditionally
+  // reported "paused_awaiting_input". When the write silently did not happen the
+  // run looked resumable but was not: resolveGate fails CLOSED on read
+  // (exists !== true -> nothing_to_resume), so EVERY later answer — approve, edit
+  // or cancel — bailed out, with nothing to indicate why.
+  //
+  // Verification is a read-back through the same command resolveGate uses, so it
+  // proves the record is retrievable rather than merely that a command exited.
+  let _persistVerified = false;
+  try {
+    const _verifyRaw = await agent(
+      "Confirm a pause record was persisted. Run exactly:\n" +
+      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
+      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
+      { agentType: "status-checker", label: "pause-persist-verify" }
+    );
+    const _verified = (typeof _verifyRaw === "string")
+      ? parseAgentJson(_verifyRaw, { stage: "pause-persist-verify", agent: "status-checker" })
+      : _verifyRaw;
+    _persistVerified = !!(_verified && _verified.exists === true);
+  } catch (_verifyErr) {
+    _persistVerified = false;
+  }
+
+  if (!_persistVerified) {
+    // Fail loudly rather than advertising a resumable pause that does not exist.
+    return {
+      status: "pause_persist_failed",
+      run_id: runId,
+      gate_id: gateId,
+      message:
+        "Gate '" + gateId + "' needed a human answer, but the pause record for run '" +
+        runId + "' could not be verified as written, so this run CANNOT be resumed.\n" +
+        "Work already committed by earlier stages is safe on the authoring branch; " +
+        "uncommitted drafts remain in the authoring worktree.\n" +
+        "Re-run /plan-feature interactively, or drive the remaining authoring agents directly.",
+    };
+  }
+
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
 }
 
@@ -1683,6 +1730,66 @@ const sessionSlug = component
   ? component.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20)
   : null;
 
+// -------------------------------------------------------------------------
+// Pre-Stage-0 — Workspace-Setup Dispatch Permission Gate (AC BO-1500f-1).
+// -------------------------------------------------------------------------
+// The isolated-workspace setup step below runs repository-mutating commands
+// (fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
+// be dispatched only to an agent whose registered charter (config/agent_registry.json)
+// permits running repository/shell commands — resolved from the registry
+// itself, never from a hardcoded agent name, so the guarantee survives an
+// agent rename (and so a read-only reporting agent like status-checker,
+// the mis-assigned target of the original incident, can never receive it).
+const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
+
+let permissionResult;
+try {
+  permissionResult = await agent(
+    "Run the following command and return ONLY the raw stdout output:\n" +
+    "cat {{config.output_root}}/config/agent_registry.json\n" +
+    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
+    { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
+  );
+} catch (_permErr) {
+  permissionResult = null;
+}
+
+let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
+try {
+  const registryParsed = parseAgentJson(
+    permissionResult,
+    { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
+  );
+  if (registryParsed && typeof registryParsed.output === "string") {
+    const registryJson = JSON.parse(registryParsed.output);
+    const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
+    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+    permitsShell = !!(match && match.permits_shell === true);
+  }
+} catch (_parseErr) {
+  permitsShell = false; // fail closed on any parse error
+}
+
+if (!permitsShell) {
+  await agent(
+    "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
+    workspaceSetupAgentId + "', but that agent's registered charter (config/agent_registry.json) " +
+    "does not permit running repository-mutating shell commands. Halting before any authoring " +
+    "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
+    "agent='" + workspaceSetupAgentId + "'.",
+    { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+  );
+  return {
+    status: "error",
+    message:
+      "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
+      workspaceSetupAgentId + "', whose registered charter does not permit running " +
+      "repository/shell commands. Halting before any authoring agent is dispatched. " +
+      "Fix the workspace_setup_agent configuration or config/agent_registry.json's " +
+      "permits_shell field for that agent.",
+  };
+}
+
 let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
@@ -1690,10 +1797,10 @@ let worktreeSetupResult;
 try {
   worktreeSetupResult = await agent(
     "Run the following command and return ONLY the raw stdout output:\n" +
-    "python scripts/setup_ticket_worktree.py create-ac-worktree" +
+    "python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree" +
     (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
     "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
-    { agentType: "status-checker", label: "worktree-setup" }
+    { agentType: workspaceSetupAgentId, label: "worktree-setup" }
   );
 } catch (wtErr) {
   return {
@@ -1707,7 +1814,7 @@ try {
 
 let wtParsed;
 try {
-  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: "status-checker" });
+  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: workspaceSetupAgentId });
 } catch (_parseErr) {
   wtParsed = null;
 }
@@ -1819,7 +1926,7 @@ if (route === "covered" && !force) {
     args.run_id || "default-run"
   );
   if (_covGateResult && _covGateResult.status &&
-      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_covGateResult.status)) {
+      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_covGateResult.status)) {
     return _covGateResult;
   }
   const userChoice = _covGateResult || { choice: "cancel" };
@@ -1973,7 +2080,7 @@ if (ptRunSet.skip) {
           args.run_id || "default-run"
         );
         if (_ptGateResult && _ptGateResult.status &&
-            ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_ptGateResult.status)) {
+            ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_ptGateResult.status)) {
           return _ptGateResult;
         }
         const ptGate = _ptGateResult || { action: "cancel" };
@@ -2267,7 +2374,7 @@ for (const step of pipeline) {
         args.run_id || "default-run"
       );
       if (_midGateResult && _midGateResult.status &&
-          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_midGateResult.status)) {
+          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_midGateResult.status)) {
         return _midGateResult;
       }
       const gateDecision = _midGateResult || { action: "cancel" };
@@ -2365,7 +2472,7 @@ for (const step of pipeline) {
       );
       // Non-proceed outcomes: exit immediately.
       if (_finalGateResult && _finalGateResult.status &&
-          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale"].includes(_finalGateResult.status)) {
+          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_finalGateResult.status)) {
         return _finalGateResult;
       }
       const finalDecision = _finalGateResult || { action: "defer" };

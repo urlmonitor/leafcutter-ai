@@ -1,0 +1,138 @@
+id: ACD-2000a-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "State diagram shows a requirement's attempt lifecycle from first try to escalation"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement moves between being attempted, reworked, escalated and
+    resolved as its budget is consumed,
+  When the architecture documentation for the requirement's adjudication
+    lifecycle is consulted,
+  Then a state diagram shows each state a requirement can be in with respect to
+    its attempts, and every transition between them,
+  And each transition names what causes it -- an attempt failing, a budget being
+    exhausted, a person recording a decision,
+  And the diagram shows the escalated state and the transition back out of it
+    that a person's decision causes,
+  And the diagram distinguishes a requirement that has never been attempted from
+    one whose budget is spent, so the two are not read as the same resting state,
+  And a reader can trace the path from a first failure to an escalation and back
+    without consulting any other document.
+depends_on: [ACD-2000a, ACD-2000a-1, ACD-2000a-2, ACD-2000a-3]
+doc_links:
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "The intended home. Its own frontmatter already claims 'blocker adjudication flows', and today the ladder appears there only as a prose TIP (~line 362) with no diagram at all -- so this is a gap to fill, not a diagram to compete with."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The state machine being drawn: the four ladder rungs at lines 693, 708, 723 and 740, the retry-cap table at 784, and the in-memory counter at 789 that the trail replaces."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2000-resilient-parallel-build/ACD-2000b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The claim lifecycle. A separate machine on the same requirement; must NOT be merged into this diagram."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "PLACE THE DIAGRAM ON docs/architecture/agent_delivery_workflows.md. Its frontmatter description already claims 'blocker adjudication flows', and the ladder currently appears there only as a prose TIP (~line 362) with no diagram. Reconcile with that TIP in the same change -- amend it to point at the diagram -- rather than leaving prose and picture to drift apart, which is how this repository has produced stale second copies before."
+  - "USE MERMAID stateDiagram-v2, NOT A SEQUENCE OR FLOW DIAGRAM. The subject is durable states and the transitions between them, not an ordered interaction. A sequence diagram cannot express the fourth criterion at all: two quiescent states that look identical from outside are a state-machine distinction, and a lifeline has no way to show them."
+  - "DRAW ONLY STATES THE TRAIL CAN ACTUALLY REPRESENT AND BUDGETS THE RESOLVER CAN ACTUALLY REACH. The depends_on edges on ACD-2000a-1, -2 and -3 are load-bearing: a diagram drawn ahead of those three, or not revisited after them, is a confident wrong picture, which is worse than no picture. If a state you want to draw has no representation in the trail, that is a finding to report, not a state to invent."
+  - "RENDER 'NEVER ATTEMPTED' AND 'BUDGET SPENT' AS TWO DISTINCT STATES, never as one resting node with a note. Both are quiescent and both look identical from outside, but one is ready work and the other is blocked work waiting on a person -- and every scanner, dashboard and operator reading the store has to tell them apart. A diagram that collapses them teaches the wrong model to everyone who reads it."
+  - "DRAW THE TRANSITION OUT OF ESCALATED, caused by a person's recorded decision, and draw that decision as an APPEND to the trail -- not as a reset or an erasure. Escalation is the state most likely to be drawn as terminal, and terminal is wrong: ACD-2000a-2's fourth criterion requires a person to be able to make an exhausted requirement retriable again. A missing edge here makes the diagram contradict the behaviour."
+  - "LABEL EVERY TRANSITION WITH ITS CAUSE (attempt failed, budget exhausted, person recorded a decision). An unlabelled edge in a durable state machine is an invitation for the next reader to invent one."
+  - "DO NOT MERGE WITH ACD-2000b-5's CLAIM LIFECYCLE (available / taken / handed back / reclaimed). The two machines run on the same requirement at the same time and are independent; drawing them as one would imply transitions that do not exist. If a cross-reference is useful, link the two diagrams rather than combining them."
+  - "SATISFY THE REPOSITORY DIAGRAM GATES: check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming and check-mermaid-complexity. Take the diagram id from `python scripts/next_diagram_seq.py` rather than inventing one. If the complexity gate rejects the machine, split by concern (attempt lifecycle vs clearing procedure) rather than by dropping states -- dropping the fourth criterion's distinction to fit a node budget defeats the AC."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2000a-2
+    contract: "The state vocabulary the diagram renders: the retry-vs-escalate verdict, the settled per-run or per-lifetime scope, and the human clearing decision that is the transition out of escalated."
+  - ac_id: ACD-2000a-1
+    contract: "The attempt-record shape and the append-only guarantee -- specifically that every transition in the diagram corresponds to an APPEND, so no edge may be drawn as a reset."
+  - ac_id: ACD-2000a-3
+    contract: "The resolved-budget contract { budget_in_force, source } including the declared-zero case, which is the edge that takes a requirement from never-attempted straight to escalated on its first failure."
+test_required: false
+test_rationale: "The artifact is a Mermaid state diagram embedded in an architecture page; it has no executable surface for a test to drive, and its correctness is a question of whether it matches the machine rather than whether any code runs. Its mechanical gates are the repository diagram hooks (check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming, check-mermaid-complexity), which run at commit time rather than as unit tests. A test that asserted a state name appears in the page text would be a presence-only check that passes on a diagram whose edges are wrong -- the same grep-on-prose failure mode CLAUDE.md's gate/workflow rule prohibits for behavioural ACs. The states and transitions depicted are covered by the executing tests on ACD-2000a-1, ACD-2000a-2 and ACD-2000a-3; the diagram's own acceptance is the fifth criterion's trace test, performed by a reader."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC, produced because ACD-2000a declares
+  `documentation_triggers: [reference-doc, state-diagram]`. This is the
+  state-diagram half; ACD-2000a-4 is the reference-doc half. Craft deliberately
+  LEFT UNSET this pass; the intended craft is the architecture-diagram surface,
+  and the IT PO fills assigned_agent / it_requirements / estimated_complexity /
+  contracts.
+
+  WHY A STATE DIAGRAM IS THE RIGHT ARTEFACT HERE AND NOT PADDING. The
+  adjudication ladder is a genuine state machine with four rungs, each with its
+  own cap: templates/skills/building-epics/SKILL.md §3.1 respawn same agent (cap
+  1 per phase per ticket, ~line 693), §3.2 respawn a named sibling (cap 1 per
+  phase pair, ~708), §3.3 spawn brainstorm-lead (cap 1 per ticket, ~723), §3.4
+  halt and escalate (~740). Today that machine's state lives in an in-memory
+  counter dictionary (~789) and is described only in prose. Moving it onto the
+  requirement makes the states durable and inspectable, and a diagram is how an
+  operator reads a durable state machine.
+
+  THE FOURTH THEN CLAUSE IS THE ONE THAT EARNS THE DIAGRAM. "Never attempted"
+  and "budget spent" are both quiescent states in which nothing is happening,
+  and they look identical from the outside -- but one is ready work and the other
+  is blocked work waiting on a person. Every scanner, dashboard and operator that
+  reads the store has to tell them apart. A diagram that renders them as one
+  resting node will teach the wrong model to everyone who reads it.
+
+  THE TRANSITION OUT OF ESCALATED (third Then) is the one most likely to be
+  omitted, because escalation feels terminal. It is not: ACD-2000a-2's fourth
+  criterion requires a person to be able to make an exhausted requirement
+  retriable again, and that decision is recorded as a trail entry rather than an
+  erasure. If that edge is missing from the diagram, the diagram contradicts the
+  behaviour.
+
+  CONSISTENCY OBLIGATION: the states drawn here must be the states ACD-2000a-1's
+  trail can actually represent and ACD-2000a-3's budget can actually reach. A
+  diagram drawn ahead of those two, or not revisited after them, becomes a
+  confident wrong picture -- worse than none.
+
+  DO NOT CONFLATE WITH ACD-2000b's LIFECYCLE. ACD-2000b-5 covers the claim
+  lifecycle (available / taken / handed back / reclaimed). The two machines run
+  on the same requirement at the same time and are independent; drawing them as
+  one diagram would imply transitions that do not exist.
+
+  2026-08-17 (IT PO enrichment). Assigned architecture-diagram-author rather than
+  documentation-expert: the S7b documentation-gate mapping routes the
+  `state-diagram` trigger to that craft, it is a dispatchable ticket-phase agent in
+  the registry, and BO-2900a-5 is the recent sibling precedent for exactly this
+  call. Complexity S.
+
+  PLACEMENT DECISION MADE THIS PASS, with the collision check the BA asked for.
+  Verified: docs/architecture/agent_delivery_workflows.md already claims "blocker
+  adjudication flows" in its own frontmatter description, and the Blocker
+  Adjudication Ladder appears there at ~line 362 as a prose TIP with NO diagram --
+  the page has five Mermaid diagrams, none of them of this machine. So unlike
+  BO-2900a-5 there is no incumbent diagram to supersede; the risk is the inverse,
+  a diagram added without amending the prose TIP that currently carries the whole
+  explanation. That reconciliation is recorded as an it_requirement.
+
+  ONE CONSTRAINT ADDED BEYOND THE BA's LIST: the diagram must be stateDiagram-v2.
+  The fourth criterion -- two quiescent states that must not read as one -- is
+  expressible in a state machine and not in a sequence diagram or a flowchart, and
+  "state diagram" in the title is otherwise easy to satisfy with a flowchart that
+  loses exactly the distinction the criterion exists for.

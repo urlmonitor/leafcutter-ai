@@ -1,7 +1,15 @@
 ---
-description: "Conventions and standing notes for authoring/decomposing ACs in the guardrail-engine component (prefix GE)."
+title: "guardrail-engine — AC store context"
+description: Conventions and standing notes for authoring/decomposing ACs in the guardrail-engine
+  component (prefix GE).
+created: '2026-08-14'
+last_updated: '2026-08-17'
+type: tutorial
+status: active
+components:
+  - commit_guardian
+  - precommit_hooks
 ---
-
 # guardrail-engine — AC store context
 
 Conventions and standing notes for authoring/decomposing ACs in the
@@ -24,6 +32,12 @@ authoring agents across runs.
   `assigned_agent`, `estimated_complexity`, `it_requirements`, `delivers_to`,
   `expects_from`). Mirror an existing sibling file's field set rather than the
   bare schema.
+
+> **Amendment (2026-08-14):** the "no L0 root file" convention above describes
+> the ORIGINAL GE-1xx family only. Newer trees (GE-113, GE-116, GE-118, GE-120)
+> are authored as a proper L0 root + L1 children in a `GE-NNN-<slug>/` folder.
+> Follow the newer pattern for new work; the note above is retained because the
+> older GE-100/GE-107 files still have the flat shape.
 
 ## Exception-handling guard lineage (GE-107 / GE-108)
 
@@ -62,3 +76,169 @@ leaf (likely `GE-108a` / `GE-108b` / `GE-108c`):
   `origin_agent: business-analyst`.
 - Priority is finalised at the workflow's final gate, not at authoring time —
   new L0/L1 ACs are written `priority: medium`, `readiness: draft`.
+
+## GE-120 green-means-checked: framing note for the BA/IT-PO (2026-08-14, PO)
+
+GE-120 ("Trust that a green check actually checked something") is a NEW root L0
+in guardrail-engine, slug folder `GE-120-green-means-checked/`, four L1 children
+GE-120a..d, origin_agent BrainCandy, readiness draft, priority medium,
+roadmap_phase phase_1. It generalises a defect class: a commit-guardian check
+that cannot reach what it needs exits 0 and reports success, so "green" is
+indistinguishable from "did not run".
+
+PLACEMENT PRECEDENT (reuse this reasoning): triage suggested grafting onto
+GE-118a. Rejected — GE-118a is an L1 whose SUBJECT is one check (check-secrets)
+and whose only child is done; hanging a cross-cutting policy under a
+single-instance L1 inverts containment and reopens a complete node. GE-118's L0
+was also rejected as parent: its scope is dependency RESOLUTION from the
+deployed layout, while two of GE-120's L1s cover degrade paths that are not
+resolution failures. Standing rule for this component: **GE-118 = the point
+fixes that landed (GE-118a-1, GE-118b, both done); GE-120 = the class they are
+instances of.** GE-118 was deliberately NOT amended or superseded.
+
+FAIL-OPEN CONTRADICTION — load-bearing, do NOT let decomposition flatten it:
+this component has a deliberate fail-open convention (internal error → exit 0 +
+stderr warning so a script bug never blocks an unrelated commit), documented in
+the ac-store PROJECT_CONTEXT and approved as GE-116a-1-iii ("Unparseable agent
+definition fails open and does not block the commit"). GE-120 does NOT repeal
+it. The line it draws: fail-open on ONE bad input while the check still ran is
+fine; reporting SUCCESS for a check that never ran is not. The unit of the rule
+is **visibility**, not blocking. Whether a cannot-run condition should also
+BLOCK is a per-check L2 decision — there is no blanket default.
+
+L1 split (decompose each into L2; do NOT re-cut at L1):
+
+- **GE-120a** — the POLICY: a check that cannot run says so. Cross-cutting over
+  the 18 checks sharing the `_find_project_root` / `parents[]` root-walk
+  pattern. `documentation_triggers: [reference-doc]` — the opposite rule is what
+  is currently written down.
+- **GE-120b** — PARITY: same work, same verdict from any working copy. The
+  acceptance shape is the observed pair — `check_ac_parent_covered_by.py`
+  exiting 0 with "skipping check (fail-open)" without the deployed-layout link
+  vs. blocking with 6 violations WITH it, on identical staged files. The how-to
+  trigger is a REPLACEMENT: the manual "link `.leafcutter` into your worktree"
+  pre-drive step must be deleted, not left beside the fix.
+- **GE-120c** — PROOF: verified by running the deployed checks from a separate
+  working copy. Today's unit tests import from the source tree — the one layout
+  where the bug cannot reproduce — so they are not evidence.
+  `[component-diagram]` for the new harness.
+- **GE-120d** — SET-UP: `setup_ticket_worktree.py`'s own "graceful no-op" on
+  `verify_precommit_active.py` / `install_pre_commit_shims.py`. Different
+  script, so it is its own L1; may be folded into GE-120b ONLY if decomposition
+  proves the same root cause — and say so explicitly rather than dropping it.
+
+EVIDENCE CONFIDENCE (carry the labels through — do not upgrade them): the
+`check_ac_parent_covered_by` pair is DIRECTLY OBSERVED AND REPRODUCIBLE. The
+"26 schema-violating files looked clean" figure from `check_ac_schema.py`'s
+silent degrade to manual field validation is REPORTED BY A PARALLEL SESSION AND
+UNVERIFIED — GE-120c is what makes it checkable.
+
+REPEAT-DEFECT HISTORY: GE-112 already fixed an adjacent defect in
+`check_ac_schema.py`. Three prior point patches exist in this area (GE-112,
+GE-118a-1, GE-118b). Favour a structural fix; a fourth point patch is the
+failure mode to avoid.
+
+SEQUENCING WITH ac-store: GE-120b and ACS-1200a touch the same file
+(`check_ac_parent_covered_by.py`) for opposite-direction reasons — GE-120b makes
+it run everywhere, ACS-1200a makes it enforce the right rule. A check that
+starts running reliably everywhere while still holding the wrong rule blocks
+every parked idea MORE consistently. Sequence ACS-1200a with or before GE-120b,
+or land them in the same release.
+
+## GE-119 is a DUPLICATED id — do not mint by "the next number looks free" (2026-08-17)
+
+Two unrelated ACs both claim `GE-119`: the L0 tree
+`GE-119-green-means-checked/GE-119.yaml` and a parentless L2 at
+`guardrail-engine/GE-119.yaml` (authored by `/quick-fix` from a different
+worktree, subject: the contract-shrinking guard distinguishing an edited test
+from a deleted one). Different levels, different subjects, same id; neither has
+been renumbered yet. When picking a new root id in this component, scan the FLAT
+files as well as the folders — `GE-114-*.yaml` and `GE-115.yaml` also sit loose
+at component root, so a folder-only listing under-reports the taken ids.
+
+**Update (2026-08-18, reconciliation after origin/main merge):** the sentence
+this note originally ended on — "`GE-120` was minted 2026-08-17; the next free
+root is `GE-121`." — is now wrong on both halves and is corrected here rather
+than silently rewritten. The parentless L2 above was renumbered to `GE-111f`
+under `GE-111`, resolving this collision from that side. Separately and
+concurrently, `origin/main` (PR #453) resolved the SAME collision from the other
+side by renaming the L0 tree `GE-119-green-means-checked/` itself to
+`GE-120-green-means-checked/`. `GE-119` is therefore now a RETIRED identifier,
+claimed by no record, and must never be reissued. The `GE-120` this note minted
+for the unrelated "numbers-mean-one-thing" tree was independently reused by that
+same main-side rename, so that tree was renumbered again, to `GE-122` — **not**
+`GE-121`, which that tree's own prose cites roughly twenty times as the rejected
+candidate for the `GE-111f` move and which would therefore resolve to the wrong
+thing if reused. Re-verify the next free root at time of use rather than trusting
+any number recorded in this note.
+
+## GE-122 numbers-mean-one-thing: framing note for the BA/IT-PO (2026-08-17, PO)
+
+New root L0 minted as `GE-120-numbers-mean-one-thing/`; renumbered 2026-08-18 to
+`GE-122-numbers-mean-one-thing/` after an identifier collision with origin/main
+(see the update note above this section) — five L1 children GE-122a..e,
+origin_agent BrainCandy, readiness draft, priority medium, roadmap_phase
+phase_1. Scope: id / number drift across FOUR namespaces — AC ids, ticket ids +
+lifecycle location, ADR numbers, diagram sequence numbers — enforced at three
+stages (authoring-time session hook, pre-commit, CI).
+
+L1 CUT — deliberate; do NOT re-cut per namespace. One-L1-per-namespace was the
+rejected alternative (four near-identical ACs that hide where the real
+differences are). The cut is by GUARANTEE, not by artifact type:
+
+- **GE-122a** — the invariant: one number, one thing. Covers BOTH the collision
+  shape and the one-id-two-lifecycle-copies shape, and all four namespaces,
+  because for this guarantee they genuinely are the same requirement applied
+  four times.
+- **GE-122b** — enrolment: an artifact that takes NO id can never collide, so
+  without this L1 the uniqueness promise has a silent opt-out.
+- **GE-122c** — remediation quality: you are told which two things collide and
+  what to do, not merely blocked.
+- **GE-122d** — strength of the promise: three stages, unskippable backstop.
+- **GE-122e** — one-time repair of the drift that already exists, so the guard
+  does not certify a broken state as clean.
+
+THREE DISTINCT DRIFT SHAPES — only the first is a collision. (1) two artifacts
+claim one id (GE-119 today; BO-2700 previously, renumbered to BO-2900);
+(2) an artifact takes no id at all — 11 unnumbered diagrams sit beside 12
+correctly-sequenced ones despite `scripts/next_diagram_seq.py` existing (drift by
+abandonment); (3) one id, two files in different lifecycle folders free to
+disagree — 5 tickets (4× 00_inbox+99_done, 1× 00_inbox+01_todo).
+Measured 2026-08-17: 2,969 AC files / 2,968 distinct ids; ADRs 1..33 contiguous,
+zero duplicates, zero gaps. Guarding ADR numbers LOCKS IN a good state — do not
+write them up as though a defect existed.
+
+ROOT CAUSE IS THE UNIT OF INSPECTION: the AC schema validator is PER-FILE, so it
+is structurally incapable of noticing that a second file elsewhere claims the
+same id. No gate in the repo runs a whole-store uniqueness pass. Another
+per-file rule cannot satisfy GE-122a.
+
+HONESTY CONSTRAINT ON THE "SPAWN A BA" REQUIREMENT (load-bearing, GE-122c):
+a git pre-commit hook is a plain subprocess — it can BLOCK and PRINT, it CANNOT
+spawn an agent. A CI job can FAIL and PRINT, it CANNOT spawn an agent. Only a
+Claude Code PostToolUse hook on Edit|Write runs inside the live session with its
+output fed back into the running agent's context; `ticket_frontmatter_guard.py`
+is the existing precedent for that hook point. ANTI-PRECEDENT that must not be
+repeated: `templates/scripts/commit_guardian/check_glossary_coverage.py` is
+documented in CLAUDE.md as "dispatches the glossary-triage agent automatically"
+and does not — its docstring says "Returns: Always 0 (fail-open contract)" and
+`_dispatch_triage_standalone` blacklists every novel term with reason
+"standalone-mode placeholder". A documented-but-dead remediation path is worse
+than none, because authors believe they are covered. Any L2 claiming an agent is
+dispatched needs a test that proves it actually happens.
+
+BOUNDARY WITH ACS-800a-3 — do NOT close either as a duplicate of the other.
+ACS-800a-3 (`ac-store/ACS-800-stable-ac-identity/`, readiness approved, priority
+high, work_status todo) already specifies store-wide AC-id uniqueness, but it
+depends on ACS-800a — a 38-file approved but entirely UNBUILT restructure that
+replaces today's position-encoded ids with opaque, position-independent UIDs.
+User decision: DECOUPLE. GE-122 enforces uniqueness on TODAY's position-encoded
+ids and ships now; ACS-800a-3 carries the same invariant forward to the future
+UID model. Complementary and sequential. The ACS-800 tree must NOT be edited,
+reopened, or re-authored by GE-122 work.
+
+INHERITED, NOT REPEALED: GE-119's "a check that cannot run says so" and this
+component's deliberate fail-open convention (GE-116a-1-iii) both apply to GE-122
+unchanged. The new hazard specific to a whole-store check is "I could not read
+the whole store, therefore it is fine" — decide block-vs-announce per stage
+explicitly at L2.

@@ -40,6 +40,7 @@ _CANONICAL = _TEMPLATE_DIR / "check_ac_limits.py"
 _CANONICAL_COVERED_BY = _TEMPLATE_DIR / "check_ac_parent_covered_by.py"
 _CANONICAL_SCHEMA = _TEMPLATE_DIR / "check_ac_schema.py"
 _CANONICAL_DONE_PROOF = _TEMPLATE_DIR / "check_done_proof.py"
+_CANONICAL_CONTRACT_SHRINKING = _TEMPLATE_DIR / "check_contract_shrinking.py"
 
 _AC_DIR = "docs/acceptance-criteria/demo"
 
@@ -121,10 +122,32 @@ def _load_done_proof_module():
         return None
 
 
+def _load_contract_shrinking_module():
+    """Load the contract-shrinking hook from its canonical template path.
+
+    Returns:
+        The loaded module, or None when it cannot be imported.
+    """
+    if not _CANONICAL_CONTRACT_SHRINKING.exists():
+        return None
+    sys.path.insert(0, str(_TEMPLATE_DIR))
+    try:
+        spec = _ilu.spec_from_file_location(
+            "check_contract_shrinking_mergescope", _CANONICAL_CONTRACT_SHRINKING
+        )
+        mod = _ilu.module_from_spec(spec)
+        sys.modules["check_contract_shrinking_mergescope"] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    except (ImportError, AttributeError):
+        return None
+
+
 _mod = _load_module()
 _mod_covered_by = _load_covered_by_module()
 _mod_schema = _load_schema_module()
 _mod_done_proof = _load_done_proof_module()
+_mod_shrink = _load_contract_shrinking_module()
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
@@ -334,6 +357,168 @@ class TestDoneProofMergeScoping(TestMergeScoping):
             ]
         finally:
             os.chdir(original)
+
+
+@unittest.skipUnless(
+    _mod_shrink is not None, f"hook not found at {_CANONICAL_CONTRACT_SHRINKING}"
+)
+class TestContractShrinkingMergeScoping(TestMergeScoping):
+    """The contract-shrinking (TDD) guard obeys the same merge-scoping contract.
+
+    This gate was the last of the family still unscoped: it reads the staged
+    diff as TEXT rather than as a path list, so it did not share the collector
+    the other four fixed. A merge therefore showed it every test the incoming
+    branch had ever deleted or skipped, and it blocked the merge on them.
+    """
+
+    def _staged_ac_paths_in_repo(self) -> list[str]:
+        """Report the paths this hook's diff will actually cover.
+
+        Mirrors ``_get_staged_diff``: a None from ``_merge_scoped_paths`` means
+        "not a merge — scan everything staged", so the equivalent path set is
+        the full staged list. Returning the sentinel instead would make the
+        inherited non-merge assertion test nothing.
+
+        Returns:
+            The list of paths in scope for the diff scan.
+        """
+        original = os.getcwd()
+        os.chdir(self.repo)
+        try:
+            scoped = _mod_shrink._merge_scoped_paths()
+        finally:
+            os.chdir(original)
+        if scoped is None:
+            return _git(self.repo, "diff", "--cached", "--name-only").stdout.split()
+        return scoped
+
+
+@unittest.skipUnless(
+    _mod_shrink is not None, f"hook not found at {_CANONICAL_CONTRACT_SHRINKING}"
+)
+class TestContractShrinkingMergeBehaviour(unittest.TestCase):
+    """End-to-end: the guard blocks the author's own weakening, not the merge's.
+
+    Path-scoping alone is not proof — the scoped list has to actually change the
+    verdict. These drive the real scan over a real repository and assert on the
+    exit code, so a scoping helper that were computed and then ignored would
+    fail here.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        _git(self.repo, "init", "-q", "-b", "main")
+        _git(self.repo, "config", "user.email", "t@example.com")
+        _git(self.repo, "config", "user.name", "Test")
+
+        (self.repo / "unit_tests").mkdir()
+        (self.repo / "app.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+        (self.repo / "unit_tests" / "test_app.py").write_text(
+            "def test_one():\n    assert True\n\n\ndef test_two():\n    assert True\n",
+            encoding="utf-8",
+        )
+        (self.repo / "shared.txt").write_text("base\n", encoding="utf-8")
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "base")
+
+        # Feature side: an innocuous edit, and a conflicting edit to shared.txt.
+        _git(self.repo, "checkout", "-q", "-b", "feature")
+        (self.repo / "shared.txt").write_text("feature\n", encoding="utf-8")
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "feature work")
+
+        # Main side: deletes a test AND changes production code — exactly what
+        # the guard exists to block when an AUTHOR does it. Here it is already
+        # committed on main, so a merge only inherits it.
+        _git(self.repo, "checkout", "-q", "main")
+        (self.repo / "app.py").write_text("def f():\n    return 2\n", encoding="utf-8")
+        (self.repo / "unit_tests" / "test_app.py").write_text(
+            "def test_one():\n    assert True\n", encoding="utf-8"
+        )
+        (self.repo / "shared.txt").write_text("main\n", encoding="utf-8")
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "main work")
+        _git(self.repo, "checkout", "-q", "feature")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _scan(self) -> bool:
+        """Run the real diff-fetch + scan in the temp repo.
+
+        Returns:
+            True when the guard would BLOCK the commit.
+        """
+        original = os.getcwd()
+        os.chdir(self.repo)
+        try:
+            diff = _mod_shrink._get_staged_diff()
+            return bool(_mod_shrink._scan_diff(diff).is_contract_shrinking)
+        finally:
+            os.chdir(original)
+
+    def test_merge_does_not_block_on_weakening_inherited_from_main(self) -> None:
+        # covers: ACS-100c-1
+        """A merge is not blocked by a test main deleted on its own branch."""
+        merge = _git(self.repo, "merge", "main", "--no-commit", "--no-ff")
+        self.assertNotEqual(
+            merge.returncode, 0, "expected a conflicting merge for this fixture"
+        )
+        (self.repo / "shared.txt").write_text("resolved\n", encoding="utf-8")
+        _git(self.repo, "add", "shared.txt")
+
+        self.assertFalse(
+            self._scan(),
+            "The deleted test and the production edit both came verbatim from "
+            "main, where they were already gated. Blocking the merge author for "
+            "them makes merging impossible and teaches people to use SKIP=.",
+        )
+
+    def test_author_weakening_a_test_is_still_blocked_outside_a_merge(self) -> None:
+        # covers: ACS-100c-1
+        """The guard still fires on the author's own weakening.
+
+        The discriminating case: identical content to the merge above, staged as
+        an ordinary commit. If scoping had simply disabled the gate, this would
+        pass and the guard would be dead.
+        """
+        (self.repo / "app.py").write_text("def f():\n    return 3\n", encoding="utf-8")
+        (self.repo / "unit_tests" / "test_app.py").write_text(
+            "def test_one():\n    assert True\n", encoding="utf-8"
+        )
+        _git(self.repo, "add", "-A")
+
+        self.assertTrue(
+            self._scan(),
+            "Deleting a test while changing production code in a NORMAL commit "
+            "is exactly what this guard exists to block.",
+        )
+
+    def test_weakening_introduced_by_the_conflict_resolution_is_blocked(self) -> None:
+        # covers: ACS-100c-1
+        """Resolving a conflict by weakening a test is the author's own act.
+
+        Content that differs from BOTH parents is authored by the merge, so it
+        stays in scope — this is what keeps merge-scoping from being a loophole.
+        """
+        merge = _git(self.repo, "merge", "main", "--no-commit", "--no-ff")
+        self.assertNotEqual(merge.returncode, 0)
+        (self.repo / "shared.txt").write_text("resolved\n", encoding="utf-8")
+        # The merge author now weakens a test and edits production code itself.
+        (self.repo / "app.py").write_text("def f():\n    return 99\n", encoding="utf-8")
+        (self.repo / "unit_tests" / "test_app.py").write_text(
+            "import pytest\n\n\ndef test_one():\n    pytest.skip('later')\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "-A")
+
+        self.assertTrue(
+            self._scan(),
+            "A pytest.skip added by the MERGE differs from both parents, so it "
+            "must remain in scope. Otherwise merge-scoping is a way to smuggle "
+            "test weakening past the guard.",
+        )
 
 
 if __name__ == "__main__":

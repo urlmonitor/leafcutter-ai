@@ -1,0 +1,196 @@
+id: ACD-1800f-1
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement can declare that it has an observable effect, through one slot that every observation craft reads"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement that promises an effect a person can observe -- running a
+    command changes what a subsequent command reports,
+  When the author records that promise on the requirement,
+  Then the requirement is accepted as valid rather than rejected for carrying
+    something the record does not recognise,
+  And the requirement reports that it has an observable effect when it is
+    inspected,
+  And a requirement that promises nothing observable reports that it has none,
+    and is equally valid,
+  And the same declaration also carries which kind of observation the promise
+    needs -- a smoke check of a user-facing surface, or an exercise of a live
+    surface -- so that a second kind of observation can be requested without a
+    second place to declare it.
+depends_on: [ACD-1800f, ACD-1900a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The normative AC-record reference. The declaration slot is a new field on that record; ACD-1800f-5 owns the prose that documents it."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "Safety rule 1 (new fields land optional and additive) and rule 4 (absence = legacy mode, derive nothing, never fail) govern how this slot lands."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component page for the AC-driven build surface this slot is added to."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1900-safe-migration/ACD-1900a.yaml
+    relationship: related
+    status: exists
+    relevance: "The additive-optional-field landing this slot requires. additionalProperties:false is enforced today, so no ACD-1800f field can be authored before ACD-1900a's optional slots exist. Recorded as a link rather than a depends_on edge because ACD-1900* is out of bounds for this enrichment pass -- see the caveat in notes."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ONE SLOT, KINDED -- this is the load-bearing constraint and the whole reason the AC exists. Add exactly ONE new optional AC field, `observable_effect`: absent/null means the requirement promises nothing observable; when present it is a non-empty list of unique kind strings drawn from the closed set {smoke_surface, live_surface}. An empty list is rejected so there is no ambiguous third state."
+  - "NO SECOND SLOT, EVER. `declares_side_effect`, `user_facing_surface` and `live_surface_test` must all be DERIVED from `observable_effect` by reader helpers in scripts/ac_store/, and must remain unauthorable on an AC record (additionalProperties:false already rejects them -- do not add them as schema properties). A parallel per-craft boolean is a second slot in disguise and re-creates the three-orphaned-triggers state this AC exists to remove."
+  - "Land the field OPTIONAL and additive in config/ac_store_schema.json (ADR-026 safety rule 1); absence is legacy mode -- derive nothing, never fail (rule 4). additionalProperties:false at config/ac_store_schema.json line 15 IS enforced today via jsonschema.Draft7Validator (scripts/ac_store/validate_ac_schema.py ~line 152, and the same mechanism in the commit hook), so this schema slot is a hard prerequisite for every other AC in the ACD-1800f family, including ACD-1800f-2's proof content."
+  - "MIRROR VALIDATION INTO EVERY ENFORCEMENT POINT THAT ACTUALLY GATES A COMMIT, and know which one is load-bearing: scripts/commit_guardian/check_ac_schema.py, its manual-validation fallback scripts/commit_guardian/_ac_schema_validators.py (the authoritative branch whenever jsonschema is unavailable), and the agent-side scripts/ac_store/validate_ac_schema.py. A kind-enum rule added only to the JSON schema is a no-op on the fallback branch."
+  - "REPOINT THE DEAD ROUTING INPUT RATHER THAN LEAVING A DUPLICATED SOURCE. scripts/ac_store/generate_ticket_from_ac.py carries `declares_side_effect: bool = False` (line ~659), propagation of the key into ticket frontmatter (~lines 1914-1920), and two extraction sites reading `ac.get('declares_side_effect')` (~2772, ~2809) -- a key no AC can legally carry. Every one of these must read the derived accessor over `observable_effect` in the same change. Leaving the old parameter beside the new field is a duplicated source with exactly one live branch, which is the defect being corrected."
+  - "Reader accessors must be exported from canonical source under scripts/ac_store/ so that no consumer re-implements the derivation. Never edit a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001, ADR-026)."
+  - "DEPLOY-MANIFEST FIRST: any NEW module that a commit-guardian hook or done_proof.py imports MUST be added to build_ac_store's deploy_map (scripts/build_phases.py, ~line 794) in the same change, or the deployed hook and the required CI done-proof job crash with ModuleNotFoundError (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "Advisory before required (ADR-026 rule 3): the new shape rule must be diff-scoped so the ~2000 pre-existing ACs that carry no declaration never retroactively fail a required gate."
+delivers_to:
+  agent: python-coder
+  contract: "AC-record field `observable_effect: null | [\"smoke_surface\" | \"live_surface\", ...]` (non-empty and unique when present), plus reader accessors exported from scripts/ac_store/: `declares_observable_effect(ac) -> bool` and `observation_kinds(ac) -> set[str]`. Consumed by ACD-1800f-1-i (craft routing), ACD-1800f-2 (proof content keyed to the declaration), ACD-1800f-3 (the declared-but-unproven verdict), ACD-1800f-4 (bundle composition) and ACD-1800f-5 (the reference doc)."
+expects_from:
+  ac_id: ACD-1900a
+  contract: "The additive-optional-field landing in config/ac_store_schema.json: a new AC property may be declared optional without tightening additionalProperties, and a legacy AC carrying none of the new fields still validates. Until that lands, authoring `observable_effect` on any AC is rejected at commit time with 'Additional properties are not allowed'."
+test_spec:
+  - name: test_requirement_declaring_an_observable_effect_passes_the_real_store_validator
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Writes a real AC YAML record carrying observable_effect: [smoke_surface] into a temp store and runs the actual scripts/ac_store/validate_ac_schema.py entry point over an explicit file glob; asserts exit 0. Today that record is rejected with 'Additional properties are not allowed', so this is a genuine currently-failing assertion, not a tautology."
+  - name: test_requirement_with_no_declaration_validates_and_reports_no_observable_effect
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A legacy AC record with the field absent validates, and the reader accessor returns False with an empty kind set -- legacy mode derives nothing and never fails (ADR-026 rule 4)."
+  - name: test_unknown_observation_kind_is_rejected_at_all_three_enforcement_points
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An AC carrying observable_effect: [screenshot_diff] is rejected by scripts/ac_store/validate_ac_schema.py, by scripts/commit_guardian/check_ac_schema.py, AND by check_ac_schema.py with jsonschema forced unavailable so the _ac_schema_validators.py manual branch is the one that runs. Asserting only the JSON-schema path passes on a no-op fallback gate."
+  - name: test_empty_kind_list_is_rejected_so_there_is_no_ambiguous_third_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "observable_effect: [] fails validation; only absence/null expresses 'no observable promise'. Prevents an empty declaration from being read as a declared-and-satisfied promise."
+  - name: test_no_second_slot_the_three_legacy_trigger_names_stay_unauthorable
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "AC records carrying declares_side_effect, user_facing_surface or live_surface_test directly are each still rejected by the real validator after the change, while the same requirement expressed through observable_effect validates. This is the mechanical guarantee that a second declaration slot was not introduced -- without it, 'one slot' is a design intention nothing checks."
+test_rationale: "The defect this AC corrects is a field name that lives in routing code and in the agent registry while being unauthorable on the record that routing reads, so a test that greps config/ac_store_schema.json for the key would pass on precisely the dead-ended state the store is in today. Every descriptor therefore writes a real AC record to disk and runs the real validator entry point, asserting its exit status and the value a reader gets back. The accepted and the rejected cases are asserted in the same suite so an accept-everything change (dropping additionalProperties) cannot pass, and the enforcement-point descriptor deliberately forces the jsonschema-absent branch because that is the branch that actually gates a commit when the dependency is missing."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - "2026-08-17 sequencing pass: added depends_on ACD-1900a. This AC introduces a new authored field on the AC record, and config/ac_store_schema.json sets top-level additionalProperties:false which IS enforced (jsonschema.Draft7Validator, in both scripts/ac_store/validate_ac_schema.py and the commit hook). Authoring the declaration before ACD-1900a lands its optional slot is rejected at commit with 'Additional properties are not allowed'. The IT PO correctly declined to add this edge — depends_on is write-locked by check_ac_governance and ACD-1900* was out of its pass — so it is added here by the human author."
+  - "2026-08-17 VERIFIED DEFECT for the implementer, beyond this AC's own scope. live-surface-tester has ZERO occurrences in scripts/ac_store/generate_ticket_from_ac.py, so it appears in neither _CANONICAL_PHASE_ORDER (line 165) nor _FLOW_CHANGE_PHASE_ORDER (line 188), while user-surface-smoker is explicitly in both. Routing the live-surface craft through this AC's declaration slot WITHOUT adding it to both lists reproduces a failure this repo has already shipped once: an agent that is emitted but sorts outside the sequence runs after commit, or is dropped, and the run still reports success. Assert ordering in the rendered agents map, never frozenset membership."
+superseded_by: null
+covered_by:
+  - ACD-1800f-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE DECLARATION SLOT -- the half of ACD-1800f that the original gap statement
+  missed. The gap is not "the fixture block has no AC-side home"; the ROUTING
+  SIGNAL has no AC-side home either, and it is the harder of the two.
+
+  VERIFIED (ACD-1800f notes, re-verified 2026-08-17 -- do not re-investigate):
+    - `declares_side_effect` has ZERO occurrences in config/ac_store_schema.json.
+      (Line ~637 of that file is `product_truth`, not `declares_side_effect` -- an
+      earlier analysis got this backwards.)
+    - The schema sets `"additionalProperties": false` at top level (line 15) and
+      that IS enforced today (jsonschema.Draft7Validator,
+      scripts/ac_store/validate_ac_schema.py ~line 152). A probe AC carrying the
+      field is rejected: "Additional properties are not allowed
+      ('declares_side_effect' was unexpected)", exit 1.
+    - Consistently, ZERO ACs in docs/acceptance-criteria/ carry the field.
+    - CONCLUSION: the field cannot legally be authored on an AC at all. The
+      generator's propagation (~lines 1914-1920) and its routing
+      (~line 903: `if declares_side_effect: all_needed.add("user-surface-smoker")`)
+      plus the non-overridable `_SIDE_EFFECT_MANDATORY` frozenset (~line 920) are
+      LIVE BUT DEAD-ENDED from the AC path.
+  Hence the FIRST Then clause, which reads oddly for a behaviour AC and is
+  deliberate: today the store REJECTS this declaration, so "is accepted" is a
+  real, currently-failing assertion, not a tautology.
+
+  ONE SLOT, NOT THREE -- the fourth Then clause. Three triggers are orphaned in
+  the same shape and must not spawn three mechanisms:
+    - `declares_side_effect` -> user-surface-smoker (generator ~903);
+    - `user_facing_surface` -> user-surface-smoker's second routing condition
+      (config/agent_registry.json ~2597-2603); zero occurrences in BOTH the
+      schema and generate_ticket_from_ac.py;
+    - `live_surface_test` -> live-surface-tester (registry ~2663,
+      `conditional_field: live_surface_test`, `requires_ticket_section: true`);
+      zero occurrences in both, and the agent exists but is unreachable.
+  ACD-1800f's notes ask explicitly that the slot be designed "wide enough that
+  live_surface_test can reuse the same mechanism rather than inventing a third
+  one". The criteria encode that as a capability (declare the KIND of
+  observation) rather than as a field shape, so the IT PO can choose between a
+  kinded list and parallel booleans without reopening the behaviour.
+
+  ORDERING. config/ac_store_schema.json's additionalProperties:false is enforced
+  NOW, so this slot is a HARD prerequisite for ACD-1800f-2's proof content and
+  for anything piloting the behaviour by hand. It lands under ACD-1900a's
+  additive-first, optional-field rule (ADR-026 safety rule 1), and absence means
+  legacy mode -- derive nothing, never fail (rule 4), which is what the third
+  Then clause protects. The IT PO should consider an ACD-1900a depends_on edge in
+  the same shape as ACD-1800a's 2026-08-17 amendment.
+
+  MIRROR VALIDATION INTO ALL THREE ENFORCEMENT POINTS:
+  scripts/commit_guardian/check_ac_schema.py, its manual fallback
+  scripts/commit_guardian/_ac_schema_validators.py, and
+  scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is
+  a no-op gate (the ACD-1800a-1 it_requirements finding).
+
+  TESTABILITY. Write a real AC record carrying the declaration to disk and run
+  the store validator on it -- the assertion is the validator's exit status and
+  the value a reader gets back. Grepping the schema for the key name would pass
+  on a key that the generator's routing never consults, which is exactly the
+  state the code is in today.
+
+  2026-08-17 (IT PO enrichment).
+
+  SLOT SHAPE DECIDED: a kinded LIST, `observable_effect`, not parallel booleans.
+  The BA deliberately left the choice open. A kinded list is chosen because the
+  three legacy triggers then become DERIVED reads over one authored field, which
+  makes "no second slot" a mechanical property rather than a review convention:
+  a fourth observation craft is a new enum member, not a new field. Parallel
+  booleans would satisfy the criteria as written while leaving the next author
+  the same invitation that produced three orphans.
+
+  DERIVATION MAP (binding for ACD-1800f-1-i and ACD-1800f-2):
+    declares_side_effect  == observable_effect is non-empty
+    live_surface_test     == "live_surface" in observable_effect
+    user_facing_surface   == derived from the `surface` key of the smoke proofs
+                             authored under ACD-1800f-2, NOT from this field.
+  The declaration carries WHICH KIND of observation; each individual proof
+  carries its own surface. Keeping `surface` off the declaration is what lets a
+  requirement carry several proofs against different surfaces (ACD-1800f-2's
+  third Then clause).
+
+  CROSS-TREE DEPENDENCY NOT ENCODED AS AN EDGE (caveat for the user). This AC is
+  unimplementable before ACD-1900a lands its optional slots -- verified, not
+  inferred: additionalProperties:false is enforced by jsonschema.Draft7Validator
+  in both scripts/ac_store/validate_ac_schema.py (~152) and the commit hook. The
+  correct expression of that is `depends_on: [ACD-1800f, ACD-1900a]`, matching
+  the ACD-1800a amendment of 2026-08-17. It was NOT added here because ACD-1900*
+  is owned by a concurrent authoring pass and depends_on is governance
+  write-locked; the constraint is instead carried in `expects_from` and in
+  it_requirements, and the edge is recommended to the user for a single
+  reconciling amendment across the whole ACD-1800/1900 boundary.
+
+  ADDITIONAL VERIFIED FINDING, not in the briefing: the routing repoint is
+  larger than line ~903. `declares_side_effect` appears at generator lines ~659
+  (parameter default), ~685/689/702 (docstring), ~896-922 (routing plus the
+  _SIDE_EFFECT_MANDATORY frozenset), ~1914-1920 (frontmatter propagation) and
+  ~2772/~2809 (two separate extraction sites that both call
+  `ac.get("declares_side_effect")`). Repointing only the routing leaves two live
+  extraction sites reading a key no AC can carry.

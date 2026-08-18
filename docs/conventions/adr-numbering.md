@@ -3,10 +3,12 @@ title: 'Convention: ADR Numbering and Collision Prevention'
 type: how-to
 status: active
 created: 2026-05-17
-last_updated: 2026-08-13
+last_updated: 2026-08-18
+components:
+- commit_guardian
+- documentation_system
 related_docs:
 - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
-- docs/how-to/documentation/write-adr.md
 related_code:
 - scripts/adr_refs.py
 - templates/scripts/commit_guardian/check_adr_collision.py
@@ -117,15 +119,26 @@ git add docs/architecture/adrs/ADR-NNN-<slug>.md
 git commit -m "docs(adr): add ADR-NNN <short title>"
 ```
 
-The pre-commit hook will run automatically and block the commit if a collision is
-detected against `origin/main` or any remote in-flight branch at commit time.
+The pre-commit hook is *intended* to run automatically and block the commit if a collision
+is detected against `origin/main` or any remote in-flight branch at commit time. **As of
+2026-08-18 it is not registered and does not run** — see [The Pre-Commit
+Hook](#4-the-pre-commit-hook) below. Until it is wired up, check the number by hand with
+`python scripts/adr_refs.py`.
 
 ---
 
 ## 4. The Pre-Commit Hook
 
-The hook is registered in `.pre-commit-config.yaml` as `check-adr-collision`. It fires
-automatically on commits that stage files matching `^docs/architecture/adrs/ADR-.*\.md$`.
+> **NOT CURRENTLY ACTIVE (verified 2026-08-18).** This section originally opened "The hook
+> is registered in `.pre-commit-config.yaml` as `check-adr-collision`." It is not.
+> `check_adr_collision.py` appears in none of the 49 hook entries in
+> `templates/scripts/commit_guardian/commit_guardian.json`, from which
+> `.pre-commit-config.yaml` is generated, so it is deployed but never invoked. Everything
+> below describes the hook's behaviour **when it is wired up**, which is tracked under goal
+> `GE-122`. Treat the number-collision guard as manual until then.
+
+The hook is designed to fire on commits that stage files matching
+`^docs/architecture/adrs/ADR-.*\.md$`.
 
 ### What it checks
 
@@ -135,12 +148,24 @@ automatically on commits that stage files matching `^docs/architecture/adrs/ADR-
 4. Exits non-zero and prints the next-free number if a collision is found.
 5. Exits 0 silently when no collision is detected.
 
-### Fail-open behavior
+### Failure behaviour — fail-open for its own bugs, fail-closed when it could not read
 
-Any unexpected error (git unavailable, `docs/architecture/adrs/` absent, network
-failure) causes the script to print a warning to stderr and **exit 0** — the commit
-is never blocked by a script error. This prevents the hook from becoming a deployment
-blocker in CI environments or on new developer machines.
+*Amended 2026-08-18 by [ADR-029 Amendment 1](../architecture/adrs/ADR-029-adr-number-collision-prevention.md#amendment-1--2026-08-18--fail-open-is-narrowed-to-the-guards-own-defects).
+This section previously said any unexpected error exits 0. That unqualified rule is
+withdrawn.*
+
+The disposition turns on **whether the hook managed to read the whole ADR sequence**, not
+on which exception it caught:
+
+| Situation | Read the sequence? | Behaviour |
+|---|---|---|
+| Bug in the hook's own reporting, after the scan completed | Yes | Warn on stderr, **exit 0** |
+| Git unavailable, `docs/architecture/adrs/` absent, remote scan failed | No | Name what it could not read, report how many numbers it did read, **do not exit 0** |
+
+The first case has established that your number is free and then tripped on the way to
+saying so; a bug in the hook must not hold an unrelated commit hostage. The second has
+established nothing, and exiting 0 there would mean "I could not check, therefore your
+number is fine."
 
 ### Visibility gap
 

@@ -58,6 +58,44 @@ logger = logging.getLogger(__name__)
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
 _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 
+#: The two angles this module EMITS on derived test descriptors. The wider
+#: vocabulary is 5 core (criterion, reachability, seam, real_artifact, deployed)
+#: plus 2 conditional (boundary, failure) — see ``_TEST_ANGLES`` below — with
+#: must_block a modifier on reachability that this module neither emits nor
+#: reads. The trigger table for the remaining angles is separate work; do NOT
+#: infer it from these two constants.
+TEST_ANGLE_CRITERION = "criterion"
+TEST_ANGLE_REACHABILITY = "reachability"
+
+#: The full angle vocabulary, MIRRORED from the ``test_spec[].angle`` enum in
+#: config/ac_store_schema.json (which is the source of truth and the gate — the
+#: check-ac-schema hook rejects anything else at authoring time). Kept as a local
+#: copy so ticket generation never depends on locating the schema file in a
+#: consumer layout; the two copies are pinned together by a set-equality test in
+#: unit_tests/ac_store/test_derived_test_reachability_floor.py. Used ONLY to warn
+#: on an unrecognised authored value — this module does not reject one.
+_TEST_ANGLES = frozenset({
+    TEST_ANGLE_CRITERION,
+    TEST_ANGLE_REACHABILITY,
+    "seam",
+    "real_artifact",
+    "deployed",
+    "boundary",
+    "failure",
+})
+
+#: Assertion text carried by every derived reachability-floor descriptor. It is
+#: deliberately an instruction, not a stub: the AC authored no ``test_spec``, so
+#: nothing in the store names the production entry point — the test author has
+#: to resolve it. Deleting the entry instead is the phantom-done path.
+_REACHABILITY_ASSERTS = (
+    "REQUIRED — invoke the production entry point (CLI, hook, slash command, "
+    "workflow dispatch, or main()) as a subprocess/dispatch and assert the new "
+    "behaviour actually occurs. Do NOT satisfy this by importing the function "
+    "directly. The AC authored no test_spec, so the entry point is not declared: "
+    "resolve it before writing this test, and do not delete this entry."
+)
+
 #: doc_links relationships that represent a real edit surface (i.e. the linked
 #: file is a file the implementing agent must modify or create). Paths with these
 #: relationships enter ``files_touched``. Relationships not in this set (e.g.
@@ -494,6 +532,53 @@ def _extract_paths_from_prose(text: str) -> list[str]:
     return found
 
 
+def _resolve_worktree_root_or_none() -> "Path | None":
+    """Resolve the worktree root from this module's own location, or None.
+
+    Wraps :func:`_find_worktree_root` so callers that must degrade gracefully
+    (rather than raise) when no ``.git`` marker is found — e.g. the prose
+    path-existence gate below, which is a best-effort filter, not a hard
+    requirement — can treat "root not found" as "skip the filter".
+
+    Returns:
+        The worktree root path, or ``None`` when no ``.git`` marker is found.
+    """
+    try:
+        return _find_worktree_root(Path(__file__))
+    except FileNotFoundError:
+        return None
+
+
+def _is_real_prose_path(token: str, worktree_root: "Path | None") -> bool:
+    """Return True when *token* names a file that actually exists on disk.
+
+    TKT-600a-1: a narrative it_requirements bullet may quote example paths
+    purely to illustrate a scenario (e.g. ``"src/foo.py"`` in a sentence
+    describing an exploit) — such tokens satisfy ``_extract_paths_from_prose``'s
+    extension/prefix heuristics but do not name a real edit-surface file, so
+    they must not leak into ``files_touched``. Gating on on-disk existence
+    (per the AC's own remediation note: "gate on file existence") distinguishes
+    illustrative examples from real paths without narrowing the token-detection
+    regex, which would risk dropping genuine paths that happen to look unusual.
+
+    When *worktree_root* is ``None`` (root could not be resolved), the gate is
+    skipped and the token is treated as real — this preserves prior behaviour
+    in contexts where the worktree cannot be located, rather than silently
+    dropping every prose-extracted path.
+
+    Args:
+        token: Candidate path token extracted from prose.
+        worktree_root: Resolved worktree root, or ``None``.
+
+    Returns:
+        True when the file exists (or the root could not be resolved), False
+        when the root resolved but the file does not exist there.
+    """
+    if worktree_root is None:
+        return True
+    return (worktree_root / token).exists()
+
+
 def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     """Build the sorted, de-duplicated ``files_touched`` list for a generated ticket.
 
@@ -501,7 +586,12 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
 
     1. The ``reference_file_path`` named in ``it_requirements`` (structured form),
        or file path tokens extracted from prose bullets when ``it_requirements``
-       is a list of strings (list form — TKT-500f-8-i).
+       is a list of strings (list form — TKT-500f-8-i), FILTERED to tokens that
+       name a file actually present on disk (TKT-600a-1) — illustrative example
+       paths quoted only to describe a scenario (e.g. ``src/foo.py`` in prose
+       that never touches a real ``src/`` tree) do not exist on disk and are
+       excluded, while a real edit-surface path named in a bullet (e.g.
+       ``scripts/goal_to_epic.py``) survives.
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
        ``creates``, ``implements``, ``modifies``, ``specifies``).
@@ -521,19 +611,25 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
     paths: set[str] = set()
 
     # Source 1 — it_requirements edit surface.
-    # Structured form: a dict with an explicit reference_file_path key.
+    # Structured form: a dict with an explicit reference_file_path key. This
+    # form is trusted verbatim — it is an authored, structured field, not a
+    # prose token, so the existence gate below does not apply to it.
     # List form (TKT-500f-8-i): a list of prose bullet strings; each bullet is
-    # scanned for file path tokens via _extract_paths_from_prose.
+    # scanned for file path tokens via _extract_paths_from_prose, then each
+    # candidate token is gated on on-disk existence (TKT-600a-1) so
+    # illustrative example paths never leak into files_touched.
     it_req = ac.get("it_requirements")
     if isinstance(it_req, dict):
         ref_path = it_req.get("reference_file_path", "")
         if isinstance(ref_path, str) and ref_path:
             paths.add(ref_path)
     elif isinstance(it_req, list):
+        worktree_root = _resolve_worktree_root_or_none()
         for bullet in it_req:
             if isinstance(bullet, str):
                 for path_token in _extract_paths_from_prose(bullet):
-                    paths.add(path_token)
+                    if _is_real_prose_path(path_token, worktree_root):
+                        paths.add(path_token)
 
     # Source 2 — doc_links edit-surface entries
     doc_links = ac.get("doc_links") or []
@@ -1134,22 +1230,83 @@ def _slugify_for_test(text: str, max_words: int = 8) -> str:
     return "_".join(words[:max_words])
 
 
+def _unique_test_name(name: str, seen: set[str]) -> str:
+    """Return *name*, numerically suffixed until it is absent from *seen*.
+
+    A fixed suffix can still collide with an earlier clause's slug, which would
+    silently drop a test, so the suffix is incremented until the candidate is
+    genuinely unique. Does NOT mutate *seen* — the caller records the result.
+
+    Args:
+        name: Desired test function name.
+        seen: Names already allocated for this descriptor set.
+
+    Returns:
+        A name not present in *seen*.
+    """
+    if name not in seen:
+        return name
+    suffix = 1
+    candidate = f"{name}_{suffix}"
+    while candidate in seen:
+        suffix += 1
+        candidate = f"{name}_{suffix}"
+    return candidate
+
+
+def _reachability_descriptor(
+    ac_id: str, file_path: str, seen: set[str]
+) -> dict[str, Any]:
+    """Build the mandatory reachability-floor test descriptor for an AC.
+
+    The derived-from-criteria fallback is, by construction, the AC-literal angle
+    and nothing else: one test per Gherkin ``Then`` clause, asserting the clause
+    text. That is exactly the shape that lets code ship unit-tested but never
+    wired into anything that runs it (phantom-done — see CLAUDE.md "Gate /
+    Workflow ACs — Verify Behaviorally, Not by Grep"). This descriptor is the
+    floor under that fallback: one test that must invoke the production entry
+    point.
+
+    Args:
+        ac_id: The AC id the test covers.
+        file_path: Test file the derived descriptors live in.
+        seen: Names already allocated, so a slug collision disambiguates rather
+            than silently dropping the entry.
+
+    Returns:
+        A single test descriptor dict tagged ``angle: reachability``.
+    """
+    slug = _slugify_for_test(ac_id)
+    return {
+        "name": _unique_test_name(f"test_{slug}_reachable_from_entry_point", seen),
+        "file": file_path,
+        "covers": [ac_id],
+        "angle": TEST_ANGLE_REACHABILITY,
+        "asserts": _REACHABILITY_ASSERTS,
+    }
+
+
 def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
     """Derive best-effort test descriptors from an AC's Gherkin criteria.
 
     Fallback used only when the AC carries no explicit ``test_spec``. Each
-    ``Then`` clause in the criteria becomes one test descriptor, so the derived
-    ticket still tells test-writer what to assert straight from the criteria —
-    the AC remains the source of truth. When no ``Then`` clause is present a
-    single generic descriptor is emitted so the ticket is never left with an
-    empty test contract.
+    ``Then`` clause in the criteria becomes one ``angle: criterion`` test
+    descriptor, so the derived ticket still tells test-writer what to assert
+    straight from the criteria — the AC remains the source of truth. When no
+    ``Then`` clause is present a single generic descriptor is emitted so the
+    ticket is never left with an empty test contract.
+
+    On top of those, one mandatory ``angle: reachability`` descriptor is always
+    appended: the reachability floor. Without it this fallback emits only
+    AC-literal unit tests, which pass happily on code no entry point ever calls.
 
     Args:
         ac: Parsed AC record.
         ac_id: The AC id.
 
     Returns:
-        List of test descriptor dicts (name / file / covers / asserts).
+        List of test descriptor dicts (name / file / covers / angle / asserts),
+        always including exactly one reachability entry.
     """
     criteria = str(ac.get("criteria") or "")
     slug = _slugify_for_test(ac_id)
@@ -1159,33 +1316,36 @@ def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
         if m.group(1).strip()
     ]
     file_path = f"unit_tests/test_{slug}.py"
+    tests: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
     if not then_clauses:
-        return [{
+        tests.append({
             "name": f"test_{slug}_satisfies_criteria",
             "file": file_path,
             "covers": [ac_id],
+            "angle": TEST_ANGLE_CRITERION,
             "asserts": "Derived from AC criteria — replace with a concrete assertion.",
-        }]
-    tests: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for clause in then_clauses:
-        name = f"test_{slug}_{_slugify_for_test(clause)}"
-        if name in seen:
-            # Disambiguate until unique — a fixed suffix can still collide with an
-            # earlier clause's slug, which would silently drop a test.
-            suffix = len(tests)
-            candidate = f"{name}_{suffix}"
-            while candidate in seen:
-                suffix += 1
-                candidate = f"{name}_{suffix}"
-            name = candidate
-        seen.add(name)
-        tests.append({
-            "name": name,
-            "file": file_path,
-            "covers": [ac_id],
-            "asserts": clause,
         })
+        seen.add(tests[0]["name"])
+    else:
+        for clause in then_clauses:
+            name = _unique_test_name(f"test_{slug}_{_slugify_for_test(clause)}", seen)
+            seen.add(name)
+            tests.append({
+                "name": name,
+                "file": file_path,
+                "covers": [ac_id],
+                "angle": TEST_ANGLE_CRITERION,
+                "asserts": clause,
+            })
+
+    # Unconditional by design. Every descriptor built above is hard-coded
+    # ``angle: criterion``, and an authored ``test_spec`` never reaches this
+    # function — ``_build_test_requirements_section`` returns the spec-derived
+    # descriptors before calling it. So there is nothing here that could already
+    # be a reachability entry, and an "is one present?" guard would be dead code.
+    tests.append(_reachability_descriptor(ac_id, file_path, seen))
     return tests
 
 
@@ -1235,6 +1395,31 @@ def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
             entry["framework"] = item["framework"]
         if item.get("type"):
             entry["type"] = item["type"]
+        if item.get("angle"):
+            # Pass an authored angle straight through to the ticket entry, so an
+            # it-po's angle classification survives into ## Test Requirements
+            # instead of being silently dropped. Declared in the test_spec item
+            # schema (config/ac_store_schema.json), vocabulary in
+            # docs/testing/test-angles.md. There is no double-cover to guard
+            # against here: _build_test_requirements_section returns these
+            # descriptors and never falls through to the derived floor.
+            #
+            # The value is NOT rejected here — the schema is the gate, and
+            # dropping authored data on a vocabulary miss is worse than emitting
+            # it. But the schema hook does not run on every path an AC can reach
+            # the store by, so an unrecognised value is logged rather than
+            # passed through in silence.
+            if item["angle"] not in _TEST_ANGLES:
+                logger.warning(
+                    "AC %s test_spec entry %r declares an unrecognised test "
+                    "angle %r (known: %s); emitting it unchanged — see "
+                    "docs/testing/test-angles.md",
+                    ac_id,
+                    name,
+                    item["angle"],
+                    ", ".join(sorted(_TEST_ANGLES)),
+                )
+            entry["angle"] = item["angle"]
         if item.get("requires_db"):
             entry["requires_db"] = True
         descriptors.append(entry)
@@ -1333,6 +1518,54 @@ def _extract_doc_genre(ac: AcRecord) -> str:
     return "explanation"
 
 
+def _load_derive_parent_id_fn(*, warn_context: str = "parent genre resolution"):
+    """Load ``ac_parent_id.derive_parent_id`` from the sibling module, or None.
+
+    Shared loader used by both :func:`_load_parent_ac` (parent-genre
+    resolution) and :func:`_build_ticket_depends_on` (TKT-600a-1: dropping a
+    structural-parent AC id from a generated ticket's ``depends_on``) so the
+    ``importlib.util`` sibling-load boilerplate exists in exactly one place.
+
+    Args:
+        warn_context: Short phrase naming the caller's use case, interpolated
+            into the WARNING messages so log output stays traceable to the
+            feature that needed the function.
+
+    Returns:
+        The ``derive_parent_id`` callable, or ``None`` when the sibling
+        module cannot be loaded or does not define it.
+
+    DECISION HISTORY:
+        BO-2200c-3 (2026-08-11): Introduced (as inline logic in
+        ``_load_parent_ac``) to support parent-genre resolution. Uses
+        importlib.util (same pattern as _load_migration_map) for robust
+        sibling-module import regardless of sys.path state.
+        TKT-600a-1 (2026-08-18): Extracted into this shared helper so
+        ``_build_ticket_depends_on`` can reuse the same loader instead of
+        duplicating the importlib boilerplate.
+    """
+    sibling = Path(__file__).resolve().parent / "ac_parent_id.py"
+    try:
+        spec = importlib.util.spec_from_file_location("ac_parent_id", sibling)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        derive_fn = getattr(mod, "derive_parent_id", None)
+    except (OSError, AttributeError, ImportError, SyntaxError) as exc:
+        logger.warning(
+            "Cannot load ac_parent_id module for %s: %s", warn_context, exc
+        )
+        return None
+
+    if derive_fn is None:
+        logger.warning(
+            "ac_parent_id module has no derive_parent_id function; "
+            "%s unavailable",
+            warn_context,
+        )
+        return None
+    return derive_fn
+
+
 def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
     """Load the parent L1 AC record for *ac_id* from the AC store.
 
@@ -1346,7 +1579,8 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
 
     File I/O for YAML reads is handled inside :func:`_find_ac_by_id`; the
     only new I/O here is the ``importlib.util`` load of the sibling module
-    (wrapped in a specific except clause per Error Handling Policy Rule 1).
+    (wrapped in a specific except clause per Error Handling Policy Rule 1),
+    delegated to :func:`_load_derive_parent_id_fn`.
 
     Args:
         ac_id: Leaf AC identifier (e.g. ``"BO-2200c-3"``).
@@ -1359,24 +1593,11 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
         BO-2200c-3 (2026-08-11): Introduced to support parent-genre resolution.
         Uses importlib.util (same pattern as _load_migration_map) for robust
         sibling-module import regardless of sys.path state.
+        TKT-600a-1 (2026-08-18): Delegated the sibling-module load to the
+        shared :func:`_load_derive_parent_id_fn` helper.
     """
-    sibling = Path(__file__).resolve().parent / "ac_parent_id.py"
-    try:
-        spec = importlib.util.spec_from_file_location("ac_parent_id", sibling)
-        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-        derive_fn = getattr(mod, "derive_parent_id", None)
-    except (OSError, AttributeError, ImportError, SyntaxError) as exc:
-        logger.warning(
-            "Cannot load ac_parent_id module for parent genre resolution: %s", exc
-        )
-        return None
-
+    derive_fn = _load_derive_parent_id_fn(warn_context="parent genre resolution")
     if derive_fn is None:
-        logger.warning(
-            "ac_parent_id module has no derive_parent_id function; "
-            "parent genre resolution unavailable"
-        )
         return None
 
     parent_id: "str | None" = derive_fn(ac_id)
@@ -1399,6 +1620,74 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
 
     _, parent_ac = result
     return parent_ac
+
+
+def _build_ticket_depends_on(
+    ac: AcRecord,
+    ac_id: str,
+    tickets_root: "Path | None",
+) -> list[str]:
+    """Translate the source AC's ``depends_on`` into a guard-valid ticket list.
+
+    TKT-600a-1: a generated ticket is standalone (one ticket per AC), but the
+    source AC's own ``depends_on`` lists AC identifiers — typically its
+    structural parent, sometimes a genuine sibling dependency.
+    ``templates/hooks/ticket_frontmatter_guard.py``'s ``_check_depends_on``
+    requires every ticket ``depends_on`` entry to resolve to a sibling ticket
+    file in the same tickets folder, so an AC id can never be copied verbatim.
+    This function classifies each entry:
+
+    * The AC's own structural parent (via ``ac_parent_id.derive_parent_id``)
+      is always dropped — it is not a ticket-level dependency.
+    * An AC id with an already-generated, co-located ticket in *tickets_root*
+      (found via :func:`_find_existing_ticket` matching ``source_ac``) is
+      translated to that ticket's filename, preserving the dependency.
+    * Any other AC id (dangling — no ticket exists for it in scope) is
+      dropped, with a WARNING naming the dropped id so the omission is
+      traceable rather than silently lossy.
+
+    Args:
+        ac: Parsed AC record dict.
+        ac_id: The AC id the ticket is being generated for.
+        tickets_root: Root directory to search for co-located sibling
+            tickets, or ``None`` when unavailable (e.g. a caller that has not
+            resolved a tickets root) — in that case every entry is dangling
+            and the result is always ``[]``.
+
+    Returns:
+        List of ticket filenames (each a guard-valid ``depends_on`` entry).
+        Empty when the AC declares no dependencies, none survive
+        classification, or *tickets_root* is ``None``.
+    """
+    raw_deps = ac.get("depends_on") or []
+    if not isinstance(raw_deps, list) or not raw_deps or tickets_root is None:
+        return []
+
+    own_parent_id = None
+    derive_fn = _load_derive_parent_id_fn(warn_context="depends_on structural-parent drop")
+    if derive_fn is not None:
+        own_parent_id = derive_fn(ac_id)
+
+    resolved: list[str] = []
+    for dep in raw_deps:
+        if not isinstance(dep, str) or not dep:
+            continue
+        if dep == own_parent_id:
+            # Structural parent — never a ticket-level dependency (dropped
+            # silently; this is the expected, common case, not an omission).
+            continue
+        existing = _find_existing_ticket(tickets_root, dep)
+        if existing is not None:
+            resolved.append(existing.name)
+        else:
+            logger.warning(
+                "AC '%s': depends_on entry %r has no co-located ticket in %s; "
+                "dropping it to keep the generated ticket's depends_on guard-valid.",
+                ac_id,
+                dep,
+                tickets_root,
+            )
+    return resolved
 
 
 def _resolve_genres_from_parent(
@@ -1848,6 +2137,7 @@ def _build_frontmatter(
     files_touched: list[str],
     agents: dict[str, str],
     ac_store_path: "str | None" = None,
+    tickets_root: "Path | None" = None,
 ) -> str:
     """Build the YAML frontmatter block for the ticket.
 
@@ -1859,8 +2149,16 @@ def _build_frontmatter(
         ac_store_path: Repo-root-relative path to the source AC YAML file.
             When provided, an ``ac_traceability`` entry is added to the
             frontmatter carrying both the AC id and the store path, enabling
-            ac-validator and ac-fulfillment-gate to locate the source AC
-            directly without scanning the whole store.
+            ac-fulfillment-gate to locate the source AC directly without
+            scanning the whole store. NOTE (ACD-1900b-5-i): ac-validator does
+            NOT read ``ac_traceability`` at all -- an earlier version of this
+            docstring claimed both agents used it, which was false for
+            ac-validator. ac-fulfillment-gate is the sole consumer, via the
+            shared ``ac_coverage_resolver`` module.
+        tickets_root: Root directory to search for co-located sibling tickets
+            when translating the AC's ``depends_on`` (TKT-600a-1). When
+            ``None`` (the default — preserves prior callers' behaviour),
+            ``depends_on`` is always ``[]``.
 
     Returns:
         Formatted frontmatter string (including opening and closing ``---``).
@@ -1880,10 +2178,13 @@ def _build_frontmatter(
         # ticket depends_on entry to resolve to a sibling ticket file in the
         # same tickets/ folder, so copying the AC-level value verbatim hard-
         # blocks the generated ticket with "depends_on references missing
-        # file: '<AC-id>'" (ACD-400b-7). There is no ticket-scoped
-        # dependency source in an AC record for a standalone generated
-        # ticket, so depends_on is intentionally empty here.
-        "depends_on": [],
+        # file: '<AC-id>'" (ACD-400b-7). _build_ticket_depends_on (TKT-600a-1)
+        # drops the AC's structural parent, translates a genuine sibling
+        # dependency to its co-located ticket filename when one has already
+        # been generated in tickets_root, and drops any other (dangling) AC
+        # id — so the result is always guard-valid. When tickets_root is
+        # None the result is always [] (prior behaviour preserved).
+        "depends_on": _build_ticket_depends_on(ac, ac_id, tickets_root),
         "priority": _map_priority(ac),
         "roadmap_phase": "phase_1",
         "advances_current_outcome": True,
@@ -2777,7 +3078,9 @@ def main(argv: list[str] | None = None) -> int:
             files_touched=files_touched,
             declares_side_effect=declares_side_effect,
         )
-        frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
+        frontmatter = _build_frontmatter(
+            ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
+        )
         body = _build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
         print(frontmatter)
         print()
@@ -2814,7 +3117,9 @@ def main(argv: list[str] | None = None) -> int:
         files_touched=files_touched,
         declares_side_effect=declares_side_effect,
     )
-    frontmatter = _build_frontmatter(ac, ac_id, files_touched, agents, ac_store_path)
+    frontmatter = _build_frontmatter(
+        ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
+    )
     body = _build_ticket_body(ac, ac_id, agents_map=agents, ac_root=ac_root)
     ticket_content = frontmatter + "\n\n" + body
 
@@ -2957,5 +3262,11 @@ DECISION HISTORY
   declares_side_effect from the source AC to the ticket frontmatter so downstream
   tools can read the declaration directly. Both call sites in main() updated to
   extract and pass declares_side_effect from the AC record.
+- 2026-08-18 [python-coder]: Corrected the _build_frontmatter docstring's false
+  claim that ac_traceability enables "ac-validator and ac-fulfillment-gate" to
+  locate the source AC. ac-validator does not read ac_traceability at all;
+  ac-fulfillment-gate (via the new ac_coverage_resolver module) is the sole
+  consumer. The producer's emitted two-key {id, path} shape is unchanged
+  (ACD-1900b-5-i). (#ACD-1900b-5-i)
 ====================================================================
 """

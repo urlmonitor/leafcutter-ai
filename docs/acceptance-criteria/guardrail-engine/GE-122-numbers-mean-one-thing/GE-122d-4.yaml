@@ -1,0 +1,112 @@
+id: GE-122d-4
+title: "The three-stage arrangement is drawn, showing which stage owns which promise"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand where the numbering rule is enforced and what each stage
+    guarantees,
+  When they read the component diagram,
+  Then it shows the three stages, the single shared rule evaluation all three invoke, and the
+    collection each reads,
+  And each stage is annotated with what it can do when a clash is found — bring in a specialist,
+    stop a commit, or fail a build — so the differing strength of the three promises is visible
+    on the drawing,
+  And each stage is annotated with whether it can be bypassed, and the shared build is
+    identified as the one that cannot,
+  And it shows the rule evaluation as a single element the three stages share, not as three
+    parallel copies,
+  And the diagram carries a sequence number allocated by the project's own allocator and is
+    placed where the enrolment rule expects a numbered diagram,
+  And it is linked from its parent architecture document in both directions.
+depends_on:
+  - GE-122d
+  - GE-122d-1
+  - GE-122d-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "The parent architecture document this diagram must link to and from."
+  - path: scripts/next_diagram_seq.py
+    relationship: context
+    status: exists
+    relevance: "The allocator that must supply this diagram's sequence number."
+  - path: docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+    relationship: context
+    status: exists
+    relevance: "An existing correctly-numbered c2 container view in the enrolled location — the level, shape and naming convention to follow."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the drawing must show the DEPLOYED layouts the three stages actually run from (.claude/hooks/ for authoring time, .leafcutter/scripts/commit_guardian/ for the other two) rather than the templates/ source tree — the two-layout split is the structural fact GE-122d-1's shared element has to bridge."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "The sequence number MUST come from `python scripts/next_diagram_seq.py`, not from scanning the directory and adding one — the allocator encodes never-reusing a retired number and a max+1 scan does not. Coordinate with GE-122c-4, which allocates at the same time: two diagrams allocated from one stale scan is a collision minted by the tree that exists to prevent collisions."
+  - "The file goes in `docs/architecture/diagrams/` at level c2 (a container-level structural view), named `c2-NNN-<slug>.md`. GE-122c-4 is the c3 interaction view of the same arrangement; the two levels are the distinction between them."
+  - "The drawing must show the two DEPLOYED layouts the stages run from — `.claude/hooks/` for authoring time and `.leafcutter/scripts/commit_guardian/` for commit time and the shared build — because that split is the real structural obstacle to the shared element and hiding it makes the diagram describe an easier system than the one that was built."
+  - "The shared rule evaluation must be ONE element with three inbound arrows. This is the diagram's main assertion and the thing a future contributor is most likely to break by adding a stage-specific special case: if the drawing shows three copies, three copies is what the next person builds."
+  - "The bypass annotation must state the mechanism, not just the fact, for each bypassable stage, and must identify the shared build as unbypassable ONLY once GE-122d-2's required-check step has actually landed. Drawing it as unbypassable while the CI gate is still optional documents an intent as if it were a fact."
+  - "`check-mermaid-parent-link` enforces bidirectional links and `check-mermaid-complexity` caps size, both at commit time on `docs/architecture/**`. Add the back-link in `docs/architecture/components/commit-guardian.md` in the same change."
+  - "Must agree with GE-122c-4 on which stage engages the specialist. Structure and interaction views that disagree are a contradiction inside the architecture surface itself."
+test_required: false
+test_rationale: |
+  change_target is docs and the deliverable is a Mermaid diagram; there is no executable
+  behaviour to assert. The mechanically checkable clauses are already gated at commit time by
+  check-mermaid-parent-link (the bidirectional link) and check-mermaid-complexity (size), and
+  the numbered-and-placed clause is verified by the enrolment gate GE-122b-1 builds — this
+  diagram and GE-122c-4's are deliberately the first real additions that gate will see, so a
+  test here would only restate that check.
+delivers_to: null
+expects_from:
+  ac_id: GE-122d-1
+  contract: "Which element the three stages actually share, so the diagram depicts the arrangement that was built rather than the one that was intended."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'Added it_requirements: allocate the sequence number by running scripts/next_diagram_seq.py
+    and coordinate with GE-122c-4, which allocates at the same time (two diagrams
+    from one stale scan would be a collision minted by this tree); place at docs/architecture/diagrams/
+    at level c2 as the structural counterpart to GE-122c-4''s c3 interaction view;
+    show the two DEPLOYED layouts the three stages run from, since that split is the
+    real obstacle to the shared element; annotate the shared build as unbypassable
+    only once GE-122d-2''s required-check step has landed, so the drawing states a
+    fact rather than an intent; add the back-link in the same change for check-mermaid-parent-link.
+    Set test_required false with a rationale. Added documentation_system component
+    and two doc_links. criteria, title, agent, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies GE-122d's documentation_triggers: [component-diagram]. The L1 scopes it as "the
+  three-stage arrangement and which stage owns which promise".
+
+  DRAWING THE SHARED RULE AS ONE ELEMENT is not a stylistic choice — it is the diagram's main
+  assertion, and it is the thing a future contributor is most likely to break by adding a
+  stage-specific special case. If the drawing shows three copies, three copies is what the next
+  person will build.
+
+  Companion to GE-122c-4, which draws the remediation sequence. This one draws the structure;
+  that one draws the interaction. They must agree on which stage engages the specialist.
+
+  IT PO NOTE (2026-08-17): the structural fact most worth putting on this drawing is the one the
+  BA could not see — the three stages run from TWO deployed layouts (.claude/hooks/ and
+  .leafcutter/scripts/commit_guardian/). That is what makes GE-122d-1's single shared element
+  non-trivial, and a diagram that omits it shows a simpler system than the one being built.

@@ -1,0 +1,128 @@
+id: GE-120e-4
+title: "Undoing or replaying someone else's recorded change is treated the same way as merging it in"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a commit that stages the undo of a large changeset already recorded in the project's
+    history, and a commit that stages a copy of a change already recorded elsewhere, in each
+    case with a record of the operation in progress naming the change it came from,
+  When a check that works out its own change set runs on each of them,
+  Then the content that is present only because it reproduces or undoes the named recorded
+    change is absent from the change set the check inspects, and the check raises no
+    objection to it,
+  And content the author wrote on top of that operation is present in the change set and the
+    check reaches its verdict on it,
+  And on an ordinary commit, with no operation in progress and one state to compare against,
+    the change set is the author's entire staged content, so the rule narrows nothing on the
+    common path,
+  And the change set is worked out from the states the commit is built on and the record of
+    the operation in progress together, so it is never decided by asking whether a merge in
+    particular is under way.
+
+  Coverage note: cover each operation by performing it as a real repository operation and
+  executing the check as a process against the resulting staged state. The last clause is
+  the load-bearing one and cannot be covered by any merge fixture — cover it by running an
+  operation in which no merge marker exists, and asserting the carried-in content is still
+  absent from what the check objects to.
+depends_on:
+  - GE-120e
+  - GE-120e-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/commit_guardian/check_contract_shrinking.py
+    relationship: related
+    status: exists
+    relevance: "The clearest subject: undoing a merge that added tests stages those tests as deletions, so this check objects to the undo of someone else's work with the same message it produced on the observed merge."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "TWO SIGNALS, COMBINED — NEVER A MARKER SWITCH. The derivation takes the states the commit is built on AND the record of the operation in progress. REVERT_HEAD and CHERRY_PICK_HEAD are the operation records this AC is about; MERGE_HEAD is a third of the same kind. Branching on 'is a merge in progress' is explicitly forbidden by the fourth criterion — the question is 'what states is this commit built on', and the operation record is one input to that answer, not a mode selector."
+  - "EXTEND GE-120e-1'S SHARED SOURCE, DO NOT ADD A SECOND DERIVATION for these operations. Two derivations will disagree, and the disagreement surfaces as one check blocking what another passed — the defect this L1 removes."
+  - "RESOLVE THE GIT DIRECTORY WITH PLUMBING. The operation records live in the git directory, and drives in this repository run inside git worktrees where there is no .git DIRECTORY. Use git rev-parse --git-dir (or equivalent) rather than assuming <root>/.git; a hard-coded path makes the whole derivation a silent no-op in exactly the environment the observed defect was hit in."
+  - "THE ORDINARY-COMMIT CLAUSE IS A NEGATIVE CONTROL AND MUST STAY TRUE. With no operation in progress and one state, the change set is the author's entire staged content, byte-identical to today's git diff --cached. The cheapest way to satisfy the first two clauses is a narrowing that also quietly exempts ordinary commits, and nothing else in this L1 would catch that."
+  - "SCOPING JUDGMENT — CONFIRMED, WITH A CONSTRAINT ON HOW TO REVISE IT. Treating a straight undo as not-the-author's is accepted here: being blocked on deletions that are inherent to reversing someone else's decision is precisely what teaches the override reflex this L1 exists to remove. If a specific check needs the opposite answer, record it as that check's own behaviour on its manifest entry; do not weaken this rule and do not delete this AC — the copy-of-a-recorded-change half stands regardless."
+  - "PERFORMANCE. At most one additional git invocation beyond GE-120e-1's derivation, memoised per process. The derivation must not walk history — an undo of a large mainline merge is precisely the case where a history walk turns a pre-commit into a coffee break."
+  - "TEMPLATE/DEPLOYED PARITY (ADR-001): the change lands in templates/scripts/commit_guardian/ and must be verified in the deployed layout after build.py, not only in the source tree."
+  - "Error-handling policy applies to the git calls: specific exceptions, logged at WARNING or higher, never swallowed, and never degrading to 'attribute everything to the author'."
+test_spec:
+  - name: test_ge120e4_undo_of_a_large_recorded_changeset_raises_no_objection
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A real revert of a mainline merge that added tests stages those deletions; check_contract_shrinking, run as a process, does not object to them."
+  - name: test_ge120e4_copy_of_a_change_recorded_elsewhere_raises_no_objection
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A real cherry-pick of a recorded change is attributed to its source, not to the author, and the check stays silent."
+  - name: test_ge120e4_authors_own_edits_on_top_of_the_operation_are_inspected
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Content the author wrote on top of the revert or cherry-pick is in the inspected change set and the check reaches its verdict on it."
+  - name: test_ge120e4_ordinary_commit_change_set_is_the_entire_staged_content
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "With no operation in progress the rule narrows nothing — the negative control against a narrowing that quietly exempts ordinary commits."
+  - name: test_ge120e4_carried_in_content_excluded_with_no_merge_marker_present
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "On an operation where no merge marker exists at all, carried-in content is still absent from what the check objects to — the load-bearing clause."
+test_rationale: "The fourth criterion cannot be covered by any merge fixture, so the contract is built around operations in which no merge marker exists: a real revert and a real cherry-pick, each performed as a repository operation with the check executed as a process against the resulting staged state. An implementation that keys on MERGE_HEAD passes every merge test in this L1 and fails only here, which is why those two cases are non-negotiable. The ordinary-commit case is a negative control rather than a restatement — the cheapest way to make the first two cases green is a narrowing that also exempts ordinary commits, and GE-120e-3's ordinary arm has no operation in progress and would read that as agreement. Direct-import testing of the derivation cannot cover any of this: the signals are git state, and the criterion is what the check does with them."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-1
+  contract: "The shared authored-change source, which this AC requires to consult the operation record as well as the states the commit is built on."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120e-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE NON-MERGE AC, and it is not a restatement of GE-120e-1 for other operations — it
+  covers the cases GE-120e-1's definition does NOT reach.
+
+  WHY THESE OPERATIONS NEED THEIR OWN AC. GE-120e-1 attributes by comparing the staged tree
+  against every state the commit is built on. On a merge there are two such states and the
+  carried-in work falls out of the comparison. On an undo or a copy of someone else's change
+  there is only ONE state — the branch tip — so the comparison attributes the entire
+  changeset to the author, and the defect survives GE-120e-1 untouched. Undoing a mainline
+  merge that added tests stages hundreds of test deletions against a single parent; the
+  observed contract-shrinking objection reappears word for word on a commit whose author
+  wrote none of it. The second signal, the record of the operation in progress naming the
+  source change, is what closes that gap, and it is the reason the fourth clause forbids
+  keying on a merge marker.
+
+  THE THIRD CLAUSE IS A NEGATIVE CONTROL, not filler. The cheapest way to satisfy the first
+  two clauses is a narrowing that also quietly exempts ordinary commits, and nothing else in
+  this L1 would catch that — GE-120e-3's ordinary arm has no operation in progress and would
+  read as agreement. State it, cover it.
+
+  A JUDGMENT THE IT-PO SHOULD CONFIRM. Treating a straight undo as "not the author's" is a
+  scoping choice, not something the PO's notes settled. The argument for it is that the
+  deletions in an undo are inherent to reversing someone else's decision rather than a
+  decision of the author's own, and that being blocked on them is precisely what teaches the
+  override reflex this L1 exists to remove. The argument against is that choosing to undo is
+  a deliberate act. If the answer goes the other way for one check, record it as that
+  check's behaviour rather than by removing this AC — the copy-of-a-recorded-change half
+  stands regardless.

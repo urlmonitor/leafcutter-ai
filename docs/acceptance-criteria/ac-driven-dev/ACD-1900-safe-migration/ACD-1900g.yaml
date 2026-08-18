@@ -9,7 +9,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Dogfooded end-to-end on ourselves; an explicit go/no-go gates the final cutover.
 
@@ -41,7 +41,7 @@ documentation_triggers:
 notes: |
   ADR-026 "Self-host is a self-consistent build" (rule 6), "Behavioral spot-check on a real
   on-disk ticket in a fresh process" (rule 7), and the "Go / No-Go for the final cutover"
-  section. Dogfood-first proving lives in phase_acbuild_2_cutover (why this L1's roadmap_phase
+  section. Dogfood-first proving lives in phase_acbuild_2b_ticket_demotion (why this L1's roadmap_phase
   is _2 and not _3, per the ADR); the go/no-go criteria it defines govern the phase_3 legacy
   removal (ACD-1900f). Go = strict store validation 0; all required CI green on >=10 consecutive
   self-host merges under enforce:true; a full self-host epic driven end-to-end thin + AC-sign-off

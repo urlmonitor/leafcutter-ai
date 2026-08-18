@@ -1,0 +1,81 @@
+id: TQ-400d
+components:
+  - testing_quality
+  - ac_store
+title: "The pile of unproven finished work gets worked through, not written off"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The finished-but-unproven backlog is triaged, never grandfathered into silence.
+
+  Every item already marked finished that cannot be proven today is put in front
+  of someone with a decision to make — prove it, redo it, or retire it — and
+  progress through the pile is visible. Nothing is quietly exempted just for
+  being old.
+depends_on:
+  - TQ-400
+doc_links:
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: related
+    status: exists
+    relevance: "The FLOOR beneath this L1, shipped by KM-ADM-005 (PR #425): HIGH_WATER_MARK = 244 fails the build if the untagged-done count rises. This L1 is the drawdown — it lowers that mark. Nothing should ever raise it."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "Where the ratchet came from, and the second measurement of this pile (244 of 607 on 2026-08-13, whole store) against TQ-400's own (240 of 641 on 2026-08-17, done L2/L3 only)."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-400d-1
+  - TQ-400d-2
+  - TQ-400d-3
+  - TQ-400d-4
+  - TQ-400d-5
+implemented_by: []
+change_target:
+  - docs
+  - code
+risk_surface: internal
+documentation_triggers:
+  - how-to
+notes: |
+  THIS L1 OWNS THE 244 — SAID HERE SO NOBODY AUTHORS IT AGAIN (2026-08-18, PO).
+  Two live surfaces currently claim the untagged-done backlog is unowned:
+  KM-ADM-005's notes ("leaving the 244 to be retired separately") and KI-KM-002 in
+  docs/known-issues/knowledge-management.md ("That work has no AC and no owner").
+  Both predate or overlooked this L1, which was authored 2026-08-17 with exactly
+  that remit. It is owned. Do not open a new AC for it.
+
+  DIVISION OF LABOUR WITH THE SHIPPED RATCHET:
+    - KM-ADM-005 = the floor. The count cannot grow; a new work_status: done AC
+      with no `# covers:` tag breaks the build. Already shipped and required.
+    - TQ-400a = the store-wide sweep that produces the inventory.
+    - TQ-400d (here) = the drawdown, with a recorded decision per record, and the
+      party responsible for LOWERING HIGH_WATER_MARK as the pile shrinks. Note the
+      practical consequence for TQ-400d-2 ("progress is measurable from one cycle
+      to the next"): the high-water mark is already a machine-readable progress
+      metric, and moving it down is the cheapest possible proof of progress. Reuse
+      it rather than inventing a parallel counter.
+
+  TWO COUNTS OF THE SAME PILE DISAGREE — RECONCILE BEFORE TRIAGING. TQ-400's L0
+  notes record 240 of 641 done L2/L3 records untagged (2026-08-17). KM-ADM-005's
+  ratchet records 244 of 607 done ACs untagged (2026-08-13, all levels, ids
+  quote-stripped before joining). Different inclusion rules, different dates,
+  neither citing the other, so the delta cannot be read as movement. TQ-400d-1's
+  worked list must declare its own inclusion rule and state which of these two
+  populations it is drawing from — the standing requirement in ACS-1100 (a figure
+  arrives with the total it was measured against and the method behind it). Also
+  inherit the join-key lesson baked into the ratchet: ids must be quote-stripped
+  before matching `# covers:` tags, or four records are miscounted as unproven.

@@ -335,6 +335,7 @@ class TestBP300e6AgentJsonOnlyContract(unittest.TestCase):
         whose agent template lacks the contract section, this test FAILS —
         ensuring future drift is caught rather than silently missed.
         """
+        # covers: BP-300e-6
         producers = _derive_all_machine_parsed_producers()
 
         missing_contract: list = []

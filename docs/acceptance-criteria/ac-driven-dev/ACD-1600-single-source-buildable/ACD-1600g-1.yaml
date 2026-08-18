@@ -1,0 +1,164 @@
+id: ACD-1600g-1
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement declares the boundary it must not cross, alongside the surface it changes"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose intended change surface is the commit-guardian rules,
+    and whose author has decided the build-orchestration runbook must stay
+    untouched by this piece of work,
+  When the requirement is inspected,
+  Then the requirement states, as part of its own record, the boundary it must
+    not cross -- naming the build-orchestration runbook as deliberately excluded,
+  And that exclusion is readable from the requirement alone, without consulting
+    any container the requirement is later bundled into,
+  And a requirement authored without any exclusion is still accepted and is
+    reported as having an empty boundary, not a missing one.
+depends_on: [ACD-1600g, ACD-1900a]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "The only consumer of the exclusion list today. Step 1.1 (~lines 73-74) reads it from TICKET frontmatter and instructs 'may be absent -- treat as empty list'. This AC gives the field an AC-side home; the reader change is ACD-1600g-3 and the absent-vs-empty announcement is ACD-1600g-4."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Canonical-source rule: the schema and validators are edited in the source tree, never in a deployed .claude/ copy or the workspace-parent build-output mirror."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Add the boundary as a NEW OPTIONAL top-level field on the AC record in config/ac_store_schema.json. Keep the key name `out_of_scope` for continuity with the ticket-frontmatter key templates/agents/change-scope-reviewer.md already reads, so the consumer change in ACD-1600g-3 is a source swap and not a vocabulary change. Shape: a list of repo-relative path or component strings."
+  - "HARD PREREQUISITE, VERIFIED 2026-08-17: config/ac_store_schema.json sets top-level `additionalProperties: false` (line 15) and it IS enforced -- scripts/ac_store/validate_ac_schema.py loads the real schema through jsonschema.Draft7Validator and rejects an undeclared field with 'Additional properties are not allowed', exit 1. No AC anywhere in the store can carry a boundary until this slot exists, so this AC gates every other leaf under ACD-1600g."
+  - "THE READER MUST RETURN THREE STATES, NOT TWO: absent (no key -- legacy, unmigrated), declared-and-empty (the author positively asserts nothing is excluded), and declared-non-empty. Defaulting the missing key to an empty list at any consumer collapses the first two and is forbidden; ACD-1600g-4's whole guarantee depends on the distinction surviving the read."
+  - "Put the read behind ONE seam -- a new module scripts/ac_store/scope_boundary.py -- and make every consumer go through it. A second ad-hoc parse anywhere is where the three-state collapse reappears."
+  - "Mirror the shape/type validation into EVERY enforcement point that gates commits, not just the JSON schema: scripts/commit_guardian/check_ac_schema.py AND its manual-validation fallback scripts/commit_guardian/_ac_schema_validators.py (the load-bearing gate when jsonschema is unavailable) AND scripts/ac_store/validate_ac_schema.py. A rule added only to the JSON schema is a partial gate -- the same finding recorded on ACD-1800a-1."
+  - "Additive only (ADR-026 safety rule 1): do NOT tighten additionalProperties, and do not make the field required, until the store is 100% backfilled. Absence is legacy mode -- derive nothing, never fail (ADR-026 rule 4)."
+  - "Deploy-manifest first (ADR-026 rule 2): if any commit-guardian hook imports the new module, add it to the build_ac_store deploy_map in scripts/build_phases.py (~line 794) in the SAME change, and verify from the deployed layout. The done_proof ModuleNotFoundError precedent is the reason this is a rule and not a reminder."
+  - "Canonical source only: the schema and the modules under scripts/ac_store/ in the source tree. Never edit a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001)."
+  - "Error handling per the project policy: a record whose boundary key is present but malformed (a scalar, a list of non-strings) must be reported by the validators as a violation, caught by exception type and logged at WARNING or higher -- never silently normalised into 'absent'. A malformed boundary that reads as absent is the same false-green shape this tree exists to close."
+  - "Backward compatibility is testable, not assumed: validating the entire existing AC store after the change must produce zero new violations."
+delivers_to:
+  agent: python-coder
+  contract: "Three-state boundary read from scripts/ac_store/scope_boundary.py: read_boundary(ac_record) -> { declared: bool, paths: list[str] } where declared=False means the key was absent (legacy) and declared=True with paths==[] means the author positively declared an empty boundary. Consumed by ACD-1600g-2 (bundle composition), ACD-1600g-3 (adjudication) and ACD-1600g-4 (absence announcement)."
+expects_from:
+  ac_id: ACD-1900a
+  contract: "The additive-first optional-field landing rule and the schema_version data signal (ADR-026 safety rule 1). Until ACD-1900a's additive slot mechanism is in place, no new top-level AC field can be authored at all -- the store schema's additionalProperties:false is enforced today. Recorded here as a contract rather than a depends_on edge because ACD-1600g deliberately scoped its depends_on to ACD-1600 (see its ORDERING note); the edge itself is the user's call."
+test_spec:
+  - name: test_ac_declaring_a_boundary_validates_and_the_boundary_reads_back
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Writes a real AC YAML record carrying a boundary to a temp store, runs the real validate_ac_schema entry point over an explicit file glob (exit 0), then calls the real reader and asserts the exact declared paths come back. Fails on a schema-only change that no reader consults."
+  - name: test_declared_empty_boundary_is_distinguishable_from_an_absent_one
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Two real on-disk AC records -- one with an explicitly empty boundary, one with no boundary key at all -- both validate, and the reader returns two different three-state results. This is the assertion a default-to-empty-list implementation cannot pass."
+  - name: test_legacy_ac_without_the_field_still_validates_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real validator over pre-existing store records that carry no boundary key and asserts exit 0 with zero new violations -- ADR-026 rule 4, absence is legacy mode and never a failure."
+  - name: test_malformed_boundary_is_rejected_by_the_manual_fallback_validator_too
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "An AC whose boundary is a scalar string is rejected by the agent-side validator AND by check_ac_schema with jsonschema forced unavailable so the manual _ac_schema_validators branch runs. Asserts a non-zero exit on both paths."
+test_rationale: "Three weaker shapes all pass on a broken implementation here, which is why each test drives a real entry point over a real on-disk record. (1) A test that greps the schema JSON for the key name passes on a key that no reader ever consults -- the exact prohibition in CLAUDE.md's 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep'. (2) A direct-import unit test of the reader would be handed a dict that some other code already parsed, proving nothing about whether the store validator actually accepts the field; the schema and the reader can disagree while each unit test still passes. (3) Testing only the jsonschema path masks a missing rule in the manual fallback, and the fallback is the branch that actually gates the commit when jsonschema is absent -- so the malformed-input test asserts both enforcement points, not the one that happens to be convenient. The empty-versus-absent pair must be asserted in one run, because an implementation that reports both as 'declared' and one that reports both as 'absent' each satisfy a single-case test."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+  - "2026-08-17 sequencing pass: added depends_on ACD-1900a. This AC introduces a new authored field on the AC record and config/ac_store_schema.json sets top-level additionalProperties:false, which IS enforced (jsonschema.Draft7Validator in both scripts/ac_store/validate_ac_schema.py ~152 and the commit hook). No boundary can be authored anywhere until ACD-1900a lands its optional slot. The IT PO recorded this as expects_from and correctly declined to add the edge — depends_on is write-locked by check_ac_governance and re-sequencing an L1 subtree was outside its pass — so it is added here by the human author."
+  - "2026-08-17 FIFTH UNAUTHORABLE FIELD, and this one is load-bearing for the whole migration. `schema_version` has ZERO occurrences in config/ac_store_schema.json, so it is as unauthorable today as declares_side_effect / user_facing_surface / live_surface_test / test_failure_rework_cap (see PROJECT_CONTEXT.md). ADR-026's control surface depends on it directly: `enforce` may only be switched on once zero schema_version<2 records remain — a condition that cannot be evaluated, because no record can carry the field. ACD-1900a must land the schema_version slot, not merely the deliverable-checklist slots, or the kill-switch has no data signal to read."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE DECLARATION SLOT. This is the half of ACD-1600g that does not exist at all
+  today: per the L1's verified notes, `out_of_scope` has ZERO occurrences in
+  config/ac_store_schema.json and ZERO in scripts/ac_store/generate_ticket_from_ac.py.
+  Its twin `files_touched` already survives the migration (derived AC-side by
+  `_build_files_touched()`, generate_ticket_from_ac.py ~line 497), so the pair is
+  asymmetric and only the exclusion half needs a new home.
+
+  HARD PREREQUISITE, NOT A PREFERENCE. config/ac_store_schema.json declares
+  `"additionalProperties": false` at top level (line 15) and that constraint IS
+  enforced today (jsonschema.Draft7Validator in scripts/ac_store/validate_ac_schema.py
+  ~line 152; empirically confirmed 2026-08-17 -- an AC carrying an undeclared field
+  is rejected with "Additional properties are not allowed", exit 1). No author can
+  pilot this by hand-adding the field first: the optional slot must land under
+  ACD-1900a's additive-first rule before any exclusion can be authored anywhere in
+  the store. The IT PO should consider whether depends_on needs an ACD-1900a edge
+  in the same shape as ACD-1800a's 2026-08-17 amendment.
+
+  ADR-026 SAFETY RULES 1 AND 4 apply verbatim: the field lands OPTIONAL; absence
+  means legacy mode (derive nothing, never fail -- hence the third Then clause,
+  which makes "no exclusion" a valid, distinguishable state rather than a
+  validation error); do not tighten additionalProperties until the store is 100%
+  backfilled.
+
+  MIRROR THE VALIDATION INTO ALL THREE ENFORCEMENT POINTS. Any shape/type rule
+  must be added to scripts/commit_guardian/check_ac_schema.py AND its manual
+  fallback scripts/commit_guardian/_ac_schema_validators.py (the load-bearing
+  gate when jsonschema is absent) AND scripts/ac_store/validate_ac_schema.py. A
+  rule added only to the JSON schema is a partial/no-op gate -- the same finding
+  recorded on ACD-1800a-1's it_requirements.
+
+  WHY THE EMPTY-BOUNDARY CLAUSE IS SEPARATE FROM "no boundary declared". The
+  consumer (templates/agents/change-scope-reviewer.md, Step 1.1) currently reads
+  `out_of_scope` from ticket frontmatter and says "may be absent -- treat as empty
+  list". That conflation is exactly the quiet degradation ACD-1600g-4 exists to
+  fix, so this L2 deliberately requires the two states to be reportable apart.
+
+  TESTABILITY. Drive this behaviourally through the store validator and the
+  reader that surfaces the boundary -- author a real AC record on disk, run the
+  validator, and assert the boundary is returned. Do NOT satisfy it with a test
+  that greps config/ac_store_schema.json for the field name: a grep passes on a
+  key that no reader ever consults, which is the failure shape CLAUDE.md's
+  "Gate / Workflow ACs -- Verify Behaviorally, Not by Grep" section forbids.
+
+  2026-08-17 (IT PO enrichment). Four decisions recorded for the implementer.
+
+  - KEY NAME IS `out_of_scope`, DELIBERATELY. Reusing the ticket-frontmatter key
+    the consumer already reads makes ACD-1600g-3 a change of SOURCE only, not of
+    vocabulary, and keeps the eventual backfill mechanical. A new name would force
+    the reviewer to hold two vocabularies for the whole cutover window.
+
+  - ONE READ SEAM (scripts/ac_store/scope_boundary.py) IS A CONSTRAINT, NOT A
+    STYLE PREFERENCE. Four leaves under this L1 all need the same three-state
+    read; if each parses the record itself, the default-to-empty collapse that
+    ACD-1600g-4 exists to prevent will be reintroduced by whichever leaf is
+    implemented last, and it will be invisible because the other three still pass.
+
+  - THE ACD-1900a EDGE IS RECORDED AS `expects_from`, NOT ADDED TO depends_on.
+    The BA's note asks the IT PO to consider a depends_on edge. The prerequisite
+    is real and verified, but ACD-1600g's ORDERING note deliberately scoped its
+    depends_on, and re-sequencing an L1 subtree is the user's call, not an
+    enrichment. Flagged for the user in this pass's report.
+
+  - RELATED VERIFIED FINDING, OUT OF SCOPE HERE: `schema_version` -- the per-AC
+    data-version signal ADR-026's control surface depends on -- is ALSO absent
+    from config/ac_store_schema.json's property list, and is therefore equally
+    unauthorable under additionalProperties:false today. It belongs to ACD-1900a,
+    not here, but it is the same blocker and should land in the same slot change.
+
+  - AUTHORING NOTE ON it_requirements PROSE: only genuine EDIT surfaces are
+    written as full paths. `_build_files_touched()` scrapes any slash-bearing
+    token out of these bullets into the generated ticket's `files_touched`, so a
+    read-only reference written as a path silently widens the declared change
+    surface and weakens the very scope guard this L1 is building.

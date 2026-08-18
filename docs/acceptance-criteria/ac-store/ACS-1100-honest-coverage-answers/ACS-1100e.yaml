@@ -26,6 +26,10 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "The single existing store reference document that all four coverage sections belong in."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "The worked example the reference section must cite: a real, shipped, self-describing answer produced BEFORE the contract was written down. Its vocabulary (scope / measurement date / enforcing test / explicit do-not-read-as) is the starting point, not a competitor."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -64,3 +68,19 @@ notes: |
   documentation_rationale naming this L1. ACS-1100d keeps [component-diagram], which is
   a different artifact by a different agent (ACS-1100d-4) and is deliberately NOT
   folded in here.
+
+  THE CONTRACT NOW HAS A PRIOR INSTANCE TO ACCOUNT FOR (2026-08-18, PO). This L1 is
+  the one the KM-ADM-005 reconciliation makes MORE work, not less. Two additions for
+  ACS-1100e-1's scope, neither of them optional:
+    1. CITE THE WORKED EXAMPLE. A shipped, self-describing answer already exists
+       (the artifact map's test-covers edge note). The reference section must present
+       it as an instance of the contract's vocabulary, so the next author copies a
+       real example rather than inventing a fifth phrasing. If the contract's chosen
+       vocabulary cannot express that note, the vocabulary is wrong.
+    2. STATE WHO INHERITS AND WHO OWNS. ACS-1100 is scope: standing — other components
+       inherit it and do not re-specify it. Three trees already relate to it and a
+       reader currently has to reconstruct how: KM-200 (inherits it for artifact
+       census figures), KM-ADM-100 (inherits it for map trust ratings, and shipped the
+       first instance), TQ-400 (adjacent — proof over time, not answer coverage; its
+       TQ-400d owns retiring the untagged-done pile). The reference section is the
+       one place that can say this once instead of five AC notes saying it partially.

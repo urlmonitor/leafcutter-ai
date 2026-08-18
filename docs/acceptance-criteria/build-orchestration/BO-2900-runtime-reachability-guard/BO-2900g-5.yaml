@@ -1,0 +1,120 @@
+id: BO-2900g-5
+components:
+  - documentation_system
+  - build_orchestration
+  - testing_quality
+title: "Reference documentation states the one set of words for a required proof and what is always asked for"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the single definition of how a required proof is described is in place,
+  When a reader who has to author, produce, or read a required-proof description
+    consults the project's reference documentation,
+  Then one reference page states the permitted kinds of proof and, for each kind,
+    the facts a description of it must carry,
+    And it states that a request for a reached-the-real-way proof is attached to
+      every piece of work regardless of how that work's plan was produced, and
+      that no route grants an exemption,
+    And it states how a work record's declaration that it changes something real
+      is obtained from the behaviour that work already states, and that the
+      declaration is not a field an author fills in by opinion,
+    And it names the retired older name for the reached-the-real-way kind and what
+      replaced it, so a reader who meets the old name in an existing description
+      knows what it became and that no synonym is accepted,
+    And it states that everything on the page is about what is ASKED FOR before
+      any test exists, and names where the question of whether a proof was
+      ACHIEVED is settled instead, so the page is never cited as evidence of
+      completion.
+depends_on:
+  - BO-2900g
+  - BO-2900g-1
+  - BO-2900g-2
+  - BO-2900g-3
+  - BO-2900g-4
+doc_links:
+  - path: docs/reference/required-proof-vocabulary.md
+    relationship: describes
+    status: planned
+    relevance: "PINNED BY IT-PO: this is the page to author. docs/reference/ is the reference-author's surface and the path the depending ACs will cite."
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "The taxonomy and its evidence base. Cross-link and cite; do NOT restate the failure catalogue on the new page — that page is the explanation, this one is the contract."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "The existing field reference. The declaration-derivation rule has to be reachable from here, and the two pages must not state different permitted kinds."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The prohibition the page's final clause points at: whether a proof went in the real way is decided by watching the run, never from a written description. The page must say so in its own words or it will be read as a completion criterion."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-6.yaml
+    relationship: related
+    status: exists
+    relevance: "The consumer-side reference page. The two pages must cross-link and must not state different permitted kinds; this one is the ASK side, that one is the CLAIM side."
+assigned_agent: reference-author
+estimated_complexity: M
+it_requirements:
+  - "Pin the path: docs/reference/required-proof-vocabulary.md. It must carry the project reference-doc frontmatter (title / type: reference / status / created / last_updated / components / description) or check_doc_frontmatter blocks the commit."
+  - "The permitted-kind table must be generated from, or explicitly stated as mirroring, the single definition BO-2900g-3 establishes — and the page must name that file path. A reference page that restates an enum from memory becomes the next competing definition."
+  - "The page must name the retired kind and its replacement explicitly, and state that no synonym is accepted, so a reader who meets the old name in an existing description knows what it became."
+  - "The final clause is not boilerplate: the page must state in its own words that it covers what is ASKED FOR before any test exists, and must name BO-2900a's execution observer as where ACHIEVED is settled. Without it this becomes the most convenient page from which to conclude that a conforming description means the proof exists."
+  - "Cross-link, do not restate: docs/testing/test-angles.md keeps the failure catalogue and the evidence base; this page is the contract."
+  - "It must be reachable from docs/reference/ac-schema.md and must not state a different permitted-kind set from it."
+test_required: false
+test_rationale: |
+  Genuinely test-free: change_target is docs and the AC's entire observable is the prose
+  content of one reference page. There is no executable behaviour to assert. The two
+  mechanical properties that DO exist are already covered elsewhere and must not be
+  re-tested here by proxy: frontmatter validity is enforced by the check-doc-frontmatter
+  hook, and enum agreement between the page and the single definition is covered by
+  BO-2900g-3's cross-source set-equality test. A test that greps this page for keywords
+  would assert prose presence, not correctness, and is explicitly not wanted.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned reference-author (registry: ''requires a new reference document
+    in docs/reference/''), pinned the page path, added it_requirements and test_required:
+    false with rationale. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies BO-2900g's documentation_triggers: [reference-doc]. Same role as
+  BO-2900f-5 in the sibling tree: a reference, not a how-to.
+
+  WHY THE LAST CLAUSE IS NOT BOILERPLATE. This page will be the single most
+  convenient place to look up "what proof is required", which makes it the single
+  most likely place for someone to conclude that a conforming description means
+  the proof exists. The parent L1's boundary — planning-time only, never evidence
+  of achievement — has to be written on the page itself, because a boundary that
+  lives only in an AC file is invisible to the page's readers.
+
+  AGENT ASSIGNMENT DELIBERATELY OMITTED. This AC is authored by the BA at L2 with
+  no technical enrichment; the IT PO assigns it (documentation-expert is the
+  expected owner, per the documentation-trigger convention) and pins the real
+  page path.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Assignment DEVIATES from the suggestion
+  above, on the evidence of config/agent_registry.json: the registry carries a
+  more specific phase agent, reference-author (tier: phase, role: documentation,
+  is_ticket_phase: true), whose selection_criteria reads "Assign when the ticket
+  requires a new reference document in docs/reference/." documentation-expert's
+  criteria are broader ("docs-only change", "files_touched contains docs/*.md")
+  and it is additionally routed post-coder by the documentation_gates
+  canonical-order path, so it will still see the change; the specialist owns the
+  authoring. Page path pinned to docs/reference/required-proof-vocabulary.md.

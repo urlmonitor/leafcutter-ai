@@ -45,6 +45,14 @@ implemented_by:
   - "config/agent_registry.json"
 covered_by:
   - "tests/test_ac_fulfillment_gate.py"
+  # Added by ACD-1900b-5-i, which requires BO-201 to gain its first EXECUTING
+  # coverage. The entry above is a read_text() + regex suite over the gate
+  # template that asserts only frontmatter fields -- it could never have
+  # detected the producer/consumer shape divergence, which is how this AC sat
+  # at work_status: done while the gate it specifies resolved zero ACs. The
+  # test below carries a "# covers: BO-201" tag and asserts the list form still
+  # yields a verified-AC count equal to the number the block named.
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestListFormRegression
 test_spec:
   - name: test_ac_fulfillment_gate_registered_as_ticket_phase_agent
     target_dir: tests/
@@ -89,6 +97,13 @@ test_rationale: |
   module implementing it, so no unit test can execute it; only an end-to-end
   agent run could. That residual gap is NOT covered by this test_spec and
   should not be read as covered.
+
+  Note (post-merge): origin/main independently added
+  unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestListFormRegression to
+  covered_by as BO-201's first EXECUTING coverage, reaching the same conclusion
+  about the grep-only suite from the other direction. That test narrows the
+  VERDICT gap described above; it does not close it, because it exercises the
+  list-form resolution path rather than the full ok/blocker verdict.
 change_target: prompt
 risk_surface: internal
 product_truth:

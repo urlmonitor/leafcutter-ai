@@ -51,7 +51,8 @@ _TEST_PATH_RE = re.compile(
 # `-    def test_x` AND an added `+    def test_x` for the same name, and an
 # ordinary modification of a test file still puts it on the `--- a/` side. Both
 # were reported as deletions, so every edited test and every merge commit was
-# blocked (GE-119). They are detected by _find_deleted_tests /
+# blocked (GE-111f, renumbered from GE-119 by TICKET-20260817-GE-122e-1). They
+# are detected by _find_deleted_tests /
 # _find_deleted_test_files below, which correlate the two sides of the diff.
 # Each pattern anchors the token to the START of the added line (after the
 # diff's own "+" and the line's indentation) and requires real call/decorator
@@ -161,11 +162,71 @@ class ScanResult:
         return self.has_production_changes and bool(self.violations)
 
 
+def _merge_scoped_paths() -> list[str] | None:
+    """Return paths differing from BOTH merge parents, or None when not merging.
+
+    A merge stages the ENTIRE incoming branch, so an unscoped ``git diff
+    --cached`` shows every test the other side ever deleted or skipped. The
+    merge author neither wrote those changes nor can improve them — they are
+    already on the branch being merged — so blocking on them only makes merging
+    impossible and trains people to reach for ``SKIP=``.
+
+    Narrowing to files whose result differs from both parents keeps the guard
+    fully effective on the merge author's OWN edits (including a conflict
+    resolution that weakens a test, which differs from both sides by
+    construction) while ignoring what the merge merely inherits.
+
+    Returns:
+        A list of repo-relative paths to scope the diff to; an empty list when
+        the merge introduces no such file; or None when this is not a merge, or
+        when the merge state cannot be determined (fail-open to the unscoped
+        diff, which is the stricter behaviour).
+    """
+    try:
+        probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"[contract-shrinking guard] WARNING: MERGE_HEAD probe failed: {exc} "
+            "— scanning the full staged diff",
+            file=sys.stderr,
+        )
+        return None
+    if probe.returncode != 0:
+        return None  # not a merge
+
+    try:
+        ours = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            capture_output=True, text=True, timeout=30, check=True,
+        )
+        theirs = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "MERGE_HEAD"],
+            capture_output=True, text=True, timeout=30, check=True,
+        )
+    except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
+        print(
+            f"[contract-shrinking guard] WARNING: merge-scope diff failed: {exc} "
+            "— scanning the full staged diff",
+            file=sys.stderr,
+        )
+        return None
+
+    theirs_set = set(theirs.stdout.split())
+    return [p for p in ours.stdout.split() if p in theirs_set]
+
+
 def _get_staged_diff() -> str:
     """Return the staged diff as a string.
 
     Uses HOOK_TEST_DIFF env var when set (for unit testing only).
-    Otherwise calls git diff --cached.
+    Otherwise calls git diff --cached, scoped to the merge-introduced files
+    when a merge is in progress (see :func:`_merge_scoped_paths`).
     """
     test_diff_path = os.environ.get("HOOK_TEST_DIFF")
     if test_diff_path:
@@ -175,9 +236,16 @@ def _get_staged_diff() -> str:
             print(f"[contract-shrinking guard] ERROR: could not read HOOK_TEST_DIFF: {exc}", file=sys.stderr)
             sys.exit(1)
 
+    scoped = _merge_scoped_paths()
+    if scoped is not None and not scoped:
+        return ""  # merge introduces nothing of its own — nothing to scan
+    cmd = ["git", "diff", "--cached"]
+    if scoped:
+        cmd += ["--", *scoped]
+
     try:
         result = subprocess.run(
-            ["git", "diff", "--cached"],
+            cmd,
             capture_output=True,
             text=True,
             check=True,

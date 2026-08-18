@@ -366,7 +366,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
     const _readPrompt =
       "Read the durable pause record for this run. Run exactly:\n" +
-      "  python scripts/pause_store.py read --run-id " + runId + "\n" +
+      "  python {{config.output_root}}/scripts/pause_store.py read --run-id " + runId + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
     let recCheck;
@@ -438,7 +438,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
-    "  python scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
+    "  python {{config.output_root}}/scripts/pause_store.py write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'\n" +
     "That writes .leafcutter/paused_runs/" + runId + ".json. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
@@ -1611,7 +1611,7 @@ if (closureAlreadyCommitted) {
       "  Read the ticket frontmatter and look for a `source_ac:` field.\n" +
       "  If `source_ac` is absent or empty: log 'No source_ac on <ticket_path> — skipping AC closure.' and skip (AC-3 no-op).\n" +
       "  If `source_ac` is present:\n" +
-      `    Run: python3 ${WORKTREE_ROOT}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
+      `    Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
       "    Capture the exit code.\n" +
       "    If exit code is 0: increment acs_closed counter.\n" +
       "    If exit code is non-zero: log 'WARNING: mark_ac_done.py exited <code> for <ticket_path> — skipping AC closure (non-fatal).' and increment acs_skipped counter. DO NOT fail finalize. (AC-4 non-fatal)\n" +

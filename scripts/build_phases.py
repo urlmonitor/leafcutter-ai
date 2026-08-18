@@ -605,18 +605,58 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     removed in EPIC-DualEngineWorkflowSupport ticket 09 — it produced an
     unloadable ESM module).
 
+    **Config injection (BP-900g-6)**: ``inject_config`` is applied to the
+    (post-engine-transform) content of every ``.js`` file before it is written,
+    exactly as ``build_workflows``/``build_commands``/``build_rules`` already do
+    for their ``.md`` templates. This resolves ``{{config.output_root}}`` and
+    other ``{{config.*}}`` placeholders so a workflow script can invoke
+    ``{{config.output_root}}/scripts/...`` instead of a script path hardcoded to
+    the default output root. Injection runs BEFORE the compare-before-write
+    guard so a rendered-but-unchanged file still counts as up-to-date rather
+    than as a fresh write on every run. Non-UTF-8 source content is written
+    through unchanged (injection is skipped with a warning) rather than
+    failing the whole phase.
+
     Applies the compare-before-write guard so that identical files are skipped
     on subsequent runs, satisfying the idempotency requirement.
 
     Args:
         target_root: Absolute path to the target project root directory.
         config: Merged config dictionary; reads ``config["workflows"]["enabled"]``
-            and ``config["workflows"]["engine"]``.
+            and ``config["workflows"]["engine"]``, and supplies the values used
+            to resolve ``{{config.*}}`` placeholders (notably ``output_root``).
         dry_run: When True, logs intent but writes nothing.
         force: When True, overwrites existing files.
 
     Returns:
         Count of ``.js`` files written (or that would be written in dry-run mode).
+
+    # DECISION HISTORY
+    # - 2026-08-14 [BrainCandy/BP-900g-6]:
+    #   Applied inject_config() to workflow .js content before writing. Workflow
+    #   scripts invoke deployed Python scripts by path (setup_ticket_worktree.py,
+    #   fast_lane.py, pause_store.py, mark_ac_done.py, ...); every such
+    #   invocation was hardcoded to the literal "scripts/..." prefix, which is
+    #   only correct when a consumer's configured output_root is the default
+    #   ".leafcutter". Deploy paths are computed as
+    #   "<output_root>/scripts/..." (see build_ac_store, build_agent_support_scripts),
+    #   and output_root is documented as "configurable per consumer project" in
+    #   config/skills_config.schema.json — so a hardcoded "scripts/..." prefix in
+    #   a .js workflow silently breaks for any consumer who customises it.
+    #   .md templates already resolve {{config.output_root}} via inject_config;
+    #   .js workflows did not because build_workflow_scripts never called it —
+    #   an identity byte-copy phase, not an oversight in inject_config itself.
+    #   Rejected: hardcoding ".leafcutter/scripts/..." directly in the .js
+    #   source. That reintroduces the exact per-consumer breakage this ticket
+    #   fixes and duplicates a value the config system already owns; the
+    #   {{config.output_root}} placeholder is the single source of truth other
+    #   phases already use, and workflow scripts should not special-case that.
+    #   Verified non-destructive before applying broadly: the only pre-existing
+    #   "{{" occurrences in templates/workflows-js/ are JSDoc type annotations
+    #   (e.g. "@returns {{ request: string ... }}", "{{skip:boolean, ...}}"),
+    #   each followed by a space or a bare "key:" — neither matches
+    #   _PLACEHOLDER_RE's "{{(?:config\\.)?[a-zA-Z0-9_.]+}}", so no prose was
+    #   accidentally substituted. (#BP-900g-6)
     """
     import os
     import subprocess
@@ -704,6 +744,23 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 exc,
             )
             continue
+
+        # Apply config-placeholder injection (BP-900g-6) so tokens like
+        # {{config.output_root}} resolve in deployed workflow scripts, the same
+        # treatment build_workflows/build_commands/build_rules already give
+        # .md templates. Runs BEFORE the compare-before-write guard below so an
+        # unchanged rendered output still skips the write (idempotency
+        # preserved). A non-UTF-8 source cannot be injected into and is copied
+        # through unchanged (verbatim byte-for-byte, same as before this phase
+        # gained injection).
+        try:
+            emitted = inject_config(emitted.decode("utf-8"), config).encode("utf-8")
+        except UnicodeDecodeError as exc:
+            _log.warning(
+                "Skipping config injection for %s (non-UTF-8 content): %s",
+                js_file.name,
+                exc,
+            )
 
         if not _should_overwrite(dest, force):
             continue
@@ -811,6 +868,12 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # /build-ac Step 2b.1 fails even though the file is present — a
         # file-presence check cannot catch this, only executing it can (BP-900g-4).
         (ac_store_src / "ac_parent_id.py",              "ac_parent_id.py"),
+        # ac_coverage_resolver.py backs the ac-fulfillment-gate agent template's
+        # Step 1 coverage-resolution seam (ACD-1900b-5-i). It MUST deploy or
+        # the gate's CLI invocation crashes with ModuleNotFoundError in the
+        # deployed layout even though unit tests -- which import from source --
+        # stay green.
+        (ac_store_src / "ac_coverage_resolver.py",      "ac_coverage_resolver.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
@@ -2257,6 +2320,17 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     "roadmap_query_audit.py",
     # package-audit/SKILL.md
     "package_audit.py",
+    # plan-feature.js / finalize-feature.js invoke this at every interactive
+    # gate (read/write pause-resume records). No deploy phase shipped it before
+    # BP-900g-6, so both workflows died at their first gate in a consumer
+    # install. Module-scope imports are stdlib only (argparse, json, logging,
+    # subprocess, sys, time) — no sibling module to co-deploy.
+    "pause_store.py",
+    # fast-lane-build.js invokes this at every phase to build the layered LLM
+    # context bundle (assemble_context_bundle). No deploy phase shipped it
+    # before BP-900g-6. Module-scope imports are stdlib only (json, logging,
+    # pathlib, typing) — no sibling module to co-deploy.
+    "injection_builders.py",
 )
 
 
@@ -2291,6 +2365,16 @@ def build_agent_support_scripts(target_root: Path, config: dict[str, Any],
     #   install. Driven off a module-level spec that build.py's manifest helper
     #   imports, so the deployed set and the declared set cannot diverge.
     #   (#BP-900g-5)
+    # - 2026-08-14 [BrainCandy/BP-900g-6]:
+    #   Added pause_store.py and injection_builders.py to AGENT_SUPPORT_SCRIPT_FILES.
+    #   Both are referenced (via {{config.output_root}}/scripts/...) by the
+    #   plan-feature.js and finalize-feature.js pause-resume gates and by the
+    #   fast-lane-build.js context-assembly step, but presence-checked source
+    #   files only pass this guard if they are also reachable from a deployed
+    #   consumer tree — no phase shipped either script before this. Checked
+    #   both for module-scope imports of undeployed siblings (the ac_parent_id.py
+    #   lesson from BP-900g-4): neither has one — both import stdlib only.
+    #   (#BP-900g-6)
     """
     scripts_src = PACKAGE_ROOT / "scripts"
     written = 0
@@ -2824,4 +2908,11 @@ def clean_stale_artifacts(
 #   for the four file-based artifact phases (agents, commands, workflows, hooks).
 #   Also suppressed pre-existing TRY003 violation in _emit_workflow_variant
 #   (#TICKET-20260707-BP-100m-1)
+# - 2026-08-18 [python-coder]: Added ac_coverage_resolver.py to build_ac_store's
+#   deploy_map. This new AC-store module backs the ac-fulfillment-gate agent
+#   template's Step 1 coverage-resolution seam (ACD-1900b-5-i); without a
+#   deploy_map entry it would exist in the source tree but not the deployed
+#   layout, so the deployed gate's CLI invocation would crash with
+#   ModuleNotFoundError even though unit tests importing from source stay
+#   green. (#ACD-1900b-5-i)
 # ====================================================================

@@ -134,6 +134,8 @@ flowchart TD
 
 - BO-1900c-3: Reference doc defines the charter-vs-task-verb matching rules
 - BO-1900d-3: Reference doc specifies the allowlisted dispatch-payload contract
+- BO-2900g-5: Reference documentation states the one set of words for a required proof and what is always asked for
+- BP-1100g-6: Reference documentation states what a claimed kind of proof does and does not mean
 - BP-1300a-3: Reference doc specifies canonical-source skill-pointer resolution for the build
 - BP-1300b-3: Reference doc states the canonical-source-resolution rule for all guardrails
 - BP-1300c-4: Reference doc lists the warn-to-fail checks and the drive-context rule

@@ -1,0 +1,230 @@
+id: ACD-1800a-4
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A requirement can list a reviewed product-truth artifact as a deliverable, proven by a journey step naming it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose promised outcome includes a reviewed user journey as
+    well as code and tests,
+  When the requirement is inspected,
+  Then its deliverable checklist carries a product-truth item alongside the code
+    and tests items, naming a kind of artifact the checklist did not previously
+    offer,
+  And that item is an obligation the author wrote down, held separately from the
+    requirement's tool-maintained record of which journey steps already name it,
+  And the item counts as delivered once a journey step names this requirement as
+    one of the requirements it realises,
+  And it counts as delivered on the strength of that naming alone, never on how
+    far along the journey step reports this requirement to be, so that the
+    requirement's own progress is never an input to deciding whether the
+    requirement is complete,
+  And a requirement that promises no product-truth artifact carries no such item
+    and is unaffected.
+depends_on: [ACD-1800a, ACD-1800a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Read-only reference, not an edit surface. Carries the two facts the cycle cut turns on: `implements` is the AUTHORED flow->AC link, and `impl_status` is DERIVED from the work_status of every AC in `implements` -- or, when `expands_to` is set, from the child flow's rollup, taking precedence."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes the product-truth store as the upstream layer and the flow-first authoring direction that makes flow->AC the authored edge and the AC-side product_truth field the derived inversion. The cycle this AC cuts is a direct consequence of that direction."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1800-ac-as-unit-of-work/ACD-1800a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Fixes the deliverable-kind enum at {code, tests, docs, diagram, config} and the {kind, craft} item shape. This AC extends that vocabulary rather than paralleling it; the two must not diverge."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "KIND VOCABULARY DECISION (IT PO, the choice the BA deferred): add ONE new deliverable kind covering the whole product-truth family with a sub-type, not three sibling kinds. Flows, mockups and mock data share one store, one authored direction and one evidence mechanism; adding them one at a time reproduces the three-orphaned-triggers pattern documented on ACD-1800f, where near-identical declaration slots were introduced separately and two of them ended up wired to nothing."
+  - "THE AUTHORED OBLIGATION AND THE DERIVED BACK-REFERENCE MUST BE SEPARATE KEYS. Verified 2026-08-17 in config/ac_store_schema.json: the existing `product_truth` field is TOOL-OWNED, generated as the inversion of every flow step or branch whose `implements` list contains this AC id, and is NEVER hand-edited. The product-truth validator errors on any mismatch against the by_ac inversion, so the first hand edit breaks it. The new checklist item must never be written into that field."
+  - "THE CYCLE CUT -- the load-bearing constraint. Satisfaction is judged from the STRUCTURAL fact that a flow node's `implements` names this AC, and from nothing else. The implementation must NEVER read the node's `impl_status`, because the flow schema derives impl_status from the work_status of every AC in `implements`; feeding it back into the AC's own completeness closes the loop AC.work_status <- flow.impl_status <- AC.work_status."
+  - "THERE ARE TWO WAYS TO READ THE STATUS WRONGLY, NOT ONE. Verified: the flow schema also defines `expands_to` on a step -- when set, that step's impl_status is derived from the CHILD FLOW's rollup, TAKING PRECEDENCE over `implements`. So a naive 'read the step's impl_status' is wrong on two independent derivation paths and would appear correct on whichever one the first fixture happened to use. State the rule positively to close both: read `implements` membership only, never impl_status on any path."
+  - "PREFERRED EVIDENCE SOURCE: the derived product-truth back-reference already on the AC record. It records exactly the node linkage (flow, node, node_kind, screen, mock_data, entities, source, asof) and carries NO status field of its own, so reading it for link content is structurally incapable of closing the cycle. If the implementation instead walks the flow artifacts directly it must select `implements` only and must not deserialise impl_status into the decision at all."
+  - "PURELY ADDITIVE. A requirement declaring no product-truth deliverable must produce byte-identical validation output and checklist behaviour before and after this change, or it collides with ACD-1800a-2's checklist-versus-change-surface validation and ACD-1800a-2-i's missing-kind reporting."
+  - "The item's `craft` must resolve to a real agent id in the agent registry -- for this kind the product-truth authoring crafts (flow-author, mockup-author, mock-data-author), never a coder. Reject an unknown craft, and reject a coder craft on a product-truth item, or the surface-to-craft map ACD-1700b establishes is bypassed at exactly the point it was added to protect."
+  - "Validate the extended enum at EVERY enforcement point that gates commits: scripts/commit_guardian/check_ac_schema.py plus its manual-validation fallback scripts/commit_guardian/_ac_schema_validators.py (the load-bearing gate when jsonschema is absent), mirrored by scripts/ac_store/validate_ac_schema.py. A rule added only to config/ac_store_schema.json is a partial gate -- the same finding recorded on ACD-1800a-1."
+  - "Tolerant reader: absence of the checklist is legacy mode -- derive or skip, never fail (ADR-026 rule 4). Canonical source only: the store schema and the modules under scripts/ac_store/, never a deployed .claude/ copy (ADR-001)."
+  - "Error handling per the project policy: reading the flow store crosses a filesystem boundary, so a missing or malformed flow artifact must be caught by exception type and logged at WARNING or higher, and must resolve to 'not yet delivered' -- never to 'delivered' and never to a swallowed exception. Failing open here would mark a product-truth deliverable done because its evidence could not be read."
+delivers_to:
+  agent: python-coder
+  contract: "Deliverable checklist item of the new product-truth kind: { kind: <product-truth kind>, subtype: flow|mockup|mock_data, craft: flow-author|mockup-author|mock-data-author }, plus a satisfaction predicate derived ONLY from flow-node `implements` membership (evidence: the derived product-truth back-reference entries {flow, node, node_kind}). Consumed by ACD-1800b-1a's per-deliverable sign-off store and by ACD-1800a-2's checklist-versus-change-surface validation, which must treat the new kind as satisfied by a product-truth artifact rather than by a code path."
+expects_from:
+  ac_id: ACD-1800a-1
+  contract: "The deliverable checklist field, its {kind, craft} item shape, and the kind enum {code, tests, docs, diagram, config}. This AC EXTENDS that enum and item shape; it must not introduce a second checklist field or a second item shape."
+test_spec:
+  - name: test_product_truth_deliverable_reads_as_delivered_once_a_flow_node_implements_the_ac
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Writes a real AC record declaring the deliverable and a real flow artifact whose step `implements` names it, runs the real product-truth generator to produce the back-reference, and asserts the deliverable reads as delivered."
+  - name: test_deliverable_stays_delivered_when_the_flow_step_reports_not_started
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "THE CYCLE TEST. Same fixture with the flow step's impl_status forced to not_started: the deliverable is still delivered. This is the assertion that fails on the naive implementation and the reason the AC exists."
+  - name: test_deliverable_stays_delivered_when_the_step_carries_expands_to
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A step with `expands_to` set, whose child-flow rollup is not_started, still satisfies the deliverable -- closing the SECOND, precedence-taking derivation path that the previous test does not reach."
+  - name: test_ac_with_no_product_truth_deliverable_is_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Validation output and checklist behaviour for a requirement declaring no product-truth item are byte-identical before and after the change -- the no-regression clause."
+  - name: test_declaring_the_obligation_does_not_corrupt_the_derived_back_reference
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real product-truth validator after the obligation is declared and asserts the by_ac inversion equality check still passes -- proving the authored key and the tool-owned key stayed separate."
+  - name: test_unreadable_flow_store_resolves_to_not_delivered
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A missing or malformed flow artifact yields 'not yet delivered' with a logged warning, never 'delivered' and never an unhandled exception -- the fail-closed guard on the evidence read."
+  - name: test_product_truth_item_rejects_a_coder_craft
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A product-truth checklist item whose craft is a coder agent is rejected by the gating validators, including on the manual-validation fallback path with jsonschema forced unavailable."
+test_rationale: "The whole AC turns on a distinction that is invisible to inspection and to any direct-import unit test: 'satisfied because a flow node names this AC' versus 'satisfied because the flow node reports done'. In every ordinary fixture those two facts agree, so both implementations pass -- the only way to separate them is to force the linkage and the reported status to DISAGREE, and then assert on the linkage. That is the second test, and it is why a predicate handed a pre-built dict proves nothing: the fixture would carry whatever status the test author chose, and the trapped implementation would read it and be right by accident. The third test exists because `expands_to` gives impl_status a second derivation path that takes precedence over `implements`; an implementation that correctly ignores the implements-derived status can still read the child-rollup-derived one, and test two alone cannot see that. The fifth test runs the real product-truth validator rather than asserting on the record shape, because the failure it guards -- the authored obligation leaking into the tool-owned back-reference -- is only observable as the by_ac inversion equality check breaking, which no shape assertion would catch. The last test asserts on the manual-validation fallback as well as the jsonschema path, since the fallback is the branch that actually gates the commit when jsonschema is absent."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE GAP. ACD-1800a-1 fixes the deliverable-kind enum at
+  {code, tests, docs, diagram, config}. Product-truth artifacts -- flows
+  (`*.flow.json`), mockups (`*.mockup.json`) and mock data (`*.mock.json`) under
+  docs/product-truth/ -- fit none of those, so a requirement that must produce a
+  reviewed journey cannot say so. The user named flows explicitly as something a
+  requirement has to account for. This L2 adds the missing kind.
+
+  THE TRAP, AND WHY THE FOURTH THEN CLAUSE IS THE WHOLE AC. Adding `flow` to the
+  enum as a plain deliverable kind creates a STATUS CYCLE. Verified in both
+  schemas:
+    - config/ac_store_schema.json ~line 637-691: `product_truth` is a TOOL-OWNED
+      DERIVED back-reference, "GENERATED by
+      docs/product-truth/scripts/generate_product_truth.py as the inversion of
+      every flow step/branch whose `implements` list contains this AC id -- NEVER
+      hand-edited. The authored link direction is flow->AC (step.implements)".
+      The product-truth validator "errors on any mismatch against the by_ac
+      inversion".
+    - docs/product-truth/schemas/flow.schema.json ~line 43: `implements` is the
+      "AUTHORED link -- the source of truth for graph<->AC linkage"; ~line 45:
+      `impl_status` is "DERIVED from work_status of every AC in `implements` ...
+      Regenerated by the impl-status generator; never hand-edited".
+  So: flow.impl_status <- AC.work_status. If the AC's completeness then depended
+  on the flow step's impl_status, we would have AC.work_status <-
+  flow.impl_status <- AC.work_status -- a requirement that can never become
+  complete, or worse, one that latches complete on its own echo.
+
+  THE RESOLUTION, STATED PRECISELY: the deliverable is DECLARED by the author
+  (third Then clause), and its evidence is the STRUCTURAL fact that a flow node's
+  `implements` names this AC (fourth Then) -- which is exactly what the existing
+  derived `product_truth` back-reference records. Presence of the link is the
+  proof; the linked node's PROGRESS is explicitly excluded. That reads the
+  derived field for its link content while never reading its status, which cuts
+  the cycle at the only place it can be cut.
+
+  TWO DIRECTIONS, NOT ONE FIELD DOING DOUBLE DUTY (second Then clause). The
+  authored obligation ("this requirement owes a journey") and the derived
+  back-reference ("these journey nodes reference this requirement") must stay
+  separate keys. Merging them would make `product_truth` hand-editable, which the
+  schema forbids in terms, and would break the product-truth validator's
+  by_ac-inversion equality check on the first hand edit.
+
+  KIND VOCABULARY: the new kind should cover the product-truth family (flow,
+  mockup, mock data) rather than `flow` alone -- all three share the same authored
+  direction and the same store, and adding them one at a time repeats the
+  three-orphaned-triggers pattern documented on ACD-1800f. Whether that is one
+  kind with a sub-type or three kinds is an IT PO decision.
+
+  INHERITED CONSTRAINTS FROM ACD-1800a-1, which apply unchanged: validate the
+  extended enum at EVERY enforcement point that gates commits --
+  scripts/commit_guardian/check_ac_schema.py plus its manual-validation fallback
+  scripts/commit_guardian/_ac_schema_validators.py, mirrored by
+  scripts/ac_store/validate_ac_schema.py; a rule added only to the JSON schema is
+  a partial/no-op gate. Each checklist item also carries a `craft` that must
+  resolve to a real agent id in config/agent_registry.json -- for this kind that
+  is the flow/mockup/mock-data authoring craft, not a coder. Tolerant reader:
+  absence of the checklist is legacy mode, derive/skip, never fail (ADR-026 rule
+  4). Canonical source only -- config/ac_store_schema.json and
+  scripts/ac_store/*.py, never a deployed .claude/ copy (ADR-001).
+
+  FIFTH THEN CLAUSE is the no-regression clause: this must be purely additive for
+  the overwhelming majority of requirements that produce no product-truth
+  artifact, or it collides with ACD-1800a-2's checklist-vs-change-surface
+  validation and ACD-1800a-2-i's missing-kind reporting.
+
+  TESTABILITY. Author a real requirement declaring the deliverable, add a real
+  flow node whose `implements` names it, regenerate, and assert the deliverable
+  reads as delivered. Then set that flow node's impl_status to not_started and
+  assert the deliverable STILL reads as delivered -- that second assertion is the
+  cycle test and is the one that fails on the naive implementation.
+
+  2026-08-17 (IT PO enrichment). The deferred vocabulary decision is made, and
+  one further derivation path is added to the cycle analysis.
+
+  - ONE KIND WITH A SUB-TYPE, NOT THREE KINDS. All three product-truth artifact
+    families share one store, one authored direction (artifact -> AC) and one
+    evidence mechanism (`implements` membership). Three sibling kinds would mean
+    three enum entries, three craft mappings and three satisfaction predicates
+    that must stay identical by discipline alone -- which is precisely the shape
+    ACD-1800f records going wrong, where near-identical declaration slots were
+    added separately and two of the three ended up wired to nothing.
+
+  - THE CYCLE HAS TWO EDGES, NOT ONE. The BA's analysis correctly identifies
+    flow.impl_status <- AC.work_status via `implements`. Verified additionally at
+    docs/product-truth/schemas/flow.schema.json: a step may carry `expands_to`,
+    and when it does, that step's impl_status is derived from the CHILD FLOW's
+    rollup, TAKING PRECEDENCE over `implements`. An implementation that carefully
+    avoids the implements-derived status can still read the rollup-derived one and
+    reintroduce the cycle one level down. Hence the positively-stated rule (read
+    `implements` membership only; never read impl_status on any path) and a
+    dedicated third test, rather than a prohibition that enumerates one path.
+    Note `expands_to` is defined on STEPS only, not on branches -- a branch has
+    just the one derivation path.
+
+  - A HELPFUL VERIFIED FACT FOR THE IMPLEMENTER: the derived `product_truth`
+    back-reference on the AC carries NO status field at all -- its item shape is
+    {flow, node, node_kind, flow_kind, screen, mock_data, entities, source, asof}.
+    Reading it is therefore structurally incapable of closing the cycle, which
+    makes it the safe evidence source and makes "walk the flow JSON yourself" the
+    risky one. That asymmetry is not obvious from the criteria and is recorded in
+    it_requirements as a preference rather than a mandate.
+
+  - FAIL CLOSED ON AN UNREADABLE EVIDENCE STORE. Not in the criteria, but the
+    omission is load-bearing: the evidence read crosses a filesystem boundary, and
+    the natural except-and-continue would resolve a missing flow artifact to the
+    same value as a present one under a truthy check. A product-truth deliverable
+    marked done because its evidence could not be read is a false green of exactly
+    the kind ACD-1800f exists to prevent.
+
+  - AUTHORING NOTE ON it_requirements PROSE: the product-truth generator, the
+    product-truth validator, the flow schema and the agent registry are READ-ONLY
+    references for this AC, so they are named in words in it_requirements and by
+    path only here and in doc_links. `_build_files_touched()` scrapes slash-bearing
+    tokens out of it_requirements prose into the generated ticket's declared change
+    surface, and declaring a tool-owned generator as editable is precisely the
+    wrong signal to hand a scope reviewer.

@@ -1,11 +1,13 @@
 ---
 title: "INF-600 Ticket 5: Populate self-description metadata across all 39 remaining agents"
-status: todo
+status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
 created: 2026-06-05
 depends_on:
-  - TICKET-20260605-INF600-BuildEnforcementGate.md
+  - 04-build-enforcement-gate.md
 priority: medium
 roadmap_phase: phase_1
 advances_current_outcome: true

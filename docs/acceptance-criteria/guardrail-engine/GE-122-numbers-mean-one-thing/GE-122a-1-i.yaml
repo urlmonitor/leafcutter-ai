@@ -1,0 +1,144 @@
+id: GE-122a-1-i
+title: "A collision is found even when only one claimant is in the current change set"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the collection contains two acceptance-criterion records that both declare the
+    identifier "GE-119",
+  And the current change set contains ONLY ONE of the two — the other has sat unmodified on
+    the shared branch for weeks and appears in no diff,
+  When the uniqueness pass runs,
+  Then it reports the contested identifier and names BOTH claimant paths, including the one
+    absent from the change set.
+
+  And Given a change set that touches NEITHER claimant while the collision is still present in
+    the collection,
+  When the pass runs,
+  Then it still reports the contested identifier and both claimant paths.
+
+  And Given a change set that adds a record claiming an identifier no other record claims,
+  When the pass runs,
+  Then it reports nothing for that record.
+
+  The property this criterion pins: the change set may be used to decide which findings are
+  ATTRIBUTED to the current author, but it must never bound WHAT IS INSPECTED. A check whose
+  input set is the changed files cannot observe a collision whose second claimant is not in the
+  diff — and in the collision actually observed in this repository, the two claimants were
+  authored weeks apart from different working copies, so they were never in one diff together.
+
+  Coverage note: covered only by a test that stages exactly one claimant, executes the pass, and
+  asserts the absent claimant's path appears in the output. A test that stages both claimants
+  cannot distinguish a whole-collection pass from a changed-files pass and therefore does not
+  cover this criterion.
+depends_on:
+  - GE-122a-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: context
+    status: exists
+    relevance: "Reads its file set from `git diff --cached --name-only` (_get_staged_ac_paths). This is the changed-files scoping that makes the incumbent validator blind to the condition in this criterion."
+  - path: templates/scripts/commit_guardian/check_ac_circular_deps.py
+    relationship: context
+    status: exists
+    relevance: "Existing precedent for the required shape: it builds an adjacency list from the WHOLE on-disk store and then overlays the staged changes. The whole-collection load mechanism already exists in the hook family and should be reused rather than reinvented."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "The 'AC store valid' job documents the identical attribution-versus-inspection trade-off and its chosen resolution — diff-scope the ATTRIBUTION, leave the rule whole — for the 57 pre-existing orphans. It is the precedent this criterion's disposition decision follows."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This is the single most important test in the tree and the one a plausible implementation fails by accident. The inspection input MUST be the on-disk collection, resolved independently of `git diff --cached` / `--name-only`; the change set may only be intersected with the findings AFTERWARDS. Any implementation that derives its file list from the diff satisfies GE-122a-1 and fails this criterion, and the reviewer should read the input-set construction specifically."
+  - "DECIDES THE QUESTION THE BA LEFT OPEN (notes: 'whether a pre-existing collision in which NEITHER claimant is in the change set should BLOCK or only be REPORTED'). DECISION: attribution is diff-scoped, inspection is not. A contested number with at least one claimant in the change set BLOCKS. A contested number with no claimant in the change set is REPORTED with a visible count and does NOT block. This follows the resolution already documented in ci.yml's 'AC store valid' job for the 57 pre-existing orphans, and is what lets the gate be switched on before GE-122e's repair has landed rather than after."
+  - "The count of reported-but-unattributed collisions MUST be printed on every run, exactly as GE-122b-2 requires for its pre-existing unnumbered population. A silently-tolerated backlog is how the current drift accumulated; a visible count is what makes the backlog shrink."
+  - "Once GE-122e has repaired the collection, no configuration change should be needed to make the unattributed case block — the set is expected to be empty, so the two dispositions converge. Do NOT implement the tolerance as an allowlist or a known-bad list of identifiers: GE-122e-3 asserts that no such configuration exists anywhere."
+  - "Must not add a second collection walk: reuse GE-122a-1's single pass and filter its verdict. A separate diff-scoped walk would be a second definition of the rule and would fail GE-122d-1."
+test_spec:
+  - name: test_collision_reported_when_only_one_claimant_is_staged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Stage exactly ONE of the two claimants — the other is committed and untouched — execute the pass, and assert the unstaged claimant's path appears in the output. Staging both claimants is explicitly not an acceptable substitute."
+  - name: test_collision_reported_when_neither_claimant_is_staged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With a change set touching neither claimant while the collision is still present, the pass still reports the contested identifier and both paths."
+  - name: test_unattributed_collision_reports_but_does_not_block_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The neither-claimant-staged case yields a non-blocking commit-time disposition and a printed count of unattributed contested numbers, while the one-claimant-staged case blocks."
+  - name: test_new_uncontested_record_produces_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A change set adding a record whose identifier no other record claims produces no finding for that record."
+test_rationale: |
+  The distinguishing test is the one-claimant-staged case: it is the only condition under which
+  a changed-files implementation and a whole-collection implementation give different answers,
+  and it reproduces the actual incident (the two GE-119 records were authored weeks apart from
+  different working copies and have never appeared in one diff). A test that stages both
+  claimants passes on both implementations and therefore proves nothing, which is why the
+  coverage note rules it out. The blocking-disposition descriptors exist because the
+  attribution decision is made in it_requirements rather than in the criteria, so it needs its
+  own executable evidence.
+delivers_to: null
+expects_from:
+  ac_id: GE-122a-1
+  contract: "The collection-wide uniqueness pass whose inspection scope this criterion constrains."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'RESOLVED the question the BA deliberately left open for the IT PO: attribution
+    is diff-scoped, inspection is not — a contested number with a claimant in the
+    change set blocks, one with no claimant in the change set is reported with a visible
+    count and does not block, following the precedent ci.yml''s ''AC store valid''
+    job already set for the 57 pre-existing orphans. Added it_requirements forbidding
+    an allowlist implementation (GE-122e-3 asserts none exists) and forbidding a second
+    collection walk. Added test_spec, test_rationale and two doc_links. criteria,
+    title, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  This is the single most important edge case in the tree and the reason the L1 insists the
+  UNIT OF INSPECTION is the point. It is kept as its own record rather than folded into
+  GE-122a-1 because it is the one condition under which a plausible, well-written, well-tested
+  implementation of GE-122a-1 still fails to catch the defect the goal exists to prevent.
+
+  It is also the condition that reproduces the actual incident: the parentless GE-119 record was
+  minted by /quick-fix from a different working copy than the GE-119 goal tree. The two files
+  have never appeared in a single change set, so every diff-scoped gate in the repository saw a
+  clean change.
+
+  OPEN FOR THE IT PO — not a behavioural question, so deliberately not decided here: whether a
+  pre-existing collision in which NEITHER claimant is in the change set should BLOCK the current
+  author or only be reported to them. The criterion above requires only that it be REPORTED.
+  Blocking on it is safe only once GE-122e has repaired the store; before that it would stop
+  every unrelated commit. Note the ci.yml "AC store valid" job already documents this exact
+  trade-off for the 57 pre-existing orphans and resolved it by diff-scoping the ATTRIBUTION
+  while leaving the rule itself intact.
+
+  RESOLVED BY THE IT PO (2026-08-17): attribution is diff-scoped, inspection is not. At least
+  one claimant in the change set blocks; no claimant in the change set reports with a visible
+  count and does not block. The tolerance must be derived from the change set, never from a
+  configured allowlist — GE-122e-3 asserts no such configuration exists. See it_requirements.

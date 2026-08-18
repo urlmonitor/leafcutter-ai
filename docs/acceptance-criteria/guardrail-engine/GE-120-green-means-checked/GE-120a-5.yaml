@@ -1,0 +1,93 @@
+id: GE-120a-5
+title: "The no-silent-pass rule is written where the next check author will find it"
+component: guardrail-engine
+components:
+  - documentation_system
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the reference documentation an author consults before adding a check to the
+    guardrail engine,
+  When that author reads it,
+  Then it states the no-silent-pass rule in the form this tree defines it: a check that
+    could not perform its inspection reports a could-not-check outcome rather than success,
+  And it states the boundary against the existing fail-open convention explicitly — failing
+    open on one bad input while the check still ran remains correct and is not repealed —
+    and cites GE-116a-1-iii as the approved example,
+  And it states the third state as well: a check that fell back to a reduced inspection
+    labels its clean result as not authoritative,
+  And it states that the cannot-run disposition, block or announce, is recorded per check
+    with no implicit default, and names where it is recorded,
+  And the existing documentation that records only the fail-open convention, without its
+    limit, is corrected in place rather than contradicted by a second document,
+  And the AC-parent-covered-by reproduction is included as the worked example of the
+    difference between "nothing wrong here" and "I never looked".
+depends_on:
+  - GE-120a
+  - GE-120a-1
+  - GE-120a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "Currently documents the fail-open convention for the AC hooks without stating its limit."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md
+    relationship: context
+    status: exists
+    relevance: "Records the fail-open contradiction and the line GE-120 draws."
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: related
+    status: exists
+    relevance: "The other surface a new check author reads; must not be left stating the unlimited fail-open rule."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "CORRECT IN PLACE, do not add a second document. The document to correct is docs/reference/ac-schema.md, which today records the fail-open convention (including the unlimited form, that any unexpected exception causes the hook to exit 0) without stating its limit. Adding a new document while the old one still says the opposite leaves the next author with two rules and no ordering between them — that is the failure the criterion names."
+  - "Sweep the other surfaces that state the same unlimited rule and reconcile them in the same change: docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md (its FAIL-OPEN CONTRADICTION section) and docs/how-to/creating-a-claude-code-hook.md, which is what a new check author actually reads."
+  - "Name the disposition storage location EXACTLY as GE-120a-2 implements it — a new key on each entry of hooks_manifest.hooks[] in templates/scripts/commit_guardian/commit_guardian.json (canonical; templates/commit-guardian/commit_guardian.json is the legacy mirror and config/ copies are build outputs). Verified: there is no pre-existing mode field to describe. SEQUENCE THIS AFTER GE-120a-2 LANDS so the location documented is the one that exists, not one the author guessed at."
+  - "Use the same names for all three states that the shared outcome module actually defines (ordinary success, degraded-but-ran / not authoritative, could-not-check). Documentation that invents its own vocabulary for a machine-readable enum is drift on day one."
+  - "Cite GE-116a-1-iii by id as the approved fail-open example that is NOT repealed, and state the boundary as the unit of visibility rather than blocking, matching GE-120 and GE-120a notes."
+  - "Use the check_ac_parent_covered_by reproduction as the worked example with its evidence label intact (DIRECTLY OBSERVED AND REPRODUCIBLE: same check, same repo, same staged files, opposite verdicts decided purely by workspace layout). Do NOT cite the 26-schema-violating-files figure — it is REPORTED, NOT VERIFIED until GE-120c-4 runs."
+  - "docs/reference/ac-schema.md is an existing tracked document: edit it, do not replace it, and keep it passing check_doc_frontmatter, check_doc_length and check_doc_links in the same commit."
+test_required: false
+test_rationale: "change_target is docs: the deliverable is corrected reference prose with no executable behaviour of its own. The mechanical guarantees this document describes are asserted by GE-120a-2 (the disposition field is populated and governs) and GE-120a-2-i (an omission fails), so a test here would duplicate their coverage rather than add any."
+delivers_to: null
+expects_from:
+  ac_id: GE-120a-2
+  contract: "The recorded per-check disposition vocabulary and its storage location, to document accurately."
+origin_agent: BrainCandy
+created: 2026-08-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc entry in GE-120a's documentation_triggers.
+
+  The PO's reason for the trigger, preserved: "a rule that 18 checks must obey has to be
+  written down somewhere a future author will find it; today the opposite rule (fail open
+  quietly) is the one that is documented." That makes the CORRECTION clause load-bearing —
+  adding a new document while the old one still says "any unexpected exception causes the
+  hook to exit 0" leaves the next author with two rules and no ordering between them.
+
+  Sequence this after GE-120a-2 lands, so the disposition storage location documented here
+  is the one that actually exists rather than one the author guessed at.
+
+  IT-PO (2026-08-14): the storage location is a new per-entry key in
+  hooks_manifest.hooks[] — there is no existing mode field to extend. Also added
+  docs/how-to/creating-a-claude-code-hook.md to the sweep, since that is the surface a new
+  check author reads before touching the reference.

@@ -1,0 +1,186 @@
+id: BO-2900g-3
+components:
+  - ac_store
+  - build_orchestration
+  - testing_quality
+title: "One set of words for a required proof, with the reached-the-real-way kind named once"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two independent definitions of how a required proof is described, which
+      disagree today:
+      one permits a set of kinds that includes an older name for the
+        reached-the-real-way proof, and requires the way in to be named only for
+        that kind,
+      and the other permits a different set of kinds altogether and carries the
+        reached-the-real-way name on a separate axis of its own,
+  When the two are reconciled into the project's single definition,
+  Then exactly one statement of the permitted kinds remains, and every producer
+    and every reader of a required-proof description resolves to it,
+    And the reached-the-real-way kind is called by the name the test-angle
+      taxonomy uses for it,
+    And a described proof of that kind is required to name the way in, keeping the
+      field the older definition already used for that purpose,
+    And the older name for that kind is absent from the permitted kinds, with no
+      translation layer that accepts it as a synonym,
+    And the kinds one definition permits and the other does not are each either
+      carried into the single definition or dropped from it — none is left
+      permitted on one side only.
+depends_on:
+  - BO-2900g
+doc_links:
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "One of the two definitions: kinds unit / integration / manual / live_dispatch, with surface_invoked required when the kind is live_dispatch. Outside docs/, the string live_dispatch occurs in exactly one file in the repository — this one; nothing reads it."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The other definition: test_spec[].type is unit / integration / e2e / behavioral, and the seven-value taxonomy sits on a separate test_spec[].angle axis. The two disagree on the permitted kinds and on which facts are mandatory."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The taxonomy that supplies the surviving name, and the source of the recommendation this AC makes binding: retire the older name in favour of 'reachability', keep the entry-point field."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The authoring-facing statement of the store side; a reconciliation that changes the machine schema and leaves this page stating the old vocabulary has produced a third definition rather than removing one."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Carries a THIRD copy of the enum: the _TEST_ANGLES frozenset (~line 77) that _test_descriptors_from_spec validates authored angles against. A reconciliation of two definitions that leaves a hard-coded third behind has not reduced the count."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "config/test_requirements.schema.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ unit_tests/commit_guardian/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The single reconciled required-proof description. One permitted-kind enum, and the entry-point field carried under one name and required for the reachability kind."
+    required:
+      - name
+      - description
+      - type
+      - target_dir
+      - covers
+    properties:
+      type:
+        type: string
+        description: "The single permitted-kind enum after reconciliation. live_dispatch is retired and must not appear, and must not be accepted as a synonym for reachability."
+      surface_invoked:
+        type: string
+        minLength: 1
+        description: "The entry-point field, kept under the name the retiring definition already used. Required when the described proof is of the reached-the-real-way kind; may hold the single unresolved sentinel."
+  constraints:
+    - "ENFORCE ON THE GATE THAT ACTUALLY RUNS. Of the two definitions only one is load-bearing today: config/ac_store_schema.json is read by scripts/commit_guardian/check_ac_schema.py through jsonschema, and since the 2026 rework that verdict is authoritative (validate_manually() runs only when the schema is absent or jsonschema/PyYAML are unimportable). config/test_requirements.schema.json — the file named in reference_file_path — has NO reader at all: outside docs/, the string live_dispatch occurs only in that file. A reconciliation applied only to the inert definition is a no-op. Change BOTH, and state in the sign-off which one gates."
+    - "THERE ARE THREE COPIES OF THE ENUM, NOT TWO. The _TEST_ANGLES frozenset in scripts/ac_store/generate_ticket_from_ac.py is a hand-maintained duplicate of the schema's angle enum. It must either read from the single source, or be covered by a cross-source set-equality contract test that reads both real files from disk. Leaving a hard-coded duplicate is exactly EPIC-ComputedQualityGates FP-1 layer 3 — a hook's allow-list and the config it mirrored were disjoint vocabularies, each tested against its own copy. n_location_rule: 'all' covers every one of these locations, not only the reference file."
+    - "No translation layer and no synonym: the retired name must be rejected, not rewritten. A mapping that accepts the old name and converts it preserves the two vocabularies with a converter in between that has to be kept correct."
+    - "The entry-point field must survive under exactly one name. Note the store-side test_spec item schema is additionalProperties: false and has no entry-point property today, so carrying surface_invoked across is an explicit property addition, not an implicit one; without it the entry point can only be stated inside description prose, which no consumer can read reliably."
+    - "Each disputed kind (manual, e2e, behavioral, live_dispatch) must be explicitly carried into the single definition or explicitly dropped, and the decision recorded. Taking the union produces a definition that permits everything and constrains nothing."
+    - "Any records already carrying a retired value must be enumerated before the enum narrows. Narrowing an enum that live records still satisfy turns the next unrelated commit into a store-wide failure."
+    - "OUT OF SCOPE — DO NOT BUILD IT HERE. config/package_boundary.json:21 advertises check_test_requirements_refs.py as a shipped portable check and the file does not exist. Per the parent L1 that is a one-line remediation plus, if needed, an L2 widening under BP-900e. Building it under this AC would freeze a vocabulary into an enforcement point in the same change that is meant to settle the vocabulary."
+    - "docs/reference/ac-schema.md must be updated in the same change. A machine schema that changes while the authoring-facing page still states the old vocabulary has produced a third definition rather than removing one."
+delivers_to:
+  - agent: python-coder
+    contract: "One authoritative statement of the permitted kinds for a required-proof description, resolvable from a single file path, together with the single name of the entry-point field and the rule that a reachability-kind description must carry it. Consumed by BO-2900g-4 (the producer must conform) and BP-1100g-1 (the taught set must equal it)."
+expects_from: null
+test_spec:
+  - name: test_bo_2900g_3_single_permitted_kind_set_resolves_from_the_real_config_files
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Load config/ac_store_schema.json and config/test_requirements.schema.json from disk in a fresh subprocess with json.load (no fixture copies) and assert exactly one permitted-kind set is resolvable, identical on both sides."
+  - name: test_bo_2900g_3_retired_kind_is_absent_and_not_accepted_as_a_synonym
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The retired name is absent from the permitted kinds, and a description carrying it is rejected rather than rewritten — assert the rejection, and assert no code path maps it to the surviving name."
+  - name: test_bo_2900g_3_generator_test_angles_equals_the_schema_enum
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Cross-source set-equality between the real producer's _TEST_ANGLES and the real schema enum, both read from where they live. The FP-1 layer-3 control: a comparison against a convenience copy reproduces the defect it is checking for."
+  - name: test_bo_2900g_3_deployed_ac_schema_gate_rejects_a_retired_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ac_schema.py <AC yaml>` as a subprocess on a real AC file whose test_spec declares a retired kind, and assert a non-zero exit naming the offending value — proving the reconciled vocabulary is enforced on the gate that runs, not only in the inert schema."
+test_rationale: |
+  Two things can go wrong here that a schema-shaped unit test cannot see. First, the
+  change can be applied to the definition nothing reads, leaving the live gate on the
+  old vocabulary — hence the deployed-hook test with a known-bad input (must_block).
+  Second, the third copy of the enum inside the generator can drift, which is the exact
+  shape of the ComputedQualityGates layer-3 incident — hence the cross-source set-equality
+  test that reads both real sources rather than a fixture.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, complexity, it_requirements (package-surface object
+    form; load-bearing gate and the third enum copy named under `constraints`), test_spec
+    (real_artifact/criterion/seam/reachability) and delivers_to. declares_side_effect
+    deliberately NOT set — see notes. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  GAP C of BO-2900g, first half: make the definition single. BO-2900g-4 is the
+  second half — make what is actually produced conform to it — and carries the
+  hard ordering constraint as a depends_on edge.
+
+  THE OBSERVED DISAGREEMENT, stated concretely so a reader does not have to
+  re-derive it. The ticket-facing definition permits unit / integration / manual
+  / live_dispatch and makes the entry-point fact conditional on live_dispatch.
+  The store-facing definition permits unit / integration / e2e / behavioral and
+  puts the seven-value angle taxonomy on a second, independent axis with no
+  entry-point field at all. They agree on two kinds out of four and disagree on
+  where the reached-the-real-way concept lives. This is EPIC-ComputedQualityGates
+  FP-1 layer 3 in a different registry: two vocabularies, each tested against its
+  own copy, with no cross-source contract between them.
+
+  WHY 'NO TRANSLATION LAYER' IS IN THE CRITERIA. A mapping that accepts the old
+  name and rewrites it is the cheapest way to make both sides pass, and it
+  preserves exactly the thing this AC exists to remove: two vocabularies, now
+  with a converter in between that has to be kept correct. The user's stated
+  recommendation, carried from docs/testing/test-angles.md, is one vocabulary,
+  not a translation layer.
+
+  WHY THE LAST CLAUSE EXISTS. Reconciling two enums by taking their union
+  produces a single definition that permits everything and constrains nothing.
+  Requiring each disputed kind to be explicitly carried or dropped forces the
+  decision to be made rather than avoided.
+
+  BOUNDARY. This AC settles WHAT THE WORDS ARE. It describes no gate, no block
+  and no done-state consequence, and it says nothing about whether any proof was
+  achieved.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). declares_side_effect is deliberately NOT
+  set here. The Then clauses assert the CONTENT of two config files after the
+  change, which is true of every code change; they assert no durable observable
+  effect produced by running the work. Marking a config-vocabulary edit would
+  route user-surface-smoker onto a JSON edit and is exactly the "a derivation
+  that marks everything is indistinguishable from one that marks nothing"
+  failure BO-2900g-2 warns about. A third enum copy (_TEST_ANGLES) was found
+  during enrichment and is named in the constraints.
