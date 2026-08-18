@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -98,21 +98,22 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity M. it_requirements state, explicitly so no
-      implementer builds a parallel exemption system, that test_required: false is
-      ALREADY honoured unguarded at check_done_proof.py:463 (37 done records carry
-      it) and that test_rationale ALREADY exists in config/ac_store_schema.json —
-      this AC pairs the two. All three enforcement points are named, with :463
-      identified as the load-bearing one, and the opposing rule at
-      _ac_schema_validators.py:~522 (rejects test_required: false on an approved
-      leaf code AC) is flagged for reconciliation rather than stacking. test_spec:
-      criterion / real_artifact (byte identity on real-shaped records) / seam (one
-      honouring point, proven by mutation) / reachability (reported, not skipped).
-      criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements state, explicitly so
+    no implementer builds a parallel exemption system, that test_required: false is
+    ALREADY honoured unguarded at check_done_proof.py:463 (37 done records carry it)
+    and that test_rationale ALREADY exists in config/ac_store_schema.json — this AC
+    pairs the two. All three enforcement points are named, with :463 identified as
+    the load-bearing one, and the opposing rule at _ac_schema_validators.py:~522 (rejects
+    test_required: false on an approved leaf code AC) is flagged for reconciliation
+    rather than stacking. test_spec: criterion / real_artifact (byte identity on real-shaped
+    records) / seam (one honouring point, proven by mutation) / reachability (reported,
+    not skipped). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

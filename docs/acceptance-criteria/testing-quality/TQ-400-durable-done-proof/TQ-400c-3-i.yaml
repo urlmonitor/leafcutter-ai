@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -75,15 +75,17 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity S. it_requirements forbid null-as-state and
-      empty-population differencing, and require the no-predecessor state to be
-      transient (the latch failure). test_spec is boundary-led with a criterion
-      latch check and a reachability entry, because this path executes exactly once
-      in production. criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder; complexity S. it_requirements forbid null-as-state
+    and empty-population differencing, and require the no-predecessor state to be
+    transient (the latch failure). test_spec is boundary-led with a criterion latch
+    check and a reachability entry, because this path executes exactly once in production.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

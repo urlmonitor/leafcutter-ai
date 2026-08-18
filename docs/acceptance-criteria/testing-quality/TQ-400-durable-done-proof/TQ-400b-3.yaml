@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -101,7 +101,10 @@ expects_from:
     the reason travels with the work.
 origin_agent: business-analyst
 created: 2026-08-17
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

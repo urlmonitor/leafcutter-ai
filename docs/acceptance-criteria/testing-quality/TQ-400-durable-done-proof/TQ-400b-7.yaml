@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -247,29 +247,29 @@ test_rationale: >-
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-18
-    note: >-
-      Assigned documentation-expert; complexity S (one entry in an existing file,
-      and the change is owned by TQ-400b-2). ESCALATED HAND-OFF RESOLVED — the
-      first and largest it_requirement now states explicitly that this AC is the
-      ACCEPTANCE STANDARD for the single field-reference entry TQ-400b-2 already
-      obliges, that the implementer must amend or complete that entry rather than
-      open a second section or document, and that a zero-line diff plus a recorded
-      verification is a legitimate outcome that must not be papered over with a
-      manufactured edit to satisfy a diff-based documentation check. TQ-400b-2 was
-      re-read at enrichment and its it_requirement "Both fields must be documented
-      in docs/reference/ac-schema.md in the same change" is quoted in doc_links so
-      the ownership is unambiguous. Added config/ac_store_schema.json and
-      scripts/ac_store/validate_ac_schema.py to doc_links (the two artifacts the
-      round-trip clause is really about), and delivers_to TQ-400b-6 so the state
-      diagram labels the fields and links here. test_spec: criterion (six facts
-      per field) / seam (shapes agree with the shipped schema both directions,
-      plus the no-second-account absence scan) / reachability (the entry's own
-      examples through the real validator subprocess, must_block) / real_artifact
-      (an actual pre-demotion record from the store still validates). criteria
-      untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Assigned documentation-expert; complexity S (one entry in an existing file,
+    and the change is owned by TQ-400b-2). ESCALATED HAND-OFF RESOLVED — the first
+    and largest it_requirement now states explicitly that this AC is the ACCEPTANCE
+    STANDARD for the single field-reference entry TQ-400b-2 already obliges, that
+    the implementer must amend or complete that entry rather than open a second section
+    or document, and that a zero-line diff plus a recorded verification is a legitimate
+    outcome that must not be papered over with a manufactured edit to satisfy a diff-based
+    documentation check. TQ-400b-2 was re-read at enrichment and its it_requirement
+    "Both fields must be documented in docs/reference/ac-schema.md in the same change"
+    is quoted in doc_links so the ownership is unambiguous. Added config/ac_store_schema.json
+    and scripts/ac_store/validate_ac_schema.py to doc_links (the two artifacts the
+    round-trip clause is really about), and delivers_to TQ-400b-6 so the state diagram
+    labels the fields and links here. test_spec: criterion (six facts per field) /
+    seam (shapes agree with the shipped schema both directions, plus the no-second-account
+    absence scan) / reachability (the entry''s own examples through the real validator
+    subprocess, must_block) / real_artifact (an actual pre-demotion record from the
+    store still validates). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

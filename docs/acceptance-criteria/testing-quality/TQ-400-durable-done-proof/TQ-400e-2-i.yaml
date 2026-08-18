@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -84,19 +84,20 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity S. it_requirements state the predicate
-      positively (shape of present evidence, never absence of a resolved id),
-      require the fork to sit where the per-capture resolution outcome still exists
-      rather than downstream of a flattened id list, and add an anti-neuter
-      requirement — no threshold or safety valve may stand down on a large unproven
-      population, which at 259 records would fire on the real store's first run.
-      test_spec: criterion (both outcomes, one run) / reachability (demotion
-      actually lands under outcome application) / boundary (all-absent store
-      demotes everything). criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity S. it_requirements state the predicate
+    positively (shape of present evidence, never absence of a resolved id), require
+    the fork to sit where the per-capture resolution outcome still exists rather than
+    downstream of a flattened id list, and add an anti-neuter requirement — no threshold
+    or safety valve may stand down on a large unproven population, which at 259 records
+    would fire on the real store''s first run. test_spec: criterion (both outcomes,
+    one run) / reachability (demotion actually lands under outcome application) /
+    boundary (all-absent store demotes everything). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

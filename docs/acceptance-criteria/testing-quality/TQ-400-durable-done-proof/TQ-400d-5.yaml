@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -243,26 +243,26 @@ test_rationale: >-
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-18
-    note: >-
-      Assigned documentation-expert; complexity M. Named the target as a NEW
-      docs/how-to/triage-unproven-done-records.md with bidirectional cross-links
-      and a build.py regeneration of docs/INDEX.md. Turned the two negative clauses
-      into explicit negative requirements (no bulk route in any wording; record age
-      nowhere as a decision input) and required the refusal message to be quoted
-      verbatim rather than paraphrased. Required the cause-to-decision mapping to
-      cover the whole cause space with a discriminating question where a cause is
-      ambiguous — that is the checkable form of the guide's central claim. Added
-      expects_from TQ-400e-6 (and docs/reference/ac-schema.md to doc_links) so the
-      legitimately-absent populations are linked to the single reconciled exemption
-      statement rather than described here. test_spec: criterion (cause coverage
-      and progress figure) / reachability (a real record worked to a recorded
-      decision by the guide's own steps) / failure (the designed refusal fires and
-      the quoted text is byte-equal, must_block) / seam (decision vocabulary
-      set-equality both directions plus the no-bulk-route and no-age absence scan).
-      criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Assigned documentation-expert; complexity M. Named the target as a NEW docs/how-to/triage-unproven-done-records.md
+    with bidirectional cross-links and a build.py regeneration of docs/INDEX.md. Turned
+    the two negative clauses into explicit negative requirements (no bulk route in
+    any wording; record age nowhere as a decision input) and required the refusal
+    message to be quoted verbatim rather than paraphrased. Required the cause-to-decision
+    mapping to cover the whole cause space with a discriminating question where a
+    cause is ambiguous — that is the checkable form of the guide''s central claim.
+    Added expects_from TQ-400e-6 (and docs/reference/ac-schema.md to doc_links) so
+    the legitimately-absent populations are linked to the single reconciled exemption
+    statement rather than described here. test_spec: criterion (cause coverage and
+    progress figure) / reachability (a real record worked to a recorded decision by
+    the guide''s own steps) / failure (the designed refusal fires and the quoted text
+    is byte-equal, must_block) / seam (decision vocabulary set-equality both directions
+    plus the no-bulk-route and no-age absence scan). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

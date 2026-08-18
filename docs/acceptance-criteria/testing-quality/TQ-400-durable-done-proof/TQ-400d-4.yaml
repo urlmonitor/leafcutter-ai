@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -103,18 +103,20 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity M. it_requirements make the derivation
-      obligation structural and untestable-by-inspection — a hand edit to the list
-      must not survive the next run — forbid any independent verdict computation in
-      the list producer, forbid a stale-inventory fallback, and state the
-      two-directional requirement as load-bearing. expects_from widened to a list
-      naming TQ-400a-4 (inventory shape) and TQ-400d-1 (entry shape). test_spec:
-      seam (two-directional mutation) / criterion (both-ways accounting) /
-      real_artifact (hand edit must not survive) / reachability. criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements make the derivation
+    obligation structural and untestable-by-inspection — a hand edit to the list must
+    not survive the next run — forbid any independent verdict computation in the list
+    producer, forbid a stale-inventory fallback, and state the two-directional requirement
+    as load-bearing. expects_from widened to a list naming TQ-400a-4 (inventory shape)
+    and TQ-400d-1 (entry shape). test_spec: seam (two-directional mutation) / criterion
+    (both-ways accounting) / real_artifact (hand edit must not survive) / reachability.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

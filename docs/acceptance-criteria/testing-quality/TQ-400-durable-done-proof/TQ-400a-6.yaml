@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -231,26 +231,26 @@ test_rationale: >-
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-18
-    note: >-
-      Confirmed architecture-diagram-author (the diagram surface is mermaid under
-      docs/architecture/diagrams/, which is that agent's owned surface via the
-      write-c4-diagram skill); complexity M. Named the exact target path and the
-      enforced conventions: c{level}-{seq:03d}-{slug}.md, next c3 sequence 6 as of
-      2026-08-18 via scripts/next_diagram_seq.py, diagram_type component from
-      config/diagram_types.json, flight_level L3-Component (check_diagram_naming
-      rejects a prefix/flight_level mismatch). Required frontmatter related_code to
-      list every module the boxes name — that is what makes the picture
-      mechanically falsifiable — and required the verdict source to be named
-      identically to the existing c3-done-proof-evaluation-sequence.md. Added that
-      diagram and c2-003-ac-readiness-states.md to doc_links. test_spec: criterion
-      (one verdict node, three inbound checker edges, population labels) /
-      real_artifact (every named module and symbol resolves) / seam (same oracle
-      name across both diagrams and the real callers) / reachability (the real
-      check_diagram_naming and check_doc_frontmatter gates, both polarities).
-      criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Confirmed architecture-diagram-author (the diagram surface is mermaid under
+    docs/architecture/diagrams/, which is that agent''s owned surface via the write-c4-diagram
+    skill); complexity M. Named the exact target path and the enforced conventions:
+    c{level}-{seq:03d}-{slug}.md, next c3 sequence 6 as of 2026-08-18 via scripts/next_diagram_seq.py,
+    diagram_type component from config/diagram_types.json, flight_level L3-Component
+    (check_diagram_naming rejects a prefix/flight_level mismatch). Required frontmatter
+    related_code to list every module the boxes name — that is what makes the picture
+    mechanically falsifiable — and required the verdict source to be named identically
+    to the existing c3-done-proof-evaluation-sequence.md. Added that diagram and c2-003-ac-readiness-states.md
+    to doc_links. test_spec: criterion (one verdict node, three inbound checker edges,
+    population labels) / real_artifact (every named module and symbol resolves) /
+    seam (same oracle name across both diagrams and the real callers) / reachability
+    (the real check_diagram_naming and check_doc_frontmatter gates, both polarities).
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

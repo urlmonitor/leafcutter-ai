@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -282,31 +282,32 @@ test_rationale: >-
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-18
-    note: >-
-      Assigned documentation-expert; complexity M. ESCALATED HAND-OFF RESOLVED —
-      the reconciliation obligation is now the first and defining it_requirement,
-      with both sides verified at enrichment on 2026-08-18: _ac_schema_validators.py
-      ~:515-540 REJECTS test_required: false on an approved, not-yet-done, leaf code
-      AC (and rejects it alongside a non-empty test_spec as a contradiction), while
-      check_done_proof.py:463 (`if data.get("test_required") is False: continue`)
-      HONOURS it unconditionally on any done record, as does :491-495 in the
-      change-scoped mode; 37 done records carry it. The it_requirement now demands
-      the entry state WHICH RECORDS THE RECONCILED RULE LEAVES ELIGIBLE — the
-      boundary the two layers imply is non-code records and already-done records —
-      and names all three enforcement points with what each gates. Both source files
-      added to doc_links with the verified line references. Ruled the target is the
-      EXISTING test_required / test_rationale entries in docs/reference/ac-schema.md
-      extended in place, not a new document, on the same no-second-mechanism
-      reasoning TQ-400e-3 applies to the code. Added delivers_to TQ-400d-5 so the
-      triage guide links to this single statement. test_spec: criterion (two fields,
-      four refusal facts, boundary as a one-record rule, three enforcement points) /
-      seam (the stated rule partitions the REAL store consistently with BOTH layers)
-      / reachability (documented exemption forms through the real sweep, both
-      polarities, must_block) / real_artifact (the today-backlog description
-      measured against the live store). criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Assigned documentation-expert; complexity M. ESCALATED HAND-OFF RESOLVED
+    — the reconciliation obligation is now the first and defining it_requirement,
+    with both sides verified at enrichment on 2026-08-18: _ac_schema_validators.py
+    ~:515-540 REJECTS test_required: false on an approved, not-yet-done, leaf code
+    AC (and rejects it alongside a non-empty test_spec as a contradiction), while
+    check_done_proof.py:463 (`if data.get("test_required") is False: continue`) HONOURS
+    it unconditionally on any done record, as does :491-495 in the change-scoped mode;
+    37 done records carry it. The it_requirement now demands the entry state WHICH
+    RECORDS THE RECONCILED RULE LEAVES ELIGIBLE — the boundary the two layers imply
+    is non-code records and already-done records — and names all three enforcement
+    points with what each gates. Both source files added to doc_links with the verified
+    line references. Ruled the target is the EXISTING test_required / test_rationale
+    entries in docs/reference/ac-schema.md extended in place, not a new document,
+    on the same no-second-mechanism reasoning TQ-400e-3 applies to the code. Added
+    delivers_to TQ-400d-5 so the triage guide links to this single statement. test_spec:
+    criterion (two fields, four refusal facts, boundary as a one-record rule, three
+    enforcement points) / seam (the stated rule partitions the REAL store consistently
+    with BOTH layers) / reachability (documented exemption forms through the real
+    sweep, both polarities, must_block) / real_artifact (the today-backlog description
+    measured against the live store). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

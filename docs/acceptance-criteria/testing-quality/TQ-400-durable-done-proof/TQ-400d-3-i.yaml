@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -82,17 +82,19 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity S. it_requirements state the structural
-      constraint (no date field in any outcome predicate), forbid reusing
-      check_changed_done_acs' deliberate change-scoping, and require age to be
-      DISPLAYED rather than omitted. test_spec makes the prohibition falsifiable:
-      a must_block reachability entry that attempts to clear the old record without
-      a decision and requires the identical refusal, plus a boundary entry that
-      shifts every date to expose a hidden cut-off. criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity S. it_requirements state the structural
+    constraint (no date field in any outcome predicate), forbid reusing check_changed_done_acs''
+    deliberate change-scoping, and require age to be DISPLAYED rather than omitted.
+    test_spec makes the prohibition falsifiable: a must_block reachability entry that
+    attempts to clear the old record without a decision and requires the identical
+    refusal, plus a boundary entry that shifts every date to expose a hidden cut-off.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

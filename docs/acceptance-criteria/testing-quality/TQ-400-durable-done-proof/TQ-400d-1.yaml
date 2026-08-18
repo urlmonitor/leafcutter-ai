@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -102,16 +102,18 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity M. it_requirements close the decision enum,
-      forbid encoding 'undecided' as absence, require two-directional set-equality
-      with the sweep population, and forbid re-deriving the exemption verdict
-      locally. expects_from widened to a list naming both TQ-400e-3 and TQ-400a-4.
-      test_spec: criterion / seam (both-ways membership + exempt flip) / boundary
-      (empty pile stated) / reachability. criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements close the decision enum,
+    forbid encoding ''undecided'' as absence, require two-directional set-equality
+    with the sweep population, and forbid re-deriving the exemption verdict locally.
+    expects_from widened to a list naming both TQ-400e-3 and TQ-400a-4. test_spec:
+    criterion / seam (both-ways membership + exempt flip) / boundary (empty pile stated)
+    / reachability. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []

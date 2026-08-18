@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -88,17 +88,18 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity M. it_requirements make the must_block
-      obligations explicit — one entry point, fail closed on any non-positively-
-      confirmed decision, refusal visible outside the process, refusal not blanket,
-      and no residue that would let a retry succeed. test_spec: reachability
-      (must_block negative control through the real path) / criterion (paired
-      positive in the same run) / seam (refused record persists into the next
-      cycle). criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements make the must_block
+    obligations explicit — one entry point, fail closed on any non-positively- confirmed
+    decision, refusal visible outside the process, refusal not blanket, and no residue
+    that would let a retry succeed. test_spec: reachability (must_block negative control
+    through the real path) / criterion (paired positive in the same run) / seam (refused
+    record persists into the next cycle). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by:
   - TQ-400d-3-i

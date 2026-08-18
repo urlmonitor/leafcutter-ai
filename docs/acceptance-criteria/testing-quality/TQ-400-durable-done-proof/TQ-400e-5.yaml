@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -93,20 +93,21 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: >-
-      Assigned python-coder; complexity M. it_requirements require stability to
-      come from determinism rather than remembered state (no seen set,
-      acknowledgement file, confirmation marker, or suppression list), forbid any
-      write to the record in either run, require exempt records to be absent from
-      the triage pile in every run rather than dismissed after appearing, and
-      recommend building general run-to-run idempotence rather than special-casing
-      exemptions. test_spec: real_artifact (three-point sha256, fresh processes) /
-      criterion (same reason, not in the newly-found delta) / seam (absent from the
-      pile in both runs) / reachability (third run after deleting prior artifacts —
-      the anti-memory control). criteria untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements require stability to
+    come from determinism rather than remembered state (no seen set, acknowledgement
+    file, confirmation marker, or suppression list), forbid any write to the record
+    in either run, require exempt records to be absent from the triage pile in every
+    run rather than dismissed after appearing, and recommend building general run-to-run
+    idempotence rather than special-casing exemptions. test_spec: real_artifact (three-point
+    sha256, fresh processes) / criterion (same reason, not in the newly-found delta)
+    / seam (absent from the pile in both runs) / reachability (third run after deleting
+    prior artifacts — the anti-memory control). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
 superseded_by: null
 covered_by: []
 implemented_by: []
