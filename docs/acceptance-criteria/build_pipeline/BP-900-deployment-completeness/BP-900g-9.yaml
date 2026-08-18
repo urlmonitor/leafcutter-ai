@@ -1,0 +1,226 @@
+id: BP-900g-9
+components:
+  - build_pipeline
+title: "A declared deploy entry whose source is missing fails the build instead of warning and continuing"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given a deploy phase iterating the entries it has been declared to ship,
+  And an entry whose source file cannot be found at the path the declaration names,
+  When the phase runs,
+  Then the build exits non-zero and the failure names the phase, the entry, and the
+    source path that was not found,
+  And the phase does not emit a warning and proceed to the next entry, because a
+    build that completes with a success verdict while silently omitting a declared
+    file reports a consumer install that was never produced,
+  And the build reports EVERY unresolvable entry in the run, not only the first, so a
+    single build tells the author the whole remediation set rather than revealing it
+    one commit at a time,
+  And a declaration listing zero entries, and a declaration all of whose entries
+    resolve, both complete without a failure, so the rule distinguishes "nothing to
+    ship" and "everything shipped" from "something was promised and dropped",
+  And the demonstration invokes the build's real entry point as a subprocess against a
+    package tree carrying a declared-but-absent source, and asserts the non-zero exit
+    and the naming — a test that calls the phase's helper directly does not satisfy
+    this criterion, because the fail-open branch is reached through the build's own
+    iteration, not through the helper,
+  Because at HEAD 339b0981c the build_ac_store deploy loop in scripts/build_phases.py
+    (~lines 878-883) logs a warning and continues when a declared source is missing.
+    That is fail-open in the same direction as the loader defect BP-900g-8 addresses,
+    in the same loop, so the one mechanism that could have caught a hand-maintained
+    map going stale is itself configured not to.
+depends_on:
+  - BP-900g
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "The fail-open deploy loop (~lines 878-883): a missing source logs a warning and continues, so a declared entry can silently vanish from the deployed tree while the build reports success."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "The real entry point the negative control must run through; the exit code the criterion asserts on is this process's."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary (reachability + must_block, boundary for the zero/one/many entry shapes)."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-6.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Carries the test asserting KNOWN_UNDEPLOYED_ALLOWLIST stays empty. Read it before landing: it is why the stale entries this change surfaces cannot be parked, and it is the test that will go red if anyone tries."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Requires the registry-completeness report to enumerate the whole finding set rather than the first. This AC applies the same reporting property to the deploy loop; the two should produce recognisably similar reports rather than two inventions."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/build_phases.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-entry deploy failure record the loop accumulates instead of warning and continuing. Accumulating records rather than logging strings is what makes 'report every entry, not only the first' implementable and testable."
+    required:
+      - phase
+      - entry
+      - source_path
+    properties:
+      phase:
+        type: string
+        description: "The deploy phase that declared the entry (e.g. build_ac_store), so the author knows which declaration to edit."
+      entry:
+        type: string
+        description: "The declaration entry as written, so it can be located in the map without guessing."
+      source_path:
+        type: string
+        description: "The repo-relative source path that was not found — the fact the current warning already emits correctly and that the build then discards."
+  constraints:
+    - "ENFORCE ON EVERY LOOP THAT ACTUALLY SHIPS FILES, AND SAY WHICH ONES THOSE ARE. n_location_rule is 'all'. The live instance is the build_ac_store loop at ~878-883, but the warn-and-continue shape is a pattern, not a line: audit scripts/build_phases.py for every deploy iteration that can encounter a missing declared source and flip each one. Enumerate the enforcement points found in the sign-off. A fix applied to the one loop the AC names leaves the identical hole in its siblings, which is the shape of EPIC-BOPhantomDoneRemediation T03 — an empty-list guard present in one check and absent from its structurally identical twin, with all 22 tests green."
+    - "COLLECT, THEN FAIL — DO NOT HALT ON THE FIRST FINDING. The loop must accumulate every unresolvable entry and raise once at the end. Halting at the first turns a set of N stale entries into N build-fix-build cycles, and every intermediate build is green, so an author who stops at the first green ships the remaining N-1."
+    - "THE OBSERVABLE IS THE EXIT CODE, NOT THE LOG TEXT. The current behaviour already logs the missing source accurately and completely; every fact an author needs is emitted today and the defect shipped anyway. Any test whose assertion is the presence of the failure text is green against BOTH the fixed and the broken implementation. This is the single most important constraint on this AC."
+    - "ENUMERATE AND RESOLVE THE PRE-EXISTING STALE SET IN THE SAME CHANGE. Flipping this branch fail-closed will surface every currently-stale declared entry at once and may turn the next unrelated build red. That is the intended effect, but the set must be listed and each entry resolved (deployed, or removed from the declaration) before this lands. Parking is not available: KNOWN_UNDEPLOYED_ALLOWLIST was emptied by BP-900g-5 and BP-900g-6 carries a test asserting it stays empty, so re-parking is a visible regression by design."
+    - "DO NOT WEAKEN THE FAILURE INTO A CONFIGURABLE MODE. A flag, environment variable, or 'strict' opt-in reproduces the defect for everyone who does not set it, and the default is what ships to consumers. If a transitional escape hatch is judged unavoidable, it must be declared in the sign-off with the date it is removed."
+    - "The failure must follow the project error handling policy: a typed failure raised once at the end of the loop, carrying the accumulated records. Not a bare exception, and not a sys.exit buried in the iteration."
+    - "The zero-entry declaration must complete cleanly and must not raise. 'Nothing to ship' and 'everything shipped' are both success; only 'something was promised and dropped' is a failure."
+delivers_to:
+  - agent: python-coder
+    contract: "A fail-closed deploy iteration that accumulates a DeployFailure record {phase, entry, source_path} per unresolvable declared entry and raises once at the end of the run, surfacing as a single non-zero exit from `python scripts/build.py --target-dir <target>` whose output names every finding. Consumed by BP-900g-9-i, which asserts the multi-finding report shape, the exactly-once non-zero exit, and the state the target directory is left in after the failure."
+expects_from: null
+test_spec:
+  - name: test_bp_900g_9_missing_declared_source_produces_a_failure_record_not_a_warning
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The deploy iteration, given a declaration entry whose source path does not exist, accumulates a failure record carrying phase, entry and source_path, and does NOT proceed to report the run as successful. Assert the record's fields and that the run's verdict is failure — never that a warning string was logged."
+  - name: test_bp_900g_9_build_subprocess_exits_non_zero_on_a_declared_but_absent_source
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Copy the package tree to a temp dir, delete the source file behind one declared deploy entry (leaving the declaration intact), and run `python scripts/build.py --target-dir <tmp_target>` as a SUBPROCESS. Assert a non-zero exit and that the output names the phase, the entry and the source path. Calling the phase's helper directly does NOT satisfy this: the fail-open branch is reached through the build's own iteration, and a helper-level test is green while the iteration still swallows it."
+  - name: test_bp_900g_9_empty_and_fully_resolving_declarations_both_build_clean
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The zero/all controls through the same subprocess: a deploy declaration with zero entries, and one whose entries all resolve, each exit zero and neither raises. The empty case is the EPIC-BOPhantomDoneRemediation T03 shape — an empty-list guard present in one check and missing from its structurally identical twin, with all 22 tests passing. Without this entry, making the loop fail-closed can turn 'nothing to ship' into a build failure and nobody finds out until an unrelated phase ships nothing."
+  - name: test_bp_900g_9_three_unresolvable_entries_are_all_named_in_one_run
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The many case: delete the sources behind three separate declared entries and run the build once. Assert all three are named in the single failure — not one, and not one-per-run. A guard that halts at the first finding passes the must_block entry above and fails here, which is the only way to tell the two implementations apart."
+test_rationale: |
+  This AC replaces a branch that already does almost everything right. It finds the
+  missing source, it identifies it correctly, and it logs it accurately. The one thing
+  it gets wrong is the exit code. That makes it the purest grep-shaped false-green trap
+  in this subtree: a test that asserts the failure text appears is green against BOTH
+  the broken implementation and the fixed one, because the broken one emits exactly the
+  same text. Every entry above therefore asserts on the exit code, the accumulated
+  records, or the set of names in the single failure — never on log output.
+
+  The second entry runs through `scripts/build.py` as a subprocess rather than calling
+  the deploy helper, because the fail-open is IN the iteration, not in the helper. A
+  helper-level test can be green while the loop that calls it still swallows the
+  result — that is BO-1700 and BO-400c-3-i in the reachability catalogue, twice.
+
+  The two boundary entries are not symmetric decoration. The zero/all entry is the
+  false-positive control that stops a fail-closed flip from making correct builds red,
+  and its empty case is the exact T03 shape where a structurally identical sibling
+  check lacked the empty guard and 22 tests still passed. The three-findings entry is
+  the only test that distinguishes a guard that halts at the first finding from one
+  that reports the set — and that difference is worth a test because halting turns N
+  stale entries into N build-fix-build cycles with a green build between each one.
+
+  `deployed` is deliberately NOT charged. The assertion here is about the build
+  process's own exit, observable from the package tree; the state the target directory
+  is left in after the failure is BP-900g-9-i's subject, and charging it here would
+  duplicate that AC while spending a slot.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; 'the observable is the exit code, not the log text' and 'audit every
+    deploy loop, not only build_ac_store' named as constraints, plus the requirement
+    to enumerate and resolve the pre-existing stale set in the same change), delivers_to
+    (the accumulated DeployFailure record consumed by BP-900g-9-i), test_spec (criterion
+    / reachability+must_block / boundary x2) and test_rationale. Added two doc_links.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BP-900g-9-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  HOLE B, second build-time half — the fail-open that hides the first one.
+
+  WHY THIS IS SEPARATE FROM BP-900g-8. g-8 catches a dependency that was never
+  declared. This AC catches a dependency that WAS declared and then went missing from
+  source — a rename, a move, a deletion. The two failure modes reach the deployed tree
+  by different routes and neither guard sees the other's case. Both were live in the
+  same loop at HEAD, which is the argument for specifying them separately rather than
+  as one "deploy map is correct" AC that a single test could appear to satisfy.
+
+  WHY "EVERY ENTRY, NOT ONLY THE FIRST" IS IN THE CRITERIA. A guard that halts at the
+  first finding turns a set of N stale entries into N build-fix-build cycles, and each
+  intermediate green build reads as completion. This is the same reporting property
+  BP-900e-4 requires of the registry-completeness report, applied to the deploy loop.
+
+  TEST ANGLES for it-po. Floor: criterion + reachability, with must_block on the
+  reachability entry (declared-but-absent source through the real build entry point →
+  non-zero exit). `boundary` is triggered — the criterion names zero / one / many
+  entry shapes explicitly, and a guard with no empty-declaration case is the exact
+  shape of EPIC-BOPhantomDoneRemediation T03, where _check_change_target had an
+  empty-list guard and the identically structured _check_risk_surface did not while
+  all 22 tests passed. `deployed` is NOT triggered here: the assertion is about the
+  build process's own exit, observable in the package tree.
+
+  RISK TO FLAG AT IMPLEMENTATION. Flipping this branch fail-closed will surface every
+  pre-existing stale entry at once and may turn the next unrelated build red. That is
+  the point, but the set must be enumerated and resolved in the same change rather
+  than parked — KNOWN_UNDEPLOYED_ALLOWLIST was emptied by BP-900g-5 and BP-900g-6
+  carries a test asserting it stays empty, so re-parking is not available.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO ENRICHMENT NOTE (2026-08-17). Two constraints added that the criteria imply
+  but do not name, both recorded in it_requirements.constraints.
+
+  FIRST, n_location_rule is 'all'. The criteria say "a deploy phase", singular, and
+  the Because clause names one loop. But warn-and-continue on a missing declared
+  source is a PATTERN, and a fix scoped to the loop where the defect was found leaves
+  the identical hole in every sibling loop — which is T03's shape exactly. The
+  implementer must audit scripts/build_phases.py for every deploy iteration that can
+  meet a missing source, and enumerate what was found in the sign-off.
+
+  SECOND, the fail-closed behaviour must not be made configurable. A strict-mode flag
+  or environment variable is the cheapest way to land this without confronting the
+  pre-existing stale set, and it reproduces the defect for everyone who does not set
+  it — including every consumer install, since the default is what ships.
+
+  THE SCHEDULING RISK IS REAL AND IS NOT A REASON TO SOFTEN THE AC. This change can
+  turn the next unrelated build red. The correct response is to enumerate the stale
+  set first and land the resolutions with the flip, not to weaken the gate. The BA's
+  RISK TO FLAG paragraph is upheld unchanged.

@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -109,10 +109,15 @@ test_rationale: |
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent, complexity, it_requirements (package-surface object form; policy constraints under `constraints`), test_spec (criterion/boundary/reachability), contracts and declares_side_effect. criteria untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, complexity, it_requirements (package-surface object
+    form; policy constraints under `constraints`), test_spec (criterion/boundary/reachability),
+    contracts and declares_side_effect. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by: []
 implemented_by: []

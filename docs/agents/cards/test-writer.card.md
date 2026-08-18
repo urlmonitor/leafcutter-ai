@@ -176,6 +176,12 @@ flowchart TD
 - BP-700b-2-i: LLM trigger fires for tickets describing UI work without frontend file extensions in files_touched
 - BP-700b-3: Agent produces no output or side effects when not dispatched
 - GE-113c-3-iv: Direct unit tests for _is_suppressed cover both exploit paths
+- GE-119c-1: A harness executes the deployed checks out of process from a real separate working copy
+- GE-119c-1-i: The harness reports its own setup failure instead of passing vacuously
+- GE-119c-2: The harness is shown to fail against the behaviour that was actually observed
+- GE-119c-3: Every registered check is exercised by the harness, and a new check cannot opt out by omission
+- GE-119c-4: The unverified count of files that only looked clean is replaced with a measured one
+- GE-119d-4: A working copy created by set-up passes the parity sweep with no manual repair
 - INF-100a-4: Wiring tests verify template Pre-Flight section and PROJECT_CONTEXT.md content
 - INF-400g-2-i: emit_event.py handles optional arguments gracefully (null in payload)
 - INF-400g-2-ii: emit_event.py appends (not overwrites) on subsequent calls

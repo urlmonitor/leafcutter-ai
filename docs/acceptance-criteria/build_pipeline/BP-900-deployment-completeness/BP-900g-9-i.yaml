@@ -1,0 +1,208 @@
+id: BP-900g-9-i
+components:
+  - build_pipeline
+title: "The fail-closed deploy loop reports the whole set and leaves no half-built target behind"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-9.yaml"
+criteria: |
+  Given the fail-closed deploy loop of BP-900g-9,
+  And a declaration in which three separate entries name source files that cannot be
+    found,
+  When the build runs,
+  Then the single failure names all three, in one report, so one build yields the
+    whole remediation set,
+  And the build's exit is non-zero exactly once — the run does not report success at
+    any point before exiting, so no caller reading only the final status can conclude
+    the deploy completed,
+  And given the same run, the target directory is left in a state an author can
+    recognise as failed: it does not contain a subset of the declared files presented
+    as if it were the complete deploy,
+  And given a declaration in which every entry resolves, the build completes with a
+    zero exit and the target contains every declared file, so making the loop
+    fail-closed does not make an unrelated correct build red,
+  And these shapes are exercised through the build's real entry point as a subprocess
+    with an inspection of the resulting target directory — asserting on the log text
+    the loop emits does not satisfy this criterion, because the defect being replaced
+    is precisely a run that logged the truth and exited zero,
+  Because a guard that halts at the first missing entry turns a set of N stale
+    declarations into N build-fix-build cycles in which every intermediate build is
+    green, and an author who stops at the first green has shipped the remaining N-1.
+depends_on:
+  - BP-900g-9
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-9.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "The loop whose per-entry warn-and-continue this replaces; the collection of all findings before exiting is a change to the same iteration."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns the process exit the criterion asserts on, and the target directory whose post-failure state the third clause constrains."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Explains why the post-failure target state is in scope rather than tidiness: a target left half-populated converts a CAUGHT build failure back into the silent runtime failure BP-900g-10 exists to catch. The two ACs meet at exactly that directory."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Angle vocabulary, and the source of the grep-shaped-false-green warning that governs this AC's assertion surface: the current code logs the truth and exits zero, so a log-text assertion is green on both implementations."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  reference_file_path: "scripts/build_phases.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The end-of-run report the accumulated failures are rendered into, and the post-failure state contract for the target directory. Both are observables the criterion asserts on directly, so both need a defined shape rather than prose in a log line."
+    required:
+      - failures
+      - target_state
+    properties:
+      failures:
+        type: array
+        items:
+          type: object
+        description: "Every DeployFailure {phase, entry, source_path} accumulated in the run, rendered in one report. Length must equal the number of unresolvable entries — three findings produce a three-item report, not the first one."
+      target_state:
+        type: string
+        description: "What the target directory is left as after a failed run. Must be a state an author and a subsequent process can both recognise as failed — not a partially-populated tree that is indistinguishable from a complete deploy. Whichever mechanism is chosen (an explicit failure marker written into the target, or not leaving a partial tree at all) must be stated and asserted, not left implicit."
+  constraints:
+    - "THE ASSERTION SURFACE IS THE EXIT CODE AND THE TARGET DIRECTORY. Never the log text. The behaviour being replaced already logs every fact an author needs, accurately, and the defect shipped regardless because the exit code said success. A test asserting the failure text is present is green against BOTH the broken and the fixed implementation — this is the cleanest example of the grep-shaped false green in this subtree, and the criterion disqualifies it explicitly."
+    - "EXACTLY ONE NON-ZERO EXIT, AND NO SUCCESS VERDICT BEFORE IT. The run must not print or return a success status at any point and then exit non-zero, because callers and workflows read the final status only. Assert both the exit code and the absence of a success verdict in the run's output ordering."
+    - "DEFINE THE POST-FAILURE TARGET STATE EXPLICITLY AND ASSERT IT. A build that fails after copying two of five declared files leaves a directory that looks deployed; the next thing to run there — a hook, a workflow, a consumer command — cannot tell the difference, which converts a caught build failure back into the silent runtime failure BP-900g-10 exists to catch. Choose one mechanism (an explicit failure marker in the target, or not leaving a partial tree), state which in the sign-off, and test it. Leaving this implicit is how the clause gets quietly dropped."
+    - "IDEMPOTENCY ON THE FAILING PATH. Running the failing build twice must leave the target in the same recognisable state, and a subsequent successful run against a repaired tree must produce a complete, correct target with no residue from the failed attempt."
+    - "THE ALL-RESOLVE CONTROL IS NOT OPTIONAL. Assert that a declaration whose entries all resolve exits zero AND that the target contains every declared file. A fail-closed flip that also breaks correct builds passes every negative test in this AC."
+    - "NO NEW LOOP AND NO SECOND REPORT FORMAT. This AC constrains the same iteration BP-900g-9 changes and the same accumulated records. A separate reporting path that only the tests exercise will drift from the one the build uses."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-9
+  contract: "The fail-closed deploy iteration and its accumulated DeployFailure records {phase, entry, source_path}, raised once at the end of the run and surfacing as a single non-zero exit from `python scripts/build.py --target-dir <target>`. This AC constrains the rendering of that same accumulation (all findings in one report), the exit discipline (non-zero exactly once, no prior success verdict), and the state the target directory is left in. It introduces no new loop and no second report format."
+test_spec:
+  - name: test_bp_900g_9_i_three_missing_sources_are_all_named_in_a_single_report
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Delete the sources behind three separate declared entries, run the build once, and assert the single failure report contains all three {phase, entry, source_path} records — count equal to three, not 'at least one'. A loop that halts at the first finding produces a one-item report and fails here while passing every other entry in this AC."
+  - name: test_bp_900g_9_i_build_subprocess_exits_non_zero_once_with_no_prior_success_verdict
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Run `python scripts/build.py --target-dir <tmp_target>` as a SUBPROCESS against a tree with declared-but-absent sources. Assert the process exit code is non-zero and that the run emits no success verdict before exiting. The assertion is the exit code and the verdict ordering — asserting the failure text appears is explicitly disqualified, because the code being replaced emits that same text and exits zero."
+  - name: test_bp_900g_9_i_failed_run_leaves_no_partial_target_presented_as_complete
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After the failing subprocess run, inspect the produced target directory and assert it is recognisable as failed by whichever mechanism the implementation declares — an explicit failure marker present, or no partial tree left. Specifically assert it does NOT contain a proper subset of the declared files with nothing distinguishing it from a complete deploy. Run the failing build twice and assert the target state is identical both times."
+  - name: test_bp_900g_9_i_all_resolving_declaration_builds_clean_with_a_complete_target
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The false-positive control through the same subprocess: a declaration whose entries all resolve exits zero and the target directory contains every declared file. Then repair the three-missing-sources tree and re-run, asserting the target is complete and carries no residue from the failed attempt. Without this, a fail-closed flip that also breaks correct builds passes every negative assertion in this AC."
+test_rationale: |
+  The defect this AC guards against is not that the build fails to notice — it notices
+  perfectly. It logs the phase, the entry and the missing path, accurately, today, and
+  the broken deploy shipped anyway because the process exited zero. That single fact
+  determines every assertion here: the exit code and the target directory are the only
+  admissible observables. A log-text assertion is green against both implementations,
+  which makes it worse than no test, because it reads as coverage.
+
+  Three of the four entries therefore run the real build as a subprocess and assert on
+  its exit or on the tree it produced. The fourth is the all-resolve control, which
+  exists because a fail-closed flip has a symmetric failure mode nobody tests for:
+  breaking correct builds. Every negative assertion in this AC passes against an
+  implementation that fails unconditionally.
+
+  The post-failure target state gets its own entry rather than riding along, because
+  it is the seam between this AC and BP-900g-10. A build that fails after copying two
+  of five declared files leaves a directory the next process cannot distinguish from a
+  complete deploy — which converts a CAUGHT build failure straight back into the
+  silent runtime failure BP-900g-10 exists to catch. The idempotency assertion (run the
+  failing build twice, same state) is folded into that entry rather than spending a
+  fifth angle.
+
+  Four distinct angles are charged — boundary, reachability, deployed, criterion — which
+  is exactly the cap. `deployed` is charged here although BP-900g-9 declines it, and the
+  distinction is real: the parent's observable is the build process's exit, this AC's
+  third clause is a claim about a produced target directory, which can only be judged by
+  inspecting one.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; the exit-code-and-target-directory assertion surface, the explicit
+    post-failure target-state contract, and failing-path idempotency named as constraints),
+    expects_from (matching BP-900g-9's delivers_to), test_spec (boundary / reachability+must_block
+    / deployed / criterion — at the four-angle cap) and test_rationale. Added two
+    doc_links. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  EDGE CASE PINNED: the difference between failing and failing usefully.
+
+  WHY THE LOG-TEXT EXCLUSION IS EXPLICIT. The current behaviour already logs the
+  missing source accurately. Every fact an author needs is emitted today, and the
+  defect shipped anyway, because the exit code said success. A test that asserts the
+  failure text is present is therefore green against BOTH the fixed and the broken
+  implementation — it is the purest available example of the grep-shaped false green
+  this repo keeps hitting. The assertion has to be the exit code and the target
+  directory's contents.
+
+  WHY THE POST-FAILURE TARGET STATE IS IN SCOPE. A build that fails after copying two
+  of five declared files leaves a target that looks deployed. The next thing to run in
+  that directory — a hook, a workflow, a consumer's own command — cannot tell the
+  difference, which converts a caught build failure back into the silent runtime
+  failure BP-900g-10 exists to catch.
+
+  TEST ANGLES for it-po. `boundary` (three findings in one run versus one; and the
+  all-resolve case as the false-positive control) and `reachability` with must_block
+  through the real build entry point. `deployed` is triggered in the weak sense that
+  the assertion inspects a produced target directory; one subprocess test that runs
+  build.py into a temp target and then inspects the tree charges both and stays inside
+  the cap.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO ENRICHMENT NOTE (2026-08-17). One clause was under-specified for
+  implementation and has been pinned in it_requirements rather than in the criteria.
+
+  "A state an author can recognise as failed" admits two implementations — write an
+  explicit failure marker into the target, or do not leave a partial tree at all — and
+  they have different consequences for the next process that opens that directory. The
+  AC does not need to choose, but the IMPLEMENTATION does, and if the choice is left
+  implicit the clause gets satisfied by whatever the code happens to do. The constraint
+  therefore requires the implementer to declare which mechanism was chosen in the
+  sign-off and to assert it. Failing-path idempotency (run the failing build twice, same
+  recognisable state) was added for the same reason: a marker written non-deterministically
+  is not a state anything can rely on.
+
+  `deployed` is charged here despite the parent declining it. That is deliberate and
+  not a contradiction: BP-900g-9's observable is the build process's own exit, while
+  this AC's third clause is a claim about a directory the build produced, and the only
+  way to judge it is to produce one and look.

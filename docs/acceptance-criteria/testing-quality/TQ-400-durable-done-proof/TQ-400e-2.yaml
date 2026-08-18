@@ -1,0 +1,163 @@
+id: TQ-400e-2
+components:
+  - testing_quality
+  - ac_store
+title: "Evidence the check cannot trust produces an abstention, never a demotion"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record whose apparent coverage evidence cannot be resolved to a
+    real criterion identifier — the captured text is a bare quote character, an
+    unexpanded placeholder such as "{ac_id}", or an ordinary English word lifted
+    out of surrounding prose,
+  When the whole-store honesty sweep evaluates that record,
+  Then the record is reported under a distinct "evidence not trustworthy" outcome,
+    separate from both "proven" and "unproven",
+  And the record is left finished, with no demotion, reason text, or date written
+    to its file,
+  And the report names the unresolvable evidence and where it was found, so it is
+    fixed at source rather than absorbed as a demotion,
+  And the count of records in the "evidence not trustworthy" outcome is stated in
+    the run's report rather than folded into the unproven total.
+depends_on:
+  - TQ-400e
+  - TQ-100b-4
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle — this AC consumes TQ-100b-4's shaped-id reader and must be tested by piping that real reader's output into the sweep, not by hand-constructing an 'unresolvable' capture."
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: describes
+    status: exists
+    relevance: "COVERS_TAG_RE at :57 captures (\\S+) with no shape check — the direct cause of the misfires this AC abstains on. READ IT, DO NOT FIX IT HERE: fixing the reader is TQ-100b-4's job. This AC owns only the consequence, and must remain correct whatever the reader's residual error rate is."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "_scan_test_root_for_covers_tags and verify_done_eligible — the path an unresolvable capture actually travels today. The abstention branch has to be introduced where the resolution fails, not bolted on afterwards."
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "THE UPSTREAM. 'Only captures shaped like an acceptance-criterion id count as coverage tags' — it owns the reader fix. Read it to see the shaped-id predicate this AC's abstention branch consumes; do not restate its criteria and do not modify it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SCOPE BOUNDARY — DO NOT FIX THE READER HERE. TQ-100b-4 owns COVERS_TAG_RE and the shaped-id predicate. This AC owns one guarantee only: whatever the reader's residual error rate, the sweep must never take 'done' away on evidence it could not resolve. An implementation that tightens the regex and drops the abstention outcome has built the wrong AC and leaves the sweep unsafe against the next class of misfire."
+  - "ABSTENTION IS A FOURTH REPORTED OUTCOME, NOT A SKIP. proven / unproven / exempt / evidence-not-trustworthy must be four separately counted outcomes in the report. A skipped record is indistinguishable from a record nobody evaluated, which is the exact invisibility the parent L0 exists to remove."
+  - "THE ABSTAINED RECORD'S FILE MUST BE BYTE-IDENTICAL AFTER THE RUN — no demotion, no reason text, no date. Same write discipline as TQ-400e-1: do not open the file for writing at all."
+  - "THE REPORT MUST NAME THE UNRESOLVABLE CAPTURE AND ITS LOCATION — the literal captured text and the file (and line, where available) it came from. Without the location the defect cannot be fixed at source, and an abstention that cannot be fixed at source is a permanent hole in the sweep rather than a temporary one."
+  - "THE ABSTENTION PREDICATE IS THE SHAPE OF THE CAPTURE, NOT THE ABSENCE OF A MATCH. This is the distinction TQ-400e-2-i makes falsifiable: a capture that exists but is not id-shaped abstains; no capture at all is unproven and demotable. Implementing abstention as 'no resolvable tag was found' silently exempts the entire 259-record unproven population."
+  - "MEASURED SCALE, so the implementer can sanity-check their own output: over unit_tests/ at HEAD 339b0981c, 2,328 coverage-tag records referencing 680 distinct ids, 80 resolving to no AC, of which only 16 are even AC-id-shaped. The other 64 are reader misfires — bare quote characters, f-string placeholders such as {ac_id} and {self.ac_id}, and English words scraped out of prose. A sweep that treated those 64 as evidence of a lapse would demote wrongly most of the time."
+  - "Must handle errors gracefully per the project error handling policy, and must fail toward abstention rather than demotion whenever the evidence cannot be positively resolved. Note the asymmetry with TQ-400e-4, which fails toward refusal: uncertainty about EVIDENCE abstains; uncertainty about an EXEMPTION refuses. Both directions are 'do not silently grant the record what it wants'."
+delivers_to:
+  - agent: python-coder
+    contract: "The demotion-safety guarantee TQ-400b-1 is authorised by, on the evidence axis: a record whose coverage capture is present but not resolvable to an AC id is classified evidence-not-trustworthy, is never written to, and is never included in the population TQ-400b-1 demotes. The report carries the abstention count separately and names each unresolvable capture with its source location."
+expects_from:
+  ac_id: TQ-100b-4
+  contract: >-
+    A coverage-tag reader that only yields captures shaped like an
+    acceptance-criterion id. TQ-100b-4 owns fixing the reader; this AC owns only
+    the demotion-side consequence — the sweep must not act destructively on
+    evidence the reader could not resolve. Consumed as a per-capture resolution
+    outcome that distinguishes three states the sweep must treat differently:
+    resolved to a real AC id; present but not id-shaped (abstain); and no capture
+    at all (unproven, demotable).
+test_spec:
+  - name: test_tq_400e_2_unresolvable_evidence_is_reported_as_a_distinct_fourth_outcome
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A finished record whose only coverage capture is unresolvable is reported under evidence-not-trustworthy, separate from proven and unproven, and its count is stated separately in the report. Assert specifically that the abstention count is NOT included in the unproven total — construct a store where folding them would produce the same unproven figure a correct implementation must not show."
+  - name: test_tq_400e_2_misfire_shapes_come_from_real_test_files_on_disk
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The misfire shapes must be produced by writing real .py test files containing the constructs that actually cause them — a bare quote character, an f-string placeholder such as {ac_id}, and a covers-like phrase in prose or a docstring — and letting the real scanner read them. Hand-typing the capture strings reproduces exactly the bias that hid the files_touched parser no-op for an entire epic; the shapes observed at HEAD include \"'\", \"<id>'\", \"{self.ac_id}\", \"{nonexistent_id}\" and \"UNKNOWN\"."
+  - name: test_tq_400e_2_abstained_record_is_untouched_and_its_capture_is_named_with_a_location
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Run the sweep to completion with outcome application enabled, as a subprocess, over a store containing an abstained record and at least one genuinely unproven record. Assert the abstained record's file is byte-identical (sha256) afterwards, that the report names the literal unresolvable capture and the file it came from, and that the unproven record WAS acted on in the same run."
+  - name: test_tq_400e_2_abstention_branch_consumes_the_shaped_id_reader
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Pipe the real coverage-tag reader's output into the sweep and assert an unshaped capture reaches the abstention branch while a shaped-but-dangling id (an AC-id-shaped capture naming no active AC — 16 such at HEAD) reaches the unproven branch instead. Those two must not collapse: a dangling real id is a genuine lapse; an unshaped capture is reader noise."
+test_rationale: |
+  The distinction this AC turns on — unresolvable versus dangling versus absent — is invisible
+  to any test whose fixtures are hand-typed capture strings, because the author chooses what
+  'unresolvable' looks like and will choose the case their implementation already handles. The
+  real_artifact entry therefore forces the misfires to be generated the way production
+  generates them: by scanning real .py files containing the constructs that actually trip the
+  reader. The seam entry exists because the sharpest wrong answer is collapsing an unshaped
+  capture with a shaped-but-dangling id — the first is noise and must abstain, the second is a
+  real lapse and must demote, and 16 records at HEAD sit in the second category. And the
+  byte-identity assertion rides on the production entry point because an abstention that is
+  correct in a dry run and destructive with application enabled is the whole defect.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. Upstream dependency VERIFIED: depends_on
+    and expects_from both correctly name TQ-100b-4 (testing-quality/TQ-100- trustworthy-test-gate/TQ-100b-4.yaml,
+    "Only captures shaped like an acceptance-criterion id count as coverage tags");
+    the contract is now explicit about the three resolution states the sweep must
+    treat differently, and TQ-100b-4 is doc_linked as related. it_requirements restate
+    the scope boundary (do not fix the reader here), require a fourth reported outcome
+    rather than a skip, and record the measured misfire scale. test_spec: criterion
+    / real_artifact (misfires generated by the real scanner over real files) / reachability
+    (byte identity under outcome application) / seam (unshaped capture vs shaped-but-dangling
+    id must not collapse). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by:
+  - TQ-400e-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Scope boundary — do NOT restate TQ-100b-4. That AC fixes the reader itself
+  (COVERS_TAG_RE at scripts/ac_store/test_enforcement.py:57 captures `(\S+)`,
+  which scrapes bare quotes, f-string placeholders and prose words). This AC owns
+  a different guarantee: whatever the reader's remaining error rate, the sweep
+  must never take "done" away on evidence it could not resolve.
+
+  Measured at authoring time (2026-08-17) with the project's own scanner over
+  unit_tests/: 2,328 tag records referencing 680 distinct ids; 90 resolve to no
+  active AC, and 64 of those 90 are reader misfires rather than real dangling
+  references. Observed misfire captures include "'", "<id>'", "{self.ac_id}",
+  "{nonexistent_id}" and "UNKNOWN". A sweep that treated those 64 as evidence of
+  a lapse would demote on noise.
+
+  Why an abstention outcome and not silence: an untrustworthy-evidence record
+  that were simply skipped would be indistinguishable from a record nobody
+  evaluated, which is the exact invisibility TQ-400a exists to remove.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17) — UPSTREAM CONFIRMED, AND ONE NUMBER
+  RECONCILED. depends_on and expects_from both already named TQ-100b-4 and both
+  are correct; no change was needed and none was made. A re-measurement at HEAD
+  339b0981c with the project's own scanner over unit_tests/ gives 2,328 tag
+  records, 680 distinct ids, 80 resolving to no AC of which only 16 are AC-id-
+  shaped — so 64 misfires, matching the BA's count, against a slightly different
+  no-AC total (80 vs 90) depending on whether inactive records are counted. The 64
+  is the load-bearing figure and both passes agree on it.
+
+  THE THREE-WAY DISTINCTION IS THE IMPLEMENTATION RISK. Unshaped capture (noise —
+  abstain), shaped-but-dangling id (real lapse — demote), and no capture at all
+  (real lapse — demote) are three states, and the natural implementation collapses
+  the first two. TQ-400e-2-i guards the third against the first; the seam test
+  here guards the second against the first.

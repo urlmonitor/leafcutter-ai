@@ -1,0 +1,146 @@
+id: TQ-400d-1
+components:
+  - testing_quality
+  - ac_store
+title: "The unproven-finished pile is a worked list carrying a decision on each item"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a completed sweep that has identified the population of finished records
+    which cannot be proven,
+  When that population is presented for triage,
+  Then every record in it carries either one of the fixed decisions — prove it,
+    redo it, or retire it — or is explicitly marked as not yet decided,
+  And the number of records awaiting a decision is stated,
+  And no record in the sweep's unproven population is missing from the list,
+  And records the sweep found proven or exempt do not appear in the list.
+depends_on:
+  - TQ-400d
+  - TQ-400a-4
+  - TQ-400e-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle (the exemption outcome produced by TQ-400e-3 must be consumed here, not re-derived) and the boundary angle (an empty pile must be stated, not omitted)."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "check_all_done_acs (:403) produces the unproven population this list is a view over. Note :463 — the test_required: false skip — is what TQ-400e-3 converts into a reported 'exempt' outcome; until it does, the skipped records are invisible to this list rather than excluded from it, and those are different things."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "verify_done_eligible and its verdict reason strings. The per-record reason the oracle already produces is the most useful thing to carry into the triage entry, and re-inventing it would create a second vocabulary."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The AC record shape the triage entries reference. Read before deciding where a decision is recorded — the decision is per record and must be addressable by AC id."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE DECISION SET IS CLOSED AND MUST BE VALIDATED. Exactly three decisions plus an explicit not-yet-decided state. A free-text decision field, or an open enum, makes TQ-400d-2's arithmetic and TQ-400d-3's refusal both unenforceable. A value outside the set must be refused, never coerced and never silently accepted."
+  - "NOT-YET-DECIDED MUST BE A REPRESENTED STATE, NOT AN ABSENT FIELD. An undecided record and a record nobody has looked at must be distinguishable — that distinction is what TQ-400d-3 then enforces, and it is unenforceable if 'undecided' is encoded as absence."
+  - "SET-EQUALITY WITH THE SWEEP'S UNPROVEN POPULATION IS THE CONTRACT, IN BOTH DIRECTIONS. No record of the sweep's unproven population may be missing, and no record may be present that the sweep did not classify unproven. Test both directions: a list that silently shrinks and a list padded with everything are different defects and each passes the other's test."
+  - "EXEMPT AND PROVEN RECORDS MUST BE EXCLUDED BY CONSUMING TQ-400e-3'S OUTCOME, NOT BY A LOCAL RULE. Re-deriving 'is this exempt?' here creates a second exemption reader that will drift from the one TQ-400e-4 guards. The 37 records that carry a test-free declaration today must leave the pile because the sweep classified them exempt, not because this list filtered them."
+  - "SCALE IS 259 RECORDS AT AUTHORING TIME (measured 2026-08-17: 259 of 641 done L2/L3 records have no test carrying their coverage tag), minus whatever the exemption path legitimately removes. The list must be usable at that size — ordered deterministically so two readers see the same list, and carrying enough per-record context (the oracle's reason, the record's component) to triage without opening each file."
+  - "Must handle errors gracefully per the project error handling policy: a record whose decision state cannot be read must be reported and must remain in the awaiting-decision population — never dropped, and never defaulted to a decision."
+delivers_to:
+  - agent: python-coder
+    contract: "The triage list for a completed run: one entry per unproven record, each carrying {ac_id, outcome_reason, decision: prove|redo|retire|not_yet_decided}, plus the stated count of entries in the not_yet_decided state. Consumed by TQ-400d-2 (progress arithmetic), TQ-400d-3 (the clear-refusal gate operates on these entries) and TQ-400d-4 (which constrains how the list is derived)."
+expects_from:
+  - ac_id: TQ-400e-3
+    contract: >-
+      The honoured-exemption outcome. Records legitimately declared test-free must
+      already be separable, or the triage pile fills with work nobody should triage
+      and the exercise is abandoned. Consumed as the sweep's per-record 'exempt'
+      classification — never re-derived here.
+  - ac_id: TQ-400a-4
+    contract: >-
+      The durable per-run inventory of every evaluated record and its verdict. The
+      unproven population is read from it; TQ-400d-4 makes that derivation
+      obligation falsifiable.
+test_spec:
+  - name: test_tq_400d_1_every_entry_carries_a_decision_or_an_explicit_undecided_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Over a real run, assert every triage entry carries one of the three fixed decisions or the explicit not-yet-decided state, that the awaiting count equals the number in that state, and that 'undecided' is a present value rather than an absent field. Assert a value outside the closed set is refused."
+  - name: test_tq_400d_1_list_membership_equals_the_sweep_unproven_population_both_ways
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Take the sweep's actual unproven set and the actual triage list and assert set-equality in BOTH directions. Include in the same store a proven record and an exempt record (test_required: false with a reason) and assert neither appears — the exempt exclusion must come from the sweep's classification, verified by flipping that record's declaration and observing it enter the list."
+  - name: test_tq_400d_1_empty_unproven_population_yields_a_stated_empty_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A store in which every finished record is proven or exempt produces a triage list that explicitly states zero awaiting a decision, rather than omitting the list or the count. An omitted list is indistinguishable from a list that failed to compute."
+  - name: test_tq_400d_1_triage_list_is_produced_by_the_real_sweep_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Fire the sweep entry point as a subprocess and read the triage list artifact it actually wrote to disk. A correct list-builder function that no production path calls is the reachability gap this repo has hit repeatedly (BO-2400f-7..10)."
+test_rationale: |
+  The two completeness clauses are the load-bearing ones and they fail in opposite
+  directions: a list that silently shrinks and a list padded with everything each pass the
+  other's test, so set-equality must be asserted in both directions in one test. The exempt
+  exclusion is a seam, not a filter — the whole point of sequencing this AC behind TQ-400e-3
+  is that the exemption verdict is made once, by the sweep, and consumed here; the flip-the-
+  declaration mutation is what proves consumption rather than a local reimplementation. The
+  empty case gets its own entry because at a starting population of 259 nobody will exercise
+  it naturally, and it is the state the feature is supposed to eventually reach.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements close the decision enum,
+    forbid encoding ''undecided'' as absence, require two-directional set-equality
+    with the sweep population, and forbid re-deriving the exemption verdict locally.
+    expects_from widened to a list naming both TQ-400e-3 and TQ-400a-4. test_spec:
+    criterion / seam (both-ways membership + exempt flip) / boundary (empty pile stated)
+    / reachability. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+  - code
+risk_surface: internal
+notes: |
+  Sequenced behind TQ-400e-3 on the product owner's instruction: without a working
+  exemption path the pile is padded with records that can never be proven, and a
+  pile that cannot be finished is a pile nobody works.
+
+  Scale at authoring time (measured 2026-08-17 over unit_tests/): 259 of 641
+  finished L2/L3 records have no test carrying their coverage tag. That is the
+  starting population, minus whatever the exemption path legitimately removes.
+
+  The "not yet decided" state is deliberate and must be explicit rather than
+  implied by absence — an undecided record and a record nobody has looked at must
+  not be the same thing, which is the distinction TQ-400d-3 then enforces.
+
+  Both final clauses are completeness controls: one stops the list from silently
+  shrinking, the other stops it from being padded with everything.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The exempt-exclusion clause is the one most
+  likely to be implemented as a local filter (`if rec.get("test_required") is
+  False: skip`), which would work today and drift the moment TQ-400e-4 starts
+  refusing reasonless declarations — at which point the pile and the sweep would
+  disagree about the same 37 records. it_requirements state the consumption
+  obligation and test_spec makes it falsifiable by flipping a declaration and
+  observing the record enter the list.

@@ -1,0 +1,136 @@
+id: TQ-100b-4-ii
+components:
+  - testing_quality
+  - ac_store
+title: "An id-shaped covers phrase inside a string literal or docstring is not a tag"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given a test file in the repository's unit-test tree that contains the text
+    "# covers: ACS-999z-9" only inside a string literal or a docstring — as
+    fixture input to a test of the tagging mechanism itself — where that value
+    has valid acceptance-criterion id shape, resolves to no acceptance criterion
+    in the store, and is carried by no test function in tag position,
+  When the coverage-tag reader scans that tree,
+  Then ACS-999z-9 yields no coverage-tag record and appears in neither the
+    dangling-reference list nor the malformed-tag list
+  And in that same run every genuine tag in tag position elsewhere in that same
+    file is still read and recorded, so excluding literal occurrences does not
+    cost the file its real tags
+  And when the same text is moved out of the string literal into tag position
+    above a test function and the reader is run again through the same entry
+    point, ACS-999z-9 is then recorded as a tag and reported as a dangling
+    reference — the outcome flips on position alone.
+depends_on:
+  - TQ-100b-4
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-4-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The other half of the position rule. -4-i requires a docstring in tag position to COUNT as a tag; this AC requires a docstring occurrence used as fixture text NOT to. The implementer must adopt one deterministic disambiguation and satisfy both — see it_requirements."
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "READER 1 of 2 — COVERS_TAG_RE at :57 is line-oriented and position-blind, which is why an id-shape test alone cannot remove this class of false positive."
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "The application site: :370 applies the pattern with .search() to EVERY line of every file, with no knowledge of whether the line is code, a comment, or the interior of a triple-quoted literal. Making the scan position-aware is the change this AC requires."
+  - path: scripts/commit_guardian/check_test_ac_tags.py
+    relationship: implements
+    status: exists
+    relevance: "READER 2 of 2 and the existing working precedent: it parses the file with AST and only inspects the comment line above the def, the docstring node, and the first body line — so it is already structurally immune to fixture-string occurrences. Port that approach rather than inventing one, and mirror the change per TQ-100b-5. Source of truth is templates/scripts/commit_guardian/check_test_ac_tags.py; build.py overwrites the scripts/ copy."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the real_artifact angle this AC leans on: the fixture must be the real on-disk file, because the files that produce this false positive are the repo's own tag-mechanism tests."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Recognition must become position-aware, not merely shape-aware. A line-oriented regex over raw file text cannot satisfy this criterion at any level of pattern sophistication, because the distinguishing fact is not in the line — it is in whether the line is inside a string literal. Parse the file (AST or equivalent) rather than tightening the regex."
+  - "AMBIGUITY TO RESOLVE BEFORE IMPLEMENTING (raised by it-po, not resolvable from the criteria alone): TQ-100b-4-i names the test's docstring as a valid tag position, while this AC names a docstring occurrence as a non-tag. Adopt one deterministic rule that satisfies both — the workable one is that a docstring counts as tag position only when the covers marker is the docstring's own leading content, whereas a covers marker embedded inside larger fixture text being built by the test is not. State the chosen rule in the reader's own documentation and cover it with the boundary test in this AC's test_spec. Do NOT resolve the ambiguity by dropping either criterion."
+  - "Position-awareness must not silently swallow files it cannot parse. A file that fails to parse must be reported (as an unscannable file), never treated as containing zero tags — a parse failure that reads as 'no tags here' is a false negative in exactly the direction TQ-100b-4-i forbids."
+  - "Excluding literal occurrences must not cost a file its genuine tags. The files that produce this false positive (ac_store/test_done_proof_js.py, ac_store/test_done_proof_composite.py, ac_store/test_bo2500a_done_proof.py, commit_guardian/test_bo2500b_done_proof_hook.py, build_orchestration/test_bo2400a_fast_lane.py) also carry real tags on their own test functions; those must survive the change unchanged."
+  - "Applies to both readers or to neither. Reader 2 (check_test_ac_tags.py) is already position-aware; making reader 1 position-aware CLOSES a known behavioural gap between them, so the parity assertion in TQ-100b-5 must be re-run after this change, not before."
+  - "Parsing cost must stay inside the commit-time done-proof budget: at most one parse per file per scan, results reused across both the resolved and unresolved paths. Do not parse the tree once per report class."
+test_spec:
+  - name: test_id_shaped_covers_text_inside_a_string_literal_yields_no_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a real on-disk tree containing '# covers: ACS-999z-9' only inside a string literal (and, in a second case, only inside a docstring as embedded fixture text), run the reader and assert ACS-999z-9 produces no coverage-tag record and appears in neither the dangling-reference list nor the malformed-tag list."
+  - name: test_real_tags_in_the_committed_tag_mechanism_files_survive_the_position_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the reader over the committed unit_tests/ tree — the real files, not a fixture — and assert that the genuine tags carried by the very files that also contain literal covers text (ac_store/test_done_proof_js.py, ac_store/test_done_proof_composite.py, ac_store/test_bo2500a_done_proof.py, commit_guardian/test_bo2500b_done_proof_hook.py, build_orchestration/test_bo2400a_fast_lane.py) are still recorded, while the literal-position captures from those same files ({ac_id}, {self.child_a_id}, {nonexistent_id}, <id>, <deprecated-id>) are gone. A hand-typed fixture reproduces the bias that hides this bug."
+  - name: test_moving_the_text_into_tag_position_flips_it_to_a_dangling_reference
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Two runs through the SAME production entry point (subprocess, not a directly-imported helper) over two real trees differing only in whether ACS-999z-9 sits inside the string literal or in tag position above a test function: the first run reports nothing, the second reports it as a dangling reference. The flip on position alone, through one entry point, is the proof."
+  - name: test_docstring_leading_marker_versus_embedded_fixture_text_disambiguation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Pins the docstring boundary the two edge cases straddle: a docstring whose own leading content is the covers marker IS a tag (as TQ-100b-4-i requires), while a covers marker embedded inside larger fixture text within a docstring is NOT (as this AC requires). Also asserts an unparseable file is reported as unscannable rather than as containing zero tags."
+delivers_to: null
+expects_from:
+  ac_id: TQ-100b-4
+  contract: "The narrowed reader; this edge case pins the residual false positive that an id-shape test alone cannot remove."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: TQ-100b-4-ii it-po technical enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Criteria untouched. Added assigned_agent (python-coder), estimated_complexity
+    (M), it_requirements, a four-angle test_spec (criterion / real_artifact / reachability
+    / boundary) and reader doc_links; readiness draft -> reviewed. Recorded two implementer-facing
+    findings the criteria could not carry: (1) reader 2 (check_test_ac_tags.py) is
+    ALREADY AST-position-aware and should be ported rather than reinvented; (2) a
+    genuine ambiguity between this AC and TQ-100b-4-i over whether a docstring is
+    tag position, with a proposed deterministic resolution and a boundary test to
+    pin it. Also required that an unparseable file be reported rather than read as
+    zero tags, which would be the same false negative TQ-100b-4-i forbids.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The id-shape test in TQ-100b-4 accounts for all 64 of the measured non-id
+  artifacts, but it cannot remove a false positive whose captured value happens to
+  be well-formed — a tag-mechanism test that builds the literal string
+  "# covers: <some-id>" as fixture input is indistinguishable from a real tag on
+  shape alone. That is why position is a second, independent recognition rule and
+  gets its own criterion rather than being folded into TQ-100b-4.
+
+  Residual-risk note for the implementer and for whoever later remediates the 16:
+  some of the 16 currently-id-shaped unresolved values (AC-1 through AC-6 read
+  like invented fixture ids) may themselves be literal-position artifacts that
+  this criterion removes. TQ-100b-4 therefore bounds the surviving list at "at
+  most 16" rather than "exactly 16". Confirming which of the 16 are genuine is
+  remediation work and is out of scope here.
+
+  TEST ANGLE: assert by running the reader over a real tree containing the
+  literal, then over the same tree with the text relocated to tag position. The
+  flip between the two real runs, through one entry point, is the proof; a test
+  that feeds two strings to the pattern proves nothing.
+change_target: code
+risk_surface: contract_boundary

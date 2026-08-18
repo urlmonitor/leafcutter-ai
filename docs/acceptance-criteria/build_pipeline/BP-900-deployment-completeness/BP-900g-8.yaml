@@ -1,0 +1,297 @@
+id: BP-900g-8
+components:
+  - build_pipeline
+title: "A deployed script's own intra-package imports are deployed with it, proven in the deployed tree"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given any script the build deploys into a consumer install,
+  And that script resolving, importing, or executing another module belonging to the
+    same package — whether by import statement, by path construction relative to its
+    own location, or by dynamic loader,
+  When the build runs its deploy-completeness preflight,
+  Then every such intra-package dependency is itself deployed, or the build exits
+    non-zero naming the deployed script, the dependency it needs, and the deploy
+    phase that would have to carry it,
+  And the dependency set is DERIVED from what the deployed script actually resolves,
+    so a module added to a deployed script tomorrow is covered without anyone editing
+    a list — a hand-maintained manifest of dependencies does not satisfy this
+    criterion even when it happens to be complete on the day it is written,
+  And the closure is transitive: a dependency of a dependency is subject to the same
+    rule, so a chain that is correct at its first hop and broken at its second fails
+    the build rather than passing it,
+  And the demonstration runs the build into a temporary target directory and then
+    exercises the DEPLOYED copy in a fresh subprocess, with a negative control that
+    withholds one dependency from the deploy and must be shown to fail the build —
+    a check performed against the source tree does not satisfy this criterion,
+    because the source tree contains every module by construction and is therefore
+    structurally blind to the defect,
+  Because at HEAD 339b0981c scripts/ac_store/generate_ticket_from_ac.py is deployed
+    by the build_ac_store phase and resolves its sibling
+    scripts/ac_store/_component_migration_map.py, which that phase does not deploy —
+    so in every consumer install the sibling is absent. That deploy map already
+    carries THREE separate comments warning about this exact ModuleNotFoundError
+    failure mode, for done_proof.py, test_enforcement.py and ac_parent_id.py, and
+    still contains a live fourth instance. A hand-maintained list annotated with
+    warnings about the way it fails is not a mechanism; it is a record of the
+    mechanism's absence.
+depends_on:
+  - BP-900g
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the build_ac_store deploy_map (~lines 851-873) carrying the live fourth instance and the three prior warning comments. The manifest that must become derived rather than hand-maintained."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "The deployed script with the undeployed dependency (~line 328 resolves and execs its sibling). The concrete instance, not the criterion."
+  - path: scripts/ac_store/_component_migration_map.py
+    relationship: describes
+    status: exists
+    relevance: "Present in source, absent from the deploy map — the dependency whose absence is invisible to every source-tree check."
+  - path: scripts/build_referential_integrity.py
+    relationship: modifies
+    status: exists
+    relevance: "The existing reference guard; BP-900g-6 established its output-root prefix bound, which this AC must not widen."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary for the acceptance demonstration (deployed + reachability + must_block)."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-5.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION — READ THIS BEFORE TOUCHING build_phases.py. Its fifth it_requirement asks that _manifest_ac_store_scripts derive FROM the deploy_map. That is a different edge of the same triangle and it is NOT in conflict with this AC, but it can be satisfied in a way that IS. The ruling on which direction wins is in this AC's notes and is binding on the implementer."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO ADDITION. The process the preflight must run inside and whose exit code the criterion asserts on, and the command the deployed-tree harness invokes (`python scripts/build.py --target-dir <tmp>`). The harness this AC builds is reused by BP-900g-8-i and BP-900g-10."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest' is the prose statement of this defect after the done_proof.py incident. It records the rule as a convention for humans to remember, which is precisely what this AC replaces with a mechanism — the convention was written and the fourth instance still shipped."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  reference_file_path: "scripts/build_phases.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The three sets this AC and BP-900g-5 together govern, named explicitly so an implementer cannot satisfy one by collapsing it into another. The whole defect class is these three being assumed equal while never being compared."
+    required:
+      - resolved_closure
+      - deploy_declaration
+      - guard_manifest
+    properties:
+      resolved_closure:
+        type: array
+        items:
+          type: string
+        description: "SET A — the transitive set of intra-package modules a deployed script actually resolves, DERIVED from the code by static analysis of imports, relative path construction, and dynamic loader calls. Never hand-maintained. This is the new artifact this AC introduces."
+      deploy_declaration:
+        type: array
+        items:
+          type: string
+        description: "SET B — the deploy_map: what a phase declares it ships. Remains an explicit, human-readable declaration. It is CHECKED against set A, not generated from it."
+      guard_manifest:
+        type: array
+        items:
+          type: string
+        description: "SET C — _manifest_ac_store_scripts: the guard's model of what has been deployed. Per BP-900g-5's fifth it_requirement this must derive FROM set B. It must never be the source set B is derived from."
+      invariant:
+        type: string
+        description: "B must contain closure(A), enforced by a build failure; C is derived from B. Deriving B from A automatically, or deriving C from anything other than B, does not satisfy this AC."
+  constraints:
+    - "THE BINDING DIRECTION RULE (resolves the conflict the BA escalated). Three sets, two edges, and the direction of each edge is fixed. Edge 1: B must CONTAIN closure(A) — checked at build time, failing the build when it does not. Edge 2: C DERIVES FROM B — this is BP-900g-5's fifth it_requirement and it stays. What is FORBIDDEN: (a) generating B from A, which silently deploys whatever a typo'd import names and leaves BP-900g-9 with no declaration to check; (b) deriving the checker's view from B, which makes the guard and the thing it polices agree by construction and detect nothing — this is the failure the AC's own criteria name; (c) deriving C from A, which restores the divergence BP-900g-5 was closing. Full rationale in this AC's notes under IT-PO RULING."
+    - "DERIVED MEANS DERIVED FROM THE CODE. The closure must be computed from what the deployed script resolves — import statements, paths built relative to __file__, and dynamic loader calls — not read from any list, map, allowlist, or annotation. The test that proves this is the newly-added-module case in BP-900g-8-i: add a module inside the test, have an already-deployed script resolve it, edit NO list, and require the build to either deploy it or fail naming it. An implementation that passes every other test and fails that one is an enumeration wearing the word 'derived'."
+    - "TRANSITIVE, AND SAY SO IN THE FAILURE. The closure follows dependencies of dependencies. When it fails at the second hop the message must name the module that is actually missing, not only the top-level deployed script, or the author fixes the wrong hop."
+    - "EVERY DEPLOY PHASE, NOT ONLY build_ac_store. n_location_rule is 'all': the live instance is in build_ac_store, but any phase in scripts/build_phases.py that ships intra-package Python modules is subject to the same closure. A fix scoped to the one phase where the defect was found reproduces the history the criteria cite — three prior instances, each fixed individually, each annotated with a warning comment, and a fourth still live."
+    - "DO NOT SATISFY THIS BY ADDING _component_migration_map.py TO THE DEPLOY MAP. That makes the live symptom disappear and leaves the mechanism exactly as it was. Adding it is necessary and is not sufficient; the closure check must independently fail on a tree where it is withheld."
+    - "OUT-OF-PACKAGE MODULES ARE NOT OURS TO SHIP. The standard library, installed third-party distributions, and host-project paths the consumer owns must produce no finding. A closure that demands the build ship the standard library gets an allowlist, and an allowlist is a hand-maintained list wearing a different name. Respect BP-900g-5's narrowed output-root prefix bound and keep BP-900g-6's negative-control tests green — that bound exists because BP-900g-4 mis-normalised a host-project path (debugging/scripts/...) into a deploy key."
+    - "STATIC ANALYSIS HAS A KNOWN BLIND SPOT AND IT MUST BE DECLARED, NOT PAPERED OVER. A dynamic loader that builds a module path from a runtime value cannot always be resolved statically. Where the closure cannot decide, it must report the unresolvable reference for a human rather than assume it is external — an unknown silently classified as not-ours is the same fail-open in a new place. BP-900g-10 is the runtime backstop for whatever the closure still misses; it is not a licence for the closure to guess."
+    - "IDEMPOTENCY AND BUDGET. The closure computation must be deterministic and byte-stable across runs on an unchanged tree, and must run inside the existing build preflight's budget — static analysis of the package's own Python files, no network, no per-module subprocess."
+delivers_to:
+  - agent: python-coder
+    contract: "Two artifacts. (1) The derived transitive intra-package dependency closure — a function over the package tree returning, per deployed script, the set of intra-package modules it resolves, computed from the code and never from a list, together with the build-time check that set B (the deploy declaration) contains it. (2) The deployed-tree test harness: run `python scripts/build.py --target-dir <tmp>` into a temporary target and exercise the DEPLOYED copy in a genuinely fresh subprocess with the source tree off sys.path. Consumed by BP-900g-8-i (which drives three surface shapes through the same harness) and by BP-900g-10 (which removes a dependency from that same deployed tree and asserts the runtime behaviour). The harness is shared, not rebuilt per AC."
+expects_from: null
+test_spec:
+  - name: test_bp_900g_8_derived_closure_includes_the_sibling_the_deploy_map_omits
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Compute the closure for scripts/ac_store/generate_ticket_from_ac.py from the code and assert _component_migration_map.py is in it, and that it is reported as NOT covered by the build_ac_store declaration. Asserts the closure's contents and the containment verdict — never that a name appears in a list literal in build_phases.py."
+  - name: test_bp_900g_8_build_subprocess_blocks_when_a_resolved_dependency_is_withheld_from_the_deploy
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier, plus its paired control. Copy the package tree to a temp dir, withhold one intra-package dependency of a deployed script from the deploy declaration, run `python scripts/build.py --target-dir <tmp_target>` as a SUBPROCESS: assert non-zero exit and that the output names the deployed script, the missing dependency, and the phase that would have to carry it. Then run the SAME command against the unmodified tree: exit zero. Both halves through the same command — a positive-path build alone cannot tell a working guard from an absent one."
+  - name: test_bp_900g_8_deployed_tree_contains_the_full_closure_of_every_deployed_script
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run build.py into a temp target, then walk the DEPLOYED tree (not the source tree) and assert that for every deployed Python script, every module in its derived closure is present in the deployed tree. The source tree contains every module by construction, so the same assertion made there is structurally incapable of failing — this is the BP-811 distinction between the copy tier and the reachability tier."
+  - name: test_bp_900g_8_deployed_generate_ticket_cold_imports_in_a_fresh_subprocess
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "From the temp target produced by the harness, execute the DEPLOYED copy of generate_ticket_from_ac.py in a genuinely fresh `python` subprocess with the package source tree absent from sys.path, and assert it reaches its entry point without a ModuleNotFoundError. importlib.reload does NOT satisfy this: it re-executes inside an already-populated namespace and masks cold-import failures — that is exactly how the GenReviewFixes H-2 forward-reference NameError survived its tests."
+test_rationale: |
+  The defect is invisible to source-tree inspection by construction. In the package
+  repo every sibling module resolves, so every direct-import test passes on a tree
+  that ships broken. Three prior instances of this exact failure were each fixed
+  individually and each annotated with a warning comment in the deploy map, and a
+  fourth is live at HEAD — the convention was written down, in CLAUDE.md and in the
+  map itself, and the defect shipped anyway. Only a test that inspects a produced
+  deployed tree can fail on it, which is why entries 3 and 4 build into a temp target.
+
+  Entry 4 is separated from entry 3 deliberately even though both use the same
+  harness. Entry 3 asserts a FILE IS PRESENT; entry 4 asserts the module LOADS in a
+  cold process. Those are different claims and this repo has been burned by the
+  distinction twice: BP-811 (the file was copied to a path nothing invoked) and
+  GenReviewFixes H-2 (the import failed only on true first import, which
+  importlib.reload never performs).
+
+  Entry 2 carries must_block because a preflight that cannot block is inert, and it
+  carries its own positive control through the same command because a guard that fails
+  every build also passes the must_block assertion.
+
+  Entry 1 is the only unit-level entry and it exists to make the closure itself
+  falsifiable — the containment verdict has to be wrong for the withheld-dependency
+  case before the build failure means anything. It asserts on the computed closure, not
+  on the presence of a name in build_phases.py; a grep-shaped assertion there would be
+  green over a closure nothing consults.
+
+  real_artifact and deployed are both charged, and criterion and reachability are the
+  floor, which puts this AC exactly at the four-angle cap. `boundary` (one hop, two
+  hops, not-ours) is deliberately pushed to BP-900g-8-i rather than squeezed in here.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; the three-set A/B/C model and the binding direction rule as constraints),
+    delivers_to (the derived closure plus the shared deployed-tree harness consumed
+    by BP-900g-8-i and BP-900g-10), test_spec (criterion / reachability+must_block
+    / deployed / real_artifact — at the four-angle cap) and test_rationale. Added
+    three doc_links. Ruled on the BA's escalated question 1 — see notes. criteria
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BP-900g-8-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  HOLE B, build-time half. A deployed script can import a module that is not
+  deployed, and nothing notices until a consumer runs it.
+
+  WHY THIS IS INVISIBLE BY CONSTRUCTION. The defect exists only in the deployed
+  layout. In the package repo scripts/ is tracked source, so every sibling resolves
+  and every source-tree test passes. This is the same shape as the done_proof.py
+  incident recorded in CLAUDE.md ("New Hook / Gate Dependencies Must Be in the Build
+  Deploy-Manifest") and as BP-811 in the test-angles failure catalogue, where the AC
+  asserted the copy tier and never the reachability tier.
+
+  WHY THE CRITERION DEMANDS A DERIVED SET. BP-900g-5's it_requirements already
+  identified the manifest-overstatement defect one level down
+  (_manifest_ac_store_scripts scans all ~23 files in scripts/ac_store/ while
+  build_ac_store deploys an explicit 9-entry map) and asked for the manifest to derive
+  FROM the deploy map. This AC states the converse and stronger requirement: the
+  deploy set must derive from what the deployed code actually resolves. Deriving the
+  guard's view from the same hand-maintained map it is supposed to police makes the
+  two agree by construction and detect nothing.
+
+  TEST ANGLES for it-po. Floor: criterion + reachability. `deployed` is triggered
+  (the file ships through build.py and the claim is only true post-deploy) and
+  `real_artifact` is triggered (the claim is about module load, so it must be verified
+  in a genuinely fresh subprocess — importlib.reload re-executes in an already-
+  populated namespace and masks cold-import errors, which is precisely how
+  GenReviewFixes H-2 survived). One subprocess test that runs build.py into a temp
+  target and then invokes the deployed script charges reachability, deployed and
+  real_artifact together, which is how to stay inside the four-angle cap. must_block
+  rides the reachability entry: withhold one dependency and require the build to fail.
+
+  BOUNDARY. This AC is about the build refusing to ship an incomplete tree.
+  BP-900g-10 covers what a deployed script must do when a dependency is nonetheless
+  absent at runtime; BP-900g-9 covers a declared deploy entry whose source is missing.
+  The three are deliberately separate: g-8 alone would still have shipped this defect,
+  because _component_migration_map.py was never declared anywhere for g-9 to check.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO RULING (2026-08-17) — OPEN QUESTION 1, ESCALATED BY THE BA.
+  Question: this AC's derived-closure requirement (derive the deploy set FROM the
+  code) appears to push in the OPPOSITE direction to BP-900g-5's fifth
+  it_requirement (make _manifest_ac_store_scripts derive FROM the deploy_map).
+  BP-900g-5 is readiness: approved, work_status: done, so an implementer working its
+  residual could satisfy it in a way that forecloses this AC.
+
+  RULING: the two are NOT in conflict. They govern different edges of a three-set
+  relationship that has been treated as two sets, and that conflation IS the defect
+  class. Naming the three sets resolves it:
+
+    SET A — what the deployed code actually RESOLVES.  (truth of need)
+    SET B — the deploy_map: what a phase DECLARES it ships.  (declaration)
+    SET C — _manifest_ac_store_scripts: the guard's MODEL of what shipped.
+
+  BP-900g-5's fifth requirement is the edge C ← B. It is correct and it stands: C
+  currently overstates, scanning ~23 files in scripts/ac_store/ while B ships 9, so
+  the guard believes things are deployed that are not. Making C derive from B fixes
+  an inaccurate model.
+
+  This AC adds the edge B ⊇ closure(A), enforced by a build failure. That is a new,
+  upstream constraint on B. It does not touch the C ← B edge and does not require B
+  to be generated.
+
+  WHICH DIRECTION WINS WHERE THEY MEET: BP-900g-8 wins on the SOURCE OF TRUTH for
+  what must be deployed. B is checked against A and fails the build when it falls
+  short. BP-900g-5 wins on the GUARD'S MODEL: C keeps deriving from B. The three
+  forbidden shortcuts are enumerated in it_requirements.constraints and repeated here
+  because they are the whole ruling:
+
+    (a) Generating B from A — auto-deploying whatever the code imports. FORBIDDEN.
+        It removes the declaration, so BP-900g-9 has nothing left to check, and a
+        typo'd or accidental import silently changes what ships.
+    (b) Deriving the CHECKER's view from B — i.e. computing "what needs deploying"
+        from the deploy map. FORBIDDEN, and it is the specific trap this AC's
+        criteria name: the guard and the thing it polices agree by construction and
+        detect nothing.
+    (c) Deriving C from A. FORBIDDEN. It restores the divergence between the guard's
+        model and the actual deploy that BP-900g-5 was closing.
+
+  PRACTICAL ORDERING FOR THE IMPLEMENTER: land the C ← B derivation (BP-900g-5's
+  residual) FIRST, because it is behaviour-neutral by BP-900g-5's own assessment and
+  makes the guard's model honest. Then add the B ⊇ closure(A) check. Doing it in the
+  reverse order means the closure check runs against a guard model that overstates
+  coverage, and its first failures will be noise.
+
+  CAVEAT RAISED, NOT ACTED ON: BP-900g-5 is marked work_status: done and
+  readiness: approved, yet the evidence in this AC's criteria (the deploy_map still
+  hand-maintained at ~851-873, still carrying a live fourth instance) indicates its
+  fifth it_requirement is not implemented. That is a store-accuracy question about an
+  approved record owned outside this authoring pass; BP-900g-5 was NOT modified. It
+  is flagged here so the implementer of this AC verifies the state of the C ← B edge
+  before assuming it exists.

@@ -1,0 +1,311 @@
+id: TQ-400b-7
+components:
+  - testing_quality
+  - ac_store
+title: "The field reference answers type, nullability, writer and never-rewritten for both demotion fields"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the two record fields the demotion path introduces — the reason a record
+    lost its finished badge and the date it happened — whose documentation
+    obligation is already carried by TQ-400b-2, which requires both to be
+    documented in the store's field reference in the same change as the schema
+    change,
+  When a reader consults that field reference for either field, having neither the
+    schema nor the demotion code in front of them,
+  Then, for each field, they can state its type, whether it may be empty, what
+    value means the record was never demoted, which process writes it, and at what
+    moment,
+  And they can state that the date records the FIRST demotion and is never
+    rewritten by a later run — a rule that cannot be inferred from the field's
+    type and is the one a re-implementer most often breaks,
+  And they can state that a record carrying neither field is valid, so the records
+    that predate the demotion path are not read as malformed,
+  And a reader about to set either field by hand can say in advance which values
+    the store's validator will reject and which it will accept,
+  And what the reference says the validator accepts is what it actually accepts at
+    publication: a record shaped as the reference describes passes validation, and
+    a record the reference calls invalid is rejected,
+  And these rules are stated in exactly one place — the field reference — with any
+    other mention of the two fields pointing to it rather than restating it, so no
+    second, competing account of the demotion fields can drift from this one.
+depends_on:
+  - TQ-400b
+  - TQ-400b-2
+  - TQ-400b-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE SINGLE SURFACE. The obligation to document both fields here is already
+      stated in TQ-400b-2's it_requirements; this AC states the standard that
+      entry must meet, and must not be read as a second, separate obligation to
+      write a different document. 846 lines as of 2026-08-18 — extend the existing
+      field reference in place; do not open a new document for two fields.
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OWNING AC. It introduces both fields, owns the schema change they
+      require, and already carries the requirement that they be documented in the
+      field reference in the same change. Read it before authoring; do not restate
+      its field definitions and do not create a competing documentation task.
+      Confirmed at enrichment 2026-08-18: TQ-400b-2's it_requirements read "Both
+      fields must be documented in docs/reference/ac-schema.md in the same change,
+      including the never-rewritten rule for demotion_date." That IS the change.
+      This AC is its acceptance standard.
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The promotion-side counterpart a reader will compare against; the
+      demotion entry should be legible next to it rather than in isolation.
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. The declaration the entry must agree with, field for field.
+      The root is additionalProperties:false, which is why an undocumented field
+      is a field nobody will set correctly, and why the both-directions agreement
+      test reads this file rather than the entry's prose.
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. The shipped validator. The criteria's round-trip clause is a
+      claim about THIS program's behaviour, so the entry's accept/reject examples
+      are checked by running it, not by re-reading the schema.
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    THIS IS AN ACCEPTANCE STANDARD, NOT A SECOND DOCUMENTATION TASK — THE MOST
+    IMPORTANT CONSTRAINT ON THIS RECORD. TQ-400b-2's it_requirements ALREADY carry
+    the obligation to document demotion_reason and demotion_date in
+    docs/reference/ac-schema.md, in the same change as the
+    config/ac_store_schema.json edit. That obligation stands, is owned by
+    TQ-400b-2, and is NOT duplicated here. What this AC adds is the quality bar
+    that one entry must meet. An implementer working this AC must therefore
+    AMEND OR COMPLETE the entry TQ-400b-2 produces — never open a second section,
+    a second document, or a parallel account of the same two fields. Two accounts
+    of one field pair is precisely the drift the final criterion forbids, and it
+    is the drift this repo has already shipped in the code layer.
+  - >-
+    TARGET DOCUMENT AND SITE — docs/reference/ac-schema.md, in the existing field
+    reference, sited alongside the other work_status-related field entries. The
+    file is 846 lines and already over the 300-line advisory budget
+    (check_doc_length, severity warn), which is a further reason to complete the
+    existing entry rather than add a new top-level section.
+  - >-
+    IF TQ-400b-2'S ENTRY IS ALREADY PRESENT WHEN THIS AC IS WORKED, THE
+    DELIVERABLE MAY BE A ZERO-LINE DIFF PLUS A RECORDED VERIFICATION. That is a
+    legitimate outcome and must be reported as one. Do not manufacture an edit to
+    satisfy a diff-based documentation check — documentation-verifier's real-diff
+    assertion is the floor for a NEW document, not a licence to duplicate an
+    adequate entry. If the entry falls short, amend it in place and say which of
+    the six required facts were missing.
+  - >-
+    SIX FACTS PER FIELD, ALL SIX EXPLICIT. For each of demotion_reason and
+    demotion_date: (1) type, (2) whether it may be empty, (3) the value that means
+    the record was never demoted, (4) which process writes it, (5) at what moment,
+    and — for demotion_date only — (6) that it records the FIRST demotion and is
+    never rewritten by a later run. Fact 6 cannot be inferred from the type and is
+    the one an author writing to satisfy a presence check omits; losing it destroys
+    the lapse-duration information the cadence reports depend on.
+  - >-
+    STATE EXPLICITLY THAT A RECORD CARRYING NEITHER FIELD IS VALID. All existing
+    records in the store predate the demotion path; without this sentence a reader
+    reasonably concludes they are malformed. Neither field may appear in the
+    schema's required list (TQ-400b-2 already carries that constraint) and the
+    entry must say so in reader-facing terms.
+  - >-
+    THE ACCEPT/REJECT ACCOUNT MUST BE FALSIFIABLE, SO WRITE IT AS EXAMPLES. Give at
+    least one example record the store's validator accepts and at least one it
+    rejects (e.g. a malformed demotion_date), in the form a reader would actually
+    write by hand. Prose alone about "valid values" is not extractable, and the
+    round-trip criterion is only checkable if the examples can be lifted out and
+    fed to scripts/ac_store/validate_ac_schema.py.
+  - >-
+    WRITE AGAINST THE DELIVERED FIELD SHAPE, NOT AGAINST THIS AC'S WORDING. If
+    TQ-400b-2 ships a different type, nullability, or date format from what this
+    record anticipates, the entry follows the delivery and the divergence is raised
+    against TQ-400b-2 — it is never smoothed over in the reference.
+  - >-
+    SINGLE STATEMENT, ENFORCED BY LINKING. Every other mention of the two fields —
+    docs/how-to/done-proof-enforcement.md (TQ-400a-5), the state diagram
+    (TQ-400b-6), the triage guide (TQ-400d-5) — names the fields and LINKS here for
+    their rules. Any of those that restates a rule is a second account that will
+    drift; check for them at authoring time rather than trusting the convention.
+  - >-
+    SEQUENCE AFTER TQ-400b-2'S SCHEMA EDIT AND WRITER LAND. Both the field shapes
+    and the validator's behaviour are claims about shipped code; the round-trip
+    criterion cannot be satisfied before there is something to round-trip against.
+  - >-
+    The file is a tracked reference subject to check_doc_frontmatter and
+    check_doc_links; keep both passing in the same commit.
+delivers_to:
+  - agent: architecture-diagram-author
+    ac_id: TQ-400b-6
+    contract: >-
+      The single normative account of demotion_reason and demotion_date — type,
+      nullability, never-rewritten rule, and the never-demoted value — published in
+      docs/reference/ac-schema.md. TQ-400b-6's state diagram LABELS the demotion
+      edge with the two field names and links here for their semantics; it must not
+      restate them.
+expects_from:
+  - ac_id: TQ-400b-2
+    contract: >-
+      The two fields as delivered — their names, types, nullability, the closed
+      set of values each can take, and the schema change that admits them. This
+      AC's reference entry describes exactly that delivery; if the delivered
+      shape differs, the entry follows the delivery, not this AC's wording. ALSO
+      the field-reference entry itself: TQ-400b-2's it_requirements already oblige
+      it, so this AC receives an entry to complete rather than a blank page.
+  - ac_id: TQ-400b-4
+    contract: >-
+      The never-rewritten rule for the demotion date, which is the one semantic
+      the field's type cannot express and which the reference must state
+      explicitly.
+test_spec:
+  - name: test_tq400b7_reference_states_all_six_facts_for_both_demotion_fields
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Read the published docs/reference/ac-schema.md and assert that, for each of
+      demotion_reason and demotion_date, the entry states type, emptiness, the
+      never-demoted value, the writing process and the moment of writing — and
+      that the demotion_date entry states the first-demotion / never-rewritten
+      rule. Also assert the entry states that a record carrying neither field is
+      valid.
+  - name: test_tq400b7_documented_shapes_agree_with_the_shipped_schema_and_no_second_account_exists
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      TWO SOURCES, ONE VOCABULARY, BOTH DIRECTIONS. Load
+      config/ac_store_schema.json and assert the field names, JSON types,
+      nullability and date format the reference documents agree with what the
+      schema declares — no documented property the schema lacks, and no demotion
+      property in the schema left undocumented. Then scan docs/ for any OTHER file
+      that DEFINES (rather than links to) either field's type, nullability or
+      never-rewritten rule, and assert there is none. That scan is the mechanical
+      form of the single-statement criterion.
+  - name: test_tq400b7_reference_examples_are_accepted_and_rejected_by_the_real_validator
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT, BOTH POLARITIES. Extract the example records from the
+      entry, write them into a temp store, and run
+      scripts/ac_store/validate_ac_schema.py as a SUBPROCESS: every example the
+      reference calls valid must pass, and every example it calls invalid must be
+      rejected (must_block). Re-implementing the schema check inside the test
+      proves nothing about the validator a reader will actually meet.
+  - name: test_tq400b7_a_real_pre_demotion_record_still_validates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Take an actual on-disk AC file from docs/acceptance-criteria/ that carries
+      neither demotion field, copy it verbatim into a temp store, and run the real
+      validator over it — it must pass. This is the bytes-as-written check behind
+      the "records that predate the demotion path are not malformed" clause; a
+      hand-built dict reproduces the author's assumption instead of the store's
+      actual shape.
+test_rationale: >-
+  change_target is docs, and the cheapest satisfying artifact here is two field
+  rows — which would pass a file-diff check and answer none of the reader's
+  questions. Two of this AC's clauses are round-trips against shipped programs and
+  therefore fully mechanical: what the reference says the validator accepts is
+  checked by running the validator on the reference's own examples in both
+  polarities, and the pre-demotion-record clause is checked against a real
+  on-disk record rather than a fixture. The single-statement clause is also fully
+  mechanical and is folded into the seam entry as an absence scan, because a
+  reviewer reading this AC's diff sees an addition and has no way to know another
+  document already defines the same fields. NOT MECHANICALLY TESTABLE: "a reader
+  can state its type / can say in advance which values will be rejected" is
+  comprehension. The proxy is deliberately structural — assert the six facts are
+  each PRESENT (not merely that the field name appears) and assert via the seam
+  entry that what is present is TRUE of the shipped schema. Presence plus
+  correctness is the checkable half of "can state correctly"; the reader's success
+  is not observable by a test. Note also that this AC may legitimately produce a
+  zero-line diff if TQ-400b-2's entry already meets the bar — the tests are
+  written against the published entry, not against this AC's diff, precisely so
+  that outcome is a pass rather than a reason to duplicate.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Assigned documentation-expert; complexity S (one entry in an existing file,
+    and the change is owned by TQ-400b-2). ESCALATED HAND-OFF RESOLVED — the first
+    and largest it_requirement now states explicitly that this AC is the ACCEPTANCE
+    STANDARD for the single field-reference entry TQ-400b-2 already obliges, that
+    the implementer must amend or complete that entry rather than open a second section
+    or document, and that a zero-line diff plus a recorded verification is a legitimate
+    outcome that must not be papered over with a manufactured edit to satisfy a diff-based
+    documentation check. TQ-400b-2 was re-read at enrichment and its it_requirement
+    "Both fields must be documented in docs/reference/ac-schema.md in the same change"
+    is quoted in doc_links so the ownership is unambiguous. Added config/ac_store_schema.json
+    and scripts/ac_store/validate_ac_schema.py to doc_links (the two artifacts the
+    round-trip clause is really about), and delivers_to TQ-400b-6 so the state diagram
+    labels the fields and links here. test_spec: criterion (six facts per field) /
+    seam (shapes agree with the shipped schema both directions, plus the no-second-account
+    absence scan) / reachability (the entry''s own examples through the real validator
+    subprocess, must_block) / real_artifact (an actual pre-demotion record from the
+    store still validates). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the reference-doc entry in TQ-400b's documentation_triggers.
+
+  SCOPE — THIS IS NOT A SECOND OBLIGATION. TQ-400b-2 already requires both fields
+  to be documented in the store's field reference in the same change as the
+  schema edit. That obligation stands and is not duplicated here. What this
+  record adds is the acceptance standard for that entry: what a reader must be
+  able to answer from it. Anyone enriching or building this AC must treat
+  TQ-400b-2 as the owner of the change and this record as its quality bar, and
+  must NOT open a second documentation surface for the same two fields — two
+  accounts of one field pair is precisely the drift the last criterion forbids.
+
+  Why "the entry exists" would not do: the store's schema refuses unknown fields,
+  so an undocumented field is a field nobody else will ever set correctly. The
+  four things a reader must be able to state — type, emptiness, writer, moment —
+  are the four an author omits when writing to satisfy a presence check, and the
+  never-rewritten rule is invisible from the type, so it is the one that gets
+  lost and the one whose loss destroys the lapse-duration information the
+  cadence reports depend on.
+
+  The validator-agreement clause makes the entry falsifiable against the shipped
+  schema rather than against the author's intent.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — THE ESCALATED HAND-OFF, AND THE INCENTIVE
+  THAT WOULD BREAK IT. The BA escalated the risk that this record becomes a second
+  documentation task. The mechanism by which that would actually happen is worth
+  naming: documentation-verifier asserts a named doc file has a REAL git diff, so
+  an implementer who arrives after TQ-400b-2 has already written an adequate entry
+  faces a gate that a zero-line diff does not satisfy. The pressure is therefore
+  toward writing SOMETHING — a new section, a restatement elsewhere — which is
+  exactly the drift the last criterion forbids. it_requirements now make the
+  zero-diff outcome explicitly legitimate and require it to be reported, and the
+  test contract is written against the PUBLISHED entry rather than against this
+  AC's diff so that outcome passes on its merits.

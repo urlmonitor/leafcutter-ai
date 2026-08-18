@@ -1,0 +1,220 @@
+id: BP-900g-8-i
+components:
+  - build_pipeline
+title: "The dependency closure holds at the second hop and survives a newly added module"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given the derived intra-package dependency closure of BP-900g-8,
+  And a deployed script A that resolves module B, where B in turn resolves module C,
+    and C is not deployed,
+  When the deploy-completeness preflight runs,
+  Then the build exits non-zero naming C, so a chain that is correct at its first hop
+    and broken at its second is caught rather than passed,
+  And given a module D newly added to the package and resolved by an already-deployed
+    script, with no edit made to any manifest, list, or allowlist,
+  When the same preflight runs,
+  Then D is either deployed or named in a build failure — the closure covers it
+    because it was derived from the code, and a run in which D is silently ignored
+    means the closure is still reading a hand-maintained list and this criterion is
+    not met,
+  And given a deployed script that resolves a module from outside the package — the
+    standard library, an installed third-party distribution, or a host-project path
+    the consumer owns — that module produces no finding, so the closure does not
+    demand the build ship what it does not own,
+  And each of these three shapes is exercised by building into a temporary target and
+    inspecting the deployed tree, not by reading the manifest and agreeing with it,
+  Because the fourth instance of this defect at HEAD arrived after three prior
+    instances had each been fixed individually and annotated with a warning comment;
+    a closure that a new module can slip past reproduces that history exactly, and a
+    closure derived from the very map it is auditing agrees with it by construction
+    and detects nothing.
+depends_on:
+  - BP-900g-8
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "The build_ac_store deploy_map and _manifest_ac_store_scripts — the two views BP-900g-5's it_requirements already noted can diverge. Deriving one from the other satisfies neither hop of this criterion."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-5.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Its fifth it_requirement records the manifest-overstatement defect (_manifest_ac_store_scripts scans ~23 files, the deploy map ships 9) — the divergence this AC's derived closure must resolve in the opposite direction."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO ADDITION. The subprocess entry point all three shapes must run through (`python scripts/build.py --target-dir <tmp>`). The criterion's last clause — 'inspecting the deployed tree, not reading the manifest' — is only satisfiable by producing a real target with this command."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-6.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Carries the negative-control tests that keep host-project and package-dev path forms out of the deploy keys. The third clause of this AC (out-of-package modules produce no finding) is the same bound at the closure layer; those tests must stay green."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Angle vocabulary, and the source of the specific warning behind the newly-added-module clause: the deployment-gap catalogue records four incidents where a source-tree test could not observe the defect at all."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/build_phases.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-reference classification the closure must make before it can decide anything. The three clauses of this AC are the three verdicts, and conflating any two of them is how a closure stops being right."
+    required:
+      - verdict
+    properties:
+      verdict:
+        type: string
+        description: "One of: OURS_DEPLOYED (intra-package, present in the deployed tree — no finding); OURS_MISSING (intra-package, absent from the deployed tree — build failure naming it, at any hop depth); NOT_OURS (standard library, installed third-party distribution, or host-project path — no finding, and never a candidate for deployment); UNRESOLVABLE (a dynamic reference static analysis cannot decide — reported for a human, never silently classified NOT_OURS)."
+      hop_depth:
+        type: integer
+        description: "The distance from the deployed script at which the reference was found. Carried so a second-hop failure names the module that is actually missing rather than the top-level script, and so a closure that silently stops at depth 1 is observable as such."
+  constraints:
+    - "THE NEWLY-ADDED-MODULE TEST IS THE ONE THAT CANNOT BE FAKED, AND IT IS THE ACCEPTANCE TEST FOR 'DERIVED'. It must add a real module to the package tree inside the test, have an already-deployed script resolve it, edit NO manifest, list, or allowlist, and re-run the build. Every other clause of this AC can be satisfied by a sufficiently complete enumeration; this one cannot. If it is dropped, weakened, or replaced by a fixture that pre-registers the module, the derivation requirement of BP-900g-8 has not been met regardless of what else is green."
+    - "A CLOSURE THAT STOPS AT DEPTH 1 MUST BE OBSERVABLE AS SUCH. 'Check the siblings' is where a naive implementation stops, and the ac_store package is exactly the module cluster where one helper imports another. The second-hop failure message must name C, not A — an author told the top-level script is broken goes looking at the wrong file."
+    - "OUT-OF-PACKAGE IS A FALSE-POSITIVE CONTROL, NOT A COURTESY. A closure that demands the build ship the standard library gets an allowlist within a week, and an allowlist is a hand-maintained list wearing a different name — which returns the whole feature to the state BP-900g-8 exists to leave. Cover all three out-of-package forms: stdlib, an installed third-party distribution, and a host-project path such as the debugging/scripts/... form that BP-900g-4 mis-normalised and BP-900g-5 had to spend a clause undoing. BP-900g-6's negative-control tests fence this and must stay green."
+    - "UNRESOLVABLE IS A FOURTH VERDICT, NOT A SYNONYM FOR NOT_OURS. Where static analysis cannot decide what a dynamic reference resolves to, report it. Folding the undecidable case into 'not ours' is the same fail-open this whole L2 subtree is closing, relocated into the classifier."
+    - "REUSE BP-900g-8'S HARNESS; DO NOT BUILD A SECOND ONE. The temp-target build harness is delivered by BP-900g-8 and is also consumed by BP-900g-10. Three private copies of a deployed-tree harness will drift, and the copy that is not exercised by the blocking test is the one that will be wrong."
+    - "The three shapes must be asserted against the produced target directory, never against the deploy declaration. 'Read the manifest and agree with it' is explicitly disqualified by the criterion and is the exact shape of a test that passes while the tree ships broken."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-8
+  contract: "Two things, both delivered by BP-900g-8 and consumed unchanged here: (1) the derived transitive closure function over the package tree, returning per deployed script the intra-package modules it resolves, plus the build-time containment check against the deploy declaration; (2) the deployed-tree harness that runs `python scripts/build.py --target-dir <tmp>` into a temporary target and exposes the produced tree for inspection. This AC adds no new closure and no new harness — it drives three surface shapes (second hop, newly added module, out-of-package) through both."
+test_spec:
+  - name: test_bp_900g_8_i_second_hop_missing_dependency_fails_the_build_naming_the_inner_module
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The depth boundary: deployed script A resolves B, B resolves C, C is withheld from the deploy. Build into a temp target and assert non-zero exit and that the failure names C — specifically assert C appears and that naming only A is a failure. A closure that stops at depth 1 passes a one-hop test and fails here; that is the whole point of the entry."
+  - name: test_bp_900g_8_i_out_of_package_modules_produce_no_finding
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The false-positive control across all three out-of-package forms in one run: a stdlib import, an installed third-party distribution import, and a host-project path of the debugging/scripts/... form that BP-900g-4 mis-normalised into a deploy key. Build into a temp target and assert zero findings for all three and a zero exit. A closure that flags these gets an allowlist, and an allowlist is the hand-maintained list this feature exists to remove."
+  - name: test_bp_900g_8_i_newly_added_module_is_covered_with_no_manifest_edit
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier, and the acceptance test for 'derived'. Inside the test, write a new module D into the package tree and make an already-deployed script resolve it. Edit NO manifest, list, or allowlist. Run `python scripts/build.py --target-dir <tmp_target>` as a subprocess and assert the outcome is either (a) D present in the deployed tree, or (b) non-zero exit naming D. A run that exits zero with D absent from the deployed tree FAILS this test — that outcome means the closure is still reading a list. This is the only construction that distinguishes derivation from enumeration."
+  - name: test_bp_900g_8_i_all_three_shapes_asserted_against_the_produced_target_tree
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "For each of the three shapes, the assertion reads the DEPLOYED target directory produced by build.py — file presence and cold module resolution in the temp target — and never the deploy declaration in build_phases.py. A test that reads the manifest and agrees with it is green on a tree that ships broken, which is explicitly disqualified by the criterion's last clause."
+test_rationale: |
+  Three shapes, three distinct ways a closure that is right today stops being right,
+  and each needs its own failure mode available to the test.
+
+  The second hop is where a "check the siblings" implementation stops. It is not depth
+  for its own sake: scripts/ac_store/ is exactly the module cluster where one helper
+  imports another, and the live instance at HEAD is a sibling resolution. A one-hop
+  test is green on a depth-1 closure, so the entry has to withhold the module at
+  depth 2 and assert the inner module's name appears.
+
+  The newly-added module is the temporal case and it is the only entry here that can
+  fail an otherwise-complete enumeration. An implementer can satisfy every other clause
+  of BP-900g-8 by writing a correct list today; the defect then returns on the next
+  module, which is precisely the history the criteria cite — three instances fixed one
+  at a time, each annotated with a warning, and a fourth live. This entry adds a module
+  inside the test and forbids touching any list, so the only implementation that passes
+  is one that reads the code.
+
+  The out-of-package case is the false-positive control, and it is load-bearing rather
+  than tidy: a closure that demands the build ship the standard library acquires an
+  allowlist, and an allowlist is a hand-maintained list under a different name. It also
+  re-fences BP-900g-5's narrowed prefix bound, which existed because BP-900g-4
+  mis-captured a host-project path.
+
+  The fourth entry charges `deployed` explicitly so the assertion surface is pinned:
+  every one of the three shapes is judged from the produced target directory. Reading
+  the manifest and agreeing with it would pass all three shapes on a tree that ships
+  broken, and the criterion disqualifies it in so many words. Three distinct angles are
+  charged (boundary, reachability, deployed) against a cap of four; the fourth slot is
+  deliberately left unspent rather than duplicating the parent's criterion entry.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; the four-verdict classification including UNRESOLVABLE, and the newly-added-module
+    clause named as the non-negotiable acceptance test for 'derived'), expects_from
+    (matching BP-900g-8's delivers_to — closure plus shared harness, explicitly no
+    second harness), test_spec (boundary x2 / reachability+must_block / deployed)
+    and test_rationale. Added three doc_links. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  EDGE CASE PINNED: the closure that is right once and stops being right.
+
+  THREE SHAPES, THREE DISTINCT FAILURES. The second hop is where a "check the
+  siblings" implementation stops — and it is not hypothetical depth-for-its-own-sake,
+  because the ac_store package is exactly the kind of module cluster where one helper
+  imports another. The newly-added module is the temporal case and is the whole point
+  of BP-900g-8's "derived, not hand-maintained" clause; without it, an implementer can
+  satisfy g-8 by writing a complete list today and the defect returns on the next
+  module. The external-module case is the false-positive control: a closure that
+  demands the build ship the standard library is one that gets an allowlist, and an
+  allowlist is a hand-maintained list wearing a different name.
+
+  WHY THE THIRD CLAUSE MATTERS MORE THAN IT LOOKS. BP-900g-5 had to spend a clause
+  narrowing BP-900g-4's prefix because it had mis-captured a host-project path
+  (debugging/scripts/...) as a deploy key. The same boundary applies to a dependency
+  closure. BP-900g-6 preserved that bound explicitly and its negative-control tests
+  must stay green.
+
+  TEST ANGLES for it-po. `boundary` (one hop / two hops / not-ours) and `deployed`
+  (all three inspected in a real temporary target). The newly-added-module shape is
+  the one that cannot be faked: it requires adding a module to the package tree inside
+  the test and re-running the build, which is also the only construction that proves
+  derivation rather than enumeration.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO ENRICHMENT NOTE (2026-08-17). Two additions to the BA's hand-off.
+
+  FIRST, a fourth verdict. The BA's three clauses give three outcomes: ours-and-
+  deployed, ours-and-missing, not-ours. Static analysis has a case none of them
+  covers — a dynamic reference whose target is built from a runtime value and cannot
+  be resolved statically. Folding it into "not ours" is the same fail-open this
+  subtree is closing, relocated into the classifier, so UNRESOLVABLE is specified as
+  a distinct verdict that reports for a human. This is stated in
+  it_requirements.constraints and in the config_schema_fragment rather than in the
+  criteria, because it is an implementation-environment constraint the BA could not
+  see, not a new behaviour.
+
+  SECOND, the newly-added-module entry is marked as the acceptance test for the whole
+  derivation requirement, not merely one of three shapes. It is the only test in
+  either this AC or BP-900g-8 that an implementation based on a complete
+  hand-maintained list cannot pass. If schedule pressure forces a reduction, this is
+  the entry that must survive.
+
+  ON THE DIRECTION QUESTION. The BA's second doc_link raises BP-900g-5's fifth
+  it_requirement as pushing the opposite way. That is ruled on in BP-900g-8's notes
+  under IT-PO RULING — three sets, two edges, B ⊇ closure(A) checked and C ← B
+  derived — and the ruling binds this AC too. Nothing was changed in BP-900g-5.

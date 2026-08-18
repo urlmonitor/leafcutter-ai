@@ -96,7 +96,12 @@
           "additionalProperties": { "type": "string" },
           "description": "Angle id -> one-line definition. Keys are constrained to the $defs/angle enum so a flow cannot declare a vocabulary its own checks are unable to reference."
         },
-        "modifier": { "type": "object", "additionalProperties": { "type": "string" } },
+        "modifier": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/modifier" },
+          "additionalProperties": { "type": "string" },
+          "description": "Modifier id -> one-line definition. Keys are constrained to the $defs/modifier enum for the same reason `core` and `conditional` are: a flow cannot declare a modifier its own checks are unable to reference."
+        },
         "conditional": {
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/angle" },
@@ -147,6 +152,11 @@
       ],
       "description": "Which angle of the machinery a check verifies. criterion = the literal claim holds; reachability = the real production entry point produces the behaviour AND its result is consumed in control flow; seam = real producer output fed into the real consumer; real_artifact = the actual on-disk artifact, not a hand-authored fixture; deployed = the built/deployed copy, not the source tree; boundary/failure = conditional edge angles."
     },
+    "modifier": {
+      "type": "string",
+      "enum": ["must_block"],
+      "description": "A flag layered on top of an angle rather than a substitute for one. must_block marks a check whose SUBJECT is a gate/guard/validator, so a paired negative control is mandatory and must be shown to BLOCK. Single-sourced here so `angle_vocabulary.modifier` (what the flow declares) and `checks[].modifiers` (what the flow uses) cannot drift apart."
+    },
     "phase": {
       "type": "object",
       "additionalProperties": false,
@@ -193,7 +203,7 @@
         "angle": { "$ref": "#/$defs/angle" },
         "modifiers": {
           "type": "array",
-          "items": { "type": "string", "enum": ["must_block"] },
+          "items": { "$ref": "#/$defs/modifier" },
           "description": "must_block marks a check whose subject is a gate/guard/validator, so a paired negative control is mandatory and must be shown to BLOCK."
         },
         "claim": {

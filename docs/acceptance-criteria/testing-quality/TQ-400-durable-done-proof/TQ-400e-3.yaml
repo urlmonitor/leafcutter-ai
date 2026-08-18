@@ -1,0 +1,158 @@
+id: TQ-400e-3
+components:
+  - testing_quality
+  - ac_store
+title: "Work that legitimately needs no test can be declared so, with a stated reason"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finished record for which a covering test is structurally impossible —
+    for example a documentation deliverable — that has been declared test-free and
+    carries a written reason explaining why,
+  When the whole-store honesty sweep evaluates it,
+  Then the record is reported under a distinct "exempt" outcome, separate from
+    both "proven" and "unproven",
+  And it is left finished, with its file byte-for-byte unchanged by the run,
+  And the run's report shows the stated reason next to the record, so a reader can
+    judge the exemption without opening the record,
+  And the number of exempt records is stated separately in the report rather than
+    being absorbed into the proven total.
+depends_on:
+  - TQ-400e
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The normative field reference for test_required and test_rationale — the two fields this AC pairs. Read it before considering any new field: both already exist and are already documented."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "THE FIELDS ALREADY EXIST. test_required (boolean|null) and test_rationale (string|null, 'Must be a string, never a list') are both defined here today. The exemption mechanism is not being invented — it is being given a reason requirement. Do not add a parallel field."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "THE LOAD-BEARING ENFORCEMENT POINT. Line 463 — `if data.get(\"test_required\") is False: continue` inside check_all_done_acs — is where the declaration is honoured today, with NO reason required, for the 37 done records that carry it. check_changed_done_acs repeats the same skip at :491-495. Both must be reconciled with the reason requirement; :463 is the one the whole-store sweep actually runs through."
+  - path: scripts/commit_guardian/_ac_schema_validators.py
+    relationship: describes
+    status: exists
+    relevance: "THE OTHER ENFORCEMENT POINT, AND IT POINTS THE OPPOSITE WAY. Around :522 an APPROVED, not-yet-done, leaf CODE AC carrying test_required: false is REJECTED outright, and a test_spec alongside test_required: false is rejected as a contradiction. The two rules must be reconciled, not stacked — see it_requirements."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The real_artifact angle. The 37 records that already carry test_required: false are the authentic fixture for this AC; hand-built dicts would reproduce the bias that hid the files_touched no-op."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DO NOT MINT A NEW MECHANISM — HARDEN THE ONE THAT ALREADY EXISTS. `test_required: false` is already honoured today at scripts/commit_guardian/check_done_proof.py:463 (and again at :491-495 in the change-scoped mode), with no reason required, and 37 done records in the store carry it as of 2026-08-17. The prose justification field also already exists: `test_rationale` in config/ac_store_schema.json. This AC pairs the two. Any implementation that introduces a new exemption field, a new allowlist, or a parallel declaration syntax has built a second mechanism beside the live one, and the live one will keep being honoured unguarded."
+  - "NAME EVERY ENFORCEMENT POINT AND KNOW WHICH ONE GATES THE SWEEP. There are three: check_done_proof.py:463 (whole-store sweep — LOAD-BEARING for this AC), check_done_proof.py:491-495 (change-scoped CI mode), and _ac_schema_validators.py:~522 (authoring-time schema validation). A reason requirement added only to the schema validator does nothing to the sweep; a change to the sweep alone leaves the CI mode inconsistent. Update the ones that gate, and keep the others in agreement."
+  - "RECONCILE, DO NOT STACK, THE SCHEMA VALIDATOR'S OPPOSING RULE. _ac_schema_validators.py already REJECTS test_required: false on an approved, not-yet-done, leaf CODE AC ('a code AC always needs tests'), and rejects test_required: false alongside a non-empty test_spec as a contradiction. So the legitimate exemption population is non-code records and already-done records. State that boundary explicitly in the implementation rather than adding a reason requirement on top of a rule that would have rejected the record anyway — otherwise the two layers disagree about which records may legally be exempt."
+  - "EXEMPT IS A REPORTED OUTCOME, NOT A `continue`. The current code path literally skips the record; a skipped record is invisible, and 37 records currently leave the enforced population with no reader ever seeing why. The sweep must classify and report them, with the reason text carried into the report so a reader can judge the exemption without opening the file."
+  - "THE EXEMPT COUNT MUST BE STATED SEPARATELY AND MUST NEVER BE ABSORBED INTO PROVEN. Folding exempt into proven lets a test-free declaration inflate the good news, which is the specific dishonesty the parent L0 exists to remove."
+  - "THE EXEMPT RECORD'S FILE MUST BE BYTE-IDENTICAL AFTER THE RUN. Same write discipline as TQ-400e-1: do not open the file for writing at all, including to record that the exemption was confirmed — TQ-400e-5 depends on that."
+  - "Must handle errors gracefully per the project error handling policy. The refusal path for a reasonless declaration is TQ-400e-4's subject and must be built as part of the same entry point, not as a separate validator."
+delivers_to:
+  - agent: python-coder
+    contract: "The honoured-exemption outcome: a record carrying test_required: false AND a positively-confirmed non-empty test_rationale is classified `exempt`, reported with its reason text, counted separately, and never written to. This is (a) the population TQ-400d-1 must exclude from the triage pile, (b) the entry point TQ-400e-4 feeds a reasonless declaration through, and (c) the outcome TQ-400e-5 requires to be stable across consecutive runs."
+expects_from: null
+test_spec:
+  - name: test_tq_400e_3_reasoned_declaration_is_reported_exempt_with_its_reason
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A done record carrying test_required: false and a non-empty test_rationale is reported under a distinct exempt outcome with the reason text present in the report, and the exempt count is stated separately. Assert specifically that the exempt count is NOT added into the proven count — construct a store where folding them yields the same proven figure a correct implementation must not show."
+  - name: test_tq_400e_3_exempt_record_file_is_byte_identical_after_the_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Build the store with the project's real serializer, using records shaped exactly as the 37 that already carry test_required: false today. sha256 the record file before and after a full sweep with outcome application enabled and assert equality — bytes, not parsed values, because a load-and-dump round trip preserves values and rewrites the file."
+  - name: test_tq_400e_3_exempt_outcome_is_produced_by_the_existing_honouring_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER, AND THE ANTI-SECOND-MECHANISM CONTROL. Assert the sweep's exempt set is exactly the set the existing test_required skip at check_done_proof.py:463 applies to (restricted to records with a confirmed reason). Then flip a record's test_required from false to absent and assert it leaves the exempt set and enters the evaluated population — proving one honouring point rather than two."
+  - name: test_tq_400e_3_exempt_records_appear_in_the_report_rather_than_being_skipped
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Run the sweep as a subprocess and assert every exempt record is PRESENT in the report artifact written to disk. The current behaviour is a bare `continue`, so 'skipped' is the default an implementation falls back into, and skipped versus exempt is invisible to any test that only inspects the unproven list."
+test_rationale: |
+  The dominant risk here is not a wrong answer but a duplicated mechanism: an implementer who
+  does not know that test_required: false is already live at check_done_proof.py:463 will build
+  a second exemption path, ship it green, and leave the original honoured without a reason for
+  the 37 records that use it today. The seam test is what makes that failure visible — it
+  asserts the sweep's exempt set is the SAME set the existing skip applies to, and the
+  flip-the-field mutation proves there is one honouring point rather than two. The byte-identity
+  test uses records shaped like the real 37 rather than hand-built dicts, and the reachability
+  test exists because the current code path is literally a `continue`: skipping is the state
+  the implementation starts in, and only reading the report can tell that it stopped.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements state, explicitly so
+    no implementer builds a parallel exemption system, that test_required: false is
+    ALREADY honoured unguarded at check_done_proof.py:463 (37 done records carry it)
+    and that test_rationale ALREADY exists in config/ac_store_schema.json — this AC
+    pairs the two. All three enforcement points are named, with :463 identified as
+    the load-bearing one, and the opposing rule at _ac_schema_validators.py:~522 (rejects
+    test_required: false on an approved leaf code AC) is flagged for reconciliation
+    rather than stacking. test_spec: criterion / real_artifact (byte identity on real-shaped
+    records) / seam (one honouring point, proven by mutation) / reachability (reported,
+    not skipped). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: internal
+notes: |
+  Build on the mechanism that already exists — do NOT mint a new one. A test-free
+  declaration is already honoured today: check_all_done_acs and
+  check_changed_done_acs (scripts/commit_guardian/check_done_proof.py:463 and
+  :491-495) skip any record whose test_required is the boolean False, and 37
+  finished records in the store carry it as measured on 2026-08-17. The schema
+  already carries test_rationale (config/ac_store_schema.json) as the prose
+  justification field.
+
+  What is missing, and what this AC adds, is that the declaration is currently
+  honoured with NO reason required — a silent, unaccountable escape. This AC
+  requires the reason; TQ-400e-4 makes the requirement enforceable by refusing
+  declarations that lack one.
+
+  Exempt must be a reported outcome, not a skip. A skipped record is invisible,
+  and invisibility is the whole defect TQ-400 addresses: 37 records currently
+  leave the enforced population with no reader ever seeing why.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17) — THE THIRD ENFORCEMENT POINT, AND IT
+  DISAGREES. Beyond the two skips the BA identified, scripts/commit_guardian/
+  _ac_schema_validators.py (around :522) already REJECTS test_required: false on
+  an approved, not-yet-done, leaf CODE AC, and rejects test_required: false
+  alongside a non-empty test_spec as a contradiction. So the two layers currently
+  point in opposite directions: the schema validator forbids the declaration for
+  code ACs at authoring time, while the sweep honours it unconditionally for done
+  records at check time. The legitimate exemption population is therefore
+  non-code records and already-done records, and that boundary has to be stated in
+  the implementation. Adding a reason requirement without reconciling the two
+  leaves a record that is legal to the sweep and illegal to the validator, which
+  is the disjoint-vocabulary failure (EPIC-ComputedQualityGates FP-1 layer 3)
+  waiting to happen again.
+
+  SEQUENCING. Per the product owner, TQ-400e gates TQ-400b and TQ-400d. This
+  record is the gate for TQ-400d specifically: TQ-400d-1 consumes the exempt
+  outcome to keep the triage pile free of records nobody should triage.
