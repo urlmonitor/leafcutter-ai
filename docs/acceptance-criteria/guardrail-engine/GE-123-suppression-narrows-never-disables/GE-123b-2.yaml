@@ -1,0 +1,169 @@
+id: GE-123b-2
+components:
+  - commit_guardian
+title: "One allowlist line cannot silence every file in the repository"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three files — "secrets.py", "helpers.py" and "src/deep/secrets.py" —
+    each containing the same four lines the scanner's content rules recognise: a
+    cloud access key in the AWS_KEY form, a private-key header line, a quoted
+    twelve-character value assigned to a field named password, and a
+    high-entropy token,
+  And the allowlist contains exactly one entry, in which both the rule field and
+    the path field are written as the wildcard,
+  When all three files are scanned through the scanner's multi-file entry point
+    — the same entry point the pre-commit secrets check calls,
+  Then all twelve findings are reported and the run's exit status reports
+    findings present,
+  Because a line that names no particular rule and no particular path leaves
+    every file it reaches with nothing able to report on it, which is the same
+    collapse this guarantee forbids, applied to the whole repository at once.
+
+  Given the same three files,
+  And the allowlist instead contains exactly one entry naming the single rule
+    that recognises the password assignment, with the path field written as the
+    wildcard,
+  When the run completes,
+  Then nine findings are reported — the cloud access key, the private-key header
+    and the high-entropy token in each of the three files — and no
+    password-assignment finding is reported for any of them,
+  Because suppressing ONE rule across the repository leaves five rules able to
+    report on every file, so it is a narrowing and must keep working; a fix that
+    satisfies the first arm by refusing repository-wide entries as a class is a
+    regression, not a fix.
+
+  Given the same three files,
+  And the allowlist contains two entries — the all-rules, all-paths entry on one
+    line, and on another an entry naming the single rule that recognises the
+    password assignment together with the path "helpers.py",
+  When the run completes,
+  Then "helpers.py" reports three findings rather than four,
+  Because refusing one over-broad line never withdraws the other lines the
+    author wrote in the same file.
+depends_on:
+  - GE-123b
+  - GE-123b-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The scanner is a packaged template. templates/skills/security-scanner/scripts/scan_secrets.py is the canonical edited copy; build.py propagates it to the materialized copies. Edit the template only."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done, and this criterion is the exact complement of one of its scenarios — read the note below before treating either as a duplicate of the other. -v closed the MALFORMED spelling of total disablement (a wildcard rule with a ZERO-SEGMENT path) and deliberately preserved the literal wildcard path as the legitimate repository-wide form. The correctly-written spelling — wildcard rule AND wildcard path — was therefore left working, and still disables the whole scanner today."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THIS IS A DIFFERENT SEAM FROM GE-123b-1, not a bigger example, and the distinction dictates the implementation. An entry whose path field is the wildcard names no file at all, so an implementation that asks 'which named path would this entry empty?' never sees it and passes GE-123b-1 with this hole wide open. The decision must be reached PER SCANNED FILE in the run — every entry in force for that file, path-naming or path-wildcard alike — and never per named path enumerated from the allowlist."
+  - "DO NOT REFUSE REPOSITORY-WIDE ENTRIES AS A CLASS. Arm 2 is the regression guard on exactly that cheap fix: a rule-scoped entry with the path wildcard silences one of six rules on every file, leaves five, and is documented behaviour the repository's own allowlist relies on heavily today. Refusal is triggered by the state the allowlist would leave a FILE in, never by how broad a line looks."
+  - "PER-FILE INDEPENDENCE, both ways: the refusal reached for one file must not change the outcome for any other file in the run, and each file's decision must be reached against its own path. The nested third file deliberately shares a basename with the root file — it distinguishes 'the entry was correctly scoped' from 'the entry happened to miss', and the GE-113c-3 exact / segment-suffix path semantics must be used unchanged when deciding which entries are in force for it."
+  - "Refusing one over-broad line never withdraws the other lines in the same allowlist (arm 3). This is GE-113c-3-v's per-line-not-per-file precedent applied to a declined-for-effect entry rather than a rejected-for-shape one."
+  - "COMPLEMENT OF GE-113c-3-v, NOT REOPENED WORK: -v closed the malformed spelling (wildcard rule plus a zero-segment path) and deliberately preserved the literal wildcard path as the legitimate repository-wide form. Do not re-specify -v's scenarios, and do not close this criterion by banning the wildcard path at parse time — that would repeal -v's fourth scenario."
+  - "VERIFICATION STANDARD, non-negotiable: every arm must be exercised through `scan_files` with three real files on disk — one of them at a nested path sharing a basename with another — and a real `.security-allowlist` in the same temporary root. Calling `_is_suppressed` with hand-built tuples discharges nothing; an audit in the sibling GE-113c-3 family found two criteria that passed unit-level tests while describing scenarios the real entry point can never produce."
+  - "Fixture reachability: ordinary `.py` filenames throughout. `scan_file` short-circuits an environment-named path to a single name-based finding and returns before any content rule runs, so the four-findings fixture is unreachable at such a path. The environment-filename collapse is GE-123a's subject."
+  - "Commit hot path: the per-file decision must not turn a repository-wide entry into a per-file re-scan. At most one pass over (scanned files x allowlist entries), no additional file reads."
+  - "ADR-001 parity: edit the canonical `templates/skills/security-scanner/scripts/scan_secrets.py` only and let `build.py` propagate. Never hand-edit the copies under `.claude/`, `.gemini/`, `.leafcutter/`, `EPIC-*/` or `worktrees/**`."
+  - "RED-FIRST LABELLING: arm 1 is red (measured 0 findings across all three files, clean exit, no warning; target 12 and a findings-present exit) and arm 3 is red (measured 0; target three findings for the middle file). Arm 2 is a declared REGRESSION GUARD and is GREEN ON ARRIVAL by design (measured 9) — that is expected and is not a TDD-order violation."
+delivers_to: null
+expects_from:
+  ac_id: GE-123b-1
+  contract: "The per-file decision helper in templates/skills/security-scanner/scripts/scan_secrets.py that scan_files calls once per scanned file with the file path and the loaded allowlist, returning the rule ids still able to report on that file plus the entries declined for it. This criterion is that decision reached for every file in the run, driven by an entry that names no file in particular — so the helper must accept path-wildcard entries as being in force for every scanned file, rather than being driven by an enumeration of the paths the allowlist happens to name."
+test_spec:
+  - name: test_all_rules_all_paths_entry_cannot_silence_every_scanned_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 1, RED today (measured 0 across three files). One entry with both the rule field and the path field written as the wildcard; scan_files over three real fixture files reports all twelve findings, asserted as four per file path rather than as a bare total"
+  - name: test_repository_wide_rule_scoped_entry_still_narrows_every_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 2, REGRESSION GUARD, GREEN ON ARRIVAL by design (measured 9). An entry naming only the rule that recognises the password assignment with the path field as the wildcard reports nine findings and no password-assignment finding in any of the three files — a fix that refuses repository-wide entries as a class fails here"
+  - name: test_declining_the_repository_wide_entry_keeps_the_other_line_applied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 3, RED today (measured 0). With the all-rules all-paths entry on one line and a rule-scoped entry naming the middle file on another, that middle file reports three findings rather than four — the declined line does not withdraw its neighbour"
+  - name: test_wildcard_path_entry_is_decided_against_each_scanned_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The seam this criterion exists for: the third fixture sits at a nested path and shares a basename with the first, and must report its own four findings under the wildcard-path entry — proving the decision was reached per scanned file rather than per path named in the allowlist, and that it did not merely happen to miss"
+  - name: test_exit_status_reports_findings_present_for_the_repository_wide_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Arm 1's exit-status clause driven through the scanner module's CLI entry point with the temporary root as the working directory, so the allowlist is read the way a real run reads it: the run exits findings-present. Working directory restored in cleanup"
+test_rationale: "An entry that names no path is invisible to any implementation that asks which named file an entry would empty, so a fix satisfying GE-123b-1 can leave this hole fully open — which is why the descriptors here are not variations of the parent's but are shaped around the per-scanned-file seam. The three-file fixture with one nested path sharing a basename is load-bearing rather than decorative: with a single file, an implementation that suppressed nothing at all and one that decided correctly are indistinguishable, and without the shared basename a correctly-scoped decision cannot be told apart from an entry that happened to miss. Per-file counts are asserted rather than totals for the same reason. The regression descriptor guards the specific cheap fix this criterion invites — refusing repository-wide entries as a class — which would break the rule-scoped wildcard-path form the repository's own allowlist depends on today and would repeal GE-113c-3-v's fourth scenario. Every descriptor drives scan_files with real files on disk and a real allowlist because an audit in that same family found two criteria that passed at the predicate level while describing scenarios the real entry point cannot produce."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): authored it_requirements naming the distinct seam (a path-wildcard entry names no file, so the decision must be per scanned file rather than per path enumerated from the allowlist), the explicit prohibition on refusing repository-wide entries as a class, and the boundary with GE-113c-3-v's preserved wildcard-path form; tightened expects_from so the parent's helper is required to treat path-wildcard entries as in force for every scanned file. Authored a 5-entry test_spec plus test_rationale, all arms through scan_files with three real files including a nested basename-sharing path, with per-file counts rather than totals; labelled arm 2 as a green-on-arrival regression guard. Baselines re-verified through the real entry point: 0 / 9 / 0. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS A SEPARATE CRITERION AND NOT AN INSTANCE OF GE-123b-1. It is a
+  different implementation seam, not merely a bigger example. An entry that
+  names a path can be checked against that path. An entry whose path field is
+  the wildcard names no file at all, so an implementation that asks "which file
+  would this entry empty?" never sees it — the emptiness only becomes visible
+  when suppression is evaluated against the findings a run actually produced.
+  A fix that satisfies GE-123b-1 by inspecting named paths passes that criterion
+  and still leaves this hole wide open. The paired positive is different too:
+  here it guards repository-wide RULE-scoped suppression, which is documented
+  behaviour authors rely on.
+
+  THE COMPLEMENT-OF--v POINT, load-bearing, and the reason this is new work
+  rather than reopened work. GE-113c-3-v's third scenario is a wildcard rule
+  with a zero-segment path, and it establishes that "a single malformed entry
+  must never be able to disable the scanner across every rule". Its fourth
+  scenario establishes that the literal wildcard path keeps working. Between
+  them they close the typo'd spelling of total disablement and leave the
+  correctly-typed spelling — wildcard rule plus wildcard path — fully
+  operational. That is not an oversight in -v; it is precisely the boundary
+  GE-123 was raised to cover. Nothing in -v is re-specified here.
+
+  MEASURED TODAY, end-to-end through the multi-file entry point (2026-08-18):
+    - arm 1 baseline: 0 findings across all three files, clean exit, and NO
+      warning on any stream. Target: 12 findings, findings-present exit.
+    - arm 2 baseline: 9 findings — ALREADY CORRECT. Labelled regression guard;
+      green on arrival is expected and is not a TDD-order violation.
+    - arm 3 baseline: 0 findings, because the over-broad line currently swallows
+      everything. Target: three findings for "helpers.py".
+
+  Three files rather than one, and one of them at a nested path sharing a
+  basename with another, so the arms distinguish "the entry was correctly scoped"
+  from "the entry happened to miss". Ordinary source filenames throughout — no
+  env-named file appears in this criterion, per the tree-wide authoring
+  constraint.
+
+  Every arm must be exercised through the multi-file entry point with real files
+  on disk. Coverage of the suppression predicate in isolation does not discharge
+  this criterion.
+
+  IT-PO RE-VERIFICATION (2026-08-18, before enrichment): all three baselines were
+  re-measured through scan_files with three real files on disk, one of them at a
+  nested path sharing a basename with another, and a real allowlist in the same
+  temporary root — 0, 9, 0 — matching the BA's figures exactly.

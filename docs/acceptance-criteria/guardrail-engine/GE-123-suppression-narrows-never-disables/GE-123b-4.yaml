@@ -1,0 +1,174 @@
+id: GE-123b-4
+components:
+  - commit_guardian
+title: "The guarantee holds however many lines the author spreads the suppression across"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file "secrets.py" containing four lines the scanner's content rules
+    recognise — a cloud access key in the AWS_KEY form, a private-key header
+    line, a quoted twelve-character value assigned to a field named password,
+    and a high-entropy token,
+  And the allowlist contains six entries, one naming each of the scanner's six
+    rules, every one of them naming the path "secrets.py" and every line,
+  When the file is scanned through the scanner's multi-file entry point — the
+    same entry point the pre-commit secrets check calls,
+  Then at least one finding is still reported for "secrets.py",
+  And the run's exit status reports findings present,
+  And the author is told which file the entries would have left with nothing
+    able to report on it,
+  Because the guarantee is about the state the allowlist leaves a file in, not
+    about how many lines it took to get there; an implementation that only ever
+    inspects one line at a time is defeated by writing two.
+
+  Given the identical six entries written into the allowlist in the reverse
+    order,
+  When the run completes,
+  Then the same number of findings is reported for "secrets.py" as in the first
+    arm,
+  Because which entry is declined must be settled by the state the allowlist
+    would leave the file in, and not by the order the author happened to write
+    the entries in.
+
+  Given the same file "secrets.py",
+  And the allowlist contains five entries naming five of the scanner's six
+    rules, every one of them naming the path "secrets.py" and every line, with
+    the high-entropy rule left unnamed,
+  When the run completes,
+  Then exactly one finding is reported for "secrets.py" — the high-entropy
+    token — and no lost-coverage warning is emitted,
+  Because narrowing a file all the way down to one remaining rule is still
+    narrowing; only the step that would take it to none is declined.
+depends_on:
+  - GE-123b
+  - GE-123b-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The scanner is a packaged template. templates/skills/security-scanner/scripts/scan_secrets.py is the canonical edited copy; build.py propagates it to the materialized copies. Edit the template only."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Establishes that a bad entry is handled per line and never per file, so that every other entry in the same allowlist still applies. This criterion is the case that rule cannot decide on its own: here every individual line is well-formed and reasonable, and only their combined effect is a collapse."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE DECISION IS TAKEN AGAINST THE WHOLE ALLOWLIST IN FORCE FOR THE FILE, never against one entry in isolation. Six individually unremarkable per-rule lines reach exactly the same zero as the one over-broad line in GE-123b-1 — measured today at 0 findings. A per-line reading of GE-123b's title ships a guarantee that anyone defeats by writing their suppression out longhand, which is the form the existing how-to guidance actually encourages."
+  - "DETERMINISM AND ORDER-INDEPENDENCE: the outcome must be a function of the SET of entries in force for the file — not of the order they appear in the allowlist file, and not of the iteration order of whatever container holds them. Note the current hazard profile: `_load_allowlist` returns an unordered `set`, so no ordering is observable today; the moment GE-123b-1-i's provenance plumbing turns that container into an ordered sequence, or a sequential apply-then-refuse loop is introduced, order becomes observable and this constraint starts to bite. Design for it up front rather than discovering it."
+  - "ARM 2 PASSES VACUOUSLY TODAY AND MUST NEVER BE RUN OR REPORTED AS A STANDALONE PASS. Both orders currently yield zero findings, so an order-equality assertion on its own is green while the defect is fully live (0 == 0). Arm 2 is meaningful only asserted together with arm 1: the same test method must assert that the count is identical in both orders AND that the count is at least one. Do not split it into its own test, do not sign it off separately, and do not let a coverage report credit it in isolation."
+  - "THE RESOLUTION MUST LEAVE THE FILE ACTUALLY REPORTED ON, NOT MERELY NOMINALLY COVERED — this is the constraint that eliminates the naive fix. Arm 1 requires at least one finding to be reported. Two of the six rules (the exchange-key rule and the env-filename rule) fire zero times on an ordinary source file, so a resolution that restores one of THOSE satisfies 'a rule is live again' while the file still reports nothing, and fails arm 1. Any resolution strategy is acceptable that simultaneously (a) is a deterministic function of the entry set for that file, (b) leaves at least one declared rule able to report, and (c) causes at least one finding to be reported for that file. Declining the entire collapsing group for that file is one shape that satisfies all three with no ordering hazard at all; the choice is the implementer's, the three constraints are not."
+  - "DO NOT IMPLEMENT AS 'decline any entry once more than one is in force for a file'. Arm 3 is the regression guard on exactly that: five entries leaving the high-entropy rule unnamed must still narrow the file to exactly one reported finding, with no lost-coverage warning."
+  - "THE COLLAPSE THRESHOLD MUST FOLLOW THE DECLARED RULE INVENTORY (the single declared source required by GE-123b-1's it_requirements), not a hard-coded six. The consequence is testable and must be tested: if the declared inventory gains a seventh rule, these same six entries stop being a collapse automatically and the file is suppressed to zero. A hard-coded count passes every other arm here and silently weakens the guarantee the day a rule is added."
+  - "The accumulated-collapse announcement reuses GE-123b-1-i's warning contract without variation — error stream, allowlist file path, 1-based line number, verbatim text — and additionally names the affected file. Where several entries jointly cause the collapse, every declined line must be identifiable; still at most one warning per declined entry per affected file per run."
+  - "VERIFICATION STANDARD, non-negotiable, and sharper here than elsewhere in the batch: the accumulation behaviour cannot be observed by calling the suppression predicate once, and the order arm cannot be observed AT ALL through an unordered in-memory set. Every arm must be driven through `scan_files` with a real fixture file on disk and a real `.security-allowlist` whose lines are written in the specified order."
+  - "Fixture reachability: ordinary `.py` filenames throughout. `scan_file` short-circuits an environment-named path to a single name-based finding and returns before any content rule runs. The environment-filename collapse is GE-123a's subject, not this one's."
+  - "ADR-001 parity: edit the canonical `templates/skills/security-scanner/scripts/scan_secrets.py` only and let `build.py` propagate. Never hand-edit the copies under `.claude/`, `.gemini/`, `.leafcutter/`, `EPIC-*/` or `worktrees/**`."
+  - "RED-FIRST LABELLING: arm 1 is red (measured 0 findings, clean exit, no warning on any stream; target at least one finding and a findings-present exit). Arm 2 is vacuous today and inherits arm 1's red status only because it is asserted with it. Arm 3 is a declared REGRESSION GUARD and is GREEN ON ARRIVAL by design (measured 1 finding, the high-entropy token) — expected, and not a TDD-order violation; without it the criterion is satisfied by an implementation that declines every entry once more than one is present."
+delivers_to: null
+expects_from:
+  ac_id: GE-123b-1
+  contract: "The per-file decision helper in templates/skills/security-scanner/scripts/scan_secrets.py that scan_files calls once per scanned file, returning the rule ids still able to report on that file plus the entries declined for it. This criterion requires that decision to be computed against the whole set of entries in force for the file — never one entry at a time, never dependent on the order the entries were written or iterated — and requires the declared rule inventory it counts against to be the single declared source, so the collapse threshold tracks the rule set rather than a hard-coded six."
+test_spec:
+  - name: test_six_per_rule_entries_are_declined_and_the_outcome_is_order_independent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arms 1 AND 2 in ONE test method, deliberately not split. Six entries, one per declared rule, all naming the fixture path and every line: at least one finding is reported, and the identical six entries written in reverse order report the same count. RED today (measured 0 in both orders). The order assertion is vacuous alone — 0 equals 0 today — so it is only ever asserted alongside the at-least-one assertion in the same method, and must never be reported as a standalone pass"
+  - name: test_multi_entry_collapse_warning_names_the_file_and_the_declined_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 1's announcement clause, RED today (no output on any stream): the error stream captured around scan_files names the fixture file as the one the entries would have left with nothing able to report on it, and identifies each declined line by its 1-based line number and verbatim text, reusing GE-123b-1-i's contract without variation"
+  - name: test_five_per_rule_entries_leaving_one_live_rule_still_narrow
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 3, REGRESSION GUARD, GREEN ON ARRIVAL by design (measured 1). Five entries naming five of the six declared rules, with the high-entropy rule left unnamed, report exactly one finding — the high-entropy token — and no lost-coverage warning. Fails any implementation that declines entries as soon as more than one is in force"
+  - name: test_collapse_threshold_follows_the_declared_rule_inventory
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Data-driven guard against a hard-coded six: with the scanner's declared rule inventory temporarily extended by one additional rule id, the same six entries are no longer a collapse — the file is suppressed to zero findings and no lost-coverage warning is emitted. A hard-coded count passes every other descriptor here and fails this one"
+  - name: test_exit_status_reports_findings_present_for_the_accumulated_collapse
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Arm 1's exit-status clause driven through the scanner module's CLI entry point with the temporary root as the working directory, so the allowlist is read the way a real run reads it: the run exits findings-present. Working directory restored in cleanup"
+test_rationale: "GE-123b's title says no single line, and the literal reading of that invites an implementation examining each entry alone — which six individually unremarkable per-rule lines defeat, reaching the same measured zero as one over-broad line. The accumulation cannot be observed by calling the suppression predicate once, so every descriptor drives scan_files with a real allowlist file whose lines are written in the specified order. The first descriptor deliberately fuses arms 1 and 2 into one test method: both orders yield zero today, so an order-equality test standing alone is green while the defect is fully live, and a split would hand a reviewer a passing test that proves nothing. The inventory descriptor exists because the threshold is the one number an implementer will hard-code, and a hard-coded six passes every other descriptor while silently weakening the guarantee the day a seventh rule is added. The regression descriptor guards the opposite over-reach — declining entries as soon as more than one is in force — and is green on arrival by design. Note for whoever picks the resolution strategy: two of the six rules fire zero times on an ordinary source file, so restoring one of those would satisfy a rules-only assertion while reporting nothing, which is why the first descriptor asserts a reported finding and not merely a live rule."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): authored it_requirements requiring the decision to be computed against the whole set of entries in force for the file, with determinism keyed on the SET (noting that _load_allowlist returns an unordered set today, so the ordering hazard appears only once GE-123b-1-i's provenance plumbing makes the container ordered); recorded in it_requirements that arm 2 passes vacuously today and must be asserted in the same test method as arm 1, never as a standalone pass; named the constraint that eliminates the naive resolution — two of the six rules fire zero times on an ordinary source file, so restoring one of those leaves the file nominally covered and silent, failing arm 1 — and stated the three constraints any resolution must satisfy without prescribing one; required the collapse threshold to follow the single declared rule inventory rather than a hard-coded six, and added a data-driven test descriptor that fails a hard-coded count. Authored a 5-entry test_spec plus test_rationale; labelled arm 3 as a green-on-arrival regression guard. Baselines re-verified through the real entry point: 0 in both orders, 1 for the five-entry arm. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE TRIVIAL BYPASS THIS CLOSES. GE-123b's title says "no single line", and the
+  literal reading of that invites an implementation that examines each entry
+  alone. Six entries, each naming one rule and each of them individually
+  unremarkable, reach exactly the same zero as the one over-broad line in
+  GE-123b-1 — measured today at 0 findings. If the per-line reading is the one
+  that ships, the guarantee is defeated by anyone who writes their suppression
+  out longhand, which is the form the existing how-to guidance actually
+  encourages. The rule that has no bypass is: the entry that would remove a
+  file's LAST remaining live rule is the one declined, whichever entry that
+  turns out to be, judged against every suppression in force.
+
+  ORDER-INDEPENDENCE IS AN ASSERTION IN ITS OWN RIGHT, and arm 2 exists because
+  the natural implementation of arm 1 introduces the hazard. Once entries are
+  applied in sequence and the last one is refused, the surviving finding depends
+  on file order, which makes the outcome an accident of how the author typed
+  their allowlist. Arm 2 deliberately asserts the COUNT rather than which rule
+  survives, so it constrains the outcome without prescribing a resolution
+  strategy — that choice belongs to the IT PO. CAUTION FOR THE TEST AUTHOR: arm
+  2 passes vacuously today, because both orders currently yield zero. It is only
+  meaningful asserted together with arm 1, and must never be run or reported as
+  a standalone pass.
+
+  MEASURED TODAY, end-to-end through the multi-file entry point (2026-08-18):
+    - arm 1 baseline: 0 findings, clean exit, no warning on any stream. Target:
+      at least one finding and a findings-present exit.
+    - arm 2 baseline: 0 findings in both orders — vacuously equal, see above.
+    - arm 3 baseline: 1 finding, the high-entropy token — ALREADY CORRECT.
+      Labelled regression guard; green on arrival is expected and is not a
+      TDD-order violation. It is the mandatory paired positive: without it the
+      criterion is satisfied by an implementation that declines every entry once
+      more than one is present.
+
+  Ordinary source filenames throughout — no env-named file appears here, per the
+  tree-wide authoring constraint. Every arm must be exercised through the
+  multi-file entry point with real files on disk; the accumulation behaviour in
+  particular cannot be observed by calling the suppression predicate once.
+
+  IT-PO RESOLUTION-STRATEGY NOTE (2026-08-18), left here rather than decided in
+  the criteria: the strategy is the implementer's choice, but it is constrained
+  from three directions at once and the naive shape fails. Restoring "one rule"
+  is not enough — two of the six declared rules (the exchange-key rule and the
+  env-filename rule) fire zero times on an ordinary source file, so restoring
+  one of those leaves the file nominally covered and still silent, which fails
+  arm 1's "at least one finding". The outcome must also be a function of the
+  entry SET rather than its order, and arm 3 forbids declining entries merely
+  because several are in force. Declining the entire collapsing group for the
+  affected file satisfies all three with no ordering hazard; it is offered as a
+  worked shape, not mandated. Baselines re-verified before enrichment: 0 in both
+  orders, and 1 for the five-entry arm.
