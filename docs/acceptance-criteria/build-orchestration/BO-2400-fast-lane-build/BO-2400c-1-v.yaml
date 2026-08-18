@@ -1,0 +1,127 @@
+id: BO-2400c-1-v
+components:
+  - build_orchestration
+  - injection_builder
+title: "The orphaned second runner is removed once the live lane is wired, and the grep test guarding it goes with it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the prompt-caching layer is assembled and consumed by the lane that actually
+    runs, so the second, orphaned fast-lane runner is the last file holding a reference
+    to a capability that is now wired elsewhere,
+  When that orphan is reviewed,
+  Then it holds nothing the running lane does not, and it is removed from the package
+    rather than kept, built, deployed and maintained in parallel with the lane that runs,
+  And after the removal nothing refers to it: no command routes to it, no build or
+    deploy step ships it, and no justification for shipping anything else cites it,
+  And the removal happens only after the wiring lands — while the running lane does not
+    consume the layer, this orphan is the last thread attaching a tested, documented
+    capability to the codebase, and deleting it first retires that capability silently.
+
+  Given the removal deletes a file that a test asserts a string inside,
+  When the file is removed,
+  Then that test is removed with it or re-pointed at the executed behaviour that replaced
+    it,
+  And it is not kept alive by re-creating the string somewhere else, by relaxing the
+    assertion, by marking the test skipped, or by pointing it at another file that merely
+    contains the same name — the assertion was that a name appeared in a file, and a name
+    appearing in a file is not the property anyone wanted proved.
+depends_on: [BO-2400c-1, BO-2400c-1-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-build.js
+    relationship: implements
+    status: exists
+    relevance: "The orphan itself. Nothing invokes it — the only Workflow(\"fast-lane...\") call anywhere names fast-lane-ship, and the /fast-lane-build command routes there. This is the file the criterion removes."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: implements
+    status: exists
+    relevance: "The lane that actually runs and that keeps every behaviour worth keeping. The orphan may be removed only once this file consumes the prompt-caching layer (BO-2400c-1-iii)."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-006 records the orphan, its 'do not delete it blind' caveat, and the two honest options — wire the caching layer into fast-lane-ship, or delete both and say plainly that prompt caching is gone. This criterion takes the first."
+  - path: unit_tests/workflows/test_bo2400a_runner_wiring.py
+    relationship: specifies
+    status: exists
+    relevance: "Holds the grep assertion at line 401 that the literal 'assemble_context_bundle' appears in the orphan. Deleting the orphan fails this test, so the test is part of the removal, not an obstacle to work around."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    orphan_runner_removal:
+      type: object
+      description: "Removal record for the orphaned fast-lane runner: the workflow source is deleted, no deployed layout contains it after a build, no command or workflow routes to it, and the grep-only test that asserted a string inside it is deleted or re-pointed at executed behaviour. Ordered strictly after the caching wiring lands."
+  reference_file_path: "templates/workflows-js/fast-lane-build.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  constraints:
+    - "Ordering is a hard prerequisite, not a preference. BO-2400c-1-iii must be implemented first. Until the running lane consumes the layer, this orphan is its only production reference, and removing it converts a tested, documented capability into dead code without anyone deciding to."
+    - "The grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserts the literal 'assemble_context_bundle' appears in the file being deleted, so the deletion breaks the suite by construction. Delete that test alongside the file, or re-point it at the executed coverage authored under BO-2400c-1-iii. Do not re-create the string, relax the assertion, skip the test, or re-aim it at another file that happens to contain the name — every one of those keeps the same worthless proof alive under a new address. The neighbouring telemetry grep test in the same class is in the same position and needs the same decision."
+    - "The build's agent-support deploy manifest (scripts/build_phases.py, AGENT_SUPPORT_SCRIPT_FILES) justifies shipping scripts/injection_builders.py by citing fast-lane-build.js as its caller. That justification must be re-pointed at fast-lane-ship.js in the same change, or the module's only recorded reason to be deployed disappears with the orphan and a future cleanup drops it from the manifest — which would break the deployed command surface added by BO-2400c-1-ii."
+    - "Sweep every remaining reference before declaring the removal complete: command templates, workflow registries, the docs index, how-to guides, and the known-issues entry. A dangling reference to a deleted workflow is the next KI."
+    - "This criterion is a deletion, so the evidence is EXECUTED rather than grep-shaped in the usual sense: run the build and assert the deployed workflows directory no longer contains the file, and run the full suite green with no residual grep-only test standing in for the deleted one. Confirming absence in the source tree alone is not enough — the file is a build output as well as a source file. A source grep passes on dead code, and that is exactly how the deleted assertion earned its place here: it asserted a NAME appeared in an orphaned file and thereby kept a dead reference looking alive while the function it named had never executed once, alongside roughly 25 other green tests."
+    - "Record the decision in the known-issues entry rather than leaving KI-BO-006 open — the entry explicitly asks for a capability decision, and the decision taken here is 'wire it, then delete the orphan'."
+delivers_to:
+  agent: python-coder
+  contract: "A package with exactly one fast-lane runner, and no test whose only assertion is that a function name appears somewhere in a file."
+expects_from:
+  ac_id: BO-2400c-1-iii
+  contract: "The live lane consuming the prompt-caching layer, which is what makes the orphan's last unique reference redundant."
+test_required: true
+test_spec:
+  - name: test_deployed_layout_has_no_orphaned_fast_lane_runner
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "After a build, the deployed workflows directory contains the shipping lane and no second fast-lane runner."
+  - name: test_no_command_or_workflow_routes_to_the_removed_runner
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "No command template, workflow registry entry, or deploy manifest resolves to the removed runner, so nothing can dispatch a file that no longer exists."
+  - name: test_injection_builders_still_deployed_after_the_removal
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The prompt-caching module is still present and executable in the deployed layout after the orphan is gone, so removing its former caller did not remove its reason to ship."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Two files claim to be the fast lane; one of them runs. The orphan has been built,
+  deployed and kept consistent with the real lane through at least one amendment, purely
+  because it looked like a peer. It is not a peer — it is a maintained copy of a lane
+  nobody invokes, and every edit made to keep it consistent was work spent on a file that
+  cannot execute.
+
+  It is nevertheless the wrong file to delete first. KI-BO-006 spells out why: it holds
+  the only production reference to the prompt-caching layer, so deleting it before the
+  wiring lands quietly retires a capability that has a reference doc and roughly 25 tests.
+  Hence the strict ordering after BO-2400c-1-iii.
+
+  The test clause is the part most likely to be got wrong. The obvious way to "fix" a
+  suite broken by a deletion is to make the assertion pass again, and here that means
+  re-creating the string somewhere. That would preserve, at a new address, precisely the
+  test that let a dead reference read as alive for a month. The assertion has to go, or
+  be replaced by one that runs the lane.

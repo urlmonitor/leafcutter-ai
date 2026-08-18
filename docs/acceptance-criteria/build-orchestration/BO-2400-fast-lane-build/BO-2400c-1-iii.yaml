@@ -1,0 +1,141 @@
+id: BO-2400c-1-iii
+components:
+  - build_orchestration
+  - injection_builder
+title: "The prompt a dispatched fast-lane agent receives is the assembled bundle"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run that dispatches its phase agents to build a connected set,
+  When each build-context-carrying agent is dispatched — at minimum the test-writer and
+    the coder, the two that receive the run's working context,
+  Then the prompt that agent receives is the bundle the prompt-caching layer assembled:
+    the stable layers first, then the cache breakpoint, then this run's volatile layers,
+  And the bundle reaches the agent verbatim — what the layer produced is what is sent,
+    not a summary of it, a re-worded version of it, a subset of it, or a pointer to
+    where it could be found,
+  And the criterion is satisfied only by what the dispatched agent receives: a run that
+    names the layer, invokes it, and then composes its prompts some other way does not
+    satisfy it, however faithfully the layer was called.
+
+  Given the bundle cannot be obtained for this run — the assembling command fails, or it
+    returns nothing the run can use,
+  When the run reaches the point at which it would dispatch those agents,
+  Then it reports that the context bundle was not obtained and names it as the reason,
+  And it does not quietly fall back to prompts composed some other way, so a lane that
+    is not assembling its context is visibly different from one that is — rather than
+    looking identical from the outside, which is how this went unnoticed.
+depends_on: [BO-2400c-1, BO-2400c-1-ii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: implements
+    status: exists
+    relevance: "The lane that actually runs, and the one that must consume the bundle. Its fixed phase order — Worktree, Resolve, Test Writer, Coder, Review, Changelog, Commit, Pull Request — is where the assembling dispatch and the bundled prompts have to be placed."
+  - path: scripts/injection_builders.py
+    relationship: implements
+    status: exists
+    relevance: "The layer being consumed. Its assemble_context_bundle output is the exact text that must arrive in the dispatched prompt."
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: describes
+    status: exists
+    relevance: "Which content belongs in which layer — architecture, conventions and parent ACs before the breakpoint; this batch's ACs, prior tests, prior outputs and working diff after it."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Why the bundle must be fetched through an agent dispatch and threaded back into later prompts: the workflow body itself cannot read the files the stable layers are built from."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-006 records that the live lane never mentions the layer at all and that the only production reference sits in an orphan — the state this criterion ends."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The only way to observe what a dispatched agent actually received: run_workflow_under_e2 records every agent() call, and each recorded call carries the prompt the criterion is about."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    fast_lane_context_bundle:
+      type: object
+      description: "Bundle payload obtained once per run before the Test Writer phase: {bundle: str, obtained: bool, message: str}. The build-context-carrying dispatches send bundle verbatim as their prompt context. obtained false, absent, or a bundle that is empty or missing the breakpoint marker ends the run with the context-bundle phase named as the failure — never a silent fallback to an unbundled prompt."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The bundle is obtained once per run through a single agent-mediated command dispatch (the surface added by BO-2400c-1-ii) and the returned text is threaded into the later prompts. The workflow body cannot read the architecture, conventions or parent-AC content itself, and re-deriving the bundle per dispatch is what would break the byte-identity BO-2400c-1-iv asserts."
+    - "The returned bundle text is inserted into the dispatched prompt unaltered. No trimming, no re-wrapping, no interpolation inside the stable region, no per-dispatch preamble prepended ahead of it. Anything the phase agent additionally needs goes after the breakpoint, with the volatile layers."
+    - "Mentioning is not wiring. Adding the layer's name to a comment, to a phase list, to an agent instruction, or dispatching it and discarding the result does not satisfy this criterion. The single observable that counts is the prompt text the dispatched agent received."
+    - "Fail closed when the bundle is unobtainable: read the obtained flag with the same plain-falsy check the red-baseline gate_passed key already uses, so version skew and an explicit failure behave identically. No default-true, no `|| ''`, no optional read that yields undefined-as-empty and lets an unbundled prompt through."
+    - "Covering tests must EXECUTE the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2 with label_responses stubbing the bundle-assembling dispatch) and assert on the RECORDED agent_calls — specifically on their prompt text. A test that greps templates/workflows-js/fast-lane-ship.js for the layer's name, for a phase label, or for source-text ordering is not acceptable evidence: it passes on dead code. This exact feature is the proof — it carries roughly 25 green unit tests and a reference doc and has never executed once, and the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserted the layer's NAME appeared in an orphaned file, which kept a dead reference looking alive for a month."
+delivers_to:
+  agent: test-writer
+  contract: "The assembled context bundle, delivered verbatim as the prompt of each build-context-carrying phase dispatch — stable layers, one cache breakpoint, then this run's volatile layers."
+expects_from:
+  ac_id: BO-2400c-1-ii
+  contract: "A command an agent can run in one Bash call whose stdout is the assembled bundle, plus a non-zero exit and a named reason when it cannot be assembled."
+test_required: true
+test_spec:
+  - name: test_dispatched_agent_prompt_is_the_assembled_bundle
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executed under the E2 harness with the assembling dispatch stubbed to return a known bundle, the recorded test-writer and coder calls carry that bundle text in their prompts."
+  - name: test_bundle_reaches_the_agent_verbatim
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The stubbed bundle text appears in the recorded prompt unaltered — same bytes, same order, no re-wrapping and no interpolation inside the stable region."
+  - name: test_bundle_assembly_dispatch_precedes_the_context_carrying_dispatches
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "In a fully green harness run the recorded call order places the bundle-assembling dispatch before the test-writer and coder dispatches, asserted on executed call order rather than on source text."
+  - name: test_unobtainable_bundle_halts_instead_of_dispatching_unbundled_prompts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the assembling dispatch stubbed to return a failure, an empty payload, or nothing readable, the run records no test-writer or coder dispatch and its terminal payload names the context bundle as the reason."
+  - name: test_breakpoint_marker_present_exactly_once_in_the_dispatched_prompt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Each recorded context-carrying prompt contains exactly one cache breakpoint marker, with the stable layers before it and the run's volatile content after it."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the criterion that makes BO-2400c-1 true rather than merely implemented. The
+  parent promises that the prompt a fast-lane agent receives is laid out stable-first
+  with a cache breakpoint. Today no fast-lane invocation has ever assembled a prompt that
+  way: the layer is pure, tested and documented, its only production reference is a call
+  from an orphaned runner that cannot reach it, and the live lane does not mention it.
+
+  The load-bearing word is CONSUMPTION. An acceptance criterion satisfied by "the
+  workflow refers to the layer" is worth nothing here — that is literally the state we
+  are in, and it is the state that read as done. The only observable that distinguishes
+  a wired lane from an unwired one is the text a dispatched agent actually received,
+  which is why every covering test runs the lane and reads the recorded prompts.
+
+  The second scenario exists because silent fallback is what would let this regress
+  invisibly. If the assembly fails and the lane simply builds its prompts the old way,
+  the run still succeeds, the tests still pass, and the caching is gone again with no
+  signal. A lane that cannot assemble its context must say so.

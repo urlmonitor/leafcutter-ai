@@ -1,0 +1,128 @@
+id: BO-2400c-1-iv
+components:
+  - build_orchestration
+  - injection_builder
+title: "Across one run's successive dispatches the cacheable prefix is byte-identical"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one fast-lane run that dispatches more than one build-context-carrying agent,
+  When the prompts those agents received are compared with one another,
+  Then the portion of each prompt up to and including the cache breakpoint is
+    byte-identical across every one of those dispatches — the same bytes, in the same
+    order, with the same whitespace,
+  And the portions after the breakpoint are not identical: they carry what has changed
+    as the run progressed — this batch's acceptance criteria, the tests already written,
+    the work in progress — so the volatile content is present but sits behind the anchor
+    rather than being dropped to make the prefixes match.
+
+  Given a run in which the prefix differs between two dispatches by even one byte,
+  When the run's dispatches are compared,
+  Then that difference is a failure of this criterion regardless of its cause — a stable
+    source re-read and re-rendered mid-run, an elapsed time or counter, a per-dispatch
+    identifier, or volatile content leaking forward across the breakpoint,
+  And the difference is reported rather than tolerated, because a prefix that changes
+    between dispatches means the cache never anchors and the whole layer buys nothing
+    while continuing to look wired.
+depends_on: [BO-2400c-1, BO-2400c-1-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: implements
+    status: exists
+    relevance: "The run whose successive dispatches are compared. Its Test Writer and Coder phases are the two context-carrying dispatches that must share one prefix."
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: describes
+    status: exists
+    relevance: "States the cacheable-prefix guarantee this criterion tests at runtime: the prefix is byte-identical whenever architecture, conventions, high_level and the marker are unchanged."
+  - path: scripts/injection_builders.py
+    relationship: implements
+    status: exists
+    relevance: "The layer whose purity makes the guarantee achievable — the same three stable inputs always produce the same prefix, so any observed drift comes from the wiring, not the layering."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Supplies the recorded agent_calls whose prompts are compared to each other; the comparison is over dispatched prompts, not over function return values."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    stable_prefix_reuse:
+      type: object
+      description: "Per-run stable-prefix handling: the assembled bundle is obtained once and its stable region — everything up to and including the cache breakpoint marker — is reused unchanged by every subsequent context-carrying dispatch in that run. Only the region after the marker is rebuilt per dispatch."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Assemble the stable region once per run and reuse the same string. Re-assembling it per dispatch is permitted only if the covering test proves the results byte-equal — and re-assembly re-reads the stable sources, which is precisely how a mid-run edit to an architecture doc or a convention file would bust the anchor without anyone noticing."
+    - "Nothing that varies within a run may enter the stable region: no timestamp, no elapsed counter, no dispatch index, no phase name, no per-call identifier, no retry count. Those belong after the breakpoint if they are needed at all."
+    - "Values that are constant within a run but vary between runs — the worktree path, the branch name, the run id, the target AC — also belong after the breakpoint. This criterion's comparison is within one run and would pass with them in the prefix, but a prefix carrying them yields a cold cache on every single run, which is the same nothing the feature buys today."
+    - "The volatile region must genuinely differ between the compared dispatches. A run that satisfies the prefix comparison by sending every agent an identical prompt has not carried its per-phase context and does not satisfy this criterion — the covering test asserts the difference as well as the identity, so the equality assertion cannot be passed trivially."
+    - "This is the runtime counterpart of BO-2400c-1-i. That criterion checksums the pure function's output; this one compares prompts the lane actually dispatched. Reuse the same checksum helper for the comparison so the two cannot drift, and surface a mismatch at WARNING or higher exactly as BO-2400c-1-i requires."
+    - "Covering tests must EXECUTE the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2 with label_responses) and compare the RECORDED agent_calls' prompts to one another. A test that greps fast-lane-ship.js, or that only re-tests the pure function in isolation, is not acceptable evidence: a grep passes on dead code and the isolated function has been provably correct and provably unused for a month. Roughly 25 green unit tests and the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 all stayed green while the layer never ran once."
+delivers_to:
+  agent: python-coder
+  contract: "A run whose successive context-carrying prompts share one byte-identical cacheable prefix, so an LLM KV cache anchors on it across the run's dispatches."
+expects_from:
+  ac_id: BO-2400c-1-iii
+  contract: "Dispatched prompts that are the assembled bundle, so the prefixes being compared are the real ones the agents received."
+test_required: true
+test_spec:
+  - name: test_stable_prefix_identical_across_successive_dispatches
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In an executed harness run, the region up to and including the breakpoint marker is byte-equal across every recorded context-carrying prompt."
+  - name: test_volatile_suffix_differs_across_successive_dispatches
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The regions after the breakpoint marker are not all equal, so the prefix equality cannot be satisfied by sending every agent the same prompt."
+  - name: test_run_varying_values_do_not_appear_before_the_breakpoint
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The worktree path, branch name and target AC id supplied to the executed run appear only after the breakpoint marker in the recorded prompts, never in the prefix."
+  - name: test_prefix_drift_between_dispatches_is_surfaced
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "When the run is driven so a later dispatch would carry a different prefix, the drift is reported rather than passing silently."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This criterion is the reason the feature exists. Ordering the layers and inserting a
+  marker is only worth doing if the bytes before that marker repeat exactly; a wiring
+  that rebuilds the prefix slightly differently for each dispatch produces a perfectly
+  well-formed bundle that never hits cache. The feature would then be decorative in a new
+  way — wired, executing, and still buying nothing.
+
+  It is deliberately asserted over dispatched prompts rather than over function output.
+  The pure function's guarantee has been tested since 2026-07-21 and is not in doubt.
+  What has never been observed is whether the lane calls it in a way that preserves the
+  guarantee, and that can only be seen from the prompts the agents received.
+
+  The suffix-differs assertion is not padding. Without it the cheapest way to make the
+  prefix comparison pass is to send every agent the same prompt, which would satisfy the
+  letter of the criterion while destroying the per-phase context the lane depends on.

@@ -1,0 +1,126 @@
+id: BO-2400c-1-ii
+components:
+  - build_orchestration
+  - injection_builder
+title: "The prompt-caching layer is reachable the only way the lane can reach Python — as a command that runs"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane's workflow body cannot read or write files and reaches Python
+    only by dispatching an agent that runs a single command,
+  When the lane needs an assembled context bundle,
+  Then the prompt-caching layer answers that command: invoked with the layer's inputs
+    supplied as arguments, it runs to completion, exits zero, and emits the assembled
+    bundle — the stable layers, one cache breakpoint, then the volatile layers — as its
+    output,
+  And what it emits is the bundle and nothing else: no banner, no progress line, no log
+    text is mixed into the output, because any extra byte on the stable side of the
+    breakpoint destroys the byte-identity the whole feature rests on,
+  And an invocation that resolves to a real path, runs, exits zero and produces nothing
+    does not satisfy this criterion — a call that silently does nothing is the defect
+    being fixed here, not evidence of a fix.
+
+  Given the invocation is unusable — a required layer is not supplied, or an argument
+    names content the layer cannot obtain,
+  When the command runs,
+  Then it exits non-zero and names what was missing,
+  And it does not exit zero carrying a partial bundle, an empty bundle, or a bundle with
+    a silently-omitted stable layer, so a caller can never mistake a broken assembly for
+    a successful one.
+depends_on: [BO-2400c-1]
+doc_links:
+  - path: scripts/injection_builders.py
+    relationship: implements
+    status: exists
+    relevance: "Holds assemble_context_bundle — the pure layering function that already exists. This criterion adds the way to reach it from outside the Python process; it does not change the layering."
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: describes
+    status: exists
+    relevance: "The parameter table, ordering contract and default breakpoint marker the command surface must expose as arguments without reinterpreting them."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-005 records the defect precisely: the module is invoked as a command-line script but defines no argparse and no __main__, so the call is a silent no-op."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Why a command is the only available surface — the workflow body has no filesystem or Node.js access, so Python is reached exclusively through an agent-run Bash command."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The shape to mirror: every existing gate in the live lane is reached as `python3 <script> <subcommand> --args` inside an agent prompt, with the JSON or text output parsed by that agent."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    context_bundle_command:
+      type: object
+      description: "Command-line surface over assemble_context_bundle: a subcommand accepting one argument per layer (architecture, conventions, high_level, acs, prior_tests, optional prior_outputs, optional working_diff, optional breakpoint marker), writing the assembled bundle to stdout and exiting 0. Missing required layer or unreadable input: non-zero exit, diagnostic naming the missing layer on stderr, nothing on stdout."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The entry point wraps the existing pure function; it must not reimplement the layering, the ordering, or the marker placement. Two copies of the ordering rule is two things to drift — the command parses arguments, calls assemble_context_bundle, and prints what it returns."
+    - "The command surface must match the way the lane already reaches Python: a single `python3 <script> <subcommand> --args` invocation an agent can run in one Bash call, with the module remaining importable and side-effect-free at import time. The workflow body has no filesystem access (ADR-024, docs/reference/workflow-constraints.md), so any surface that requires the caller to read or write files itself is unusable."
+    - "stdout carries the bundle only. Logging, warnings and diagnostics go to stderr. A logger writing to stdout would insert run-varying text into the stable side of the breakpoint and quietly bust the cache this feature exists to hit (paired with BO-2400c-1-iv)."
+    - "Fail closed on an unusable invocation: exit non-zero and name what was missing. Never exit zero with an empty or partially-assembled bundle — an assembly that silently drops a stable layer would still look byte-identical to itself and would pass a naive prefix comparison."
+    - "The module is already in the build's agent-support deploy manifest (scripts/build_phases.py, AGENT_SUPPORT_SCRIPT_FILES), so the command must work from the DEPLOYED layout at `<worktree>/<output_root>/scripts/injection_builders.py`, not only from the package source tree. Verify by running build.py and executing the deployed copy."
+    - "Covering tests must EXECUTE the command as a real subprocess and assert on its exit code and its actual output. Greping the source for `argparse`, `__main__`, or the subcommand name is not acceptable evidence: a grep passes on dead code, which is exactly how this defect survived. This same failure class has now recurred twice in this lane — `fast_lane.py` had no CLI so the runner's `select_batch` call was a silent no-op (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'), and KI-BO-005 is the identical defect in this module."
+delivers_to:
+  agent: python-coder
+  contract: "A command-line surface over the prompt-caching layer that an agent dispatch can run in one Bash call and whose stdout is the assembled bundle — the reachability BO-2400c-1-iii consumes."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_bundle_command_executes_and_emits_the_assembled_bundle
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run as a real subprocess with all required layers supplied, the command exits zero and its stdout contains the stable layers, exactly one breakpoint marker, and the volatile layers in that order."
+  - name: test_bundle_command_stdout_matches_the_function_output_byte_for_byte
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The subprocess stdout equals the string the imported pure function returns for the same inputs, so the command adds no banner, log line, or trailing decoration to the bundle."
+  - name: test_bundle_command_missing_required_layer_exits_non_zero
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Invoked without a required layer, the command exits non-zero, names the missing layer on stderr, and writes no bundle to stdout — never a zero exit with a partial bundle."
+  - name: test_deployed_copy_of_the_command_runs
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The command executes successfully from the deployed scripts layout the lane actually invokes, not only from the package source tree."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  This is the reachability half of making BO-2400c-1 real. The layering function has
+  been correct and fully tested since 2026-07-21; what it has never had is a way for
+  the lane to call it. The workflow engine cannot import Python, cannot read a file,
+  and cannot spawn a process — it can only ask an agent to run one command. A module
+  with no command-line entry point is, from the lane's position, unreachable.
+
+  KI-BO-005 records that the orphaned runner nonetheless calls it as a script. The path
+  resolves, the call runs, nothing happens, and every test stays green. Reachability is
+  therefore not an implementation detail of the wiring — it is a separate promise that
+  needs its own executed proof.
