@@ -262,6 +262,14 @@ class TestMergeScoping(unittest.TestCase):
             "on that branch and must NOT be re-judged by the merge author. "
             f"Got: {sorted(names)}",
         )
+        self.assertNotIn(
+            "MINE.yaml",
+            names,
+            "A file taken verbatim from OUR side was already gated when it was "
+            "committed here, so it must be excluded too. Without this, scoping "
+            "to 'differs from MERGE_HEAD' alone would pass — putting the whole "
+            f"feature branch back in scope. Got: {sorted(names)}",
+        )
 
     def test_non_merge_commit_scope_is_unchanged(self) -> None:
         # covers: ACS-100c-1
@@ -454,7 +462,10 @@ class TestContractShrinkingMergeBehaviour(unittest.TestCase):
         os.chdir(self.repo)
         try:
             diff = _mod_shrink._get_staged_diff()
-            return bool(_mod_shrink._scan_diff(diff).is_contract_shrinking)
+            weakening = _mod_shrink._get_weakening_diff(diff)
+            return bool(
+                _mod_shrink._scan_diff(diff, weakening).is_contract_shrinking
+            )
         finally:
             os.chdir(original)
 
@@ -493,6 +504,136 @@ class TestContractShrinkingMergeBehaviour(unittest.TestCase):
             self._scan(),
             "Deleting a test while changing production code in a NORMAL commit "
             "is exactly what this guard exists to block.",
+        )
+
+    def test_author_weakening_paired_with_inherited_production_change_is_blocked(
+        self,
+    ) -> None:
+        # covers: ACS-100c-1
+        """The archetypal abuse: inherit the production change, weaken the tests.
+
+        This guard's predicate spans two disjoint file sets — production changed
+        AND a test weakened. Scoping BOTH scans to merge-introduced files breaks
+        the conjunction: the author takes main's production edit verbatim (so it
+        leaves scope) and skips the tests it broke (which stays in scope), and
+        the pairing that should block never forms. Nobody gated that pairing on
+        either branch, because it did not exist until the merge created it.
+        """
+        merge = _git(self.repo, "merge", "main", "--no-commit", "--no-ff")
+        self.assertNotEqual(merge.returncode, 0)
+        # Resolve the conflict, take main's app.py verbatim (do not touch it),
+        # and weaken only the tests.
+        (self.repo / "shared.txt").write_text("resolved\n", encoding="utf-8")
+        (self.repo / "unit_tests" / "test_app.py").write_text(
+            "import pytest\n\n\ndef test_one():\n    pytest.skip('broken by main')\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "-A")
+
+        self.assertTrue(
+            self._scan(),
+            "app.py is verbatim from main so it leaves scope, but the commit "
+            "still lands a production change next to a newly-skipped test. The "
+            "production scan must stay unscoped or this pairing goes unnoticed.",
+        )
+
+    def _weaken_and_stage(self, test_rel: str) -> None:
+        """Resolve the conflict, then weaken *test_rel* and edit production.
+
+        Args:
+            test_rel: Repo-relative path of the test file to weaken.
+        """
+        (self.repo / "shared.txt").write_text("resolved\n", encoding="utf-8")
+        (self.repo / "app.py").write_text("def f():\n    return 99\n", encoding="utf-8")
+        (self.repo / test_rel).write_text(
+            "import pytest\n\n\ndef test_one():\n    pytest.skip('later')\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "-A")
+
+    def test_weakening_is_detected_when_the_path_contains_a_space(self) -> None:
+        # covers: ACS-100c-1
+        """A space in the path must not tear the pathspec in two.
+
+        `git diff --name-only` does not quote spaces, so splitting its output on
+        whitespace turns 'unit tests/test_app.py' into two tokens that match no
+        file. The scoped diff comes back empty and the guard passes — a silent
+        hole, not a crash. NUL separation is what prevents it.
+        """
+        spaced = self.repo / "unit tests"
+        spaced.mkdir()
+        (spaced / "test_app.py").write_text(
+            "def test_one():\n    assert True\n", encoding="utf-8"
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "add spaced test dir")
+
+        merge = _git(self.repo, "merge", "main", "--no-commit", "--no-ff")
+        self.assertNotEqual(merge.returncode, 0)
+        self._weaken_and_stage("unit tests/test_app.py")
+
+        self.assertTrue(
+            self._scan(),
+            "A pytest.skip added by the merge author in a directory whose name "
+            "contains a space must still be caught.",
+        )
+
+    def test_weakening_is_detected_when_the_path_is_non_ascii(self) -> None:
+        # covers: ACS-100c-1
+        """core.quotePath C-quotes non-ASCII paths; the pathspec must survive.
+
+        With the default core.quotePath=true, git emits
+        '"unit_tests/caf\\303\\251/test_app.py"' — quotes and octal escapes
+        included. Passing that literal back as a pathspec matches nothing, and
+        an unmatched pathspec is not a git error, so the guard exits 0.
+        """
+        accented = self.repo / "unit_tests" / "café"
+        accented.mkdir(parents=True)
+        (accented / "test_app.py").write_text(
+            "def test_one():\n    assert True\n", encoding="utf-8"
+        )
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-q", "-m", "add non-ascii test dir")
+
+        merge = _git(self.repo, "merge", "main", "--no-commit", "--no-ff")
+        self.assertNotEqual(merge.returncode, 0)
+        self._weaken_and_stage("unit_tests/café/test_app.py")
+
+        self.assertTrue(
+            self._scan(),
+            "A pytest.skip added by the merge author under a non-ASCII path "
+            "must still be caught.",
+        )
+
+    def test_weakening_is_detected_when_invoked_from_a_subdirectory(self) -> None:
+        # covers: ACS-100c-1
+        """Pathspecs resolve against CWD; --name-only paths are root-relative.
+
+        Run from unit_tests/, an unanchored pathspec 'app.py' means
+        'unit_tests/app.py' and matches nothing. This repo's CLAUDE.md tells
+        people to run the package hooks manually, so a subdirectory invocation
+        is a real path — and the unscoped code was immune to it, making this a
+        regression the scoping introduced.
+        """
+        merge = _git(self.repo, "merge", "main", "--no-commit", "--no-ff")
+        self.assertNotEqual(merge.returncode, 0)
+        self._weaken_and_stage("unit_tests/test_app.py")
+
+        original = os.getcwd()
+        os.chdir(self.repo / "unit_tests")
+        try:
+            diff = _mod_shrink._get_staged_diff()
+            weakening = _mod_shrink._get_weakening_diff(diff)
+            blocked = bool(
+                _mod_shrink._scan_diff(diff, weakening).is_contract_shrinking
+            )
+        finally:
+            os.chdir(original)
+
+        self.assertTrue(
+            blocked,
+            "The verdict must not depend on which directory the hook is "
+            "invoked from.",
         )
 
     def test_weakening_introduced_by_the_conflict_resolution_is_blocked(self) -> None:
