@@ -75,4 +75,102 @@ after any self-host build, and never stage `docs/INDEX.md` from a build run.
 **Trap.** Because the corruption is a *tracked file modification* produced by a routine
 build, it is easy to commit by accident in a `git add -A` sweep — and easy to blame on a
 concurrent author, since it appears in a tree you did not knowingly edit.
-</content>
+
+---
+
+### KI-BP-002 — Generated agent cards are tracked but never regenerated, so every build dirties six of them
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `scripts/build.py` — the agent-card generation phase; output at `docs/agents/cards/*.md`
+
+**Symptom.** The cards are generated from two sources that change constantly — each
+agent's template `description`, and the AC store — but they are **tracked files**, and the
+PRs that change those sources do not regenerate them. So the committed cards drift out of
+date silently, and the next `build.py` run rewrites them, leaving a tracked-file diff on an
+otherwise clean tree that has nothing to do with the work in hand.
+
+**Evidence.** Reproduced twice on 2026-08-18 in a clean worktree at `origin/main`. The
+second run (after `#474` merged) rewrote **six** cards, 99 insertions / 36 deletions:
+`ac-fulfillment-gate`, `architecture-diagram-author`, `documentation-expert`, `llm-expert`,
+`python-coder`, `test-writer`.
+
+The two drift sources are both visible in that diff:
+
+- **Template description drift.** `#474` changed `ac-fulfillment-gate`'s agent template
+  description and did not regenerate its own card. The committed card still described the
+  pre-fix behaviour (`status: ok if all ACs pass`) after the fix had shipped the stricter
+  contract (`ok only when at least one AC was resolved`).
+- **AC-store drift.** `llm-expert`'s card was missing the five `BO-2400g-*` entries merged
+  in `#452`, still listed `BO-530-3-i` (since removed), and carried a superseded title for
+  `BO-2400a-3-i`.
+
+**Fix direction.** Pick one and hold it: either stop tracking the cards and generate them
+on demand, or make card regeneration a required part of any PR that touches an agent
+template or the AC store — a CI drift check that fails when a rebuild would change a card,
+in the same spirit as the existing `check-build-drift` hook (which does not catch this,
+because it only inspects files already staged).
+
+**Trap.** Same shape as KI-BP-001 — a routine build silently modifies tracked files you
+did not edit, so the diff is easy to sweep into an unrelated commit with `git add -A`. It
+is also easy to mistake for another author's work. Restore with
+`git restore docs/agents/cards/` after any build you did not intend to include them in.
+
+---
+
+### KI-BP-003 — A hook deployed into the self-hosted workspace cannot find `config/doc_types.json` and hard-crashes
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** deploy layout vs `templates/scripts/commit_guardian/doc_type_validators.py:49` (`_find_doc_types_json`)
+
+**Symptom.** `check-doc-frontmatter` aborts with an unhandled `FileNotFoundError` naming
+`<root>/.leafcutter/scripts/commit_guardian/config/doc_types.json`. The hook is deployed;
+the declaring file it must read is not, and no ancestor of the deployed location contains
+it.
+
+`_find_doc_types_json()` walks up from its own `__file__` checking two candidates at each
+level: `config/doc_types.json` and `leafcutter/config/doc_types.json`. Neither resolves in
+the self-hosted workspace layout:
+
+- `<workspace>/config/` **does not exist** — the workspace parent is a deploy target
+  holding only `.claude/`, `scripts/` and `.leafcutter/`.
+- `<workspace>/leafcutter/config/` does not exist either, because **this package installs
+  as `leafcutter-ai/`, not `leafcutter/`** — the directory name the consumer-layout
+  candidate is hardcoded against. `CLAUDE.md` documents the install directory as
+  `leafcutter-ai/`.
+
+The walk then falls through to the filesystem root and returns its first candidate purely
+so the error can name a path.
+
+**Evidence.** Hit live on 2026-08-18 committing in a worktree whose `.leafcutter` was a
+symlink to the workspace parent's — the bootstrap `CLAUDE.md` → "Worktree pre-commit
+config" explicitly recommends. `find /home/henzeh/projects/leafcutter -maxdepth 4 -name
+doc_types.json` returns only `leafcutter-ai/config/doc_types.json`, inside the package
+repo. Running `build.py --target-dir <worktree>` so the worktree had its own deployed
+layout fixed it, because the walk then reaches `<worktree>/config/doc_types.json`.
+
+Note this is fail-**closed** and loud, which is the right choice (GE-120 deliberately
+removed the silent fallback to a narrower built-in list). The defect is the unreachable
+file, not the raised error.
+
+**Fix direction.** Either deploy `config/doc_types.json` alongside the hooks that read it —
+this is the failure class `CLAUDE.md` → "New Hook / Gate Dependencies Must Be in the Build
+Deploy-Manifest" already documents — or stop hardcoding the package directory name in the
+candidate list and derive it.
+
+**The same resolution gap exists in the sibling resolver, with a worse outcome.**
+`diagram_type_validators._find_diagram_types_json()` (`:35-55`) uses the identical
+two-candidate walk with the same hardcoded `leafcutter/` directory name, so it is equally
+unreachable in this layout — but it returns `None` and `_load_diagram_types()` falls back
+**silently** to the `DOC_FM_DIAGRAM_TYPE_VALUES` constant. That is precisely the silent
+narrowing GE-120 removed from `doc_types` on 2026-08-18, still live in the file GE-120
+copied its pattern from. Fixing the path resolution must cover both; see
+`docs/known-issues/commit-guardian.md` → KI-CG-002 for the fallback half.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (a hook dependency missing
+from the deployed layout), though this one crashes rather than passing falsely.

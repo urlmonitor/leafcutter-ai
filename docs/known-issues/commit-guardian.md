@@ -80,3 +80,49 @@ Until then, the workaround is documented in `CLAUDE.md` → "AC-store commits �
 parent alongside the child".
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M3.
+
+---
+
+### KI-CG-002 — The diagram-type enum silently narrows from 11 values to 8 when its declaring file is unreachable
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/scripts/commit_guardian/diagram_type_validators.py:35-55` (`_find_diagram_types_json`) and `_load_diagram_types()`
+
+**Symptom.** `_find_diagram_types_json()` walks ancestors of its own `__file__` looking for
+`leafcutter/config/diagram_types.json` or `config/diagram_types.json`. When neither
+resolves it returns `None`, and `_load_diagram_types()` falls back **without any warning**
+to the `DOC_FM_DIAGRAM_TYPE_VALUES` constant in `config.py:190`. The hook then validates
+against a different, narrower enum than the one it is configured with, and says nothing.
+
+**Evidence.** The declaring file `config/diagram_types.json` defines **11** types:
+`agent_flow`, `component`, `container`, `context`, `data_flow`, `dataflow`, `erd`, `none`,
+`sequence`, `state`, `user_flow`. The fallback constant defines **8**: `context`,
+`container`, `component`, `sequence`, `erd`, `state`, `dataflow`, `none`. So on the
+fallback path a doc declaring `diagram_type: agent_flow`, `data_flow` or `user_flow` — all
+canonical — is rejected as an unknown value.
+
+The resolution gap is not hypothetical: it is the same one that made
+`check-doc-frontmatter` crash on 2026-08-18 (see
+`docs/known-issues/build-pipeline.md` → KI-BP-003). Both resolvers hardcode the package
+directory as `leafcutter/`, while this package installs as `leafcutter-ai/`, and the
+self-hosted workspace target has no `config/` tree at all. `doc_types` fails loudly there;
+`diagram_types` fails quietly.
+
+**This is the exact failure GE-120 fixed in the sibling module on the same day.** That work
+removed the silent `except (json.JSONDecodeError, OSError): pass` and the `.exists()`
+fallthrough from `doc_type_validators.py`, on the stated grounds that "a guard that quietly
+answers a different question than the one it was configured with is enforcing a rule nobody
+wrote." `diagram_type_validators.py` is the file GE-120 copied its ancestor-walk pattern
+*from*, and it still has the behaviour that was removed.
+
+**Fix direction.** Mirror GE-120 the rest of the way: raise a `FileNotFoundError` naming
+the resolved path instead of substituting the constant, and fix the path resolution for
+both modules together. If a fallback must be retained for consumer installs, log it at
+WARNING so it is at least observable — a narrowed enum reached in silence is
+indistinguishable from a passing check.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a check that runs against
+less than it claims to, and reports success).
