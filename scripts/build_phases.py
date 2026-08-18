@@ -868,6 +868,12 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         # /build-ac Step 2b.1 fails even though the file is present — a
         # file-presence check cannot catch this, only executing it can (BP-900g-4).
         (ac_store_src / "ac_parent_id.py",              "ac_parent_id.py"),
+        # ac_coverage_resolver.py backs the ac-fulfillment-gate agent template's
+        # Step 1 coverage-resolution seam (ACD-1900b-5-i). It MUST deploy or
+        # the gate's CLI invocation crashes with ModuleNotFoundError in the
+        # deployed layout even though unit tests -- which import from source --
+        # stay green.
+        (ac_store_src / "ac_coverage_resolver.py",      "ac_coverage_resolver.py"),
         (scripts_src / "build_ac_mode_detection.py",    "build_ac_mode_detection.py"),
         (scripts_src / "goal_to_epic.py",               "goal_to_epic.py"),
     ]
@@ -2529,7 +2535,77 @@ def build_build_orchestration_scripts(target_root: Path, config: dict[str, Any],
             print(f"  scripts/build_orchestration/{src_file.name}")
             written += 1
 
+    written += _deploy_fast_lane_release_dependency(target_root, dry_run, force)
+
     return written
+
+
+def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
+                                         force: bool) -> int:
+    """Deploy ``check_changelog_presence.py`` to ``<target>/scripts/release/``.
+
+    ``fast_lane.py`` imports ``check_changelog_presence`` at MODULE SCOPE
+    (KI-BO-001 / BO-2400f-4-i: the module is imported rather than its
+    ``EXEMPT_PREFIXES`` list, so the changelog-requirement decision re-reads the
+    merge check's own rule at call time instead of freezing a copy). It reaches
+    it by putting ``<scripts>/release`` on ``sys.path``.
+
+    Nothing else deploys ``scripts/release/``. Without this, the deployed
+    ``fast_lane.py`` is present but dies at import with ``ModuleNotFoundError:
+    No module named 'check_changelog_presence'`` — which kills the whole module,
+    not just the changelog path, so ``select_connected``, ``mark_done`` and both
+    lean gates go with it and the fast lane is inert in every consumer install.
+
+    This is the ``ac_parent_id.py`` situation exactly (see ``build_ac_store``'s
+    deploy_map), and the same class ``done_proof.py`` hit before it: a
+    file-presence check cannot catch it, only executing the deployed copy can.
+    Caught by BP-900g-4's deployed-execution test, which is why that test exists.
+
+    Args:
+        target_root: Absolute path to the target project root directory.
+        dry_run: When True, logs intent but writes nothing.
+        force: When True, overwrites an existing file.
+
+    Returns:
+        1 when the file was written (or would be in dry-run mode), else 0.
+    """
+    src_file = PACKAGE_ROOT / "scripts" / "release" / "check_changelog_presence.py"
+    output_path = target_root / "scripts" / "release" / "check_changelog_presence.py"
+
+    if not src_file.is_file():
+        _log.warning(
+            "build_build_orchestration_scripts: fast_lane.py's release dependency "
+            "not found, skipping: %s",
+            src_file,
+        )
+        return 0
+
+    if not _should_overwrite(output_path, force):
+        return 0
+
+    if _files_content_identical(src_file, output_path):
+        global _uptodate_count  # noqa: PLW0603
+        _uptodate_count += 1
+        return 0
+
+    if dry_run:
+        print("  [DRY-RUN] would copy scripts/release/check_changelog_presence.py")
+        return 1
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_file, output_path)
+    except OSError as exc:
+        _log.warning(
+            "build_build_orchestration_scripts: failed to copy %s → %s: %s",
+            src_file,
+            output_path,
+            exc,
+        )
+        raise
+
+    print("  scripts/release/check_changelog_presence.py")
+    return 1
 
 
 def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
@@ -2907,4 +2983,11 @@ def clean_stale_artifacts(
 #   for the four file-based artifact phases (agents, commands, workflows, hooks).
 #   Also suppressed pre-existing TRY003 violation in _emit_workflow_variant
 #   (#TICKET-20260707-BP-100m-1)
+# - 2026-08-18 [python-coder]: Added ac_coverage_resolver.py to build_ac_store's
+#   deploy_map. This new AC-store module backs the ac-fulfillment-gate agent
+#   template's Step 1 coverage-resolution seam (ACD-1900b-5-i); without a
+#   deploy_map entry it would exist in the source tree but not the deployed
+#   layout, so the deployed gate's CLI invocation would crash with
+#   ModuleNotFoundError even though unit tests importing from source stay
+#   green. (#ACD-1900b-5-i)
 # ====================================================================

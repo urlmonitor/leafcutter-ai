@@ -5,7 +5,7 @@ type: architecture
 status: active
 flight_level: L2-Container
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-08-18
 source_ticket: tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
 components:
   - build_pipeline
@@ -63,6 +63,7 @@ This container is documented by one L3 child diagram at the component level:
 
 ## Cross-References
 
+- [AC-Driven Development — Coverage Resolution](ac-driven-dev.md#coverage-resolution--ac_coverage_resolver) — a sibling instance of this failure mode outside the five BP-1100f gates above: the `ac-fulfillment-gate` phase gate's coverage-resolution step signed off `ok` having verified zero ACs, because its "every AC in the working list passed or skipped" rule was vacuously true over an empty working list (`ACD-1900b-5-i`). Fixed by making the `ok` verdict structurally require at least one resolved AC.
 - [Build Orchestration — Epic & Ticket Dispatch Sequencing](build-orchestration.md) — owns the drive/verification-phase routing the gates plug into.
 - [Agent Code Delivery Workflows](../agent_delivery_workflows.md) — the supervisor dispatch topology and blocker adjudication these gates review.
 - [Feature to Merged PR — End-to-End Sequence Diagram](../diagrams/c2-006-feature-to-merged-pr.md) — the end-to-end pipeline the gates annotate.

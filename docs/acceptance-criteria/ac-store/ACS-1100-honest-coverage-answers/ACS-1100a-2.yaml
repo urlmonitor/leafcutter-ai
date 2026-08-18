@@ -29,6 +29,22 @@ criteria: |
     clean outcome over an empty set: a validation run pointed at a directory holding 21
     requirement records reports 21 in scope, never "no records to validate" with a
     successful outcome,
+  And the join between the enumerated population and the observed set is made on
+    NORMALISED identifiers, so a record whose identifier is written with surrounding
+    quotes — id: "GE-114-1" — matches the bare token GE-114-1 that the observing side
+    carries, and that record is counted as observed rather than as a miss: the one
+    shipped measurement of this shape mis-counted exactly four records this way until it
+    stripped quotes from identifiers before joining,
+  And a figure whose join fails on formatting variance alone does not satisfy this
+    criterion, because a population that cannot match its own records on presentation is
+    wrong for the same reason as a total drawn through the query's own filters — both
+    report the shape of the measurement instead of the contents of the store — and the
+    bug symptom this clause forbids is four records reported as unobserved purely because
+    their identifier is quoted, with the resulting figure then frozen into a build gate
+    as though it were the real count,
+  And the normalisation the join applies is named in the answer's method as part of its
+    inclusion rule, so a second measurement of the same population reproduces the join
+    instead of arriving at a different number,
   And a total produced by applying the query's own filter set, match keys, or join keys
     does not satisfy this criterion, because it carries the same blind spot,
   And a single filter-free enumeration of the store root that yields both the total and
@@ -47,6 +63,10 @@ doc_links:
     relationship: related
     status: exists
     relevance: "BINDING in-component grounding failure. Given a DIRECTORY argument it collects zero files through its own argument filter, prints 'No YAML files to validate.' and exits 0 — a zero-denominator silent pass in the store's own validator. Verified 2026-08-13 against the ACS-1100 folder, which held 21 requirement records at the time. An independently enumerated total exposes it immediately."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: related
+    status: exists
+    relevance: "BINDING worked example of the join-key normalisation clause, shipped by KM-ADM-005 (PR #425). It enumerates the store filter-free via rglob (the correct denominator shape) and joins that population against '# covers:' tags on a separate key — and it must strip quotes from AC identifiers before joining, because a record written with a quoted id does not match the bare token in a tag. Four records were mis-counted as untagged before the strip was added. Read it before implementing the join; do NOT re-implement it here, the surface belongs to KM-ADM-100."
   - path: scripts/agent-health/generate_health_report.py
     relationship: related
     status: exists
@@ -61,7 +81,17 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: scope-addition
+    by: business-analyst
+    at: 2026-08-18
+    note: >-
+      Added the join-key normalisation case to criteria (three clauses) plus a binding
+      doc_link to the shipped ratchet. A denominator that fails to match its own
+      population on formatting variance is as wrong as one built from the query's own
+      filters. Real, already-fixed-in-one-place behaviour (KM-ADM-005 strips quotes from
+      AC identifiers before joining coverage tags; four records were mis-counted before
+      it did). No existing clause was altered or removed.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -91,3 +121,30 @@ notes: |
   binding this AC to them would have let it go done against scan_ac_store.py alone while
   both named bugs stayed live. They are retained as clearly-labelled illustrations, and
   each needs its own AC in its owning component.
+
+  ==========================================================================
+  JOIN-KEY NORMALISATION IS A DENOMINATOR BUG (2026-08-18, BA).
+  ==========================================================================
+  Added on the strength of already-shipped behaviour, not speculation. KM-ADM-005's
+  ratchet joins a filter-free rglob population against coverage tags, and it must strip
+  quotes from identifiers before joining: a record written with a quoted id does not
+  match the bare token a tag carries. Four records were counted as untagged before the
+  strip was added — a four-record error in a figure that is now a build gate.
+
+  WHY THIS AMENDS a-2 RATHER THAN ADDING AN L3. The existing criterion already forbids a
+  total that "carries the same blind spot" as the query's own filters. A join that fails
+  on presentation IS that blind spot, arriving through the KEY rather than through the
+  FILTER, and the criterion already names match keys and join keys alongside filters. It
+  is a normal-path property of every join this contract governs, not an exceptional
+  input — an L3 would have made the general rule look optional and left the L2 reading as
+  though only filters could poison a total. The parent L1's own note asks for it "carried
+  into L2" (ACS-1100a notes, 2026-08-18 PO section).
+
+  Boundary kept intact: this clause constrains how the population is MATCHED, never the
+  RULE applied per record. The ACS-100h-7a exemption and the denominator-versus-rule
+  boundary are untouched.
+
+  The third added clause (state the normalisation in the method) is the seam to
+  ACS-1100b-1: without it, two correct measurements of one population can still disagree
+  and neither can be reproduced — which is the live TQ-400 / KM-ADM-005 disagreement in
+  miniature.

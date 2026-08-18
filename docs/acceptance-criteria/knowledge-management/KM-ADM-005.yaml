@@ -7,6 +7,22 @@ status: active
 component: knowledge-management
 level: L2
 title: "The test-covers edge states its diff scope, and the untagged-done backlog cannot grow"
+parent: KM-ADM-100a
+depends_on:
+  - KM-ADM-100a
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: "The GENERAL contract this AC is one concrete instance of: an answer that saw a fraction of the store must not look like one that saw all of it. ACS-1100 is standing and unbuilt; this AC satisfies its spirit for a single surface, in hand-written prose. Inherited, not duplicated — a future build of ACS-1100 must not re-implement or contradict what shipped here."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400d.yaml
+    relationship: context
+    status: exists
+    relevance: "OWNS retiring the untagged-done backlog this AC only ratchets. TQ-400d ('the pile of unproven finished work gets worked through, not written off') is the follow-on work; this AC is the floor beneath it."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: verifies
+    status: exists
+    relevance: "Carries HIGH_WATER_MARK = 244. Lowering it as the pile is retired is TQ-400d's job; raising it is never correct."
 origin_agent: BrainCandy
 criteria: |
   Given the artifact data map rates test-covers (Test -> AC via "# covers: <AC-ID>") as
@@ -40,5 +56,32 @@ notes: |
   The ratchet is deliberately a floor, not a fix: it stops the backlog growing while
   leaving the 244 to be retired separately. It also gives the store the first mechanical
   answer to the user's original question, "is the implementation covered".
+
+  ==========================================================================
+  RECONCILIATION 2026-08-18 (product-owner) — READ BEFORE ACTING ON THE 244.
+  ==========================================================================
+  1. "TO BE RETIRED SEPARATELY" NOW HAS A NAMED OWNER. The sentence above, and
+     KI-KM-002 in docs/known-issues/knowledge-management.md, both read as though the
+     retirement is unowned. It is not. TQ-400d ("the pile of unproven finished work
+     gets worked through, not written off", authored 2026-08-17, one day BEFORE the
+     known-issue entry) owns exactly this pile, with five L2 children covering the
+     worked list, per-item decisions, progress measurement, and a triage how-to. Do
+     NOT author a new AC for retiring the 244 — it would duplicate TQ-400d.
+  2. THE DIVISION OF LABOUR IS CLEAN, KEEP IT THAT WAY. This AC is the FLOOR (the
+     count cannot grow). TQ-400d is the DRAWDOWN (the count goes down, with a
+     recorded decision per record). TQ-400a is the store-wide sweep that produces the
+     inventory both depend on. HIGH_WATER_MARK should be lowered by TQ-400d as the
+     pile is retired; nothing should ever raise it.
+  3. TWO MEASUREMENTS OF THE SAME THING DISAGREE — AND THAT IS THE ACS-1100 DEFECT
+     LIVE IN THIS VERY FILE. This AC reports 244 of 607 done ACs untagged (measured
+     2026-08-13, whole store, quote-stripped ids). TQ-400 reports 240 of 641
+     (measured 2026-08-17, done L2/L3 records only). Different denominators, different
+     dates, different inclusion rules, neither stating the other's existence — so a
+     reader cannot tell whether the pile grew, shrank, or was simply counted twice.
+     Both figures are defensible; what is missing is precisely what ACS-1100b
+     requires, a declared scope and inclusion rule alongside the number. Whichever AC
+     builds first must state its method, and the other must be reconciled to it.
+  4. THE STANDING CONTRACT IS ACS-1100, AND IT STAYS IN ac-store. This AC is not
+     re-homed under it. See the doc_links above and the KM-ADM-100 notes.
 change_target: docs
 risk_surface: internal

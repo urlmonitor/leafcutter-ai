@@ -43,9 +43,11 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 ### KI-BO-002 — moved to `ac-store`
 
-Refiled 2026-08-18 as **KI-ACS-001** in
+Refiled 2026-08-18 as **KI-ACS-003** in
 [`docs/known-issues/ac-store.md`](ac-store.md): *an AC is marked `done` with no link
-to the code implementing it.*
+to the code implementing it.* (Filed there as KI-ACS-001; renumbered to 003 on merge,
+when it turned out `ac-store.md` had been created independently on main with two
+entries already holding 001 and 002.)
 
 Found during a fast-lane run and the call site is in `fast_lane.py`, but what
 `implemented_by` must contain — and what a claim of "done" has to prove — is
@@ -106,7 +108,51 @@ preserve, at a new address, exactly the test that let a dead reference read as a
 
 ---
 
-### KI-BO-007 — A structural test makes code comments load-bearing
+### KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/workflows-js/build-feature.js` — the per-phase result handling
+  that populates `completed_phases`
+
+**Symptom.** A phase agent that runs to completion but deliberately performs **no
+action** is recorded in `completed_phases` exactly like one that did the work. The
+`pull-request` agent is the reliable trigger: its Confirmation Contract forbids pushing
+or calling `gh pr create` without an affirmative user turn, and no user turn exists
+inside a workflow dispatch, so it drafts the PR, halts at the gate, and returns a
+well-formed message explaining that it stopped. The workflow reads that as success.
+
+The result is a top-level `"status": "ok"` and `"pull-request"` in `completed_phases`
+for a branch that was never pushed and a PR that does not exist. The same shape applies
+to any phase whose agent can legitimately decline.
+
+**Evidence.** Run `wf_ebe75602-f98` (ticket ACD-1900b-5-i) returned
+`{"status":"ok", "completed_phases":[…,"commit","pull-request"]}`. Verified against git:
+`git ls-remote --heads origin ticket/TICKET-20260818-ACD-1900b-5-i` returned empty, no PR
+existed, and the branch sat at `[ahead 3]` with no upstream. The journal entry for that
+agent reads: *"Pre-flight complete, PR drafted, but I am holding at the mandatory
+confirmation gate before pushing … No user turn is available in this dispatch to supply
+the required affirmative."* The commit phase in the same run genuinely did commit, so
+this is not a blanket failure — it is per-phase, and invisible without checking git.
+
+**Related.** The same run skipped `architect-review` and `documentation-verifier` on
+`cross_agent` blockers and still reported `status: ok`; skipped-on-blocker phases are
+surfaced in `skipped_phases`, which is correct and legible. The defect here is narrower:
+a phase in `completed_phases` that did nothing.
+
+**Fix direction.** A phase's completion should be asserted against an observable side
+effect, not against the agent returning cleanly — for `pull-request`, that the remote
+branch exists and `gh pr list --head <branch>` is non-empty. Failing that, the agent's
+own "I halted at the gate" outcome needs a distinct status the workflow routes on, so it
+lands in `skipped_phases` (or a new `halted_phases`) rather than `completed_phases`.
+Reporting `status: ok` while a required terminal phase silently did not happen is the
+phantom-done pattern applied to the build loop itself.
+
+---
+
+### KI-BO-008 — A structural test makes code comments load-bearing
 
 - **Severity:** medium
 - **Status:** open
@@ -137,7 +183,7 @@ Worth doing when that file is next touched rather than as its own errand.
 
 ---
 
-### KI-BO-008 — The harness default stub is generically positive, so a new gate silently breaks older fixtures
+### KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures
 
 - **Severity:** medium
 - **Status:** open
