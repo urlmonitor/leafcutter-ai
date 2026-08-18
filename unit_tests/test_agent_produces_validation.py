@@ -204,6 +204,7 @@ class TestValidateProducesFieldRegistryErrors:
 
     def test_single_agent_missing_produces_in_registry(self, tmp_path: Path) -> None:
         """Error message must identify the missing registry field by agent ID."""
+        # covers: BO-510-3-i
         agents = [_make_agent("new-agent")]  # No 'produces' key
         errors = validate_produces_field(agents, template_dir=tmp_path)
 

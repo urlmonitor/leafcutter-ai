@@ -132,13 +132,81 @@ less than it claims to, and reports success).
 
 ---
 
-### KI-CG-003 — `check-contract-shrinking` has no merge-commit awareness, so it blames the base branch's history on the merge
+### KI-CG-006 — The pre-commit proof-of-done gate is stricter than the CI backstop it approximates
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/scripts/commit_guardian/check_done_proof.py` (`check_staged_done_proofs`)
+
+**Symptom.** `check_staged_done_proofs` never reads `test_required`, and has no composite
+path. Its two siblings have both: `check_all_done_acs` and `check_changed_done_acs` each
+skip an AC with `test_required: false`, and both derive a composite's verdict from its
+children via `verify_done_eligible`. So the fast local gate blocks commits that the CI
+gate would pass.
+
+The module docstring documents the exemption for the two CI functions and is silent about
+the pre-commit one, so the omission may be deliberate. It is still incoherent in effect:
+the same docstring calls the pre-commit check the fast approximation and CI "the
+authoritative backstop". An approximation stricter than its backstop is not an
+approximation.
+
+**Consequence.** An AC that is legitimately `test_required: false` and `work_status: done`
+can never appear in a staged diff again. Editing so much as a stale path inside one of
+those files is uncommittable without `SKIP=`. Same for any `done` composite.
+
+**Evidence.** On 2026-08-18 a commit correcting AC statuses was blocked on seven records:
+`BO-1500a-3`, `BO-1500b-4`, `BO-1500c-4`, `BO-1500c-5` (all `test_required: false`
+documentation ACs whose diagrams and how-to exist on disk) and `BO-1500b-1`, `BO-1600d`,
+`BO-510-3` (composites). The authoritative gate — `check_done_proof --mode ci-changed
+--base origin/main`, which backs the required "Proof-of-done coverage check (BO-2500b)"
+status check — exited 0 on the same tree.
+
+Earlier in the same session the same hook was run standalone from the workspace parent and
+exited 0, which was read as a pass. It was vacuous: `git diff --cached` saw no index there,
+so it checked nothing. See KI-CG-001 for the same index-scoping confusion.
+
+**Fix direction.** Mirror the siblings: skip `test_required: false`, and fall through to
+the composite path rather than demanding a direct tag. It is a small change but it widens
+a phantom-done gate, so it wants an AC and a test rather than an in-passing edit.
+
+---
+
+### KI-CG-003 — `check-contract-shrinking` has no merge-commit awareness, so it blames the base branch's history on the merge
+
+- **Severity:** high
+- **Status:** FIXED 2026-08-18 — pending deletion once merged
+- **Occurrences:** 2
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/scripts/commit_guardian/check_contract_shrinking.py:165-189` (`_get_staged_diff`)
+
+**Fixed.** Hit a second time merging `origin/main` into `fix/ac-schema-conformance-33`,
+blocked on the same `#461` test deletions. `_get_staged_diff` now narrows to files
+differing from BOTH parents during a merge, matching the four sibling hooks.
+
+Two things the original fix direction above does not mention, both found by review before
+the fix landed:
+
+- **Scoping the whole diff breaks the guard's conjunction.** The predicate spans two
+  disjoint file sets — production changed AND a test weakened. Narrowing both halves lets
+  an author take the base branch's production edit verbatim (removing it from scope) and
+  skip the tests it broke; the pairing never forms. Production detection therefore stays
+  on the full staged diff and only weakening detection is merge-scoped.
+- **Three silent-pass paths.** Paths with spaces were split into two tokens, non-ASCII
+  paths came back C-quoted (`core.quotePath` defaults true), and pathspecs after `--`
+  resolve against CWD rather than the repo root. Each produced an unmatched pathspec, an
+  empty diff, and a passing gate — an unmatched pathspec is not a git error. Fixed with
+  `-z` NUL splitting and `:(top)` anchoring, plus a contradiction check that falls back to
+  the full diff when a non-empty scope yields an empty diff.
+
+Covered by `unit_tests/commit_guardian/test_ac_limits_merge_scope.py`
+(`TestContractShrinkingMergeScoping`, `TestContractShrinkingMergeBehaviour`) — 17 tests,
+including discriminating cases for each of the four defects above.
+
+Delete this section once the fix is on `main`.
+
+**Original report, kept for the record until deletion.**
 
 **Symptom.** The guard blocks when a diff deletes test functions *and* touches production
 files. It obtains that diff from a bare `git diff --cached`, with no check for `MERGE_HEAD`

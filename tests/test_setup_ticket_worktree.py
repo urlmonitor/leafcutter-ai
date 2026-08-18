@@ -1274,6 +1274,7 @@ class TestEstablishPreCommitConfigSymlinkPath(unittest.TestCase):
         When _establish_pre_commit_config is called,
         Then worktree/.leafcutter is created as a symlink pointing to main_repo/.leafcutter.
         """
+        # covers: BO-1500b-1-i
         import tempfile
 
         mod = _load_scripts_setup_module()
