@@ -151,7 +151,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-122a-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
