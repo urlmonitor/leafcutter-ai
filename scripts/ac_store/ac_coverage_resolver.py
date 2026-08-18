@@ -305,10 +305,23 @@ def compute_verdict(
     the working list is passed or skipped" rule went vacuously green on a
     generator-produced ticket.
 
+    THE SAME INVARIANT, ONE LEVEL DOWN: ``all()`` over *ac_results* is also
+    vacuously ``True`` when that list is shorter than *resolved_acs* — a caller
+    passing ``ac_results=[]`` against three resolved ACs would otherwise get
+    ``{"ok": True, "verified_count": 3}``, claiming three ACs verified while
+    checking none. Today's sole caller (``verify_ticket_coverage``) always
+    builds the two lists 1:1 so this is unreachable, but the guard is here
+    because this module is the documented seed for ACD-1900b-1's shared
+    resolver and WILL gain a second caller. A module whose whole purpose is to
+    make vacuous truth structurally impossible must not depend on its callers
+    being careful. On mismatch the honest count is the number actually checked,
+    so ``verified_count`` reports ``len(ac_results)``, not the claimed total.
+
     Args:
         resolved_acs: The resolved-AC list from ``resolve_coverage``.
         ac_results: Per-AC check results, each
             ``{"ac_id": str, "passed": bool, "failed_fields": list[str]}``.
+            Must be 1:1 with *resolved_acs*.
 
     Returns:
         ``{"ok": bool, "verified_count": int}``.
@@ -316,6 +329,8 @@ def compute_verdict(
     verified_count = len(resolved_acs)
     if verified_count == 0:
         return {"ok": False, "verified_count": 0}
+    if len(ac_results) != verified_count:
+        return {"ok": False, "verified_count": len(ac_results)}
     ok = all(result.get("passed", False) for result in ac_results)
     return {"ok": ok, "verified_count": verified_count}
 

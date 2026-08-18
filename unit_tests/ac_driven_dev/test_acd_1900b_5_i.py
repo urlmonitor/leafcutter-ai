@@ -455,6 +455,65 @@ class TestVacuousTruthGuard(unittest.TestCase):
             f"nothing' bug). Got: {verdict_empty!r}",
         )
 
+    def test_ok_verdict_is_impossible_when_ac_results_is_shorter_than_resolved(
+        self,
+    ) -> None:
+        # covers: ACD-1900b-5-i
+        """The same vacuous-truth invariant, one level down.
+
+        ``all()`` over ac_results is ALSO vacuously True when that list is
+        shorter than resolved_acs. A caller passing ac_results=[] against
+        three resolved ACs must not receive ok=True with verified_count=3 —
+        that would claim three ACs verified while checking none, which is the
+        precise defect this AC exists to make structurally impossible.
+
+        Unreachable through today's sole caller (verify_ticket_coverage builds
+        the two lists 1:1), so this asserts the guard directly. It matters
+        because this module is the documented seed for ACD-1900b-1's shared
+        resolver and will gain a second caller; the invariant must not depend
+        on callers being careful.
+
+        Regression guard for the architect-review finding on ACD-1900b-5-i.
+        """
+        resolved = [
+            {"ac_id": "AC-ONE", "ac_yaml_path": "a.yaml", "resolved_via": "traceability_block"},
+            {"ac_id": "AC-TWO", "ac_yaml_path": "b.yaml", "resolved_via": "traceability_block"},
+            {"ac_id": "AC-THREE", "ac_yaml_path": "c.yaml", "resolved_via": "traceability_block"},
+        ]
+
+        verdict_none_checked = _resolver.compute_verdict(
+            resolved_acs=resolved, ac_results=[]
+        )
+        self.assertFalse(
+            verdict_none_checked["ok"],
+            "Three resolved ACs with zero per-AC results must yield ok=False, "
+            "not a vacuous all([])==True. Got: "
+            f"{verdict_none_checked!r}",
+        )
+        self.assertEqual(
+            verdict_none_checked["verified_count"],
+            0,
+            "verified_count must report what was actually CHECKED (0), not "
+            "the number resolved (3) — otherwise the verdict overstates its "
+            f"own coverage. Got: {verdict_none_checked!r}",
+        )
+
+        # Partial coverage: two of three checked, both passing, still not ok.
+        verdict_partial = _resolver.compute_verdict(
+            resolved_acs=resolved,
+            ac_results=[
+                {"ac_id": "AC-ONE", "passed": True, "failed_fields": []},
+                {"ac_id": "AC-TWO", "passed": True, "failed_fields": []},
+            ],
+        )
+        self.assertFalse(
+            verdict_partial["ok"],
+            "Two passing results against three resolved ACs must yield "
+            "ok=False — the third was never checked, so 'every AC passed' is "
+            f"not established. Got: {verdict_partial!r}",
+        )
+        self.assertEqual(verdict_partial["verified_count"], 2)
+
 
 class TestListFormRegression(unittest.TestCase):
     """Test 5: regression for the previously-accepted list form (BO-201)."""
