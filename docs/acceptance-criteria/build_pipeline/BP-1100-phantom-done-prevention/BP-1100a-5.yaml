@@ -1,0 +1,125 @@
+id: BP-1100a-5
+components:
+  - build_pipeline
+  - documentation_system
+title: "The guidance on getting a generated ticket's surface right describes the derivation that actually runs"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given both changes to how a generated ticket's surface is derived have shipped — a
+    file reaches the surface only where the requirement says that file changes, and a
+    requirement that offers no way to tell has its ticket say so instead of guessing,
+  When an author consults the project's task-oriented guidance on making a generated
+    ticket name the right files,
+  Then that guidance describes the derivation as it now behaves, and no longer offers
+    scanning the requirement's prose for path-shaped words as a way a file can reach
+    the surface,
+  And it states the routes that do remain, and what an author gets when they use none
+    of them: a ticket that declares no surface and says why, shown to whoever is asked
+    to approve the build,
+  And the worked example the guidance already carries — the live requirement whose
+    generated surface omitted the file it exists to change and invented others,
+    including one its own criteria forbid touching — reports what that same requirement
+    produces after the change rather than what it produced before,
+  And where the guidance today warns that the readiness check reports a count dressed
+    as a verdict on the surface, it says what that check now reports for a surface that
+    could not be determined, and keeps the warning only for the part that is still true,
+  And an author following the guidance end to end is never instructed to do something
+    the shipped derivation ignores.
+depends_on:
+  - BP-1100a
+  - BP-1100a-3
+  - BP-1100a-4
+doc_links:
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: modifies
+    status: exists
+    relevance: "The page this AC owns, and the only file it edits. The affected section is 'How do I make sure /build-ac names the right files_touched?'. It documents, as current behaviour, the two-source derivation, the prose fallback, and the --verify count caveat — all three change when BP-1100a-3 and BP-1100a-4 land. Extend the existing section; do not start a competing page. The rest of the guide (creating, amending, deprecating ACs) is out of scope."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "One of the two behaviours the page must be rewritten to match: what the surface must contain, plus the determined/undetermined outcome and the statement shown to whoever approves the build. Its own it_requirements records this stale-doc caveat as explicitly out of its surface — this AC is the follow-up it asks for."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The other behaviour: prose ceases to be a source of surface membership at all. This is the change that makes the page's advice actively wrong rather than merely incomplete — an author who reads 'the generator falls back to scanning prose' and words their bullets accordingly will get an undetermined surface and no idea why."
+  - path: docs/known-issues/ac-store.md
+    relationship: related
+    status: exists
+    relevance: "KI-ACS-002 records the --verify count-not-correctness defect the page currently warns readers about, and docs/reference/false-green-mechanisms.md catalogues it as M8. Both are separate surfaces with their own lifecycles and are NOT edited here; the page must simply stop describing behaviour that has changed and must not contradict what those two still say about the part that has not."
+assigned_agent: documentation-expert
+test_required: false
+test_rationale: "The whole artifact is prose in docs/how-to/ac-traceability-store.md; it adds no executable surface, so there is nothing a test could drive. The behaviours it describes are covered by BP-1100a-3's and BP-1100a-4's test contracts, both of which assert on tickets the real generator wrote. Recorded explicitly rather than left absent so test-writer skips with a stated reason instead of the silent auto-skip documented in CLAUDE.md."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY THIS EXISTS. BP-1100a-3 changes the first of the two sources the surface is derived
+  from and BP-1100a-4 retires the second. The section of docs/how-to/ac-traceability-store.md
+  titled "How do I make sure /build-ac names the right files_touched?" documents both as
+  current behaviour, in detail and by name. When those two land, the page tells authors how
+  a mechanism works that no longer works that way.
+
+  WHY A SEPARATE AC AND NOT A WIDENING OF EITHER. Both ACs' criteria are about the
+  generated ticket, not about documentation, and both deliberately exclude the page from
+  their surface; the it-po's reasoning there is right and this AC does not overturn it.
+  Nothing else would have scheduled the work either: documentation-expert is added to a
+  generated ticket by config/guardrail_gates.yaml's documentation_gates, keyed on the
+  leaf's change_target against the trigger list (ui, schema, pipeline, docs). BP-1100a-3
+  and BP-1100a-4 both carry change_target: code, so neither ticket would ever have carried
+  a documentation phase. This AC carries change_target: docs and therefore does.
+
+  WHY THE STALENESS IS NOT COSMETIC. This page is the authoring-side remedy for the very
+  defect class BP-1100a exists to close, and BP-1100a-4 makes it MORE load-bearing, not
+  less: once prose stops contributing, re-tagging a doc_link to an edit-surface
+  relationship or supplying reference_file_path is the ONLY way a file reaches the surface.
+  An author who follows today's text — which describes the prose fallback as a live
+  behaviour — will produce a requirement whose ticket declares no surface, and the page
+  will not explain why. Documentation that describes a retired mechanism is the same
+  phantom-done shape one layer up: it looks like coverage and cannot be acted on.
+
+  THREE THINGS ON THE PAGE CHANGE, AND THEY FAIL INDEPENDENTLY.
+    1. The two-source description and the prose-fallback paragraph.
+    2. The worked BO-2400g-2 example, whose stated output ("[PASS] files_touched has 4
+       path(s)", none of them the file the AC exists to change) is a before-picture once
+       the derivation is fixed.
+    3. The --verify caveat. BP-1100a-3 requires that no report call an undetermined
+       surface satisfactory, so the "a green exit code does not do it for you" advice is
+       partly overtaken — but only partly: the check still cannot confirm that a
+       DETERMINED surface is the right one. The criteria ask for the true remainder to be
+       kept, not for the whole warning to be deleted, because deleting it would restore
+       exactly the over-trust that KI-ACS-002 and false-green mechanism M8 describe.
+
+  SCOPE FENCE. This AC owns one section of one page. It does not own docs/known-issues/
+  ac-store.md (KI-ACS-002 is closed by whoever fixes the readiness report, not by a writer)
+  and it does not own docs/reference/false-green-mechanisms.md, whose M8 entry is a durable
+  pattern illustrated by this defect rather than a record of it. Contradicting either is
+  the failure mode; editing them here is out of bounds.
+
+  ORDERING. depends_on names both behaviour ACs because the page cannot be written
+  truthfully until both have shipped — writing it after only BP-1100a-3 would document a
+  prose fallback that is about to be retired. This is the documentation-after-
+  implementation timing the store uses elsewhere (see BO-2400a-6).
+
+  FIELDS LEFT FOR THE IT PO. estimated_complexity and it_requirements are not set here.
+  assigned_agent is set to documentation-expert because the how-to genre maps to that agent
+  mechanically, not as a judgement — override it if the enrichment pass disagrees. No
+  test_spec is authored: test_required is false with a stated rationale.
+
+  PARENT CAP. BP-1100a now has five L2 children (BP-1100a-1, -2, -3, -4, -5) and declares no
+  child_limit_override. _MAX_L2_PER_L1 is 5 and is applied as child_count > limit, so five
+  passes and this AC is the last one that fits. A sixth L2 under BP-1100a will be blocked;
+  the next author must split the tree (see the ac-tree-split skill) or find another L1
+  rather than reach for the override. BP-1100 itself is also full at seven L1s, so a new
+  sibling L1 is not available either.

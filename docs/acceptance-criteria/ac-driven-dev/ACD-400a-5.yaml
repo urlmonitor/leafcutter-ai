@@ -12,19 +12,26 @@ work_status: todo
 roadmap_phase: phase_1
 criteria: |
   Given the store holds a unit of work "P" that is buildable in its own right — it
-    carries its own criteria and its own single owner, a builder can be handed it
-    exactly as it stands, and it reaches a completed state by being built — and P
-    has not been completed,
+    carries criteria of its own, the work it describes is work one builder does, and it
+    reaches a completed state by being built rather than by the things beneath it
+    reaching one — and P has not been completed,
   And the store also holds a composite "C" that is never handed to a builder as it
     stands and only reaches a completed state by the things beneath it reaching one,
   And a refinement "R" that sits directly beneath P in the store's hierarchy names P
-    as the prerequisite it refines,
+    as the prerequisite it refines, and P's own record acknowledges R among the things
+    beneath it — so P both has work of its own AND has something beneath it,
   And a separate refinement "S" that sits directly beneath C names only C as its
     prerequisite,
+  And the store also holds "Q", buildable in the same sense as P and equally
+    uncompleted, but with nobody yet named to build it, and a refinement "T" directly
+    beneath Q naming Q as the prerequisite it refines,
   When the scanner is asked which work is ready to be picked up,
   Then R is not offered as ready, and the account of what is holding R names P,
   And S IS offered as ready, and nothing in the account of held work names C as
     holding S,
+  And T is not offered as ready either, and the account of what is holding T names Q —
+    a unit that reaches completion by being built holds its dependant whether or not
+    anyone has yet been named to build it,
   And the only thing holding R is that P is not finished — R's position beneath P in
     the hierarchy neither adds a reason to hold R nor removes one.
 depends_on: [ACD-400a, ACD-400a-3]
@@ -95,6 +102,39 @@ amended_by:
       edit it. The BA-authored test_spec and test_rationale are kept verbatim — they already cover
       criterion, negative control, real_artifact and reachability, and the pair-of-opposed-criteria
       structure is load-bearing. criteria, title and notes untouched."
+  - reason: criteria-clarification
+    by: business-analyst
+    at: 2026-08-18
+    note: "Settles the it-po's open caveat that 'independently completable' had no discriminator.
+      DECISION: the criteria do NOT name the record field, because naming one would freeze a
+      storage detail into a behavioural requirement and would make the AC pass or fail on a
+      vocabulary change rather than on the scanner's answers. What was genuinely wrong is that
+      the criteria did not FORCE a discriminator, and the three candidates the notes had blessed
+      (level, owner presence, the leaf/composite distinction) give different answers on the real
+      store — so an implementer could satisfy the letter with a proxy that misses the point. Two
+      changes fix that by construction. (1) The R-beneath-P clause now also states that P's own
+      record acknowledges R among the things beneath it, so P demonstrably HAS a child. This
+      makes 'composite = has children beneath it' fail the very first assertion instead of
+      passing it. It is not a hypothetical: BO-2400g-1 — the observed defect's own P — is an L2
+      with covered_by [BO-2400g-1-i], so the has-children reading reproduces today's wrong answer
+      exactly. (2) A third pair, Q and T, is added: Q is buildable in the same sense as P but has
+      nobody named to build it yet, and T beneath Q must still be held. This makes
+      'not-independently-completable = no owner recorded' fail, which matters because the store
+      is permanently full of BA-authored L2s awaiting enrichment — BP-1100a-3 and BP-1100a-4 were
+      both in exactly that state yesterday, and this AC's own notes record that assignment is
+      deliberately omitted at authoring time. Consequentially, P's definition no longer makes an
+      owner constitutive of being buildable ('its own single owner' became 'the work it describes
+      is work one builder does'), or the record would contradict itself.
+      TWO IT-PO-OWNED FIELDS ARE NOW OUT OF STEP AND ARE NOT TOUCHED HERE. (a) The
+      config_schema_fragment's independently_completable description still says the property
+      means the prerequisite 'carries its own criteria and a single owner' — the owner half is
+      what the new Q/T pair rejects, and the phrase should be dropped so the fragment and the
+      criteria agree. (b) test_spec has four descriptors and none exercises Q/T; a fifth is
+      needed, opposed to the first two in the same way, asserting that a buildable prerequisite
+      with no owner recorded still appears in the account of what holds its refinement. Both are
+      recorded rather than fixed silently. Title and every other it-po-owned field untouched;
+      the notes paragraph that had blessed all three candidate mechanisms is corrected in place
+      and marked as superseded by this record."
 superseded_by: null
 covered_by: [ACD-400a-5-i]
 implemented_by: []
@@ -181,16 +221,36 @@ notes: |
   correct behaviour is neither "ignore ancestors" nor "ignore nobody" — it is "ignore only
   those prerequisites that can never themselves be built". The criteria are written around
   that distinction and deliberately do not name a helper, a parent-id derivation, or a
-  level comparison: how the implementation recognises "can be built" is the IT PO's call
-  and may reasonably be the level field, the presence of an owner, or the composite/leaf
-  distinction already in the schema.
+  level comparison: which field the implementation reads is the IT PO's call.
 
-  WHY THE NEGATIVE CONTROL IS INSIDE THE CRITERIA AND NOT ONLY IN A TEST. The cheapest
+  WHICH CANDIDATE MECHANISMS THE CRITERIA NOW REJECT (settled 2026-08-18; supersedes the
+  earlier note that all three candidates were equally reasonable). This AC used to say the
+  recognition "may reasonably be the level field, the presence of an owner, or the
+  composite/leaf distinction already in the schema". Two of those three give the wrong
+  answer on this very store, so the criteria were tightened until they discriminate:
+    - "Composite = has something beneath it" is REJECTED, because P in these criteria has
+      R beneath it and P's own record says so. This is not a contrived fixture: BO-2400g-1,
+      the observed defect's own P, is an L2 whose covered_by is [BO-2400g-1-i]. An
+      implementation keyed on having children reproduces today's wrong answer exactly while
+      appearing to be a principled fix.
+    - "Not independently completable = no owner recorded" is REJECTED by the Q/T pair. The
+      store permanently contains BA-authored L2s that have not been enriched yet — this
+      AC's own notes say assignment is deliberately omitted at authoring time — and those
+      are unfinished paperwork, not composites. They will be built, so they must hold their
+      dependants meanwhile. The distinction that matters is between "can never be completed
+      on its own" (structural, permanent) and "is not ready to hand over right now"
+      (transient); only the first may drop a prerequisite from the blocking set.
+  Anything that survives both rejections and the S/C control is acceptable. The IT PO's
+  independently_completable predicate is compatible; what its description must not do is
+  make an owner constitutive of the property, which is recorded in the amendment above.
+
+  WHY THE NEGATIVE CONTROLS ARE INSIDE THE CRITERIA AND NOT ONLY IN A TEST. The cheapest
   wrong fix is a one-line deletion of `dep not in ancestors`. That satisfies every
   sentence about R and reinstates the exact bug ACD-400a-3 was written to remove, on a
   store where nearly every freshly-authored leaf carries its parent in depends_on. The
   S/C clauses exist so the requirement itself, not merely a downstream test, rejects that
-  fix.
+  fix. The Q/T clauses are there for the same reason one level down: they reject a proxy
+  that passes S/C and R/P and is still wrong across most of the store.
 
   CAP ARITHMETIC — CHECKED, AND THIS L1 IS NOW FULL. The default cap is 5 L2s per L1
   (_MAX_L2_PER_L1 = 5, templates/scripts/commit_guardian/check_ac_limits.py:82, applied as

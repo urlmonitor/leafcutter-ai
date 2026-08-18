@@ -22,10 +22,15 @@ criteria: |
   file where the behaviour will change,
   And it contains every other file the requirement says will change,
   And when the requirement offers no way to tell which of the files it references will
-  change, the generated ticket states that its surface could not be determined, in a
-  place the person driving the ticket reads before dispatching a coder — rather than
-  quietly emitting a surface assembled from whatever paths the requirement happened to
-  mention.
+  change, the generated ticket states that its surface could not be determined and what
+  about the requirement left it undeterminable — rather than quietly emitting a surface
+  assembled from whatever paths the requirement happened to mention,
+  And that same statement is put in front of the person who is asked to approve the
+  build, at the moment they are asked and without their having to run a further check to
+  go and find it — that approval is the last point at which anyone can stop the work
+  before a coder is dispatched, and that person is the reader this criterion means,
+  And no report on that ticket calls its surface satisfactory while the surface is
+  undetermined.
 depends_on:
   - BP-1100a
 doc_links:
@@ -174,6 +179,40 @@ amended_by:
       this and BP-1100a-4 land, but BP-1100a carries no documentation_triggers and the criteria
       are about the generated ticket only, so the page is deliberately NOT in this surface —
       a follow-up documentation AC is needed. criteria, title and notes untouched."
+  - reason: criteria-clarification
+    by: business-analyst
+    at: 2026-08-18
+    note: "Settles the it-po's open caveat on the third criterion clause: 'a place the person
+      driving the ticket reads' was not resolvable as written, so the clause named no reader and
+      any surface could claim to satisfy it. The clause is now split in three and NAMES the
+      reader. (1) The generated ticket must state that the surface could not be determined AND
+      what about the requirement left it undeterminable — the reason was previously only in the
+      it_requirements fragment, never in the criteria, so a bare 'undetermined' with no cause
+      satisfied the old wording. (2) The same statement must be put in front of the person who
+      is asked to APPROVE THE BUILD, at the moment they are asked. That approval — the
+      'Build this ticket now? (yes / review / skip)' gate in the /build-ac leaf path, and the
+      per-leaf readiness gate on the goal path — is the last point at which a human can stop the
+      work before a coder is dispatched, so it is the only defensible reading of 'the person
+      driving the ticket'. The clause says 'without their having to run a further check to go
+      and find it' deliberately: the readiness report is opt-in, and it is also the report that
+      already prints '[PASS] files_touched has N path(s)' over a wrong surface
+      (docs/known-issues/ac-store.md KI-ACS-002; docs/reference/false-green-mechanisms.md M8),
+      so a reader who trusts it is precisely the reader this AC exists to protect. (3) A separate
+      clause now forbids ANY report on the ticket calling its surface satisfactory while the
+      surface is undetermined — this keeps the it-po's second enforcement point (the self-check
+      at lines 2790-2793) and its test descriptor
+      test_a_partial_surface_is_not_reported_as_a_passing_check squarely inside the criteria,
+      stated as an invariant over reports rather than as a pointer at one code block.
+      SURFACE IMPLICATION FOR THE IT PO, NOT ACTIONED HERE (criteria and title are the BA's;
+      it_requirements, doc_links, delivers_to and test_spec are not): clause (2) is not
+      satisfiable by an edit to scripts/ac_store/generate_ticket_from_ac.py alone, because the
+      approval prompt is rendered by the /build-ac coordinator, not by the generator. Either the
+      coordinator surface must be added to n_location_rule and the edit surface, or the
+      generator must emit the statement on a channel the coordinator is required to relay — that
+      choice is the it-po's. A seventh test descriptor is needed for clause (2): assert on what
+      the approver is shown at the confirmation point, not only on the written ticket. Until
+      that is done this AC's criteria are broader than its declared surface, which is recorded
+      here rather than fixed silently. Title, notes, and every it-po-owned field untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -218,6 +257,20 @@ notes: |
   complete is worse than an empty one: the empty one is visible, the partial one reads as
   scope.
 
+  WHO "THE PERSON DRIVING THE TICKET" IS (settled 2026-08-18, do not re-open). The reader
+  is whoever answers the build-confirmation gate: /build-ac's leaf path prints
+  "Found AC / Priority / Ticket path" and then "Build this ticket now? (yes / review /
+  skip)" (templates/skills/build-ac/SKILL.md, Mode A output contract), and the goal path
+  gates each leaf at the readiness prompt (ACD-1200b-2). That gate is the last point at
+  which a human can refuse before a coder is dispatched, and it does not display the
+  surface today. The readiness report is deliberately NOT accepted as sufficient on its
+  own: it is opt-in, and it is the very report that prints "[PASS] files_touched has 4
+  path(s)" over BO-2400g-2's wrong surface (KI-ACS-002 / false-green mechanism M8), so a
+  reader who trusts it is the reader being failed. It stays in scope only through the
+  negative clause — no report may call an undetermined surface satisfactory.
+  The ticketless fast lane is out of scope by construction: every clause here is
+  conditioned on "when a ticket is generated", and the fast lane generates none.
+
   WHY IT MATTERS, IN THIS PROJECT'S OWN TERMS. CLAUDE.md records wrong files_touched as a
   documented phantom-done driver: files_touched defines the surface downstream agents and
   the scope reviewer treat as in-bounds. A ticket that omits the file the work must change
@@ -241,6 +294,11 @@ notes: |
   One caution for whoever writes the test: the generator writes an implemented_by
   back-reference into the source AC, so it must be pointed at a COPY of the store, never
   at docs/acceptance-criteria itself.
+
+  THE STALE-DOC CAVEAT IS NOW DISCHARGED. The it_requirements constraint below asks for a
+  follow-up documentation AC covering the how-to section that this AC and BP-1100a-4 make
+  stale. That AC is BP-1100a-5, which depends on both and owns the page. Nothing about
+  this AC's own surface changed as a result — the page is still deliberately not in it.
 
   AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.
   assigned_agent, it_requirements, estimated_complexity, delivers_to, expects_from and

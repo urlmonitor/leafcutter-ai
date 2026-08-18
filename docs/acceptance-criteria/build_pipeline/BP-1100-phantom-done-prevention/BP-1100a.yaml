@@ -25,31 +25,57 @@ doc_links:
   - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
     relationship: describes
     status: exists
+documentation_triggers:
+  - how-to
 origin_agent: BrainCandy
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - reason: child-added
+    by: business-analyst
+    at: 2026-08-18
+    note: "Added BP-1100a-5 to covered_by — the follow-up documentation AC that BP-1100a-3's
+      and BP-1100a-4's it_requirements both ask for and both deliberately exclude from their
+      own surface. Added documentation_triggers: [how-to]. That field is NOT what schedules
+      the work — documentation-expert is added to a generated ticket by
+      config/guardrail_gates.yaml's documentation_gates, keyed on the leaf's change_target,
+      and BP-1100a-5 carries change_target: docs so its ticket gets the phase either way.
+      What the field does is supply the Diataxis genre: generate_ticket_from_ac.py resolves
+      the genre for a documentation-expert contract line from the PARENT L1's
+      documentation_triggers (_resolve_genres_from_parent), and with the field absent it
+      logs a warning and emits the literal marker '(unspecified genre)' onto the ticket. So
+      the trigger is set to stop BP-1100a-5's ticket shipping an unlabelled documentation
+      contract, not as a statement that every future child of this L1 needs a how-to.
+      Updated the child-cap note: four slots were free-standing before, five are used now
+      and this L1 is at the cap. criteria, title and level untouched."
 superseded_by: null
 covered_by:
   - BP-1100a-1
   - BP-1100a-2
   - BP-1100a-3
   - BP-1100a-4
+  - BP-1100a-5
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
-  CHILD CAP — ONE L2 SLOT LEFT AS OF 2026-08-18. The default cap is 5 L2s per L1
+  CHILD CAP — THIS L1 IS NOW FULL AS OF 2026-08-18. The default cap is 5 L2s per L1
   (_MAX_L2_PER_L1 = 5 in templates/scripts/commit_guardian/check_ac_limits.py:82,
-  enforced as child_count > limit). This AC declares no child_limit_override. Four of the
-  five slots are now taken: BP-1100a-1 and BP-1100a-2 (enforcement points that flag a
-  documentation-only surface), plus BP-1100a-3 and BP-1100a-4 (the derivation itself —
-  what the generated surface must contain, and what it must not). L3 refinements are not
-  capped.
+  enforced as child_count > limit, so exactly five passes). This AC declares no
+  child_limit_override. All five slots are taken: BP-1100a-1 and BP-1100a-2 (enforcement
+  points that flag a documentation-only surface), BP-1100a-3 and BP-1100a-4 (the derivation
+  itself — what the generated surface must contain, and what it must not), and BP-1100a-5
+  (the authoring guidance the previous two make stale). A sixth L2 here will be blocked:
+  the next author must split the tree (see the ac-tree-split skill) or place the work under
+  a different L1, and must NOT reach for child_limit_override, which the hook itself
+  describes as a temporary waiver. Note that BP-1100 is also full at seven L1s
+  (_MAX_L1_PER_L0 = 7), so a new sibling L1 is not an escape route either. L3 refinements
+  are not capped.
 
-  THE TWO HALVES ARE DELIBERATELY SPLIT. BP-1100a-1/-2 catch a ticket whose surface is
-  already wrong; BP-1100a-3/-4 stop the wrong surface being derived in the first place.
-  Both are wanted — a ticket authored by hand still needs the lens — but they are
-  different enforcement layers and must not be collapsed.
+  THE THREE GROUPS ARE DELIBERATELY SPLIT. BP-1100a-1/-2 catch a ticket whose surface is
+  already wrong; BP-1100a-3/-4 stop the wrong surface being derived in the first place;
+  BP-1100a-5 keeps the page an author reads honest about what the derivation does. All are
+  wanted — a ticket authored by hand still needs the lens — but they are different
+  enforcement layers and must not be collapsed.
 product_truth:
   - flow: leafcutter/how-acs-are-built
     node: scope
