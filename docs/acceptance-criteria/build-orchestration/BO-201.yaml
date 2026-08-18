@@ -35,7 +35,7 @@ criteria: |
   Then it skips L0/L1 ACs (composite — fulfillment derived from children)
     and only verifies L2/L3 ACs
 level: L2
-work_status: in_progress
+work_status: done
 origin_agent: BrainCandy
 superseded_by: null
 amended_by: []

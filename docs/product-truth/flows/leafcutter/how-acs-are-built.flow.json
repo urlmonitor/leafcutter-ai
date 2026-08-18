@@ -275,7 +275,7 @@
         "BO-201",
         "BO-202"
       ],
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "impl_asof": "2026-08-18"
     },
     {
@@ -414,8 +414,8 @@
     }
   ],
   "impl_summary": {
-    "done": 2,
-    "in_progress": 2,
+    "done": 3,
+    "in_progress": 1,
     "not_started": 15,
     "total": 19,
     "asof": "2026-08-18"

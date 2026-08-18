@@ -82,6 +82,15 @@ verify_done_eligible('BO-510-3', ...) -> "composite BO-510-3 has no coverable ch
 
 The correct verdict names `BO-510-3-i`.
 
+**Live instance.** `BO-510-3-i` now carries a `# covers:` tag and the oracle
+passes it (`unit_tests/test_agent_produces_validation.py`, 17 passing). Its
+parent `BO-510-3` is still rejected with "no coverable children" purely because
+of this recursion bug, so it is deliberately left `work_status: done` — the same
+treatment as the D-1 group, for the same reason: the work is proven, the gate
+cannot see it. Removing the legacy path from `BO-510-3-i.covered_by` would also
+resolve it, but `covered_by` is a requirement-defining field under the ACS-400
+write-lock, so that is the requirement owner's call, not a passing edit.
+
 ---
 
 ## D-3 — Multi-id `covers:` tags are mis-parsed

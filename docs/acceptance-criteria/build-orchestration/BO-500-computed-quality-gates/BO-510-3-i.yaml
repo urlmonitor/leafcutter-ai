@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: in_progress
+work_status: done
 criteria: |
   Given a developer adds a new agent template file at templates/agents/new-agent.md
     with valid YAML frontmatter containing name, description, model, and tools
