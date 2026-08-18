@@ -1,0 +1,160 @@
+id: ACD-2000a-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement being taken and handed back leaves its existing trail intact and complete"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose trail already holds three attempt records,
+  When that requirement is taken for a build and then handed back, and taken and
+    handed back again,
+  Then the trail still holds exactly those three records, each with every
+    attribute it started with,
+  And no record has been reordered, merged, or emptied,
+  And a hand-back that is interrupted part-way through writing leaves the
+    requirement readable, with either the three records or the three records plus
+    a complete fourth -- never a partial record and never a truncated file,
+  And two efforts taking and handing back two different requirements at the same
+    time each leave the other requirement's trail untouched.
+depends_on: [ACD-2000a-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component page for scripts/build_orchestration/fast_lane.py, whose claim and release paths are the writer this AC constrains."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2000-resilient-parallel-build/ACD-2000b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling claim leaf. This L3 is the only test that fails when ACD-2000a and ACD-2000b are implemented in ignorance of each other; whichever lands second must run it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE FIX SURFACE IS `_update_ac_work_status()` IN scripts/build_orchestration/fast_lane.py (lines 98-125), reached from `claim_build_set()` (line 128) and `release_claim()` (line 224). Three defects verified in that function today, all of which this AC must close: (a) line 122 calls `yaml.safe_dump(data, fh, allow_unicode=True)` with sort_keys left at its PyYAML default of True, so EVERY key of the record is re-ordered alphabetically on every claim and every release; (b) line 121 opens the LIVE path in mode 'w', which truncates before any bytes are written, so an interruption between open and close leaves a shortened or empty AC file; (c) block scalars such as notes and criteria are re-emitted by safe_dump and lose their formatting."
+  - "TRUNCATION IS THE MOST DANGEROUS OF THE THREE AND MUST BE TREATED AS THE PRIMARY DEFECT. Because the trail IS the durable retry budget (ACD-2000a-2), a truncated trail silently RESETS the cap -- it converts a crash into an infinite retry loop rather than into an escalation. A merely-reordered trail is a correctness bug; a truncated one is an availability incident."
+  - "ATOMICITY IS REQUIRED BEHAVIOURALLY, NOT STYLISTICALLY. After an interrupted hand-back the file must parse and must contain either the pre-existing entries or the pre-existing entries plus one COMPLETE new entry. Never a partial entry, never a truncated file. The implementation technique is the coder's choice; the test kills the write mid-flight rather than asserting that any particular idiom appears in the source."
+  - "KEY ORDER AND BLOCK-SCALAR FORMATTING OF EVERY FIELD THE WRITER DID NOT INTEND TO CHANGE MUST SURVIVE THE ROUND TRIP. This is not cosmetic: a round trip that faithfully re-emits every trail entry in a DIFFERENT ORDER still violates the promise, because ACD-2000a-1's append-only guarantee says nothing about ordering. A re-flowed multi-line reason is still 'present' and would pass a naive count assertion."
+  - "WRITER SCOPE IS PER-REQUIREMENT. Do NOT introduce a shared side-log, journal or index file as the fix for the three defects above. It is the plausible response and it reintroduces exactly the container-grain conflation ACD-2000a exists to remove, and it makes the fourth criterion (two requirements, no interference) unsatisfiable by construction. Per-requirement files are the store's shape today and satisfy that criterion for free."
+  - "THE GUARANTEE MUST HOLD ON THE RELEASE PATH AS STRONGLY AS ON THE CLAIM PATH. `release_claim()` (line 224) calls the same helper, and release-on-failure is the path that runs when things are already going wrong -- it is the likeliest moment for the interruption this AC specifies."
+  - "MUST NOT CHANGE THE OBSERVABLE CONTRACT OF `claim_build_set()` OR `release_claim()`. Both return dicts keyed claimed / success / error / named_acs; existing callers and the BO-2400f-7-i tests depend on those keys and on the halt-on-failure semantics. This is a durability fix, not a redesign of the claim API -- that is ACD-2000b's scope."
+  - "Must complete a claim or a release in under 100ms per AC so that making the write durable does not serialise a parallel build set."
+  - "Must log an interrupted or failed write at WARNING per the project error handling policy, naming the AC id and the path, so a recovered-from truncation is visible rather than inferred from a later cap reset."
+delivers_to:
+  agent: python-coder
+  contract: "A trail-preserving claim/release guarantee on scripts/build_orchestration/fast_lane.py: after any sequence of claim and release calls, the AC record's trail field holds exactly the entries it held before, in the same order, with the same attribute values and the same scalar formatting; and any interrupted write leaves the file parseable with no partial entry. Consumed by every ACD-2000b claim leaf and by ACD-2000a-2, whose budget arithmetic is only sound if this holds."
+expects_from:
+  - ac_id: ACD-2000a-1
+    contract: "The trail slot and its append-only writer API -- <trail_field>: [ { actor, timestamp, stage, outcome, decision, reason } ], oldest-first, optional, absent-means-empty -- which this AC must round-trip without loss."
+  - ac_id: ACD-2000b-1
+    contract: "The claim record fields (owner and claimed-at moment) written through the same file writer. Their write path and the trail's must be the same durable writer, not two writers racing on one file. NOTE FOR RECONCILIATION: ACD-2000b's enrichment is authored concurrently; if its claim leaf specifies a separate writer, that is a contradiction to resolve before either is built."
+test_spec:
+  - name: test_claim_and_release_twice_leaves_a_three_entry_trail_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Calls the real claim_build_set and release_claim twice against a real on-disk AC file whose trail holds three entries; asserts the trail still holds exactly those three, in order, with every attribute value identical."
+  - name: test_claim_release_round_trip_preserves_key_order_and_block_scalars
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Diffs the file text before and after a claim/release cycle; asserts the only textual change is the work_status value -- no alphabetical re-keying of the record and no re-flowing of the block-scalar notes and criteria."
+  - name: test_interrupted_hand_back_leaves_the_file_parseable_with_no_partial_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Forces the write to fail part-way (unwritable or full target, or an injected failure between read and write) during release_claim; asserts the file still parses and holds either the three original entries or those three plus one complete fourth -- never a truncated file."
+  - name: test_two_requirements_claimed_and_released_concurrently_leave_each_others_trails_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Runs claim and release against two different AC files from two workers at once; asserts each file's trail is exactly its own, proving no shared side-log was introduced as the durability fix."
+test_rationale: "The failure this AC guards is caused by a code path that has no idea the trail exists -- fast_lane's claim/release helper, which loads and re-dumps the whole record for an unrelated reason. So a direct-import unit test of the append helper, or of any new atomic-write utility, passes on the broken system: the helper is correct and the damage happens elsewhere, in a function the test never calls. Only driving the REAL claim_build_set and release_claim against a REAL on-disk AC file that already carries a trail exercises the interaction, which is why every test here is behavioural rather than a unit test of a writer. The atomicity test must interrupt an actual write rather than assert that a temp-file-and-rename idiom appears in the source -- that is a grep test and it passes on the idiom applied to the wrong path, which is the exact shape of the fast-lane phantom-done regression this repo already shipped once. The round-trip test asserts on the file text rather than on a parsed count because a faithful re-emission in a different key order, or a re-flowed multi-line reason, leaves the count correct and the guarantee broken."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE COLLISION BETWEEN THIS L1 AND ACD-2000b. Flagged in ACD-2000a's hazard 1
+  and again in the component PROJECT_CONTEXT.md; it is the one failure that
+  neither L1's own tests would catch, because it only appears when both land.
+
+  VERIFIED MECHANISM (do not re-investigate): `_update_ac_work_status()` in
+  scripts/build_orchestration/fast_lane.py (~lines 113-125) rewrites the ENTIRE
+  AC record on every claim and every release -- `yaml.safe_load` of the whole
+  file, mutate one key, `yaml.safe_dump` of the whole file back. It is called by
+  `claim_build_set()` (~line 128) and by `release_claim()` (~line 224). So every
+  single claim/release cycle from ACD-2000b passes ACD-2000a's entire trail
+  through a load/dump round trip.
+
+  THE THREE THINGS THAT ROUND TRIP CAN DO TO A TRAIL:
+    1. REORDER. safe_dump sorts keys by default; nested structures and any
+       author-meaningful ordering are at its mercy. The append-only guarantee of
+       ACD-2000a-1 says nothing about a writer that faithfully re-emits every
+       entry in a different order -- so this L3 says it.
+    2. LOSE FIDELITY. Comments are dropped, dates may be re-typed, multi-line
+       strings may be re-wrapped. A trail entry whose text is silently re-flowed
+       is still "present" and would pass a naive count assertion.
+    3. TRUNCATE. A rewrite is read-all / write-all. An interruption between the
+       two leaves a shortened or empty file -- and because the trail is the
+       durable retry budget (ACD-2000a-2), a truncated trail silently RESETS the
+       cap. That is the most dangerous outcome in this whole L1: it converts a
+       crash into an infinite retry loop rather than into an escalation. Hence
+       the atomicity clause (third Then).
+
+  THE FOURTH THEN CLAUSE is about writer scope, not concurrency on one file:
+  two efforts working on two DIFFERENT requirements must not be able to affect
+  each other's records. It is cheap to satisfy with per-requirement files (which
+  is the store's shape today) and it fails immediately on any implementation
+  that introduces a shared side-log -- which is a plausible response to hazards
+  1-3 and would reintroduce exactly the container-grain conflation ACD-2000a
+  exists to remove.
+
+  ORDERING NOTE FOR THE IT PO: ACD-2000a and ACD-2000b are siblings with no
+  depends_on edge between them, and this L3 is the reason they cannot be
+  implemented in ignorance of each other. Whichever lands second must run this
+  test. Consider a delivers_to/expects_from contract between ACD-2000a-1 and the
+  ACD-2000b claim leaves rather than a dependency edge.
+
+  TESTABILITY. Drive the real claim and release functions against a real AC file
+  with a real trail, and diff the file. Simulate the interrupted write (kill
+  between read and write, or a write to a full/failing target) rather than
+  asserting that a temp-file-and-rename idiom appears in the source -- the latter
+  is a grep test and passes on an idiom applied to the wrong path.
+
+  2026-08-17 (IT PO enrichment). Assigned python-coder; the surface is one Python
+  function in scripts/build_orchestration/fast_lane.py and its two callers.
+  Complexity M. The BA's ordering note is taken up as a CONTRACT rather than a
+  dependency edge, exactly as suggested: ACD-2000a-1 delivers the no-whole-record-
+  rewrite constraint to the ACD-2000b claim path, and this AC expects the claim
+  record fields from ACD-2000b-1. No depends_on edge was added, so the safe
+  migration order is untouched.
+
+  TWO CORRECTIONS TO THE BA'S MECHANISM NOTE, both verified against the file and
+  both sharpening rather than contradicting it:
+    - The reorder is not merely "at safe_dump's mercy". Line 122 passes only
+      allow_unicode=True, so sort_keys keeps its PyYAML default of True and the
+      whole record is re-keyed ALPHABETICALLY every time. It is deterministic and
+      total, not incidental.
+    - The truncation window is wider than "an interruption between the read and
+      the write". Line 121 opens the LIVE path in mode "w", which truncates at
+      open -- so the file is already empty before the first byte of new content is
+      produced, and any failure during serialisation (not only a crash between the
+      two operations) leaves an empty AC record.
+
+  RECONCILIATION FLAG FOR THE ORCHESTRATOR: the expects_from entry naming
+  ACD-2000b-1 was written while ACD-2000b's own enrichment was in flight in a
+  concurrent pass. If ACD-2000b-1 ends up specifying its own separate writer for
+  the claim fields, that is a contradiction between the two sides of this contract
+  and must be resolved before either branch is built.

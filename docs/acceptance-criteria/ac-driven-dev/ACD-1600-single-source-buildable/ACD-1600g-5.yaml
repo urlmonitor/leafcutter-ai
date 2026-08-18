@@ -1,0 +1,132 @@
+id: ACD-1600g-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Reference doc describes the requirement boundary and its bundle composition rule"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given the requirement boundary can be authored on a requirement and composed
+    across a bundle,
+  When an author consults the reference documentation for the requirement
+    record,
+  Then the documentation describes the boundary field alongside the change
+    surface it qualifies, and states that it is optional and that its absence is
+    legacy mode rather than an empty boundary,
+  And the documentation states the bundle composition rule as a difference --
+    excluded by at least one member and changed by none -- with the worked
+    counter-example showing why taking the members' exclusions together would
+    block a legitimate bundle,
+  And the documentation states what a scope review does when a requirement
+    carries no boundary at all,
+  And an author who has read only this documentation can author a valid boundary
+    and predict the review outcome for a bundle of three requirements without
+    reading any implementation.
+depends_on: [ACD-1600g, ACD-1600g-1, ACD-1600g-2, ACD-1600g-3, ACD-1600g-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "The canonical AC-record reference, already the doc_link on ACD-1600g itself, and the single normative home for the boundary field. This is the edit surface for this AC -- relationship promoted from `describes` to `modifies` because this AC writes it."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies the legacy-mode semantics (rule 4, absence of a new field is legacy mode) and the advisory-before-required posture (rule 3) that the section must state accurately."
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "One of the three surfaces that mirror this section by spec-parity rather than by code reuse; its Tier 1/2/3 ladder is the review behaviour the section must let a reader predict."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Write the section into docs/reference/ac-schema.md -- the canonical description of the AC record and already the doc_link on ACD-1600g itself. Do not start a new reference file; a second home for the boundary rule is how the two descriptions diverge."
+  - "The section must state, for the boundary field: that it sits alongside the change-surface field it qualifies; that it is OPTIONAL; and that its ABSENCE is legacy mode, which is explicitly NOT the same thing as a declared empty boundary. The absent-versus-empty distinction is the fact most likely to be lost in the writing, and it is the fact two of the sibling behaviours depend on."
+  - "The section must state the bundle composition rule as a DIFFERENCE -- a path is out of scope for a bundle when at least one member excludes it AND no member changes it -- and must carry the worked three-member counter-example showing why taking the members' exclusions together blocks a legitimate bundle. The counter-example is load-bearing content, not illustration: the naive union is the single most likely defect in this area, and a rule stated without its counter-example gets re-derived wrongly by the next author who reads the field name."
+  - "The section must state the mixed-grain cancellation rule -- a member changing one file inside an excluded directory cancels that PATH, not the whole exclusion entry -- or a reader cannot predict the outcome for the directory-grain exclusions that are the common case."
+  - "The section must state what a scope review does when a requirement carries no boundary at all: an advisory announcement naming the requirement, not a block, and materially different from the outcome for a declared-empty boundary."
+  - "This reference section is the SINGLE NORMATIVE definition that the AC-store schema, the three commit-gating validators, and the change-scope-reviewer agent template all mirror. The mirroring is spec-parity, not code reuse -- a markdown agent template and a Python validator cannot share an import -- so an inaccuracy here propagates into three implementations that each look internally consistent."
+  - "Acceptance is comprehension, not presence: the section must be sufficient for an author who has read nothing else to author a valid boundary and predict the review outcome for a three-member bundle. A heading with a field name under it satisfies no clause of the criteria."
+  - "Canonical source only: edit the source-tree copy, never a deployed one (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600g-2
+  contract: "The implemented composition rule and its worked counter-example, which is the load-bearing content of this document. Two further facts must be in place before this AC can be written accurately: the optional/legacy-mode semantics and the empty-versus-absent distinction from ACD-1600g-1 (third Then) and ACD-1600g-4 (fourth Then), and the mixed-grain per-path cancellation rule from ACD-1600g-2-i."
+test_required: false
+test_rationale: "No executable behaviour: change_target is docs and the sole artefact is a prose section in the canonical AC-record reference, so test_required is false rather than a test_spec. This is not a coverage gap -- the criteria's final clause defines acceptance as a READER CAPABILITY (an author who has read only this section can author a valid boundary and predict a three-member bundle's outcome), and no unit test can assert that. The tempting weaker shape is the documentation-shaped grep: asserting the file contains a section named for the boundary field, or that the field name appears N times. That passes on a heading with nothing useful beneath it, which is exactly the failure mode this tree exists to prevent, one surface over. Verification belongs to documentation-verifier and to human review against the five facts enumerated in it_requirements; the executable guarantees are owned by the sibling ACs ACD-1600g-1 through ACD-1600g-4, each of which carries its own behavioural test_spec."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC, produced because ACD-1600g declares
+  `documentation_triggers: [reference-doc]`. Craft is deliberately LEFT UNSET on
+  this pass -- assigned_agent, it_requirements, estimated_complexity and the
+  delivery contracts are the IT PO's to fill. The intended craft is the
+  documentation surface, not a coder; ACD-1800a-3 is the sibling precedent for
+  the shape of this AC.
+
+  WHY THE COMPOSITION RULE MUST BE IN THE DOC, NOT JUST THE CODE. The naive
+  union is the single most likely defect in this L1 (ACD-1600g notes; component
+  PROJECT_CONTEXT.md repeats it). A rule that lives only in an implementation
+  gets re-derived -- wrongly -- by the next author who reads the field name
+  `out_of_scope` and assumes exclusions accumulate. The worked counter-example is
+  therefore load-bearing content, not illustration: it is the artefact that stops
+  the defect recurring after the original implementation is forgotten.
+
+  THE THREE FACTS THE DOC MUST CARRY, each traceable to a sibling L2:
+    1. the optional/legacy-mode semantics and the empty-vs-absent distinction
+       (ACD-1600g-1, third Then; ACD-1600g-4, fourth Then);
+    2. the difference-not-union composition rule with its counter-example
+       (ACD-1600g-2);
+    3. the review's behaviour when there is no boundary to read (ACD-1600g-4).
+
+  ACCEPTANCE IS COMPREHENSION, NOT PRESENCE. The last Then clause is written as
+  a capability of a reader rather than as a list of headings on purpose. A
+  documentation AC verified by "the file contains a section named X" is the
+  documentation-shaped version of a grep test -- it passes on a heading with
+  nothing useful under it.
+
+  SURFACE NOTE: docs/reference/ac-schema.md is the canonical description of the
+  AC record and is already the doc_link on ACD-1600g itself, so it is the natural
+  home; whether the composition rule also warrants a paragraph in the
+  change-scope-reviewer's own reference material is an IT PO decision.
+
+  2026-08-17 (IT PO enrichment). Four decisions.
+
+  - AGENT IS documentation-expert, matching ACD-1800a-3, the sibling precedent
+    this AC's own notes name, and the S7b reference-doc mapping. `reference-author`
+    exists in config/agent_registry.json and would also be defensible; consistency
+    within the ac-driven-dev tree decided it.
+
+  - ONE HOME, NOT TWO. The BA left open whether the composition rule also warrants
+    a paragraph in the change-scope-reviewer's reference material. Decision: no.
+    The rule is a property of the AC RECORD, and the reviewer is one consumer of
+    it; a second copy would be a second normative source with no mechanism keeping
+    the two in step, and the recorded failure mode across this repository is
+    exactly that -- a rule mirrored into a place nobody updates. The reviewer
+    template stays a doc_link, not an edit surface.
+
+  - A FOURTH FACT WAS ADDED to the three the BA enumerated: the mixed-grain
+    per-path cancellation rule from ACD-1600g-2-i. Without it the last Then clause
+    is unsatisfiable in practice -- exclusions are authored at directory and
+    component grain (that is what the existing reviewer matches on), so a reader
+    who does not know that cancellation is per-path cannot predict the outcome for
+    any realistic three-member bundle.
+
+  - THE ac-schema.md DOC_LINK IS PROMOTED FROM `describes` TO `modifies`. This is
+    mechanical, not cosmetic: `_build_files_touched()` in
+    scripts/ac_store/generate_ticket_from_ac.py (~line 497) admits doc_links whose
+    relationship is in `_EDIT_SURFACE_RELATIONSHIPS` and excludes `describes` and
+    `related`. Left as `describes`, the generated ticket would declare an empty
+    change surface for a documentation AC whose whole content is an edit to that
+    file -- and an empty files_touched is the phantom-done shape recorded in this
+    repository's own history.

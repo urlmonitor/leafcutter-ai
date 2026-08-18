@@ -1,0 +1,95 @@
+id: GE-120e-3-i
+title: "Two arms that agree because the check said nothing at all is an inconclusive pair, not a pass"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a differential pair in which both arms raise no objection,
+  When the verification evaluates that pair,
+  Then it accepts the pair as evidence only when the same check, in the same verification
+    run, is also shown objecting to content the author did introduce,
+  And a pair whose two arms agree without that control present is reported as inconclusive
+    and the verification reports a failure,
+  And a check that has been switched off, or that has been given no change set at all,
+    causes the verification to report a failure rather than a run of agreeing pairs,
+  And the inconclusive report names the check and states that the control was missing, so it
+    is not read as a passing pair.
+
+  Coverage note: demonstrate by switching off the check under test and asserting the
+  verification fails. A verification that cannot be made to fail is not evidence — the same
+  standard GE-120c-1 sets for its harness. Asserting only that today's pairs agree is the
+  always-green assertion this whole tree exists to eliminate.
+depends_on:
+  - GE-120e-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Sets the same standard for the layout harness: a harness that cannot be made to fail is not evidence."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: S
+it_requirements:
+  - "THE CONTROL IS A PROPERTY OF THE VERIFICATION, EVALUATED PER CHECK PER RUN. Implement it once in the pair evaluator so every check added to the sweep inherits it, rather than as a per-check assertion each future author must remember."
+  - "THE CONTROL MUST BE LIVE, IN THE SAME RUN, ON THE SAME CHECK: the check observed objecting to content the author actually introduced. A control read from a previous run, a recorded snapshot, a fixture file or a hard-coded expectation does not count — a stale control agrees with a disabled check just as happily as two silences do."
+  - "SELF-DEMONSTRATION IS A DELIVERABLE. Two states must be shown to make the verification fail: (a) the check under test switched off, and (b) the check handed no change set at all. Both produce a run of perfectly agreeing silences, which is exactly what every mis-implementation of this L1 looks like."
+  - "INCONCLUSIVE IS A FAILURE, NEVER A SKIP AND NEVER AN XFAIL. This repository has a recorded history of xfail-masked AC enforcement that made CI under-report failures; an inconclusive pair recorded as a skip is that failure mode reintroduced at the point it matters most."
+  - "THE INCONCLUSIVE REPORT MUST BE VISUALLY DISTINCT FROM A PASS and must name the check and state that the control was missing. Two silences printed in the same form as a verified pair is the whole defect at the reporting layer."
+test_spec:
+  - name: test_ge120e3i_agreeing_pair_without_a_control_is_inconclusive_and_fails
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A pair whose arms both stay silent, with no live control for that check in the run, is reported inconclusive and the verification exits non-zero."
+  - name: test_ge120e3i_disabled_check_makes_the_verification_fail
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Switching the check under test off produces a failure, not a run of agreeing pairs — the self-demonstration the coverage note requires."
+  - name: test_ge120e3i_check_given_no_change_set_makes_the_verification_fail
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A check handed no change set at all is caught by the control rather than passing as two silences."
+  - name: test_ge120e3i_inconclusive_report_names_the_check_and_the_missing_control
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The inconclusive output identifies the check, states the control was missing, and is not rendered in the same form as a pass."
+  - name: test_ge120e3i_agreeing_pair_with_a_live_control_is_accepted_as_evidence
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "With the same check shown objecting to author-introduced content in the same run, the agreeing pair is accepted — the control does not make every pair fail."
+test_rationale: "Every way this L1 can be mis-implemented — narrowing the change set to nothing, exempting merges outright, disabling the check while the fix is in progress — produces two agreeing silences and a green pair, so the pair alone cannot be trusted. The contract therefore tests the CONTROL rather than the check: three of the five cases deliberately break the verification (check off, no change set, no control) and assert it fails, because a verification that cannot be made to fail is not evidence. The fifth case is the necessary counterweight — a control that fails every pair would be abandoned within a week. All cases run through the real pair machinery as processes; asserting on the evaluator's internals would leave the reporting layer, where two silences can still be printed as a pass, untested."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-3
+  contract: "The differential pair and its recorded per-arm result status and output."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE CONTROL THAT KEEPS THE PAIR HONEST. A differential pair is only informative when the
+  check is capable of objecting in the first place; two silences agree perfectly. Every way
+  this L1 can be mis-implemented — narrowing the change set to nothing, exempting merges
+  outright, disabling the check while the fix is worked on — produces agreeing silences and
+  a green pair. This AC is what makes those states report a failure instead.
+
+  It is written as a property of the VERIFICATION rather than of any one check, so a future
+  check added to the sweep inherits the control automatically rather than needing its own.

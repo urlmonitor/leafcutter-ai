@@ -1,0 +1,176 @@
+id: ACD-2000a-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement can raise or lower its own rework budget, and the effort honours that number"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement known to sit on flaky ground, which states on itself that
+    its rework budget for repeated test failures is four rather than the usual
+    default,
+  When that requirement fails its tests four times in a row,
+  Then the fourth failure is still reworked rather than escalated,
+  And the fifth failure stops and asks a person,
+  And a requirement that states nothing about its budget uses the standard one,
+  And a requirement that states a budget of zero stops and asks a person on its
+    first failure rather than being treated as having no limit,
+  And the budget in force for a given requirement is visible on the requirement
+    itself, not only in the behaviour of whatever is building it.
+depends_on: [ACD-2000a, ACD-2000a-1, ACD-2000a-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Section 4 line 784 is the entire current existence of this knob: the retry-cap table row that names test_failure_rework_cap, states a default of 2 per ticket, and calls it configurable via ticket frontmatter. Nothing reads it."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1900-safe-migration/ACD-1900a.yaml
+    relationship: related
+    status: exists
+    relevance: "The hard ordering gate. additionalProperties:false is enforced, so the budget field cannot be authored on any AC before ACD-1900a registers it as an optional slot."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SCHEMA SLOT IS A HARD PREREQUISITE. One optional non-negative-integer field on the AC record for the declared budget, landed additively by ACD-1900a. additionalProperties:false is enforced today, so the field cannot be piloted by hand before the slot exists. Absence means the standard budget, per ADR-026 rule 4."
+  - "ZERO IS A VALUE, NOT AN ABSENCE -- AND THIS IS THE DEFECT THE AC EXISTS TO PREVENT. Both `cap = ac.get(field) or DEFAULT` and `cap = ac.get(field, DEFAULT) or DEFAULT` read a declared 0 as unset and silently restore the default, which is the exact opposite of what the author asked for. Resolution must distinguish declared-zero from declared-nothing with an explicit None/sentinel check. A declared zero means 'do not rework this, tell me immediately'; any implementation that cannot express it has the bug."
+  - "THE RESOLVED BUDGET -- THE NUMBER ACTUALLY IN FORCE, INCLUDING THE DEFAULT -- MUST BE READABLE FROM THE REQUIREMENT WITHOUT RUNNING A BUILD. The fifth criterion says 'the budget in force', not 'the override if present'. A budget that only manifests as behaviour cannot be reviewed, and making it readable is also what lets the AC be tested without staging five real failures."
+  - "DATA-DRIVEN, NEVER BY NAME. A requirement with no declared budget inherits the default because its declared value is absent, not because it appears on any exemption or opt-out list. New requirements must inherit the rule automatically."
+  - "SUPERSEDE THE EXISTING PROSE-PRESENCE TEST IN THE SAME CHANGE, OR THE REPO KEEPS A GREEN GREP OVER A LIVE MECHANISM. Verified: unit_tests/test_generate_ticket_from_ac.py, test_bo530_3i_building_epics_documents_test_failure_rework_cap (line 2218), asserts only that the string test_failure_rework_cap and a configurable default of 2 appear in SKILL.md's text. Its own docstring states 'no Python script reads the cap' and 'It intentionally does NOT assert enforcement, because there is no code path to enforce'. Once this AC lands there IS a code path. Retarget that test at the resolver, or mark BO-530-3-i superseded and replace its coverage -- leaving it as-is means the cap's only green test passes whether or not the mechanism works."
+  - "THIS IS A GRAIN CHANGE AS WELL AS A HOME CHANGE, AND THE DENOMINATOR MUST BE STATED. SKILL.md section 4 line 784 scopes the cap as '2 per ticket'. Under ACD-1800c a ticket groups N requirements, so a per-ticket budget of 2 spread over 5 requirements is a materially different budget from a per-requirement budget of 2. Update the section 4 wording to state the new denominator in the same change; a silent denominator change is the same class of defect as the per-run/per-lifetime hazard on ACD-2000a-2."
+  - "THE DEFAULT STAYS 2 UNLESS THE SAME CHANGE UPDATES SECTION 4. The number is published in the runbook and operators rely on it; changing the default and the storage location at once makes any resulting behaviour change unattributable."
+  - "SCOPE FENCE: ONLY THE TEST-FAILURE REWORK CAP IS IN SCOPE. SKILL.md's other three ladder caps -- section 3.1 respawn-same-agent, 3.2 respawn-sibling, 3.3 brainstorm-lead, all fixed at 1 -- stay fixed at 1 and stay non-overridable. Generalising the mechanism to all four is a legitimate extension but must not silently make three previously-fixed caps author-controllable."
+  - "A DECLARED BUDGET MUST BE VALIDATED AT AUTHORING TIME, NOT COERCED AT READ TIME. A negative or non-integer value must be rejected by the schema and by the commit gate, so the author learns at commit rather than the supervisor guessing at 3am. Mirror the constraint into scripts/ac_store/validate_ac_schema.py, scripts/commit_guardian/check_ac_schema.py and its manual fallback scripts/commit_guardian/_ac_schema_validators.py, and state which of those actually gates the commit."
+  - "Must log the resolved budget and its provenance (declared on the requirement, or default) at INFO on every resolution, so an operator can tell a honoured override from an ignored one without reading code."
+delivers_to:
+  - agent: python-coder
+    contract: "The resolved budget, as { budget_in_force: int, source: 'declared'|'default', ac_id: str, stage: str }, readable from a requirement without running a build. Consumed by the ACD-2000a-2 resolver as its `budget_in_force` input, and by ACD-2000a-4's documentation as the value an operator inspects on a stuck requirement."
+  - agent: llm-expert
+    contract: "The rewritten section 4 retry-cap row in templates/skills/building-epics/SKILL.md: the cap's home moves from ticket frontmatter to the requirement, and the denominator changes from per-ticket to per-requirement. Co-deliverable of the same change; llm-expert review of the runbook wording is recommended but the edit is python-coder's to land."
+expects_from:
+  - ac_id: ACD-1900a
+    contract: "An optional, additive non-negative-integer slot for the declared budget in config/ac_store_schema.json, with absence treated as legacy and meaning the default."
+  - ac_id: ACD-2000a-2
+    contract: "The adjudication resolver whose `budget_in_force` this AC supplies -- { verdict, ac_id, stage, attempts_counted, budget_in_force, scope, reason }. This AC changes where that number comes from; it does not change the verdict contract."
+  - ac_id: ACD-2000a-1
+    contract: "The trail read API supplying `attempts_counted`. A declared limit with a volatile counter is today's state exactly, so this AC is only meaningful on top of the durable trail."
+test_spec:
+  - name: test_declared_budget_of_four_reworks_the_fourth_failure_and_escalates_the_fifth
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Drives four real test-stage failures against a real AC declaring a budget of four and asserts each is reworked, then drives a fifth and asserts it escalates. Both boundaries asserted in one run so an off-by-one cannot pass."
+  - name: test_absent_budget_uses_the_standard_default
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A real AC declaring nothing resolves to the documented default and escalates one failure past it; asserts the resolved budget also reports source 'default'."
+  - name: test_declared_budget_of_zero_escalates_on_the_first_failure
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "A real AC declaring 0 escalates on failure one and is NOT silently given the default -- the falsy-zero defect. Asserts resolved budget is 0 with source 'declared'."
+  - name: test_resolved_budget_in_force_is_readable_from_the_requirement_without_running_a_build
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Reads the budget in force for a declaring AC and for a non-declaring AC with no build in flight; asserts both return a number and a provenance, satisfying the fifth criterion independently of the retry loop."
+  - name: test_negative_or_non_integer_declared_budget_is_rejected_at_authoring_time
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real validator over AC files declaring -1 and 'two'; asserts both are rejected with a message naming the field, rather than coerced or ignored at read time."
+  - name: test_the_three_fixed_ladder_caps_remain_non_overridable
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "An AC attempting to declare an override for the respawn-same-agent, respawn-sibling or brainstorm-lead caps does not change their behaviour; asserts the scope fence held and the generalisation did not leak."
+test_rationale: "The trap here is that the cheap test and the correct test look identical in a diff. Asserting that the code reads a field named for the cap proves nothing about the number being honoured -- and the repository already demonstrates the failure mode: unit_tests/test_generate_ticket_from_ac.py's test_bo530_3i_building_epics_documents_test_failure_rework_cap has been green for the whole life of this knob while the knob has been read by nothing at all, and its own docstring admits it asserts documentation rather than enforcement. A direct-import unit test of a resolve_budget helper is only marginally better: handed a dict, every implementation returns the right integer for the present-value case, and the falsy-zero defect only appears when the value is 0 and the helper is written with `or DEFAULT` -- so the zero case must be a first-class test, driven through the real resolution path against a real on-disk AC declaring 0, not through a hand-built dict. Each test therefore counts REAL reworks before a REAL escalation, and the four-then-five and zero-then-escalate boundaries are asserted in the same runs so neither an off-by-one nor a refuse-everything implementation passes. The fifth criterion is tested by reading the resolved budget with no build running, which is the only way to distinguish a budget that is genuinely visible on the requirement from one that merely happens to produce the right behaviour."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE ORPHANED KNOB. ACD-2000a's notes: "ADJACENT ORPHAN, same shape:
+  SKILL.md §4 (line ~784) makes the test-failure rework cap 'configurable
+  per-ticket via `test_failure_rework_cap:` in the TICKET FRONTMATTER'.
+  `test_failure_rework_cap` has ZERO occurrences in BOTH
+  config/ac_store_schema.json AND scripts/ac_store/generate_ticket_from_ac.py --
+  so the knob is unreachable from the AC path today and will be unauthorable
+  after the cutover. Design the trail so the cap OVERRIDE has an AC-side home
+  too, not just the cap COUNTER."
+
+  TWO SEPARATE THINGS, ONE TREE. ACD-2000a-1 gives the COUNTER a durable home;
+  this L2 gives the LIMIT an authorable home. They fail independently: a durable
+  counter with no authorable limit means every requirement gets the hard-coded
+  default forever (today's state, one layer down); an authorable limit with a
+  volatile counter means the number is respected within a run and forgotten
+  between runs (today's state exactly). Hence the depends_on edge on both
+  siblings.
+
+  THE ZERO CASE (fourth Then) IS THE CLASSIC DEFECT and is why it is written into
+  the criteria rather than left to an L3. `cap = ac.get("rework_cap") or DEFAULT`
+  reads a declared zero as "unset" and silently restores the default, which is
+  the opposite of what the author asked for. A declared zero is a meaningful
+  value: "do not rework this, tell me immediately". Any implementation that
+  cannot express it has the bug.
+
+  THE FIFTH THEN CLAUSE (visibility) exists because a budget that only manifests
+  as behaviour cannot be reviewed. It also makes the AC testable without running
+  five failures: the effective budget is readable. Note it says "the budget in
+  force" -- i.e. the resolved value including the default -- not merely "the
+  override if present".
+
+  SCOPE NOTE: the criteria speak of the rework budget for repeated test failures
+  because that is the cap SKILL.md §4 makes configurable. The ladder's other caps
+  (§3.1 respawn-same-agent, §3.2 respawn-sibling, §3.3 brainstorm-lead) are
+  fixed at 1 today and are deliberately NOT in scope here; if the IT PO
+  generalises the mechanism to all four, that is an extension, not a
+  reinterpretation of these criteria.
+
+  SCHEMA CONSTRAINT: new optional field; additionalProperties:false is enforced
+  today, so ACD-1900a's additive landing gates it. Absence = the standard budget
+  (third Then), which is the ADR-026 rule 4 tolerant-reader behaviour.
+
+  TESTABILITY. Drive real failures against a real requirement carrying the
+  override and count reworks before the escalation. Asserting that the code reads
+  a field named for the cap proves nothing about the number being honoured -- and
+  the current code path already reads such a field from a place nothing writes.
+
+  2026-08-17 (IT PO enrichment). Assigned python-coder, complexity M. Scope fence
+  respected: only the test-failure rework cap is in scope, and it_requirements adds
+  a test that the three fixed caps did NOT become overridable as a side effect.
+
+  THE BA'S ORPHAN FINDING IS TRUE BUT UNDERSTATED, AND THE STRONGER VERSION IS NOW
+  IN it_requirements. The BA says the knob "is unreachable from the AC path today".
+  Verified across the whole worktree: `test_failure_rework_cap` occurs in exactly
+  one non-AC, non-doc file -- templates/skills/building-epics/SKILL.md line 784 --
+  plus one done ticket and one test. It is unreachable from EVERY path, not only
+  the AC path: no code reads it from ticket frontmatter either, so the "configurable
+  per-ticket" sentence has never been true since it was written.
+
+  AND THE KNOB HAS A GREEN TEST OVER IT ALREADY, WHICH IS THE SHARPER PROBLEM.
+  unit_tests/test_generate_ticket_from_ac.py line 2218,
+  test_bo530_3i_building_epics_documents_test_failure_rework_cap, asserts that the
+  §4 row exists in SKILL.md's TEXT. Its docstring is candid: "DOCUMENTATION CHECK
+  (not runtime enforcement) ... no Python script reads the cap ... It intentionally
+  does NOT assert enforcement, because there is no code path to enforce (M-3)", and
+  it invites "a future ticket that makes the cap mechanically enforced ... [to] add
+  a separate test that drives that code path". THIS AC IS THAT TICKET. Retargeting
+  or superseding that test is therefore a mandatory part of the change and is
+  recorded as an it_requirement -- otherwise BO-530-3-i's coverage remains a grep
+  that stays green whether or not the new mechanism works, which is precisely the
+  phantom-done shape CLAUDE.md's gate/workflow rule exists to stop.

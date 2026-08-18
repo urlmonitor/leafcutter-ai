@@ -1,0 +1,110 @@
+id: GE-120e
+title: "A block is always about something you actually did"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Red means you did something wrong — never someone else's work.
+
+  When a check stops you, what it objects to is part of the change you are
+  actually making. It never holds you responsible for work other people already
+  did and you are merely bringing across, so you are never pushed into
+  overriding a check on a commit that did nothing wrong.
+depends_on:
+  - GE-120
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200.yaml
+    relationship: context
+    status: exists
+    relevance: "Same corrosion, different trigger. ACS-1200 exists because a convention forced a routine override of check-ac-parent-covered-by; this L1 is the false-positive source of the same override habit."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120e-1
+  - GE-120e-2
+  - GE-120e-3
+  - GE-120e-4
+  - GE-120e-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AXIS — this is the FALSE-POSITIVE L1, deliberately distinct from GE-120a-d.
+    GE-120a, b, c and d are all one axis: a check FAILING TO DETECT a real
+    problem (silent pass, false negative). This L1 is the mirror image: a check
+    REPORTING a problem that is not the author's. Do not collapse it into the
+    others and do not let decomposition treat it as "more of GE-120a" — the
+    trigger, the symptom and the fix are all different. Both axes attack the
+    same L0 promise from opposite sides: the L0 says green must mean "it was
+    checked"; this L1 says red must mean "you did something wrong".
+
+  WHY IT MATTERS MORE THAN THE INDIVIDUAL BLOCKED COMMIT.
+    A check that blames you for changes someone else made teaches you to reach
+    for the override on a legitimate commit. Once overriding is routine, the
+    whole guardrail family is quietly disarmed — including everything
+    GE-120a-d is trying to establish, because a check that finally reports
+    honestly is worth nothing if the reflex is to skip it. The habit is the
+    real damage.
+
+  PRIOR ART FOR THE HABIT — ACS-1200. That tree exists precisely because a
+    parked-idea convention was forcing SKIP=check-ac-parent-covered-by on every
+    use. Same corrosion, different trigger: there the rule itself was wrong,
+    here the rule is right but is applied to the wrong set of changes. Read the
+    two together when judging how severe a routine override is.
+
+  DIRECTLY OBSERVED, THIS SESSION (both independently verified).
+    Checks that compute their own diff use the staged diff:
+      - templates/scripts/commit_guardian/check_contract_shrinking.py:180
+        -> ["git", "diff", "--cached"]
+      - templates/scripts/commit_guardian/check_doc_frontmatter.py:287
+        -> ["git", "diff", "--cached", "--name-status"]
+    Both declare pass_filenames: false, so pre-commit hands them no file list
+    and they derive one themselves.
+    While merging origin/main (479 files) into an AC-authoring branch:
+      - check-contract-shrinking blocked with "You may not delete, skip, or
+        xfail tests while also modifying production code" — reacting to tests
+        main deleted and production files main modified. The branch itself
+        deleted ZERO files across unit_tests/, tests/, templates/, scripts/.
+      - check-doc-frontmatter reported invalid depends_on frontmatter in three
+        EPIC-SharedPatternSpecs tickets from main. The branch's own diff against
+        tickets/ was EMPTY.
+    Both had to be bypassed with SKIP= on a commit that introduced neither
+    problem.
+
+  SCOPE — do NOT over-narrow this to merges.
+    A merge commit is where it bites hardest (the staged tree holds everything
+    the incoming branch did since divergence, attributed to whoever is merging),
+    but the root cause is more general: a check ASSUMING that the staged diff
+    equals the author's change. A rebase, a revert, or a cherry-pick can expose
+    the same assumption. Frame the L2s around the assumption, not around merges.
+
+  SURFACE SIZE. 54 checks are registered in the hook manifest; any check that
+    derives its own diff rather than using the file list it is handed shares
+    this flaw. The BA should enumerate them from the manifest, not from the two
+    named above.
+
+  NOT PRESCRIBING THE FIX. Comparing against the other side of the merge is one
+    option among several; choosing the mechanism (and whether it is per-check or
+    a shared helper) is BA/IT-PO territory, not decided here.
+
+  Authored at the PO stage; L1 only. BA decomposes to L2/L3.

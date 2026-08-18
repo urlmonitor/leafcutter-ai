@@ -10,7 +10,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given a requirement that is a member of a ticket's group,
   When the ticket is inspected,

@@ -58,6 +58,44 @@ logger = logging.getLogger(__name__)
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
 _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 
+#: The two angles this module EMITS on derived test descriptors. The wider
+#: vocabulary is 5 core (criterion, reachability, seam, real_artifact, deployed)
+#: plus 2 conditional (boundary, failure) — see ``_TEST_ANGLES`` below — with
+#: must_block a modifier on reachability that this module neither emits nor
+#: reads. The trigger table for the remaining angles is separate work; do NOT
+#: infer it from these two constants.
+TEST_ANGLE_CRITERION = "criterion"
+TEST_ANGLE_REACHABILITY = "reachability"
+
+#: The full angle vocabulary, MIRRORED from the ``test_spec[].angle`` enum in
+#: config/ac_store_schema.json (which is the source of truth and the gate — the
+#: check-ac-schema hook rejects anything else at authoring time). Kept as a local
+#: copy so ticket generation never depends on locating the schema file in a
+#: consumer layout; the two copies are pinned together by a set-equality test in
+#: unit_tests/ac_store/test_derived_test_reachability_floor.py. Used ONLY to warn
+#: on an unrecognised authored value — this module does not reject one.
+_TEST_ANGLES = frozenset({
+    TEST_ANGLE_CRITERION,
+    TEST_ANGLE_REACHABILITY,
+    "seam",
+    "real_artifact",
+    "deployed",
+    "boundary",
+    "failure",
+})
+
+#: Assertion text carried by every derived reachability-floor descriptor. It is
+#: deliberately an instruction, not a stub: the AC authored no ``test_spec``, so
+#: nothing in the store names the production entry point — the test author has
+#: to resolve it. Deleting the entry instead is the phantom-done path.
+_REACHABILITY_ASSERTS = (
+    "REQUIRED — invoke the production entry point (CLI, hook, slash command, "
+    "workflow dispatch, or main()) as a subprocess/dispatch and assert the new "
+    "behaviour actually occurs. Do NOT satisfy this by importing the function "
+    "directly. The AC authored no test_spec, so the entry point is not declared: "
+    "resolve it before writing this test, and do not delete this entry."
+)
+
 #: doc_links relationships that represent a real edit surface (i.e. the linked
 #: file is a file the implementing agent must modify or create). Paths with these
 #: relationships enter ``files_touched``. Relationships not in this set (e.g.
@@ -1134,22 +1172,83 @@ def _slugify_for_test(text: str, max_words: int = 8) -> str:
     return "_".join(words[:max_words])
 
 
+def _unique_test_name(name: str, seen: set[str]) -> str:
+    """Return *name*, numerically suffixed until it is absent from *seen*.
+
+    A fixed suffix can still collide with an earlier clause's slug, which would
+    silently drop a test, so the suffix is incremented until the candidate is
+    genuinely unique. Does NOT mutate *seen* — the caller records the result.
+
+    Args:
+        name: Desired test function name.
+        seen: Names already allocated for this descriptor set.
+
+    Returns:
+        A name not present in *seen*.
+    """
+    if name not in seen:
+        return name
+    suffix = 1
+    candidate = f"{name}_{suffix}"
+    while candidate in seen:
+        suffix += 1
+        candidate = f"{name}_{suffix}"
+    return candidate
+
+
+def _reachability_descriptor(
+    ac_id: str, file_path: str, seen: set[str]
+) -> dict[str, Any]:
+    """Build the mandatory reachability-floor test descriptor for an AC.
+
+    The derived-from-criteria fallback is, by construction, the AC-literal angle
+    and nothing else: one test per Gherkin ``Then`` clause, asserting the clause
+    text. That is exactly the shape that lets code ship unit-tested but never
+    wired into anything that runs it (phantom-done — see CLAUDE.md "Gate /
+    Workflow ACs — Verify Behaviorally, Not by Grep"). This descriptor is the
+    floor under that fallback: one test that must invoke the production entry
+    point.
+
+    Args:
+        ac_id: The AC id the test covers.
+        file_path: Test file the derived descriptors live in.
+        seen: Names already allocated, so a slug collision disambiguates rather
+            than silently dropping the entry.
+
+    Returns:
+        A single test descriptor dict tagged ``angle: reachability``.
+    """
+    slug = _slugify_for_test(ac_id)
+    return {
+        "name": _unique_test_name(f"test_{slug}_reachable_from_entry_point", seen),
+        "file": file_path,
+        "covers": [ac_id],
+        "angle": TEST_ANGLE_REACHABILITY,
+        "asserts": _REACHABILITY_ASSERTS,
+    }
+
+
 def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
     """Derive best-effort test descriptors from an AC's Gherkin criteria.
 
     Fallback used only when the AC carries no explicit ``test_spec``. Each
-    ``Then`` clause in the criteria becomes one test descriptor, so the derived
-    ticket still tells test-writer what to assert straight from the criteria —
-    the AC remains the source of truth. When no ``Then`` clause is present a
-    single generic descriptor is emitted so the ticket is never left with an
-    empty test contract.
+    ``Then`` clause in the criteria becomes one ``angle: criterion`` test
+    descriptor, so the derived ticket still tells test-writer what to assert
+    straight from the criteria — the AC remains the source of truth. When no
+    ``Then`` clause is present a single generic descriptor is emitted so the
+    ticket is never left with an empty test contract.
+
+    On top of those, one mandatory ``angle: reachability`` descriptor is always
+    appended: the reachability floor. Without it this fallback emits only
+    AC-literal unit tests, which pass happily on code no entry point ever calls.
 
     Args:
         ac: Parsed AC record.
         ac_id: The AC id.
 
     Returns:
-        List of test descriptor dicts (name / file / covers / asserts).
+        List of test descriptor dicts (name / file / covers / angle / asserts),
+        always including exactly one reachability entry.
     """
     criteria = str(ac.get("criteria") or "")
     slug = _slugify_for_test(ac_id)
@@ -1159,33 +1258,36 @@ def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
         if m.group(1).strip()
     ]
     file_path = f"unit_tests/test_{slug}.py"
+    tests: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
     if not then_clauses:
-        return [{
+        tests.append({
             "name": f"test_{slug}_satisfies_criteria",
             "file": file_path,
             "covers": [ac_id],
+            "angle": TEST_ANGLE_CRITERION,
             "asserts": "Derived from AC criteria — replace with a concrete assertion.",
-        }]
-    tests: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for clause in then_clauses:
-        name = f"test_{slug}_{_slugify_for_test(clause)}"
-        if name in seen:
-            # Disambiguate until unique — a fixed suffix can still collide with an
-            # earlier clause's slug, which would silently drop a test.
-            suffix = len(tests)
-            candidate = f"{name}_{suffix}"
-            while candidate in seen:
-                suffix += 1
-                candidate = f"{name}_{suffix}"
-            name = candidate
-        seen.add(name)
-        tests.append({
-            "name": name,
-            "file": file_path,
-            "covers": [ac_id],
-            "asserts": clause,
         })
+        seen.add(tests[0]["name"])
+    else:
+        for clause in then_clauses:
+            name = _unique_test_name(f"test_{slug}_{_slugify_for_test(clause)}", seen)
+            seen.add(name)
+            tests.append({
+                "name": name,
+                "file": file_path,
+                "covers": [ac_id],
+                "angle": TEST_ANGLE_CRITERION,
+                "asserts": clause,
+            })
+
+    # Unconditional by design. Every descriptor built above is hard-coded
+    # ``angle: criterion``, and an authored ``test_spec`` never reaches this
+    # function — ``_build_test_requirements_section`` returns the spec-derived
+    # descriptors before calling it. So there is nothing here that could already
+    # be a reachability entry, and an "is one present?" guard would be dead code.
+    tests.append(_reachability_descriptor(ac_id, file_path, seen))
     return tests
 
 
@@ -1235,6 +1337,31 @@ def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
             entry["framework"] = item["framework"]
         if item.get("type"):
             entry["type"] = item["type"]
+        if item.get("angle"):
+            # Pass an authored angle straight through to the ticket entry, so an
+            # it-po's angle classification survives into ## Test Requirements
+            # instead of being silently dropped. Declared in the test_spec item
+            # schema (config/ac_store_schema.json), vocabulary in
+            # docs/testing/test-angles.md. There is no double-cover to guard
+            # against here: _build_test_requirements_section returns these
+            # descriptors and never falls through to the derived floor.
+            #
+            # The value is NOT rejected here — the schema is the gate, and
+            # dropping authored data on a vocabulary miss is worse than emitting
+            # it. But the schema hook does not run on every path an AC can reach
+            # the store by, so an unrecognised value is logged rather than
+            # passed through in silence.
+            if item["angle"] not in _TEST_ANGLES:
+                logger.warning(
+                    "AC %s test_spec entry %r declares an unrecognised test "
+                    "angle %r (known: %s); emitting it unchanged — see "
+                    "docs/testing/test-angles.md",
+                    ac_id,
+                    name,
+                    item["angle"],
+                    ", ".join(sorted(_TEST_ANGLES)),
+                )
+            entry["angle"] = item["angle"]
         if item.get("requires_db"):
             entry["requires_db"] = True
         descriptors.append(entry)

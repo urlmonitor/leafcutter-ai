@@ -1,0 +1,135 @@
+id: GE-122
+title: "Trust that a number always refers to exactly one piece of work"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The number you cite means one thing — and it keeps meaning that one thing.
+
+  Almost everything in this project is referred to by a number: requirements,
+  tickets, decisions, diagrams. Those numbers are how people and automation
+  point at work, so the moment two unrelated things claim the same number, or a
+  new thing quietly takes no number at all, or one number ends up on two copies
+  that can disagree with each other, every reference built on top of it stops
+  being trustworthy. That has already happened here, more than once, and nothing
+  noticed. After this goal, a number identifies exactly one thing, nothing can
+  come into existence without taking a number, the numbering that already drifted
+  is repaired rather than frozen in place, and a clash surfaces the moment it
+  appears — with the fix in hand, at a point where it cannot be skipped.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-800-stable-ac-identity/ACS-800a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Complementary and sequential, NOT a duplicate. ACS-800a-3 carries the same one-number-one-thing invariant FORWARD into the future position-independent identity model, and can only ship after the large unbuilt ACS-800 restructure. GE-122 enforces that invariant on the identity scheme in use TODAY and ships independently of that migration. Neither closes the other."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-122a
+  - GE-122b
+  - GE-122c
+  - GE-122d
+  - GE-122e
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE L1 CUT IS SHAPED THIS WAY (do not re-cut at L1).
+    The obvious cut — one L1 per numbered thing (requirements / tickets /
+    decisions / diagrams) — was rejected. It produces four near-identical ACs
+    that each re-specify the same guarantee against a different file pattern,
+    and it hides the fact that the interesting differences are not between the
+    namespaces but between the KINDS of failure and the STRENGTH of the promise.
+    The cut used instead is by distinct user-visible guarantee:
+      - GE-122a — the invariant itself: one number, one thing. This is where all
+        four namespaces are enforced, because for this guarantee they genuinely
+        are the same requirement applied four times.
+      - GE-122b — coverage of that invariant: a thing that never takes a number
+        can never collide, so no uniqueness promise can ever see it. Without
+        this L1, GE-122a is a guarantee with an opt-out. Distinct benefit,
+        distinct failure mode, distinct evidence.
+      - GE-122c — what happens on a hit: being told which two things collide and
+        what to do about it, rather than just being stopped. Remediation quality
+        is what decides whether the guard is useful or merely obstructive.
+      - GE-122d — the strength of the promise: it holds at every stage of the
+        work and cannot be bypassed or quietly self-disable. Separate from (a)
+        because a correct rule that can be waved through is not a guarantee.
+      - GE-122e — the starting point: the drift that already exists is repaired,
+        not grandfathered. A guard added on top of a store that already contains
+        a collision certifies a broken state as clean. Separate benefit, and the
+        only one that is one-time rather than standing.
+
+  ALL FOUR NAMESPACES ARE IN SCOPE, WITH DIFFERENT MOTIVES (user decision).
+    Requirement ids and ticket ids are being REPAIRED (drift observed today).
+    Decision-record numbers are currently healthy — contiguous, no duplicates,
+    no gaps — so guarding them LOCKS IN a good state and protects it from the
+    same erosion, rather than fixing a present defect. Frame their benefit that
+    way; do not invent a defect for them. Diagram sequencing has no collisions
+    but a large opt-out population, which is exactly why GE-122b exists.
+
+  THE DRIFT HAS THREE SHAPES — ONLY THE FIRST IS A COLLISION.
+    1. Two unrelated artifacts claim one number (observed: a requirement id
+       claimed independently by two different documents, at two different levels
+       of the hierarchy, minted from two different working copies; this is the
+       third such incident recently, an earlier one was resolved by renumbering).
+    2. An artifact takes no number at all, so it can never collide and no
+       uniqueness pass will ever see it (observed: a substantial set of diagrams
+       carrying no sequence number, despite an allocator existing for exactly
+       that purpose). Drift by abandonment.
+    3. One number, two files in different lifecycle locations, free to disagree
+       about the state of the work (observed on a handful of tickets).
+    Shapes 1 and 3 are both "one number must mean one thing" and live in
+    GE-122a; shape 2 is a different promise and lives in GE-122b.
+
+  WHY NOTHING CAUGHT ANY OF IT — the structural point the BA must preserve.
+    The existing validation is per-file: it opens one artifact at a time and
+    judges it in isolation. A per-file check is structurally incapable of
+    noticing that a second file elsewhere claims the same number. No existing
+    gate performs a whole-collection pass. The fix is therefore a change in the
+    UNIT of inspection, not another rule added to the per-file validator.
+
+  HONESTY CONSTRAINT ON THE REMEDIATION PROMISE — load-bearing, see GE-122c.
+    The user's request was for the gates to "say a specialist should be brought
+    in to fix the numbers". What each stage can actually do differs, and the ACs
+    must not promise more than the stage can deliver: the stage that runs while
+    the author is still working is the only one able to actually bring a
+    specialist in; the stage at commit time and the stage in the shared build
+    can block and explain, but cannot summon anyone. Precedent for the first
+    exists in this project already. There is also an anti-precedent that must not
+    be repeated: another guard is DOCUMENTED as automatically dispatching a
+    specialist and does not — it is hard-wired to report success and its
+    remediation path is a placeholder. A documented-but-dead remediation path is
+    worse than none, because authors believe they are covered. Every promise in
+    this tree must be true of the stage it is written about.
+
+  RELATIONSHIP TO THE STABLE-IDENTITY WORK — do not close either as a duplicate.
+    An approved requirement in the requirements-store component already states
+    the same uniqueness invariant, but it is a child of a large, approved and
+    entirely UNBUILT restructure that replaces today's position-encoded numbers
+    with position-independent ones. The user chose deliberately to DECOUPLE:
+    GE-122 enforces uniqueness on the numbering scheme in use today and ships
+    now, without waiting for that migration; the other requirement carries the
+    same invariant forward to the future scheme. They are complementary and
+    sequential. Nothing in the stable-identity tree may be edited, reopened, or
+    re-authored by this work.
+
+  Authored at the PO stage; L0/L1 only. The BA decomposes to L2/L3 and the IT PO
+  adds the technical constraints.

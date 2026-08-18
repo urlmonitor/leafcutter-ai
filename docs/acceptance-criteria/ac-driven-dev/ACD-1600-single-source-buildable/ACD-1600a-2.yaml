@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given an AC ACS-100a-1 that carries it_requirements and delivers_to / expects_from contracts,
   When the ticket generator produces the ticket for ACS-100a-1,
@@ -32,7 +32,7 @@ it_requirements:
   - "The generator must stop emitting the ## Implementation Notes block built from it_requirements (currently _build_implementation_notes_section) and must not restate delivers_to / expects_from contract values in the ticket body."
   - "The emitted ticket must carry the source_ac frontmatter pointer plus a lightweight workflow checklist and no copied spec field."
   - "Single-source invariant: after generation, no spec field (criteria, it_requirements, contracts) is present in BOTH the ticket body and the store record."
-  - "GOVERNANCE CAVEAT: this reverses ADR-400b / ADR-400b-1 (verbatim spec in ticket body) and is gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2_cutover; the flag-off path must still produce a valid ticket."
+  - "GOVERNANCE CAVEAT: this reverses ADR-400b / ADR-400b-1 (verbatim spec in ticket body) and is gated behind the ac_unit_of_work.emit flag per ADR-026 phase_acbuild_2b_ticket_demotion; the flag-off path must still produce a valid ticket."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy

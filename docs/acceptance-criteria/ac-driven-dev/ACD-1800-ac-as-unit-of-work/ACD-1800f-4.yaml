@@ -1,0 +1,181 @@
+id: ACD-1800f-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Bundled proofs all run, each in isolation, and a failure names whose proof failed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a feature that bundles three requirements, two of which promise
+    observable effects and carry one proof each,
+  When the observable promises of the feature are checked,
+  Then both proofs are executed, and the feature is only counted as proven when
+    both are observed,
+  And each proof runs against a starting state unaffected by the other proof's
+    run,
+  And when the second requirement's proof is not observed, the reported outcome
+    names that requirement, not merely the feature,
+  And checking the second requirement on its own, with no bundle, executes the
+    same proof and reaches the same outcome.
+depends_on: [ACD-1800f, ACD-1800f-2, ACD-1800f-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where the composition rule and the attribution shape must be documented for authors (ACD-1800f-5)."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+    relevance: "ACD-1800c makes the ticket a grouping container of N requirements, which is what turns composition, isolation and attribution into first-class concerns."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the fast lane, the standalone build path that has no ticket at all -- the path the grain-invariance clause is really about."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: related
+    status: exists
+    relevance: "A sibling's cleanup making another's assertion pass for an unrelated reason is a false green; the honesty axes live here."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "COMPOSITION IS UNION, AND THAT IS THE EASY HALF. The proof set for a work item is the union of every member requirement's proofs, in a deterministic order keyed by member id then proof index. Note the deliberate contrast with ACD-1600g, where exclusions compose by DIFFERENCE -- do not reuse that composition rule here."
+  - "ISOLATION IS THE HARD HALF, AND THE INCUMBENT CLEANUP MUST NOT SURVIVE. templates/agents/user-surface-smoker.md Step 5 (~line 163) runs `git restore .` unconditionally after every stanza, and Step 1 (~lines 119-121) refuses to start when the worktree has staged changes. Running N members' proofs in one pass interleaves N whole-tree restores with N invocations that each may mutate the tree. Each proof must begin from a starting state unaffected by any other proof's run; a sequential run over one shared tree with an unconditional whole-tree restore does NOT satisfy the second Then clause."
+  - "THE TECHNIQUE IS THE IMPLEMENTER'S CHOICE, THE OUTCOME IS NOT. A fresh worktree per proof, a restore scoped to only the paths that proof declared, or capturing the observation before cleanup rather than after -- any of these is acceptable. Whichever is chosen, the dirty-worktree pre-check must be evaluated against that proof's own baseline, never against the raw tree, or member A's legitimate artefact aborts member B's run."
+  - "ATTRIBUTION IS PER-REQUIREMENT, NOT PER-BUNDLE. Every outcome entry carries the member ac_id and the proof index. The incumbent aggregation ('if ALL stanzas PASS: emit ok') is set-shaped and loses stanza identity; 'the feature's smoke check failed' tells a reader nothing about which requirement to reopen. Same shape as ACD-1600g-3-i for boundaries."
+  - "GRAIN-INVARIANCE IS A REAL, VERIFIED GAP -- A STORE-SIDE RESOLVER ALONE DOES NOT SATISFY THE FOURTH THEN CLAUSE. templates/workflows-js/fast-lane-ship.js has a fixed, code-defined five-phase order (Worktree, Resolve, Test Writer, Coder, Commit) with NO observation phase, and scripts/build_orchestration/fast_lane.py has ZERO occurrences of user-surface-smoker. The fast lane therefore builds and marks an AC done today without ever checking its observable promise. The standalone path must gain an observation step keyed on the declaration, or the clause is proven on the bundled half only."
+  - "MIXED SURFACE -- PARTIAL FLAG (S2.8, BP-1100f-3-i). The matched portion (union resolution, isolation harness, attributed aggregation, the standalone entry point in scripts/build_orchestration/fast_lane.py) is python-coder's and is checkable by pytest. The unmatched portion is templates/workflows-js/fast-lane-ship.js (a `.js` workflow, jest/vitest territory) and templates/agents/user-surface-smoker.md (prose). A Python implementer cannot act on either. Expose the standalone check as a callable/CLI surface in fast_lane.py so the Python half is independently drivable, and flag the JS phase insertion and the template repoint for the user; see the caveat in notes."
+  - "The fast lane's done accounting is already a known regression risk under this migration: fast_lane.mark_done_built_acs() marks ACs done on test coverage alone. Once an observable promise can be unproven (ACD-1800f-3), marking done on coverage alone is a phantom-done regression introduced by the migration itself, in the tool with the strongest done proof in the repo. The standalone observation step must gate that call."
+  - "Canonical source only: scripts/ac_store/, scripts/build_orchestration/, templates/workflows-js/ -- never a deployed .claude/ copy or the workspace-parent build-output mirror (ADR-001). Run ./build-self.sh after the change and re-verify from the deployed layout, since a workflow invoked by name can run a stale session-cached script."
+delivers_to:
+  agent: python-coder
+  contract: "Bundle-level observation result: { status: 'proven'|'unproven'|'refuted'|null, proofs_declared: int, proofs_executed: int, proofs_observed: int, per_requirement: [{ac_id: str, proof_index: int, status: str, reason: str, isolation_baseline: str}] }, produced identically whether the work item is a multi-AC bundle or a single AC built standalone by the fast lane. Consumed by ACD-1800f-4-i (the destructive-interference case), by scripts/ac_store/done_proof.py's eligibility path, and by the reporting craft."
+expects_from:
+  ac_id: ACD-1800f-2
+  contract: "The store-only resolver `resolve_observation_proofs(ac_ids, *, ac_root)` returning per-requirement proof records tagged with ac_id and proof_index. Because the resolver takes AC ids and no ticket path, the same call serves the bundled and standalone paths -- which is what makes the fourth Then clause achievable at all."
+test_spec:
+  - name: test_three_member_bundle_executes_both_declared_proofs_and_proves_only_when_both_are_observed
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real bundle check over a real three-member work item in a real temporary git worktree, where one member declares nothing and two each carry one genuinely executing proof; asserts proofs_executed == 2 and status 'proven' only when both are observed."
+  - name: test_each_proof_starts_from_a_state_unaffected_by_the_other_proofs_run
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "The first member's proof genuinely mutates the working tree; asserts the second member's proof observes the pre-proof baseline and not the first member's residue. Stubbing the invocation removes the git restore from the picture and stubs away the entire hazard, so the invocation must be real."
+  - name: test_a_failing_member_proof_names_that_requirement_not_the_feature
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "With the second member's proof not observed, asserts the emitted per_requirement entry carries that member's ac_id and proof index, and that the bundle status is not proven. Asserting only the bundle-level status passes on a set-shaped aggregation that has lost stanza identity."
+  - name: test_standalone_check_of_the_same_requirement_executes_the_same_proof_and_agrees
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: behavioral
+    description: "Checks the second member alone via the fast lane's standalone path, with no bundle and no ticket file on disk, and asserts the same proof ran and the same outcome was reached. This is the clause a ticket-body implementation cannot satisfy and the one that fails today, since the fast lane has no observation phase at all."
+  - name: test_fast_lane_does_not_mark_an_unproven_requirement_done_on_test_coverage_alone
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Drives the real fast-lane done-accounting path for an AC that declares an observable effect and has passing covers-tagged tests but an unobserved proof; asserts it is not marked done. Guards the migration-introduced regression in mark_done_built_acs."
+test_rationale: "Every failure this AC forbids is produced by the interaction between a real git working tree and a real surface invocation, so any test that stubs the invocation also stubs away the entire hazard -- the tree is never mutated, the unconditional restore never runs, and a shared-tree implementation passes. Each descriptor therefore drives the real check over a real multi-member work item in a real temporary git worktree with proofs that genuinely mutate files. The bundled and standalone runs are both asserted because the fourth Then clause is half the point of moving proofs onto the requirement, and it is currently unmet in a verified way: fast-lane-ship.js has no observation phase and fast_lane.py has zero references to the smoke craft. The attribution descriptor is separated from the pass/fail one because a set-shaped aggregation satisfies 'the bundle failed' while losing the only information a reader needs."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1800f-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  COMPOSITION AND GRAIN-INVARIANCE. Note the deliberate contrast with ACD-1600g:
+  exclusions compose by DIFFERENCE, proofs compose by UNION. A bundle must
+  satisfy every member's proofs -- that part is the easy half, and it is the first
+  Then clause.
+
+  THE HAZARD IS ORDER AND ISOLATION, NOT COMPOSITION (ACD-1800f notes, verified):
+    - user-surface-smoker Step 1 BLOCKS on a dirty worktree ("Pre-smoke worktree
+      has staged changes").
+    - Step 5 runs `git restore .` UNCONDITIONALLY after every stanza.
+  Unioning N members' proofs into one run therefore interleaves N unconditional
+  restores with N invocations that may each mutate the tree. The failure is not
+  hypothetical: member A's proof legitimately leaves an uncommitted artefact,
+  member B's proof restores the tree, and A's observation is destroyed -- or,
+  worse, B's restore makes A's assertion pass for the wrong reason. The second
+  Then clause ("a starting state unaffected by the other proof's run") is the
+  behavioural statement of the fix; ACD-1800f-4-i drives the destructive case
+  explicitly.
+
+  THE THIRD THEN CLAUSE (attribution) exists because the aggregation the smoker
+  uses today -- "if ALL stanzas PASS: emit ok" -- is set-shaped and loses stanza
+  identity. Under ACD-1800c the bundle has N members and "the feature's smoke
+  check failed" tells the reader nothing about which requirement to reopen. Same
+  shape as ACD-1600g-3-i for boundaries.
+
+  THE FOURTH THEN CLAUSE (grain-invariance) is the whole point of moving the
+  proof to the requirement, and it is the clause a ticket-body implementation
+  cannot satisfy: the fast lane
+  (scripts/build_orchestration/fast_lane.py) builds a single AC with no ticket at
+  all, so there is no body to hold a `## Smoke Fixture` block. It also means this
+  AC's test must exercise BOTH paths -- bundled and standalone -- or it proves
+  half the criterion.
+
+  WHAT IS DELIBERATELY NOT SPECIFIED: how isolation is achieved (per-proof
+  worktree, scoped restore of only the paths a proof touched, stash/restore
+  discipline). That is the IT PO's decision; the criteria constrain the observable
+  outcome, not the technique. Note only that "keep the unconditional `git restore
+  .` and run the proofs sequentially" does NOT satisfy the second Then clause,
+  since it is exactly the behaviour that destroys a sibling's uncommitted effect.
+
+  TESTABILITY. Run the check over a real three-member bundle in a real worktree
+  where one proof genuinely mutates the tree, and assert both proofs ran, the
+  outcome names the failing member, and the standalone run of that member agrees.
+  Any test that stubs the invocation away also stubs away the entire hazard.
+
+  2026-08-17 (IT PO enrichment).
+
+  ISOLATION TECHNIQUE LEFT OPEN, AS THE BA INTENDED -- but one boundary condition
+  is added that the criteria do not state and an implementer will otherwise miss:
+  the dirty-worktree PRE-CHECK must also be per-proof. It is not enough to scope
+  the cleanup. Step 1 refuses to start on a dirty tree, so with a shared tree and
+  a scoped restore, member A's legitimately-retained artefact still aborts member
+  B before B's proof runs. Both halves of the collision have to move to the
+  per-proof baseline together; fixing only the restore converts a destruction
+  failure into a refusal failure, which ACD-1800f-4-i's fourth Then clause
+  explicitly forbids.
+
+  GRAIN-INVARIANCE: VERIFIED GAP, LARGER THAN THE BA COULD SEE. The BA's note
+  says the fast lane "builds a single AC with no ticket at all", which is true and
+  is the argument. The stronger verified fact is that the fast lane has no
+  observation step of ANY kind: templates/workflows-js/fast-lane-ship.js declares
+  a fixed five-phase order (Worktree, Resolve, Test Writer, Coder, Commit) and
+  scripts/build_orchestration/fast_lane.py has ZERO occurrences of
+  user-surface-smoker. So the fourth Then clause is not merely unproven on the
+  standalone path -- the standalone path currently marks ACs done without ever
+  looking at an observable promise. A store-side resolver does not fix that on
+  its own; a phase has to be added.
+
+  MIXED SURFACE -- PARTIAL FLAG (S2.8, BP-1100f-3-i), and it is widest on this AC:
+    - MATCHED (python-coder / pytest): scripts/ac_store/*.py (union, isolation
+      harness, attributed aggregation), scripts/build_orchestration/fast_lane.py
+      (the standalone entry point and the done-accounting gate).
+    - UNMATCHED: templates/workflows-js/fast-lane-ship.js (`.js`, jest/vitest) and
+      templates/agents/user-surface-smoker.md (prose). A python-coder checked by
+      pytest cannot modify a workflow engine file or an agent template.
+  Mitigation recorded in it_requirements: expose the standalone check as a
+  callable/CLI surface in fast_lane.py so the Python half is independently
+  drivable and testable, leaving the JS phase insertion a thin call. No split was
+  made -- ACD-1800f is at its 5-L2 cap and ACD-1800 at 6 of 7 L1, so a split is
+  the user's call and is recommended rather than taken.
+
+  ADJACENT REGRESSION THE MIGRATION INTRODUCES (from the component context, and
+  it lands squarely on this AC): fast_lane.mark_done_built_acs() marks ACs done on
+  test coverage alone. Once an observable promise can be `unproven`, that becomes
+  phantom-done in the tool with the strongest done proof in the repo. The fifth
+  test descriptor exists to pin it.

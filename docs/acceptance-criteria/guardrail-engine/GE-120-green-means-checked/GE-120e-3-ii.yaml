@@ -1,0 +1,118 @@
+id: GE-120e-3-ii
+title: "A merge whose own resolution introduces the fault is still blocked, and no check treats a merge as grounds to skip"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a merge commit in which the author's own resolution introduces exactly the fault a
+    check exists to catch — a test file removed by the resolution rather than by either
+    incoming state, and frontmatter the author typed into a conflicted region that the check
+    rejects,
+  When that check runs on the commit,
+  Then it objects and the commit is blocked,
+  And its objection names the author's resolution and does not name the carried-in work that
+    arrived alongside it,
+  And the identical content arriving unchanged from a state the commit is built on, with no
+    resolution of the author's own, is not blocked, in the same verification against the
+    same repository,
+  And no check skips its inspection, in whole or in part, on the grounds that a merge is
+    under way — a merge changes which content is attributed to the author, never whether the
+    author's content is inspected.
+
+  Coverage note: both arms must run in the same test against the same repository, because
+  the difference between them IS the criterion. A test that only asserts the untouched case
+  is not blocked passes on a check that has been switched off for merges entirely, which is
+  the exact regression this AC exists to prevent.
+depends_on:
+  - GE-120e-3
+doc_links:
+  - path: templates/scripts/commit_guardian/check_contract_shrinking.py
+    relationship: related
+    status: exists
+    relevance: "First arm's subject — a test deleted by the resolution must still trip it."
+  - path: templates/scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: related
+    status: exists
+    relevance: "Second arm's subject — frontmatter written during resolution must still trip it."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The placement precedent: the guarantee that must survive a future relaxation of an exemption is filed with the enforcement branch, not with the exemption it constrains."
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "BOTH ARMS IN ONE CASE AGAINST ONE REPOSITORY. Do not split the blocked arm and the not-blocked arm into separate tests. The difference between identical bytes blocked in one arm and passed in the other IS the criterion; two independent tests can both pass against a check that has been switched off for merges, which is the regression this AC exists to prevent."
+  - "TWO REAL SUBJECTS, NOT ONE. Arm A(i): a test file removed by the author's own conflict resolution must still trip check_contract_shrinking. Arm A(ii): frontmatter the author typed into a conflicted region must still trip check_doc_frontmatter. Both were the observed false-positive sources; both must be shown still catching the real thing."
+  - "THE OBJECTION MUST NAME THE AUTHOR'S RESOLUTION AND MUST NOT NAME THE CARRIED-IN WORK. Assert on the objection text, not only on the exit status — a check that blocks for the right reason and a check that blocks for the old wrong reason both exit non-zero."
+  - "COVER THE NO-SKIP CLAUSE BEHAVIOURALLY, NOT BY GREP. Do not assert the absence of the string MERGE_HEAD in any source file. Assert instead that with a merge genuinely in progress the author's own faulty content is still blocked — a check that consults the marker to decide WHETHER to inspect fails that assertion, and a grep passes on dead code (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+  - "MERGE_HEAD IS PRESENT ONLY WHILE THE MERGE IS IN PROGRESS. The fixture must execute the check at that point in the operation — after staging the resolution, before the merge commit is created — because that is when the commit path runs and it is the only window in which the marker exists at all."
+  - "RECORD THE ACCEPTED NARROWING EXPLICITLY, in the test module docstring and in the sign-off: under GE-120e-1's definition, resolving a conflict by taking an incoming deletion verbatim matches an incoming state and is therefore not the author's, so an author who accepts an incoming test deletion and separately edits production code is no longer blocked by contract-shrinking. That is the observed false positive removed on purpose. If it is later judged too wide, the fix belongs in GE-120e-1's definition of authored content, never in an exemption clause here."
+  - "REUSE GE-120c-1'S OUT-OF-PROCESS HARNESS and the deployed layout, so what is under test is the check as the commit path runs it."
+test_spec:
+  - name: test_ge120e3ii_test_deleted_by_the_authors_resolution_still_blocks
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A test file removed by the author's own conflict resolution trips check_contract_shrinking and the commit is blocked."
+  - name: test_ge120e3ii_frontmatter_typed_during_resolution_still_blocks
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Frontmatter the author typed into a conflicted region trips check_doc_frontmatter and the commit is blocked."
+  - name: test_ge120e3ii_objection_names_the_resolution_and_not_the_carried_in_work
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The blocking objection identifies the author's resolution and mentions none of the work that arrived alongside it."
+  - name: test_ge120e3ii_identical_content_arriving_unchanged_is_not_blocked_in_the_same_case
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "In the same test against the same repository, the identical bytes arriving from a state the commit is built on pass — authorship, not the operation, is the discriminator."
+  - name: test_ge120e3ii_no_check_skips_inspection_while_a_merge_is_in_progress
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "With a merge genuinely in progress, every self-deriving check still inspects the author's own content and still objects to a fault in it."
+test_rationale: "This is the still-blocked negative and it must not be weakened to a single arm. Asserting only that the untouched case passes is green against a check that has been switched off for merges entirely — the SKIP habit moved into the codebase — and asserting only that the resolution blocks is green against the original defect. The two arms therefore live in one case against one repository, with identical bytes on both sides, so the only variable is whether the author put them there. The no-skip clause is covered behaviourally rather than by grepping for a merge marker, because a grep passes on dead code and would certify a check that consults the marker but never acts on it; the fixture instead runs the check while the merge is genuinely in progress, which is the only window in which the marker exists."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-3
+  contract: "The differential pair mechanics — two arms over one repository with per-arm status and objection text."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLACEMENT IS DELIBERATE — this is the ACS-1200c-3 move. The narrowing that this AC
+  constrains lives in GE-120e-1 and GE-120e-4. If this guarantee were filed as a child of
+  either, a future relaxation of the narrowing would take it along; filed under the proof
+  branch, a relaxation has to be argued against a verification that is still running. It is
+  the only thing standing between "a check stopped blaming the wrong author" and "a check
+  stopped blaming anyone".
+
+  THE DISCRIMINATOR IS AUTHORSHIP, NOT THE OPERATION. Read the third and fourth clauses
+  together: identical bytes, blocked in one arm and not the other, and the only difference is
+  whether the author put them there. That is the whole L1 in one test.
+
+  A CONSEQUENCE THE IT-PO SHOULD WEIGH RATHER THAN DISCOVER. Under GE-120e-1's definition, a
+  conflict resolved by taking an incoming side verbatim matches that state and is therefore
+  not the author's. So an author who resolves by accepting an incoming test deletion and
+  separately edits production code is no longer blocked by the contract-shrinking rule. That
+  is the observed false positive being removed on purpose, but it is a real narrowing of
+  that check's reach on merges and it is worth stating out loud before it is implemented,
+  not after. If it is judged too wide, the fix belongs in GE-120e-1's definition of what
+  counts as authored — not in an exemption clause here, which would put the constraint back
+  inside the thing it constrains.

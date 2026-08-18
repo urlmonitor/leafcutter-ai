@@ -1,0 +1,158 @@
+id: ACD-2000b-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "When two efforts reach for the same requirement at once, exactly one gets it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given an available requirement,
+  And two efforts that both reach for it at the same moment,
+  When both attempt to take it,
+  Then exactly one of them ends up holding it,
+  And the other is told the requirement is already taken and goes looking for
+    different work rather than proceeding,
+  And the requirement records exactly one owner, being the effort that succeeded,
+  And repeating the same simultaneous contest many times never once produces two
+    holders or zero holders.
+depends_on: [ACD-2000b, ACD-2000b-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The verified race: claim_build_set reads at ~181, tests current_status at ~193, writes at ~203 with no exclusion between the three. main()'s claim branch (~990-1012) is the consumer whose exit-code contract decides whether losing is fatal."
+  - path: docs/reference/feedback-concurrency.md
+    relationship: describes
+    status: exists
+    relevance: "The repo's other unsynchronised-writer defect and its proposed remedy (fcntl.flock / msvcrt.locking). Read for the portability trap before choosing a mechanism -- leafcutter installs into consumer projects on POSIX, WSL2/NTFS and Windows."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE CURRENT IMPLEMENTATION DOES NOT SATISFY THIS AC. Verified: claim_build_set reads the YAML (~line 181), tests current_status == 'in_progress' (~line 193) and writes (~line 203) with no exclusion across the three steps. Two efforts can both read todo and both flip. The existing already-in_progress detection at ~193 is exactly the check the race defeats -- it looks like protection and is not."
+  - "TAKING MUST BE ONE INDIVISIBLE OPERATION against the store: no observable interval may exist between deciding the requirement is free and recording it as taken. Compare-and-set, exclusive create, or an equivalent -- the technique is the implementer's choice, the absence of the window is not."
+  - "PORTABILITY CONSTRAINS THE MECHANISM. leafcutter is installed into consumer projects running on Linux, WSL2 over NTFS, and Windows. Advisory locking (fcntl.flock) is POSIX-only and is not reliably honoured on every mount this package runs on; docs/reference/feedback-concurrency.md records the same class of defect and proposes a platform-split lock. Prefer a mechanism whose atomicity does not depend on advisory locks being honoured -- exclusive create (os.open with O_CREAT|O_EXCL) and same-filesystem atomic replace (os.replace) are the portable primitives. Whatever is chosen must be exercised on the developer platform in the test contract, and its portability limits stated where it is implemented."
+  - "THE EXCLUSION MUST COVER THE WHOLE READ-MODIFY-WRITE, not just the status assignment. _update_ac_work_status (~lines 113-125) round-trips the ENTIRE record through yaml.safe_load -> yaml.safe_dump, so two interleaved writers silently drop each other's edits to unrelated fields -- including ACD-2000a's adjudication trail. Protecting only the claim field leaves a lost-update defect on everything else."
+  - "LOSING THE CONTEST IS AN ORDINARY OUTCOME, NOT A RUN FAILURE. Check the consumer, not just the producer: fast_lane.main()'s claim branch (~lines 990-1012) returns exit 1 only when the WHOLE set is refused, and reports an already-claimed member through the `error` channel. The loser must be routed to 'select different work'; a losing contender that aborts its drive converts a resolved race into an outage."
+  - "ZERO HOLDERS IS A DEFECT, NOT A SAFE FALLBACK. Mutual back-off -- both contenders detect the conflict and both release -- satisfies 'never two holders' and is still a bug: an idle build that looks healthy. The mechanism must resolve the contest, not dissolve it."
+  - "DO NOT RESOLVE CONTENTION BY ORDERING THE CALLERS. A single-writer serialisation point is acceptable only if BOTH entry points must pass through it; a scheme that works because the fast lane and the drive happen not to run together reproduces the current gap under a new name."
+  - "IDEMPOTENCE AND SELF-CONTENTION. The same owner re-taking a requirement it already holds must be a no-op that leaves one owner and the ORIGINAL instant, not a refusal and not a refreshed timestamp -- ACD-2000b-3 judges staleness from that instant."
+  - "Follow the project error handling policy (Ruff E722/BLE001/TRY): typed except around every file operation, log-or-reraise, no bare except. A lock or exclusive-create failure must never be swallowed into 'claim succeeded'."
+delivers_to:
+  agent: python-coder
+  contract: "An atomic take/release primitive over the claim record: take(ac_id, owner) returns granted|already_taken with the current owner when refused, never both-granted and never both-refused for a free requirement. Consumed by ACD-2000b-2-i (set claims), ACD-2000b-3 (takeover must go through the same take) and ACD-2000b-4 (take-time footprint re-verification)."
+expects_from:
+  ac_id: ACD-2000b-1
+  contract: "The claim record { owner identity, claim instant (UTC ISO-8601), entry-point kind } and the shared take/release helper whose read-check-write this AC makes indivisible."
+test_spec:
+  - name: test_two_concurrent_processes_reaching_for_one_requirement_yield_exactly_one_owner
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Two real OS processes, released from a shared barrier so their attempts genuinely overlap, both invoke the real claim entry point on one on-disk requirement; asserts the record afterwards names exactly one owner and that exactly one process reported success."
+  - name: test_repeated_contest_never_produces_two_holders_or_zero_holders
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Repeats the same two-process contest over a fresh requirement many times (enough iterations to hit the window reliably) and asserts every single round ends with exactly one holder -- never two, never none."
+  - name: test_losing_contender_is_told_already_taken_and_does_not_abort
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Asserts the loser's result identifies the requirement as already taken and names the holder, and that its outcome is the ordinary select-other-work path rather than a fatal run failure."
+  - name: test_contended_claim_does_not_drop_unrelated_fields
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Runs the contest against a record carrying a populated adjudication trail and asserts no field is lost or reordered by the interleaved whole-record rewrites."
+  - name: test_same_owner_retaking_its_own_claim_is_a_no_op
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The holder takes the same requirement again; asserts one owner and the ORIGINAL claim instant, so self-contention neither refuses the holder nor silently resets the staleness clock."
+test_rationale: "The obvious test -- claim the requirement, then claim it again -- PASSES on today's broken read-check-write, because the second read observes in_progress and the already-claimed branch at ~line 193 fires. A sequential test therefore cannot distinguish the defective implementation from a correct one, and neither can two threads in one interpreter, where the GIL and shared caches can serialise the very window under test. The only honest shape is two real OS processes contending for one real on-disk requirement, released from a barrier so the attempts overlap. A single contest is also insufficient: it is a coin flip a broken implementation wins most of the time, so the repeat count is part of the assertion, and 'never zero holders' is asserted alongside 'never two' so a mutual-back-off implementation cannot pass by dissolving the contest."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000b-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE ATOMICITY LEAF -- ACD-2000b hazard 2, verified and NOT satisfied today.
+
+  THE VERIFIED RACE (do not re-investigate), in
+  scripts/build_orchestration/fast_lane.py `claim_build_set()`:
+    - reads the YAML at ~line 181,
+    - tests `current_status == "in_progress"` at ~line 193,
+    - writes at ~line 203.
+  Read, check, write, with no exclusion between the three. Two runs can both read
+  `todo` and both flip, each believing it owns the requirement. The existing
+  already-in_progress detection at ~193 is exactly the check that the race
+  defeats -- it looks like protection and is not.
+
+  WHY THE FOURTH THEN CLAUSE IS WORDED AS A REPEATED CONTEST. A single concurrent
+  attempt is a coin flip: a broken implementation passes it most of the time, and
+  a test that runs the contest once is a flaky green rather than a proof. Stating
+  "many times, never once" makes the required test shape unambiguous. ACD-2000b's
+  own note makes the same demand: "cover it with a test that runs two claimers
+  CONCURRENTLY; a sequential test cannot observe this bug."
+
+  "ZERO HOLDERS" IS IN THE CLAUSE ON PURPOSE. The natural over-correction for a
+  double-claim is mutual back-off, where both contenders detect the conflict and
+  both release -- leaving the requirement available, no work started, and both
+  efforts moving on. That satisfies "never two holders" and is still a bug: it
+  is a livelock that presents as an idle build.
+
+  THE SECOND THEN CLAUSE ("goes looking for different work") ties this to the
+  L1's first promise. Losing the contest must be an ordinary, non-fatal outcome
+  -- not an error that aborts the losing drive. Today `claim_build_set` reports
+  an already-in_progress AC "via `error`", which the IT PO should check is
+  consumed as "pick something else" and not as "fail the run".
+
+  IMPLEMENTATION SPACE (IT PO's call, deliberately unconstrained here):
+  compare-and-set on the record, exclusive file creation, an OS-level lock, or a
+  single-writer serialisation point. Note that the store is per-requirement YAML
+  files on disk, and that `_update_ac_work_status()` (~lines 113-125) rewrites
+  the WHOLE record, so whatever is chosen must also protect ACD-2000a's trail
+  from interleaved rewrites -- see ACD-2000a-1-i.
+
+  TESTABILITY. Two real processes (not two threads sharing an interpreter, and
+  not two sequential calls) contending for one real on-disk requirement, repeated
+  enough times to make the window reliably hit. Then assert the file's recorded
+  owner. This is the one AC in the tree that a same-process test cannot honestly
+  cover.
+
+  2026-08-17 (IT PO enrichment). THE CONSUMER CHECK THE BA ASKED FOR, ANSWERED.
+  `fast_lane.main()`'s claim branch (~lines 990-1012) returns exit 1 only on
+  `target_refused` -- the case where the WHOLE set is already claimed. A single
+  contended member today lands in `claim_build_set`'s `error` string while the
+  CLI still exits 0. So the "goes looking for different work" clause is partly
+  inherited and partly missing: the loser is not fatally aborted, but nor is it
+  told anything a caller can act on. Both halves are it_requirements.
+
+  THE MECHANISM IS CONSTRAINED BY PORTABILITY, NOT BY TASTE. leafcutter installs
+  into consumer projects on Linux, WSL2 over NTFS, and Windows.
+  `docs/reference/feedback-concurrency.md` records the sibling defect (an
+  unlocked append losing writes) and proposes `fcntl.flock` / `msvcrt.locking` --
+  a platform split that has never been implemented. Advisory locks are not
+  reliably honoured on every mount this package runs on, so the it_requirements
+  point at exclusive create and atomic replace instead. This is the constraint
+  most likely to be discovered late, on a consumer's machine rather than here.
+
+  SELF-CONTENTION IS THE CLAUSE NOBODY WRITES. An owner re-taking its own claim
+  must not refuse itself and must not refresh the instant -- refreshing it lets a
+  looping build hold a requirement indefinitely while never appearing stale to
+  ACD-2000b-3.

@@ -1,0 +1,170 @@
+id: ACD-1600g-3
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A change outside the declared boundary is surfaced for a decision, naming the file and the requirement that excluded it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement that declares the release workflow as deliberately
+    excluded from its work,
+  And a build of that requirement whose pending changes include the release
+    workflow alongside the files the requirement was meant to change,
+  When the change under review is compared against the requirement's boundary,
+  Then the review does not conclude on its own -- it stops and surfaces the
+    release workflow for a person to decide about,
+  And the report names the release workflow specifically and names the
+    requirement whose boundary it crossed,
+  And a build whose pending changes stay inside the boundary concludes without
+    surfacing anything,
+  And the same requirement built inside a bundle of four other requirements
+    produces the same outcome for the same pending changes.
+depends_on: [ACD-1600g, ACD-1600g-1, ACD-1600g-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "The consumer whose exclusion SOURCE this AC changes. Verified 2026-08-17: Step 1.1 (~lines 73-74) extracts both lists from ticket frontmatter; Step 1.3 (~line 92) computes unexpected = actual - expected; Tier 1 soft (~lines 109-110); Tier 2 hard (~lines 120-122) returns (status: blocker); Step 4 (~lines 148-176) is the report format that must carry the AC id."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The path that makes grain-invariance unsatisfiable by a frontmatter-only implementation: the fast lane builds a single AC with no ticket file at all, so there is no frontmatter to read."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The agent template must be edited in templates/, never in the deployed .claude/agents/ copy."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "THE EXCLUSION LIST MUST BE SOURCED FROM THE AC STORE, NOT FROM TICKET FRONTMATTER. Replace the frontmatter extraction in templates/agents/change-scope-reviewer.md Step 1.1 with a call into scripts/ac_store/scope_boundary.py over the AC ids the change is being built for. This is a change of SOURCE only -- the three-tier adjudication ladder is existing behaviour and must not be re-specified."
+  - "GRAIN INVARIANCE IS ONLY SATISFIABLE OFF THE STORE, AND THAT IS THE POINT OF THE FOURTH THEN CLAUSE. scripts/build_orchestration/fast_lane.py builds a single AC with no ticket file, so a frontmatter-sourced implementation has nothing to read there. Requirement: the same AC id set plus the same pending changes must produce byte-identical findings whether the adjudication is invoked with a ticket path or with a bare list of AC ids."
+  - "PRESERVE TIER 2's SECOND CLAUSE UNCHANGED. Verified 2026-08-17: Tier 2 blocks on EITHER 'the file's top-level directory or component is listed in out_of_scope' OR 'the file belongs to a fundamentally different top-level component from every file in files_touched'. Only the first clause changes source here. Silently dropping the second while rewiring the first would remove the only block condition that works today."
+  - "Every finding must name the crossed path AND the AC id whose boundary it crossed. Extend the existing hard-violation record and the Step 4 'Hard violations' bullet format in templates/agents/change-scope-reviewer.md to carry the AC id; do not invent a parallel report structure."
+  - "THE CLEAN CASE MUST STAY CLEAN. A diff wholly inside the boundary produces zero findings and the existing (status: ok) path with no new output. An implementation that surfaces something on every run passes the positive test and fails the requirement."
+  - "The adjudication logic must live in Python (scripts/ac_store/scope_boundary.py) and be callable independently of the agent, so it can be executed by a test. Adjudication expressed only as prose instructions inside the agent template cannot be verified behaviourally, which is what makes this the one leaf in ACD-1600g that could ship as unverified dead prose."
+  - "PROMPT-SURFACE CAVEAT: templates/agents/change-scope-reviewer.md is an agent template. Edit the canonical templates/ copy only (ADR-001) and rebuild via ./build-self.sh so the deployed .claude/agents/ copy matches. If this repository routes prompt-surface edits to llm-expert, that file is the hand-off; the Python surface remains python-coder's."
+  - "Performance budget: adjudication of a 200-file diff against a 20-member bundle completes in under 500 ms -- it runs on the phase-agent path between the coder and pr-reviewer."
+  - "A boundary the store cannot supply must fail VISIBLY via the ACD-1600g-4 announcement, never be silently treated as empty. Per the project error-handling policy, a read failure is caught by exception type, logged at WARNING or higher, and converted into an announced outcome -- never swallowed."
+  - "Deploy-manifest first (ADR-026 rule 2): if adjudication becomes a commit-guardian hook dependency, add its module to the build_ac_store deploy_map in scripts/build_phases.py (~line 794) in the same change and verify from the deployed layout."
+delivers_to:
+  agent: change-scope-reviewer
+  contract: "Scope findings from scripts/ac_store/scope_boundary.py: { findings: [ { path: str, ac_id: str, tier: 'hard'|'soft'|'ambiguous', reason: str } ], undeclared_members: [ac_id], verdict: 'clean'|'soft'|'question'|'blocker' }. Rendered by templates/agents/change-scope-reviewer.md Step 4 and consumed unchanged by the fast lane's no-ticket path. `verdict` maps onto the reviewer's existing Step 5 status table; no new status values are introduced."
+expects_from:
+  ac_id: ACD-1600g-2
+  contract: "compose_boundary(members) -> { paths: { <path>: { excluded_by: [ac_id] } }, undeclared_members: [ac_id] } -- the composed bundle boundary with per-path provenance. The provenance is what makes the second Then clause (naming the requirement) satisfiable without re-reading the members."
+test_spec:
+  - name: test_pending_change_outside_the_boundary_is_surfaced_and_names_the_path_and_the_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Stages a diff touching the excluded release workflow in a temp git tree with a real on-disk AC record declaring it excluded, runs the real adjudication, and asserts a hard finding whose text contains both the path and the AC id."
+  - name: test_change_inside_the_boundary_produces_no_finding
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Same harness, diff wholly inside the declared surface: asserts zero findings and a clean verdict. Run alongside the positive case so a surface-everything implementation cannot pass."
+  - name: test_same_requirement_produces_the_same_outcome_alone_and_inside_a_five_member_bundle
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Identical pending changes adjudicated twice -- once for the single AC, once with four additional member ACs that neither exclude nor change the release workflow -- and asserts byte-identical findings. This is the grain-invariance clause."
+  - name: test_adjudication_runs_with_no_ticket_file_present
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Invokes the adjudication with a bare AC id list and no ticket anywhere on disk (the fast-lane shape) and asserts the same findings as the ticket-bearing run. A frontmatter-sourced implementation cannot pass this."
+  - name: test_component_mismatch_still_blocks_after_the_source_is_rewired
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A file in a wholly different top-level component from every file in the change surface, with no exclusion declared at all, still yields a hard finding -- Tier 2's second clause survives the rewiring."
+test_rationale: "This is the leaf that makes the boundary do anything, and it is also the leaf most exposed to the failure this repository was rebuilt around: an assertion that the agent template contains the string `out_of_scope` passes on a reviewer that reads the field and ignores it, exactly as the fast-lane runner's structural tests passed on gates it never executed. Every test therefore drives a real staged diff in a real temp git tree against a real on-disk AC record and asserts the emitted findings. The negative case runs in the same harness because a reviewer that blocks on everything satisfies the positive case alone. The no-ticket test is the only assertion in this list that can distinguish an AC-store-sourced implementation from a frontmatter-sourced one -- in every ordinary run the two read the same value and agree, so grain invariance would otherwise be untested in practice. The last test exists because the natural way to implement this rewiring is to replace the whole Tier 2 condition rather than only its first clause, which would remove the block path that works today and would be invisible to the other four tests."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1600g-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE CONSUMER-SIDE READ. ACD-1600g-1 gives the boundary a home and ACD-1600g-2
+  composes it; this L2 is the one that makes it do anything. Without it the
+  field is authored, validated, composed -- and never consulted, which is the
+  exact dead-code shape CLAUDE.md warns about.
+
+  VERIFIED CONSUMER: templates/agents/change-scope-reviewer.md.
+    - Step 1.1 (~lines 73-74) extracts `files_touched` and `out_of_scope` from
+      TICKET FRONTMATTER.
+    - Step 1.3 (~line 92) computes `unexpected = actual - expected` from the
+      staged diff.
+    - Tier 1 "soft / continue with tag" (~lines 109-110) requires the file NOT be
+      named in `out_of_scope`.
+    - Tier 2 "hard / block" (~lines 120-122) fires when the file's top-level
+      directory or component IS listed in `out_of_scope`, and returns
+      `(status: blocker)`.
+  So the adjudication ladder already exists; what this L2 changes is WHERE the
+  exclusion list comes from -- the requirement, not the container.
+
+  THE THIRD AND FOURTH THEN CLAUSES ARE THE LOAD-BEARING ONES.
+    - "concludes without surfacing anything" pins the negative case, so a
+      reviewer that blocks on everything cannot pass this AC.
+    - The grain-invariance clause (same outcome bundled or alone) is the whole
+      reason the boundary moved to the requirement. It is also the clause that a
+      ticket-frontmatter-only implementation cannot satisfy, because the fast
+      lane (scripts/build_orchestration/fast_lane.py) builds a single AC with no
+      ticket at all -- there is no frontmatter to read.
+
+  ORDERING. Per ADR-026's "read-side before write-side" invariant and
+  ACD-1600g's own ordering note, this read-side change must land BEFORE the
+  ticket is demoted to a container (ACD-1800c). If it lands after, the reviewer
+  spends the whole cutover window with an empty exclusion list -- see
+  ACD-1600g-4, which is the same failure in its quiet form.
+
+  TESTABILITY. Drive the reviewer over a real staged diff in a real worktree with
+  a real on-disk AC record and assert the emitted status and the named file. A
+  test that asserts the template contains the string "out_of_scope" is a grep
+  test: it passed on the fast-lane runner that never executed its gates
+  (CLAUDE.md, fast-lane precedent, 2026-07-22) and it would pass here on a
+  reviewer that reads the field and ignores it.
+
+  2026-08-17 (IT PO enrichment). Three decisions, and one caveat raised to the
+  user rather than resolved here.
+
+  - THE ADJUDICATION MUST BE PYTHON, NOT PROSE. The criteria describe a review
+    outcome, and the natural implementation is to rewrite the agent template's
+    Step 1.1. That implementation is unverifiable: an LLM template cannot be
+    executed by a unit test, so the AC would be signed off on a grep. Splitting
+    the adjudication into scripts/ac_store/scope_boundary.py -- with the template
+    reduced to calling it and rendering the result -- is what makes the four
+    behavioural tests possible at all, and it is simultaneously what makes the
+    no-ticket fast-lane case work. One decision satisfies both clauses.
+
+  - TIER 2 HAS TWO CLAUSES AND ONLY ONE OF THEM CHANGES. This is not in the
+    criteria and is easy to lose: today's Tier 2 also blocks on a file belonging
+    to a wholly different top-level component, and that clause is the only block
+    condition that fires at all while `out_of_scope` is absent everywhere. An
+    implementer rewriting "the Tier 2 condition" would delete it. Added as an
+    it_requirement and a fifth test.
+
+  - CAVEAT RAISED, NOT RESOLVED (mixed surface). The declared change surface for
+    this leaf spans Python (scripts/ac_store/) and one agent-template markdown
+    file (templates/agents/change-scope-reviewer.md). python-coder can act on
+    both extensions, so this is not a technology contradiction -- but the
+    template is a PROMPT surface that this repository conventionally routes to
+    llm-expert. No split was made: ACD-1600g is at the five-L2 cap and ACD-1600
+    at the seven-L1 cap, so a split would require a tree restructure, which is
+    the user's call. Recorded in this pass's report as a recommended follow-up
+    AC for the prompt-surface half.

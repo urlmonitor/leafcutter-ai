@@ -74,9 +74,9 @@ notes: |
   commit-time surface it changes lives in the guardrail family — carried on the
   `components` graph list, not by splitting the tree across two namespaces.
 
-  DEPENDENCY / SEQUENCING NOTE for the IT-PO: this tree and GE-119 point at
+  DEPENDENCY / SEQUENCING NOTE for the IT-PO: this tree and GE-120 point at
   overlapping code (check_ac_parent_covered_by.py). They are NOT the same work —
-  GE-119b makes that check run everywhere, ACS-1200a makes it enforce the right
+  GE-120b makes that check run everywhere, ACS-1200a makes it enforce the right
   rule — but a check that starts running reliably everywhere and still holds the
   wrong rule blocks every parked idea MORE consistently. Sequence accordingly, or
   at least land them in the same release.

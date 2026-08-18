@@ -10,7 +10,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given a ticket grouping three requirements where two are done and one is not,
   When the ticket's completion state is evaluated,

@@ -39,6 +39,21 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
     Error handling: all I/O wrapped per the Error Handling Policy (Rules 1-3).
     Pre-commit hook fail-open: the if __name__ == '__main__' guard exits 0 on
     unexpected errors so a crash never blocks a commit.
+
+DECISION HISTORY:
+  - 2026-08-14 [python-coder/BO-2500b-5]: Changed _DEFAULT_TEST_ROOT's
+    resolution in main() from the project root's "unit_tests" subdirectory to
+    the project root itself. Root cause: the pre-commit hook entry in
+    commit_guardian.json passes --test-root . explicitly, but the CI
+    invocation (.github/workflows/ci.yml) passes no --test-root at all and
+    silently fell back to the "unit_tests" default — so the two callers
+    disagreed about which tests count as proof, and JS/TS-covered ACs (whose
+    tests live outside unit_tests/) were reported unproven by CI alone
+    (BO-2500e-5). Fixing the DEFAULT (not the CI command line) repairs every
+    caller that omits --test-root, including consumer installs and ad-hoc
+    runs. _EXCLUDED_SCAN_DIRS continues to apply so the widened default does
+    not traverse node_modules/, dist/, etc. An explicit --test-root still
+    overrides the default unchanged.
 """
 from __future__ import annotations
 
@@ -128,7 +143,11 @@ _EXCLUDED_SCAN_DIRS: frozenset[str] = frozenset(
 # Default paths relative to the project root (used in main() when no explicit
 # --ac-root / --test-root argument is supplied).
 _DEFAULT_AC_ROOT = "docs/acceptance-criteria"
-_DEFAULT_TEST_ROOT = "unit_tests"
+# BO-2500b-5: the default scan root for covers-tag discovery is the project
+# root itself (""), not a hardcoded subdirectory such as "unit_tests" — see
+# DECISION HISTORY above. An empty relative path resolves to project_root
+# unchanged via `project_root / _DEFAULT_TEST_ROOT`.
+_DEFAULT_TEST_ROOT = ""
 
 
 # ---------------------------------------------------------------------------
@@ -592,7 +611,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Root directory to scan for covers-tagged tests "
-            "(default: <project-root>/unit_tests)."
+            "(default: <project-root>, i.e. the whole project)."
         ),
     )
     return parser

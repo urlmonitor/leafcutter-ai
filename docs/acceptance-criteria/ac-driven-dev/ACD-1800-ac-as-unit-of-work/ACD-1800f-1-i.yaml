@@ -1,0 +1,161 @@
+id: ACD-1800f-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement asking for a live-surface exercise is routed to that craft through the same declaration, with no second slot"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a requirement whose observable promise can only be confirmed by
+    exercising a live running surface rather than by a smoke check,
+  And the requirement declares that promise in the same place a smoke-checkable
+    promise is declared, naming the live-surface kind of observation,
+  When the work for that requirement is assembled,
+  Then the craft that exercises live surfaces is requested,
+  And the craft that performs smoke checks is not requested for that promise,
+  And a requirement declaring both kinds requests both crafts,
+  And no separate declaration exists anywhere for the live-surface case -- the
+    same slot that satisfies the smoke case is the one that satisfied this one.
+depends_on: [ACD-1800f-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where the single declaration slot and its kind vocabulary are documented."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the conditional_field / conditional_field_legacy / requires_ticket_section routing contract that this AC repoints from ticket frontmatter to the AC declaration."
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: related
+    status: exists
+    relevance: "requires_ticket_section: true becomes a dangling reference once ACD-1800c thins the ticket; this AC must resolve it, not inherit it."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Routing derives from the kind list ALONE, by an exact mapping: smoke_surface -> user-surface-smoker, live_surface -> live-surface-tester. Requesting both crafts unconditionally is forbidden: an unrequested user-surface-smoker fires against a requirement with zero smoke proofs, and its 'if ALL stanzas PASS emit ok' aggregation then passes vacuously -- over-routing manufactures the exact false green ACD-1800f-3 exists to remove."
+  - "EXEMPTION IS DATA-DRIVEN, NEVER BY NAME. A craft is requested because a kind is present in the declared set, not because an AC id, component or file path was special-cased. A new observation kind must inherit routing by adding an enum member and one mapping entry -- no per-agent branch."
+  - "`_SIDE_EFFECT_MANDATORY` (scripts/ac_store/generate_ticket_from_ac.py, ~line 920) must contain exactly the crafts the declaration requested for that work item, so a `not_needed` override cannot silence a requested observation while a craft that was never requested stays overridable. Do not widen the frozenset to both crafts unconditionally."
+  - "VERIFIED GAP THE BRIEFING DID NOT NAME -- live-surface-tester is absent from BOTH phase-order lists. `live-surface-tester` has ZERO occurrences in scripts/ac_store/generate_ticket_from_ac.py, so it appears in neither `_CANONICAL_PHASE_ORDER` (~line 165) nor `_FLOW_CHANGE_PHASE_ORDER` (~line 188), while user-surface-smoker is present in both at priority 11.5. It must be added to BOTH lists at its registered priority 11.8 (between user-surface-smoker and ac-validator, before commit) in the same change. A craft emitted as needed but missing from the phase order sorts after the commit phase and its work is lost -- the same failure shape as the build-feature llm-expert ordering defect."
+  - "Do not bypass live-surface-tester's second gate: config/agent_registry.json (~line 2675) requires `live_surface_testing.enabled: true` in skills_config.json in addition to the routing condition, and scripts/config_loader.py validates that block. A declaration of the live_surface kind requests the craft; the config gate still decides whether it is emitted, and when it is suppressed the reason must be visible, not silent."
+  - "RESOLVE THE REGISTRY LOOSE ENDS IN THE SAME CHANGE. config/agent_registry.json carries `conditional_field: live_surface_test` and `requires_ticket_section: true` on live-surface-tester (~2663-2696) and `conditional_field_legacy: user_facing_surface` on user-surface-smoker (~2631). All three name ticket-frontmatter/ticket-body inputs that will not exist after ACD-1800c. Repoint them at the AC declaration; leaving requires_ticket_section: true dispatches the craft against a section that no longer exists."
+  - "config/agent_registry.json is canonical source and is validated by scripts/registry_validator.py during build.py; run ./build-self.sh after editing it, and never edit a deployed .claude/ copy (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "Craft-request mapping consumed by the generator's agents-map builder: observation_kinds(ac) -> requested crafts, where {smoke_surface} -> {user-surface-smoker}, {live_surface} -> {live-surface-tester}, {smoke_surface, live_surface} -> both, and the empty/absent set -> neither. Each requested craft is emitted as `needed` at its registered priority (11.5 / 11.8) and is protected from a not_needed override; each unrequested craft is absent."
+expects_from:
+  ac_id: ACD-1800f-1
+  contract: "The `observable_effect` kind list and the `observation_kinds(ac) -> set[str]` accessor, as the single authored source of routing. This AC must not read `declares_side_effect`, `user_facing_surface` or `live_surface_test` from any record."
+test_spec:
+  - name: test_live_only_requirement_requests_the_live_craft_and_not_the_smoker
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Runs the real generator over an on-disk AC declaring observable_effect: [live_surface] and asserts the emitted agents map contains live-surface-tester as needed and contains no user-surface-smoker entry at all. Over-routing both crafts is the likely wrong implementation and this is the assertion that catches it."
+  - name: test_smoke_only_requirement_requests_the_smoker_and_not_the_live_craft
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "The symmetric case over observable_effect: [smoke_surface]; asserted in the same suite so a request-nothing implementation cannot pass the test above."
+  - name: test_requirement_declaring_both_kinds_requests_both_crafts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "observable_effect: [smoke_surface, live_surface] yields both crafts as needed, each exactly once."
+  - name: test_live_craft_is_present_in_both_phase_orders_at_its_registered_priority
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Generates a ticket for a live-only requirement on the canonical path and on the flow-change path, and asserts live-surface-tester appears in the rendered agents map ordered after user-surface-smoker and before commit in BOTH. Today the craft is absent from both order lists, so a routed craft would sort past commit."
+  - name: test_no_second_slot_live_routing_reads_only_the_shared_declaration
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "An AC that declares live_surface routes correctly while carrying no live_surface_test / user_facing_surface / declares_side_effect key anywhere, and an attempt to author live_surface_test directly is still rejected by the store validator -- the same slot serves both kinds and no second one was added."
+  - name: test_requested_craft_cannot_be_silenced_by_a_not_needed_override
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "An AC declaring live_surface with an explicit live-surface-tester: not_needed override still emits the craft as needed, while an unrequested craft stays absent -- the mandatory set tracks the declaration rather than being hard-coded to one agent."
+test_rationale: "Both wrong implementations of this AC are invisible to a static check: requesting both crafts unconditionally satisfies 'the live craft is requested' while manufacturing the vacuous smoke pass, and emitting a craft that is missing from the phase order satisfies 'the craft is requested' while the craft never runs before commit. Only assembling the work for a real on-disk requirement of each kind and asserting WHICH crafts were emitted, and in what order, separates them. Asserting that config/agent_registry.json contains a live_surface_test conditional_field is the grep test the BA warned about -- it passes today against a field no producer can ever set."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE ANTI-THIRD-MECHANISM ASSERTION. ACD-1800f-1's fourth Then clause states the
+  slot must be wide enough for both kinds; this L3 is the test that proves it,
+  by driving the OTHER kind end to end. Without it, "wide enough" is a design
+  intention that nothing checks, and the next author faced with
+  `live_surface_test` adds a third field -- which is precisely how the repo
+  arrived at three orphaned triggers in the first place.
+
+  VERIFIED CONTEXT (do not re-investigate):
+    - templates/agents/live-surface-tester.md EXISTS and is registered in
+      config/agent_registry.json (~line 2663) with
+      `conditional_field: live_surface_test` and `requires_ticket_section: true`.
+    - `live_surface_test` has ZERO occurrences in BOTH
+      config/ac_store_schema.json AND scripts/ac_store/generate_ticket_from_ac.py.
+      A registered, working agent is therefore unreachable from the AC path
+      entirely -- nothing can request it.
+    - The same is true of `user_facing_surface` (registry ~2597-2603), the second
+      routing condition for user-surface-smoker.
+
+  WHY THE FIFTH THEN CLAUSE MATTERS. Requesting the live craft is easy to satisfy
+  by requesting BOTH crafts unconditionally. That would make user-surface-smoker
+  fire on requirements with no smoke fixture at all -- and because its aggregation
+  is "if ALL stanzas PASS, emit ok" over an empty stanza set, it would pass
+  vacuously and quietly (see ACD-1800f-3). So over-routing is not a harmless
+  excess here; it manufactures the exact false green this L1 exists to remove.
+
+  `requires_ticket_section: true` IS A LOOSE END the IT PO must resolve. The
+  registry entry asserts the live-surface craft needs a section in the TICKET
+  BODY. Once the declaration and its content live on the requirement, that flag
+  either points at the requirement instead or becomes meaningless -- and if it is
+  left as-is while the ticket is thinned by ACD-1800c, the craft is dispatched
+  against a section that no longer exists. Flagged here rather than silently
+  assumed; ACD-1800f-2 owns the content side.
+
+  TESTABILITY. Assemble the work for a real on-disk requirement of each kind and
+  assert WHICH crafts were requested. Asserting that the registry contains a
+  `live_surface_test` conditional_field is a grep test -- and it passes today,
+  against a field that no producer can ever set.
+
+  2026-08-17 (IT PO enrichment).
+
+  LOOSE END RESOLVED, AS DIRECTED. `requires_ticket_section: true` is repointed
+  at the requirement, not deleted: the craft genuinely needs authored content,
+  and after ACD-1800f-2 that content is `observation_proofs` on the AC. The flag
+  therefore becomes "this craft requires authored proof content on the declaring
+  requirement", and its unsatisfied case is ACD-1800f-3's `unproven` verdict
+  rather than a missing-section error. Deleting the flag instead would make the
+  live craft dispatchable with no content at all -- the same vacuous shape one
+  level over.
+
+  NEW VERIFIED FINDING, NOT IN THE BRIEFING -- and it is the one most likely to
+  turn this AC green while the craft never runs. `live-surface-tester` has ZERO
+  occurrences in scripts/ac_store/generate_ticket_from_ac.py, so it is missing
+  from BOTH `_CANONICAL_PHASE_ORDER` (~165) and `_FLOW_CHANGE_PHASE_ORDER`
+  (~188), where user-surface-smoker is explicitly present at priority 11.5 with
+  a comment. The registry assigns live-surface-tester priority 11.8 (~2694).
+  Route the craft without adding it to both lists and it is emitted but sorted
+  outside the phase sequence -- dispatched after commit, or dropped. This is the
+  same defect shape as the build-feature llm-expert ordering bug. The fourth
+  test descriptor asserts ordering in a rendered map for exactly this reason;
+  asserting membership of the frozenset would not catch it.
+
+  SECOND GATE PRESERVED DELIBERATELY. config/agent_registry.json ~2675 requires
+  `live_surface_testing.enabled: true` in skills_config.json as well as the
+  routing condition, and scripts/config_loader.py::_validate_live_surface_testing
+  validates that block. The declaration REQUESTS the craft; the config gate still
+  decides emission. This is intentional and is not an escape hatch for the smoke
+  case, which has no equivalent config gate.

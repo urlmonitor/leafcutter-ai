@@ -1,0 +1,205 @@
+id: BP-1100g-4
+components:
+  - build_pipeline
+  - testing_quality
+  - ticket_lifecycle
+title: "A kind of proof that was promised and never claimed is refused by name"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of work whose plan promised two kinds of proof for one stated
+      behaviour — one for the behaviour itself and one for being reached the way
+      the product is really used,
+    And the tests written for it carry a claim for the first kind only,
+  When the work is offered for hand-off,
+  Then it is refused, and the refusal names the piece of work, the stated behaviour,
+    and the kind of proof that was promised and never claimed,
+    And a second piece of work whose every promised kind has a matching claim is
+      not refused,
+    And a kind of proof that was never promised for a piece of work is never named
+      in a refusal for it, because a proof nobody asked for is not a proof that is
+      missing,
+    And both sides of the comparison are statements someone wrote — what the plan
+      promised, and what a test claims — with nothing else consulted to reach the
+      outcome.
+depends_on:
+  - BP-1100g
+  - BP-1100g-3
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "MANDATORY BOUNDARY. Forbids reaching a reachability VERDICT by reading, parsing, tokenizing, importing-for-inspection or regexing a test's source. This check derives no verdict: it compares a promise against a claim and reports a missing pair."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The compatible posture already accepted in this tree: a diff-time check on the SHAPE of what was written. This check is the same posture applied to presence and parity between two declarations."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the claim side once BP-1100g-3 lands (the second tag axis on the same records), and is already fail-closed about outcomes it cannot account for."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The promise side. What a plan may promise, and in which words, is settled there; this check reads that promise and does not reinterpret it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The denominator discipline this AC's third clause copies: the record is derived from what was REQUESTED, and something nobody requested produces no entry and no complaint."
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: "The hooks manifest a commit-time refusal must be registered in. A check that exists but is not registered is inert — the fast-lane incident, where a runner never executed its own gates."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/commit_guardian/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The hooks-manifest registration for the promise-versus-claim gate, plus the refusal payload it emits. Registration is part of the work: an unregistered check never runs and passes its own tests."
+    required:
+      - id
+      - entry
+      - _comment
+    properties:
+      id:
+        type: string
+        description: "Hook id, referenced by SKIP= and by the pre-commit config."
+      entry:
+        type: string
+        description: "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/<hook>.py"
+      _comment:
+        type: string
+      refusal_entry:
+        type: object
+        description: "One per unmatched promise."
+        required:
+          - ac_id
+          - behaviour
+          - missing_kind
+        properties:
+          ac_id:
+            type: string
+          behaviour:
+            type: string
+          missing_kind:
+            type: string
+  constraints:
+    - "NOTE ON reference_file_path: the primary implementation is a NEW hook module under scripts/commit_guardian/, which cannot be named here because the field must resolve to an existing file. commit_guardian.json is named instead because registering the hook there is a real, mandatory, single-location edit without which the check is inert. Create the hook module alongside it."
+    - "THE CLAIM/VERDICT BOUNDARY IS THE HARD CONSTRAINT. The outcome must be reachable using only two inputs: (a) the promised kinds in the work's plan (the ## Test Requirements descriptors), and (b) the claimed kinds collected by BP-1100g-3's scanner. Reading a test FILE to COLLECT its tag is the scanner's job and is permitted; opening, parsing, tokenizing, importing-for-inspection or regexing a test's BODY to judge what it does is forbidden on every path to the outcome (BO-2900a-2). A source scan inside a phantom-done guard is itself phantom-done."
+    - "THE DENOMINATOR RULE IS NOT OPTIONAL. The promise set is the denominator. A kind absent from the promise set is absent from the refusal, always. Without it the check degenerates into demanding all seven kinds on every piece of work, buries its own signal, and gets switched off — BO-2900f-1's gate D clause in a different registry."
+    - "The refusal must name the AC id, the stated behaviour (the criterion the promise was attached to), and the missing kind. A generic 'proof requirements not met' is unactionable and is the message an implementer writes first; the reader has to be able to go and write the specific missing test."
+    - "REGISTRATION IS PART OF THE WORK. The check must be reachable through the deployed hook path (python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/<hook>.py) AND registered in the reference file's hooks manifest. An unregistered check is inert and passes its own grep-shaped tests."
+    - "DEPLOY-MANIFEST OBLIGATION: any module the hook imports must be present in build_ac_store's deploy_map in scripts/build_phases.py, or the deployed hook raises ModuleNotFoundError and blocks every merge once the gate is required (the 2026-07-22 done_proof.py incident)."
+    - "Fail-closed on inputs it cannot account for, consistent with done_proof's _classify_outcomes, but the refusal must distinguish 'could not read the promise' from 'a promise had no claim' — conflating them produces false refusals whose natural remedy is switching the check off."
+    - "The outcome must never be worded as reached, proven, verified, or done. It establishes a promise and a claim and nothing more (BP-1100g-4-i's fourth clause)."
+    - "It must not change which FAILING tests block. That decision belongs to TQ-100c-1's axis and is untouched here; this check blocks on a MISSING test at commit time, never on a failing one."
+    - "Must run within the pre-commit budget: no full pytest run, no full-store walk when the staged set is small — the comparison is over the staged work's plan and the test tree's tags."
+delivers_to:
+  - agent: commit
+    contract: "A refusal payload and a non-zero exit when a promised kind has no matching claim. Each entry names {ac_id, criterion/behaviour reference, missing_kind}. When every promised kind has a claim, exit zero and report the outcome as 'promised and claimed' — never as reached, proven, verified or done."
+expects_from:
+  - ac_id: BP-1100g-3
+    contract: "Per test function, {file, lineno, function, covers: list[ac_id], angles: list[str]} collected in a single pass — the CLAIM side, taken at face value."
+  - ac_id: BO-2900g-4
+    contract: "Per plan, the promised kinds per stated behaviour, expressed in the single permitted-kind vocabulary, with the reachability request carrying either a named entry point or the single unresolved sentinel — the PROMISE side, read and not reinterpreted."
+test_spec:
+  - name: test_bp_1100g_4_promise_without_claim_is_refused_naming_work_behaviour_and_kind
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A plan promising criterion and reachability for one stated behaviour, with tests claiming criterion only, is refused, and the refusal text contains the AC id, the behaviour reference, and the word 'reachability'."
+  - name: test_bp_1100g_4_unpromised_kind_is_never_named_in_a_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The denominator rule across the shapes: a plan promising one kind, a plan promising all permitted kinds, and a plan promising none. No kind outside the promise set appears in any refusal, and the promise-none case produces no refusal at all."
+  - name: test_bp_1100g_4_known_bad_input_blocks_through_the_deployed_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/<hook>.py <staged paths>` as a subprocess on a staged state whose promise has no claim, and assert a non-zero exit with the named missing kind in the output. Also assert the hook id is present in scripts/commit_guardian/commit_guardian.json — an unregistered gate never runs."
+  - name: test_bp_1100g_4_real_generated_plan_piped_into_the_real_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Generate a ticket with the real generator CLI, scan a real test tree with the real BP-1100g-3 scanner, and feed both real outputs into the check — never hand-built promise or claim dicts. The producer/consumer pair is where every incident in the seam catalogue lived."
+test_rationale: |
+  A unit test over hand-built promise and claim dicts passes on three separate defects
+  this AC must not ship: an unregistered hook that never runs (the fast-lane incident), a
+  gate that cannot actually block (BO-1700 shipped fail-open), and a promise/claim shape
+  mismatch between the real producer and the real consumer (the whole seam catalogue). So
+  the contract requires the deployed-hook run with known-bad input, the registration
+  assertion, and the real-producer-into-real-consumer seam test.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Assigned python-coder. it_requirements in package-surface object form; the claim/verdict boundary is stated as an input restriction (permitted: tag collection; forbidden: reading a test body to reach the outcome), with registration and deploy-manifest obligations, under `constraints`. Added test_spec (criterion/boundary/reachability/seam), both contracts, and declares_side_effect. criteria untouched."
+superseded_by: null
+covered_by:
+  - BP-1100g-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  GAP E of BP-1100g, second half, and the forcing function without which the tag
+  axis decays to the 0% the side-effect declaration sits at today. USER DECISION,
+  2026-08-17, DO NOT RE-LITIGATE: scope was widened exactly this far and no
+  further.
+
+  IN SCOPE: presence and parity between two AUTHORED declarations. Did the plan
+  promise a kind of proof for a stated behaviour, and is there a test claiming to
+  give it? If not, refuse and name the missing kind.
+
+  OUT OF SCOPE: any correctness verdict. Whether the claiming test actually
+  reaches the work the real way is execution-derived and belongs exclusively to
+  BO-2900a's observer.
+
+  THE THIRD CLAUSE IS THE DENOMINATOR RULE AND IT IS NOT OPTIONAL. Without it the
+  check degenerates into demanding all seven kinds on every piece of work, which
+  buries the signal it exists to raise and gets the check switched off. The
+  promise set is the denominator; a kind absent from it is absent from the
+  refusal. This is BO-2900f-1's gate D clause, in a different registry.
+
+  THE REFUSAL MUST NAME THE MISSING KIND, NOT JUST REFUSE. "Proof requirements
+  not met" is unactionable and is the message an implementer writes first. The
+  reader has to be able to go and write the specific test that is missing, which
+  means the piece of work, the stated behaviour, and the kind all appear in the
+  message.
+
+  BOUNDARY vs BO-2900f. BO-2900f guarantees that a requested GATE which did not
+  run still leaves a record saying so. This is not a gate record: it is a
+  comparison between a plan and a suite, with a different producer and a
+  different artifact. Neither may be folded into the other.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The claim/verdict boundary is expressed as
+  an INPUT RESTRICTION rather than a prohibition on a technique, because the
+  distinction the implementer needs is precise: reading a test file to collect
+  its tag is the scanner's permitted job; reading a test body to decide what it
+  does is forbidden. declares_side_effect is true — a commit-time refusal is a
+  command that leaves the system in a different state, and the refusal message is
+  exactly the kind of user-facing output user-surface-smoker's placeholder
+  negative control exists to check ("proof requirements not met" is the
+  placeholder to fail on). reference_file_path names commit_guardian.json because
+  the primary new hook module does not exist yet and the field must resolve to a
+  real path; the registration edit there is genuinely mandatory.

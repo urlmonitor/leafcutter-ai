@@ -1,0 +1,164 @@
+id: ACD-1800f
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement that promises something visible says how to see it"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  The proof of an observable promise travels with the requirement itself.
+
+  When a requirement promises an effect a person can actually observe, the
+  requirement states what to invoke and what should be seen as a result -- not
+  a separate document that may or may not have been filled in. The check runs
+  identically whether that requirement is built on its own or bundled with
+  others into a larger feature, and a requirement that promises something
+  observable but says nothing about how to observe it is surfaced as
+  incomplete rather than passing on an empty check.
+depends_on: [ACD-1800]
+doc_links:
+  - docs/reference/ac-schema.md
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1800f-1
+  - ACD-1800f-2
+  - ACD-1800f-3
+  - ACD-1800f-4
+  - ACD-1800f-5
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  GAP ANALYSIS ORIGIN (2026-08-17, BrainCandy): one of five ticket-carried
+  responsibilities found to have NO successor in the AC-as-unit-of-work model
+  (ADR-026 / ACD-1800). This is the observable-behaviour-proof gap: the
+  `## Smoke Fixture` block.
+
+  VERIFIED AGAINST CODE (do not re-investigate -- re-verified 2026-08-17):
+    - The CONSUMER reads the ticket BODY. templates/agents/user-surface-smoker.md
+      extracts two inputs (lines ~92-93): `user_facing_surface` from ticket
+      frontmatter, and the `## Smoke Fixture` block from the TICKET BODY. The
+      block format (lines ~95-107) is one or more YAML stanzas -- `surface`,
+      `fixture_input`, `assertion`, `placeholder_signature` -- separated by
+      `---`. The Algorithm (line ~111) is literally "For each stanza in the
+      `## Smoke Fixture` block", and Step 6 (line ~171) aggregates with
+      "If ALL stanzas PASS: emit (status: ok)".
+    - The PRODUCER writes nothing. scripts/ac_store/generate_ticket_from_ac.py
+      contains ZERO occurrences of "Smoke Fixture" and ZERO of
+      "actuation_contract". Nothing in the AC path emits the block the gate reads.
+    - Yet the gate is DISPATCHED and NON-OVERRIDABLE. At line ~903-904 the
+      generator does `if declares_side_effect: all_needed.add("user-surface-smoker")`,
+      and at line ~920 `_SIDE_EFFECT_MANDATORY = frozenset({"user-surface-smoker"})`
+      makes it immune to a `not_needed` override (the same protection shape as
+      `_TDD_MANDATORY` for test-writer/test-runner).
+    - NET EFFECT TODAY, BEFORE ANY MIGRATION: a mandatory gate is dispatched
+      against a block nobody writes. Because its algorithm iterates stanzas and
+      its aggregation is "ALL stanzas PASS", zero stanzas means the loop body
+      never runs and the gate emits `ok`. This is the BO-2900 failure shape
+      exactly: a check that never ran reads as a check that passed. Whatever L2s
+      come out of this L1, at least one MUST assert that an observable-effect
+      requirement with no declared proof FAILS -- an empty proof set must never
+      be a pass.
+
+  CORRECTION TO THE BRIEFED FINDING -- the gap is WIDER than "the fixture content
+  has no AC-side home". The routing signal has no AC-side home either:
+    - `declares_side_effect` has ZERO occurrences in config/ac_store_schema.json.
+      (Line ~637 of that file is `product_truth`, not `declares_side_effect`.)
+    - The schema declares `"additionalProperties": false` at top level (line 15),
+      and that constraint IS enforced today. Empirically confirmed 2026-08-17 by
+      running scripts/ac_store/validate_ac_schema.py (jsonschema.Draft7Validator,
+      line ~152) against a probe AC carrying the field:
+        "schema violation at <root> -- Additional properties are not allowed
+         ('declares_side_effect' was unexpected)"  -> exit 1.
+      NOTE this also contradicts ACD-1900a's note, which says
+      additionalProperties:false is declared "but nothing enforces it today".
+      That note is wrong for the store validator; correct it when ACD-1900a is
+      next touched (NOT edited here -- ACD-1900* is out of bounds this pass).
+    - Consistently, ZERO ACs in docs/acceptance-criteria/ carry
+      `declares_side_effect`.
+    - CONCLUSION: today the mandatory smoke gate is UNREACHABLE from the AC path.
+      The propagation code (generator lines ~1914-1920, `ac.get("declares_side_effect")`
+      -> ticket frontmatter) and the routing at ~903 are live but dead-ended,
+      because no AC can legally declare the field. The gate only fires for
+      hand-authored tickets that set the frontmatter directly -- and for those it
+      passes vacuously per the paragraph above. So this L1 must deliver BOTH the
+      declaration slot and the proof content, not just the proof content.
+    - The legacy trigger is orphaned the same way: `user_facing_surface` (named in
+      config/agent_registry.json ~line 2597-2603 as the second routing condition)
+      has ZERO occurrences in BOTH config/ac_store_schema.json AND
+      generate_ticket_from_ac.py.
+    - SIBLING ORPHAN (adjacent, deliberately NOT in this L1's scope):
+      `live_surface_test` / `live-surface-tester` also has ZERO occurrences in
+      both generate_ticket_from_ac.py and config/ac_store_schema.json. The agent
+      exists (templates/agents/live-surface-tester.md, registered at
+      config/agent_registry.json ~2663 with `conditional_field: live_surface_test`
+      and `requires_ticket_section: true`) but is unreachable from the AC path
+      entirely. Flagged so it is not "discovered" again as a surprise; whoever
+      designs the declaration slot here should design it wide enough that
+      live_surface_test can reuse the same mechanism rather than inventing a
+      third one.
+
+  WHY THE PROOF MUST MOVE TO THE REQUIREMENT (the load-bearing argument):
+    Under ACD-1800c the ticket is a grouping container whose members are ACs.
+    A per-ticket `## Smoke Fixture` block therefore has no single author: the
+    bundle's observable promises are the union of its members' promises, and a
+    stanza written at ticket level is an assertion nobody owns and nobody
+    revalidates when membership changes. The proof has to be authored at the same
+    grain as the promise it proves -- the requirement. That also makes the gate
+    grain-invariant: build the AC alone via the fast lane, or inside a five-AC
+    bundle, and the same stanzas run either way. Today they only exist if a human
+    happened to type them into one particular ticket body.
+
+  DESIGN HAZARD FOR THE BA -- proofs compose by UNION, and that is the trap:
+    Unlike `out_of_scope` (ACD-1600g, where union is WRONG), observable proofs DO
+    compose by union: a bundle must satisfy every member's stanzas. The hazard is
+    the opposite one -- ORDER and ISOLATION. user-surface-smoker Step 1 blocks on
+    a dirty worktree ("Pre-smoke worktree has staged changes") and Step 5 runs
+    `git restore .` unconditionally after every stanza. Unioning N members'
+    stanzas into one run therefore means N `git restore .` calls interleaved with
+    N invocations that may each mutate the tree. Specify at L2: (a) each stanza is
+    independently isolated and its cleanup is scoped, (b) one member's stanza must
+    not be able to destroy another member's uncommitted side-effect, and (c) the
+    aggregate result names WHICH member's stanza failed, not just the bundle.
+    Second hazard: a "no stanzas" bundle must be distinguishable from an "all
+    stanzas passed" bundle in the emitted status (see the vacuous-pass note above).
+
+  ORDERING (ADR-026 "read-side before write-side") -- note the direction:
+    `depends_on` deliberately lists only ACD-1800. This L1 is a PREREQUISITE of
+    ACD-1800c (ticket-as-container), not a dependent of it: the AC-side
+    declaration slot + proof content and the smoker's ability to read them must
+    land BEFORE the ticket body stops being generated, or user-surface-smoker
+    spends the whole cutover window passing vacuously on empty input. Adding
+    ACD-1800c to depends_on would invert the safe migration order. Practically
+    the schema slot lands under ACD-1900a's additive-first rule -- see the
+    ACD-1800a amendment of 2026-08-17 for the same cross-tree dependency shape.
+
+  SCHEMA / MIGRATION CONSTRAINTS (ADR-026 safety rules 1 and 4):
+    New fields land OPTIONAL in config/ac_store_schema.json; absence = legacy mode
+    (derive nothing, never fail). Because additionalProperties:false is enforced
+    NOW (see correction above), the schema slot is a hard prerequisite -- no
+    author can pilot this by hand-adding the field first. Mirror any shape
+    validation into BOTH scripts/commit_guardian/check_ac_schema.py and its manual
+    fallback scripts/commit_guardian/_ac_schema_validators.py as well as
+    scripts/ac_store/validate_ac_schema.py -- a rule added only to the JSON schema
+    is a no-op gate (same finding as ACD-1800a-1's it_requirements).
+
+  CHILD-CAP NOTE: this is ACD-1800's 6th L1 child (a-f), against the
+  `_MAX_L1_PER_L0 = 7` cap in scripts/commit_guardian/check_ac_limits.py (the
+  check is `child_count > limit`, so 7 passes and 8 blocks). ONE L1 slot remains
+  under ACD-1800; the remaining gap-analysis items were deliberately placed under
+  the new ACD-2000 rather than consuming it.

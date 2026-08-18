@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: reviewed
 priority: medium
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given the go/no-go criteria set (strict store validation = 0; 10 consecutive green
     required-CI self-host merges under enforce: true; a full self-host epic

@@ -1,0 +1,179 @@
+id: GE-122c-1
+title: "While you are still writing, a specialist is actually brought in to renumber"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an authoring session in which an agent writes a new record declaring an identifier that
+    another record already in the collection claims,
+  When the write completes and the authoring-time guard runs on it,
+  Then the guard's output is returned into the running session, so the working agent receives it
+    rather than it going only to a terminal nobody is reading,
+  And that output states the contested identifier, the path of every artifact claiming it, and a
+    free identifier the author can move to,
+  And a business-analyst is DISPATCHED to perform the renumbering — observable as a
+    business-analyst invocation that actually occurs after that write and before the session
+    proceeds to unrelated work,
+  And when the same guard runs on a write that introduces no contested identifier, NO
+    business-analyst is dispatched and the session proceeds unimpeded.
+
+  Coverage note — this criterion is satisfied ONLY by a test that observes the dispatch actually
+  happening. It is NOT satisfied by a test asserting that the guard's output contains the words
+  "business-analyst", nor by one asserting that a dispatch function is defined, nor by one
+  asserting the guard is registered at the right hook point. Every one of those passes on a
+  guard that never dispatches anything. That is not a hypothetical: an existing guard in this
+  repository is documented as automatically dispatching a triage specialist, returns success
+  unconditionally, and routes its remediation through a placeholder that stamps every input with
+  the reason "standalone-mode placeholder". A documented-but-dead dispatch is the specific
+  outcome this criterion exists to prevent, so the evidence bar is the dispatch itself.
+depends_on:
+  - GE-122c
+  - GE-122a-1
+doc_links:
+  - path: templates/settings.json
+    relationship: modifies
+    status: exists
+    relevance: "The registration point. Its PostToolUse Edit|Write matcher is the ONLY layer whose output is returned into the live session, and therefore the only layer at which this criterion is achievable."
+  - path: templates/hooks/ticket_frontmatter_guard.py
+    relationship: context
+    status: exists
+    relevance: "The working precedent at exactly this hook point — a PostToolUse Edit|Write guard that inspects what was just written and emits a decision back into the session. The mechanism is proven, not speculative."
+  - path: templates/scripts/commit_guardian/check_glossary_coverage.py
+    relationship: context
+    status: exists
+    relevance: "THE ANTI-PRECEDENT. Documented in CLAUDE.md as dispatching the glossary-triage agent automatically; its own docstring states 'Always 0 (fail-open contract)' and its default dispatch path, _dispatch_triage_standalone, blacklists every novel term with the reason 'standalone-mode placeholder'. Read it before implementing this AC."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The hook-contract reference for the PostToolUse surface: exit 0 with no JSON allows silently, exit 0 with a block decision injects the reason back into the running agent's context. That injection is the entire mechanism available at this stage."
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: describes
+    status: exists
+    relevance: "The authoring procedure for a hook at this point, including the templates/hooks -> .claude/hooks deploy path."
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+    relevance: "debugging/logs/agent_telemetry.jsonl records one line per agent invocation. It is the concrete surface on which an actual business-analyst dispatch can be OBSERVED, as this criterion's coverage note demands."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "The depth-1 sub-agent limit. A dispatch triggered from inside an already-nested agent's session is subject to it, which bounds where this remediation can actually fire."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "MECHANICAL REALITY THE IMPLEMENTER MUST START FROM: a PostToolUse hook is a subprocess and CANNOT itself spawn an agent. Its only channel is its documented contract — exit 0 with a block decision, whose reason is injected back into the running agent's context (see templates/hooks/ticket_frontmatter_guard.py's own header). The dispatch is therefore MODEL-MEDIATED: the hook makes it happen by returning an unambiguous, imperative instruction, and the session's agent performs it. This does not weaken the criterion; it locates the two things that must be built — a deterministic injection, and an instruction reliable enough that the dispatch actually follows."
+  - "The AC is met only when BOTH halves are evidenced. The deterministic half (the hook emits the block decision, the contested identifier, every claimant path and a free identifier on a colliding write, and emits nothing on a clean write) is unit-testable and is the necessary condition. The observed half (a business-analyst invocation actually occurring after the write) is the sufficient condition and requires a live-session observation — see test_spec. Shipping only the first is precisely the anti-precedent this AC exists to avoid."
+  - "The instruction text must be imperative and single-valued — one named agent, one named task, no 'consider' or 'you may'. An advisory phrasing is the most likely way the injection lands and the dispatch still does not happen, and it fails identically to a dead dispatch from the author's point of view."
+  - "The negative case is not symmetry for its own sake and must be tested as hard as the positive one: no block decision, no injected instruction and no dispatch on a write that contests nothing. The anti-precedent guard fires its placeholder for EVERY novel term it sees, which is how it came to rubber-stamp everything; an unconditional dispatch is indistinguishable from no guard and costs more."
+  - "RESOLVES THE QUESTION THE BA LEFT OPEN (notes: 'whether the guard blocks the write or permits it and dispatches alongside'). DECISION: the write is NOT reverted. The hook uses the block-decision channel to inject its message, which is the only way to reach the session, but the author's file stays on disk. This matches GE-122d-3's authoring-time disposition (announce, do not revert), and reverting a write over a collision whose other claimant may be weeks old punishes the wrong person while the two later stages still hold the line."
+  - "REGISTRATION TARGET: a new entry under the PostToolUse `Edit|Write` matcher in `templates/settings.json`, following the existing shape exactly — `type: command` invoking `python \"$d/.claude/hooks/<name>.py\"` through the bash root-walk that locates `.claude/hooks`. `.claude/settings.json` is a build output produced by `scripts/build_claude_settings.py`; edit the template and run build.py. Give the entry a timeout consistent with its siblings (5-15s) and keep the hook well inside it — a hook that times out is silently skipped, which is a dead guard with no error."
+  - "DEPLOY MANIFEST: the hook script belongs in `templates/hooks/`, which deploys to `.claude/hooks/`. If it imports the shared uniqueness pass from GE-122a-1 — and it must, per GE-122d-1 — that module has to be reachable from the `.claude/hooks/` layout, not only from `.leafcutter/scripts/commit_guardian/`. This is the specific cross-layout import that will raise ModuleNotFoundError at session time while every source-tree unit test passes, and at this stage the failure is INVISIBLE: a crashing PostToolUse hook produces no block decision, which is indistinguishable from a clean write. Resolve the import path explicitly and test from the deployed layout."
+  - "The whole-collection pass runs on every Edit|Write in the session. It must stay within the registered timeout on the real collection (~2,975 records) or be scoped to the namespaces the written path belongs to — but scoping the NAMESPACE is permitted, scoping the INSPECTION to changed files is not (GE-122a-1-i)."
+  - "The free identifier offered must come from the same allocation rule the reference document states and must account for loose files at the namespace root (GE-114-*, GE-115 and the GE-119 record sit loose). Offering an identifier that is already taken by a loose file would mint a second collision from inside the collision guard."
+  - "Error handling per CLAUDE.md Rules 1-4. A hook exception at this stage must not lose the author's write; GE-122d-3 requires the cannot-establish condition to be ANNOUNCED in-session here rather than blocking or reverting."
+test_spec:
+  - name: test_hook_emits_block_decision_with_both_claimants_on_colliding_write
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: behavioral
+    description: "Fed a real PostToolUse payload for a write that introduces a contested identifier into a real on-disk collection, the hook exits 0 with a block decision whose reason names the contested identifier, every claimant path, and a free identifier."
+  - name: test_hook_emits_nothing_on_non_colliding_write
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: behavioral
+    description: "The same hook on a write introducing no contested identifier exits 0 with no block decision and no dispatch instruction — the negative case that the anti-precedent guard fails."
+  - name: test_injected_instruction_is_imperative_and_names_one_agent
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: behavioral
+    description: "The injected reason contains a single imperative dispatch instruction naming business-analyst and one task, with no advisory hedging — the property the model-mediated dispatch depends on."
+  - name: test_hook_does_not_revert_the_authors_write
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: behavioral
+    description: "After the colliding-write run, the file the author wrote is still present on disk with its written content — the block channel is used to inject, not to undo."
+  - name: test_hook_runs_from_the_deployed_claude_hooks_layout
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    description: "After build.py, the hook is invoked as .claude/hooks/<name>.py with a real payload and produces the block decision — proving the shared uniqueness module resolves from the hooks layout. A crash here would otherwise present as a silent clean write."
+  - name: test_business_analyst_dispatch_is_observed_in_a_live_session
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: e2e
+    description: "In a recorded live session that writes a colliding record, a business-analyst invocation is observed in debugging/logs/agent_telemetry.jsonl after that write and before unrelated work; the matching clean-write session records no such invocation. This is the dispatch-itself evidence the coverage note demands — no weaker assertion substitutes for it."
+test_rationale: |
+  The coverage note rules out every assertion that a dead guard also passes: output containing
+  the string "business-analyst", a defined dispatch function, or correct registration. So the
+  contract is split deliberately. Five descriptors pin the deterministic half — the hook's
+  emitted decision, its silence on a clean write, the imperative form of the instruction, the
+  non-reverting disposition, and the deployed-layout resolution — because a PostToolUse hook
+  that crashes emits nothing, and emitting nothing is exactly what a clean write looks like, so
+  this is the one stage where a broken guard is completely invisible. The sixth descriptor is
+  the sufficient condition and cannot be replaced by any of the first five: it observes an
+  actual business-analyst invocation in the telemetry sink, in a session that really wrote a
+  colliding record, and it requires the paired clean-write session so that an unconditional
+  dispatch — the anti-precedent's failure mode — fails the test rather than passing it.
+delivers_to: null
+expects_from:
+  ac_id: GE-122a-1
+  contract: "The collection-wide uniqueness verdict — contested identifier, every claimant path, and a free identifier — which this guard renders and acts on."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: it-po-technical-enrichment
+  entry: 'RESOLVED the question the BA left open for the IT PO: the guard does NOT
+    revert the write; it uses the PostToolUse block-decision channel to inject its
+    message, matching GE-122d-3''s authoring-time disposition. Recorded the mechanical
+    reality that a PostToolUse hook cannot itself spawn an agent — the dispatch is
+    model-mediated via reason injection — and split the acceptance evidence into a
+    deterministic half (unit-testable) and an observed half (a business-analyst invocation
+    recorded in debugging/logs/agent_telemetry.jsonl during a live session), since
+    the coverage note rules out every weaker assertion. Named the registration shape
+    in templates/settings.json and the invisible-failure hazard: a crashing or timing-out
+    PostToolUse hook emits nothing, which is indistinguishable from a clean write,
+    so deployed-layout execution must be tested. Added test_spec, test_rationale and
+    four doc_links. criteria, title, agent, complexity and expects_from unchanged.'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ONLY AC IN THE TREE THAT MAY PROMISE A DISPATCH, and the mechanical reason is
+  absolute: a git pre-commit hook is a subprocess at commit time — it can block and print, it
+  cannot spawn an agent. A shared-build job can fail and print — it cannot spawn an agent
+  either. A PostToolUse hook on Edit|Write runs inside the live session and its output is
+  returned into the running agent's context. That is the whole difference, and it is why
+  GE-122c-2 promises strictly less.
+
+  THE NEGATIVE CLAUSE — no dispatch on a clean write — is not symmetry for its own sake. The
+  anti-precedent guard dispatches its placeholder for EVERY novel term it sees, which is how it
+  came to rubber-stamp everything. A dispatch that fires unconditionally is indistinguishable
+  from no guard at all, and is more expensive.
+
+  OPEN FOR THE IT PO, deliberately not decided at L2: whether the guard blocks the write or
+  permits it and dispatches alongside. The criterion requires the dispatch and the message; it
+  does not require the write to be reverted. GE-122d-3 separately establishes that the
+  authoring-time stage announces rather than reverts on a cannot-run condition, which suggests
+  the same disposition here, but it is a technical judgement.
+
+  RESOLVED BY THE IT PO (2026-08-17): the write is NOT reverted. The block-decision channel is
+  used because it is the only way to reach the session, not to undo the author's work.
+
+  IT PO HAZARD NOTE (2026-08-17) — this stage fails silently in a way the other two do not. A
+  pre-commit hook that crashes produces a visible non-zero exit; a CI job that crashes turns the
+  build red. A PostToolUse hook that crashes, times out, or cannot import its dependency emits
+  no decision at all — and no decision is exactly what a clean write looks like. That is why the
+  deployed-layout execution test is not optional here, and why the timeout budget matters.

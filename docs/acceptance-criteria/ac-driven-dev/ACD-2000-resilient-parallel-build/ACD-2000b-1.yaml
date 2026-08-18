@@ -1,0 +1,172 @@
+id: ACD-2000b-1
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A requirement being built is visibly taken, by a named owner, since a recorded moment"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given an available requirement,
+  When an effort takes it up to build it,
+  Then anything else that looks at that requirement can see it is taken,
+  And can see which effort took it and at what moment,
+  And when that effort takes the requirement up through the single-requirement
+    fast path, and when a larger drive takes it up as part of a feature, both are
+    visible to each other in the same way and through the same record,
+  And when the effort finishes and hands the requirement back, it is visibly
+    available again, with the owner and moment cleared.
+depends_on: [ACD-2000b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The primitive this AC extends: claim_build_set (~128), release_claim (~224), and the whole-record rewrite helper _update_ac_work_status (~113-125). Read before designing anything."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The general build path's reader. _matches_work_status (~148, default 'todo') is the only reason a fast-lane claim is currently invisible-but-effective to the drive; the third Then clause makes that participation deliberate rather than accidental."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component page that owns the requirement lifecycle; the claim record belongs on it."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "EXTEND, DO NOT REPLACE. Canonical source is scripts/build_orchestration/fast_lane.py -- claim_build_set (~line 128) and release_claim (~line 224). No lockfile, no separate claim registry, no second status vocabulary (ACD-2000b's standing instruction)."
+  - "THIS IS A REAL CHANGE, NOT A RESTATEMENT OF WHAT EXISTS. Verified: today's claim writes work_status: in_progress and nothing else -- no owner, no instant. The first Then clause is already satisfied; the second and third are satisfied by no code in the repository."
+  - "The claim must record an OWNER IDENTITY and a CLAIM INSTANT, both readable by an unrelated process from the requirement record alone. The instant must be timezone-explicit (UTC, ISO-8601); a naive local timestamp is unusable for the staleness judgement ACD-2000b-3 builds on it."
+  - "Owner identity must stay meaningful to a DIFFERENT process on a DIFFERENT host or worktree. A bare process id is not sufficient -- pids are reused and are meaningless across hosts and worktrees. Record enough to identify the effort (host, process, run identity) plus which entry point took it."
+  - "THE NEW FIELD IS BLOCKED ON ACD-1900a-1's ADDITIVE SLOT. config/ac_store_schema.json sets additionalProperties: false and it IS enforced today (jsonschema.Draft7Validator in scripts/ac_store/validate_ac_schema.py ~line 152 and in the check_ac_schema commit hook -- verified empirically). Writing a claim field before its optional slot exists makes every claim produce a schema-invalid record and blocks commits repo-wide. Land the slot first."
+  - "DECISION RECORDED (ACD-2000b hazard 4): the claim is a DEDICATED record, not a further overload of work_status. Rationale -- a lifecycle value may be set by anyone, a lock may be released only by its holder; overloading makes every work_status writer an unwitting lock manipulator. ACD-2000b-1-i asserts the consequences of this choice."
+  - "DUAL-WRITE DURING THE MIGRATION. Keep writing work_status: in_progress alongside the new claim record while ac_unit_of_work.enforce is false. scan_ac_store's ready filter matches a single work_status value (default todo), so a claim that stops flipping work_status silently makes claimed requirements ready again -- a regression introduced by the fix itself. The dual write retires at the enforce stage, not here."
+  - "ONE RECORD, BOTH CALLERS, ENFORCED IN SHARED CODE. The take and the read must live in a shared store-level helper that BOTH the single-requirement fast path and the general drive already pass through -- not as an added step in templates/skills/building-epics/SKILL.md. A prose instruction to remember to claim is unenforceable, and the fast-lane-claims-while-the-drive-does-not-look split is precisely the gap this AC closes."
+  - "HANDING BACK MUST CLEAR OWNER AND INSTANT, not merely flip the status. A released record that retains a stale owner makes ACD-2000b-3's staleness rule read a dead owner as a live one, which is worse than having no reclaim rule."
+  - "PRESERVE THE REST OF THE RECORD. Every claim and release currently round-trips the whole AC through yaml.safe_load -> yaml.safe_dump (_update_ac_work_status, ~lines 113-125). The claim write must leave every other field byte-stable, because ACD-2000a's adjudication trail passes through this same write on every claim."
+  - "Follow the project error handling policy (Ruff E722/BLE001/TRY): wrap file and YAML I/O in typed try/except and log-or-reraise; no bare except, no silent swallow."
+  - "Canonical source only -- scripts/build_orchestration/ and scripts/ac_store/. Never edit a deployed .claude/ or workspace-parent build-output copy."
+delivers_to:
+  agent: python-coder
+  contract: "The claim record and its shared take/release helper: a claim carrying { owner identity, claim instant (UTC ISO-8601), entry-point kind, build-set identity } written on the AC record and cleared on hand-back, plus the read both entry points use. Consumed by ACD-2000b-2 (atomic take), ACD-2000b-3 (staleness and takeover), ACD-2000b-4 (footprints of currently claimed requirements) and ACD-2000b-1-i (writer protection)."
+expects_from:
+  ac_id: ACD-1900a-1
+  contract: "An OPTIONAL additive slot in config/ac_store_schema.json for the claim record, validating when absent (legacy schema_version 1). Without it, additionalProperties: false rejects every claim write at commit time."
+test_spec:
+  - name: test_claim_is_visible_to_a_third_reader_with_owner_and_instant
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Takes a real requirement in a fixture store through the real claim path, then reads the record back through a separate reader and asserts it reports taken, by that owner, at that instant."
+  - name: test_hand_back_clears_owner_and_instant
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Releases the same requirement and asserts a third reader sees it available with owner and instant cleared, not merely with the status flipped back."
+  - name: test_general_drive_selection_observes_a_fast_lane_claim
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Claims a requirement through the fast-lane entry point, then runs the general drive's real ready-set selection over the same store and asserts the claimed requirement is reported taken by the named owner."
+  - name: test_fast_lane_selection_observes_a_drive_claim
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The same assertion in the opposite direction: a requirement taken by the general drive is seen as taken by the fast-lane selection. Both directions are required -- a one-way implementation satisfies the fast lane and leaves the original gap."
+  - name: test_claim_write_preserves_every_other_field
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Claims and releases a record carrying a populated adjudication trail and asserts every other field survives the yaml round trip unchanged."
+test_rationale: "Asserting that a claim field is WRITTEN is the test this AC must not accept: it passes on a fast-lane-only implementation, which is the status quo. The L1's promise is about what an OBSERVER sees, and today the general drive is an observer that does not look -- so every test reads the record back through a second, different reader, and two of them cross the entry-point boundary in both directions. That cross-caller pair is the discriminating test: a change that adds owner and instant to claim_build_set alone passes the first two tests and fails these."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2000b-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  EXTEND THE EXISTING PRIMITIVE -- DO NOT INVENT A SECOND ONE. ACD-2000b's notes
+  are explicit: "Any L2 that proposes a lockfile, a separate registry, or a
+  second status vocabulary is the wrong answer -- extend claim_build_set /
+  release_claim."
+
+  VERIFIED, ALREADY IMPLEMENTED (do not re-investigate), in
+  scripts/build_orchestration/fast_lane.py:
+    - `claim_build_set()` (~line 128) flips every named AC whose work_status is
+      `todo` to `in_progress`, detects an already-`in_progress` AC (~line 193)
+      and reports it via `error` without double-flipping.
+    - `release_claim()` (~line 224) returns claimed-but-not-done ACs to `todo`
+      "on a non-success run exit so no AC is permanently stuck in in_progress
+      blocking future runs (BO-2400f-10)".
+  So "visibly taken" and "handed back on a clean exit" already work for one
+  caller. WHAT IS MISSING is everything in the second and third Then clauses.
+
+  THE ACTUAL GAP IS OWNER AND TIMESTAMP (ACD-2000b hazard 1, verified):
+  `work_status: in_progress` records THAT a requirement is taken but not BY WHOM
+  or SINCE WHEN. Without those two facts nothing can ever distinguish a live
+  claim from an abandoned one, which is why ACD-2000b-3's reclaim rule is
+  impossible to state until this AC lands. That is the dependency shape to keep
+  in mind: owner+timestamp are not metadata niceties, they are the inputs to the
+  promise the L1 makes ("never stuck as somebody else's unfinished business").
+
+  THE THIRD THEN CLAUSE IS THE GENERALISATION, and it is the whole reason this L1
+  exists. Today the fast lane claims and the supervisor does not look -- two
+  concurrent drives have no shared notion of who owns what. A test that exercises
+  only the fast lane passes on the status quo. The AC therefore requires the
+  general build path to participate in the SAME record, not merely to have its
+  own equivalent.
+
+  HAZARD 4 IS A DECISION THIS AC DELIBERATELY DOES NOT MAKE FOR THE IT PO, but
+  must not be left implied: `in_progress` currently doubles as a human-facing
+  lifecycle value AND as the lock. Every other writer of work_status (mark-done
+  flows, scanners, reconciliation passes, hand edits) can therefore steal or
+  silently drop a lock, and the readiness scanner cannot distinguish "a machine
+  has claimed this" from "a person is working on it". Either introduce a separate
+  claim field or keep the overload and enumerate every writer -- ACD-2000b-1-i
+  asserts the behaviour that either choice must produce.
+
+  INTERACTION WITH ACD-2000a: every claim and release rewrites the whole AC
+  record via `_update_ac_work_status()` (~lines 113-125), so the trail passes
+  through a yaml round trip on every operation this AC performs. See
+  ACD-2000a-1-i, which owns that assertion.
+
+  TESTABILITY. Take and hand back a real requirement through both callers and
+  assert what a third reader observes at each point. Asserting that a field is
+  written is insufficient -- the L1's promise is about what an OBSERVER can see,
+  and today the supervisor is an observer that does not look.
+
+  2026-08-17 (IT PO enrichment). HAZARD 4 DECIDED: a dedicated claim record, not
+  a further overload of `work_status`. A lifecycle value may be set by anyone; a
+  lock may be released only by its holder. The two access rules are
+  irreconcilable on one field, and the enumerate-every-writer alternative is
+  strictly more work and strictly more fragile.
+
+  THE DUAL-WRITE IS THE NON-OBVIOUS CONSEQUENCE OF THAT DECISION, and it is
+  recorded as an it_requirement because an implementer who moves the lock off
+  `work_status` cleanly will introduce a regression: `scan_ac_store`'s ready
+  filter (`_matches_work_status`, ~line 148, default `todo`) is the ONLY thing
+  that currently hides a claimed requirement from the general drive. Stop
+  flipping `work_status` and every claimed requirement becomes ready again. Keep
+  both writes until the `enforce` stage.
+
+  THE THIRD THEN CLAUSE SPANS TWO CRAFTS AND IS DELIBERATELY NOT SPLIT. Making
+  the general drive participate could be read as editing
+  `templates/skills/building-epics/SKILL.md` (prose, llm-expert) or the epic
+  workflow JS. It is scoped here to Python on purpose: the claim read must sit
+  inside the shared store-level helper both entry points already call, so the
+  drive cannot select a requirement WITHOUT consulting the claim. A runbook step
+  is unenforceable, and an unenforceable step is what produced this gap. The
+  operator-facing description of that obligation is ACD-2000b-5's job.

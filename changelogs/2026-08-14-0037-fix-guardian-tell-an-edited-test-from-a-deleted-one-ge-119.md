@@ -15,7 +15,7 @@ breaking: false
 
 ## Entry
 
-**Identifier clarification (added 2026-08-17, TICKET-20260817-GE-120e-1):** at
+**Identifier clarification (added 2026-08-17, TICKET-20260817-GE-122e-1):** at
 the time of this entry, the fix described above was tracked under the
 requirement identifier `GE-119`. That identifier was later found to collide
 with an unrelated goal-level record and the requirement described here was

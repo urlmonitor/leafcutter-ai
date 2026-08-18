@@ -44,6 +44,7 @@ covered_by:
   - BO-2900d
   - BO-2900e
   - BO-2900f
+  - BO-2900g
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

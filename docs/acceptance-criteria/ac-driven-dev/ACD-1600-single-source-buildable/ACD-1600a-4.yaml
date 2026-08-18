@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-roadmap_phase: phase_acbuild_2_cutover
+roadmap_phase: phase_acbuild_2b_ticket_demotion
 criteria: |
   Given the reference-only ticket convention (a ticket references its AC and does not copy the spec),
   When the reference documentation is authored,

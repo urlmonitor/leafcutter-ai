@@ -305,10 +305,41 @@ Do NOT attempt to create AC YAML files — only read and edit existing ones.
   YAML file without running `check_ac_schema.py` (or logging a warning if the
   script is absent).
 
+## Machine-Parsed Dispatch Output Contract
+
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else:
+
+- No markdown headings of any kind before or after the payload.
+- No leading prose, no trailing prose.
+- Carry any anomaly, warning, or caveat INSIDE the JSON payload as an `anomalies`
+  array field:
+
+  ```json
+  {
+    "status": "ok",
+    "anomalies": ["Unexpected value in X — may indicate Y"]
+  }
+  ```
+
+The machine-parsed path is active when the task prompt specifies a JSON return shape
+or you are dispatched with a `schema:` constraint. The human/interactive path keeps
+its normal markdown output — on the interactive path, flag unusual conditions in an
+`## Anomalies` section: unexpected values, unfamiliar patterns, results that
+contradict prior runs, or signals suggesting a different agent should handle it.
+
 <!--
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-17 [general-purpose]: Added the ## Machine-Parsed Dispatch Output Contract
+  section. ac-fulfillment-gate was added to the build-ticket.js / build-feature.js
+  phaseOrder arrays at its registry priority 11.7 (previously it was absent, so
+  getPriority() sorted it after commit and pull-request). Being a phaseOrder
+  member means it is now dispatched with PHASE_RESULT_SCHEMA and its reply is
+  JSON-parsed, which the BP-300e-6 machine-parsed-producer guard requires this
+  section for.
 - 2026-06-05 [TICKET-20260605-ACFulfillmentGate]: Created ac-fulfillment-gate
   agent template. Complements ac-validator (priority 11.5) by verifying the AC
   YAML store fields (work_status, implemented_by, covered_by) at priority 11.7.

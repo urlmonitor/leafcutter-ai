@@ -133,6 +133,11 @@ def test_extractor_still_scans_agents_and_skills(tmp_path: Path) -> None:
     drop or alter matching for the two directories the guard already relied on.
     """
     # covers: BP-900g-6
+    # covers: BP-900b-1
+    # BP-900b-1 requires the guard to extract script path references from every
+    # compiled agent template and skill file. The two assertions below are what
+    # hold that behaviour in place: remove the agents/ or skills/ scan target
+    # from _SCAN_TARGETS and this test goes red.
     templates = tmp_path / "templates"
     _write(
         templates,

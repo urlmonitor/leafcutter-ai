@@ -1,0 +1,126 @@
+id: GE-120e-3
+title: "The same authored content reaches the same verdict whether it is committed ordinarily or brought in alongside a mainline merge"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a body of authored content and a check that works out its own change set,
+  When the verification runs that check twice against real repositories — once on an
+    ordinary commit that introduces the authored content on its own, and once on a merge
+    commit that introduces the identical authored content alongside a large incoming
+    changeset the author did not write —
+  Then it executes the check as the commit path executes it in both arms and records the
+    result status and the reader-facing text from each,
+  And it reports a failure when the two arms disagree on the result status,
+  And it prints both arms' output side by side, so a disagreement is read directly rather
+    than inferred from an assertion message,
+  And the pair is run for every check the manifest records as working out its own change
+    set,
+  And an arm that objects names the content it objected to, so a pair that agrees on status
+    while objecting to different content is also reported as a disagreement.
+
+  Coverage note: the pair is the unit of evidence. A verification that runs only the merge
+  arm cannot tell a check that now ignores carried-in work from a check that objects to
+  nothing at all, which is why the ordinary arm is in the criterion rather than in a
+  separate test. Both arms execute the check as a process against a real repository standing
+  in the corresponding state; source inspection covers neither arm (CLAUDE.md, "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep").
+depends_on:
+  - GE-120e
+  - GE-120e-1
+  - GE-120e-2
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The harness that already stands up a real working copy and executes deployed checks out of process. This AC adds a second axis to it — operation shape — and should reuse it rather than build a second harness."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: L
+it_requirements:
+  - "EXTEND GE-120c-1'S HARNESS WITH AN OPERATION-SHAPE DIMENSION; DO NOT FORK IT. Home is unit_tests/portability/, where the out-of-process harness already stands up a real working copy, builds the deployed layout into it and runs a check as a subprocess. GE-120b-4 sweeps the same manifest on the LAYOUT axis; this sweep adds the OPERATION axis. Two dimensions of one harness, not two harnesses."
+  - "ONE AUTHORED-CONTENT FIXTURE FEEDS BOTH ARMS. Build the ordinary arm and the merge arm from a single authored-content definition so the arms cannot drift. Two hand-written fixtures that were meant to be identical is how a differential test quietly stops being differential."
+  - "THE MERGE ARM MUST BE A REAL git merge. Perform the merge as a repository operation producing a real staged merged tree with a large incoming changeset — the observed case was 479 files. A hand-staged approximation of a merge does not reproduce the two-parent state that the whole L1 turns on."
+  - "ASSERT ONLY ON THE SUBPROCESS'S OBSERVABLE OUTPUT: exit status and the text it wrote. Never import a check module, a commit_guardian helper, or _resolve_root.py into the verification — importing from the source tree reintroduces the blindness the harness exists to remove."
+  - "PRINT BOTH ARMS SIDE BY SIDE UNCONDITIONALLY, not only on failure. The criterion is that a disagreement is READ directly; output produced only inside a failure branch is unavailable to the reader diagnosing a pass that looks wrong."
+  - "COMPARE OBJECTED-TO CONTENT, NOT ONLY STATUS. Two arms that both block for different reasons is a disagreement. Status-only comparison would have called the observed merge 'agreement', because contract-shrinking would also have blocked the ordinary arm had the author really deleted a test."
+  - "ITERATE THE MANIFEST-DERIVED SET FROM GE-120e-2 at run time. No hand-written check list, no hard-coded entry count. A self-deriving check registered tomorrow must join this sweep by being registered."
+  - "RUNTIME. Two arms per self-deriving check, each a subprocess, on top of a real merge fixture. Build each repository ONCE per sweep and mark the sweep slow. Narrowing the subject list to keep the suite fast turns this AC into the always-green assertion it exists to eliminate."
+  - "A SETUP FAILURE IS A REPORTED FAILURE, NEVER A SKIPPED CASE (GE-120c-1-i), and never an xfail. This repository has a recorded history of xfail-masked AC enforcement where CI under-reported failures; a pair that could not be run must be loud."
+  - "Error-handling policy applies to the harness's own subprocess, git and filesystem calls: specific exceptions, logged at WARNING, never swallowed. Clean up any worktree or temporary repository even on failure."
+test_spec:
+  - name: test_ge120e3_pair_runs_both_arms_as_processes_against_real_repositories
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Each pair executes the check as a subprocess in the commit path's own invocation shape, once on an ordinary commit and once on a real merge."
+  - name: test_ge120e3_merge_arm_is_a_real_merge_carrying_a_large_incoming_changeset
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The merge arm's staged state comes from an actual git merge with a large incoming changeset, not from hand-staged files."
+  - name: test_ge120e3_pair_fails_when_the_two_arms_disagree_on_status
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "A planted status disagreement makes the verification report a failure — the sweep can be made to fail."
+  - name: test_ge120e3_pair_fails_when_arms_object_to_different_content_at_the_same_status
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Two arms that both block for different reasons is reported as a disagreement, not as agreement."
+  - name: test_ge120e3_both_arms_output_is_printed_side_by_side
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "Per check, the recorded status and reader-facing text from each arm are printed together, on passes as well as failures."
+  - name: test_ge120e3_pair_is_run_for_every_manifest_recorded_self_deriving_check
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    description: "The subject set is read from GE-120e-2's manifest determination at run time, with no hand-written list and no pinned count."
+test_rationale: "The pair IS the evidence, and neither arm is evidence alone: the merge arm on its own cannot distinguish a check that now correctly ignores carried-in work from a check that objects to nothing at all, and the ordinary arm on its own cannot see the defect. The test contract therefore keeps both arms inside the same case rather than splitting them, and drives them from one authored-content fixture so they cannot drift apart. Both arms must be real repository states executed as subprocesses because the defect is a property of what git reports to a check at commit time, which no in-process fixture reproduces. The two planted-disagreement cases exist because a sweep that has never been observed to fail is not evidence — the standard GE-120c-1 already sets for the layout axis."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-2
+  contract: "The manifest-derived list of checks that work out their own change set — the set the pair is run over."
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-120e-3-i
+  - GE-120e-3-ii
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE PROOF AC for this L1, and the anti-regression anchor the two negatives hang from.
+  Without it, GE-120e-1 is satisfied by any change that makes the merge arm quiet — including
+  switching the check off for merges, which is the SKIP habit moved into the codebase where
+  nobody has to type it.
+
+  TWO AXES, TWO SWEEPS, NO OVERLAP. GE-120b-4 sweeps the manifest for LAYOUT parity: same
+  work, same verdict from either working copy. This sweeps for OPERATION-SHAPE parity: same
+  authored work, same verdict whichever git operation delivered it. Both consume GE-120c-1's
+  harness and both iterate the manifest; neither subsumes the other, and an implementer
+  should extend the harness with a second dimension rather than fork it.
+
+  THE LAST CLAUSE — comparing what each arm objected to, not only whether it objected — is
+  there because status-only comparison passes on two arms that both block for different
+  reasons, which is exactly the state the observed merge was in: contract-shrinking would
+  have blocked the ordinary arm too if the author had really deleted a test, and a
+  status-only pair would have called that agreement.

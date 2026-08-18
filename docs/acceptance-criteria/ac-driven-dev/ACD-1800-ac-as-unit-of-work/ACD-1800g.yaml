@@ -1,0 +1,225 @@
+id: ACD-1800g
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Every specialist works from the current requirement, and that can be verified"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  No specialist is left working from instructions the requirement has outgrown.
+
+  When a requirement starts carrying its own proof, its own boundary and its own
+  checklist, every specialist that acts on that requirement is updated to look
+  there -- and each one is confirmed to actually do so before the change counts
+  as finished. That confirmation comes from inspecting the complete brief a
+  specialist receives and from watching a real run reach the check, not from
+  trusting that a document was edited. Nothing is left quietly consulting the old
+  source while the new one sits unread.
+depends_on: [ACD-1800, ACD-1700c, ACD-1800f, ACD-1600g]
+doc_links:
+  - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+  - docs/architecture/agent_knowledge_plane.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+  - sequence-diagram
+notes: |
+  GAP ANALYSIS ORIGIN (2026-08-17, BrainCandy): this L1 exists because FOUR
+  independent IT-PO passes over the ACD-1600g / ACD-1800f / ACD-2000 trees each
+  arrived at the same structural finding, from different starting points.
+
+  THE FINDING -- several ACs in this migration have a MIXED SURFACE.
+  Their Python half (a schema slot, a resolver, a verdict function, an isolation
+  harness, a claim primitive) belongs to python-coder and is pytest-checkable.
+  But each ALSO requires repointing a prompt or JS surface that no pytest
+  assertion can reach:
+
+    1. templates/agents/user-surface-smoker.md -- must read the new AC-side
+       resolver instead of the `## Smoke Fixture` ticket-body block, and must
+       REPORT the computed verdict rather than re-deriving it in prose.
+    2. templates/agents/live-surface-tester.md -- same repoint, PLUS phase-order
+       registration (see the verified note below -- this one has teeth).
+    3. templates/agents/change-scope-reviewer.md -- must read the AC-side scope
+       boundary delivered by ACD-1600g instead of ticket frontmatter.
+    4. templates/workflows-js/fast-lane-ship.js -- has NO observation step at
+       all, so the standalone path marks ACs done today without ever looking at
+       an observable promise.
+    5. templates/skills/building-epics/SKILL.md -- the adjudication-ladder and
+       batching prose.
+
+  THE RESIDUAL RISK IF THIS AC DOES NOT EXIST, stated precisely:
+    the store can hold correct proofs the craft never reads -- today's
+    phantom-done defect with the arrow reversed. Every other AC in this
+    migration is write-side. Each would be marked done the moment its Python is
+    green, while the LLM surfaces keep reading the removed ticket body and the
+    gates keep passing vacuously. The store gets richer and the build gets no
+    safer.
+
+  ==========================================================================
+  VERIFIED AGAINST CODE, 2026-08-17 (do not re-investigate)
+  ==========================================================================
+
+  A. live-surface-tester is NOT in either phase-order list. CONFIRMED:
+     `grep -n "live-surface-tester" scripts/ac_store/generate_ticket_from_ac.py`
+     returns ZERO occurrences. `_CANONICAL_PHASE_ORDER` (lines 165-180) and
+     `_FLOW_CHANGE_PHASE_ORDER` (lines 188-203) both list user-surface-smoker
+     (at "priority 11.5", between pr-reviewer and ac-validator) and both OMIT
+     live-surface-tester entirely. The agent is nonetheless registered:
+     config/agent_registry.json ~2675-2697, `conditional_field:
+     "live_surface_test"`, `requires_ticket_section: true`.
+     CONSEQUENCE -- this is not cosmetic. Routing live-surface-tester into a
+     ticket's agents map WITHOUT adding it to BOTH lists reproduces a bug this
+     repo has already shipped once (llm-expert missing from phaseOrder): the
+     agent is emitted but sorts outside the sequence, so it runs after the
+     commit phase or is dropped altogether -- and the run still reports success.
+     Any L2 covering live-surface-tester MUST cover both list insertions and
+     MUST assert the emitted phase sequence positions it BEFORE commit, not
+     merely that the agent appears in the map.
+
+  B. fast-lane-ship.js has no observation phase -- CONFIRMED, with one
+     correction to the briefing. `meta.phases` (lines 42-49) declares SIX
+     phases, not five: Worktree, Resolve, Test Writer, Coder, Commit, AND
+     Pull Request (the pull-request phase is real and executed at line ~527).
+     The executed top-level sequence is worktree -> resolve -> claim ->
+     test-writer -> coder -> commit -> pull-request. There is no smoke,
+     observation, or surface phase anywhere in the file, and the header comment
+     states the phase order is "fixed and code-defined (BO-2400a-5)". So the
+     fast lane can and does mark ACs done without any observable-promise check.
+
+  C. The renderer exists and is the lever. scripts/render_effective_prompt.py
+     (35 KB, present in this worktree) exposes an argparse CLI (~lines 856-869):
+       --agent (REQUIRED)  --ac  --ticket  --repo-root  --out-dir
+       --dep-depth  --doc-excerpt  --brief  --quiet
+     It assembles the agent template, the agent's `skills_invoked` SKILL.md
+     BODIES read from config/agent_registry.json (`_resolve_agent_skills`,
+     lines 382-427), repo memory files, and the AC graph (parent chain,
+     dependency closure, dependents, siblings, linked-doc excerpts).
+
+  ==========================================================================
+  HOW DO YOU VERIFY A PROMPT REPOINT? -- read this before writing L2s
+  ==========================================================================
+
+  This is the hard part of this AC and the reason it is worth its own L1.
+
+  WHAT NOT TO DO: a grep for the new wording in templates/agents/<x>.md is
+  exactly the presence-shaped test this entire tree exists to discredit. It
+  passes on prose that no run ever reads, and it is indistinguishable from the
+  BO-2900 / phantom-done failure shape. Do not accept it as coverage for any L2
+  here, and do not accept "the template was edited" as a sign-off.
+
+  WHAT TO DO -- render the brief and assert on the rendered artifact:
+    `python scripts/render_effective_prompt.py --agent user-surface-smoker
+     --ac <fixture-ac-id> --repo-root <fixture-tree> --out-dir <tmp> --quiet`
+    The assertion that can actually execute is:
+      "the rendered brief for this craft RESOLVES the store field, and does NOT
+       resolve the removed ticket-body block."
+    Both halves matter. The negative half (no `## Smoke Fixture` extraction
+    step, no ticket-frontmatter extraction step for the repointed input) is what
+    catches a repoint that ADDED the new source while leaving the old one in
+    place -- the most likely partial-migration defect.
+
+  MAKE IT DATA-DEPENDENT, NOT NAME-DEPENDENT (the subtle trap):
+    Asserting that the rendered brief contains the FIELD NAME is still
+    presence-shaped -- it passes on a template that merely mentions the field.
+    Assert instead that the brief contains the fixture AC's AUTHORED VALUE, and
+    that TWO fixture ACs carrying different values produce DIFFERENT briefs.
+    Only a differential assertion proves the brief is resolved from the store
+    rather than typed into the prose.
+
+  VERIFIED GOTCHA -- the renderer prefers the DEPLOYED copy:
+    `_resolve_agent_template` (lines 371-378) checks `.claude/agents/<agent>.md`
+    FIRST and only falls back to `templates/agents/<agent>.md`. A test that
+    edits the template and does not run build.py renders the STALE deployed
+    brief -- so the assertion either fails confusingly or, worse, an old brief
+    is what gets inspected. Pin `--repo-root` to a fixture tree that contains
+    only `templates/`, or run build.py first and assert against the deployed
+    copy deliberately. This is the same deployed-layout trap that has already
+    bitten hook dependencies in this repo.
+
+  THE SKILL.md HALF RIDES THE SAME LEVER:
+    `_resolve_agent_skills` inlines each `skills_invoked` SKILL.md body into the
+    brief, and `building-epics` IS listed in skills_invoked for several agents
+    (config/agent_registry.json lines ~100/108/160/168/224/270). So "the
+    supervisor's brief carries the new adjudication-ladder wording and not the
+    old" is a renderable, executable assertion too -- no separate mechanism
+    needed. Confirm the specific agent's skills_invoked entry before relying on
+    it for a given L2.
+
+  THE JS SURFACE NEEDS A DIFFERENT LEVER -- the renderer cannot see it:
+    fast-lane-ship.js is a workflow script, not an agent template, so
+    render_effective_prompt.py does not cover surface 4. Use the EXISTING
+    executable harness `unit_tests/_workflow_engine_harness.py`:
+    `run_workflow_under_e2(script_path, ...)` executes the workflow's top-level
+    body under mock globals and returns a HarnessResult whose `agent_calls`
+    entries expose `.agent_type`, `.label`, and `.phase_name` (classes at
+    ~lines 50-113). fast-lane-ship is an E2 top-level script, so this applies
+    directly (E1 run()-only scripts would need `run_e1_import_check` instead).
+    Assert on the CAPTURED DISPATCH SEQUENCE: an observation dispatch appears
+    between the Coder and Commit phases, and a FAILING observation prevents the
+    Commit dispatch from ever being made. Do NOT assert on `meta.phases` -- that
+    array is a declaration consumed by the progress UI, not the executed order,
+    and asserting on it is presence-shaped again.
+
+  ==========================================================================
+  SCOPE AND DECOMPOSITION GUIDANCE
+  ==========================================================================
+
+  Decompose per surface, one L2 per reader, each carrying its own content
+  prerequisite rather than blocking on all of them:
+    L2-1 user-surface-smoker repoint + verdict reporting      (needs ACD-1800f)
+    L2-2 live-surface-tester repoint + BOTH phase-order lists (needs ACD-1800f)
+    L2-3 change-scope-reviewer repoint                        (needs ACD-1600g)
+    L2-4 fast-lane-ship observation phase                     (needs ACD-1800f)
+    L2-5 building-epics SKILL.md prose                        (needs ACD-2000a/b)
+
+  That is exactly five, which is exactly `_MAX_L2_PER_L1 = 5` in
+  scripts/commit_guardian/check_ac_limits.py (the check is
+  `child_count > limit`, so 5 passes and 6 blocks). If a sixth reader surfaces,
+  fold the phase-order registration into L2-2's scope rather than splitting it
+  out, or take an explicit `child_limit_override` on this L1 -- do NOT silently
+  drop a surface to fit the cap.
+
+  DEPENDS_ON -- one recorded reason per edge (per this component's convention,
+  do not "simplify" this list without reading these):
+    - ACD-1800   : parent L0.
+    - ACD-1700c  : the effective-prompt renderer is what makes this AC
+                   VERIFIABLE AT ALL. Without it there is no executable
+                   assertion about a prompt, only a grep. Note ACD-1700c is
+                   lettered last in its tree but is sequenced third-from-first
+                   in phase_acbuild_1_foundation -- it lands well before this.
+    - ACD-1800f  : you cannot repoint a prompt at a declaration slot and
+                   resolver that do not exist yet. Also supplies the shared
+                   declaration mechanism that live_surface_test must reuse
+                   rather than inventing a third trigger.
+    - ACD-1600g  : same argument for change-scope-reviewer's AC-side boundary.
+  NOT listed, deliberately: ACD-1800c. Per ADR-026's "read-side before
+  write-side", this L1 is a PREREQUISITE of the ticket demotion, not a
+  dependent of it. The readers must be repointed BEFORE the ticket body stops
+  being generated; adding ACD-1800c here would invert the safe migration order
+  and hand the cutover window to gates reading empty input.
+
+  CHILD-CAP NOTE: this is ACD-1800's SEVENTH L1 child (a-g), which is exactly
+  the `_MAX_L1_PER_L0 = 7` hard cap in check_ac_limits.py. ACD-1800 IS NOW
+  FULL. Any further L1 under this L0 requires an ac-tree-split or an explicit
+  `child_limit_override` on ACD-1800 -- put the next gap-analysis item under
+  ACD-2000 (or a new sibling L0) instead, as ACD-1800f's note already did.
+
+  ROADMAP: phase_acbuild_2a_unit_of_work -- verified present in docs/roadmap.json
+  (line ~42). The old `phase_acbuild_2_cutover` no longer exists and nothing
+  validates this field, so a stale value would have failed silently.

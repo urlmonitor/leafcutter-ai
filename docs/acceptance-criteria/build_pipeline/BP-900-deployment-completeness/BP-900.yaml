@@ -28,7 +28,8 @@ created: 2026-06-11
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: [BP-900a, BP-900b, BP-900c, BP-900d, BP-900e, BP-900f, BP-900g]
+covered_by: [BP-900a, BP-900b, BP-900c, BP-900d, BP-900e, BP-900f, BP-900g, BP-900h]
+child_limit_override: 8
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

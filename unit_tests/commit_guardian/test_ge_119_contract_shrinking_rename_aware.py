@@ -1,6 +1,6 @@
 """
 MODULE: test_ge_119_contract_shrinking_rename_aware
-GOAL: Red tests for GE-111f (renumbered from GE-119 by TICKET-20260817-GE-120e-1;
+GOAL: Red tests for GE-111f (renumbered from GE-119 by TICKET-20260817-GE-122e-1;
     the module's filename is unchanged since renaming it is out of scope for that
     ticket) — the contract-shrinking guard must distinguish an
     EDITED test (removed `-def test_x` paired with a re-added `+def test_x` for
@@ -15,7 +15,7 @@ BUSINESS CONTEXT: _scan_diff() currently runs each weakening regex as a bare
     often in the same hunk) is misreported as "test function deleted", blocking
     routine merges/refactors and training the team to bypass the gate with
     SKIP=check-contract-shrinking. See GE-111f (renumbered from GE-119 by
-    TICKET-20260817-GE-120e-1) at
+    TICKET-20260817-GE-122e-1) at
     docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111f.yaml.
 ARCHITECTURE: Loads check_contract_shrinking.py from its canonical template
     path (same pattern as test_check_contract_shrinking.py) and drives

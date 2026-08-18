@@ -62,6 +62,14 @@ def test_guard_exits_0_on_clean_package() -> None:
     control assertion depends on tickets 02 and 03 being applied first (which they
     are — this ticket is declared to depend_on both).
     """
+    # covers: BP-900b-1-1
+    # BP-900b-1-1 requires allowlisted external scripts not to be reported as
+    # broken references. This assertion is load-bearing for that AC, verified
+    # empirically: five references in the real package (scripts/build.py,
+    # scripts/epic_lock.py, scripts/inline_adr/append_entry.py,
+    # scripts/list_sql_helpers.py, scripts/scaffold/new_arch_doc.py) resolve
+    # ONLY via EXTERNAL_DEPENDENCY_ALLOWLIST, so deleting the allowlist union
+    # turns this test red.
     result = _build._check_script_reference_guard(_REAL_PACKAGE_ROOT)
     assert result == 0, (
         f"_check_script_reference_guard() returned {result!r} on the clean package. "
@@ -88,6 +96,20 @@ def test_guard_exits_1_on_broken_ref(tmp_path: Path) -> None:
     - the JSONL line written to stderr names scripts/does_not_exist.py as
       missing_path
     """
+    # covers: BP-900b-2
+    # covers: BP-900c-2
+    # BP-900b-2 (cross-check extracted references against the deployable script
+    # manifest — the broken half; the resolved half is asserted by
+    # test_guard_exits_0_on_clean_package above) and BP-900c-2 (report emitted to
+    # stderr as JSONL with a non-zero exit).
+    #
+    # Coverage caveat for BP-900c-2: this test asserts the stderr JSONL and the
+    # non-zero exit, but NOT the AC's "stdout contains no error output" clause,
+    # and not the "exactly these three keys" clause. It patches sys.stderr only
+    # and never inspects stdout, so it would stay green if the guard began
+    # duplicating the report to stdout. See BP-900c-2's test_spec for the
+    # both-streams test that closes this gap.
+    #
     # Build a minimal synthetic package root with:
     #   templates/agents/synthetic_broken.md  — references scripts/does_not_exist.py
     # No scripts/commit_guardian/, scripts/feedback/, etc. are needed because the

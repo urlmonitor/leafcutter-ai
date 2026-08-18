@@ -1,0 +1,169 @@
+id: BO-2900g-2
+components:
+  - build_orchestration
+  - ac_store
+  - testing_quality
+title: "Work that changes something real declares it, because the work already says so in its own words"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a leaf piece of work whose stated behaviour asserts a durable, observable
+      change — a file that exists and can be read back afterwards, a record that
+      is persisted, a command that leaves the system in a different state,
+    And a second leaf piece of work whose stated behaviour asserts only a value
+      handed back to its caller,
+  When each work record is authored,
+  Then the first carries a declaration that it changes something real and the
+    second does not,
+    And the first's declaration is obtained from the behaviour that work already
+      states, not supplied as a separate opinion by whoever wrote the record,
+    And the second does not receive the declaration merely because it sits in the
+      same feature, was authored in the same pass, or is named similarly,
+    And a reader given only the two stated behaviours can predict which record
+      carries the declaration and which does not.
+depends_on:
+  - BO-2900g
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Records the observed state: the routing mechanism fires on 0 of the 2,888 records, and names this as EPIC-ComputedQualityGates FP-1 layer 2 repeating — the mechanism shipped, the store never carried the data."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Already delivers the routing GIVEN the declaration is present, and is data-driven by design. This AC is the authoring half only — do NOT re-derive the routing or its non-overridability."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The declares_side_effect property and its description — now schema-legal, still set on zero records. The description states the intended derivation rule ('set it to true whenever the AC's Then clause asserts something observable outside the process')."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The authoring-facing field reference the authoring agents read; the derivation rule has to be legible here, not only in the machine schema."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The component page that owns the surrounding guarantees, including the one automatic guard against 'built but not wired into anything' that this declaration feeds."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+it_requirements:
+  reference_file_path: "scripts/commit_guardian/_ac_schema_validators.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/commit_guardian/ unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: boolean
+    description: "declares_side_effect on an AC record — derived from the record's own Then clauses, not authored by opinion. True when the criteria assert something observable outside the process (a file written, a record persisted, a state-changing command); absent or false otherwise, and the absence is the data-driven exemption BP-1100f-5-i defines."
+  constraints:
+    - "The declaration must be produced by CODE that reads the record's own criteria text. An instruction added only to an authoring agent template (it-po.md, business-analyst.md) cannot satisfy BO-2900g-2-i's third clause, which requires the guarantee to hold for a record authored by someone who was never told the field exists."
+    - "NAME EVERY ENFORCEMENT POINT, AND STATE WHICH ONE IS LOAD-BEARING IN THE SIGN-OFF. There are three candidates and they are not equivalent: (1) scripts/commit_guardian/check_ac_schema.py, via the shared validators module named in reference_file_path — the pre-commit gate that actually runs, and since the 2026 rework config/ac_store_schema.json is authoritative via jsonschema with validate_manually() reduced to a schema-absent / import-failure fallback; (2) scripts/ac_store/validate_ac_schema.py — the bulk and CI path; (3) scripts/ac_store/generate_ticket_from_ac.py — today the SOLE reader of the field (two call sites, ~lines 2899 and 2936). A derivation placed only at (3) leaves the store still empty; a derivation placed only at (1) is bypassable with --no-verify. reference_file_path names the shared module so a single implementation can serve (1) and (2); record the choice explicitly."
+    - "The marking rule must be data-driven from the record's own Then clauses. It must never key off id prefix, folder, feature name, authoring pass, sibling records, or an allow-list of names — the same rule BP-1100f-5-i already established for the absence side."
+    - "The rule must not mark everything. Run over the real on-disk store (all 2,888 records under docs/acceptance-criteria/) it must leave a strict, substantial subset unmarked, and the marked/unmarked split must be reproducible from criteria text alone by a second reader. A derivation that marks everything is indistinguishable from one that marks nothing, one gate later: the observable-change check becomes noise and someone switches it off."
+    - "Where a derived value and an explicitly authored value disagree, the disagreement must be reported by record id — never silently overwritten and never silently ignored."
+    - "IF a one-off backfill over the existing store is included, it must be hard-idempotent: a second run is byte-stable (verify run-twice-and-diff), it infers then validates before writing, it inserts only the single declares_side_effect key (never a whole-file rewrite that reorders or reflows other fields), and any record whose criteria do not decide the question goes to a review report rather than receiving a guessed value."
+    - "THE RECURSION IS A REQUIREMENT, NOT AN OBSERVATION: the records produced by this work must themselves carry the declaration where their criteria warrant it. If they do not, the derivation has failed on the first real input it was given."
+    - "Authoring only. This AC must produce no gate, no block and no done-state consequence, and must not describe or re-derive what the declaration causes downstream (BP-1100f-5 owns that and is done)."
+delivers_to:
+  - agent: python-coder
+    contract: "Every AC record whose criteria assert a durable observable effect carries declares_side_effect: true as a top-level boolean, in the shape generate_ticket_from_ac.py already reads (bool(ac.get('declares_side_effect', False))), which routes user-surface-smoker into the generated ticket's agents map as 'needed' and propagates declares_side_effect: true to the ticket frontmatter."
+expects_from: null
+test_spec:
+  - name: test_bo_2900g_2_durable_effect_criteria_yield_the_declaration
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A record whose Then clause asserts a file written, a record persisted, or a state-changing command is marked; a record whose Then clause asserts only a returned value is not."
+  - name: test_bo_2900g_2_derivation_over_the_real_on_disk_store_marks_a_strict_subset
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Load the actual AC records under docs/acceptance-criteria/ with yaml.safe_load in a fresh subprocess (never hand-built dicts — that is the FP-1 layer-2 bias) and assert the derivation marks a strict, non-empty subset: neither zero records nor all of them, and the same split on a second run."
+  - name: test_bo_2900g_2_declaration_present_via_the_deployed_ac_schema_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ac_schema.py <staged AC yaml>` as a subprocess against a real AC file whose criteria assert a durable effect but which carries no declaration, and assert the deployed gate produces the documented outcome (block or corrected record) — not by importing the validator module."
+  - name: test_bo_2900g_2_criteria_without_a_then_clause_do_not_silently_mark
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Empty criteria, criteria with no Then clause, and criteria that mention a written file only inside a Given each resolve to unmarked, with the undecidable case surfaced rather than guessed."
+test_rationale: |
+  The parent's central property is DERIVED, and a record that carries the declaration
+  looks identical whether it was derived or set by hand, so a test that inspects one
+  record proves nothing. Two shapes are load-bearing here: the real-artifact run over
+  the actual 2,888-record store (the exact test EPIC-ComputedQualityGates FP-1 layer 2
+  lacked — every test there fed hand-built dicts that already contained the axes), and
+  the deployed-hook run, because the source-tree validator and the deployed gate are
+  different code paths and only the deployed one runs at commit time.
+origin_agent: BrainCandy
+created: 2026-08-17
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-17
+    note: "Added assigned_agent, complexity, it_requirements (package-surface object form; all three candidate enforcement points named under `constraints`), test_spec (criterion/real_artifact/reachability/boundary), delivers_to and declares_side_effect. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-2900g-2-i
+implemented_by: []
+change_target:
+  - pipeline
+  - schema
+risk_surface: contract_boundary
+notes: |
+  GAP B of BO-2900g. The whole content of this AC is the word DERIVED.
+
+  THE OBSERVED STATE. The declaration that routes work to the observable-change
+  check is set on 0 of 2,888 records, while 460 leaf records assert a durable
+  observable effect in their own Then clause. Neither authoring agent mentions
+  the field. The routing mechanism (BP-1100f-5) is complete and correct and
+  fires on nothing.
+
+  WHY A BACKFILL IS NOT THE FIX, AND WHY THAT IS AN AC AND NOT A NOTE. Sweeping
+  the 460 closes the gap for exactly as long as it takes to author record 2,889.
+  This is the identical shape of EPIC-ComputedQualityGates FP-1 layer 2, where
+  no AC in a 1,802-record store carried the computed axes and every test fed
+  hand-built dicts that already contained them. The property that survives is
+  "the declaration falls out of what the work already says"; the L3
+  (BO-2900g-2-i) is where that property is made falsifiable, because it is not
+  observable from any single authored record.
+
+  THE NEGATIVE CLAUSE IS LOAD-BEARING. A derivation that marks everything is
+  indistinguishable from a derivation that marks nothing, one gate later: it
+  routes every piece of work to the observable-change check, the check becomes
+  noise, and someone switches it off. BP-1100f-5-i already established that the
+  exemption must be data-driven and never by item name; this AC's second work
+  item is the authoring-side statement of the same rule.
+
+  THE RECURSION. The work that closes this gap writes to a record store, which
+  is a durable observable change. Its own records must therefore carry the
+  declaration. If they do not, the derivation does not work on the first real
+  input it is given.
+
+  BOUNDARY. Authoring only. This AC does not describe what the declaration
+  causes — that is BP-1100f-5, which is done — and it produces no gate, block or
+  done-state consequence.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Verified at HEAD: declares_side_effect is
+  a legal top-level property in config/ac_store_schema.json (root is
+  additionalProperties: false, so this had to land first) and the only code that
+  reads it is generate_ticket_from_ac.py. This AC's own record is among the first
+  in the store to carry declares_side_effect: true. it_requirements uses the
+  package-surface OBJECT form mandated by the schema's root if/then;
+  reference_file_path names the shared validators module so one implementation
+  can serve both the pre-commit gate and the bulk/CI path.

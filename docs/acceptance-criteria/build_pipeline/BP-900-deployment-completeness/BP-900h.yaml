@@ -1,0 +1,60 @@
+id: BP-900h
+components:
+  - build_pipeline
+title: "Know the clean install works, because every change proves it"
+component: build_pipeline
+level: L1
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Installing leafcutter into a fresh project is proven to work on every change,
+  not discovered to be broken after release.
+
+  Every pull request stands the package up in an empty project the way a real
+  adopter would — clone, build, use it — and fails if that install does not
+  come out whole and stable. Where BP-900a..BP-900g check deployment
+  completeness statically inside the build, this branch verifies it
+  empirically, by performing the install and inspecting the result.
+depends_on:
+  - BP-900
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+  - path: docs/roadmap.json
+    relationship: describes
+    status: exists
+documentation_triggers: []
+documentation_rationale: "CI-only verification gate — surfaces as a failing status check; introduces no user-facing capability or command."
+origin_agent: BrainCandy
+created: 2026-08-17
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900h-1
+  - BP-900h-2
+  - BP-900h-3
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-08-17 to close the two phase_1 exit criteria in docs/roadmap.json
+  that have no automated check anywhere: "clean install succeeds on a blank
+  project with only skills_config.json present" and "consecutive builds produce
+  zero git diff (idempotent)".
+
+  The gap this closes is measured, not assumed: the closest existing coverage,
+  unit_tests/portability/test_build_deployment.py, asserts byte-identity for the
+  build_commit_guardian phase only, and tests/test_build_clean.py exercises the
+  --clean flag rather than a clean install. Between 2026-08-13 and 2026-08-17
+  seven consumer-install defects shipped and were hotfixed after release
+  (BP-900g-4, BP-900g-5, BP-900g-6, BP-015, BP-016, BP-017, BP-018) — each one a
+  script, reference, or symlink that did not resolve in a consumer layout. Those
+  are the failures a real install would have caught before merge.

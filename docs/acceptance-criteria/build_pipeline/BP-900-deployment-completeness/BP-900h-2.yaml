@@ -1,0 +1,78 @@
+id: BP-900h-2
+components:
+  - build_pipeline
+title: "Two consecutive builds into the same project produce zero difference"
+component: build_pipeline
+level: L2
+status: active
+req_status: approved
+readiness: approved
+priority: critical
+work_status: not_started
+criteria: |
+  Given the consumer-simulation project from BP-900h-1 has been built once
+    and the deployed output committed to a scratch git repository,
+  When build.py is run a second time against the same target directory with the
+    same inputs,
+  Then "git status --porcelain" in the scratch repository reports no changes
+  And no deployed file has been added, removed, or modified
+  And the job fails, naming every differing path, if any change is reported
+depends_on:
+  - BP-900h
+  - BP-900h-1
+doc_links:
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: .github/workflows/ci.yml
+  n_location_rule: "1 — a second-build step inside the consumer-simulation job"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Idempotency must be measured across the WHOLE deployed tree via git, not per-phase — a per-phase byte comparison is what exists today and it is what missed these defects."
+    - "Exclude __pycache__ and *.pyc from the scratch repository via .gitignore; compiled bytecode legitimately differs between runs and would make the check permanently red."
+    - "The diff report must list the differing paths, not merely assert a boolean."
+  notes: |
+    This is phase_1 exit criterion 3 ("consecutive builds produce zero git diff"),
+    which today has no automated check.
+
+    Using git as the comparison mechanism is deliberate: it catches additions and
+    deletions as well as content changes, where a file-by-file loop over an
+    expected manifest silently ignores files the build should not have written.
+
+    A known real cause of non-idempotency in this codebase is absolute paths baked
+    into generated output — BP-016 and BP-017 (commits 47fb660ff, 9bf606c28) both
+    fixed build-shim symlinks pointing at absolute local paths. This check would
+    have caught both.
+test_spec:
+  - name: test_second_build_produces_no_git_diff
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    description: "Builds twice into the same target, commits after the first, and asserts git status --porcelain is empty after the second."
+  - name: test_idempotency_check_detects_a_changed_file
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    description: "Negative case — mutates one deployed file between builds and asserts the comparison reports that path, proving the check can fail."
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-1
+  contract: "A built consumer-simulation project in a scratch directory, ready for a second build and a git-based comparison."
+origin_agent: BrainCandy
+created: 2026-08-17
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

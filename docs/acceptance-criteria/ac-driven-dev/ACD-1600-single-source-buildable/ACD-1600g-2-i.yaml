@@ -1,0 +1,153 @@
+id: ACD-1600g-2-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A directory-grain exclusion is cancelled by a member that changes an exact file inside it"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_2a_unit_of_work
+criteria: |
+  Given a feature that bundles two requirements,
+  And the first requirement excludes the whole build-orchestration directory,
+  And the second requirement names one single file inside that directory as part
+    of the surface it changes,
+  When the boundary of the bundle as a whole is computed,
+  Then the one file the second requirement changes is not in the bundle's
+    boundary,
+  And a sibling file in the same directory that no member changes remains in the
+    bundle's boundary,
+  And changing that one file during the build is not surfaced as a boundary
+    breach, while changing the sibling file is.
+depends_on: [ACD-1600g-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/change-scope-reviewer.md
+    relationship: describes
+    status: exists
+    relevance: "The source of the grain mismatch. Verified 2026-08-17: Tier 2 (block, ~line 120) matches on 'the file's top-level directory or component is listed in out_of_scope' and Tier 1 (soft, ~line 110) on 'the file is NOT named in out_of_scope' -- directory/component grain -- while the change surface derived by _build_files_touched() is a set of exact paths."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "NORMALISATION DECISION (IT PO, the choice the BA deferred): match each candidate path against exclusion entries by repo-relative POSIX PREFIX CONTAINMENT, and do NOT expand exclusions into a concrete file set. Rationale: expansion requires a filesystem walk at check time and, decisively, cannot cover a file the change is about to CREATE -- a newly added file inside an excluded directory would escape the boundary entirely, which is the failure mode a scope guard exists to prevent."
+  - "CANCELLATION IS PER PATH, NEVER PER EXCLUSION ENTRY. A member that changes one file inside an excluded directory removes only THAT path from the bundle boundary; every sibling under the same entry stays excluded. Dropping the whole entry when any member touches anything inside it is over-cancellation -- the boundary silently shrinks and the guard reports clean, which is strictly worse than the false blocker it was meant to fix."
+  - "Prefix matching must respect path SEGMENT boundaries: an exclusion naming a directory must not match a sibling directory whose name merely extends it with a suffix (the classic `_legacy` twin). Compare segment lists, or append the separator before comparing -- a bare startswith() is wrong."
+  - "Normalise both sides to repo-relative POSIX form before comparing: strip a leading dot-slash, reject or rebase absolute paths, and collapse redundant separators, so the same file cannot appear under two spellings and evade cancellation. Reject rather than silently normalise anything that escapes the repository root (a parent-directory segment)."
+  - "Implement the matching at the SINGLE normalisation seam ACD-1600g-2 establishes, and route both the union of exclusions and the subtraction of change surfaces through it. Two normalisation sites is the realistic way this leaf regresses."
+  - "The cancellation must be reachable from the adjudication path (ACD-1600g-3), not only from the composition function. A correct set that no consumer consults is dead code -- CLAUDE.md, 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', and the fast-lane precedent it cites."
+  - "Component-grain entries (a bare component id rather than a path) must be resolved through the existing component vocabulary rather than string-matched against paths, or a component exclusion will silently never match anything."
+  - "Edit surface is the single module scripts/ac_store/scope_boundary.py established by ACD-1600g-1. Canonical source only -- never a deployed .claude/ copy (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "path_is_excluded(candidate_path, boundary) -> bool plus the per-path cancellation applied inside compose_boundary(), both in scripts/ac_store/scope_boundary.py. Matching is segment-aware repo-relative POSIX prefix containment; cancellation removes the individual changed path, never the exclusion entry. Consumed by ACD-1600g-3's adjudication."
+expects_from:
+  ac_id: ACD-1600g-2
+  contract: "The single normalisation seam and the composed boundary with per-path provenance. This AC supplies the matching rule that seam applies; if ACD-1600g-2 normalises inline in two places instead, this leaf cannot be implemented in one place and the two halves will disagree."
+test_spec:
+  - name: test_exact_file_changed_by_a_member_is_cancelled_from_a_directory_grain_exclusion
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Two real on-disk AC records -- one excluding a whole directory, one whose derived change surface names a single file inside it. Asserts that exact file is absent from the composed boundary. Fails on a plain exact-string difference, which cancels nothing."
+  - name: test_sibling_file_no_member_changes_remains_in_the_boundary
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Same composition: asserts a sibling file under the same excluded directory is still in the boundary. This is the over-cancellation guard and fails on a drop-the-whole-entry implementation."
+  - name: test_changing_the_cancelled_file_is_not_surfaced_while_changing_the_sibling_is
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Drives the real adjudication over a staged diff in a temp git tree twice -- once touching the cancelled file, once touching the sibling -- and asserts no breach in the first case and a breach in the second. Carries the assertion through to the observable outcome rather than stopping at the computed set."
+  - name: test_prefix_match_respects_path_segment_boundaries
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "An exclusion naming a directory does not match a sibling directory whose name merely extends it with a suffix. Asserts the extended-name path is not treated as excluded."
+  - name: test_equivalent_path_spellings_cannot_evade_cancellation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A change surface spelled with a leading dot-slash cancels the same exclusion as the plain repo-relative form, and a path escaping the repository root is rejected rather than silently normalised."
+test_rationale: "The two failure directions this L3 isolates are symmetric, and each is passed by a test that only checks the other: an implementation that cancels nothing passes the sibling-retention test, and an implementation that drops the whole exclusion entry passes the cancellation test. They must therefore be asserted over the same composition in the same run. The third test is not redundant with the first two -- it is the reason the AC is behavioural rather than structural. A correct boundary set that the adjudication never consults is precisely the fast-lane defect this repository was rebuilt around, so the assertion is carried through to what the review surfaces, over a real staged diff in a real tree. A direct-import unit test of the matching predicate would be handed two strings and would confirm the string algebra while leaving unproven that the predicate is the one the composition and the adjudication actually call."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE MIXED-GRAIN EDGE CASE. This is the case where an exact-path/exact-path set
+  difference silently does the wrong thing in BOTH directions, and it is not
+  hypothetical -- it is the grain the existing consumer already uses.
+
+  VERIFIED: templates/agents/change-scope-reviewer.md Tier 2 (block) matches on
+  "The file's top-level directory or component is listed in `out_of_scope`", and
+  Tier 1 (soft) requires "The file is NOT named in the ticket's `out_of_scope`
+  list". So exclusions are authored and matched at DIRECTORY / COMPONENT grain,
+  while `files_touched` (derived by `_build_files_touched()`,
+  scripts/ac_store/generate_ticket_from_ac.py ~line 497) is a set of EXACT PATHS.
+
+  THE TWO FAILURE DIRECTIONS, both produced by a naive exact-string difference:
+    1. NO CANCELLATION (false blocker). "build_orchestration/" never equals
+       "scripts/build_orchestration/fast_lane.py", so the subtraction removes
+       nothing and the member that legitimately changes that file is blocked by
+       its bundle-mate's exclusion. This is ACD-1600g-2's defect surviving the
+       fix, just one grain down.
+    2. OVER-CANCELLATION (false pass -- the more dangerous one). If the fix is
+       "drop the whole exclusion when any member touches anything inside it",
+       the sibling file that nobody was supposed to change loses its protection
+       too, and the boundary silently shrinks to nothing. The second and third
+       Then clauses exist to pin this down: cancellation is per-path, not
+       per-exclusion-entry.
+
+  BEHAVIOURAL, NOT STRUCTURAL. The third Then deliberately carries the assertion
+  through to the observable outcome (what is and is not surfaced as a breach)
+  rather than stopping at the computed set, because a correct set that no
+  consumer consults is dead code -- see CLAUDE.md, "Gate / Workflow ACs -- Verify
+  Behaviorally, Not by Grep", and the fast-lane precedent it cites where the
+  gates were defined and never executed.
+
+  OPEN TECHNICAL DECISION (for the IT PO, not this AC): whether normalisation is
+  "expand exclusions to the path set they cover" or "match each changed path
+  against exclusion prefixes". Either satisfies these criteria; the choice
+  belongs in it_requirements.
+
+  2026-08-17 (IT PO enrichment). The deferred decision is now made, with the
+  reason recorded so it is not re-litigated.
+
+  - PREFIX MATCHING, NOT EXPANSION. Both options satisfy the criteria as written,
+    so the criteria cannot decide it -- but they are not equivalent in operation.
+    Expanding an exclusion into the set of files it currently covers requires a
+    filesystem walk at check time and can only enumerate files that ALREADY
+    EXIST. A change that CREATES a new file inside an excluded directory would
+    then fall outside the expanded set and pass unflagged, which is the exact
+    class of change a scope guard exists to catch. Prefix matching has no such
+    blind spot and needs no I/O.
+
+  - ONE CONSEQUENCE WORTH NAMING: prefix matching makes segment-boundary handling
+    load-bearing, because `startswith` is the obvious implementation and it is
+    wrong -- an exclusion of a directory would swallow every sibling directory
+    sharing its name as a prefix (the `_legacy` twin case). That is why it is a
+    separate it_requirement and a separate test rather than an implementation
+    detail.
+
+  - COMPONENT-GRAIN ENTRIES ARE THE QUIET THIRD CASE. The existing reviewer
+    accepts "directory OR component" in the exclusion list. A component id is not
+    a path prefix and will match nothing under a pure prefix rule, so the guard
+    would degrade silently for exactly the authors who write at component grain.
+    Resolution has to go through the component vocabulary, not string matching.
+
+  - AUTHORING NOTE ON it_requirements PROSE: illustrative example paths are
+    written WITHOUT slashes on purpose. `_build_files_touched()` scrapes any
+    slash-bearing token out of it_requirements prose into the generated ticket's
+    `files_touched`, so a made-up example path becomes a declared change surface
+    and the scope reviewer then expects a file that does not exist. Real edit
+    surfaces are named with their paths; examples are described in words.

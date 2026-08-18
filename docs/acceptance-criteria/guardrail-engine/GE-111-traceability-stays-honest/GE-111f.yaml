@@ -69,3 +69,24 @@ amended_by:
       are unchanged from the original GE-119 record; only id, level,
       depends_on, and this amendment were added.'
     by: python-coder
+  - reason: reconcile-with-concurrent-resolution-on-main
+    date: '2026-08-18'
+    by: human user
+    entry: 'CORRECTION TO THE ENTRY ABOVE, which is left intact because it
+      accurately records what was known when the move was made. Two of its
+      statements have since been overtaken by events and must not be read as
+      current fact. (1) It says the goal-level record "keeps the GE-119
+      identifier" — it does not. While this repair was in flight, PR #453
+      landed on main and resolved the same duplicate the opposite way,
+      renumbering that goal tree from GE-119 to GE-120. (2) The path it cites,
+      docs/acceptance-criteria/guardrail-engine/GE-119-green-means-checked/,
+      no longer exists; that tree is now at GE-120-green-means-checked/.
+      NET RESULT OF THE TWO INDEPENDENT REPAIRS: GE-119 is now a RETIRED
+      identifier claimed by nothing, the former goal record claims GE-120, and
+      this record claims GE-111f with a mechanically enforced parent. The
+      duplicate is resolved and the store holds no colliding ids. GE-119 must
+      never be reissued — dated records still cite it, and reissuing it would
+      turn those into confidently wrong references rather than merely stale
+      ones. This collision — two sessions independently renumbering the same
+      identifier days apart, neither able to see the other — is itself the
+      clearest evidence for the goal this repair belongs to.'

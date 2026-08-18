@@ -17,7 +17,7 @@ criteria: |
   sustained clean run; it is never made mandatory until it is fully installed and proven from
   the real deployed setup; and new completeness checks judge only what a change actually
   touches, so requirements written before the check existed are never retroactively failed.
-depends_on: [ACD-1900]
+depends_on: [ACD-1900, ACD-1900b]
 doc_links:
   - docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
 assigned_agent: null
@@ -25,7 +25,8 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+  - "2026-08-14 sequencing pass: added depends_on ACD-1900b. This L1 governs HOW a new gate is promoted from warn-only to blocking; ACD-1900b is what makes those gates dual-read in the first place. Promoting a gate that has not learned to read the store is how a gate goes green while verifying nothing. Edge was implied by ADR-026 but absent from depends_on."
 superseded_by: null
 covered_by:
   - ACD-1900d-1
