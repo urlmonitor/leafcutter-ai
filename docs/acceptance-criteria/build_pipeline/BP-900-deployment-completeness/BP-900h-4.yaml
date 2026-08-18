@@ -1,0 +1,111 @@
+id: BP-900h-4
+components:
+  - build_pipeline
+title: "The install under test is a vendoring consumer, so a guardrail's data file cannot pass by borrowing the package's own tree"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+criteria: |
+  Given the consumer-simulation install of BP-900h-1, which builds into a scratch
+    project holding only a minimal skills_config.json,
+  And a guardrail the package deploys that reads a declaring file it does not itself
+    contain — a schema that defines its rule, a vocabulary of permitted values, a
+    registry of records it looks up, or a helper module it loads,
+  When the install is inspected after the build,
+  Then every declaring file that a deployed guardrail reads is present under that
+    scratch project's deployed output root,
+  And each declaring file is resolved ONLY from the scratch project's deployed output
+    root — never from the package checkout beneath it, never from a parent directory,
+    and never from the invoking process's working directory — so a file that would
+    resolve only because the target happens to be the package's own workspace is
+    reported as missing,
+  And the inspection names each missing declaring file together with the guardrail
+    that reads it and the deployed location it was expected at,
+  And a file the guardrail obtains from outside the install — an operating-system
+    path, or data owned by an external tool the package does not ship — is not
+    reported as missing, so the check does not manufacture failures for things the
+    install was never responsible for,
+  And the inspection is demonstrated to FAIL when one declaring file is deleted from
+    the deployed output root after a successful build, because an inspection that
+    stays green on a deliberately incomplete install proves nothing.
+
+  Because on 2026-08-18 five declaring files were confirmed absent from a deployed
+  output root while every build test passed: two type vocabularies read by the
+  document-frontmatter guardrail, the schema read by the AC-schema guardrail, the
+  agent registry read by the planning workflow, and a component-migration helper
+  module. None of these was detectable, because every build test to date installs
+  into leafcutter's own self-hosted workspace, where the package source tree sits
+  beside the deployed output root and each of those files resolves anyway. The layout
+  under test, not the check, is what made the gap invisible.
+depends_on:
+  - BP-900h
+  - BP-900h-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the empty-project consumer-simulation install this AC inspects. h-1 already forbids building from a copy of the repository; this AC adds the resolution rule that stops an ancestor directory from satisfying a lookup, and extends the inspected set from script references to declaring files."
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "Produces the deployed output root the inspection reads. Not modified by this AC."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The self-hosting boundary is exactly what makes the package's own workspace an unrepresentative install target — the reason this AC exists."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: deployed + real_artifact + failure, with the deliberately-incomplete-install negative control as the load-bearing entry."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A consumer-layout install fixture whose declaring-file resolution is anchored to the deployed output root alone, plus the per-guardrail declaring-file inventory it inspects. BP-900h-5 invokes the guardrails inside this same fixture rather than standing up a second one."
+expects_from:
+  ac_id: BP-900h-1
+  contract: "The empty-project consumer-simulation install and its build invocation, which this AC constrains further rather than replacing."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A FIFTH deployment-gap axis, and the first that is not about scripts at all.
+  Keep it distinct from the four already in this component (see
+  memory/feedback_ba_bp1000_source_template_parity.md and
+  memory/feedback_itpo_bp900f_tracked_source_axis.md):
+    - BP-1000 (a-d): byte-equality of scripts present in BOTH scripts/ and templates/.
+    - BP-900b: build preflight, template SCRIPT references vs the deployable manifest.
+    - BP-900e: a registered or referenced SCRIPT has a deploy-source copy at all.
+    - BP-900f: a deployable SCRIPT's source is tracked in git.
+    - THIS (h-4 + g-8-ii): the DATA and CONFIGURATION files a deployed guardrail
+      reads. Every one of the four above is expressed in terms of scripts, so a
+      configuration JSON is not a dependency as far as any of them can tell.
+
+  The division of labour with BP-900g-8-ii is deliberate and should not be collapsed:
+  g-8-ii makes the BUILD refuse to ship an install whose declaring files are not in
+  the deploy manifest; this AC proves EMPIRICALLY, in a real install, that they
+  arrived. They fail independently — a derived closure can miss a read it cannot see
+  statically, and an empirical inspection cannot tell you which manifest entry was
+  forgotten.
+
+  The load-bearing clause is the resolution rule, not the presence assertion. An
+  inspection that simply checks "does this path exist" will pass in the self-hosted
+  workspace for exactly the same reason the original defect was invisible there.

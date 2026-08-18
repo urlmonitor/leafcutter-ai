@@ -1,0 +1,88 @@
+id: BP-900h-5-i
+components:
+  - build_pipeline
+title: "A guardrail whose comparison source exists only in the package repository still reaches a verdict in a vendoring consumer"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+criteria: |
+  Given a guardrail whose job is to compare a deployed artifact against a canonical
+    copy that lives in the package repository's own source layout,
+  And a consumer install in which the package is vendored, so that canonical layout
+    does not exist beneath the install root,
+  When that guardrail is invoked inside the consumer-layout install of BP-900h-4,
+  Then it establishes whether the comparison is applicable BEFORE attempting it, and
+    reaches a verdict either way,
+  And when the canonical copy is absent while the deployed artifact is present, it
+    reports that the comparison could not be performed and names the location it
+    looked for — it does not report a difference it never measured, and it does not
+    fail the consumer for the sole reason that a package-development path is absent,
+  And when both copies are present, it performs the comparison and reports the same
+    result it would report in the package's own workspace, so the fix does not turn
+    the guardrail off for everyone,
+  And its absent-canonical handling is symmetric with its absent-deployed handling:
+    whichever side is missing, the outcome is the same shape of report naming the
+    same kind of location.
+
+  Because the hook-parity guardrail resolves its canonical location to a path that
+  exists only inside the package repository, and it guards the absence of the
+  deployed directory while not guarding the absence of the canonical one. The
+  asymmetry is the defect: in any vendoring consumer the canonical side is always
+  absent, so the guardrail fails by construction — not on a real difference, and not
+  on anything the consumer did.
+depends_on:
+  - BP-900h-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_hook_parity.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. Its canonical location resolves to a templates/ path that exists only in the package repository, and only the deployed side's absence is guarded."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300b-1-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY. BP-1300b-1-i says a guardrail that cannot locate the canonical source fails closed — asked in the package's own repository, where the canonical source is supposed to be there and its absence is a real defect. This AC is the vendoring-consumer case, where the canonical source is absent BY DESIGN and failing closed punishes the consumer for the package's layout. Read both before implementing: the reconciling rule is that the guardrail must distinguish 'the canonical source should be here and is not' from 'this install has no canonical source', and the two ACs must not be resolved by making one of them unreachable."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines which trees exist in a consumer install and which are package-development-only. The classification this AC turns on."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-5
+  contract: "The three-way per-guardrail outcome — passed, failed, unable-to-run — which this AC's guardrail must land in correctly rather than defaulting to failed."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  This is the edge case that most exposes a lazy fix. Three wrong resolutions, all of
+  which would make the immediate symptom disappear:
+
+  1. Skip the guardrail whenever the canonical location is absent, silently. That is
+     indistinguishable from the guardrail not existing, and it disables the check in
+     the package's own repository the first time a canonical path is mistyped.
+  2. Fail closed unconditionally, per BP-1300b-1-i read out of context. In a vendoring
+     consumer the canonical side is ALWAYS absent, so this blocks every consumer
+     commit forever.
+  3. Point the canonical resolution at the deployed copy when the source copy is
+     absent. That compares a file with itself and passes always — BP-1300b-2 covers
+     precisely why a deployed copy must not stand in for the canonical one.
+
+  The correct shape is a stated applicability decision that is itself observable in
+  the report, which is why the criterion demands the guardrail say WHICH location it
+  looked for rather than merely returning a status.

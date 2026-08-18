@@ -1,0 +1,96 @@
+id: BP-900h-5
+components:
+  - build_pipeline
+title: "Every guardrail the package ships reaches a verdict in the consumer install, and one that cannot run is reported as such"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+criteria: |
+  Given the consumer-layout install of BP-900h-4,
+  And the set of guardrails the package registers as running against a consumer's
+    commits,
+  When each registered guardrail is invoked inside that install against an input of
+    the kind it guards — one input it should pass and one it should fail,
+  Then each guardrail returns a pass verdict on the passing input and a fail verdict
+    on the failing input,
+  And a guardrail that instead stops because it could not locate something it needs
+    is reported in a THIRD category, "unable to run", distinct from both pass and
+    fail — because a guardrail that blocks everything and a guardrail that rejects
+    the specific input in front of it are indistinguishable by exit code alone,
+  And the report names, for each guardrail unable to run, the guardrail and the file
+    or location it could not resolve,
+  And the job's conclusion is failing when any registered guardrail is unable to run,
+    with the same force as when a guardrail is missing outright,
+  And the set of guardrails exercised is derived from what the package registers, so
+    a guardrail added tomorrow is exercised without anyone editing a list.
+
+  Because on 2026-08-18, in a consumer install, the document-frontmatter guardrail
+  stopped on an absent type vocabulary and blocked every commit that touched
+  documentation or tickets, while the package's own test suite was entirely green.
+  No test had ever invoked a deployed guardrail from an install that was not the
+  package's own workspace, so the difference between "runs and judges" and "cannot
+  start" had never been observed for any guardrail.
+depends_on:
+  - BP-900h
+  - BP-900h-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the consumer-layout install this AC invokes the guardrails inside. Do not stand up a second fixture."
+  - path: config/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: planned
+    relevance: "The registration surface the exercised set is derived from — the same source BP-900e reads for its registry-completeness axis. Confirm the deployed location before implementing; the package-source copy is the canonical one."
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: "The hook registry as it exists in the package source. Named so the derivation reads a registry rather than a hand-written list."
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: deployed + reachability + failure. The three-way verdict is the criterion angle."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A per-guardrail three-way outcome in the consumer install — passed, failed, or unable-to-run with the unresolvable location named — and a job conclusion that is failing when any entry is unable-to-run."
+expects_from:
+  ac_id: BP-900h-4
+  contract: "The consumer-layout install whose declaring-file resolution is anchored to the deployed output root alone."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900h-5-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The three-way verdict is the whole point, and it is the part most likely to be
+  dropped as an implementation detail. Collapsing "unable to run" into "failed"
+  reproduces exactly the defect this AC exists to catch: on 2026-08-18 a guardrail
+  that could not find its vocabulary reported a blocking failure on every commit,
+  and the reported failure pointed at the commits rather than at the missing file.
+  A harness that records that outcome as "the guardrail failed" is a faithful copy
+  of the misdiagnosis.
+
+  Distinct from BP-900e (a registered guardrail has a deploy-source copy at all) and
+  from BP-900h-1 (script references in the deployed tree resolve). Both of those are
+  satisfied by a guardrail that is present and reachable and still cannot run,
+  because presence is not the same as being able to start. This AC is the only one
+  in the family that invokes a guardrail.

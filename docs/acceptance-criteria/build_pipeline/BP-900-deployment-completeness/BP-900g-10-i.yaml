@@ -1,0 +1,100 @@
+id: BP-900g-10-i
+components:
+  - build_pipeline
+title: "A missing rule-declaring file is never replaced by a substitute rule"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+criteria: |
+  Given a guardrail whose verdict is defined by a rule it reads from a declaring file
+    that ships with the install,
+  And that declaring file being absent, unreadable, or unparseable in the install
+    where the guardrail is running,
+  When the guardrail is invoked against input it would otherwise judge,
+  Then it stops and reports that the file defining its rule could not be read, naming
+    the file and the location it looked for,
+  And it judges the input against NO other rule — not one compiled into the
+    guardrail, not a previously bundled default, not a stricter or looser variant,
+    and not the last rule it successfully read,
+  And it emits no per-input findings whatsoever, because a finding produced against a
+    substitute rule reports a violation of something nobody wrote, and reads to its
+    audience as a defect in their input,
+  And the presence of an available substitute is not a reason to use one: a guardrail
+    that HAS a built-in rule to hand is still required to stop,
+  And when the declaring file is present, the guardrail judges the input against it
+    and returns the verdict that file defines, so the fix is not a guardrail that
+    refuses to run.
+
+  Because on 2026-08-18 the AC-schema guardrail found its schema absent in a consumer
+  install, silently substituted a stricter schema compiled into itself, and rejected
+  920 of that consumer's 973 records against an identifier pattern their identifiers
+  had never matched and were never required to match. What the consumer was told was
+  "920 malformed identifiers". What was true was "one file is missing". The document
+  type guardrail, in the same situation, refuses to substitute and says so — that is
+  the behaviour this criterion generalises to every rule-declaring file.
+depends_on:
+  - BP-900g-10
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. Substitutes a built-in schema when the declaring schema cannot be resolved, and reports the resulting mismatches as record defects."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The declaring file whose absence triggers the substitution. Deploying it is BP-900g-8-ii's job, not this AC's."
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: "The correct precedent — refuses to fall back when its type vocabulary is absent. Read it before implementing; the reporting shape it uses is the target, not an invention."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Error Handling Policy Rule 3. BP-900g-10 already narrows it for REQUIRED dependencies; this AC pins that a rule-declaring file is always REQUIRED, never OPTIONAL, because the guardrail's entire output is defined by it."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-10
+  contract: "The REQUIRED-versus-OPTIONAL dependency classification and the fail-closed load contract. This AC fixes the classification for one kind of dependency — the file that defines the rule — and adds the prohibition on substituting a different rule, which the parent's neutral-default clause does not reach."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT ALREADY COVERED BY BP-900g-10. The parent forbids continuing with a
+  NEUTRAL default — an empty mapping, an empty list, a passthrough — on the grounds
+  that a neutral default is indistinguishable from a correct result. A substitute rule
+  is the opposite shape and slips straight past that wording: it is not neutral, it is
+  not empty, and it is emphatically distinguishable from a correct result. It produces
+  a large, confident, specific set of findings. That is what makes it worse than the
+  neutral case, not better — nobody investigates an empty result for half a day, and
+  920 findings command immediate attention and point in the wrong direction.
+
+  THE MISDIRECTION IS THE HARM, and it is what the criterion is written to prevent.
+  Rank the two failures by what they cost the reader: a guardrail that stops costs one
+  lookup of a filename. A guardrail that substitutes costs an investigation of 920
+  records that were never wrong, and ends with a consumer editing their identifiers to
+  satisfy a rule that does not apply to them. The second outcome is reachable from the
+  first only by an implementation that treats "I have something to fall back on" as
+  permission.
+
+  ONE FURTHER TRAP. Reporting the substitution as a warning and then proceeding does
+  not satisfy this criterion. The parent already establishes why — a warning into a
+  transcript carrying hundreds of lines is observationally equivalent to silence — and
+  here the warning would be printed immediately above 920 findings that appear to
+  explain themselves.

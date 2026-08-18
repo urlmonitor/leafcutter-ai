@@ -1,0 +1,119 @@
+id: BP-900g-8-ii
+components:
+  - build_pipeline
+title: "The deployed-dependency closure covers the data and configuration files a script reads, not only the modules it imports"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given a script the build deploys into a consumer install,
+  And that script reading a NON-CODE file at runtime to do its job — a schema that
+    defines the rule it applies, a vocabulary of permitted values, a registry of
+    records it looks up, or a data table it maps through — in addition to any modules
+    it imports,
+  When the build derives the set of files that must ship alongside that script,
+  Then the derived set contains those non-code files as well as the imported modules,
+  And any file in that set that is absent from the deploy manifest fails the build,
+    naming the file, the script that reads it, and the deploy phase that would have
+    to carry it,
+  And a missing non-code file fails the build with the same force as a missing
+    module, so a guard that only detects an unimportable module leaves the data case
+    live,
+  And the non-code half of the set is DERIVED from what the deployed script actually
+    reads, on the same terms as the module half — a hand-maintained list of data
+    files does not satisfy this criterion even when it is complete on the day it is
+    written,
+  And the guard is demonstrated against a dependency introduced AFTER the guard
+    exists: adding a new non-code read to a deployed script, without adding that file
+    to the deploy manifest, fails the build,
+  And a file the script reads from outside the install — an operating-system path, or
+    data owned by an external tool the package does not ship — is not added to the
+    set, so the guard does not demand the build deploy things it does not own.
+
+  Because the closure as it stands, and the written rule and guard test behind it,
+  are all expressed in terms of Python module imports and the import error a missing
+  module raises. A configuration JSON is therefore not a dependency as far as any of
+  them can tell. On 2026-08-18 four configuration files and one helper module were
+  confirmed absent from a deployed output root with the build green throughout: two
+  type vocabularies, the AC-store schema, and the agent registry — none of which is
+  a module, and none of which any existing guard was capable of noticing.
+depends_on:
+  - BP-900g-8
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the deploy maps the derived set is checked against. The same surface g-8 changes from hand-maintained to derived — extend that derivation rather than adding a second, parallel one for data files."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "Runs the deploy-completeness preflight the new failure is raised from."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Carries the rule 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest', which is written entirely in terms of module imports and ModuleNotFoundError. BP-900g-8-iii owns correcting the rule text; this AC owns the mechanism."
+  - path: config/doc_types.json
+    relationship: describes
+    status: exists
+    relevance: "Regression instance — a type vocabulary read by the document-frontmatter guardrail, confirmed absent from a deployed output root on 2026-08-18."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "Regression instance — the schema read by the AC-schema guardrail, confirmed absent from a deployed output root on 2026-08-18. Its absence is the trigger for BP-900g-10-i's substitute-rule prohibition."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Regression instance — the registry read by the planning workflow, confirmed absent from a deployed output root on 2026-08-18. Its absence is the trigger for BP-900g-10-ii's default-deny prohibition."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The empirical counterpart. This AC makes the BUILD refuse to ship an incomplete install; h-4 proves in a real consumer-layout install that the files arrived. The two fail independently and neither replaces the other."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A deployed-dependency set that includes non-code reads, and a build failure naming the file, the reading script, and the deploy phase — the same verdict shape g-8 produces for modules, so the two do not report differently for the same class of gap."
+expects_from:
+  ac_id: BP-900g-8
+  contract: "The derived intra-package dependency closure and the temporary-target deployed-tree harness. This AC widens the closure's notion of a dependency rather than building a second closure beside it."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE FAILURE MODE THIS AC IS AGAINST is not "five files were forgotten". It is that
+  every guard in the family is phrased in terms of scripts, so no guard was capable
+  of having an opinion about a JSON file. The four existing deployment-completeness
+  axes — BP-1000 byte parity, BP-900b preflight references, BP-900e registry
+  completeness, BP-900f tracked-in-git — are each about scripts, and each of them was
+  green on 2026-08-18. Widening the vocabulary is the work; deploying the five named
+  files is not.
+
+  DO NOT SATISFY THIS BY ADDING THE FIVE FILES TO THE DEPLOY MAP. That makes the
+  symptom vanish and leaves the mechanism exactly as it was — the same failure
+  BP-900g-5 records for script references and BP-900g-8 records for modules, where
+  three warning comments accumulated in a hand-maintained map while a fourth instance
+  shipped. The named files are the regression set the guard must be shown to catch,
+  not the deliverable.
+
+  THE DERIVATION IS HARDER THAN THE MODULE CASE and that is where a weak
+  implementation will hide. An import is a declaration a static reader can see; a
+  data read is an ordinary function call against a path that may be constructed. Two
+  consequences worth stating up front: whatever cannot be derived statically must be
+  reported as underivable rather than silently omitted, and a path built at runtime
+  is exactly the case BP-900g-10-i/-ii/-iii cover at runtime — the two layers are the
+  backstop for each other's blind spots, which is why both exist.

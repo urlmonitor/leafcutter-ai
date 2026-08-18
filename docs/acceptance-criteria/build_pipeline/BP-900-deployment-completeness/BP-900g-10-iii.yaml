@@ -1,0 +1,94 @@
+id: BP-900g-10-iii
+components:
+  - build_pipeline
+title: "A declaring file is located relative to the install that owns the reader, so the verdict does not depend on where the process was started"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+criteria: |
+  Given a deployed guardrail or workflow that reads a declaring file shipped with the
+    install,
+  When it is invoked twice against identical input from two different working
+    directories — once from the install root, once from a nested subdirectory several
+    levels below it,
+  Then it locates the same declaring file both times and returns the same verdict,
+  And neither run reports the file as missing,
+  And when the declaring file genuinely is absent from the install, both runs report
+    it missing and name the SAME expected location, so the two outcomes remain
+    distinguishable from each other,
+  And the expected location it names is derived from where the running artifact
+    itself lives within the install, not from the directory the process was started
+    in,
+  And a run started from outside the install entirely reports which install it
+    resolved against, so the answer to "which file did you read" is never implicit.
+
+  Excluded from this criterion: how the install root is determined for a process
+  running outside any install. That is a separate defect tracked as ACS-300g-6 and is
+  being handled on its own — do not re-derive or re-specify it here. This criterion is
+  satisfied by anchoring the read to the install that owns the running artifact.
+
+  Because the agent-registry read behind the false permission denial names a relative
+  path, so even after the file is deployed the read succeeds or fails according to
+  where the process happened to start. Deploying the file fixes the reported symptom
+  and leaves the read conditional on an accident of invocation — which is the same
+  class of fragility, one layer down, and it will present as an intermittent version
+  of the identical misleading error.
+depends_on:
+  - BP-900g-10
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The live instance — reads the deployed agent registry by a relative path. The same read BP-900g-10-ii fixes the verdict semantics of; this AC fixes how the file is found."
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: "The existing root-resolution helper the guardrails share. Read it before implementing so the anchoring rule reuses one resolver rather than adding another."
+  - path: "docs/acceptance-criteria/ac-store/ACS-300g-6.yaml"
+    relationship: describes
+    status: planned
+    relevance: "EXPLICITLY OUT OF SCOPE. The working-directory-anchored repo-root defect is handled there. Named here only so the boundary is unambiguous and the two are not merged during implementation. Confirm the record's path before relying on the link."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-10
+  contract: "The fail-closed load contract. This AC constrains HOW the declaring file is located, so the fail-closed path is entered only when the file is genuinely absent and not merely unfindable from the current directory."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT COSMETIC ONCE THE FILE IS DEPLOYED. A working-directory-relative
+  read turns a deterministic guardrail into one whose verdict depends on how it was
+  launched. It fails in precisely the situations where it is hardest to reason about
+  — a hook invoked from a subdirectory, a workflow started from a worktree, an agent
+  whose working directory is reset between calls — and it fails by reporting the file
+  as absent, which is the same misleading message BP-900g-10-i and -ii exist to
+  eliminate. Fixing the semantics of the missing-file report while leaving the
+  resolution fragile means the correct new message will still be shown for the wrong
+  reason.
+
+  THE TWO-DIRECTORY TEST IS THE WHOLE ASSERTION and it must be a real invocation, not
+  a unit test of a resolver function. The resolver almost certainly returns the right
+  answer when called with the right arguments; the defect is in the call site that
+  passes it a relative path. Run the artifact from two directories and compare.
+
+  BOUNDARY, restated because it will be tempting to widen: ACS-300g-6 owns the
+  working-directory-anchored repo-root question. If implementing this AC appears to
+  require solving that one, stop and say so rather than absorbing it — the two were
+  deliberately separated by the request that produced this AC.

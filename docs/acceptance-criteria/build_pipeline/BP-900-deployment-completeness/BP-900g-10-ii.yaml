@@ -1,0 +1,99 @@
+id: BP-900g-10-ii
+components:
+  - build_pipeline
+title: "A missing capability-declaring file is never read as a denial"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+criteria: |
+  Given a decision taken by looking up a record in a declaring file that ships with
+    the install — whether a capability is permitted, whether a feature is enabled,
+    whether an actor may perform an action,
+  And that declaring file being absent, unreadable, or unparseable in the install
+    where the decision is taken,
+  When the decision is taken,
+  Then it stops and reports that the file the decision is read from could not be
+    read, naming the file and the location it looked for,
+  And the absent lookup does NOT resolve to a negative answer, because "the file is
+    not there" and "the file says no" are different facts and only one of them is
+    true,
+  And the message describes the unreadable file, not the outcome the absent lookup
+    would have produced, so the reader is not sent to inspect a record's contents to
+    explain a verdict that no record produced,
+  And a record that is genuinely present and genuinely says no still produces a
+    denial that names the record — so the fix distinguishes the two cases rather than
+    permitting everything,
+  And when the file is present, the lookup returns the answer the record states, so a
+    capability the record grants is not withheld.
+
+  Because on 2026-08-18 the plan-feature workflow read an absent agent registry,
+  evaluated the resulting empty lookup to "not permitted", and halted reporting that
+  an agent's charter did not permit shell commands — while the source registry
+  plainly permitted them. The operator was handed a permission problem to disprove,
+  in a record that was fine, about a rule that was never consulted. Nothing in the
+  message pointed at the missing file. The shape is general: an absent record read as
+  a boolean is false, and false is a verdict.
+depends_on:
+  - BP-900g-10
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. Reads the deployed agent registry and derives a permits-shell decision from the lookup result, so an absent file evaluates to a denial. Confirm the deployed filename before implementing."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The declaring file whose absence produced the false denial. Deploying it is BP-900g-8-ii's job, not this AC's."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Error Handling Policy Rule 3, as narrowed by BP-900g-10 for REQUIRED dependencies. A file a permission decision is read from is REQUIRED by definition."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Sibling shape. g-10-i forbids substituting a different rule; this forbids converting absence into a verdict. Both are degradations the parent's neutral-default clause does not reach, and both must be fixed at every load site rather than at the two named ones."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-10
+  contract: "The REQUIRED-versus-OPTIONAL dependency classification and the fail-closed load contract, extended here to a lookup whose absent result is itself a meaningful-looking value."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS ESCAPES BOTH THE PARENT AND ITS SIBLING. BP-900g-10 forbids a neutral
+  default, on the reasoning that a neutral default is indistinguishable from a correct
+  result. Here the default is not neutral and it is not indistinguishable — it is a
+  denial, and it is extremely visible. It stops the work and demands attention. The
+  reason it is still the same defect is that the attention it commands is aimed
+  somewhere false: at a permission the reader must go and disprove, in a file that is
+  correct, rather than at the file that is absent.
+
+  THE PYTHON IDIOM THAT PRODUCES IT is the thing to hunt for, not the one workflow.
+  Any expression that coerces a lookup result to a boolean — a truthiness test over a
+  possibly-absent record, a get-with-default that returns the falsy value, an
+  equality test against an expected value that an empty result fails — collapses
+  "absent" and "says no" into one branch. The surface is not confined to one language
+  or one file: the live instance is in a JavaScript workflow, and the same idiom is
+  available everywhere. Audit for the idiom.
+
+  THE NEGATIVE CONTROL THAT MATTERS. A fix that permits everything when the file is
+  missing is not a fix, it is the opposite defect with a friendlier failure mode. The
+  criterion demands three distinct outcomes — permitted, denied by a record that says
+  so, and unable to decide — and it is the third that must be new.
