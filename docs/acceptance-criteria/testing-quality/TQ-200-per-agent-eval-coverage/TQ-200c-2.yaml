@@ -35,13 +35,13 @@ depends_on:
   - TQ-200c-1
 doc_links:
   - path: scripts/ac_store/generate_ticket_from_ac.py
-    relationship: describes
+    relationship: modifies
     status: exists
-    relevance: "The decision this AC replaces, and the exact shape of the defect. Verified 2026-08-18: line 2740 `is_code_ac = _computed_map_has_production_code_producer(agents)` (line 2068) resolves through `_agent_produces_production_code` (line 1055), whose `_FALLBACK_PRODUCERS` frozenset at line 1073 holds nine names (python-coder, sql-coder, frontend-coder and six sql-* specialists). On the normal path it calls `_load_production_code_agents` (line 658), which at line 684 reduces the registry's whole `produces` vocabulary to `== \"production_code\"`. Either way the answer is one boolean keyed on producer identity."
+    relevance: "The decision this AC replaces, the exact shape of the defect, and the file this AC edits. Verified 2026-08-18: line 2740 `is_code_ac = _computed_map_has_production_code_producer(agents)` (line 2068) resolves through `_agent_produces_production_code` (line 1055), whose `_FALLBACK_PRODUCERS` frozenset at line 1073 holds nine names (python-coder, sql-coder, frontend-coder and six sql-* specialists). On the normal path it calls `_load_production_code_agents` (line 658), which at line 684 reduces the registry's whole `produces` vocabulary to `== \"production_code\"`. Either way the answer is one boolean keyed on producer identity. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
   - path: config/agent_registry.json
     relationship: describes
     status: exists
-    relevance: "The self-description that already exists and is discarded at the point of use. Verified 2026-08-18: `produces` is populated across the registry with at least seven distinct values (production_code, test_artifact, documentation, review_verdict, orchestration, analysis, prompt); llm-expert (entry at line 3044) declares `produces: \"prompt\"` at line 3127. So `prompt` is currently treated identically to `orchestration` — a value that legitimately needs no proof. Appending llm-expert to the line-1073 frozenset would not even touch this path, because the frozenset is only the registry-unavailable fallback."
+    relevance: "The self-description that already exists and is discarded at the point of use — READ by the new derivation, NOT edited by it. Verified 2026-08-18: `produces` is populated across the registry with at least seven distinct values (production_code, test_artifact, documentation, review_verdict, orchestration, analysis, prompt); llm-expert (entry at line 3044) declares `produces: \"prompt\"` at line 3127. So `prompt` is currently treated identically to `orchestration` — a value that legitimately needs no proof. Appending llm-expert to the line-1073 frozenset would not even touch this path, because the frozenset is only the registry-unavailable fallback. Left as describes deliberately: adding a name to this file is the fix the AC's second and third clauses exist to reject, so it must NOT appear in files_touched."
   - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-1.yaml
     relationship: related
     status: exists
@@ -49,15 +49,142 @@ doc_links:
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
-    relevance: "The source of the other half of what the work says about itself — the fields an author already fills in about a requirement. Also the home of the c-1 vocabulary this decision must emit into: a derived answer that cannot be written down is not an answer."
+    relevance: "The source of the other half of what the work says about itself — the fields an author already fills in about a requirement. Also the home of the c-1 vocabulary this decision must emit into: a derived answer that cannot be written down is not an answer. READ here, not edited: TQ-200c-1 owns the schema change, which is why this AC depends on it."
   - path: docs/testing/test-angles.md
     relationship: relates-to
     status: exists
     relevance: "The existing per-proof vocabulary the derived answer has to be expressed in alongside c-1's judged/asserted distinction, so that a routed demand is a normal proof demand and not a parallel notation."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The routing answer that replaces the single is_code_ac boolean. It is a SET of required proof kinds plus the reason the set is what it is, because the criteria's fourth clause makes the provenance of an empty set part of the answer rather than metadata about it."
+    required:
+      - required_proof_kinds
+      - derived_from
+    properties:
+      required_proof_kinds:
+        type: array
+        items:
+          type: string
+          enum:
+            - asserted
+            - judged
+        description: "The kinds of proof this work must be asked for. May hold one kind, both, or none. Both is the normal case for prompt-shaped work (TQ-200c-3). Empty is legal ONLY when derived_from records a positive statement the work itself makes — never when it records a producer's absence from a list."
+      derived_from:
+        type: array
+        items:
+          type: string
+        description: "The self-descriptions the answer was read from, one entry per contributing signal, each naming the field and the value. This is what makes the fourth clause testable: an empty required_proof_kinds whose derived_from is empty or says 'producer not in set' is the free pass, and must be impossible to produce."
+  constraints:
+    - "n_location_rule is 'all' and means it literally: the same collapse exists at THREE points and a fix at one leaves the defect live at the others. The registry read that reduces the seven-value produces vocabulary to a single equality (line 684), the hardcoded nine-name fallback frozenset (line 1073), and the branch that consumes the resulting boolean to gate the entire test-contract section (line 2740). Leaving the fallback frozenset in place as a name list re-creates the defect on every registry-unavailable run."
+    - "The decision must survive a producer kind that exists in NO enumeration the decision consults and whose introduction changes no enumeration. This is unsatisfiable by any list, however long. Verify it the way BO-2900g-1's third-route clause is verified: introduce a novel producer inside the test, tell the decision nothing about it, and assert the demand is still right."
+    - "The answer must be invariant under renaming a producer. Two pieces of work with identical self-descriptions and differently-named producers must get identical required_proof_kinds. Any mechanism keyed on producer identity fails this by construction, even when its contents are complete."
+    - "An empty required_proof_kinds must be UNREACHABLE from a producer's absence from any collection. It may be reached only from a positive statement the work itself makes, and derived_from must record that statement. Today the pipeline records `PASS  non-code AC — no test contract required` (line 2773) from exactly that absence; that path must not survive in any form."
+    - "The derivation must consult more than the producer. The registry's produces value is one signal; the requirement's own declared fields are another. A derivation reading only produces is still keyed on the producer and will fail the rename-invariance clause the moment two producers share a produces value but differ in what their work is."
+    - "The routing decision must NOT be a per-requirement authored field. Hand-declaration reproduces the present failure with extra steps — 444 requirements each depending on an author remembering. c-1's author-stated proof KIND stays legitimate; what is forbidden is the author stating which kinds are REQUIRED."
+    - "Must emit the answer in c-1's vocabulary. A derived answer that cannot be written down as a proof demand is not an answer, which is why TQ-200c-1 is a hard prerequisite rather than a preference."
+    - "Must not route every prompt-producing requirement to a judged proof. That is the same identity keying with the sign flipped, and TQ-200c-2-i rejects it explicitly."
+delivers_to:
+  agent: python-coder
+  contract: "A routing answer of the shape {required_proof_kinds: [asserted|judged...], derived_from: [<signal>=<value>...]}, derived from the work's and its producer's existing self-descriptions, replacing the is_code_ac boolean at all three of its collapse points. TQ-200c-3 shapes the plan when the set holds two kinds, TQ-200c-4 lands the judged member of the set, and TQ-200c-5 reports when a member of the set could not be carried through. derived_from is part of the contract, not diagnostics: TQ-200c-5's third clause cannot distinguish a genuine 'none required' from a skipped question without it."
+expects_from:
+  ac_id: TQ-200c-1
+  contract: "The single-sourced proof-kind vocabulary (test_spec[].proof_mode, values {asserted, judged}, absent-means-asserted) that the derived answer is emitted in. Without it the only demand this decision could express is 'unittest or pytest, or nothing', which is the binary it exists to remove."
 test_required: true
+test_spec:
+  - name: test_each_of_the_three_shapes_of_work_is_asked_for_the_kinds_it_implies
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-2]
+    description: "Three real on-disk records in a COPY of a store — assertion-settled, judgment-settled, and both — run through the real derivation; each gets exactly the kinds its own description implies. All three in one test because the discriminating property is that the answers DIFFER."
+  - name: test_a_producer_kind_the_decision_was_never_told_about_still_gets_the_right_demand
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-2]
+    description: "THE CLAUSE THAT KILLS THE FROZENSET FIX. Introduces a producer kind present in no enumeration the decision consults, changing no enumeration, and asserts the demand for its work is still correct. Modelled on BO-2900g-1's third-route test. Any list-based implementation fails here and passes everything else."
+  - name: test_renaming_a_producer_does_not_change_the_demand
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-2]
+    description: "Two records with identical self-descriptions and differently-named producers receive identical required_proof_kinds. A set-membership decision is keyed on identity by construction and fails this even with complete contents."
+  - name: test_no_proof_required_is_unreachable_from_a_producer_being_absent_from_a_list
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-2]
+    description: "THE FREE-PASS TEST. Over every record in a real store copy, no empty required_proof_kinds may carry a derived_from that is empty or that cites the producer's absence from a collection. Asserts on provenance, not on the count, because a correct-looking empty set reached the wrong way is the defect."
+  - name: test_a_prompt_producing_requirement_is_no_longer_given_a_free_pass
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [TQ-200c-2]
+    description: "Runs the real derivation over actual store records assigned to the prompt-producing agent and asserts none is answered with 'no proof of any kind'. This is the measured 444-record population, and no hand-built fixture represents it."
+  - name: test_the_generation_command_uses_the_derived_answer_not_the_old_boolean
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-2]
+    description: "PRODUCTION ENTRY POINT: drives the real generator command line over a COPY of a store and asserts the written ticket's Test Requirements reflect the derived kinds. A correct derivation the generator still gates behind is_code_ac changes nothing observable and passes every other test here."
+  - name: test_the_registry_unavailable_path_derives_the_same_answer
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    covers: [TQ-200c-2]
+    description: "With the registry unreadable, the fallback path must produce the same kinds as the normal path for the same work. The hardcoded nine-name frozenset lives on this path only, so a fix applied to the registry read alone leaves the defect fully live here and invisible everywhere else."
+test_rationale: |
+  This AC is defined by what must NOT satisfy it, so the test contract is built around the
+  three clauses that reject the cheap fix rather than around the happy path. The
+  three-shapes criterion test alone is passed by a slightly better-informed boolean; the
+  unanticipated-producer, rename-invariance and provenance tests are the ones that
+  discriminate, and each fails a different wrong implementation. Appending a name to the
+  fallback set passes the criterion test and fails the unanticipated-producer test; any
+  identity-keyed mechanism fails rename invariance; narrowing who gets the free pass
+  without removing the mechanism passes both and fails the provenance test.
+  The provenance test asserts on derived_from rather than on the emptiness of the answer,
+  because "no proof required" is a legitimate answer and the defect is HOW it was reached.
+  A test asserting merely that fewer records get an empty demand is satisfied by a longer
+  list.
+  The registry-unavailable seam test exists because the defect has two independent homes:
+  the registry read collapses the produces vocabulary, and the fallback frozenset is a bare
+  name list. They are exercised by different runtime conditions, so a suite that never makes
+  the registry unreadable is green on a half-fix. The real_artifact test runs over actual
+  store records because the 444-record population is the evidence base for the whole L1 and
+  a fixture reproduces the author's assumptions. The reachability test is mandatory here for
+  the usual reason: a correct decision the command surface never consults is phantom-done.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (L), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path
+      with n_location_rule 'all' (three collapse points: the registry read at line 684, the
+      fallback frozenset at line 1073, the consuming branch at line 2740), the
+      {required_proof_kinds, derived_from} answer shape, delivers_to, expects_from (TQ-200c-1),
+      and a seven-entry test_spec with rationale. Retagged the generator doc_link
+      describes -> modifies. config/agent_registry.json deliberately LEFT as describes: adding a
+      name there is the fix this AC's clauses reject, so it must not enter files_touched.
+      criteria, title and notes untouched."
 superseded_by: null
 covered_by:
   - TQ-200c-2-i

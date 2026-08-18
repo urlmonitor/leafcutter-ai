@@ -33,14 +33,57 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The GRANULARITY constraint on the parent's predicate. Nothing new is stored and no new predicate is introduced — this record fixes where the parent's independently_completable test is applied: once per prerequisite entry, inside the comprehension that builds the blocking list, never once per record before it. The distinction is invisible in the parent's homogeneous fixtures and is the only thing separating the three candidate implementations."
+    required:
+      - evaluation_scope
+    properties:
+      evaluation_scope:
+        type: string
+        enum:
+          - per_prerequisite_entry
+        description: "The only legal value. per_prerequisite_entry means the independently_completable test is evaluated for each id in depends_on independently, so one record may have one prerequisite dropped and another retained. A per-record short-circuit — dropping the whole gate as soon as any ancestor appears in the list — returns R as ready and passes every single-prerequisite test the parent specifies."
+  constraints:
+    - "The decision must be evaluated once per prerequisite ENTRY. This is the whole content of this record. A per-record short-circuit is the natural implementation of the parent's rule and returns R as ready while passing every homogeneous fixture the parent specifies."
+    - "A composite prerequisite must be absent from the held account at ANY depth above R, not merely at the immediate parent level. The criteria say 'at any depth of the chain above R', so a fix that only skips the direct parent leaves C surfacing from further up the ancestor walk."
+    - "The buildable prerequisite must still be NAMED, not merely counted. An account that reports R as held without saying P holds it satisfies the first clause and leaves the operator unable to act, which is the same silence ACD-400a-5's real-store observation was found by."
+    - "Assert on the scanner's real output over a real on-disk fixture chain, never on the source text. The three candidate implementations differ by one condition inside a comprehension and are indistinguishable to any structural test."
+    - "Do not introduce a second code path for the mixed case. The mixed list is the general case and the homogeneous lists are its special cases; a branch that handles 'both kinds present' separately will drift from the branch that handles one kind."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400a-5
+  contract: "The narrowed blocking rule in scan_ac_store._classify_ac and its independently_completable predicate. This L3 neither introduces a predicate nor changes what it means — it fixes the granularity at which the parent's predicate is applied, so it must be implemented against that rule rather than alongside it."
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (S — the same single
+      comprehension as the parent, constrained rather than extended), object-form it_requirements
+      naming scripts/ac_store/scan_ac_store.py as reference_file_path plus the
+      per_prerequisite_entry granularity constraint, delivers_to (null — this L3 reports nothing
+      downstream) and expects_from (ACD-400a-5's narrowed rule). doc_links needed no retagging:
+      scan_ac_store.py was already correctly tagged 'modifies'. The BA-authored test_spec and
+      test_rationale are kept verbatim — the two opposed assertions are precisely what separate
+      the three candidate implementations. criteria, title and notes untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+test_required: true
 test_spec:
   - name: test_mixed_prerequisites_report_only_the_buildable_one_as_holding
     target_dir: unit_tests/ac_store/

@@ -36,29 +36,138 @@ depends_on:
   - TQ-200c
 doc_links:
   - path: config/ac_store_schema.json
-    relationship: describes
+    relationship: modifies
     status: exists
-    relevance: "The half of the vocabulary that cannot express the request today. Verified 2026-08-18: `test_spec[].framework` enum is [\"unittest\", \"pytest\"] (line 401); `test_spec[].angle` enum is [criterion, reachability, seam, real_artifact, deployed, boundary, failure] (line 411) — every value there names what a proof is FOR, never how it is SETTLED; and `additionalProperties: false` is set both at the schema root (line 15) and on test_spec items (line 387) and IS enforced, so the request cannot be smuggled in as an extra key on an existing entry."
+    relevance: "The half of the vocabulary that cannot express the request today, and the file this AC edits. Verified 2026-08-18: `test_spec[].framework` enum is [\"unittest\", \"pytest\"] (line 401); `test_spec[].angle` enum is [criterion, reachability, seam, real_artifact, deployed, boundary, failure] (line 411) — every value there names what a proof is FOR, never how it is SETTLED; and `additionalProperties: false` is set both at the schema root (line 15) and on test_spec items (line 387) and IS enforced, so the request cannot be smuggled in as an extra key on an existing entry. Retagged describes -> modifies by it-po 2026-08-18: this is an edit surface, and only edit-surface relationships reach a generated ticket's files_touched (generate_ticket_from_ac.py:104-106)."
   - path: templates/agents/test-writer.md
-    relationship: describes
+    relationship: modifies
     status: exists
-    relevance: "The other half. Verified 2026-08-18 by direct count: the string \"eval\" occurs ZERO times in this template — it has no concept of an eval to receive. Its framework-choice section (\"2a — Choose the framework\") offers unittest or pytest only. It holds the Write tool, so it can physically author an eval row; nothing tells it that such a thing exists. This is why the AC says the word must mean the same thing on BOTH sides: adding an enum value alone leaves the consumer unable to act on it."
+    relevance: "The other half, and the second file this AC edits. Verified 2026-08-18 by direct count: the string \"eval\" occurs ZERO times in this template — it has no concept of an eval to receive. Its framework-choice section (\"2a — Choose the framework\") offers unittest or pytest only. It holds the Write tool, so it can physically author an eval row; nothing tells it that such a thing exists. This is why the AC says the word must mean the same thing on BOTH sides: adding an enum value alone leaves the consumer unable to act on it. Retagged describes -> modifies by it-po 2026-08-18 for the same files_touched reason."
   - path: docs/testing/test-angles.md
-    relationship: describes
+    relationship: modifies
     status: exists
-    relevance: "The existing shared vocabulary page for proofs, and the reference home the new word must appear on for it to be shared at all (see the L1's documentation_rationale). The judged/asserted distinction is ORTHOGONAL to the seven angles: an angle says which question a proof answers, the new word says how the answer is settled. A judged proof still has an angle."
+    relevance: "The existing shared vocabulary page for proofs, and the reference home the new word must appear on for it to be shared at all (see the L1's documentation_rationale). The judged/asserted distinction is ORTHOGONAL to the seven angles: an angle says which question a proof answers, the new word says how the answer is settled. A judged proof still has an angle. Retagged describes -> modifies by it-po 2026-08-18: the L1's documentation_rationale makes this page an edit surface of THIS AC rather than a separate documentation AC, so it must reach files_touched."
   - path: scripts/evals/agent_eval_config.json
     relationship: relates-to
     status: exists
-    relevance: "Evidence that the concept already exists downstream under different words. Verified 2026-08-18: scoring_mode is `label` for pt-classifier and `artifact` for mock-data-author and flow-author, and the per-agent key sets differ by that mode. The authoring-side vocabulary must be reconcilable with this one rather than becoming a third dialect."
+    relevance: "Evidence that the concept already exists downstream under different words. Verified 2026-08-18: scoring_mode is `label` for pt-classifier and `artifact` for mock-data-author and flow-author, and the per-agent key sets differ by that mode. The authoring-side vocabulary must be reconcilable with this one rather than becoming a third dialect. NOT an edit surface of this AC — registration is TQ-200c-4's."
   - path: scripts/ac_store/generate_ticket_from_ac.py
-    relationship: describes
+    relationship: modifies
     status: exists
-    relevance: "The producer side of the plan. Its ## Test Requirements descriptors are what a consumer reads; a judged proof must survive from the AC record into that plan intact, since a word that is dropped in transit is not shared."
+    relevance: "The producer side of the plan, and the third file this AC edits. Its ## Test Requirements descriptors are what a consumer reads; a judged proof must survive from the AC record into that plan intact, since a word that is dropped in transit is not shared. Retagged describes -> modifies by it-po 2026-08-18."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  reference_file_path: "config/ac_store_schema.json"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+    - llm-expert
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ unit_tests/agents/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-entry key that says HOW a proof is settled, added to the existing test_spec item schema. The BA deliberately left the naming to the it-po; this is that decision. It rides the EXISTING test_spec entry rather than a sibling field, so a mixed plan (TQ-200c-3) is two entries in one list rather than two unrelated notations, and so an angle and a proof_mode can coexist on one proof. Because test_spec items set additionalProperties: false, the key must be declared in the item schema — there is no side door."
+    properties:
+      proof_mode:
+        type: string
+        enum:
+          - asserted
+          - judged
+        description: "How this proof is settled. `asserted` = a deterministic assertion decides it. `judged` = a judgment about a model's output decides it. ABSENT is not `judged` and not an error: an entry with no proof_mode keeps exactly the meaning it had before this key existed, which is `asserted`. That default is what the criteria's last clause requires of the ~2,900 existing records, and it must be a read-time default, not a backfill."
+    required: []
+  constraints:
+    - "Must add the proof_mode key to the test_spec ITEM schema, not to the AC root: test_spec items set additionalProperties: false, so a key declared anywhere else is rejected by the validator and the author never sees the option."
+    - "An unrecognised proof_mode value must be refused at authoring time — the point at which an author is still present to fix it — naming the offending value. A value that validates and is then ignored downstream is the failure this AC exists to remove."
+    - "An entry carrying NO proof_mode must keep its pre-existing meaning without being rewritten. No migration, backfill or re-annotation of existing records may be required to keep the store valid. Verify by validating the whole store before and after the change and asserting the pass/fail set is unchanged."
+    - "The vocabulary must be single-sourced: the set of legal proof_mode values must have exactly one definition that both the authoring-side validator and the plan-consumer read. Two coordinated hand-maintained lists that happen to agree today satisfy the letter of the criteria and not the AC, and are what TQ-200c-1-i is written to catch."
+    - "The consumer side (the test-writer agent template) must be taught the same word in the same change. It currently contains zero occurrences of the word eval and offers unittest or pytest only; shipping the schema half alone produces a store full of judged demands answered with pytest files, which is worse than the status quo."
+    - "The shared test-angles reference page must carry the new word in the same change. The L1's documentation_rationale makes that page the single reference home and states that a word not written there is by definition not shared — so this is a criterion, not a documentation courtesy, and no separate documentation AC exists to cover it."
+    - "proof_mode judged must be reconcilable with the eval harness's existing scoring_mode axis (label / artifact) rather than becoming a third dialect. proof_mode says WHETHER a judgment settles the proof; scoring_mode says HOW that judgment is scored. Do not merge them and do not duplicate the scoring_mode values into the authoring vocabulary."
+    - "Must not alter the meaning, ordering or wording of any existing test_spec entry. Adding an expressible option is the whole change; re-deriving or normalising existing plans is out of bounds."
+    - "MIXED SURFACE, FLAGGED (BP-1100f-3-i). The declared surface spans .json/.py (python-coder) and two .md files, one of which is an agent template owned by llm-expert. The generator builds a ticket's agents map from assigned_agent alone, so no llm-expert phase will be spawned. Treat the template and reference-page edits as in-scope for this ticket and have them reviewed as prompt work before sign-off."
+delivers_to:
+  agent: python-coder
+  contract: "A single shared proof-kind vocabulary — the test_spec[].proof_mode key with the closed value set {asserted, judged} and an absent-means-asserted read-time default — defined once in the AC store schema, enforced at authoring time, documented on the shared test-angles page, and understood by the test-writer template. TQ-200c-2 emits into it, TQ-200c-3 carries two entries of it in one plan, TQ-200c-4 lands its judged half in the eval harness, and TQ-200c-5 reports on a kind it could not carry through. All four are unbuildable until this exists."
+expects_from: null
 test_required: true
+test_spec:
+  - name: test_a_judged_proof_can_be_authored_in_the_same_shape_as_a_deterministic_one
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-1]
+    description: "Writes a real on-disk AC record whose test_spec holds one entry marked judged and one marked asserted, runs the real store validator over it, and asserts it passes — both kinds stated in one list, in one shape."
+  - name: test_an_unrecognised_proof_kind_is_refused_at_authoring_time_naming_the_word
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-1]
+    description: "A record whose test_spec entry carries a proof kind in neither side's vocabulary is rejected by the real validator with a non-zero exit, and the offending value appears in the message. Asserting only that it failed passes on a validator that rejects the file for an unrelated reason."
+  - name: test_a_record_with_no_proof_kind_keeps_its_previous_meaning
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-1]
+    description: "BACKWARD COMPATIBILITY. An untouched pre-existing record whose test_spec states no proof kind validates unchanged and is read as asserted — not judged, and not unknown. Runs against copies of real store records rather than a hand-written fixture, which would reproduce the author's own assumption."
+  - name: test_the_whole_real_store_still_validates_after_the_vocabulary_lands
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [TQ-200c-1]
+    description: "Validates every record in the real store and asserts the set of failures is unchanged from the pre-change baseline. About 2,900 records carry pre-vocabulary proof statements; an implementation that requires re-annotation fails here and nowhere else."
+  - name: test_the_consumer_side_recognises_the_same_word_the_producer_side_emits
+    target_dir: unit_tests/agents/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    covers: [TQ-200c-1]
+    description: "PARITY SEAM. Derives the legal proof-kind vocabulary from its single definition and asserts the test-writer template documents every value, so the two sides cannot drift. The test must READ the vocabulary from its source rather than restate it — a test carrying its own copy of the list is a third dialect and passes on a half-shared vocabulary."
+  - name: test_a_judged_proof_survives_into_the_generated_plan_as_judged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-1]
+    description: "PRODUCTION ENTRY POINT: runs the real generator command line over a COPY of a store holding an AC with a judged test_spec entry and asserts the written ticket's Test Requirements section marks that entry judged. A vocabulary the generator drops in transit is not shared. Use a copy — the generator writes an implemented_by back-reference into the source AC."
+test_rationale: |
+  The failure this AC exists to prevent is a HALF-shared vocabulary, and every cheap test
+  passes on one. A test that authors a judged entry and re-reads the YAML passes on a
+  schema-only change; a test that greps the test-writer template for the word passes on a
+  template-only change; either alone leaves the store carrying written, apparently-honoured
+  demands for a kind of proof nobody produces — worse than the status quo, per TQ-200c-1-i.
+  So the contract has three legs that must all be exercised: authoring acceptance
+  (criterion), authoring refusal of an unknown word (failure), and PARITY between the two
+  sides derived from one source (seam). The seam test is specified to read the vocabulary
+  from its definition rather than restate it, because a test with its own hardcoded copy of
+  the enum is a third dialect and passes while the two real sides drift.
+  Backward compatibility is a criterion, not a courtesy, so it gets two tests: a boundary
+  test on an absent proof kind and a real_artifact test over the actual store, because the
+  ~2,900 unannotated records are the population at risk and no fixture represents them. The
+  reachability test exists because a schema change the generator never carries into the plan
+  is the same phantom-done shape one layer up: the word exists, is authored, and evaporates
+  in transit.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (L), object-form
+      it_requirements naming the AC store schema as reference_file_path plus the proof_mode
+      naming decision the BA explicitly deferred to the it-po, delivers_to, and a six-entry
+      test_spec with rationale. Retagged four doc_links describes -> modifies so the files this
+      AC actually edits reach the generated ticket's files_touched; describes and related are
+      excluded by design (generate_ticket_from_ac.py:104-106, docs/how-to/ac-traceability-store.md).
+      criteria, title and notes untouched. CAVEAT: mixed surface — the test-writer agent template
+      is llm-expert's file type and the generator routes agents from assigned_agent alone, so the
+      python-coder ticket spawns no llm-expert phase. The template edit is pinned as a constraint
+      and required_skills lists llm-expert; a reviewer must confirm that half landed."
 superseded_by: null
 covered_by:
   - TQ-200c-1-i

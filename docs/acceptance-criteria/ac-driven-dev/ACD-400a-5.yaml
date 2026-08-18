@@ -36,7 +36,7 @@ doc_links:
   - path: scripts/ac_store/ac_prioritizer.py
     relationship: related
     status: exists
-    relevance: "Verified 2026-08-18: contains no ancestor logic of its own — it merges scan_ac_store's already-classified ready/blocked lists (lines 221-232). So it inherits whatever this AC changes and cannot diverge, which satisfies ACD-400a-3's consistency requirement without a second edit. Do not add a parallel rule here."
+    relevance: "Verified 2026-08-18: contains no ancestor logic of its own — it merges scan_ac_store's already-classified ready/blocked lists (lines 221-232). So it inherits whatever this AC changes and cannot diverge, which satisfies ACD-400a-3's consistency requirement without a second edit. Do not add a parallel rule here. Confirmed by it-po 2026-08-18 as NOT an edit surface: 'related' is correct and must stay, or the generated ticket would authorise a parallel implementation this AC's own relevance text forbids."
   - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-3.yaml
     relationship: related
     status: exists
@@ -48,14 +48,59 @@ doc_links:
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The predicate the narrowed exclusion is evaluated against. The BA deliberately declined to name a helper, a parent-id derivation or a level comparison and left the recognition of 'can be built' to the it-po; this is that decision. The exclusion must be keyed on whether a prerequisite can EVER be independently completed, not on whether it is an ancestor. Nothing new is stored on any record — the predicate is derived from fields the schema already carries, so no store migration is required and the ~3,100 existing records are untouched."
+    required:
+      - independently_completable
+    properties:
+      independently_completable:
+        type: boolean
+        description: "True when the prerequisite reaches a completed state by being built — it carries its own criteria and a single owner and can be handed to a builder as it stands. False for a composite that only rolls up from its children. Derive it from the record's own fields (the L0/L1-are-composite statement in docs/reference/ac-schema.md is the normative source); do NOT derive it from the ancestor walk, which is the very thing being narrowed. A prerequisite with independently_completable true is gated normally; only false ones may be dropped from the blocking set."
+  constraints:
+    - "The exclusion must be NARROWED, not deleted. ACD-400a-3's guarantee — a child that names its never-independently-completable parent as a prerequisite is not held forever — must keep passing. A one-line removal of `dep not in ancestors` satisfies every sentence about R and reinstates the exact deadlock ACD-400a-3 was written to remove, on a store where nearly every freshly-authored leaf carries its parent in depends_on."
+    - "The decision must be made PER PREREQUISITE ENTRY, not once per record. _classify_ac builds ONE blocking list from all of depends_on, so a record can name a buildable and a composite prerequisite side by side — ACD-400a-4 does exactly that today. A per-record short-circuit passes every single-prerequisite case and fails ACD-400a-5-i."
+    - "Do not add a parallel rule to scripts/ac_store/ac_prioritizer.py. Verified 2026-08-18: it merges scan_ac_store's already-classified lists and holds no ancestor logic, so it inherits this change and cannot diverge. A second implementation there would satisfy ACD-400a-3's consistency requirement today and drift silently, because both wrong answers look like a ready queue."
+    - "The corrected rule must be reached by the real command surface. A rule the entrypoint never consults is the same phantom-done failure wearing a different hat — the store's ready/held split is only observable through the command line the build loop actually runs."
+    - "Must not change the shape of the scanner's output. The ready/blocked payload and the blocked_by account are consumed by ac_prioritizer and the build loop; this AC changes which ids appear, never the contract they appear in."
+    - "Expect the real-store totals to move. At the time of the observation the store reported 479 ready and 375 held, with BO-2400g-1-i and BO-2400g-4-i wrongly ready. A change that leaves the store-wide split identical has almost certainly not taken effect — verify against the real store, not only against fixtures."
+delivers_to:
+  agent: python-coder
+  contract: "A per-prerequisite blocking decision in scan_ac_store._classify_ac: a prerequisite is dropped from the blocking set only when it can never be independently completed, so a buildable-but-unfinished prerequisite continues to hold its dependant while a composite one does not. The ready/blocked payload shape is unchanged, so scripts/ac_store/ac_prioritizer.py inherits the correction without an edit and ACD-400a-5-i refines the same decision at per-entry granularity."
+expects_from:
+  ac_id: ACD-400a-3
+  contract: "The ancestor-aware classification and its guarantee that a child naming a never-independently-completable parent as a prerequisite is not held forever. This AC refines that rule rather than replacing it: the composite half must keep passing unchanged, which is why the S/C clauses sit inside these criteria and not only in a test."
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/ac_store/scan_ac_store.py as reference_file_path plus the
+      independently-completable predicate the BA explicitly deferred to the it-po, delivers_to,
+      and expects_from (ACD-400a-3's ancestor-aware classification, the edge the BA's notes say
+      reads naturally here). doc_links needed no retagging: scan_ac_store.py was already correctly
+      tagged 'modifies' and ac_prioritizer.py is deliberately 'related' because this AC must NOT
+      edit it. The BA-authored test_spec and test_rationale are kept verbatim — they already cover
+      criterion, negative control, real_artifact and reachability, and the pair-of-opposed-criteria
+      structure is load-bearing. criteria, title and notes untouched."
 superseded_by: null
 covered_by: [ACD-400a-5-i]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+test_required: true
 test_spec:
   - name: test_buildable_prerequisite_above_in_hierarchy_still_holds_its_dependant
     target_dir: unit_tests/ac_store/

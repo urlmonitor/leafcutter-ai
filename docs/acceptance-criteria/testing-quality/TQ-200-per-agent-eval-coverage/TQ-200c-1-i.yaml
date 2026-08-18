@@ -27,22 +27,143 @@ criteria: |
 depends_on:
   - TQ-200c-1
 doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the hand-over happens, and the file this L3 edits: the ## Test Requirements descriptor list is the artifact that crosses between the two sides, so it is where a kind can be dropped or re-read in transit, and it is where the parity check must refuse to hand a plan over. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched (only the edit-surface relationships do — generate_ticket_from_ac.py:104-106)."
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
-    relevance: "The producing side's vocabulary. Verified 2026-08-18: enums at lines 401 and 411, additionalProperties: false at lines 15 and 387. A word added here and nowhere else is exactly the half-shared vocabulary this L3 forbids."
+    relevance: "The producing side's vocabulary — READ by this L3's check, not edited by it (TQ-200c-1 owns the edit). Verified 2026-08-18: enums at lines 401 and 411, additionalProperties: false at lines 15 and 387. A word added here and nowhere else is exactly the half-shared vocabulary this L3 forbids."
   - path: templates/agents/test-writer.md
     relationship: describes
     status: exists
-    relevance: "The consuming side's vocabulary. Verified 2026-08-18: zero occurrences of \"eval\"; framework choice is unittest or pytest. This template is the concrete other side against which the parity failure must be detectable — a judged request handed to it today would be silently answered with a pytest file, which is precisely the downgrade the second clause prohibits."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
-    relationship: describes
-    status: exists
-    relevance: "Where the hand-over happens: the ## Test Requirements descriptor list is the artifact that crosses between the two sides, so it is where a kind can be dropped or re-read in transit."
+    relevance: "The consuming side's vocabulary — READ by this L3's check, not edited by it (TQ-200c-1 owns the edit). Verified 2026-08-18: zero occurrences of \"eval\"; framework choice is unittest or pytest. This template is the concrete other side against which the parity failure must be detectable — a judged request handed to it today would be silently answered with a pytest file, which is precisely the downgrade the second clause prohibits."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The parity verdict computed at hand-over, before any plan is written. It is a three-state answer, not a boolean, because the two directions of breakage must be distinguishable in the message and are tested separately."
+    required:
+      - verdict
+    properties:
+      verdict:
+        type: string
+        enum:
+          - parity_ok
+          - producer_only
+          - consumer_only
+        description: "producer_only = the plan states a kind the consumer does not recognise. consumer_only = the consumer recognises a kind the producer cannot emit. Both are errors; parity_ok is the only state in which a plan may be handed over."
+      unrecognised_kind:
+        type: string
+        description: "The offending proof-kind word, reproduced verbatim in the error so the author can find it."
+      producer_vocabulary:
+        type: array
+        items:
+          type: string
+        description: "The kinds the producing side can emit, read from their single definition — never restated in this module."
+      consumer_vocabulary:
+        type: array
+        items:
+          type: string
+        description: "The kinds the consuming side recognises, read from the consumer's own declaration — never restated in this module."
+  constraints:
+    - "On a parity mismatch NO plan may be written. Reporting the error and emitting the plan anyway satisfies the words 'reported as an error' and fails the criteria — the clause is 'and no plan is handed over'. Verify by asserting the ticket file does not exist on disk after the failing run."
+    - "A kind the consumer does not recognise must NEVER be silently re-read as the nearest kind it does recognise. Nearest-match is the exact mechanism of the parent L1's whole defect and must be absent, not merely discouraged."
+    - "Both vocabularies must be READ from their single sources at check time. A parity check holding its own hardcoded copy of either list is a third dialect: it will report parity_ok while the two real sides have already drifted, which is the failure this L3 exists to detect."
+    - "Absent is not unknown. A proof statement carrying no kind must take the pre-vocabulary default and must not be reported as a parity failure — roughly 2,900 existing records depend on this, and treating absent as unknown fails every one of them."
+    - "The symmetric direction must be detected, not merely handled. A consumer-recognised kind the producer cannot emit produces no artifact to trip over, so it can only be found by comparing the two vocabularies directly rather than by inspecting a plan."
+    - "The error must name the offending word AND both sides. A message that says only 'unknown proof kind' leaves an author with no way to tell which side is behind."
+delivers_to:
+  agent: python-coder
+  contract: "A hand-over-time parity verdict (parity_ok / producer_only / consumer_only, plus the offending word and both vocabularies read from their single sources) that gates plan emission: a non-parity_ok verdict aborts before any ticket is written. TQ-200c-5's reporting obligation consumes this verdict as one of its named, attempted checks rather than re-deriving it."
+expects_from:
+  ac_id: TQ-200c-1
+  contract: "The single-sourced proof-kind vocabulary (test_spec[].proof_mode, values {asserted, judged}, absent-means-asserted) defined once in the AC store schema and declared on the consumer side in the test-writer template. This L3 reads both definitions; it does not define either, and must not restate their contents."
 test_required: true
+test_spec:
+  - name: test_a_kind_the_consumer_does_not_know_aborts_the_handover_naming_the_word
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-1-i]
+    description: "Over a COPY of a store, a plan carrying a proof kind the consumer's declaration omits produces a non-zero exit whose message contains the offending word and identifies both sides."
+  - name: test_no_plan_is_written_when_parity_fails
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-1-i]
+    description: "Asserted separately from the message test: after the failing run the ticket file must not exist on disk. An implementation that logs the error and writes the plan anyway passes the message assertion and fails here."
+  - name: test_an_unknown_kind_is_never_downgraded_to_the_nearest_known_one
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-1-i]
+    description: "The prohibition, asserted positively: no artifact produced by the failing run may contain the nearest recognised kind in place of the unrecognised one. Silent nearest-match is the parent L1's defect mechanism and would otherwise read as a graceful degrade."
+  - name: test_the_symmetric_gap_is_reported_rather_than_read_as_absent
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-1-i]
+    description: "The reverse break: a kind the consumer declares that the producer cannot emit is reported as a mismatch. Testing only the forward direction leaves this half unproven, and this half is the quieter one — it produces no artifact to notice."
+  - name: test_a_proof_with_no_kind_stated_is_not_a_parity_failure
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-1-i]
+    description: "Absent is not unknown. A record whose test_spec states no proof kind hands over normally and keeps its pre-vocabulary meaning. An implementation conflating absent with unrecognised fails roughly 2,900 existing records."
+  - name: test_parity_is_enforced_on_the_real_generation_command
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-1-i]
+    description: "PRODUCTION ENTRY POINT: drives the generator's real command line, not the parity helper directly, and asserts the abort happens there. A correct parity check the command surface never calls is the same phantom-done shape the parent tree is about."
+test_rationale: |
+  Every assertion here is on OBSERVABLE OUTPUT of the real hand-over — exit status, message
+  content, and whether a ticket file exists — because the failure mode is a consumer doing
+  something reasonable-looking with a word it does not know. Nothing about that is visible
+  in source text: a test asserting the generator mentions a vocabulary, holds a parity
+  helper, or contains a nearest-match guard passes on an implementation where the guard
+  never runs.
+  The message test and the no-plan-written test are deliberately separate. The single most
+  likely half-implementation logs a clear parity error and then emits the plan anyway; it
+  passes any test that only inspects stderr, and only the on-disk absence assertion catches
+  it. The downgrade prohibition is asserted positively rather than inferred from 'it errored'
+  because nearest-match is exactly what an implementation does while still reporting
+  something.
+  The symmetric case gets its own test because it produces no artifact: a consumer that has
+  learned a kind the producer can never emit simply never sees it and reports nothing, so a
+  forward-only suite is green on a half-built check. The absent-kind test guards TQ-200c-1's
+  backward-compatibility clause, which this L3 is the most likely place to break. The
+  reachability test exists because the parity rule is worthless if the real generation
+  command never consults it.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path,
+      delivers_to, expects_from (TQ-200c-1's vocabulary), and a six-entry test_spec with
+      rationale. Retagged the generator doc_link describes -> modifies so the hand-over surface
+      reaches files_touched; the schema and template links stay describes because this L3 READS
+      both vocabularies and edits neither — TQ-200c-1 owns those edits. criteria, title and notes
+      untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -26,14 +26,14 @@ criteria: |
 depends_on:
   - TQ-200c-4
 doc_links:
+  - path: scripts/evals/eval_selector.py
+    relationship: modifies
+    status: exists
+    relevance: "The mechanism the third clause is stated against, and the file this L3 edits: reachability is a property only the selector can answer, so the gap report must be computed from the same trigger intersection the selector performs rather than from a second copy of that logic. TQ-200b-3 (done) computes the affected set by intersecting a change's file list against each agent's declared trigger globs; only affected evals run. A set whose globs match nothing the agent's own material touches is therefore never selected, and its absence from every run reads exactly like an unaffected pass. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
   - path: scripts/evals/agent_eval_config.json
     relationship: describes
     status: exists
-    relevance: "Both halves of the registration this L3 checks. Verified 2026-08-18: each of the three configured agents carries an `eval_set` path (the pointer that can dangle) and a `triggers` glob list (the reachability condition of the third clause). pt-classifier's triggers include its own template, its eval.jsonl, run_agent_eval.py and agent_eval_config.json itself; the artifact agents' lists are longer. A new entry whose triggers omit the agent's own template is registered and unreachable."
-  - path: scripts/evals/eval_selector.py
-    relationship: describes
-    status: exists
-    relevance: "The mechanism the third clause is stated against. TQ-200b-3 (done) computes the affected set by intersecting a change's file list against each agent's declared trigger globs; only affected evals run. A set whose globs match nothing the agent's own material touches is therefore never selected, and its absence from every run reads exactly like an unaffected pass."
+    relevance: "Both halves of the registration this L3 checks — READ, not edited: this AC reports on the file's contents and must not change them. Verified 2026-08-18: each of the three configured agents carries an `eval_set` path (the pointer that can dangle) and a `triggers` glob list (the reachability condition of the third clause). pt-classifier's triggers include its own template, its eval.jsonl, run_agent_eval.py and agent_eval_config.json itself; the artifact agents' lists are longer. A new entry whose triggers omit the agent's own template is registered and unreachable."
   - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200a-1.yaml
     relationship: related
     status: exists
@@ -42,10 +42,131 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The neighbouring guarantee and the boundary. TQ-200b-4 (in_progress) makes a MISSING or STALE result for a TRIGGERED agent a hard failure. It presupposes the agent gets triggered. This L3 covers the case its enumeration never reaches — an agent or set that is never in the affected list at all, so no result is ever expected and none is ever missed."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/evals/eval_selector.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/evals/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The gap report's per-set entry. Three distinct failures produce ONE observable — nothing runs and nothing fails — so each is named as its own kind rather than folded into a single 'not covered' verdict, and reporting is per SET rather than per agent."
+    required:
+      - agent
+      - eval_set
+      - gap_kind
+    properties:
+      agent:
+        type: string
+        description: "The agent the set belongs to. Named in every gap kind, per the criteria."
+      eval_set:
+        type: string
+        description: "The specific set the gap is about. Per-set rather than per-agent reporting is the fourth clause: one reachable row must not mask an unreachable sibling."
+      gap_kind:
+        type: string
+        enum:
+          - unreferenced_set
+          - dangling_registration
+          - untriggerable_set
+        description: "unreferenced_set = rows on disk in a set no registration mentions. dangling_registration = a registration pointing at a set that is absent or empty. untriggerable_set = registered and non-empty, but no change to the agent's own material would ever select it. Each is reported in its own right; collapsing them loses the reason and makes the report unactionable."
+  constraints:
+    - "Reachability must be computed from the SAME trigger intersection the selector performs, not from a re-implementation of it. A second copy of the glob logic will agree today and drift, and the drift is silent because both wrong answers look like coverage."
+    - "The report must be per SET, not per agent. The config holds one entry per agent today, so per-agent reporting is the natural implementation and the natural bug: one reachable row would mask an unreachable sibling and the agent would read as fully covered."
+    - "All three gap kinds must be reported in their own right, each naming the agent and — where the criteria say so — the set. Collapsing them into one 'not covered' verdict loses the reason, and the three have different remedies."
+    - "An untriggerable set means: no change to the agent's own material would ever select it. Determine that by exercising the selector against the agent's own material, not by inspecting the glob strings — a glob that looks plausible and matches nothing is precisely the case that reads green forever."
+    - "This AC reports gaps and must NOT decide whether a gap blocks a merge; that is TQ-200b-4's territory. It must also not create rows or sets, which is its parent's."
+    - "Must not contradict TQ-200a-1's existing rule that an in-scope agent with no set at all is a coverage gap. These are one idea at two depths and must be reported through the same surface, not two competing coverage reports."
+delivers_to: null
+expects_from:
+  ac_id: TQ-200c-4
+  contract: "Registration entries of the shape {eval_set, scoring_mode, triggers, threshold} created for agents receiving a judged demand. This L3 inspects those entries and their sets; it neither creates nor repairs them."
 test_required: true
+test_spec:
+  - name: test_rows_in_a_set_no_registration_mentions_are_reported_as_a_gap
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-4-i]
+    description: "An orphaned set of real rows on disk, referenced by no registration, is reported as a gap naming the agent and the unreferenced set — and is not counted toward coverage. Both halves asserted: a report that names it and still counts it fails."
+  - name: test_a_registration_pointing_at_an_absent_or_empty_set_is_reported_as_a_gap
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-4-i]
+    description: "Two sub-cases in one test because they share a remedy and differ only in whether the file exists: a pointer to a missing file and a pointer to an empty file must each be reported as a gap naming the missing set, never as a covered agent."
+  - name: test_a_registered_non_empty_set_nothing_would_ever_select_is_reported_as_a_gap
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-4-i]
+    description: "THE NON-OBVIOUS CLAUSE. A well-formed entry whose triggers omit the agent's own material is reported as a gap naming the agent. Constructed by exercising the real selector against the agent's own files and asserting the set is never selected — not by inspecting the glob strings, which look plausible."
+  - name: test_one_reachable_set_does_not_mask_an_unreachable_sibling
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-4-i]
+    description: "An agent with one reachable set and one unreachable one must not be reported as fully covered, and the report must name the unreachable set specifically. Per-agent rounding is the natural implementation given one config entry per agent today."
+  - name: test_reachability_is_answered_by_the_real_selector_not_a_second_copy_of_its_logic
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    covers: [TQ-200c-4-i]
+    description: "Changing the selector's trigger-intersection behaviour must change the reachability verdict. A gap reporter carrying its own glob implementation passes every case above and drifts silently, since both wrong answers look like coverage."
+  - name: test_the_gaps_appear_in_the_real_coverage_report_command
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-4-i]
+    description: "PRODUCTION ENTRY POINT: runs the real eval-coverage reporting surface over a temp eval tree containing all three gap shapes and asserts all three appear in its actual output. A correct gap computation nothing reports is invisible, which is the same observable as no gap at all."
+  - name: test_the_real_eval_tree_is_reported_without_a_false_gap
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [TQ-200c-4-i]
+    description: "NEGATIVE CONTROL over the actual on-disk eval config and sets: the three currently-configured agents, whose triggers do include their own templates, must produce no gap. A reporter that flags everything satisfies every positive test above and is useless."
+test_rationale: |
+  The three failures this L3 names produce ONE observable from outside — nothing runs and
+  nothing fails — which is indistinguishable from full coverage. That is why each gets its
+  own test rather than being covered by a general "the runner should find it" assertion, and
+  why every test asserts BOTH that the gap is reported AND that the agent is not counted as
+  covered: a report that lists a gap and still returns a covered verdict is the failure
+  wearing a label.
+  The untriggerable-set test is specified to construct its case by exercising the real
+  selector rather than by inspecting glob strings, because the whole point of the clause is
+  that the strings look plausible. For the same reason the seam test requires the verdict to
+  move when the selector's behaviour moves — a reporter with its own copy of the glob logic
+  agrees today, drifts later, and both wrong answers read as coverage.
+  Per-set rather than per-agent reporting gets a dedicated test because the config holds one
+  entry per agent today, making per-agent rounding both the natural implementation and the
+  natural bug. The real_artifact negative control is mandatory here: a gap reporter that
+  flags everything passes all five positive tests and is worse than nothing, and only the
+  real, correctly-configured tree can prove it does not.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/evals/eval_selector.py as reference_file_path plus the
+      three-kind gap-report fragment, expects_from (TQ-200c-4's registration entries), and a
+      seven-entry test_spec with rationale. Retagged the selector doc_link describes -> modifies;
+      agent_eval_config.json stays describes because this AC REPORTS on that file and must not
+      change it. CAVEAT: TQ-200a-1's coverage-report surface is not yet built, so the host file
+      for the gap report is not finally determined — the selector is named because reachability
+      is only answerable there. Confirm the surface with TQ-200a-1 before implementation.
+      criteria, title and notes untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

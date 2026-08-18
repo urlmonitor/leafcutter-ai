@@ -34,17 +34,17 @@ depends_on:
   - TQ-200a-1
 doc_links:
   - path: scripts/evals/agent_eval_config.json
-    relationship: describes
+    relationship: modifies
     status: exists
-    relevance: "The registry the second clause means by \"where the runner already looks\". Verified 2026-08-18: it configures exactly THREE agents — pt-classifier (scoring_mode label, label_axes, derive_outcome, threshold 0.70), mock-data-author and flow-author (scoring_mode artifact, artifact_type, schema, sandbox_copy, tools, timeout 900, threshold 0.66) — each with an `eval_set` path and a `triggers` list. An agent absent from this file has no place for a row to land, which is what the fourth clause is about."
+    relevance: "The registry the second clause means by \"where the runner already looks\", and the file this AC edits — a demand for an agent with no entry must end with one here. Verified 2026-08-18: it configures exactly THREE agents — pt-classifier (scoring_mode label, label_axes, derive_outcome, threshold 0.70), mock-data-author and flow-author (scoring_mode artifact, artifact_type, schema, sandbox_copy, tools, timeout 900, threshold 0.66) — each with an `eval_set` path and a `triggers` list. An agent absent from this file has no place for a row to land, which is what the fourth clause is about. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
   - path: scripts/evals/run_agent_eval.py
     relationship: describes
     status: exists
-    relevance: "The existing shared runner the third clause forbids duplicating. It is real and working, not greenfield, and it already stamps each result with its trigger SHAs (TQ-200b-4, verified via unit_tests/evals/test_trigger_sha_stamp.py)."
+    relevance: "The existing shared runner the third clause forbids duplicating — READ and reused, NOT edited: a change here is a strong signal the demand is standing up a second harness rather than joining this one. It is real and working, not greenfield, and it already stamps each result with its trigger SHAs (TQ-200b-4, verified via unit_tests/evals/test_trigger_sha_stamp.py)."
   - path: scripts/evals/eval_selector.py
     relationship: describes
     status: exists
-    relevance: "How a newly registered row becomes reachable in practice: the selector computes the affected set by intersecting a change against each agent's declared trigger globs (TQ-200b-3, done). A row added to a set whose triggers do not cover it is registered but unreachable — the failure TQ-200c-4-i owns."
+    relevance: "How a newly registered row becomes reachable in practice: the selector computes the affected set by intersecting a change against each agent's declared trigger globs (TQ-200b-3, done). A row added to a set whose triggers do not cover it is registered but unreachable — the failure TQ-200c-4-i owns, and the reason a new registration must carry triggers rather than only an eval_set path."
   - path: docs/product-truth/classifier/eval.jsonl
     relationship: relates-to
     status: exists
@@ -52,15 +52,146 @@ doc_links:
   - path: templates/agents/test-writer.md
     relationship: describes
     status: exists
-    relevance: "The likeliest party to be handed the judged demand and the reason the first clause is worded against prose. Verified 2026-08-18: zero occurrences of \"eval\" in this template; its framework choice offers unittest or pytest only; it does hold the Write tool, so it is physically capable of authoring a row and is simply never told such a thing exists."
+    relevance: "The likeliest party to be handed the judged demand and the reason the first clause is worded against prose. Verified 2026-08-18: zero occurrences of \"eval\" in this template; its framework choice offers unittest or pytest only; it does hold the Write tool, so it is physically capable of authoring a row and is simply never told such a thing exists. Teaching it the word is TQ-200c-1's edit, which is why this AC depends on c-1 and does not name the template as its own surface."
   - path: .github/workflows/agent-evals.yml
     relationship: relates-to
     status: exists
     relevance: "The CI surface (\"Agent evals (affected)\") that consumes the runner's output. Named here only to establish that a registered row has a real path to being executed; the gating behaviour itself belongs to TQ-200b-4, not to this AC."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  reference_file_path: "scripts/evals/agent_eval_config.json"
+  n_location_rule: "one per agent that receives a judged demand"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/evals/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The registration entry a judged demand must end up producing for an agent that had none. Modelled on the three entries already in the file — NOT a uniform shape: label mode carries label_axes / derive_outcome / response_label_field, artifact mode carries artifact_type / schema / sandbox_copy / tools / timeout. A registration mechanism assuming one uniform shape will not survive contact with the file. Read the file before implementing."
+    required:
+      - eval_set
+      - scoring_mode
+      - triggers
+      - threshold
+    properties:
+      eval_set:
+        type: string
+        description: "Path to the agent's single eval set — one set per agent, per TQ-200a-1. Must point at a real, non-empty file; a dangling pointer is a gap under TQ-200c-4-i, not coverage."
+      scoring_mode:
+        type: string
+        description: "The scoring the agent's set declares. Whichever mode is chosen, the mode-specific keys the existing entries carry for that mode must be present — the per-agent key sets differ BY MODE and that variation is meaningful, not incidental."
+      triggers:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: "Glob list the selector intersects a change against. MUST include the agent's own template — all three existing entries list it first. An entry whose triggers omit it is registered, non-empty and selected by nothing, which reads as a permanent pass."
+      threshold:
+        type: number
+        description: "Pass threshold for the set, following the existing entries (0.70 label, 0.66 artifact)."
+  constraints:
+    - "A judged demand must result in an ARTIFACT, not a sentence. The observable is a row on disk in the agent's set, in the {id, input, expected} shape TQ-200a-1 fixes. 124 named test contracts already exist on prompt work and 115 of the named tests do not exist anywhere; a demand that becomes prose in a ticket adds 444 more obligations that look satisfied on the page."
+    - "The row must be picked up and scored by a run of the EXISTING runner with nobody naming it by hand. A second scoring path immediately forks the scoring modes, thresholds, trigger manifest and freshness rules, and TQ-200b-4's staleness guarantee is keyed to results produced by this runner — a row scored elsewhere is invisible to it."
+    - "A demand for an agent with NO existing set must end with a set the runner recognises. Dropping it with a warning is the tempting behaviour and is forbidden: three agents are configured today against 444 prompt-assigned requirements, so this is the common case, not the edge."
+    - "Any new registration must carry triggers that include the agent's own template. Registration and reachability are separate properties; an entry that is well-formed and unreachable looks green forever. TQ-200c-4-i owns detecting that, but this AC must not create it."
+    - "A satisfied judged demand must be distinguishable from a written one. The pipeline must never present the request as evidence the request was met — that is exactly what recording `PASS  non-code AC — no test contract required` does today, one level up."
+    - "Do not change how the runner scores, do not add a scoring mode, and do not introduce a second results location. Joining the harness is the requirement; extending it is TQ-200a-2 and TQ-200b."
+    - "Any new helper module must live in scripts/evals/ alongside the runner and selector so it is deployed with them. A module placed elsewhere raises ModuleNotFoundError in the deployed layout while source-tree tests stay green — the deploy-manifest trap recorded in CLAUDE.md."
+    - "SURFACE NOTE: reference_file_path names the registration file because that is the observable the criteria fix. The mechanism that writes a row and an entry is additional code whose file is not yet determined; it must live in scripts/evals/, and a reviewer should confirm the generated ticket's declared surface was extended to the module actually written before sign-off."
+delivers_to:
+  agent: python-coder
+  contract: "For every judged demand: a row in the target agent's eval set in the {id, input, expected} shape, plus — when the agent had no set — a registration entry in the shared eval config carrying eval_set, scoring_mode with that mode's required keys, triggers including the agent's own template, and a threshold. The existing runner picks the row up and scores it with nobody naming it by hand. TQ-200c-4-i consumes this registration and reports orphaned sets, dangling pointers and untriggerable sets as gaps."
+expects_from:
+  ac_id: TQ-200a-1
+  contract: "The eval-set row shape ({id, input, expected}, one per line) and the one-set-per-agent rule. A row authored before that shape is settled would have to be re-authored, which is why this is a real dependency edge and not a courtesy."
 test_required: true
+test_spec:
+  - name: test_a_judged_demand_produces_a_row_on_disk_not_prose_in_a_plan
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-4]
+    description: "After a judged demand is satisfied, the agent's eval set on disk holds a new row with an id, an input and an expected outcome. Asserting the demand appears in the ticket text is the failure this test exists to reject, not evidence of it."
+  - name: test_the_existing_runner_picks_up_and_scores_the_new_row_unnamed
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-4]
+    description: "PRODUCTION ENTRY POINT: invokes the existing runner's real surface over a temp eval tree and asserts the new row is among the rows it scored, without the test naming the row. A row nothing selects is registered and inert."
+  - name: test_the_row_is_scored_by_the_scoring_the_agents_set_already_declares
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    covers: [TQ-200c-4]
+    description: "The result carries the agent's declared scoring mode and threshold, and no second results location or scoring path is created. Asserts the absence of a fork as well as the presence of a score, because a parallel harness would score the row correctly and still break TQ-200b-4's staleness guarantee."
+  - name: test_an_agent_with_no_set_ends_up_with_one_the_runner_recognises
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-4]
+    description: "THE HARD CLAUSE. A judged demand for an agent absent from the config produces a registration the runner accepts, with triggers that include the agent's own template. Dropping the demand with a warning is the tempting behaviour and must fail here."
+  - name: test_a_registration_shape_that_does_not_match_the_scoring_mode_is_refused
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-4]
+    description: "The per-agent key sets differ by scoring mode — label carries label_axes and derive_outcome, artifact carries artifact_type, schema, sandbox_copy, tools and timeout. A registration written to one uniform shape must be rejected rather than silently accepted and unrunnable."
+  - name: test_a_written_demand_is_not_reported_as_a_satisfied_one
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-4]
+    description: "A plan carrying a judged request, with no row written, must not be reportable as proof the request was met. This is the store's existing failure one level up — 115 named tests that never existed — reproduced deliberately and asserted against."
+  - name: test_the_registration_survives_a_build_into_a_deployed_layout
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    covers: [TQ-200c-4]
+    description: "Added by it-po. After a build into a temp target dir, any new registration helper resolves and the deployed runner imports it without ModuleNotFoundError. A helper that exists only in the source tree leaves the deployed harness unable to land a demand while every source-tree test above passes."
+test_rationale: |
+  The failure this AC prevents is a demand that LOOKS satisfied, so every test asserts on a
+  durable artifact — a row on disk, a registration the runner accepts, a result the runner
+  produced — and never on the text of a plan. The store has already suffered this exact
+  failure one level over: 124 named contracts, 115 of the named tests absent, 85 of those on
+  work already marked done. A test that asserts the demand was recorded would pass on all
+  444 of the requirements that are the reason this L1 exists.
+  Registration and reachability are tested separately because they are independent
+  properties: an entry can be well-formed, point at a real non-empty set, and be selected by
+  nothing. The reachability test therefore drives the real runner and refuses to name the row
+  itself — a test that hands the runner the row it is checking for cannot distinguish
+  registered from reachable.
+  The mode-mismatch test exists because the config's per-agent key sets are NOT uniform and
+  the variation is meaningful; the natural implementation writes one shape for everyone and
+  produces entries the runner cannot execute. The no-fork assertion sits inside the scoring
+  test rather than in its own because a second harness is only observable as an absence.
+  The deployed-angle test was added during enrichment for the reason recorded in CLAUDE.md:
+  a new module under scripts/ is invisible to the deployed harness unless it is deployed,
+  and no source-tree test can see that gap.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (L), object-form
+      it_requirements naming scripts/evals/agent_eval_config.json as reference_file_path with
+      n_location_rule 'one per agent that receives a judged demand' and a registration fragment
+      modelled on the three existing non-uniform entries, delivers_to, expects_from (TQ-200a-1's
+      row shape), and a seven-entry test_spec with rationale. Retagged the eval config doc_link
+      describes -> modifies; run_agent_eval.py and eval_selector.py stay describes deliberately
+      because the third criterion clause forbids duplicating or altering the runner. KNOWN
+      SURFACE GAP recorded as a constraint: the module that performs the registration is not yet
+      determined, so files_touched will name the config only until the coder declares it.
+      criteria, title and notes untouched."
 superseded_by: null
 covered_by:
   - TQ-200c-4-i
