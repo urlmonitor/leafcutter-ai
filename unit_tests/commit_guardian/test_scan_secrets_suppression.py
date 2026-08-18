@@ -54,6 +54,7 @@ import importlib.util
 import unittest
 from pathlib import Path
 from types import ModuleType
+from typing import ClassVar
 
 # The canonical template source — ADR-001: edit this copy only; build.py
 # propagates to the 16 materialized deployed copies (.claude/, .gemini/,
@@ -89,6 +90,10 @@ def _load_scan_secrets() -> ModuleType:
 
 class TestIsSuppressedPathSuffixSemantics(unittest.TestCase):
     """GE-113c-3: allowlist path-suffix suppression semantics."""
+
+    # Declared so the dynamically-loaded module assigned in setUpClass is a
+    # known attribute rather than an implicit one (mypy attr-defined).
+    _mod: ClassVar[ModuleType]
 
     @classmethod
     def setUpClass(cls) -> None:
