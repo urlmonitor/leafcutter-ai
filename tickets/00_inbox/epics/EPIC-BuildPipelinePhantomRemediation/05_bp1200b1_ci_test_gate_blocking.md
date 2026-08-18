@@ -1,13 +1,16 @@
 ---
 title: "CI test job must be a blocking gate (drop continue-on-error) without the baseline reds blocking every PR"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-07-14
+last_updated: 2026-08-17
 depends_on: []
 priority: high
 requires_diagram: false
 requires_adr: false
+change_target: infrastructure
+risk_surface: contract_boundary
 source_ac: BP-1200b-1
 ac_coverage:
   - BP-1200b-1
@@ -15,6 +18,7 @@ ac_coverage:
   - BP-1200b-1-ii
 files_touched:
   - .github/workflows/ci.yml
+  - unit_tests/build_guards/test_ci_test_gate.py
 agents:
   architect-review: needed
   test-writer: needed
@@ -99,3 +103,32 @@ tests:
 - [ ] pull-request
 
 ## Comments
+
+### 2026-08-17 — scope-refresh review (status: ok)
+
+**Closed as SUPERSEDED — the gate was made blocking on `main` after this ticket was
+written**, by EPIC-RedTestClusterRepair ticket 09.
+
+Verified independently by three reviewers and re-checked directly against
+`.github/workflows/ci.yml`:
+
+- Job `test` / `name: "Test suite (pytest)"` carries **no** `continue-on-error`. The only
+  remaining `continue-on-error: true` in the file is on the informational `typecheck`
+  job, which is outside BP-1200b's scope.
+- The job comment states the intent explicitly: *"NO continue-on-error — dropping it is
+  the whole point of this job"*, and pins the job name as the stable contract referenced
+  by the branch-protection required-status-checks list (BP-1200c) — do not rename it.
+- It runs under `AC_ENFORCE_STRICT: "1"`, so genuinely-failing tests surface as real
+  failures instead of being downgraded to xfail. That was the prerequisite for making the
+  job blocking, and it also retires this epic's "systemic enabler" paragraph.
+- `unit_tests/build_guards/test_ci_test_gate.py` exists and passes.
+- "Test suite (pytest)" is one of the six required checks on `main` as of 2026-08-17.
+
+**Caveat carried forward, not resolved here:** the covering test's assertions are
+structural reads of the `ci.yml` YAML (`job.get("continue-on-error")` and similar). That
+is a presence-only proof of a criterion whose real evidence — that the check is *required*
+— lives in the GitHub branch-protection ruleset, outside this repo. Ticket 09
+(BP-1100b-5) will flag this file; it is a legitimate waiver candidate rather than a
+defect, since no in-repo test can reach the ruleset.
+
+No work remains in this repo.
