@@ -65,26 +65,16 @@ reachable while a required check is known-failing.
 
 ---
 
-### KI-BO-002 — `mark_done` flips `work_status: done` but leaves `implemented_by: []`
+### KI-BO-002 — moved to `ac-store`
 
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-17 · **Last seen:** 2026-08-18
-- **Where:** `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by `mark_done_built_acs`
+Refiled 2026-08-18 as **KI-ACS-001** in
+[`docs/known-issues/ac-store.md`](ac-store.md): *an AC is marked `done` with no link
+to the code implementing it.*
 
-**Symptom.** The AC is marked done with no link to the code implementing it. The
-helper is deliberately status-only ("Status-only change" per its docstring), so
-provenance is never written by any automated path.
-
-**Evidence.** TKT-600a-1 after its fast-lane build: `work_status: done`,
-`implemented_by: []`. Populated by hand in `b3124ff25`. Same gap hit on 2026-08-17
-marking the BO-2400a-3 family done via `scripts/ac_store/mark_ac_done.py`, which also
-only sets `work_status` — so this is not unique to the fast lane.
-
-**Fix direction.** Write `implemented_by` from the coder phase's `files_modified` at
-mark-done time. An AC claiming done with no provenance is a phantom-done vector: it
-asserts completion that nothing can be traced back to.
+Found during a fast-lane run and the call site is in `fast_lane.py`, but what
+`implemented_by` must contain — and what a claim of "done" has to prove — is
+provenance semantics owned by `ac-store`, not by the lane that invokes it. The id is
+retired here rather than reused, so the numbering gap is intentional.
 
 ---
 
