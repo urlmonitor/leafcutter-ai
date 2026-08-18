@@ -44,8 +44,8 @@ in the commit message. If it earns real work, author an AC for it and note the A
 ### KI-ACS-001 — An AC is marked `done` with no link to the code implementing it
 
 - **Severity:** high
-- **Status:** open
-- **Occurrences:** 2
+- **Status:** open — no AC authored yet; the semantics question below is the reason
+- **Occurrences:** 12
 - **First seen:** 2026-08-17 · **Last seen:** 2026-08-18
 - **Where:** `scripts/ac_store/mark_ac_done.py`; also reached from
   `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by
@@ -59,6 +59,18 @@ code that satisfied it — the reader has no way to check the claim.
 `implemented_by: []`; populated by hand in `b3124ff25`. Same gap on 2026-08-17 when
 the BO-2400a-3 family was marked done via `mark_ac_done.py`, which also only sets
 `work_status` — so this is not specific to the fast lane.
+
+Reproduced ten more times on 2026-08-18 (PR #485). Every one of BO-2400f-4, its six
+children, BO-2400f-11, and BO-2400c-1-ii/-iii/-iv was marked done through
+`mark_ac_done.py --test-root`, passed the coverage gate, and landed with
+`implemented_by: []`. All ten were filled in by hand in the same commit. The
+count is what makes the shape clear: this is not an occasional miss, it is the
+guaranteed outcome of every automated done-transition, and the only thing
+currently preventing a store full of unprovenanced dones is somebody noticing.
+
+Worth recording precisely because the gate did its job. Coverage was verified, a
+passing covers-tagged test existed for each — so the failure is not "done was
+claimed falsely", it is "done was claimed truthfully and left untraceable".
 
 **Fix direction.** Write `implemented_by` at mark-done time from the evidence already
 in hand (the coder phase reports `files_modified`; `done_proof` already resolves the

@@ -41,30 +41,6 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 ---
 
-### KI-BO-001 — Fast lane never writes a changelog entry, so every fast-lane PR is unmergeable
-
-- **Severity:** blocker
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/fast-lane-ship.js` (commit/PR phases)
-
-**Symptom.** `fast-lane-ship` commits and opens a PR but never produces a
-`changelogs/` entry. `Changelog entry present` is a **required** status check, so the
-PR it just opened cannot merge. The workflow reports `status: ok` and `"PR opened"`
-for a PR that is structurally blocked.
-
-**Evidence.** PR #465, the first AC built end-to-end by the lane: 5 of 6 required
-checks green, `Changelog entry present` failed, `mergeable_state: blocked`. Fixed by
-hand in `b3124ff25` to let it merge. Zero occurrences of `changelog` in
-`fast-lane-ship.js`.
-
-**Fix direction.** Add a changelog phase between the coder and commit phases, or have
-the commit phase emit the entry. Whichever, the lane's `status: ok` must not be
-reachable while a required check is known-failing.
-
----
-
 ### KI-BO-002 — moved to `ac-store`
 
 Refiled 2026-08-18 as **KI-ACS-001** in
@@ -78,33 +54,10 @@ retired here rather than reused, so the numbering gap is intentional.
 
 ---
 
-### KI-BO-005 — `injection_builders.py` is invoked as a CLI but has no CLI
-
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-14 · **Last seen:** 2026-08-14
-- **Where:** `templates/workflows-js/fast-lane-build.js:121` → `scripts/injection_builders.py`
-
-**Symptom.** The workflow calls the module as a command-line script
-(`injection_builders.py assemble_context_bundle`), but it defines no `argparse` and no
-`__main__` block. The path resolves, the call runs, nothing happens.
-
-**Evidence.** Verified zero occurrences of `argparse`/`__main__` in
-`scripts/injection_builders.py`. First found during the BP-900g-6 work and recorded in
-that PR as out of scope; re-confirmed 2026-08-18.
-
-**Fix direction.** Either give it a real CLI or remove the call. Note this is
-**verbatim the failure class `CLAUDE.md` already documents** — "`fast_lane.py` had no
-CLI so the runner's `select_batch` call was a silent no-op". It recurred, so whatever
-fix lands should be covered by a test that actually executes the command.
-
----
-
 ### KI-BO-006 — `fast-lane-build.js` is deployed but orphaned
 
 - **Severity:** low
-- **Status:** open
+- **Status:** open · AC **BO-2400c-1-v**
 - **Occurrences:** 1
 - **First seen:** 2026-08-14 · **Last seen:** 2026-08-18
 - **Where:** `templates/workflows-js/fast-lane-build.js`
@@ -117,25 +70,39 @@ amendment purely to keep it consistent.
 **Evidence.** Grep for `fast-lane-build` call sites returns only the command template,
 which dispatches `fast-lane-ship`.
 
-**Fix direction.** Delete it, or document why it is kept. This needs a deletion
-decision, not a behaviour promise — do not drag a `test_spec` behind it.
+**Fix direction.** Delete it. The blocker that previously made deletion unsafe is gone,
+and the remaining work is a test migration — see below for the real size.
 
-**Do not delete it blind — read this first (found 2026-08-18).** The orphan holds the
-only production reference to `assemble_context_bundle`, the prompt-caching layer built
-by BO-2400c-1. That function is fully implemented, has ~25 unit tests and a reference
-doc (`docs/reference/fast-lane-prompt-caching.md`), and `fast-lane-ship.js` — the lane
-that actually runs — never mentions it. So the caching feature is not partly wired, it
-is **entirely unwired**, and this orphan is the last thread attaching it to the
-codebase. Deleting the file silently retires a tested, documented capability.
+**Status update, 2026-08-18.** Until this date the orphan held the only production
+reference to `assemble_context_bundle`, so deleting it would have silently retired the
+prompt-caching layer. That is no longer true: BO-2400c-1-iii wired the layer into
+`fast-lane-ship.js`, which now assembles a bundle through the module's real
+`assemble-bundle` CLI once per run. The orphan holds nothing the running lane does not.
 
-Two honest options, and this is a capability decision for the owner rather than a
-defect fix: wire `assemble_context_bundle` into `fast-lane-ship`, or delete both and
-state plainly that prompt caching is gone.
+It also holds something actively wrong: its call still names the subcommand
+`assemble_context_bundle`, which is not what the CLI added by BO-2400c-1-ii is called
+(`assemble-bundle`). That invocation was a silent no-op before the CLI existed and is a
+plain error now. It is unreachable because nothing invokes the file — which is the
+point. This absorbs the former KI-BO-005, whose substance (the module had no
+command-line entry point at all) is fixed and closed.
 
-One trap either way: `unit_tests/workflows/test_bo2400a_runner_wiring.py:401` asserts
-the literal string `assemble_context_bundle` appears in `fast-lane-build.js`. A plain
-deletion breaks the suite — and that test pins the orphan in place while proving
-nothing about behaviour, which is the grep-only failure class `CLAUDE.md` documents.
+**Deleting this is a test MIGRATION, not a deletion — size it accordingly.**
+`unit_tests/workflows/test_bo2400a_runner_wiring.py` (513 lines) and
+`test_bo2400a_runner_structure.py` (574 lines) point at the orphan and nothing else,
+and between them carry the only `# covers:` proof for **eight** criteria: BO-2400a-1,
+-2, -3, -4, -5, BO-2400b-3, BO-2400c-1 and BO-2400d-1. Several are done. Deleting the
+file and its tests together strips the done-proof from all eight and fails
+**Proof-of-done**, a required merge check. Three architecture diagrams and
+`docs/build-dataflow.json` describe the file as well.
+
+The full plan, including the parts that must NOT be rewritten (changelogs, already-done
+ACs citing the orphan as history, and the `CLAUDE.md` phantom-done lesson that names
+it), is recorded in the notes of **BO-2400c-1-v**. One specific prohibition carries
+over: `test_bo2400a_runner_wiring.py:401` asserts the literal string
+`assemble_context_bundle` appears in the orphan. That assertion must be **deleted**, not
+re-pointed at the live file — BO-2400c-1's proof now comes from the behavioural suite
+in `test_bo2400c_prompt_cache_wiring.py`, and re-pointing a name-presence grep would
+preserve, at a new address, exactly the test that let a dead reference read as alive.
 
 ---
 
