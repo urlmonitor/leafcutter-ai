@@ -310,11 +310,11 @@
         "PR"
       ],
       "impl_summary": {
-        "done": 3,
-        "in_progress": 1,
+        "done": 2,
+        "in_progress": 2,
         "not_started": 15,
         "total": 19,
-        "asof": "2026-07-20"
+        "asof": "2026-08-18"
       },
       "tags": [
         "build-pipeline",
@@ -1095,11 +1095,11 @@
       "path": "flows/leafcutter/how-acs-are-built.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 3,
-        "in_progress": 1,
+        "done": 2,
+        "in_progress": 2,
         "not_started": 15,
         "total": 19,
-        "asof": "2026-07-20"
+        "asof": "2026-08-18"
       },
       "expands": [
         "leafcutter/python-coder-internal"

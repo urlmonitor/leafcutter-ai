@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given the installed git version is older than 2.36 and therefore does not support
@@ -40,6 +40,57 @@ delivers_to: null
 expects_from:
   ac_id: BO-1600d-3
   contract: "The re-fetch-from-origin step this edge case guards for old git versions."
+test_spec:
+  - name: test_git_version_parses_standard_output
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "The version probe turns the installed git's reported version into a comparable tuple, so the >= 2.36 decision is made before any fetch is attempted."
+  - name: test_old_git_plan_excludes_refetch_action
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "With a detected git version below 2.36 the computed plan contains no action that would invoke fetch --refetch."
+  - name: test_old_git_plan_includes_blocked_description
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "The plan produced on old git states that the installed version is too old and names 2.36 as the minimum required version."
+  - name: test_old_git_plan_excludes_remove_action_for_zero_byte_objects
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "Ordering safety — when the refetch path is not viable, the zero-byte removal action is not planned, so the refuse case cannot leave the store worse than the halted state."
+  - name: test_old_git_blocked_action_raises_on_execute
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "Executing a plan built on old git stops with the version refusal instead of shelling out to an unsupported git invocation."
+  - name: test_new_git_plan_includes_refetch_action
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "Guard does not over-refuse — with a detected version at or above 2.36 the refetch action is planned normally."
+  - name: test_unparseable_git_version_refuses_refetch
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "A failed or unparseable version probe fails closed: the refetch path is disabled and the removal action is withheld, rather than assuming support."
+  - name: test_old_git_execute_leaves_real_repo_object_store_unchanged
+    target_dir: tests/
+    framework: unittest
+    type: behavioral
+    description: "On a real temporary repository seeded with a zero-byte loose object and a git version reported below 2.36, an execute-confirmed run removes nothing and reports the version refusal naming 2.36."
+test_rationale: |
+  The refusal half of this AC is only meaningful if nothing is deleted on the
+  way to refusing, and a plan-shape assertion alone cannot prove that — a plan
+  can omit the refetch action while an earlier removal step has already run.
+  test_old_git_execute_leaves_real_repo_object_store_unchanged is therefore the
+  load-bearing descriptor: it exercises the execute path on a real repository
+  with a stubbed old version and asserts the object store is untouched.
+  test_unparseable_git_version_refuses_refetch covers the fail-closed clause in
+  it_requirements, which the criteria's happy/old-path pair does not reach —
+  an ambiguous probe must behave like old git, not like new git.
 origin_agent: business-analyst-v3
 created: 2026-07-01
 amended_by:

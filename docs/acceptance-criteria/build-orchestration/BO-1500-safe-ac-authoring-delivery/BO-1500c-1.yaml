@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
 criteria: |
   Given the authoring pipeline has completed all stages on the authoring branch
@@ -51,6 +51,52 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_approved_run_end_to_end_pushes_the_authoring_branch_to_the_origin_remote
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: e2e
+  description: After a full run against a fixture bare origin remote with the final gate approved, the
+    remote holds a ref for the authoring branch pointing at the same sha as the local authoring branch
+    HEAD.
+- name: test_approved_run_opens_exactly_one_pull_request_with_base_main_and_head_the_authoring_branch
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: A recording gh shim on PATH captures exactly one PR-creating invocation whose base argument
+    is main and whose head argument is the authoring branch name produced earlier in the same run.
+- name: test_pushed_head_carries_every_ac_file_committed_by_the_stages
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: integration
+  description: The tree at the sha pushed to origin contains every AC YAML path the stage commits produced,
+    so delivery ships the whole authored set rather than only the last stage.
+- name: test_delivery_asks_the_user_for_no_manual_branch_or_pull_request_step
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a gate stub that fails the test if consulted after the final approval, the run completes
+    and returns a PR number and URL, proving branch creation and PR opening are automatic rather than
+    delegated back to the user.
+- name: test_delivery_drives_the_shared_pull_request_machinery_at_runtime
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: The shared push-and-PR helper that build-single-ticket uses records an invocation during
+    the run and, when it is made to fail, the run reports no PR, proving reuse is exercised in control
+    flow rather than a bespoke inline call sitting next to an unused helper.
+test_rationale: "Delivery is the step where a phantom-done implementation is most costly, because a run
+  that reports 'PR opened' without a PR looks successful to the user. A direct-import unit test over an
+  open_authoring_pr() helper would prove the helper can build a gh argument list and would stay green
+  while the workflow never called it, so the contract is instead driven end-to-end against a fixture bare
+  origin and observes external effects -- a real remote ref for the push, a recorded gh invocation with
+  its actual base and head arguments for the PR. The reuse clause is the one most tempting to cover by
+  grepping the source for the helper's name; that would pass on dead code, so it is covered by executing
+  the run and additionally by failure injection -- if the shared helper is made to fail and the run still
+  reports a PR, the helper is not the path being used. The no-manual-step clause is asserted by a gate
+  stub that fails on consultation, which is stronger than checking the return payload alone. The child
+  BO-1500c-1-i already covers the cancel-before-approval path, so this parent contract covers only the
+  approved delivery path and does not duplicate it."
 delivers_to:
   agent: python-coder
   contract: An opened pull request (number + URL) to main carrying the approved AC files; consumed by

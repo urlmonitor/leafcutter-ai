@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
 criteria: |
   Given the reviewed-PR delivery path for AC authoring is implemented,
@@ -31,6 +31,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-1500c-1
   contract: The implemented approval-to-PR delivery flow this guide documents
+test_required: false
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
@@ -41,3 +42,17 @@ implemented_by:
 it_requirements: []
 change_target: docs
 risk_surface: internal
+notes: |
+  test_required: false — the deliverable is prose in a how-to guide. Nothing is
+  importable and no runtime behaviour is produced. The only mechanical assertion
+  available would be "does the Markdown contain these phrases", i.e. the
+  grep-only test the project forbids (CLAUDE.md "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep") — it would pass on a guide describing a flow the
+  code no longer implements. The behaviours the guide describes are covered
+  behaviourally elsewhere: delivery by BO-1500c-1/BO-1500d-1, the cancel path by
+  BO-1500c-1-i, resume by BO-1500b-2. Accuracy of the prose is a documentation
+  review concern (documentation_gates), not a unit test. Precedent: BO-2300a-3.
+
+  Caveat for the caller: the criteria reference /create-ac, which no longer
+  exists in the tree (retired per ADR-012). The guide's coverage of that command
+  is stale; criteria were left unmodified as required.

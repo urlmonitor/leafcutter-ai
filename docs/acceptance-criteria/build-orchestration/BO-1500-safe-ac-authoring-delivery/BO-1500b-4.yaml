@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
 criteria: |
   Given the durable, resumable authoring pipeline is implemented,
@@ -32,6 +32,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-1500b-2
   contract: The implemented resume-from-last-committed-stage behavior this diagram documents
+test_required: false
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
@@ -42,3 +43,13 @@ implemented_by:
 it_requirements: []
 change_target: docs
 risk_surface: internal
+notes: |
+  test_required: false — the deliverable is a Mermaid state diagram in the
+  architecture docs. Nothing is importable and no runtime behaviour is produced;
+  the only mechanical check available is asserting state-name strings appear in
+  the Markdown, which is the grep-only anti-pattern the project forbids
+  (CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep") — it would
+  stay green on a diagram that no longer matches the pipeline. The lifecycle the
+  diagram depicts is behaviourally covered by BO-1500b-2's test contract
+  (committed stages survive; resume starts at the first uncommitted stage).
+  Precedent: BO-2300a-3.

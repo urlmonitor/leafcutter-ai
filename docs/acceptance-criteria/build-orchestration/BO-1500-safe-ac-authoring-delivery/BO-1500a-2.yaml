@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
 criteria: |
   Given the user's original checkout has uncommitted changes
@@ -49,6 +49,34 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_original_checkout_worktree_index_and_branch_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: In a fixture repo whose original checkout carries uncommitted changes, `git status --porcelain`,
+    the HEAD sha, and the current branch name of that checkout are byte-identical before and after a full
+    authoring run.
+- name: test_concurrent_unrelated_worktree_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: A second worktree on an unrelated branch has an identical porcelain status, HEAD sha, and
+    branch name before and after the authoring run.
+- name: test_all_filesystem_writes_confined_to_the_authoring_worktree
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: A recursive mtime/content snapshot of the original checkout and the concurrent worktree
+    shows no created, modified, or deleted paths; every new or changed file lives under the authoring worktree
+    root.
+- name: test_stage_commit_git_invocations_are_anchored_to_the_authoring_worktree
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a recording git shim on PATH, every git invocation the workflow issues during a stage
+    commit carries a `-C <authoring-worktree>` anchor, and no `checkout`/`switch`/`commit` is issued against
+    the original checkout.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1

@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
 criteria: |
   Given the user starts an AC-authoring workflow (/create-ac or /plan-feature),
@@ -48,6 +48,51 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_full_authoring_run_creates_a_worktree_on_a_branch_rooted_at_the_origin_main_tip
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: e2e
+  description: Driving a whole authoring run in a fixture repo with a real origin remote and stubbed stage
+    agents leaves a new worktree whose branch merge-base equals the origin/main tip sha recorded before
+    the run.
+- name: test_authoring_branch_is_cut_from_origin_main_not_the_local_checkout_head
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: e2e
+  description: Discriminating case with local main deliberately one commit ahead of origin/main; the authoring
+    branch does not contain that local-only commit, so an implementation that branches from HEAD fails
+    while the correct one passes.
+- name: test_every_ac_yaml_a_full_run_produces_lands_under_the_authoring_worktree
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: e2e
+  description: After a complete run whose stubbed stages each emit AC YAML, every produced AC file path
+    resolves inside the authoring worktree root.
+- name: test_original_checkout_holds_no_ac_yaml_and_no_moved_head_after_a_full_run
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: e2e
+  description: The user's original checkout is snapshotted before the run; afterwards it contains none
+    of the produced AC YAML paths and its HEAD sha and checked-out branch are unchanged.
+- name: test_both_authoring_surfaces_run_through_the_same_isolation_entry_point
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: Executing the plan-feature workflow and the create-ac authoring entry point against the
+    same fixture repo each produce a worktree satisfying the identical branch-base and write-confinement
+    assertions, exercising the shared helper at runtime rather than inspecting skill prose.
+test_rationale: "The value this AC buys is isolation of a whole authoring run, so the contract is deliberately
+  end-to-end rather than unit. A direct-import unit test over a create_authoring_worktree() helper would
+  prove the helper computes a path and a branch name, and would stay green while the workflow ignored
+  the helper and kept writing AC YAML into the user's checkout -- which is the exact failure this tree
+  exists to prevent and the same shape as the fast-lane phantom-done defect. Each test therefore drives
+  a real run over a fixture repo with a genuine origin remote and asserts an observable post-condition
+  on git state and on file locations. The origin/main-versus-HEAD case is a deliberate discriminating
+  test, because on a repo whose local main is in sync the correct and incorrect implementations are
+  indistinguishable; only a diverged local main separates them. The child BO-1500a-1-i already covers
+  the crashed-prior-run reuse path at integration level, so this parent contract does not repeat it and
+  instead covers the normal end-to-end path plus the two-surface parity the it_requirements demand."
 delivers_to:
   agent: python-coder
   contract: An authoring worktree path + branch name, both rooted at origin/main, that all downstream

@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given the human has started the recovery entry point against a damaged shared
@@ -49,6 +49,53 @@ delivers_to:
 expects_from:
   ac_id: BO-1600d-1
   contract: "The human-invoked, pre-confirmation-inert recovery entry point that this plan/confirm layer runs inside."
+test_spec:
+  - name: test_default_mode_prints_plan
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "With no execute confirmation the entry point prints the ordered action plan, and each printed action names its concrete target."
+  - name: test_plan_describes_zero_byte_objects_by_path
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "The removal action's printed description lists the specific zero-byte object paths, not a count-only summary."
+  - name: test_default_mode_no_git_writes_on_no
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "In default (no execute confirmation) mode the run issues zero git write subprocess calls and exits after printing the plan."
+  - name: test_execute_flag_makes_writes
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "Supplying the explicit execute flag is the only non-interactive path that issues the git write calls for the printed actions."
+  - name: test_interactive_yes_executes_plan
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "An interactive 'yes' counts as the explicit human confirmation and carries out the printed plan; any other answer performs no write."
+  - name: test_executed_plan_is_same_object_as_printed_plan
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "The action list handed to execution is the identical plan-computation result that was printed — there is no second, divergent planning pass."
+  - name: test_dry_run_on_real_repo_leaves_object_store_unchanged
+    target_dir: tests/
+    framework: unittest
+    type: behavioral
+    description: "On a real temporary git repository seeded with a zero-byte loose object, a default-mode run prints a non-empty plan while leaving the on-disk object store and refs byte-identical."
+test_rationale: |
+  The safety promise of this AC is a NEGATIVE ("zero git writes before
+  confirmation"), and a mocked-subprocess assertion can only prove that for the
+  call sites the test happens to patch. The behavioral descriptor
+  (test_dry_run_on_real_repo_leaves_object_store_unchanged) is therefore not
+  optional: it runs the entry point against a real temporary repository and
+  compares the object store and refs before/after, so an unmocked write path
+  cannot slip through. test_executed_plan_is_same_object_as_printed_plan is the
+  other load-bearing descriptor — it is the only one able to disprove a
+  "compute-a-plan-for-display, recompute-a-different-plan-for-execute"
+  divergence, which no per-action assertion can detect.
 origin_agent: business-analyst-v3
 created: 2026-07-01
 amended_by:

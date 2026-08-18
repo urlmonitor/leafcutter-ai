@@ -8,7 +8,7 @@ component: build-orchestration
 level: L1
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   In every completion message — epic, single-ticket, and inline fallback —
   the /finalize-feature command uses the epic name or branch name directly

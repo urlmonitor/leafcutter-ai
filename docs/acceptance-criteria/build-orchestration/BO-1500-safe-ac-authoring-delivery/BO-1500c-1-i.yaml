@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
 criteria: |
   Given the authoring pipeline has produced and committed one or more stages on
@@ -43,6 +43,32 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_cancel_before_final_approval_opens_no_pull_request
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a gate stub returning "cancel" before the final gate and a recording gh/git shim on
+    PATH, no `gh pr create`, no `gh api ... /pulls`, and no `git push` is invoked, and the returned status
+    is "cancelled" rather than "ok".
+- name: test_cancelled_run_keeps_committed_ac_files_on_the_authoring_branch
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: integration
+  description: AC YAML committed by the stages that completed before cancellation is still reachable from
+    the authoring branch HEAD, with unchanged content, after the cancel path returns.
+- name: test_cancelled_run_leaves_no_ac_files_on_main
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: integration
+  description: The fixture repo's main branch tree contains none of the AC YAML paths the cancelled run
+    committed, and main's HEAD sha is unmoved.
+- name: test_cancelled_run_is_resumable_from_the_first_uncommitted_stage
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: Re-running after a cancellation dispatches only the stages that had not committed, confirming
+    cancellation is a clean exit and not a terminal state.
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1

@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
 criteria: |
   Given the isolated-authoring workflow is implemented,
@@ -33,6 +33,7 @@ delivers_to: null
 expects_from:
   ac_id: BO-1500a-1
   contract: The implemented worktree-creation flow this diagram documents
+test_required: false
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by: []
@@ -43,3 +44,14 @@ implemented_by:
 it_requirements: []
 change_target: docs
 risk_surface: internal
+notes: |
+  test_required: false — the deliverable is a Mermaid sequence diagram in the
+  architecture docs. There is no importable surface and no runtime behaviour to
+  assert; the only mechanically checkable property would be the presence of
+  participant strings in the Markdown, which is exactly the grep-only test the
+  project forbids (CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by
+  Grep"): it would pass on a diagram that had drifted from the implementation.
+  The behaviour the diagram depicts is covered by the test contracts on
+  BO-1500a-1-i and BO-1500a-2. Correctness of the drawing itself is a human
+  review concern, enforced by the documentation gates, not a unit test.
+  Precedent: BO-2300a-3.
