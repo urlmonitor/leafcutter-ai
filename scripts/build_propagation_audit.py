@@ -14,6 +14,16 @@ BUSINESS CONTEXT: EPIC-PortableInstallHardening discovered 5 scripts registered
     (e.g. a user-supplied tool path) do not produce broken-reference failures.
     AC BP-900c-1 adds a three-field broken-reference report entry: missing path,
     referencing template, and a suggested action.
+    AC BP-900b-1 (ticket 05_TICKET-20260611-BP-900b-1) extends the reference-extraction
+    pass to the COMPILED output tree (agents/ and skills/ under the build target, after
+    build.py has written them) rather than the source templates/ tree this module's
+    other guards already cover. That extractor —
+    ``build_referential_integrity.extract_compiled_script_path_refs()`` — lives in the
+    sibling module alongside its pre-build counterparts
+    (``extract_script_path_refs`` / ``extract_script_path_refs_with_sources``) to keep
+    the reference-extraction pass in a single location (this AC's ``n_location_rule``);
+    it is documented here because ``doc_links`` on the AC names this file as an
+    ``extends`` relationship.
 ARCHITECTURE: One public phase function ``propagation_audit``, one guard
     function ``check_broken_references``, a ``BrokenRefEntry`` dataclass, and
     a ``build_broken_ref_report`` factory. Parsing uses ``yaml.safe_load`` with a
@@ -511,4 +521,12 @@ def propagation_audit(
 #   a hard failure when absent: commit.md has no documented fallback and explicitly forbids
 #   --no-verify as an escape path. Separate authoring tickets are required for the latter
 #   two before they can be deployed. (#EPIC-BuildGuardFalsePositive/03)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/05_BP-900b-1]: Added a
+#   docstring cross-reference to build_referential_integrity.extract_compiled_script_path_refs(),
+#   the new post-compile counterpart to this module's pre-build guards. The actual
+#   extractor implementation lives in the sibling module (natural home alongside its
+#   two pre-build siblings, keeping the reference-extraction pass in a single location
+#   per the AC's n_location_rule); this file is documented because the AC's doc_links
+#   name it with an "extends" relationship. No functional change in this file.
+#   (#BP-900b-1)
 # ===========================================================================

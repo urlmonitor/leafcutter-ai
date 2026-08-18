@@ -15,7 +15,7 @@ BUSINESS CONTEXT: skills_config.json references paths like testing_context.readm
     (``templates/workflows-js/*.js`` and ``templates/workflows/*.md``): a workflow
     that shells out to an undeployed script was previously invisible to the guard,
     the same defect class BP-900g-4/BP-900g-5 closed for agent and skill templates.
-ARCHITECTURE: Three public functions. check_referential_integrity() validates path-valued
+ARCHITECTURE: Four public functions. check_referential_integrity() validates path-valued
     fields in the config dict and is wired into build.py as a post-build warning phase
     (non-blocking). extract_script_path_refs() scans source .md/.js template files and
     returns a set of all script paths referenced via python/python3 invocations and
@@ -31,6 +31,17 @@ ARCHITECTURE: Three public functions. check_referential_integrity() validates pa
     pattern was required for the ``.js`` file type itself. See the DECISION HISTORY at
     the tail of this module for why JS template-literal interpolation prefixes
     (``${worktreePath}/scripts/...``) are deliberately NOT extracted.
+    extract_compiled_script_path_refs() is the fourth function (AC BP-900b-1 ticket
+    05_TICKET-20260611-BP-900b-1): it reuses the same ``_SCRIPT_PATTERNS`` regex set but
+    targets the COMPILED output tree (``<target>/.claude/agents/`` and
+    ``<target>/.claude/skills/``) rather than the source ``templates/`` tree, and returns
+    ``set[tuple[str, str]]`` of ``(relative_template_path, referenced_script_path)`` so a
+    caller can trace each reference back to its compiled template. It is a read-only,
+    standalone scan available for a future post-compile validation phase; no production
+    call site invokes it yet (see ``doc_links`` on the AC — this is the single
+    reference-extraction-pass location the AC's ``n_location_rule`` requires; wiring it
+    into ``build.py``'s phase list is intentionally out of this ticket's ``files_touched``
+    scope).
 """
 
 from __future__ import annotations
@@ -243,6 +254,76 @@ def extract_script_path_refs_with_sources(
     return refs_to_sources
 
 
+# ---------------------------------------------------------------------------
+# Compiled-output scan targets (AC BP-900b-1, post-compile variant)
+# ---------------------------------------------------------------------------
+# Unlike _SCAN_TARGETS (source templates_dir/{agents,skills,workflows,workflows-js}),
+# the compiled output tree has no workflows/ or workflows-js/ directory of its own —
+# workflow bodies compile into commands/ under a different naming scheme that is out
+# of scope for this AC. Only agents/ and skills/ are named in the Gherkin.
+_COMPILED_SCAN_TARGETS: tuple[tuple[str, str], ...] = (
+    ("agents", "*.md"),
+    ("skills", "*.md"),
+)
+
+
+def extract_compiled_script_path_refs(compiled_root: Path) -> set[tuple[str, str]]:
+    """Extract script path references from COMPILED agent/skill templates.
+
+    This is the post-compile counterpart to ``extract_script_path_refs()``: the
+    latter scans the SOURCE ``templates/`` tree before ``build.py`` writes any
+    output; this function scans the COMPILED output tree (e.g.
+    ``<target>/.claude``) after compilation, per AC BP-900b-1's Gherkin: "Given
+    build.py has compiled agent templates and skill files to the output
+    directory ... it scans every .md file in the compiled agents/ and skills/
+    directories".
+
+    Scans every ``.md`` file under ``compiled_root/agents/`` and
+    ``compiled_root/skills/`` (recursive, so nested skill directories such as
+    ``skills/some-skill/SKILL.md`` are covered) and extracts references
+    matching the same three patterns as ``extract_script_path_refs()``:
+
+    - ``python3 scripts/<path>``
+    - ``python scripts/<path>``
+    - ``sys.path.insert(<N>, 'scripts/<path>')``
+    - ``sys.path.insert(<N>, "scripts/<path>")``
+
+    Args:
+        compiled_root: Path to the compiled output directory (e.g. the
+            ``.claude`` directory written by a ``build.py --target-dir`` run).
+            The function looks for ``.md`` files under
+            ``compiled_root/agents/`` and ``compiled_root/skills/``.
+
+    Returns:
+        Set of ``(relative_template_path, "scripts/<path>")`` tuples, where
+        ``relative_template_path`` is the ``.md`` file's path relative to
+        ``compiled_root`` (POSIX-style, e.g. ``"agents/build-ac.md"`` or
+        ``"skills/some-skill/SKILL.md"``). Returns an empty set when no
+        matching references are found or when neither scanned directory
+        exists. Intentionally read-only and never raises: unreadable files
+        are silently skipped so the scan is always fail-open.
+    """
+    refs: set[tuple[str, str]] = set()
+    for subdir, glob_pattern in _COMPILED_SCAN_TARGETS:
+        scan_dir = compiled_root / subdir
+        if not scan_dir.exists():
+            continue
+        for source_file in scan_dir.rglob(glob_pattern):
+            try:
+                text = source_file.read_text(encoding="utf-8")
+            except OSError:
+                _log.debug("Skipping unreadable compiled template: %s", source_file)
+                continue
+            try:
+                rel_path = source_file.relative_to(compiled_root).as_posix()
+            except ValueError:
+                rel_path = source_file.name
+            for pattern in _SCRIPT_PATTERNS:
+                for match in pattern.finditer(text):
+                    refs.add((rel_path, match.group(1)))
+    return refs
+
+
 def check_referential_integrity(
     target_root: Path,
     config: dict[str, Any],
@@ -358,4 +439,27 @@ def format_integrity_report(missing: list[dict[str, str]]) -> str:
 #   "this JS variable mirrors the output root" from "this JS variable is an
 #   arbitrary runtime path" — real static analysis, not a text regex — so it is
 #   left as a documented follow-up rather than bolted on here. (#BP-900g-6)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/05_BP-900b-1]: Added
+#   extract_compiled_script_path_refs(), the post-compile counterpart to
+#   extract_script_path_refs()/extract_script_path_refs_with_sources(). Those two
+#   functions are wired into build.py's PRE-build guard (_check_script_reference_guard,
+#   which runs before _run_phases() writes output) and scan the SOURCE templates_dir
+#   tree. The AC's literal Gherkin describes a scan of the COMPILED agents/ and
+#   skills/ directories after build.py has written them — no existing function
+#   targeted that tree with the ticket's delivers_to shape (set[tuple[str, str]] of
+#   (template_path, referenced_script_path), pairing each reference with its
+#   referencing template rather than the flat set extract_script_path_refs()
+#   returns). Reused the same _SCRIPT_PATTERNS regex set (no new pattern needed —
+#   confirmed by a real-artifact behavioral test that runs build.py --target-dir
+#   into a tmp_path and scans the real compiled .claude/agents and .claude/skills
+#   directories, recovering scripts/ac_store/ac_prioritizer.py and
+#   scripts/ac_store/generate_ticket_from_ac.py from real compiled agent
+#   templates). Scoped to agents/ and skills/ only (per the Gherkin's literal
+#   wording) — the compiled tree has no workflows/ or workflows-js/ directory of
+#   its own, so _COMPILED_SCAN_TARGETS omits the workflow entries _SCAN_TARGETS
+#   carries. This function is a standalone, read-only scan; wiring it into an
+#   actual build.py post-compile phase is out of this ticket's files_touched
+#   scope (scripts/build_propagation_audit.py, scripts/build_referential_integrity.py,
+#   docs/architecture/components/template-compiler.md only — build.py is not
+#   listed) and is left as a follow-up. (#BP-900b-1)
 # ====================================================================
