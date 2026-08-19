@@ -196,8 +196,8 @@ any live citation of it outside dated historical records.
 
 - **Severity:** high
 - **Status:** open — no AC authored yet; the semantics question below is the reason
-- **Occurrences:** 12
-- **First seen:** 2026-08-17 · **Last seen:** 2026-08-18
+- **Occurrences:** 15
+- **First seen:** 2026-08-17 · **Last seen:** 2026-08-19
 - **Where:** `scripts/ac_store/mark_ac_done.py`; also reached from
   `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by
   `mark_done_built_acs`
@@ -218,6 +218,14 @@ children, BO-2400f-11, and BO-2400c-1-ii/-iii/-iv was marked done through
 count is what makes the shape clear: this is not an occasional miss, it is the
 guaranteed outcome of every automated done-transition, and the only thing
 currently preventing a store full of unprovenanced dones is somebody noticing.
+
+Three more on 2026-08-19: BO-2600b-1, -1-i and -1-ii, again via
+`mark_ac_done.py --test-root`, again all three landing `implemented_by: []` after
+passing the coverage gate, again filled in by hand. Recorded not because three more
+adds information about the mechanism — it does not — but because the only reason the
+count keeps rising instead of the defect being fixed is that hand-repair is cheap
+enough each time to stay below the threshold at which anyone stops to fix it. That is
+worth being explicit about: the workaround is what is keeping the bug alive.
 
 Worth recording precisely because the gate did its job. Coverage was verified, a
 passing covers-tagged test existed for each — so the failure is not "done was

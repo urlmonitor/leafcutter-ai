@@ -303,8 +303,14 @@ const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchest
 
 phase("Resolve");
 
+// The lane always excludes structural-parent prerequisites from the
+// dependency walk — unconditionally, with no per-run switch (BO-2600b-1).
+// An operator who wants a whole branch already has a precise way to ask for
+// it: aim at the branch (BO-2600b-1-i) — the exclusion only prunes the
+// depends_on walk, never the subtree gathered beneath the aimed-at criterion.
 const selectConnectedInvocation =
-  `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot}`;
+  `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
+  `--exclude-structural-parent`;
 
 const resolverResult = await agent(
   `You are the resolver phase agent for a fast-lane build.\n\n` +
@@ -357,12 +363,14 @@ if (acIds.length === 0) {
     status: "ok",
     message:
       `Nothing to build: the connected set for ${targetAc} is empty ` +
-      `(already done, or the id resolved to no not-done leaves). ` +
+      `(already done, or the id resolved to no not-done leaves), with ` +
+      `structural-parent prerequisites excluded from the dependency walk. ` +
       `${resolverResult ? resolverResult.message || "" : ""}`,
     worktree_path: worktreePath,
     branch,
     ac_ids: [],
     nothing_to_build: true,
+    structural_parent_excluded: true,
   };
 }
 

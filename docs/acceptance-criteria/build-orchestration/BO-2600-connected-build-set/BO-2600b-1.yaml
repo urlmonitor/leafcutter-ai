@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -111,7 +111,8 @@ superseded_by: null
 covered_by:
   - BO-2600b-1-i
   - BO-2600b-1-ii
-implemented_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-ship.js"
 change_target: pipeline
 risk_surface: internal
 notes: |
