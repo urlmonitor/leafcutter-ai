@@ -27,6 +27,10 @@ criteria: |
     discarded by the repair,
   And no work-item identifier anywhere in the collection is held by more than one lifecycle
     folder,
+  And the five are exactly the five this record already enumerates, not a set re-derived at
+    implementation time: an identifier the repair believes is twice-held but which is not among
+    them is reported and left alone, and an enumerated identifier the repair cannot confirm is
+    twice-held is reported and left alone,
   And every reference to any of the five identifiers resolves to the surviving file.
 
   Coverage note: covered by executing the work-item uniqueness pass over the repaired collection
@@ -57,7 +61,8 @@ estimated_complexity: S
 it_requirements:
   - "The survivor is chosen by computing declared-state-versus-folder agreement from `tickets/ticket_lifecycle.json`, the same data `_check_status_folder` reads — not by a rule of thumb that the completed folder wins. Four of the five will very likely resolve to the completed copy, but that is an outcome to be arrived at per pair, not an assumption to implement; assuming it is precisely how the wrong copy gets deleted."
   - "THIS IS A DELETION AND IT IS NOT REVERSIBLE FROM THE STORE. Before deleting either copy, diff the two and record the diff on the surviving file. Two copies that have drifted may each hold something the other lacks — sign-off comments, a status history, a comment stream — and the point of the repair is that one identifier means one thing, not that half the record disappears."
-  - "SCOPE IS THE FIVE THE CRITERIA NAME. GE-122a-2's whole-collection pass will also surface `EPIC-MoveOnMainOnly`, which is held by BOTH `tickets/99_done/` and `tickets/99_rejected/` — one identifier in two TERMINAL folders that flatly disagree, with Master_Plan.md and four sub-items duplicated inside. It is not in the five and it is NOT repaired under this AC. Report it and stop; expanding scope silently is the mirror image of the re-expansion GE-122e-3 fails an implementer for."
+  - "SCOPE IS THESE FIVE IDENTIFIERS AND NO OTHERS — measured 2026-08-17, listed here because an irreversible deletion must not act on a set re-derived at implementation time. Intake + completed: TICKET-20260603-ConfigDrivenBuildPaths, TICKET-20260603-FeedbackAnalysisPipeline, TICKET-20260604-PullRequestAgentProjectContext, TICKET-20260605-ContractShrinkingSelfExclusion. Intake + active: TICKET-20260629-BP-1200a-1-ii. If a fresh scan of the collection disagrees with this list in either direction, STOP and report the difference — do not repair the difference. The list, not the scan, is the scope."
+  - "GE-122a-2's whole-collection pass will also surface `EPIC-MoveOnMainOnly`, which is held by BOTH `tickets/99_done/` and `tickets/99_rejected/` — one identifier in two TERMINAL folders that flatly disagree, with Master_Plan.md and four sub-items duplicated inside. It is not in the five and it is NOT repaired under this AC. Report it and stop; expanding scope silently is the mirror image of the re-expansion GE-122e-3 fails an implementer for."
   - "Sixteen loose `TICKET-*.md` files sit at `tickets/` root outside any lifecycle folder. They are not twice-held and are out of scope here; do not tidy them while in the area."
   - "ORDERING: this repair must land before the work-item stage of the uniqueness guard becomes blocking, or every commit is stopped by five pre-existing conditions the author did not create. GE-122e-3 is the check that the ordering worked."
   - "Use `git mv` / `git rm` so the deletions and moves are tracked; a ticket file removed with a plain filesystem delete loses the history that would let the decision be reviewed. Note that `templates/hooks/check_ticket_no_branch_move.py` blocks `git mv` of ticket files on non-main branches — it is currently registered nowhere, so it will not fire today, but if it is wired during this tree's work this repair collides with it. Perform the repair on a branch with that interaction understood, not discovered."
@@ -93,6 +98,11 @@ test_spec:
     framework: unittest
     type: behavioral
     description: "Every reference to any of the five identifiers anywhere in the repository resolves to the surviving file and to no other."
+  - name: test_repair_acts_only_on_the_enumerated_five
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "NEGATIVE CONTROL on the scope list: the set of work-item files the repair created, moved or deleted is a subset of the files holding the five enumerated identifiers — so an identifier a fresh scan believes is twice-held, but which is not on the list, is reported and left untouched rather than repaired."
   - name: test_out_of_scope_duplicates_are_untouched
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -106,7 +116,9 @@ test_rationale: |
   records that may each hold sign-off history the other lacks. The out-of-scope descriptor is the
   same shape as GE-122e-3's negative assertion about the unnumbered diagrams, applied to the
   duplicates this repair deliberately does not touch: an implementer who tidies EPIC-MoveOnMainOnly
-  while in the area fails rather than quietly widening a scope the user set.
+  while in the area fails rather than quietly widening a scope the user set. The
+  acts-only-on-the-enumerated-five descriptor is the general form of that: it fails a repair that
+  substituted its own scan for the scope list, whichever extra identifier the scan happened to find.
 delivers_to: null
 expects_from:
   ac_id: GE-122a-2
@@ -131,6 +143,30 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: clarification
+  by: business-analyst
+  at: 2026-08-18
+  note: >-
+    Unnamed-referent defect on an irreversible deletion, found by a store-wide
+    scan for the shape that damaged BO-2900g-3. "The five identifiers" were named
+    nowhere an implementer is required to look: the criteria say only "five
+    identifiers", and the one constraint that points at a scope list read "SCOPE IS
+    THE FIVE THE CRITERIA NAME" — pointing at a list that does not exist there. The
+    five appear only in `notes`, which is commentary. An implementer following that
+    pointer, finding nothing, and re-deriving the set from a fresh scan gets a
+    DIFFERENT set (GE-122a-2's own it_requirements record that the count depends on
+    an identifier rule that is still open, and the record already knows an
+    epic-qualified rule surfaces EPIC-MoveOnMainOnly as a sixth) — and then deletes
+    ticket files, irreversibly, outside the scope the user set. Fixed by pinning the
+    scope in it_requirements rather than in the criteria, because the criteria are
+    deliberately written in the store's abstract register and five literal filenames
+    do not belong there, whereas it_requirements is where this store already carries
+    file-level specifics. The constraint now enumerates all five and says the LIST,
+    not a scan, is the scope, with a fresh scan that disagrees to be reported rather
+    than repaired. One criteria clause added to make the same rule behavioural and
+    therefore testable, and a matching negative-control test_spec descriptor added.
+    Nothing else changed; the survivor rule, the content-preservation clause and the
+    out-of-scope cases are untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -141,7 +177,9 @@ notes: |
   distinct identifiers, 5 held twice. Four are intake + completed
   (TICKET-20260603-ConfigDrivenBuildPaths, TICKET-20260603-FeedbackAnalysisPipeline,
   TICKET-20260604-PullRequestAgentProjectContext, TICKET-20260605-ContractShrinkingSelfExclusion);
-  one is intake + active (TICKET-20260629-BP-1200a-1-ii).
+  one is intake + active (TICKET-20260629-BP-1200a-1-ii). These five are now also carried in
+  it_requirements, which is where the implementer is required to read them — see the 2026-08-18
+  amendment.
 
   THE SURVIVOR RULE IS TAKEN FROM THIS PROJECT'S EXISTING CONVENTION rather than invented: the
   declared state is authoritative and folder position is not. Four of the five pairs almost

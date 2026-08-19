@@ -409,7 +409,12 @@
                             "angle": {
                                 "type": "string",
                                 "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec is taken as-is and gets no generator-added entries. Omit when the angle has not been classified."
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
+                            },
+                            "surface_invoked": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "BO-2900g-3: the entry-point field, carried under the name the (now-retired) ticket-facing definition already used. Names the CLI, hook script, slash command, or agent entrypoint a reachability-kind test must actually invoke, or holds the single 'entry point is not declared' sentinel when nothing upstream named one. Optional here — the generator's own reachability descriptor states the same fact via its 'asserts' field (BO-2900g-1-i) when this is omitted."
                             },
                             "description": {
                                 "type": "string",
