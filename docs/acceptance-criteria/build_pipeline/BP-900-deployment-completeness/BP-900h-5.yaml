@@ -1,0 +1,160 @@
+id: BP-900h-5
+components:
+  - build_pipeline
+title: "Every guardrail the package ships reaches a verdict in the consumer install, and one that cannot run is reported as such"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+criteria: |
+  Given the consumer-layout install of BP-900h-4,
+  And the set of guardrails the package registers as running against a consumer's
+    commits,
+  When each registered guardrail is invoked inside that install against an input of
+    the kind it guards — one input it should pass and one it should fail,
+  Then each guardrail returns a pass verdict on the passing input and a fail verdict
+    on the failing input,
+  And a guardrail that instead stops because it could not locate something it needs
+    is reported in a THIRD category, "unable to run", distinct from both pass and
+    fail — because a guardrail that blocks everything and a guardrail that rejects
+    the specific input in front of it are indistinguishable by exit code alone,
+  And the report names, for each guardrail unable to run, the guardrail and the file
+    or location it could not resolve,
+  And the job's conclusion is failing when any registered guardrail is unable to run,
+    with the same force as when a guardrail is missing outright,
+  And the set of guardrails exercised is derived from what the package registers, so
+    a guardrail added tomorrow is exercised without anyone editing a list.
+
+  Because on 2026-08-18, in a consumer install, the document-frontmatter guardrail
+  stopped on an absent type vocabulary and blocked every commit that touched
+  documentation or tickets, while the package's own test suite was entirely green.
+  No test had ever invoked a deployed guardrail from an install that was not the
+  package's own workspace, so the difference between "runs and judges" and "cannot
+  start" had never been observed for any guardrail.
+depends_on:
+  - BP-900h
+  - BP-900h-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the consumer-layout install this AC invokes the guardrails inside. Do not stand up a second fixture."
+  - path: config/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: planned
+    relevance: "The registration surface the exercised set is derived from — the same source BP-900e reads for its registry-completeness axis. Confirm the deployed location before implementing; the package-source copy is the canonical one."
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: "The hook registry as it exists in the package source. Named so the derivation reads a registry rather than a hand-written list."
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: deployed + reachability + failure. The three-way verdict is the criterion angle."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: "A per-guardrail three-way outcome in the consumer install — passed, failed, or unable-to-run with the unresolvable location named — and a job conclusion that is failing when any entry is unable-to-run."
+expects_from:
+  ac_id: BP-900h-4
+  contract: "The consumer-layout install whose declaring-file resolution is anchored to the deployed output root alone."
+test_spec:
+  - name: test_bp_900h_5_each_registered_guardrail_passes_its_good_input_and_fails_its_bad_input_inside_the_consumer_install
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Inside the BP-900h-4 consumer-layout install, invoke every registered guardrail as a SUBPROCESS against one input it should pass and one it should fail, and assert per guardrail that the pair comes back (passed, failed) and that neither run lands in the unable-to-run category. NON-VACUITY: assert the set of guardrails exercised is non-empty and equals the set the deployed registry declares - a harness that exercises zero guardrails satisfies every per-guardrail assertion in this contract. Include the document-frontmatter guardrail explicitly, since it is the 2026-08-18 regression instance and the one confirmed to stop rather than judge in a consumer install."
+  - name: test_bp_900h_5_a_guardrail_whose_declaring_file_is_removed_is_classified_unable_to_run_not_failed
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE THREE-WAY VERDICT, and the entry this AC exists for. Pick one registered guardrail and drive it three times through the same harness against the SAME input that it PASSES when healthy: (a) declaring file present - assert the recorded outcome is passed; (b) declaring file deleted from the deployed root - assert the recorded outcome is the third category, unable-to-run, asserted by its own value and explicitly NOT equal to failed, and assert the report names both the guardrail and the location it could not resolve; (c) declaring file present, input changed to one it rejects - assert failed. Then assert the three outcome values are pairwise distinct. The exit code is non-zero in both (b) and (c), so an assertion on exit code alone is green on a harness that collapses unable-to-run into failed - which is a faithful copy of the 2026-08-18 misdiagnosis."
+  - name: test_bp_900h_5_job_conclusion_is_failing_when_any_registered_guardrail_is_unable_to_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Run the harness through the same command the CI job invokes, as a subprocess, over the consumer install, in four states: healthy install - exit 0; one guardrail sabotaged into unable-to-run - non-zero; one guardrail removed from the deployed tree outright - non-zero, establishing the same force clause; healthy install again - exit 0. Then assert the consumption half from the parsed .github/workflows/ci.yml: the step running this harness is not continue-on-error, so its non-zero conclusion actually fails the job."
+  - name: test_bp_900h_5_the_exercised_set_is_derived_from_the_registry_so_a_newly_registered_guardrail_is_exercised_without_editing_a_list
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The derived-not-hardcoded control, and the only entry a hand-maintained list of guardrails cannot pass. In the consumer install, add a synthetic guardrail entry to the DEPLOYED registry - a trivial script that exits 0 on its good input and non-zero on its bad one - without touching any test code or harness source, re-run the harness, and assert the synthetic guardrail appears in the per-guardrail report with its (passed, failed) pair. Then remove the registry entry, re-run, and assert it disappears from the report. Every other entry in this contract is green on a harness that iterates a literal list of today's guardrails; this one is not."
+test_rationale: |
+  The three-way verdict is the whole point of this AC and it is the part most likely
+  to be dropped as an implementation detail, so entry 2 is written to be impossible to
+  satisfy by an exit-code-keyed classifier. Both the failed case and the unable-to-run
+  case exit non-zero in the live code, which is precisely why exit code alone cannot
+  distinguish them; the test therefore asserts the recorded category by value and
+  asserts pairwise distinctness across all three states of the same guardrail against
+  the same input. A harness that records "the guardrail failed" when a guardrail could
+  not find its vocabulary reproduces the 2026-08-18 misdiagnosis exactly, and would
+  pass any test that only asserted a non-zero result.
+
+  Entry 4 is separately non-negotiable. The derivation clause is the clause a working
+  implementation and a hardcoded list are indistinguishable on, for every input that
+  exists today. Adding a guardrail to the deployed registry at test time and asserting
+  it turns up in the report - with the paired removal, so the appearance is not an
+  artifact of the fixture - is the only construction that goes red on a list. This is
+  the same data-driven-not-by-name discipline the store applies elsewhere.
+
+  Every entry runs inside the BP-900h-4 consumer-layout install rather than the
+  package's own workspace, and none of them may import a guardrail and call it. No test
+  had ever invoked a deployed guardrail from an install that was not the package's own
+  workspace, which is why the difference between "runs and judges" and "cannot start"
+  had never been observed. Invoking through the deployed copy, as a subprocess, from
+  the consumer install is the only arrangement in which the distinction is observable
+  at all.
+
+  KNOWN TENSION, recorded rather than resolved by invention. The criterion requires
+  both that every registered guardrail be driven with an input pair AND that the
+  exercised set be derived from the registry. A guardrail registered tomorrow has no
+  declared input pair, and the harness cannot invent one. The implementer must decide
+  how the report accounts for a registered guardrail with no input pair; whatever the
+  decision, it must be visible in the report rather than a silent omission, because a
+  silent skip satisfies the derivation clause vacuously. Flagged to the IT PO's
+  sign-off as the one under-specified point in this AC.
+
+  Angles: criterion, failure, reachability, deployed — at the cap of four. real_artifact
+  and seam are not charged; boundary is not charged because the criterion names no
+  range or count. The must_block modifier rides entry 3, where the production entry
+  point lives.
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-900h-5-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The three-way verdict is the whole point, and it is the part most likely to be
+  dropped as an implementation detail. Collapsing "unable to run" into "failed"
+  reproduces exactly the defect this AC exists to catch: on 2026-08-18 a guardrail
+  that could not find its vocabulary reported a blocking failure on every commit,
+  and the reported failure pointed at the commits rather than at the missing file.
+  A harness that records that outcome as "the guardrail failed" is a faithful copy
+  of the misdiagnosis.
+
+  Distinct from BP-900e (a registered guardrail has a deploy-source copy at all) and
+  from BP-900h-1 (script references in the deployed tree resolve). Both of those are
+  satisfied by a guardrail that is present and reachable and still cannot run,
+  because presence is not the same as being able to start. This AC is the only one
+  in the family that invokes a guardrail.

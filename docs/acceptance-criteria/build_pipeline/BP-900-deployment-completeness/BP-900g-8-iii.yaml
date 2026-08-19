@@ -1,0 +1,82 @@
+id: BP-900g-8-iii
+components:
+  - build_pipeline
+title: "The written deploy-dependency rule names data and configuration files, not only imported modules"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given the project rule that requires a new guardrail or gate dependency to be added
+    to the build deploy manifest,
+  When an author consults that rule to decide whether a dependency they have just
+    added is in scope,
+  Then the rule states that a dependency is ANY file the guardrail reads in order to
+    do its job — naming schemas, vocabularies, registries and data tables alongside
+    imported modules — rather than defining the class by the kind of error a missing
+    module raises,
+  And it describes the symptom of the data-file case as concretely as it describes
+    the module case, so a reader who has hit the data-file symptom recognises the rule
+    as applying to them,
+  And it names the verification that actually distinguishes the two: running the
+    guardrail from an install that does not contain the package's own source tree,
+    and states why running it from the package's own workspace cannot,
+  And at least one worked example in the rule is a non-code declaring file,
+  And the rule points at the mechanism that enforces it, so a reader learns the check
+    exists rather than being asked to remember the rule unaided.
+
+  Because the rule as written defines the dependency class by its failure signature —
+  a module that cannot be imported — and a configuration JSON does not produce that
+  signature. Five confirmed gaps on 2026-08-18 were all in scope of the rule's
+  intent and all outside the reach of its wording.
+depends_on:
+  - BP-900g-8
+  - BP-900g-8-ii
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "Holds the rule 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest' under Implementation Conventions. The section to correct."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-ii.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The mechanism the corrected rule must point at. Write the rule against the behaviour g-8-ii specifies, not against whatever the implementation happens to do."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-8-ii
+  contract: "The widened definition of a deployed dependency and the shape of the build failure it raises, so the written rule and the enforced rule say the same thing."
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Split from BP-900g-8-ii because the surfaces and the agents differ: g-8-ii changes
+  the build's derivation (python-coder); this changes prose an author reads before
+  the build ever runs (documentation-expert). Keeping them in one AC would have put
+  two agents on one criterion.
+
+  Sequencing matters more than usual here. The rule must be corrected against the
+  specified behaviour, not against an implementation in progress — otherwise the
+  documented rule inherits whatever the coder happened to build, which is how the
+  current wording came to describe only the module case in the first place.
+
+  Note the reach limitation the author should be aware of: CLAUDE.md is not deployed
+  to consumer projects (ADR-001), so this rule governs contributors to the package,
+  not consumers. That is correct for this rule — it is a rule about adding a
+  dependency to the package — but it means the rule cannot be the enforcement, only
+  the explanation. The enforcement is g-8-ii.

@@ -57,6 +57,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - "unit_tests/test_build_tracked_source_guard.py::TestSuggestActionDirPresent::test_ac_bp900c3_missing_path_and_template_still_in_entry"
+  - BP-900c-1-1
 implemented_by:
 - tickets/00_inbox/TICKET-20260611-BP-900c-1.md
 change_target: pipeline
