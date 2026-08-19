@@ -18,9 +18,13 @@ criteria: |
   makes completion mechanical and impossible to fake: every requirement is tied
   to a real test that must genuinely pass, that test must exercise the real thing
   rather than a convenient stand-in, and an automatic check that cannot be skipped
-  has the final word. Because proof is mechanical, the slow, expensive review
-  steps that only ever offered an opinion can be retired without losing any rigor.
-  The result is that when the system says a feature is done, you can believe it.
+  has the final word. Because proof is mechanical, the review steps whose only
+  power was to hand out approval can be retired without losing any rigor. A review
+  may still stand between finished work and delivery — it can hold work back when
+  something looks wrong — but it can never be the thing that decides a feature is
+  done. Holding work back and declaring it finished are different powers, and only
+  the machine has the second one. The result is that when the system says a feature
+  is done, you can believe it.
   This is the trust guarantee the fast lane (BO-2400) depends on.
 depends_on: []
 doc_links: []
@@ -30,7 +34,10 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Value restated, not narrowed. The original text promised that the opinion-only review steps 'can be retired' outright. The fast lane no longer does that: BO-2400f-11 (shipped in PR #485 on BrainCandy's explicit instruction that the lane 'must also use a review agent in the process to catch any silly things that should not be shipped') keeps exactly one reviewer in the lane. The promise that actually matters here — and the one still kept — is that no LLM opinion may CONFER done-ness; done-ness comes only from the mechanical gates. A reviewer that can only withhold delivery leaves that intact. Amended so the goal states the surviving guarantee rather than an abolition that did not happen."
 superseded_by: null
 covered_by: [BO-2500a, BO-2500b, BO-2500c, BO-2500d, BO-2500e]
 implemented_by: []

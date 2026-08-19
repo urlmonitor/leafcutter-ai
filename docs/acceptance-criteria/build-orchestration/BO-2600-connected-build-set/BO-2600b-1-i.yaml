@@ -1,0 +1,87 @@
+id: BO-2600b-1-i
+components:
+  - build_orchestration
+title: "Aiming at a parent still resolves the whole branch beneath it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criterion store containing a parent criterion with three not-done
+    criteria beneath it, two of them leaves and one of them a leaf with a child of its own,
+  When an operator aims the fast lane at that parent criterion,
+  Then the resolved build set contains the parent and every not-done criterion beneath it,
+    including the grandchild,
+  And excluding structural-parent prerequisites removes nothing from that set, because the
+    exclusion applies only to the walk over prerequisites and never to the descendants
+    gathered beneath the criterion the operator aimed at,
+  And the set is the same one the operator would have got for that parent before the
+    exclusion was applied to this lane.
+depends_on: [BO-2600b-1]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The lane whose always-exclude behaviour must not narrow a deliberately broad aim."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: related
+    status: exists
+    relevance: "resolve_connected_build_set gathers descendants via the subtree union and prerequisites via the depends_on walk; only the second is affected by the exclusion. This criterion is the runtime confirmation of that separation from the lane's side."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "This criterion is the load-bearing safety property of the always-exclude decision in BO-2600b-1. If it fails, the decision is wrong and the lane must not ship with unconditional exclusion — escalate rather than narrowing this criterion to fit the implementation."
+    - "The fixture must include a grandchild so the assertion covers multi-level descent, not just direct children. A two-level fixture would pass on an implementation that gathered only immediate children."
+delivers_to: null
+expects_from:
+  ac_id: BO-2600b-1
+  contract: "The fast lane's resolver invocation, composed with structural-parent prerequisites excluded, whose descendant-gathering behaviour this criterion pins down."
+test_required: true
+test_spec:
+  - name: test_aiming_at_a_parent_resolves_the_whole_subtree
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executing the lane aimed at the fixture parent and running its resolver command yields the parent plus all three not-done descendants, grandchild included."
+  - name: test_exclusion_removes_nothing_from_a_parent_aimed_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "For a parent-aimed run, the set the lane resolves with the exclusion in force equals the set the same command resolves without it."
+test_rationale: |
+  Both tests execute the lane under unit_tests/_workflow_engine_harness.py against a
+  fixture store and assert on the id list the lane's own resolver command prints. The
+  second test is the one that matters: it compares the lane's resolved set against the
+  same command run without the exclusion, so it fails loudly if the exclusion ever starts
+  eating descendants — which is the single way the always-exclude decision in BO-2600b-1
+  could turn out to be wrong. A grep test cannot express this comparison at all.
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This criterion exists because it is the premise of BO-2600b-1's decision. "Always
+  exclude" is only safe if an operator who genuinely wants a whole branch can still get
+  it by aiming at the branch. That premise is stated in BO-2600b's own brief as a
+  consideration; here it is turned into something a test can falsify rather than something
+  the decision merely assumes.

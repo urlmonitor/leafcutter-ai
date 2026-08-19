@@ -1,0 +1,115 @@
+id: BO-2600b-2
+components:
+  - build_orchestration
+title: "The run states the scope it resolved before it acts on that scope"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run that has resolved a connected build set for the criterion it was
+    aimed at,
+  When the run's record is read — both the first dispatch that acts on the resolved set
+    and the run's terminal payload,
+  Then the run states the criterion it was aimed at, the resolved build set in dependency
+    order, and that structural-parent prerequisites were excluded from the prerequisite
+    walk,
+  And that statement appears in the record before any test is written and before any
+    production code is changed, so it is available to an operator at the moment the scope
+    is still the only thing that has happened,
+  And the same three facts appear on the run's terminal payload, so the scope the run
+    committed to is readable from the finished run without replaying it.
+depends_on: [BO-2600b, BO-2600b-1]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The run whose record this is. Its terminal payload already carries target_ac and ac_ids; the scope statement adds the exclusion fact and brings the statement forward of the building phases."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The recorded agent_calls carry call_index and label, which is how 'before any test is written' is asserted; HarnessResult.result carries the terminal payload. Note that the harness's log() is a no-op stub, so a scope statement emitted only through log() would be unobservable and cannot satisfy this criterion."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The scope statement must be carried on the dispatched record and the terminal payload. It must NOT be emitted only through log(): the workflow engine harness stubs log() to a no-op, so a log-only statement is unobservable to the covering tests and would push the implementer back to a grep test — the failure mode CLAUDE.md forbids for this lane."
+    - "Compose the statement once and reuse the same string in both places, so the dispatched record and the terminal payload cannot state different scopes for the same run."
+    - "The statement names the exclusion as a property of the run, not of a configurable option, because BO-2600b-1 makes it unconditional. Wording that implies the operator could have chosen otherwise is wrong."
+delivers_to:
+  agent: python-coder
+  contract: "A scope statement — target criterion, resolved set in dependency order, structural-parent prerequisites excluded — present in the run record before the first building phase and again on the terminal payload."
+expects_from:
+  ac_id: BO-2600b-1
+  contract: "The resolved connected build set produced with structural-parent prerequisites excluded, which is what the statement describes."
+test_required: true
+test_spec:
+  - name: test_run_record_states_target_set_and_exclusion
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "An executed harness run's record states the criterion aimed at, the resolved set in dependency order, and that structural-parent prerequisites were excluded."
+  - name: test_scope_statement_precedes_the_first_building_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The call_index of the dispatch carrying the scope statement is lower than the call_index of the test-writer dispatch and of the coder dispatch."
+  - name: test_terminal_payload_carries_the_same_scope_statement
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "HarnessResult.result carries the same target, the same ordered set, and the same exclusion fact as the pre-build statement."
+  - name: test_scope_statement_is_observable_without_log
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "The statement is found in the recorded dispatch and the terminal payload under a harness whose log() is a no-op, proving it is not emitted only to a log."
+test_rationale: |
+  Every test executes the lane under unit_tests/_workflow_engine_harness.py and reads the
+  recorded agent_calls (for content and call_index ordering) and HarnessResult.result.
+  The ordering test is the one that gives "before it acts on that scope" teeth: it is a
+  comparison between recorded dispatch indices, which no grep over the workflow source can
+  express, and which fails if the statement is only assembled at the end. The fourth test
+  is there because the harness stubs log() to a no-op — a scope announcement written to a
+  log would look correct while being invisible to every covering test, and the implementer
+  would then be tempted to substitute a grep, which CLAUDE.md forbids for this lane.
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  BO-2600b's L1 promises the operator "can tell from the run what that scope is before it
+  starts". This criterion is the half of that promise that BO-2600b-1 does not deliver:
+  BO-2600b-1 makes the scope right, this makes it visible.
+
+  The placement of the statement was chosen against what the run can actually be observed
+  to do. The lane's log() is stubbed to a no-op in the workflow engine harness, so a
+  console announcement is untestable under the one vehicle CLAUDE.md permits for this
+  lane; the two observable surfaces are the dispatched prompts and the terminal payload,
+  and the criterion uses both — the dispatch for "before", the payload for "afterwards
+  without replaying".

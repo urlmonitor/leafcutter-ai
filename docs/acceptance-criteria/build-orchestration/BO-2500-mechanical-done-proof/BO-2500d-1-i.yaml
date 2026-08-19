@@ -2,7 +2,7 @@ id: BO-2500d-1-i
 components:
   - build_orchestration
   - review_system
-title: "Removing a gate before its mechanical replacement exists is rejected"
+title: "Removing a mechanical proof-of-done gate, or letting an LLM verdict stand in for one, is rejected"
 component: build-orchestration
 level: L3
 status: active
@@ -12,13 +12,37 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given a change proposes removing an opinion-only gate agent from the fast-lane phase
-    order while its mechanical proof-of-done replacement is not yet present in that
-    phase order,
-  When the phase-order change is validated,
-  Then the removal is rejected
-  And the rejection states that the mechanical replacement gate must exist in the fast
-    lane before the opinion-only gate can be removed.
+  Given a proposed change to the fast lane that drops one of the three mechanical
+    proof-of-done gates — red-baseline verification, green-plus-coverage verification,
+    or the covers-tag linkage check — from the set that establishes done-ness there,
+  When the change is validated,
+  Then the change is rejected,
+  And the rejection names the gate that would be dropped and states that all three must
+    establish done-ness in the fast lane.
+
+  Given a proposed change to the fast lane under which an LLM agent's verdict would
+    stand in for a mechanical gate — the run could record an acceptance criterion done
+    on the strength of that verdict where a mechanical gate had not passed, or a
+    mechanical gate's result would be read only when a verdict permitted it,
+  When the change is validated,
+  Then the change is rejected,
+  And the rejection states that an LLM verdict may withhold delivery and may never
+    establish done-ness.
+
+  Given a proposed change that adds, replaces or alters a reviewing agent whose verdict
+    can only withhold delivery, while all three mechanical gates remain present and
+    their results remain unconditional,
+  When the change is validated,
+  Then the change is accepted — what is rejected is substitution, not review, so the
+    guard does not block the reviewer BO-2400f-11 put into this lane.
+
+  Given a proposed change whose effect on done-ness cannot be determined — the lane
+    definition cannot be read, or the set of gates establishing done-ness cannot be
+    resolved from it,
+  When the change is validated,
+  Then the change is rejected and the rejection states that the effect on done-ness
+    could not be determined,
+  And it is not accepted on the grounds that no violation was observed.
 depends_on: [BO-2500d-1]
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
@@ -30,37 +54,87 @@ doc_links:
   - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
     relationship: describes
     status: exists
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: implements
+    status: exists
+    relevance: "The lane whose done-ness definition this guard protects. Its Phase 5 mark-done step must remain reachable only through the three mechanical gate results, and must never read a review verdict."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Supplies run_workflow_under_e2. The runtime half of this guard is proved by executing a lane in which a verdict has been made to substitute for a gate and asserting the substitution does not reach mark-done."
 assigned_agent: llm-expert
 estimated_complexity: M
 it_requirements:
-  - "Add a phase-order validation that rejects removing an opinion-only gate agent from the fast-lane order whenever the corresponding mechanical proof-of-done gate is not present in that same order (fail-closed)."
-  - "The replacement mapping (which mechanical gate stands in for which opinion-only agent) must be data-driven, not a hard-coded pairing, so it stays correct as gates evolve."
-  - "The rejection message must state that the mechanical replacement gate must exist in the fast lane before the opinion-only gate can be removed, per the error handling policy."
-  - "Validation must be idempotent and deterministic for a given phase-order definition."
+  - "The guard must reject two distinct classes of change to the fast lane: (a) the removal of any of the three mechanical proof-of-done gates from the set that establishes done-ness (red-baseline, green-plus-coverage, covers-tag linkage), and (b) any wiring under which an LLM verdict substitutes for one of those gates — a mark-done path reachable on a verdict where a gate did not pass, or a gate result read conditionally on a verdict."
+  - "The guard must NOT reject the presence of a reviewing agent as such. A veto-only reviewer with all three gates intact and unconditional is the shape BO-2400f-11 shipped and BO-2500d-1 permits; a guard that blocks it is over-broad and would have to be worked around, which is how this guard would be lost."
+  - "The set of mechanical gates the guard requires must be data-driven, read from one declaration, not a hard-coded triple restated at the guard site — so adding a fourth mechanical gate does not silently leave the guard checking three."
+  - "Fail closed. An unreadable lane definition, an unresolvable gate set, or a parse failure is a rejection stating that the effect on done-ness could not be determined — never an acceptance on the grounds that no violation was seen. Follow the plain-falsy read used for the red-baseline gate_passed key; no default-true, no `|| true`."
+  - "Validation must be idempotent and deterministic for a given lane definition."
+  - "Covering tests must EXECUTE something: the guard itself, invoked against a mutated lane definition and asserted on its returned rejection; and, for the substitution class, the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2) driven so a verdict would substitute for a failing gate, asserting no mark-done dispatch is recorded. A test that greps a workflow source file for an agent name or a phase name is not acceptable evidence — that is exactly what this criterion has been green on since 2026-07-21, against an orphaned runner (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+  - "The replacement tests must carry the SAME '# covers:' ids as the assertions they replace, so scripts/ac_store/done_proof.py sees no change in linkage."
 delivers_to: null
 expects_from:
   ac_id: BO-2500d-1
-  contract: "The fast-lane phase-order change (opinion-only agent removal) whose safety precondition this validation enforces."
+  contract: "The directional invariant this guard enforces at change time: at most one LLM verdict in the fast lane, veto-only, with the three mechanical gates as the whole of what establishes done-ness."
+test_required: true
 test_spec:
-  - name: test_removal_without_mechanical_replacement_is_rejected
-    target_dir: unit_tests/build/
-    framework: unittest
-    type: unit
-    description: "Removing an opinion-only gate from the fast lane while its mechanical replacement is absent is rejected."
-  - name: test_rejection_names_required_mechanical_replacement
-    target_dir: unit_tests/build/
-    framework: unittest
-    type: unit
-    description: "The rejection states the mechanical replacement gate must exist in the fast lane first."
-  - name: test_removal_with_mechanical_replacement_present_is_allowed
-    target_dir: unit_tests/build/
-    framework: unittest
-    type: unit
-    description: "Removal is allowed once the mechanical replacement gate is present in the fast-lane order."
+  - name: test_dropping_a_mechanical_gate_is_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "For each of the three mechanical gates in turn, a lane definition with that gate removed from the done-ness set is rejected by the executed guard, and the rejection names the removed gate."
+  - name: test_verdict_substituting_for_a_gate_is_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A lane definition in which a mark-done path is reachable on a review verdict where a mechanical gate did not pass is rejected by the executed guard, and the rejection states that a verdict may not establish done-ness."
+  - name: test_veto_only_reviewer_with_all_gates_intact_is_accepted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The lane as BO-2400f-11 shipped it — one veto-only reviewer, three unconditional mechanical gates — is accepted by the executed guard, so the guard rejects substitution rather than review."
+  - name: test_substitution_does_not_reach_mark_done_at_runtime
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Executed under the E2 harness with a mechanical gate stubbed failing and the review dispatch stubbed clean, the run records no mark-done dispatch for the ACs that gate covers — the runtime counterpart of the change-time rejection."
+  - name: test_undeterminable_effect_on_doneness_is_rejected
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "An unreadable or unresolvable lane definition is rejected with a message stating the effect on done-ness could not be determined, never accepted as clean."
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Subject re-scoped, guard deliberately not weakened. This criterion previously guarded 'removing an opinion-only gate before its mechanical replacement exists' — a shape that no longer describes anything, because after BO-2400f-11 the fast lane has a reviewer again and the mechanical gates were never a replacement for it. The anti-regression value worth keeping is the opposite direction: the drift to fear is back toward 'the reviewer said yes, so it is done'. Restated as two rejections — a change removing a mechanical proof-of-done gate from the fast lane, and a change letting any LLM verdict substitute for one — plus an explicit acceptance case so the guard cannot be read as blocking the veto-only reviewer BO-2400f-11 shipped, and a fail-closed case so an undeterminable change is not waved through. Amended in place rather than superseded so the id stays active and the '# covers:' tags in unit_tests/workflows/test_bo2500d_gate_retirement.py do not dangle under scripts/ac_store/done_proof.py."
 superseded_by: null
 covered_by: []
 implemented_by:
-  - "templates/workflows-js/fast-lane-build.js"
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the criterion that stops the reconciliation from becoming a slide. Permitting a
+  veto-only reviewer is a narrow concession, and narrow concessions widen: the next step
+  is a reviewer whose approval is read at the mark-done site, and at that point BO-2500's
+  whole guarantee is gone and nothing in the store would have objected. So the guard was
+  re-aimed rather than retired.
+
+  The acceptance scenario is load-bearing, not politeness. A guard phrased only as "reject
+  changes involving a reviewer" would reject the lane as it ships today, and a guard that
+  rejects the status quo gets relaxed, disabled or routed around within one drive. The
+  distinction the guard must actually make is between a verdict that removes members from
+  the delivered set and a verdict that adds them.
+
+  STATUS CAVEAT, recorded 2026-08-18. work_status remains done but its proof is
+  string-presence greps against templates/workflows-js/fast-lane-build.js, an orphan
+  nothing invokes and which BO-2400c-1-v deletes. Under the amended criteria that proof
+  establishes nothing. work_status was left untouched because changing it is not a BA
+  decision; re-examine it when the executed-behaviour tests above are green.

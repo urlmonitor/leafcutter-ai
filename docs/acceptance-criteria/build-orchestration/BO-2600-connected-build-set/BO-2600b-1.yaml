@@ -1,0 +1,157 @@
+id: BO-2600b-1
+components:
+  - build_orchestration
+title: "The fast lane resolves its build set with structural-parent prerequisites excluded, on every run"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criterion store in which a target leaf criterion lists its own
+    structural parent as a prerequisite, that parent lists ITS parent as a prerequisite,
+    and two further not-done leaves sit beneath that grandparent,
+  When an operator aims the fast lane at the target leaf and the lane resolves the
+    connected build set for it,
+  Then the resolved set contains the target leaf, the target leaf's own descendants, and
+    the target leaf's genuine prerequisites — those that are not simply the criterion it
+    hangs beneath,
+  And the two further leaves, which are reachable only by walking up through structural
+    parent links, are absent from the resolved set,
+  And the operator supplies nothing beyond the criterion id to get that scope: the lane
+    excludes structural-parent prerequisites on every run, with no second argument, no
+    per-run switch, and no way to ask for the wider set from this entry point.
+depends_on: [BO-2600b, BO-2600a-1, BO-2600a-2]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The single change site. Its Resolve phase (line 307) composes the select_connected command the resolver agent runs and today passes only --ac and --ac-root."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: related
+    status: exists
+    relevance: "Already provides everything needed: resolve_connected_build_set's keyword-only exclude_structural_parent (BO-2600a-1, done) and the select_connected --exclude-structural-parent flag (BO-2600a-2, done). No new capability, only a caller."
+  - path: templates/agents/build-ac.md
+    relationship: related
+    status: exists
+    relevance: "The other entry point, which already passes the flag at line 333 and must not be disturbed. Its behaviour is the target this criterion brings the fast lane into line with."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The required test vehicle: run_workflow_under_e2 executes the lane and records the resolver dispatch, whose command is then run against a fixture store so the assertion lands on the RESOLVED SET rather than on the text of the workflow file."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Do NOT change the default of resolve_connected_build_set. BO-2600a-1 fixed it at False as a backward-compatibility invariant covered by test_default_false_preserves_existing_behavior; that test must stay green untouched. The decision made here is a CALLER decision and lives in the fast lane's own command composition."
+    - "Do NOT modify templates/agents/build-ac.md. It already passes --exclude-structural-parent at line 333 and its behaviour is settled under BO-2600a."
+    - "The change is the addition of --exclude-structural-parent to the select_connected invocation the Resolve phase composes. Everything downstream of the resolver — the claim, the gates, the commit — consumes the resolved id list unchanged."
+    - "No new workflow argument. The fast lane's contract is one criterion id in and a pull request out (BO-2400f); a second input to control scope would contradict that promise and would leave the wider set reachable from an entry point whose parent goal forbids it."
+delivers_to:
+  agent: python-coder
+  contract: "A fast-lane run whose resolved build set is the target criterion, its descendants, and its genuine prerequisites — structural-parent links never expanded — consumed unchanged by the claim, gate, commit and pull-request phases."
+expects_from:
+  ac_id: BO-2600a-2
+  contract: "select_connected --exclude-structural-parent, which resolves the connected build set with any depends_on entry equal to the node's structural parent skipped, and prints the ordered id list as JSON."
+test_required: true
+test_spec:
+  - name: test_fast_lane_resolved_set_excludes_structural_parent_siblings
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executing the lane under the harness against a fixture store with the parent-chain shape, then running the resolver dispatch's own command, yields a set containing the target and its descendants and NOT the leaves reachable only through structural parents."
+  - name: test_fast_lane_resolved_set_keeps_genuine_prerequisites
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A prerequisite that is not the target's structural parent is still present in the set the lane's own resolver command produces."
+  - name: test_fast_lane_needs_no_second_argument_for_the_tight_set
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "The lane is executed with only { ac: <id> } supplied and still produces the tight set — no scope argument is accepted or required."
+  - name: test_build_ac_resolution_is_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The resolver default and the /build-ac invocation resolve exactly as before this change, so the library default and the other caller are provably undisturbed."
+test_rationale: |
+  The assertion MUST be made on the RESOLVED SET, produced by executing the lane under
+  unit_tests/_workflow_engine_harness.py (run_workflow_under_e2) against a fixture AC
+  store, capturing the resolver dispatch the run recorded, running that dispatch's own
+  select_connected command as a subprocess, and comparing the JSON id list it prints
+  against the expected set. A test that reads templates/workflows-js/fast-lane-ship.js
+  and asserts the substring "--exclude-structural-parent" appears near "select_connected"
+  is NOT acceptable evidence and must not be substituted. CLAUDE.md's "Gate / Workflow ACs
+  — Verify Behaviorally, Not by Grep" was written about this exact lane after
+  fast-lane-build.js passed its grep-only structural tests while never executing its gates
+  at all. A grep passes on dead code, on a commented-out flag, and on a flag appended to
+  the wrong subcommand; running the command the lane composed passes on none of those.
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2600b-1-i
+  - BO-2600b-1-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  BEHAVIOURAL DECISION (the choice BO-2600b's "left to the BA" section delegated):
+  the fast lane ALWAYS excludes the structural parent. There is no per-run operator
+  control and no new workflow argument. Reasoning, in the order it decided the question:
+
+  1. An operator who wants a whole branch already has a precise way to ask for it — aim
+     at the branch. The flag suppresses only the depends_on walk; the subtree union is
+     untouched, so aiming at an L0 or L1 still gathers everything beneath it (this is
+     what BO-2600b-1-i pins down). The "always exclude" option therefore costs the
+     operator no expressiveness at all. That is what made the decision easy: there is no
+     scope reachable under the per-run option that is unreachable under this one.
+
+  2. A per-run switch still has to pick a default, and both defaults are worse. Defaulting
+     to include leaves today's broken scope as what an operator gets by default and makes
+     BO-2600's promise conditional on knowing a flag exists. Defaulting to exclude adds a
+     documented way to opt back INTO the scope explosion the parent L0 forbids — a footgun
+     whose only use case is already served by point 1.
+
+  3. The fast lane's own promise is one criterion id in, a pull request out (BO-2400f).
+     A second input for scope contradicts that, and it is the input most likely to be got
+     wrong precisely when the operator is least able to check — before the run starts.
+
+  4. BO-2600's amended L0 asks that "every way in resolves the same tight set, so the scope
+     you get never depends on which entry point you happened to use." /build-ac passes the
+     flag unconditionally (build-ac.md:333). Making the lane conditional would leave the two
+     entry points disagreeing whenever the operator omitted the switch — the exact defect
+     the amendment names.
+
+  The library default stays False. This is a caller decision, deliberately: BO-2600a-1
+  fixed resolve_connected_build_set's default as a backward-compatibility invariant, and
+  changing it would silently re-scope every other caller to satisfy a preference that
+  belongs to one lane.
+
+  Measured evidence this closes (2026-08-18, verified against the live store):
+    select_connected --ac BO-2400c-1-v
+      -> ["BO-2400c-1","BO-2400c-1-i","BO-2400c-1-v","BO-2400c-2","BO-2400c-2-i"]
+    select_connected --ac BO-2400c-1 --exclude-structural-parent
+      -> ["BO-2400c-1","BO-2400c-1-i","BO-2400c-1-v"]
+  Aiming at one L3 dragged in two unrelated siblings, because the leaf depends on its
+  structural parent, which depends on ITS parent, which expands to every not-done leaf
+  underneath.
