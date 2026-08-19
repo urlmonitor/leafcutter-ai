@@ -29,9 +29,34 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Must verify importability using the same sys.path mechanism that agent templates use at runtime"
-  - "Must confirm __init__.py is present and makes the directory a valid Python package"
-  - "Must not introduce any import-time side effects in __init__.py"
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/__init__.py
+  n_location_rule: "1 — the deployed package's __init__.py must be present and side-effect free"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must verify importability using the same sys.path mechanism that agent templates use at runtime"
+    - "Must confirm __init__.py is present and makes the directory a valid Python package"
+    - "Must not introduce any import-time side effects in __init__.py"
+  notes: |
+    Verify the import against the DEPLOYED layout in a fresh process, not the
+    source tree — a unit test that imports from scripts/ac_store/ directly will
+    pass while the deployed copy is missing, which is the exact masking effect
+    described in CLAUDE.md "New Hook / Gate Dependencies Must Be in the Build
+    Deploy-Manifest".
+test_spec:
+  - name: test_deployed_ac_store_modules_import_from_the_deployed_layout
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "In a fresh subprocess with sys.path set to the deployed scripts/ac_store, importing ac_prioritizer, generate_ticket_from_ac and scan_ac_store all succeed."
+  - name: test_deployed_ac_store_init_is_present_and_side_effect_free
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "__init__.py exists in the deployed package and importing it produces no output or state change."
 delivers_to: null
 expects_from:
   ac_id: BP-900a-1
