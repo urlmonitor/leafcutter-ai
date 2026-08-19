@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 components:
   - build_pipeline
 related_docs:
@@ -306,7 +306,7 @@ source no longer has.
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
 - **Where:** `scripts/build_phases.py:1970-1990` — the `skills_invoked` resolution loop, the
   only skill-reference validator in the build
 
