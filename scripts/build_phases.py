@@ -2658,6 +2658,12 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 
     - ``templates/scripts/setup_ticket_worktree.py`` → ``scripts/setup_ticket_worktree.py``
       Referenced by worktree-agent.md and build-single-ticket/SKILL.md.
+    - ``templates/scripts/goal_to_epic.py`` → ``scripts/goal_to_epic.py``
+      A thin delegator to the full implementation already deployed alongside
+      it at ``scripts/ac_store/goal_to_epic.py`` (see ``build_ac_store``).
+      Shimmed at ``<target>/scripts/goal_to_epic.py`` (BP-900a-2).
+    - ``templates/scripts/build_ac_mode_detection.py`` → ``scripts/build_ac_mode_detection.py``
+      Shimmed at ``<target>/scripts/build_ac_mode_detection.py`` (BP-900a-2).
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -2884,6 +2890,22 @@ def clean_stale_artifacts(
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/03]: No logic
+#   change to build_template_standalone_scripts() — it already globs
+#   templates/scripts/*.py (shallow) into <output_root>/scripts/, which is
+#   exactly the deploy target BP-900a-2 requires. Closed the gap by adding
+#   the two missing template sources, templates/scripts/goal_to_epic.py
+#   (a thin delegator to the already-deployed
+#   <output_root>/scripts/ac_store/goal_to_epic.py, to stay under the
+#   400-line file-size limit rather than duplicating the ~2700-line
+#   implementation) and templates/scripts/build_ac_mode_detection.py (a
+#   verbatim, header-normalized copy of scripts/build_ac_mode_detection.py,
+#   which is small enough to duplicate safely), and adding the corresponding
+#   shim entries to install_shims()'s file_shims list (scripts/build_helpers.py)
+#   so <target>/scripts/goal_to_epic.py and
+#   <target>/scripts/build_ac_mode_detection.py resolve to the deployed
+#   copies. Updated this docstring's "Currently deploys" list accordingly.
+#   (#EPIC-DeploymentCompleteness/03)
 # - 2026-05-14 00:50 [epic-supervisor/T04]: Added _find_decision_history_index (#EPIC-LeafcutterMVP/01)
 #   and _build_output_lines to re-exports from build_precommit so unit tests
 #   can access them via build_phases. No logic changes in this module.

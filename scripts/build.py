@@ -577,7 +577,10 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         if (scripts_src / fname).is_file():
             manifest.add(f"scripts/ac_store/{fname}")
 
-    # Backward-compatibility: honour a templates/scripts/ mirror if one is ever added.
+    # templates/scripts/goal_to_epic.py and templates/scripts/build_ac_mode_detection.py
+    # (BP-900a-2) are the tracked mirror this block was written to anticipate — they
+    # are also picked up by _manifest_template_standalone_scripts()'s glob above, but
+    # this explicit block is kept for clarity/documentation of the deploy path.
     templates_scripts = package_root / "templates" / "scripts"
     for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
         if (templates_scripts / fname).is_file():
@@ -1721,6 +1724,15 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-17 [python-coder/EPIC-DeploymentCompleteness/03]: Added
+#   templates/scripts/goal_to_epic.py and templates/scripts/build_ac_mode_detection.py
+#   as tracked template sources, closing the gap the "Backward-compatibility:
+#   honour a templates/scripts/ mirror if one is ever added" comments below
+#   were written to anticipate. Both manifest helpers
+#   (_get_source_deployable_scripts / _get_source_paths_for_guard) already
+#   handled this case via their pre-existing templates/scripts/ scans, so no
+#   logic change was needed here — updated the comments to reflect the mirror
+#   now existing rather than being hypothetical. (#EPIC-DeploymentCompleteness/03)
 # - 2026-05-13 15:30 [epic-supervisor/T03]: Added build_precommit_config to (#EPIC-LeafcutterMVP/01)
 #   the phase dispatch list. Reads hooks_manifest from commit_guardian.json
 #   template and emits/merges .pre-commit-config.yaml at the consumer project
