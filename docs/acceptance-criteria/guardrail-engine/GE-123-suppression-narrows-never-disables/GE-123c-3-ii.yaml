@@ -1,6 +1,7 @@
 id: GE-123c-3-ii
 components:
   - commit_guardian
+  - security_scanner
 title: "A suppression that could have matched but had nothing to match this time is left alone"
 component: guardrail-engine
 level: L3

@@ -3,6 +3,7 @@ title: "No single line can leave a file unprotected"
 component: guardrail-engine
 components:
   - commit_guardian
+  - security_scanner
 level: L1
 status: active
 req_status: draft

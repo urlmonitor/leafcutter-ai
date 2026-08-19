@@ -319,7 +319,7 @@ Three modules the AC store depends on are not in it:
 
 In a consumer repo that vendors the build output, the schema validator is therefore absent,
 and the deriver that would populate the field it validates is absent too. The consequence
-lands on the AC store as a hard block — see KI-ACS-005, where 972 of 973 ACs in one
+lands on the AC store as a hard block — see KI-ACS-007, where 972 of 973 ACs in one
 consumer repo are invalid on a field the package computes for itself.
 
 This is the **fourth** recurrence of one failure mode. `done_proof.py`, `test_enforcement.py`,

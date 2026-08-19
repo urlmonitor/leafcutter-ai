@@ -454,12 +454,25 @@ class TestRealStoreReachabilityFloor:
         self, real_records: list[tuple[Path, dict]]
     ) -> None:
         # covers: UNKNOWN
-        """A real AC with an authored test_spec keeps its own contract.
+        """A real AC with an authored test_spec keeps its own contract, plus
+        the universal reachability floor — exactly once.
 
-        The floor belongs to the fallback only. An AC whose it-po authored a
-        test_spec must not have a second, generator-invented reachability test
-        stapled on: at most one reachability entry, and no entry the author did
-        not write.
+        SUPERSEDED CONTRACT (pre-BO-2900g-1): the floor belonged to the
+        fallback route only, so an authored-test_spec AC was taken as-is and
+        got zero generator-added entries. BO-2900g-1 ("the demand for
+        proof-of-wiring reaches every piece of work, INCLUDING work that
+        arrived with a plan of its own") makes the floor universal; BO-2900g-1-i
+        adds the de-duplication rule (already-present -> not added twice). The
+        current contract is therefore EXACTLY ONE reachability entry after
+        finalisation, regardless of whether the author's own test_spec had
+        zero or one:
+          - zero authored -> the generator adds exactly one (the floor), and
+            every authored entry survives unaltered;
+          - one authored (angle: reachability) -> the generator adds none,
+            and that authored entry is the surviving one.
+        Two or more authored reachability entries, an authored entry being
+        dropped, or the generator inventing any entry beyond the single floor
+        are all still defects this test guards against.
         """
         record = _find_authored_spec_anchor(real_records)
         ac_id = record["id"]
@@ -467,9 +480,11 @@ class TestRealStoreReachabilityFloor:
         entries = _parse_test_entries(_generate_ticket_via_cli(ac_id))
         reach = _reachability_entries(entries)
 
-        assert len(reach) <= 1, (
+        assert len(reach) == 1, (
             f"real AC {ac_id} has an authored test_spec but produced "
-            f"{len(reach)} reachability entries: {reach}"
+            f"{len(reach)} reachability entries (expected exactly 1: the "
+            f"BO-2900g-1 floor reaches every plan, and BO-2900g-1-i forbids "
+            f"duplicating an already-authored one): {reach}"
         )
         authored_names: set[str] = {
             str(item["name"])
@@ -477,10 +492,35 @@ class TestRealStoreReachabilityFloor:
             if isinstance(item, dict) and item.get("name")
         }
         emitted_names: set[str] = {str(e["name"]) for e in entries}
-        assert emitted_names == authored_names, (
-            f"generator invented or dropped test entries for {ac_id}.\n"
-            f"authored: {sorted(authored_names)}\nemitted: {sorted(emitted_names)}"
+
+        dropped = authored_names - emitted_names
+        assert not dropped, (
+            f"generator dropped authored test entries for {ac_id}: {dropped}"
         )
+
+        added = emitted_names - authored_names
+        authored_already_had_reachability = any(
+            isinstance(item, dict) and item.get("angle") == TEST_ANGLE_REACHABILITY
+            for item in record["test_spec"]
+        )
+        if authored_already_had_reachability:
+            assert not added, (
+                f"{ac_id} already authored a reachability entry; the "
+                f"generator must not invent any further entry: added {added}"
+            )
+        else:
+            assert len(added) == 1, (
+                f"{ac_id} authored no reachability entry, so the generator "
+                f"must add EXACTLY ONE (the universal floor) and nothing "
+                f"else: added {added}"
+            )
+            (added_name,) = added
+            added_entry = next(e for e in entries if str(e["name"]) == added_name)
+            assert added_entry.get("angle") == TEST_ANGLE_REACHABILITY, (
+                f"the one entry the generator adds beyond the authored set "
+                f"must be the reachability floor, got "
+                f"angle={added_entry.get('angle')!r}"
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 id: GE-123c-3
 components:
   - commit_guardian
+  - security_scanner
 title: "The author is told about an unmatchable entry on the real commit path, in the one warning shape this file already uses, and the commit still proceeds"
 component: guardrail-engine
 level: L2

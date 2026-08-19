@@ -1,6 +1,7 @@
 id: GE-113c-3-v
 components:
   - commit_guardian
+  - security_scanner
 title: "An allowlist entry with a zero-segment file path suppresses nothing and is reported as malformed"
 component: guardrail-engine
 level: L3

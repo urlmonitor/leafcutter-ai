@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 components:
   - ac_store
 related_docs:
@@ -227,6 +227,30 @@ failing schema validation, **251 of them on `it_requirements`** (the other 2 are
 `framework: playwright`, outside the enum). `BO-100a.yaml` is an untouched control — it
 fails on a clean checkout with no local modifications.
 
+**Correction, 2026-08-19 — it also UNDER-matches, and that half is worse.** The original
+writeup above described only the over-match. Measured at `9b16d013`, the enum mixes the two
+component spellings:
+
+```
+component: build-orchestration   845   <-- in enum (kebab)
+component: build_pipeline         65   <-- in enum (underscore)
+component: build-pipeline        440   <-- NOT in enum
+```
+
+`components.json` graph ids use underscores; `index.yaml` namespaces use kebab. The enum
+took one of each. So of 1610 python-coder records, the rule fires on 411 and **misses 239
+build-* records — 215 of which carry non-object `it_requirements` and have therefore never
+been checked once.** The gate is simultaneously too tight and too loose, keyed off a
+spelling.
+
+The proxy is also false of the population it does catch: of 245 records carrying the object
+form, **73 set `config_schema_fragment: null`** — nearly a third wrote an explicit null to
+get past a rule that does not apply to them.
+
+Any fix must therefore do more than narrow the trigger; it must stop keying on `component`
+at all, or the 440 kebab records stay invisible. Specified in `ACS-100i-6`, `ACS-100i-6-ii`
+and `ACS-100i-7`.
+
 **Why it matters.** Both gates are diff-scoped, so the violation is invisible until an
 unrelated change puts one of these files in a diff — then it blocks that commit. It has
 now been deferred with a documented `[HOOK-SKIP: check-ac-schema]` twice, in `7c8c505e3`
@@ -313,7 +337,75 @@ whether `--mode ci` should run in CI at all — it currently cannot pass.
 the pre-commit variant being stricter than the CI backstop. A fifth is definitional: the
 schema hook's `_is_leaf_ac()` treats any `level: L2` AC as a leaf, while the oracle treats
 an AC with resolvable children as a composite, so the two gates can demand contradictory
-things of the same record (observed on `BO-1500a-1`, `BO-1500b-1`, `BO-1500c-1`).
+things of the same record (observed on `BO-1500a-1`, `BO-1500b-1`, `BO-1500c-1`). Two more
+live one layer lower, in how the oracle maps a tag to a test at all — see KI-ACS-008.
+
+---
+
+### KI-ACS-008 — The oracle's tag-to-test layer cannot see an async test or a parametrised one
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/ac_store/done_proof.py` — `_TEST_DEF_RE` (line 95, consumed by
+  `_scan_single_test_file`); `_find_nodeid_for_test` (consumed by `_classify_outcomes`)
+
+KI-ACS-006 collects defects in the oracle's **composite resolution**. These two sit one
+layer lower, in the step that decides which test a `# covers:` tag belongs to and which
+pytest result belongs to that test. Both fail closed, so both present as the same
+indistinguishable verdict a genuinely untested AC produces — which is precisely why they
+survive: the operator reads "no linked test found" and goes looking for a missing test
+that is in fact sitting right under the tag.
+
+**D-1 — `async def` is not a test definition.** `_TEST_DEF_RE` is
+`r"^\s*def\s+(test_\w+)"`. There is no `async` alternative, so an `async def test_*` line
+never updates `current_function` in `_scan_single_test_file`. Every tag inside that
+function is either dropped (nothing seen yet → `current_function is None`) or, worse,
+attributed to whatever **sync** test happened to appear earlier in the file. An AC whose
+tests are all async is unmarkable through the gate; an AC in a mixed file gets its proof
+silently reassigned to an unrelated function.
+
+**Evidence.** A consumer install (DIAGraph) has **23** ACs whose every covers-tagged test
+is `async def`. Four of them are `DTW-104` — `DTW-104a-3-i`, `DTW-104d-1`, `DTW-104d-3`,
+`DTW-104d-3-i` — and the rest are the `N4J-100*` Neo4j integration set, the `CQ-100b-2*`
+lifespan set, and `IDP-100d-4`. This is not a corner: any repo testing an async API
+surface (FastAPI, an async driver) writes async tests by default, so the gate is
+structurally unusable for the whole layer.
+
+**D-2 — a parametrised test never resolves.** `_find_nodeid_for_test` matches with
+`nodeid.endswith(f"::{func_name}")`. `_PYTEST_RESULT_RE` correctly *captures* the
+parametrised form — its pattern includes `(?:\[.*?\])?` — so the results dict holds
+`…::test_x[case]`, which does not end with `::test_x`. Both the basename-scoped pass and
+the suffix-only fallback miss, `_find_nodeid_for_test` returns `None`, and
+`_classify_outcomes` books the test as non-passing with the reason `linked test not run`.
+A green parametrised test therefore reads as evidence the test never executed.
+
+**Evidence.** Live in DIAGraph: `MSN-102` is covered only by
+`tests/test_materials_graphdb_502.py::test_neo4j_error_returns_502`, decorated
+`@pytest.mark.parametrize("path", MATERIAL_ROUTES)`. Zero occurrences in this repo today —
+which is why it has never fired here, not evidence that it is rare.
+
+**Why it matters.** Both defects push in the **false-negative** direction: they report
+covered ACs as uncovered. That is the safer direction of the two, but it is the direction
+that makes the gate get switched off — an operator who cannot mark a correctly-tested AC
+done reaches for `SKIP=` or `--no-verify`, and from then on the gate protects nothing.
+D-1's misattribution path in a mixed sync/async file is additionally a false **positive**:
+AC-A's tag can be proven by AC-B's sync test.
+
+**Fix direction.** D-1 is a one-token regex change — `r"^\s*(?:async\s+)?def\s+(test_\w+)"`
+— plus a test with an async-only fixture file. D-2 wants the match to compare the nodeid's
+function segment with the parameter suffix stripped (`nodeid.rsplit("::", 1)[-1].split("[", 1)[0]
+== func_name`) rather than a raw `endswith`, and should classify a parametrised test as
+passing only when **every** matching nodeid passed — one green case out of five is not
+proof. Note `_find_nodeid_for_test` returns a single nodeid today, so D-2's fix changes
+its signature; do it as one AC with the caller.
+
+**Related:** KI-ACS-006 (composite-resolution defects in the same oracle); KI-CG-006 (the
+pre-commit gate disagrees with this oracle in both directions).
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse case: a gate whose
+false refusals train the operator to bypass it.
 
 ---
 
@@ -367,14 +459,47 @@ underneath. The id churn is cosmetic; the defect is not.
 
 ---
 
-### KI-ACS-005 — `components` is required and hand-authored while the package ships its deriver
+### KI-ACS-007 — `components` is required and hand-authored while the package ships its deriver
 
 - **Severity:** blocker
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-19
 - **Where:** `scripts/ac_store/validate_ac_schema.py:225-230` · `config/ac_store_schema.json:521`
   · `scripts/ac_store/_component_migration_map.py` · `scripts/check_component_vocab.py:25`
+
+**Second occurrence, 2026-08-19 — there is a THIRD copy of the vocabulary, and this entry
+undercounted.** Registering the new `security_scanner` component exposed it. After adding
+the id to `docs/components.json`, the two validators disagreed:
+
+```
+$ python3 scripts/check_component_vocab.py
+OK: all `components` values are canonical components.json ids (full tree).
+
+$ find docs/acceptance-criteria/guardrail-engine -name '*.yaml' \
+      -exec python3 scripts/ac_store/validate_ac_schema.py {} +
+  ...GE-123a.yaml: schema violation at components.1 —
+  'security_scanner' is not one of ['ac_driven_dev', 'ac_store', ... 'worktree_manager']
+```
+
+Forty-two files failed. `check_component_vocab.py` reads `docs/components.json`;
+`validate_ac_schema.py` validates against a **hand-maintained `enum` inside
+`config/ac_store_schema.json`** that duplicates the same 42 ids. Adding a component
+requires editing both, in the right order, and nothing says so — the first validator
+reports full-tree success while the second rejects every record.
+
+So the count in the text below is wrong: this is not two vocabularies bridged by a map, it
+is **three** — `docs/components.json` (underscore, graph membership),
+`docs/acceptance-criteria/index.yaml` (kebab, namespace and id prefixes, correctly
+separate), and the schema `enum` (underscore, a straight duplicate of the first with no
+mechanism keeping them in step). The entry's own prediction — *"parallel names bridged by a
+map drift by construction"* — applies to the third copy most sharply, because it is not
+even bridged by a map; it is a literal transcription.
+
+**Fix direction for the third copy specifically.** Generate the schema `enum` from
+`docs/components.json` at build time, or drop the `enum` and have the validator read the
+registry the way `check_component_vocab.py` already does. Two validators disagreeing about
+what a valid component id is means one of them is always wrong.
 
 **Symptom.** Every AC must carry a `components` list, validated non-empty against
 `docs/components.json`. Almost all of it is mechanically derivable from the `component`
@@ -445,9 +570,19 @@ There is a real requirement underneath this: an AC lives in one directory but ca
 to more than one component. That is genuine 1:N and worth keeping. It does not justify a
 required, hand-authored, separately-spelled second field on all 3,154 records.
 
-Filed as KI-ACS-003 while this work sat uncommitted; renumbered to 005 on landing because
-main published a different KI-ACS-003 (id uniqueness) and a KI-ACS-004 in the interim.
-Same churn the entry above records, and the same cause.
+Filed as KI-ACS-003 while this work sat uncommitted, renumbered to 005 at merge time, and
+renumbered again to 007 immediately afterwards — the 005 landed as a DUPLICATE. PR #496
+merged three minutes before #497 and took both 005 and 006, so the number verified free at
+authoring was taken by the time the merge button was pressed.
+
+Worth recording rather than quietly correcting, because it is the third instance of one
+mechanism in two days and the first two are already filed: KI-ACS-003 (the AC store has no
+id-uniqueness gate) and KI-ACD-008 (id allocation reads a stale view of what is taken).
+This register has the same hole and no gate at all. Checking a number is free is not
+sufficient when the check and the merge are separated by any interval in which another PR
+can land — the property that matters is uniqueness AT MERGE, and nothing asserts it. The
+fix that would have caught all three is one gate over the merged tree, not more care at
+authoring time.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that cannot run
 is indistinguishable from one that passes).

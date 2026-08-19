@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 components:
   - commit_guardian
 related_docs:
@@ -45,9 +45,18 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-19
 - **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py:134-150`, and the AC hook family generally
+
+**Second occurrence, 2026-08-19.** Staging `GE-113c-1-iii` and `GE-113c-1-v` for an
+unrelated one-line `components` edit made `check-ac-schema` fail both with *"approved code
+AC must declare a test contract — add a non-empty `test_spec`"*. Neither record has ever
+had one. They are `readiness: approved`, `change_target: code`, and have been sitting on
+`main` in that state — invisible because no commit had happened to stage them since the
+rule was introduced. The hook was not silent because they were fine; it was silent because
+it had never been shown them. A store-wide sweep would find how many more there are; the
+index-scoped hook structurally cannot.
 
 **Symptom.** These hooks derive their file list from `git diff --cached --name-only` (or
 `HOOK_TEST_FILES` under test) — never from the store. Any fact that is true of the store
@@ -132,19 +141,45 @@ less than it claims to, and reports success).
 
 ---
 
-### KI-CG-006 — The pre-commit proof-of-done gate is stricter than the CI backstop it approximates
+### KI-CG-006 — The pre-commit proof-of-done gate and the CI backstop disagree on what a valid tag is, in both directions
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/scripts/commit_guardian/check_done_proof.py` (`check_staged_done_proofs`)
+- **Occurrences:** 3
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-19
+- **Where:** `templates/scripts/commit_guardian/check_done_proof.py`
+  (`check_staged_done_proofs`, `_collect_all_covered_ids`)
 
 **Symptom.** `check_staged_done_proofs` never reads `test_required`, and has no composite
 path. Its two siblings have both: `check_all_done_acs` and `check_changed_done_acs` each
 skip an AC with `test_required: false`, and both derive a composite's verdict from its
 children via `verify_done_eligible`. So the fast local gate blocks commits that the CI
 gate would pass.
+
+**The disagreement also runs the other way — it accepts tags that link to nothing.**
+The two gates do not share a scanner. `_collect_all_covered_ids` is a flat
+`COVERS_TAG_RE.finditer` over each file's whole text and keeps every id it sees, wherever
+it sits. The oracle's Python scanner (`done_proof._scan_single_test_file`) attributes a tag
+to the most recent enclosing `def test_*` and **drops** any tag with no enclosing test
+function. A tag in a module docstring, an import block, a helper, or a comment header is
+therefore proof to the pre-commit gate and invisible to the authoritative one.
+
+So the two halves of one file define "a valid covers tag" differently: a text-presence
+scan with no notion of a test function, versus a scanner that requires one. Neither reads
+the other. That is the actual defect — the strictness gap and the laxity gap are two
+symptoms of it, and fixing only the direction that blocks a commit leaves the direction
+that waves one through.
+
+**Evidence (false accept).** In a consumer install (DIAGraph),
+`tests/test_psd_problems_case_count.py` carries `# covers: MSN-101` **inside its module
+docstring** — before any `def`. The pre-commit gate finds the id and passes `MSN-101` as
+proven; `verify_done_eligible('MSN-101')` reports `no linked test found`. The record can
+be committed as `done` locally with nothing behind it. The lax half is the more dangerous
+one: it is phantom-done, and it is the failure mode this hook exists to prevent.
+
+Worth noting the oracle's own scanner is not the safe reference either — it cannot see an
+`async def` test at all (KI-ACS-008 D-1), so "the strict one is right" does not hold
+either. Any fix should settle on one shared scanner, not pick a winner.
 
 The module docstring documents the exemption for the two CI functions and is silent about
 the pre-commit one, so the omission may be deliberate. It is still incoherent in effect:
@@ -171,176 +206,34 @@ so it checked nothing. See KI-CG-001 for the same index-scoping confusion.
 the composite path rather than demanding a direct tag. It is a small change but it widens
 a phantom-done gate, so it wants an AC and a test rather than an in-passing edit.
 
----
-
-### KI-CG-003 — `check-contract-shrinking` has no merge-commit awareness, so it blames the base branch's history on the merge
-
-- **Severity:** high
-- **Status:** FIXED 2026-08-18 — pending deletion once merged
-- **Occurrences:** 2
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/scripts/commit_guardian/check_contract_shrinking.py:165-189` (`_get_staged_diff`)
-
-**Fixed.** Hit a second time merging `origin/main` into `fix/ac-schema-conformance-33`,
-blocked on the same `#461` test deletions. `_get_staged_diff` now narrows to files
-differing from BOTH parents during a merge, matching the four sibling hooks.
-
-Two things the original fix direction above does not mention, both found by review before
-the fix landed:
-
-- **Scoping the whole diff breaks the guard's conjunction.** The predicate spans two
-  disjoint file sets — production changed AND a test weakened. Narrowing both halves lets
-  an author take the base branch's production edit verbatim (removing it from scope) and
-  skip the tests it broke; the pairing never forms. Production detection therefore stays
-  on the full staged diff and only weakening detection is merge-scoped.
-- **Three silent-pass paths.** Paths with spaces were split into two tokens, non-ASCII
-  paths came back C-quoted (`core.quotePath` defaults true), and pathspecs after `--`
-  resolve against CWD rather than the repo root. Each produced an unmatched pathspec, an
-  empty diff, and a passing gate — an unmatched pathspec is not a git error. Fixed with
-  `-z` NUL splitting and `:(top)` anchoring, plus a contradiction check that falls back to
-  the full diff when a non-empty scope yields an empty diff.
-
-Covered by `unit_tests/commit_guardian/test_ac_limits_merge_scope.py`
-(`TestContractShrinkingMergeScoping`, `TestContractShrinkingMergeBehaviour`) — 17 tests,
-including discriminating cases for each of the four defects above.
-
-Delete this section once the fix is on `main`.
-
-**Original report, kept for the record until deletion.**
-
-**Symptom.** The guard blocks when a diff deletes test functions *and* touches production
-files. It obtains that diff from a bare `git diff --cached`, with no check for `MERGE_HEAD`
-and no comparison against the merge base. During a merge commit the staged diff is not
-"what this commit changes" — it is everything the incoming branch changed since the fork
-point. So merging an up-to-date `main` into a feature branch presents every test deletion
-and every production edit `main` has accumulated as though the merging commit authored
-them, and the guard blocks a commit whose own content is unrelated.
-
-**Evidence.** Merging `origin/main` into `feat/bo-1500f-1-setup-dispatch-charter` on
-2026-08-18 was blocked with 9 deleted test functions and 9 modified production files:
-
-```text
-[contract-shrinking guard] BLOCKED
-  - test function deleted: 'test_ac3i_halts_when_a_batch_test_passes'
-  - test function deleted: 'test_h2_red_baseline_cli_exits_0_when_all_red'
-  ... (9 total)
-Production files modified:
-  - scripts/ac_store/done_proof.py
-  - scripts/build_orchestration/fast_lane.py
-  ... (9 total)
-```
-
-None of it belonged to the branch. Verified two ways: `git grep` for
-`test_ac3i_halt_names_offending_ac_id` on `origin/main` returns nothing (so `main` deleted
-it, in `#461`), and `git diff origin/main --stat -- scripts/` on the branch is **empty** —
-the branch touches zero production files. `git diff origin/main -- unit_tests/ | grep "^-" |
-grep "def test_"` is likewise empty: the branch deletes no test anywhere.
-
-**Why it matters beyond the annoyance.** The only way past it is `SKIP=check-contract-shrinking`,
-and the merge commit is exactly the commit where a genuine test deletion is easiest to hide.
-Training people to skip this guard on merges disarms it at its highest-value moment. This is
-the second guard in this file whose scope is "the git index" rather than "what changed here"
-— see KI-CG-001 for the same root confusion in the AC hooks.
-
-**Fix direction.** Detect a merge in progress (`.git/MERGE_HEAD` exists) and diff against
-the merge base (`git diff $(git merge-base HEAD MERGE_HEAD)`) so only the merging branch's
-own contribution is scanned — or skip the guard on merge commits explicitly and loudly,
-which is at least honest about what is not being checked. A silent `--cached` on a merge is
-neither.
+For the laxity half, replace `_collect_all_covered_ids`' bare regex sweep with the oracle's
+own scanner — export `done_proof._scan_test_root_for_covers_tags` and derive the id set
+from `{t["ac_id"] for t in tags}`, so a tag outside a test function stops counting as
+presence in both gates by construction. That import already exists in this module (the
+`verify_done_eligible` / `COVERS_TAG_RE` block), so it costs no new coupling. Fix
+KI-ACS-008 D-1 first or the shared scanner will start rejecting every async-tested AC at
+pre-commit time. The right end state is one scanner with one definition and a test
+asserting the two gates agree on a fixture set covering all four shapes: sync, async,
+file-level, composite.
 
 ---
 
-### KI-CG-004 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/`
+### KI-CG-004 — moved to `security-scanner`
 
-- **Severity:** high
-- **Status:** open — partially anticipated by `GE-123d-4-i` (draft), but that AC governs a *proposed* widening, not this existing behaviour
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/scripts/commit_guardian/check_secrets.py` — `_PROSE_FILE_PREFIXES` / `_is_prose_exempt`
+Refiled 2026-08-19 as **KI-SEC-001** in
+[`docs/known-issues/security-scanner.md`](security-scanner.md): *prose exemption
+disables entropy detection for whole files, including executable Python under
+`templates/skills/`, and its path match is not root-anchored.*
 
-**Symptom.** `ENTROPY_HIGH` is the only rule that catches an **opaque** credential — a
-Stripe key, a JWT, a random API token — because such values carry no `password =`
-style keyword for `GENERIC_SECRET` to match and no fixed prefix for `AWS_KEY` or
-`PRIVATE_KEY`. That rule is switched off for entire files under four path prefixes.
-The source comment states the scope plainly: *"Prose-only file prefixes — entire files
-are exempt from entropy scanning."*
+Moved when the `security-scanner` register was created. The defect is about what the
+secrets scanner can be talked out of reporting, which is that surface's question, not
+the guardrail framework's. The id is retired here rather than reused, so the numbering
+gap is intentional.
 
-**Evidence.** A live-shaped token (`sk_live_…`, Shannon entropy **5.17**, threshold
-4.5) run through the real `_is_prose_exempt`:
-
-```
-templates/skills/security-scanner/scripts/scan_secrets.py   EXEMPT — not reported
-templates/skills/some-skill/scripts/helper.py               EXEMPT — not reported
-tickets/00_inbox/TICKET-20260818-Example.md                 EXEMPT — not reported
-docs/acceptance-criteria/guardrail-engine/GE-123.yaml       EXEMPT — not reported
-docs/retrospectives/retro.md                                EXEMPT — not reported
-scripts/build.py                                            reported
-leafcutter-web/app/page.tsx                                 reported
-```
-
-**Why `templates/skills/` is the sharp edge.** It is on the prose list but it is not
-prose — it holds executable Python, including the secrets scanner's own
-`scan_secrets.py`. A credential pasted into any script under that prefix is
-unreported by the very tool meant to catch it. The other three prefixes are genuinely
-prose directories, so the exposure there is narrower, but a ticket is still a file a
-developer will happily paste a token into while writing up an incident.
-
-**Scope of the exemption, precisely.** It gates `ENTROPY_HIGH` only —
-`AWS_KEY`, `PRIVATE_KEY`, `EXCHANGE_API_KEY` and `GENERIC_SECRET` still fire in these
-paths. So the hole is exactly the class of credential that has no recognisable shape,
-which is most modern opaque tokens.
-
-**The exemption is far wider than four directories — the match is NOT root-anchored.**
-`_is_prose_exempt` tests `("/" + prefix) in path_str`, a substring test against the
-whole path. So the four prefixes are really four *directory names*, matching at **any
-depth, in any subtree**. Measured with the same 5.17-entropy token:
-
-```
-tickets/00_inbox/note.md                    EXEMPT   (intended)
-leafcutter-web/tickets/app.py               EXEMPT   (not intended)
-src/vendor/tickets/handler.py               EXEMPT   (not intended)
-some/deep/nested/docs/retrospectives/x.py   EXEMPT   (not intended)
-unrelated/templates/skills/evil.py          EXEMPT   (not intended)
-src/app.py                                  reported
-```
-
-This repository already ships `leafcutter-web/`. Any feature directory named
-`tickets/`, any vendored dependency containing one, and any nested `templates/skills/`
-loses entropy detection silently — for `.py` as readily as for `.md`. The original
-framing of this issue (four known prose directories) understated it: the reachable
-surface is any path containing one of those four segment names.
-
-**Corollary — a test can be written that passes for the wrong reason.** A fixture
-placed under any such path measures the exemption rather than the scanner. This is a
-live authoring hazard, not a theoretical one; it is called out as a hard
-`it_requirement` in the `GE-123a` and `GE-123c` subtrees for exactly that reason.
-
-**Fix direction.** Three separable changes, in descending order of payoff:
-
-- **Anchor the match at the repository root.** Compare path *segments* from the root
-  rather than substring-testing the whole path. This is the single change that shrinks
-  the surface from "any path containing these names" back to the four directories the
-  exemption was written for, and it is the cheapest of the three.
-- Gate the exemption by **file kind**, not only by path. A `.md` under `tickets/` is
-  prose; a `.py` under `templates/skills/` is not. This closes the executable-code case
-  that anchoring alone leaves open, since `templates/skills/` genuinely is on the list.
-- Make the exemption **per finding** rather than per file. The existing rule discards
-  every entropy finding in a matching file; the narrower rule is to discard only
-  findings whose high entropy is explained by a benign token — which the module
-  already computes for `TICKET-…` / `EPIC-…` identifiers and could extend.
-
-**One more thing the fix must not trip over.** `_filter_prose_findings` passes
-`finding.excerpt` as the line to test, and `scan_file` sets
-`excerpt = line.strip()[:120]` (`scan_secrets.py:248` and `:254`). The exemption
-therefore judges a **truncated** line: a benign explanatory token sitting past column
-120 is invisible to it, so verdict can turn on line length alone. Any per-finding
-rework needs the full matched value, not the excerpt.
-
-**Relationship to in-flight work.** `GE-123d` proposes extending prose exemption to
-`GENERIC_SECRET`, and `GE-123d-4-i` exists specifically to require a file-kind gate so
-that widening does not inherit this defect. That is the right guard for the *new*
-behaviour, but it does not repair the *existing* `ENTROPY_HIGH` exemption — this issue
-covers that, and it should be fixed first so the new work is not built on top of it.
+**Six `GE-123` records still cite `KI-CG-004` at this file path, deliberately** — they
+fence it as out of scope so that repairing it and `GE-123d-4-i` are not closed as
+duplicates of one another. Those citations were left untouched by the move; this stub is
+what resolves them. Do not repoint them.
 
 ---
 
@@ -380,3 +273,79 @@ asked "is my dependency supposed to be here?" before acting on its absence.
 already encodes the decision that product-truth is optional. Make the hooks agree with it:
 skip when the store is absent, the same way the workflow does. Pick one answer to "is this
 optional?" and have both halves honour it.
+
+---
+
+### KI-CG-007 — The sanctioned way to add a component produces an entry the required gate rejects, and the gate's stated rule is weaker than the one it enforces
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/add_component.py` (writer) · `templates/scripts/commit_guardian/check_components_integrity.py:475-540` (gate) · `docs/components.json` (the registry)
+
+**Symptom.** Registering a component the documented way blocks your commit, twice, for
+reasons the tooling does not tell you in advance. Four separate defects compound:
+
+**1. The writer and the gate disagree.** `scripts/add_component.py` — wrapped by the
+`add-component` skill precisely so "agents can add a new entry … without knowing the
+script path or argument format" — has no flags for `agent_affinity` or
+`exposed_interfaces` and writes neither. `check-components-integrity` requires **both** on
+every new component and blocks the commit. The tool the project provides for this job
+cannot produce output the project's own required gate accepts.
+
+**2. The stated rule is weaker than the enforced rule.** The gate's failure output prints:
+
+```
+5. An 'agent_affinity' field that is a JSON array (use [] if none).
+6. An 'exposed_interfaces' field that is a JSON array (use [] if none).
+```
+
+Following that exactly — a JSON array of strings — fails on the next attempt with
+`exposed_interfaces[0] must be a JSON object`. The code additionally requires each element
+to be an object carrying `name`, `type`, `path` and `shape`, with `type` drawn from a fixed
+seven-value set (`VALID_INTERFACE_TYPES`, line 110). None of that appears in the message.
+An author who reads the error and complies is still blocked, and only reading the hook
+source resolves it.
+
+**3. Grandfathering means there is no precedent to copy.** The gate checks only components
+whose entry appears in the diff — *"Existing components (no diff) are not checked — legacy
+state is accepted."* So **zero** of the 42 pre-existing entries carry `agent_affinity` or
+`exposed_interfaces`. The first author to add a component cannot look at a neighbour to
+learn the shape, and whatever they invent silently becomes the precedent for a validated
+field. `security_scanner` (added 2026-08-19) is that first entry.
+
+**4. The registry has no owning component.** No entry in `docs/components.json` claims
+`docs/components.json` or `scripts/add_component.py` in its `primary_code`, and there is no
+`component_registry` component. This issue is filed here because
+`check_components_integrity.py` is a commit-guardian hook, but the writer half genuinely
+has no home — which is why the two halves were free to drift apart in the first place.
+
+**Evidence.** Adding `security_scanner` on 2026-08-19 took three commit attempts:
+
+```
+attempt 1  [x] 'agent_affinity' field is required (use [] if no agent affinity).
+           [x] 'exposed_interfaces' field is required (use [] if ... no external interfaces).
+attempt 2  [x] exposed_interfaces[0] must be a JSON object.
+           [x] exposed_interfaces[1] must be a JSON object.
+attempt 3  passed
+```
+
+Both blocks came from `add_component.py`'s own output, unmodified.
+
+**Fix direction.** In descending order of payoff:
+
+- **Teach the writer the full contract.** Give `add_component.py` `--agent-affinity` and
+  `--exposed-interface` flags, and have it emit the required element shape. A generator
+  that cannot satisfy the validator is worse than no generator, because it is trusted.
+- **Make the printed rule the enforced rule.** The message must state the element schema
+  and the valid `type` values, or point at them. A gate whose remedy does not resolve the
+  failure trains people to bypass it.
+- **Decide whether grandfathering is permanent.** Either backfill the 42 legacy entries so
+  new authors have a pattern to copy, or say explicitly in the registry that these fields
+  are new-entries-only. The current state reads as "everyone else omitted this", which is
+  the opposite of the intended signal.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8, in its inverse form — not a
+check that passes when it should fail, but a check whose documented contract and enforced
+contract differ, so compliance with the message is not compliance with the gate.

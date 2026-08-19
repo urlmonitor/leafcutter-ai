@@ -1,6 +1,7 @@
 id: GE-123a-1-i
 components:
   - commit_guardian
+  - security_scanner
 title: "Every sensitively-named file in the same run is read, not just the first one, and no finding is lost between the per-file scan and the run's report"
 component: guardrail-engine
 level: L3

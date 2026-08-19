@@ -1,6 +1,7 @@
 id: GE-123d-4-ii
 components:
   - commit_guardian
+  - security_scanner
 title: "The reference states where the exemption applies, in one place, as a closed list"
 component: guardrail-engine
 level: L3
