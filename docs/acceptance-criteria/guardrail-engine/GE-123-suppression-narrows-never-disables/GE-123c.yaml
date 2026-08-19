@@ -3,6 +3,7 @@ title: "An instruction to quiet a warning does what its author thinks it does"
 component: guardrail-engine
 components:
   - commit_guardian
+  - security_scanner
 level: L1
 status: active
 req_status: draft

@@ -3,6 +3,7 @@ title: "Writing about a security problem is not treated as causing one"
 component: guardrail-engine
 components:
   - commit_guardian
+  - security_scanner
 level: L1
 status: active
 req_status: draft

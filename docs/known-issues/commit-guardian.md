@@ -45,9 +45,18 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-19
 - **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py:134-150`, and the AC hook family generally
+
+**Second occurrence, 2026-08-19.** Staging `GE-113c-1-iii` and `GE-113c-1-v` for an
+unrelated one-line `components` edit made `check-ac-schema` fail both with *"approved code
+AC must declare a test contract — add a non-empty `test_spec`"*. Neither record has ever
+had one. They are `readiness: approved`, `change_target: code`, and have been sitting on
+`main` in that state — invisible because no commit had happened to stage them since the
+rule was introduced. The hook was not silent because they were fine; it was silent because
+it had never been shown them. A store-wide sweep would find how many more there are; the
+index-scoped hook structurally cannot.
 
 **Symptom.** These hooks derive their file list from `git diff --cached --name-only` (or
 `HOOK_TEST_FILES` under test) — never from the store. Any fact that is true of the store
@@ -209,97 +218,22 @@ file-level, composite.
 
 ---
 
-### KI-CG-004 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/`
+### KI-CG-004 — moved to `security-scanner`
 
-- **Severity:** high
-- **Status:** open — partially anticipated by `GE-123d-4-i` (draft), but that AC governs a *proposed* widening, not this existing behaviour
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/scripts/commit_guardian/check_secrets.py` — `_PROSE_FILE_PREFIXES` / `_is_prose_exempt`
+Refiled 2026-08-19 as **KI-SEC-001** in
+[`docs/known-issues/security-scanner.md`](security-scanner.md): *prose exemption
+disables entropy detection for whole files, including executable Python under
+`templates/skills/`, and its path match is not root-anchored.*
 
-**Symptom.** `ENTROPY_HIGH` is the only rule that catches an **opaque** credential — a
-Stripe key, a JWT, a random API token — because such values carry no `password =`
-style keyword for `GENERIC_SECRET` to match and no fixed prefix for `AWS_KEY` or
-`PRIVATE_KEY`. That rule is switched off for entire files under four path prefixes.
-The source comment states the scope plainly: *"Prose-only file prefixes — entire files
-are exempt from entropy scanning."*
+Moved when the `security-scanner` register was created. The defect is about what the
+secrets scanner can be talked out of reporting, which is that surface's question, not
+the guardrail framework's. The id is retired here rather than reused, so the numbering
+gap is intentional.
 
-**Evidence.** A live-shaped token (`sk_live_…`, Shannon entropy **5.17**, threshold
-4.5) run through the real `_is_prose_exempt`:
-
-```
-templates/skills/security-scanner/scripts/scan_secrets.py   EXEMPT — not reported
-templates/skills/some-skill/scripts/helper.py               EXEMPT — not reported
-tickets/00_inbox/TICKET-20260818-Example.md                 EXEMPT — not reported
-docs/acceptance-criteria/guardrail-engine/GE-123.yaml       EXEMPT — not reported
-docs/retrospectives/retro.md                                EXEMPT — not reported
-scripts/build.py                                            reported
-leafcutter-web/app/page.tsx                                 reported
-```
-
-**Why `templates/skills/` is the sharp edge.** It is on the prose list but it is not
-prose — it holds executable Python, including the secrets scanner's own
-`scan_secrets.py`. A credential pasted into any script under that prefix is
-unreported by the very tool meant to catch it. The other three prefixes are genuinely
-prose directories, so the exposure there is narrower, but a ticket is still a file a
-developer will happily paste a token into while writing up an incident.
-
-**Scope of the exemption, precisely.** It gates `ENTROPY_HIGH` only —
-`AWS_KEY`, `PRIVATE_KEY`, `EXCHANGE_API_KEY` and `GENERIC_SECRET` still fire in these
-paths. So the hole is exactly the class of credential that has no recognisable shape,
-which is most modern opaque tokens.
-
-**The exemption is far wider than four directories — the match is NOT root-anchored.**
-`_is_prose_exempt` tests `("/" + prefix) in path_str`, a substring test against the
-whole path. So the four prefixes are really four *directory names*, matching at **any
-depth, in any subtree**. Measured with the same 5.17-entropy token:
-
-```
-tickets/00_inbox/note.md                    EXEMPT   (intended)
-leafcutter-web/tickets/app.py               EXEMPT   (not intended)
-src/vendor/tickets/handler.py               EXEMPT   (not intended)
-some/deep/nested/docs/retrospectives/x.py   EXEMPT   (not intended)
-unrelated/templates/skills/evil.py          EXEMPT   (not intended)
-src/app.py                                  reported
-```
-
-This repository already ships `leafcutter-web/`. Any feature directory named
-`tickets/`, any vendored dependency containing one, and any nested `templates/skills/`
-loses entropy detection silently — for `.py` as readily as for `.md`. The original
-framing of this issue (four known prose directories) understated it: the reachable
-surface is any path containing one of those four segment names.
-
-**Corollary — a test can be written that passes for the wrong reason.** A fixture
-placed under any such path measures the exemption rather than the scanner. This is a
-live authoring hazard, not a theoretical one; it is called out as a hard
-`it_requirement` in the `GE-123a` and `GE-123c` subtrees for exactly that reason.
-
-**Fix direction.** Three separable changes, in descending order of payoff:
-
-- **Anchor the match at the repository root.** Compare path *segments* from the root
-  rather than substring-testing the whole path. This is the single change that shrinks
-  the surface from "any path containing these names" back to the four directories the
-  exemption was written for, and it is the cheapest of the three.
-- Gate the exemption by **file kind**, not only by path. A `.md` under `tickets/` is
-  prose; a `.py` under `templates/skills/` is not. This closes the executable-code case
-  that anchoring alone leaves open, since `templates/skills/` genuinely is on the list.
-- Make the exemption **per finding** rather than per file. The existing rule discards
-  every entropy finding in a matching file; the narrower rule is to discard only
-  findings whose high entropy is explained by a benign token — which the module
-  already computes for `TICKET-…` / `EPIC-…` identifiers and could extend.
-
-**One more thing the fix must not trip over.** `_filter_prose_findings` passes
-`finding.excerpt` as the line to test, and `scan_file` sets
-`excerpt = line.strip()[:120]` (`scan_secrets.py:248` and `:254`). The exemption
-therefore judges a **truncated** line: a benign explanatory token sitting past column
-120 is invisible to it, so verdict can turn on line length alone. Any per-finding
-rework needs the full matched value, not the excerpt.
-
-**Relationship to in-flight work.** `GE-123d` proposes extending prose exemption to
-`GENERIC_SECRET`, and `GE-123d-4-i` exists specifically to require a file-kind gate so
-that widening does not inherit this defect. That is the right guard for the *new*
-behaviour, but it does not repair the *existing* `ENTROPY_HIGH` exemption — this issue
-covers that, and it should be fixed first so the new work is not built on top of it.
+**Six `GE-123` records still cite `KI-CG-004` at this file path, deliberately** — they
+fence it as out of scope so that repairing it and `GE-123d-4-i` are not closed as
+duplicates of one another. Those citations were left untouched by the move; this stub is
+what resolves them. Do not repoint them.
 
 ---
 
@@ -339,3 +273,79 @@ asked "is my dependency supposed to be here?" before acting on its absence.
 already encodes the decision that product-truth is optional. Make the hooks agree with it:
 skip when the store is absent, the same way the workflow does. Pick one answer to "is this
 optional?" and have both halves honour it.
+
+---
+
+### KI-CG-007 — The sanctioned way to add a component produces an entry the required gate rejects, and the gate's stated rule is weaker than the one it enforces
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/add_component.py` (writer) · `templates/scripts/commit_guardian/check_components_integrity.py:475-540` (gate) · `docs/components.json` (the registry)
+
+**Symptom.** Registering a component the documented way blocks your commit, twice, for
+reasons the tooling does not tell you in advance. Four separate defects compound:
+
+**1. The writer and the gate disagree.** `scripts/add_component.py` — wrapped by the
+`add-component` skill precisely so "agents can add a new entry … without knowing the
+script path or argument format" — has no flags for `agent_affinity` or
+`exposed_interfaces` and writes neither. `check-components-integrity` requires **both** on
+every new component and blocks the commit. The tool the project provides for this job
+cannot produce output the project's own required gate accepts.
+
+**2. The stated rule is weaker than the enforced rule.** The gate's failure output prints:
+
+```
+5. An 'agent_affinity' field that is a JSON array (use [] if none).
+6. An 'exposed_interfaces' field that is a JSON array (use [] if none).
+```
+
+Following that exactly — a JSON array of strings — fails on the next attempt with
+`exposed_interfaces[0] must be a JSON object`. The code additionally requires each element
+to be an object carrying `name`, `type`, `path` and `shape`, with `type` drawn from a fixed
+seven-value set (`VALID_INTERFACE_TYPES`, line 110). None of that appears in the message.
+An author who reads the error and complies is still blocked, and only reading the hook
+source resolves it.
+
+**3. Grandfathering means there is no precedent to copy.** The gate checks only components
+whose entry appears in the diff — *"Existing components (no diff) are not checked — legacy
+state is accepted."* So **zero** of the 42 pre-existing entries carry `agent_affinity` or
+`exposed_interfaces`. The first author to add a component cannot look at a neighbour to
+learn the shape, and whatever they invent silently becomes the precedent for a validated
+field. `security_scanner` (added 2026-08-19) is that first entry.
+
+**4. The registry has no owning component.** No entry in `docs/components.json` claims
+`docs/components.json` or `scripts/add_component.py` in its `primary_code`, and there is no
+`component_registry` component. This issue is filed here because
+`check_components_integrity.py` is a commit-guardian hook, but the writer half genuinely
+has no home — which is why the two halves were free to drift apart in the first place.
+
+**Evidence.** Adding `security_scanner` on 2026-08-19 took three commit attempts:
+
+```
+attempt 1  [x] 'agent_affinity' field is required (use [] if no agent affinity).
+           [x] 'exposed_interfaces' field is required (use [] if ... no external interfaces).
+attempt 2  [x] exposed_interfaces[0] must be a JSON object.
+           [x] exposed_interfaces[1] must be a JSON object.
+attempt 3  passed
+```
+
+Both blocks came from `add_component.py`'s own output, unmodified.
+
+**Fix direction.** In descending order of payoff:
+
+- **Teach the writer the full contract.** Give `add_component.py` `--agent-affinity` and
+  `--exposed-interface` flags, and have it emit the required element shape. A generator
+  that cannot satisfy the validator is worse than no generator, because it is trusted.
+- **Make the printed rule the enforced rule.** The message must state the element schema
+  and the valid `type` values, or point at them. A gate whose remedy does not resolve the
+  failure trains people to bypass it.
+- **Decide whether grandfathering is permanent.** Either backfill the 42 legacy entries so
+  new authors have a pattern to copy, or say explicitly in the registry that these fields
+  are new-entries-only. The current state reads as "everyone else omitted this", which is
+  the opposite of the intended signal.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8, in its inverse form — not a
+check that passes when it should fail, but a check whose documented contract and enforced
+contract differ, so compliance with the message is not compliance with the gate.

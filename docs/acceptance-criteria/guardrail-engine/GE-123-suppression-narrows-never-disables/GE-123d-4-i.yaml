@@ -1,6 +1,7 @@
 id: GE-123d-4-i
 components:
   - commit_guardian
+  - security_scanner
 title: "An executable script inside a prose location does not inherit the exemption"
 component: guardrail-engine
 level: L3
