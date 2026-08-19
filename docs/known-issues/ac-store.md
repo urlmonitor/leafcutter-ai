@@ -227,6 +227,30 @@ failing schema validation, **251 of them on `it_requirements`** (the other 2 are
 `framework: playwright`, outside the enum). `BO-100a.yaml` is an untouched control — it
 fails on a clean checkout with no local modifications.
 
+**Correction, 2026-08-19 — it also UNDER-matches, and that half is worse.** The original
+writeup above described only the over-match. Measured at `9b16d013`, the enum mixes the two
+component spellings:
+
+```
+component: build-orchestration   845   <-- in enum (kebab)
+component: build_pipeline         65   <-- in enum (underscore)
+component: build-pipeline        440   <-- NOT in enum
+```
+
+`components.json` graph ids use underscores; `index.yaml` namespaces use kebab. The enum
+took one of each. So of 1610 python-coder records, the rule fires on 411 and **misses 239
+build-* records — 215 of which carry non-object `it_requirements` and have therefore never
+been checked once.** The gate is simultaneously too tight and too loose, keyed off a
+spelling.
+
+The proxy is also false of the population it does catch: of 245 records carrying the object
+form, **73 set `config_schema_fragment: null`** — nearly a third wrote an explicit null to
+get past a rule that does not apply to them.
+
+Any fix must therefore do more than narrow the trigger; it must stop keying on `component`
+at all, or the 440 kebab records stay invisible. Specified in `ACS-100i-6`, `ACS-100i-6-ii`
+and `ACS-100i-7`.
+
 **Why it matters.** Both gates are diff-scoped, so the violation is invisible until an
 unrelated change puts one of these files in a diff — then it blocks that commit. It has
 now been deferred with a documented `[HOOK-SKIP: check-ac-schema]` twice, in `7c8c505e3`
