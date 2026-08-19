@@ -1345,8 +1345,65 @@ def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
     # function — ``_build_test_requirements_section`` returns the spec-derived
     # descriptors before calling it. So there is nothing here that could already
     # be a reachability entry, and an "is one present?" guard would be dead code.
+    # This append is kept (rather than moved wholesale to the universal floor
+    # in ``_ensure_reachability_floor``) so direct callers of this function —
+    # bypassing ``_build_test_requirements_section`` entirely — still observe
+    # the floor; ``_ensure_reachability_floor``'s dedupe-by-kind check makes
+    # the two call sites idempotent together (BO-2900g-1-i), never doubled up.
     tests.append(_reachability_descriptor(ac_id, file_path, seen))
     return tests
+
+
+def _ensure_reachability_floor(
+    ac_id: str, descriptors: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Guarantee exactly one ``angle: reachability`` descriptor, at the one
+    finalisation point every produced test plan passes through.
+
+    BO-2900g-1: the reachability request used to be attached ONLY inside
+    ``_derive_tests_from_criteria`` (the criteria-derived fallback route). An
+    AC that authored its own ``test_spec`` never reached that function, so it
+    received a privileged, undecided exemption from the floor. This helper is
+    called from ``_build_test_requirements_section`` — the single place a
+    plan is finalised for a piece of work, regardless of which route produced
+    the descriptor list — so a third route introduced later inherits the
+    floor without being told about this rule.
+
+    BO-2900g-1-i: de-duplication is by declared KIND (``angle ==
+    "reachability"``), never by descriptor name, file path, or text
+    similarity. A plan that already carries one such entry — in any authored
+    shape, naming any entry point — is returned unaltered: its authored
+    order and fields survive byte-for-byte, and no second, contradictory
+    request is stapled on next to it.
+
+    Args:
+        ac_id: The AC id, used to build the appended descriptor's name/file
+            when the floor is not already present.
+        descriptors: The descriptor list produced by whichever route ran
+            (spec-derived or criteria-derived), in authored/derived order.
+
+    Returns:
+        *descriptors* unchanged when a reachability entry is already present;
+        otherwise a new list with *descriptors* followed by exactly one
+        sentinel reachability descriptor.
+    """
+    if any(
+        isinstance(item, dict) and item.get("angle") == TEST_ANGLE_REACHABILITY
+        for item in descriptors
+    ):
+        return descriptors
+
+    slug = _slugify_for_test(ac_id)
+    first_file = descriptors[0].get("file") if descriptors else None
+    file_path = first_file if isinstance(first_file, str) and first_file else (
+        f"unit_tests/test_{slug}.py"
+    )
+    seen = {
+        item["name"]
+        for item in descriptors
+        if isinstance(item, dict) and item.get("name")
+    }
+    return [*descriptors, _reachability_descriptor(ac_id, file_path, seen)]
 
 
 def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
@@ -1453,6 +1510,14 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     descriptors = _test_descriptors_from_spec(ac, ac_id)
     if not descriptors:
         descriptors = _derive_tests_from_criteria(ac, ac_id)
+
+    # BO-2900g-1 / BO-2900g-1-i: the reachability floor is universal — every
+    # route's finalised plan passes through this one check, which is a no-op
+    # (dedupe) when a reachability entry already made it into `descriptors`
+    # (e.g. via _derive_tests_from_criteria's own unconditional append) and
+    # appends exactly one sentinel entry otherwise (the authored-test_spec
+    # route, which previously received no generator-added entries at all).
+    descriptors = _ensure_reachability_floor(ac_id, descriptors)
 
     try:
         # sort_keys=False is REQUIRED: 'name' must stay the first key in each test
