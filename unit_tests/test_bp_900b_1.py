@@ -182,15 +182,52 @@ def test_ac1_handles_single_and_double_quoted_syspath_insert(tmp_path: Path) -> 
         f"paths from {single_md.name}. Got: {sorted(script_paths)!r} "
         "(AC BP-900b-1)."
     )
+    assert "scripts/commit_guardian" in script_paths, (
+        f"Expected 'scripts/commit_guardian' (double-quoted sys.path.insert) "
+        f"among extracted script paths from {double_md.name}. Got: "
+        f"{sorted(script_paths)!r}. AC BP-900b-1 requires BOTH single- and "
+        "double-quoted sys.path.insert() variants to be extracted."
+    )
 
 
-def test_ac1_returns_tuple_of_two_strings() -> None:
+def test_ac1_returns_tuple_of_two_strings(tmp_path: Path) -> None:
     """The contract requires set[tuple[str, str]] — (template_path, script_path)."""
     # covers: BP-900b-1
-    extractor = getattr(_bri, "extract_compiled_script_path_refs", None)
-    assert extractor is not None, (
-        "extract_compiled_script_path_refs must exist before its return-shape "
-        "can be checked."
+    compiled_root = tmp_path / "compiled"
+    agent_md = _write_md(
+        compiled_root / "agents",
+        "shape_check.md",
+        "python3 scripts/ac_store/ac_prioritizer.py --ac FOO-3\n",
+    )
+
+    result = _bri.extract_compiled_script_path_refs(compiled_root)
+
+    assert isinstance(result, set), (
+        f"extract_compiled_script_path_refs({compiled_root}) must return a "
+        f"set, got {type(result)!r} (AC BP-900b-1)."
+    )
+    assert result, (
+        f"extract_compiled_script_path_refs({compiled_root}) returned an "
+        "empty set against a fixture containing a real python3 invocation "
+        "(AC BP-900b-1)."
+    )
+    for item in result:
+        assert isinstance(item, tuple) and len(item) == 2, (
+            f"Expected every element to be a 2-tuple, got {item!r} from "
+            f"result {sorted(result)!r} (AC BP-900b-1)."
+        )
+        template_path, script_path = item
+        assert isinstance(template_path, str) and isinstance(script_path, str), (
+            f"Expected (str, str) tuple, got ({type(template_path)!r}, "
+            f"{type(script_path)!r}) for {item!r} (AC BP-900b-1)."
+        )
+
+    expected_rel = agent_md.relative_to(compiled_root).as_posix()
+    assert (expected_rel, "scripts/ac_store/ac_prioritizer.py") in result, (
+        f"Expected the first element of the tuple to resolve to the "
+        f"referencing template path ({expected_rel!r}) and the second to the "
+        f"script path ('scripts/ac_store/ac_prioritizer.py'). Got: "
+        f"{sorted(result)!r} (AC BP-900b-1)."
     )
 
 
