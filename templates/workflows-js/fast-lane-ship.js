@@ -303,8 +303,14 @@ const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchest
 
 phase("Resolve");
 
+// --exclude-structural-parent is REQUIRED here (BO-2600a-2-i): without it, a
+// depends_on entry naming a structural L0/L1 parent is treated as a genuine
+// prerequisite and expands into that composite's whole not-done subtree,
+// recursively — pointing the fast lane at one AC can pull in a dozen-plus
+// unrelated ACs. See templates/agents/build-ac.md's select_connected call for
+// the reference invocation that already passes this flag.
 const selectConnectedInvocation =
-  `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot}`;
+  `python3 ${gateScript} select_connected --exclude-structural-parent --ac ${targetAc} --ac-root ${acStoreRoot}`;
 
 const resolverResult = await agent(
   `You are the resolver phase agent for a fast-lane build.\n\n` +

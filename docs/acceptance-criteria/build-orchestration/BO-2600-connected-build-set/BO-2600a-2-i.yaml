@@ -1,0 +1,92 @@
+id: BO-2600a-2-i
+components:
+  - build_orchestration
+title: "The fast lane passes --exclude-structural-parent, so pointing it at one AC does not balloon the build set"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane ship workflow resolving the connected build set for a single
+    target acceptance criterion,
+  When it invokes the select_connected subcommand,
+  Then the invocation includes the --exclude-structural-parent flag,
+  And an acceptance criterion that names its own structural parent in depends_on does
+    not cause that parent's entire subtree to be pulled into the build set,
+  And the symptom ("pointing the fast lane at one AC resolves a build set of fifteen
+    and builds them all in a single run and pull request") does not occur.
+depends_on:
+  - BO-2600a-2
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: reads
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2600a-2
+  contract: "The select_connected subcommand accepts --exclude-structural-parent and threads it into resolve_connected_build_set."
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/fast-lane-ship.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+  notes: |
+    Add --exclude-structural-parent to the select_connected invocation string in
+    templates/workflows-js/fast-lane-ship.js (the selectConnectedInvocation
+    template literal). The sibling consumer templates/agents/build-ac.md already
+    passes this flag; the fast lane is the only select_connected caller that does
+    not, and the omission is drift rather than a decision — the flag landed in
+    #409 and fast-lane-ship.js has been edited three times since without picking
+    it up. Do NOT change the exclude_structural_parent=False default in
+    fast_lane.py: BO-2600a-1 fixed that default as a backward-compatibility
+    invariant and covers it with its own test.
+test_spec:
+  - name: test_fast_lane_select_connected_passes_exclude_structural_parent
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    description: "Resolves a real fixture AC whose depends_on names its own structural L0/L1 parent, invoking the resolver exactly as fast-lane-ship.js composes the command. Asserts the returned set contains only the target and its own descendants, and specifically does NOT contain the parent's other children. Asserting the resolved set rather than the command string is what makes this test fail if the flag is dropped again."
+  - name: test_dropping_the_flag_reproduces_the_ballooned_set
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    description: "Negative control over the same fixture: invoking without the flag returns a strictly larger set that includes the structural parent's other children. Pins the two behaviours apart so a future change that silently reverts to the default is caught rather than absorbed."
+test_rationale: "The defect being closed is a missing token in a command string, which is exactly the shape a grep-style test would appear to cover while proving nothing about the resolved set. Both tests therefore drive the real resolver over a real fixture store and assert on membership of the returned build set. The negative control is required: without it, an implementation that returns a small set for unrelated reasons — an empty store, a load failure — would satisfy the positive case, and the two tests together are what tie the size difference to the flag itself."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: the select_connected invocation in
+  fast-lane-ship.js omits --exclude-structural-parent, so a depends_on entry
+  naming a structural L0/L1 parent is treated as a genuine prerequisite and
+  expanded into that composite's whole not-done subtree, recursively.
+
+  Found when BO-1500a-5 resolved to fifteen ACs. Reproduced both ways against the
+  real store: without the flag the resolver returns fifteen ids; with it, exactly
+  three (the target and its two children). A store-wide sweep found 1,560 of 1,776
+  not-done leaf targets would resolve to a smaller set with the flag on, and a
+  worst case of 56 ACs from a single target in the TKT-500f family.
+
+  Sibling coverage gap this closes: BO-2600a-1 specified the capability, BO-2600a-2
+  the CLI surface, and BO-2600a-3/-4/-5 the build-ac consumers. No AC ever required
+  the fast-lane consumer to pass the flag, which is why the drift went unnoticed.
