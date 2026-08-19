@@ -45,6 +45,24 @@ DECISION HISTORY:
     everything else, so correctness is unchanged: measured against the real
     collection post-fix at under 5s (see the sign-off comment for exact
     timings).
+  - 2026-08-19 [python-coder/GE-122a-1]: Fixed a correctness bug in
+    _fast_scan_top_level_id caught by
+    unit_tests/commit_guardian/test_ge_122a_1_fast_path_equivalence.py: the
+    fast path returned an unquoted plain scalar's raw source text (e.g.
+    'no', '007', '0x1F') even where PyYAML's implicit resolvers coerce that
+    same token to a non-string value under a full parse (False, 7, 31) --
+    making two records that YAML considers identical (e.g. ids 'no' and
+    'False') look like two different ids, silently hiding a real collision.
+    Fixed by asking PyYAML's own yaml.resolver.Resolver what tag it would
+    assign a plain scalar (_plain_scalar_is_unambiguous_string) and bailing
+    out to the full-parse fallback whenever the tag is not
+    tag:yaml.org,2002:str, rather than hand-rolling a denylist of coercible
+    tokens that would drift from PyYAML's actual resolver set. Also bails
+    out on any embedded C0 control character (_contains_control_character,
+    e.g. a raw tab) since that makes a full parse raise ScannerError with no
+    usable claim, which the fast path cannot reproduce by returning a
+    literal string. The resolver is constructed ONCE at module scope
+    (_RESOLVER) to keep the per-file cost of the fast path negligible.
 """
 
 from __future__ import annotations
@@ -68,6 +86,13 @@ _HOOK_PREFIX = "[check_identifier_uniqueness]"
 
 _ADR_FILENAME_RE = re.compile(r"^ADR-(\d+)-.*\.md$", re.IGNORECASE)
 _DIAGRAM_FILENAME_RE = re.compile(r"^c(\d+)-(\d+)-.*\.md$", re.IGNORECASE)
+
+# Constructed ONCE at module scope (not per call) so the fast path's
+# per-file cost stays a cheap attribute lookup + method call rather than
+# paying resolver-construction cost on every one of ~3100 files -- see the
+# DECISION HISTORY entry on the resolver-based fix below.
+_STR_TAG = "tag:yaml.org,2002:str"
+_RESOLVER = yaml.resolver.Resolver() if _YAML_AVAILABLE else None
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +149,61 @@ def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
 _UNSAFE_SCALAR_PREFIXES = ("|", ">", "&", "*", "!", "%", "@", "`", "[", "{", "#")
 
 
+def _plain_scalar_is_unambiguous_string(value: str) -> bool:
+    """Ask PyYAML's own implicit resolver whether a PLAIN (unquoted) scalar
+    would be read back as a plain string by a full parse.
+
+    This is deliberately NOT a hand-rolled denylist of
+    ``null|true|false|yes|no|on|off|~|<digits>`` -- that would be guesswork
+    that drifts from PyYAML's actual resolver set. Instead it asks the same
+    ``yaml.resolver.Resolver`` machinery ``yaml.safe_load`` itself uses:
+    ``Resolver.resolve`` returns the tag PyYAML would assign an unquoted
+    scalar with this text. If that tag is anything other than
+    ``tag:yaml.org,2002:str`` (e.g. ``:bool``, ``:int``, ``:null``,
+    ``:float``), a full parse would COERCE this value to a non-string
+    Python object, so the fast path must not claim it -- the caller falls
+    back to a full parse instead.
+
+    Args:
+        value: The raw, unquoted scalar text (already stripped).
+
+    Returns:
+        True when it is safe for the fast path to use `value` as-is; False
+        when the caller must fall back to a full parse. Always True when
+        PyYAML itself is unavailable, since in that case the full-parse
+        fallback (`_parse_yaml_minimal`) does not apply YAML's implicit
+        resolvers either, so there is nothing for the fast path to diverge
+        from.
+    """
+    if _RESOLVER is None:
+        return True
+    tag = _RESOLVER.resolve(yaml.nodes.ScalarNode, value, (True, False))
+    return tag == _STR_TAG
+
+
+def _contains_control_character(value: str) -> bool:
+    """Detect a raw control character (e.g. an embedded tab) in a plain
+    scalar's value text.
+
+    A raw tab -- or other C0 control character -- inside an unquoted YAML
+    scalar is not legal token content; a full parse raises ScannerError
+    rather than reading it as a string, and this module's contract is that
+    an unparsable record yields NO claim (never an invented one). The fast
+    path cannot reproduce a parse failure, so it must bail out to the full
+    parse whenever one of these characters is present, rather than accept
+    text a real parser would reject outright.
+
+    Args:
+        value: The raw, unquoted scalar text (already stripped of leading
+            and trailing whitespace, but not of embedded characters).
+
+    Returns:
+        True if any character in `value` is a C0 control character
+        (codepoint below 0x20).
+    """
+    return any(ord(ch) < 0x20 for ch in value)
+
+
 def _strip_simple_quoted_scalar(value: str, quote: str) -> str | None:
     """Strip a simple, non-escaped quoted scalar's surrounding quote chars.
 
@@ -162,6 +242,22 @@ def _fast_scan_top_level_id(content: str) -> str | None:
     matches what yaml.safe_load would produce" -- so the caller falls back
     to a full parse rather than ever guess at the value.
 
+    A quoted value is trusted directly once ``_strip_simple_quoted_scalar``
+    proves it simple: a quoted scalar is never subject to YAML's implicit
+    resolvers, so ``'007'`` and ``"null"`` stay literal strings under a full
+    parse too. An UNQUOTED (plain) value is different: YAML applies implicit
+    resolution to plain scalars, coercing tokens like ``null``, ``true``,
+    ``no``, ``007``, or ``0x1F`` to a non-string Python value. Rather than
+    hand-roll a denylist of such tokens (guesswork that drifts as PyYAML's
+    resolver set changes), this function asks PyYAML's own
+    ``yaml.resolver.Resolver`` what tag it would assign the plain scalar
+    (`_plain_scalar_is_unambiguous_string`) and bails out to a full parse
+    whenever that tag is not ``tag:yaml.org,2002:str``. It also bails out on
+    any embedded C0 control character (`_contains_control_character`) --
+    e.g. a raw tab -- since that makes a full parse raise ScannerError
+    (no usable claim), which the fast path cannot reproduce by returning a
+    literal string.
+
     Only a line with zero leading whitespace is treated as top-level, since
     no legal top-level ``id`` in this store's schema is nested under another
     key. When more than one such line is present (a malformed duplicate
@@ -190,6 +286,10 @@ def _fast_scan_top_level_id(content: str) -> str | None:
             found = stripped
             continue
         if "#" in value or ":" in value:
+            return None
+        if _contains_control_character(value):
+            return None
+        if not _plain_scalar_is_unambiguous_string(value):
             return None
         found = value
     return found or None

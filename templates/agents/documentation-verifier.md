@@ -60,7 +60,9 @@ behavioral_patterns:
 - behavior: 'emit `(status: blocker)` naming each required doc absent from the git diff'
   name: Fail on missing doc
   related_agent: null
-  trigger: any required documentation file named in the Agent Contracts brief is absent from git diff HEAD
+  trigger: any required documentation file named in the Agent Contracts brief is absent
+    from the union of the branch-range diff (integration_target...HEAD) and the
+    working-tree diff (Step 4b)
 - behavior: 'emit `(status: blocker)` — never status: ok on ambiguous or failed parse'
   name: Fail-closed on parse error
   related_agent: null
@@ -185,18 +187,88 @@ git rev-parse --show-toplevel exited non-zero. Verify the ticket is inside a git
 ```
 Follow the failed-path recipe (signoff §4).
 
-### Step 4 — Get Changed Files
+### Step 4 — Resolve Integration Target and Get Changed Files (Union)
 
-Run a single Bash command to get the list of files changed relative to HEAD:
+#### 4a — Resolve Integration Target
 
+Determine the branch's integration target — the upstream ref this ticket's branch will
+eventually merge into — so 4b can ask "did this BRANCH add or change this doc" rather
+than "is this doc uncommitted right now." A working-tree-vs-HEAD comparison alone is
+structurally incapable of expressing "already committed earlier on this branch" — see
+the documentation-verifier sign-off history on GE-122a-1 for a first-hand account of the
+resulting false blocker.
+
+Try each candidate below in order via a single Bash command each; stop at the first
+command that exits 0 with non-empty output:
+
+**Candidate 1 — configured upstream:**
+```bash
+git -C <worktree_root> rev-parse --abbrev-ref --symbolic-full-name @{upstream}
+```
+
+**Candidate 2 — origin's default branch:**
+```bash
+git -C <worktree_root> symbolic-ref --short refs/remotes/origin/HEAD
+```
+
+**Candidate 3 — literal fallback, verified to exist before use:**
+```bash
+git -C <worktree_root> rev-parse --verify --quiet origin/main
+```
+Use the literal value `origin/main` as `integration_target` only if this command exits 0.
+
+Capture whichever candidate succeeds first as `integration_target`.
+
+**Unresolvable case (fail-closed).** If all three candidates exit non-zero or produce
+empty output — a detached HEAD, a fresh repo with no commits, or a worktree with no
+`origin` remote — do NOT silently fall through to an empty or partial comparison in 4b.
+That would either resurrect this defect as a false blocker (empty branch-range half
+masking real, already-committed docs) or, worse, produce a false `(status: ok)` if the
+missing half happened to be treated as vacuously satisfied. Instead emit
+`(status: blocker)`:
+```
+Cannot resolve an integration target for the branch-range diff. Tried, in order:
+configured upstream (@{upstream}), origin's default branch (refs/remotes/origin/HEAD),
+and the literal fallback origin/main — all failed to resolve in this worktree.
+This is a distinct blocker class from "documentation missing": the coverage check
+cannot run at all without a comparison base. Verify the worktree has a reachable
+origin remote and a resolvable default branch.
+```
+Follow the failed-path recipe (signoff §4). Do not proceed to 4b.
+
+#### 4b — Get Changed Files (Union of Branch Range and Working Tree)
+
+A required doc counts as present if EITHER the branch already committed it (relative to
+where it diverged from `integration_target`) OR it is sitting uncommitted in the working
+tree right now. Compute both halves with two separate Bash commands and take the union of
+their output lines into `changed_files` — never rely on one half alone; that is exactly
+the defect this step exists to prevent.
+
+**Half A — branch-range diff (catches docs already committed earlier on this branch):**
+```bash
+git -C <worktree_root> diff --name-only <integration_target>...HEAD
+```
+The three-dot form diffs `HEAD` against `git merge-base <integration_target> HEAD` — i.e.
+"everything this branch added or changed since it diverged," not "everything different
+from `HEAD` right now." This is what makes a doc committed earlier in the branch's own
+history still visible to this verifier.
+
+**Half B — working-tree diff (catches docs written but not yet committed):**
 ```bash
 git -C <worktree_root> diff HEAD --name-only
 ```
+This preserves the original, still-correct behaviour for a doc that was just written and
+staged or unstaged but not yet committed — that case must not regress.
 
-Capture the output lines into `changed_files`. If the command exits non-zero:
-emit `(status: blocker)`:
+Union the two output lists (deduplicate; a path appearing in both counts once) into
+`changed_files`.
+
+**Fail-closed on command error.** If EITHER command exits non-zero, do not treat that
+half as an empty result and silently fall back to the other half alone — the ambiguity
+must surface as a blocker:
 ```
-git diff HEAD --name-only exited non-zero. Cannot determine changed files.
+Changed-files command exited non-zero. Cannot determine changed files.
+Failing command: <the literal command that failed>.
 ```
 Follow the failed-path recipe (signoff §4).
 
@@ -227,7 +299,8 @@ List ONLY the paths in `missing_docs` — do NOT list paths that are present in
 `changed_files` (those are satisfied and must not appear in the blocker):
 ```
 Documentation coverage failure. The following required documentation files have
-no real change in the git diff (git diff HEAD --name-only):
+no real change in either the branch-range diff (<integration_target>...HEAD) or the
+working-tree diff (git diff HEAD --name-only):
 
   - <missing_file_1>
   - <missing_file_2>
@@ -344,7 +417,8 @@ emit `(status: ok)`:
 ```
 Documentation coverage verified.
 Required docs (N): <list>
-All required files present in git diff HEAD.
+All required files present (branch-range diff <integration_target>...HEAD, union
+working-tree diff git diff HEAD --name-only).
 No placeholder content detected.
 ```
 
@@ -377,7 +451,7 @@ completion_manifest:
   required_docs_list_parsed: true
   all_required_docs_present_in_diff: true
   no_placeholder_content_in_changed_docs: true
-Documentation coverage verified: all <N> required doc(s) present in git diff HEAD with real content.
+Documentation coverage verified: all <N> required doc(s) present (branch-range diff union working-tree diff) with real content.
 ```
 
 **Failure path — missing docs:**
@@ -420,8 +494,11 @@ template's frontmatter) form the required manifest keys:
   and all AC lines were parsed without error; `false` (expanded with `result`,
   `reason`, `remediation`) if parsing failed or the block was malformed.
 - `all_required_docs_present_in_diff` — `true` if every required doc path
-  appears in `git diff HEAD --name-only`; `false` (expanded) if any are missing,
-  with the missing paths in `reason`.
+  appears in the union of `git diff --name-only <integration_target>...HEAD`
+  (Step 4b) and `git diff HEAD --name-only`; `false` (expanded) if any are
+  missing, with the missing paths in `reason`. If the integration target could
+  not be resolved (Step 4a unresolvable case), this manifest key is not reached —
+  the phase fails before Step 4b with a distinct blocker.
 - `no_placeholder_content_in_changed_docs` — `true` if no placeholder markers
   were detected in any changed required doc file across all four sub-checks
   (6a helper script scan, 6b TBD markers, 6c unfilled `{template tokens}`,
@@ -516,6 +593,34 @@ DECISION HISTORY
   section so the template satisfies the BP-300e-6 machine-parsed-producer guard
   (documentation-verifier is dispatched in the ticket phase order and its reply
   may be JSON-parsed / schema-enforced by a delivery workflow).
+- 2026-08-18 [llm-expert]: Fixed the working-tree-only coverage-check defect found live
+  on EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md (see that
+  ticket's 19:05 documentation-verifier blocker comment for the first-hand account).
+  The old Step 4 (`git diff HEAD --name-only`) compared the working tree against HEAD
+  only, so a doc committed earlier on the same branch (already an ancestor of HEAD)
+  produced an empty changed_files and a false blocker. Expanded Step 4 in place into
+  "Resolve Integration Target and Get Changed Files (Union)" with two lettered
+  sub-steps — 4a (Resolve Integration Target: tries @{upstream}, then origin's default
+  branch via refs/remotes/origin/HEAD, then a verified origin/main literal; unresolvable
+  is its own fail-closed blocker, distinct from "docs missing") and 4b (Get Changed
+  Files: union of the branch-range diff `<integration_target>...HEAD` and the original
+  working-tree diff `git diff HEAD --name-only`, so an uncommitted doc still counts).
+  Deliberately did NOT renumber the existing Step 5 (Assert Coverage), Step 6
+  (Placeholder Check, with its 6a-6e sub-checks), or Step 7 (Emit OK) — an initial draft
+  shifted them to 5/6/7→6/7/8 and broke
+  unit_tests/test_bo_2200b_3_i.py::TestAC1TemplateStep6ExplicitPositiveCase, which
+  locates the placeholder-detection section by a hardcoded `### Step 6` regex; llm-expert
+  may not edit .py test files, so the fix is to keep the step numbers this test depends
+  on stable and grow Step 4 with lettered sub-parts instead (mirroring the existing
+  6a-6e convention). Fail-closed posture preserved throughout: either half of the union
+  command failing, or the integration target being unresolvable, still emits
+  status: blocker, never status: ok. Updated the behavioral_patterns trigger, the Step 5
+  blocker message template, the Step 7 / signoff-schema success messages, and the
+  Completion Manifest Requirement's `all_required_docs_present_in_diff` description to
+  match. Left the frontmatter `description:` field's generic "real git diff change"
+  phrasing as-is (it does not name a specific comparison). tools: Bash, Read, Edit and
+  requires_verification: true were already correctly declared — no frontmatter change
+  needed. (#EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md)
 ====================================================================
 """
 
