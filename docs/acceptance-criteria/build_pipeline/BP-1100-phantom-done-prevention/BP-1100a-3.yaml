@@ -37,7 +37,34 @@ doc_links:
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: modifies
     status: exists
-    relevance: "The surface, and the only file this AC edits. Verified 2026-08-18: _build_files_touched (line 535) unions exactly two sources. Source 2 (lines 576-581) admits a doc_link only when its relationship is in _EDIT_SURFACE_RELATIONSHIPS = {constrains, creates, implements, modifies, specifies} (lines 104-106); 'describes' and 'related' are excluded by design (docstring, lines 99-103). Source 1 (lines 561-574) takes reference_file_path from a structured it_requirements dict, or — when it_requirements is the LIST form — scrapes path-shaped tokens out of the prose bullets via _extract_paths_from_prose (line 496). Nothing in either source consults which file the requirement says the work changes. The third criterion clause is served by the same file's self-check block (lines 2790-2793), which today records 'files_touched has N path(s)' as a PASS and warns only when the list is EMPTY."
+    relevance: "The surface, and the only file this AC edits. Verified 2026-08-18: _build_files_touched (line 535) unions exactly two sources. Source 2 (lines 576-581) admits a doc_link only when its relationship is in _EDIT_SURFACE_RELATIONSHIPS = {constrains, creates, implements, modifies, specifies} (lines 104-106); 'describes' and 'related' are excluded by design (docstring, lines 99-103). Source 1 (lines 561-574) takes reference_file_path from a structured it_requirements dict, or — when it_requirements is the LIST form — scrapes path-shaped tokens out of the prose bullets via _extract_paths_from_prose (line 496). Nothing in either source consults which file the requirement says the work changes. The third criterion clause is served by the same file's self-check block (lines 2790-2793), which today records 'files_touched has N path(s)' as a PASS and warns only when the list is EMPTY. AMENDED 2026-08-19: 'the only file this AC edits' is no longer true — see the two build-ac coordinator entries directly below. This file remains the primary and load-bearing surface; it is now one of three."
+  - path: templates/agents/build-ac.md
+    relationship: modifies
+    status: exists
+    relevance: "THE APPROVAL GATE, AND THE SECOND EDIT SURFACE — added 2026-08-19 to close the gap
+      the BA recorded rather than leave the criteria broader than the surface. Criterion clause 2
+      names the person who answers the build-confirmation prompt as the reader, and that prompt is
+      rendered HERE, not by the generator. Verified on disk: 'Step 3 — Surface to User and Confirm'
+      prints a fixed four-line block ending 'Build this ticket now? (yes / review / skip)'
+      (line 511), and the same block is re-rendered three further times — the Step 2b.2
+      connected-set variant (line 468), the Step 2c epic variant (line 499), and the post-review
+      re-ask (line 546). None of them relays anything the generator printed: Step 2 captures only
+      the ticket path from stdout and discards the remainder, so a statement the generator emits
+      today reaches the approver on no channel at all. This file must change for clause 2 to be
+      satisfiable, which is why it is 'modifies' and not 'describes'."
+  - path: templates/skills/build-ac/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "The written contract for the prompt the agent template renders, and the third edit
+      surface. '§2 Mode A — Leaf AC (single-ticket path)' reproduces the Step 3 block verbatim as
+      the Mode A output contract (lines 56-63) and §3 does the same for the epic variant
+      (lines 106-112). Adding a line to the approval prompt without amending these leaves the
+      documented contract and the rendered prompt disagreeing — the same describes-the-old-behaviour
+      failure BP-1100a-5 exists to repair one layer up, and this AC would be committing it in the
+      act of fixing it. Edited in the same change, not deferred. DELIBERATELY NOT A SURFACE:
+      templates/workflows/build-ac.md, whose only mention of the prompt is a frontmatter description
+      quoting the QUESTION ('Build this ticket now? (yes / review / skip)'), which this change does
+      not alter — the statement is a new line above the question, not a rewording of it."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
     relationship: related
     status: exists
@@ -50,6 +77,17 @@ doc_links:
     relationship: related
     status: exists
     relevance: "NOT A DUPLICATE — read before assuming overlap. ACD-400b-6 (work_status: done) guarantees union-preservation and order-independence AMONG the paths that already qualify as an edit surface. It is silent on which relationship values qualify, and silent on prose-scraped paths. That is why it is green while BO-2400g-2's primary file is still dropped. This AC is about which paths qualify in the first place."
+  - path: scripts/goal_to_epic.py
+    relationship: describes
+    status: exists
+    relevance: "READ ONLY, AND EXPLICITLY NOT A SURFACE — settled 2026-08-19, do not re-open. The
+      BA's notes name the goal path's per-leaf readiness gate (ACD-1200b-2) alongside the leaf
+      confirmation prompt as a place clause 2 might have to land. It cannot: the readiness gate runs
+      BEFORE ticket generation. run() calls classify_readiness at line 2250 and only reaches ticket
+      generation at line 2290, so at the moment that prompt is presented no ticket exists and no
+      surface has been derived. The goal path's approval-after-generation moment is the SAME Step 3
+      block in templates/agents/build-ac.md ('Build this epic now?'), which is already in this
+      surface. Adding this file would name a location that cannot carry the statement."
   - path: docs/retrospectives/EPIC-CommitAcOutputPerStage.md
     relationship: describes
     status: exists
@@ -57,9 +95,23 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "2 — the surface derivation (_build_files_touched, line 535) AND the self-check that reports it (lines 2790-2793). Both are enforcement points and only the second is what a driver reads; a membership fix applied to the derivation alone still reports a partial surface as a PASS, which is the third criterion clause's exact target."
+  n_location_rule: "3 enforcement points across 2 executable surfaces, all of which must change.
+    In scripts/ac_store/generate_ticket_from_ac.py: (1) the surface derivation (_build_files_touched,
+    line 535), which must return a determination rather than a bare list, and (2) the self-check
+    that reports it (lines 2790-2793), which today records 'files_touched has N path(s)' as a PASS
+    on any non-empty list — a membership fix applied to the derivation alone still reports a partial
+    surface as a PASS, which is criterion clause 3's exact target. In templates/agents/build-ac.md:
+    (3) EVERY place the coordinator renders a build-approval prompt — Step 3 (line 511), the
+    Step 2b.2 connected-set variant (line 468), the Step 2c epic variant (line 499), and the
+    post-review re-ask (line 546). Treat (3) as 'all': a statement shown at Step 3 but omitted from
+    the post-review re-ask is absent at exactly the moment a cautious approver — the one who chose
+    'review' — is asked to commit. templates/skills/build-ac/SKILL.md's §2 and §3 output contracts
+    must be updated to match (3), but they are documentation of the prompt, not a fourth
+    enforcement point. The load-bearing one is (3): (1) and (2) can both be correct while the
+    approver still sees nothing."
   required_skills:
     - python-coder
+    - llm-expert
   post_write_commands:
     - "python scripts/build.py --target-dir ."
     - "python -m pytest unit_tests/ac_store/ -q"
@@ -85,17 +137,42 @@ it_requirements:
         type: string
         description: "Required when determination is undetermined. Names why the surface could not be settled — e.g. no doc_link carries an edit-surface relationship and it_requirements is the prose form — so the author can fix the record rather than guess."
   constraints:
+    - "THE RELAY CHANNEL AND THE RELAY OBLIGATION, NAMED (2026-08-19; this is the route chosen for
+      criterion clause 2). The generator must emit the undetermined-surface statement AND its reason
+      on a channel the coordinator can read without parsing the ticket body — a single, stably
+      formatted block on the generator's own stdout, alongside the ticket path the coordinator
+      already captures. The coordinator (templates/agents/build-ac.md) must then be obliged to
+      reproduce that block IMMEDIATELY ABOVE the 'Build this ticket now? / Build this epic now?'
+      question, at every one of the four places it asks. Both halves are required and both are in
+      this AC's declared surface: an emitted-but-unrelayed statement and a relay instruction with
+      nothing to relay each satisfy exactly half a criterion. Do NOT satisfy the relay by telling the
+      coordinator to open and grep the generated ticket — that is 'a further check to go and find
+      it', which clause 2 excludes in terms."
     - "The membership rule must be fixed in the DERIVATION, not in the fixture. Retagging BO-2400g-2's doc_links repairs that one record's output and leaves every other all-'describes' record dropping its primary file. The AC's observable is the derivation's behaviour over a record shaped like BO-2400g-2, not BO-2400g-2 itself."
     - "Do NOT widen _EDIT_SURFACE_RELATIONSHIPS. docs/how-to/ac-traceability-store.md states explicitly that 'describes' and 'related' are excluded by design and that the remedy is to re-tag the doc_link, not to edit the constant. Adding 'describes' to that set would pull every reference page into every surface and convert this defect into its mirror image."
     - "An undetermined surface must degrade LOUDLY. The generator's self-check (lines 2790-2793) records 'files_touched has N path(s)' as a PASS and warns only when the list is EMPTY, so a confidently wrong four-path list reports as a pass today. A partial surface presented as complete is worse than an empty one: the empty one is visible, the partial one reads as scope."
-    - "The announcement must land where the driver reads it before dispatching a coder — the generated ticket and the generator's own report — not only in a log line or a return value. A correct determination nobody sees is the same observable as no determination at all."
+    - "The announcement must land where the driver reads it before dispatching a coder — the generated ticket, the generator's own report, AND the coordinator's approval prompt — not only in a log line or a return value. A correct determination nobody sees is the same observable as no determination at all."
+    - "THE COORDINATOR RUNS FROM THE DEPLOYED LAYOUT, NOT THE SOURCE TREE. templates/agents/build-ac.md
+      and templates/skills/build-ac/SKILL.md are build inputs; the agent that actually renders the
+      prompt is the deployed copy under .claude/. Run scripts/build.py before believing the relay
+      works, and assert on the deployed artifact — an edit to templates/ alone changes nothing an
+      approver will ever see, which is this AC's own failure mode wearing a build-layout costume."
+    - "MIXED-TECHNOLOGY SURFACE — assigned_agent is python-coder but two of the three edit-surface
+      files are prose agent/skill templates that python-coder does not own. The coordinator and
+      SKILL.md edits belong to llm-expert (both are named in required_skills). This was NOT split
+      into two ACs: the coordinator change is a handful of lines added to one prompt block and its
+      documented contract, and splitting would produce a child AC whose criteria are 'print the line
+      the other child computed' — trivial by the S3 test, and it would put the emit and the relay in
+      separate tickets, which is precisely the half-satisfaction the constraint above forbids. A
+      driver dispatching this ticket must give the coordinator edit to llm-expert rather than let
+      python-coder improvise prose in an agent template."
     - "Records that already emit a correct surface must keep emitting it byte-identically. BO-2400e-3's structured form produces exactly scripts/build_orchestration/fast_lane.py today; regenerating it after this change must produce the same single entry. Verify by regenerating a set of real ACs before and after and diffing the files_touched blocks."
     - "Do not pre-empt BP-1100a-4. This AC adds a reliable positive source; narrowing what may enter the surface is the next AC and is ordered after this one deliberately, because narrowing first would produce empty surfaces. An implementation that also strips the prose fallback in this change makes the two ACs indistinguishable and removes the ordering that protects against empty surfaces."
     - "Point any test at a COPY of the store. The generator writes an implemented_by back-reference into the source AC, so a test run against docs/acceptance-criteria mutates the real store."
-    - "STALE-DOC CAVEAT, OUT OF SCOPE HERE. docs/how-to/ac-traceability-store.md documents the current two-source derivation and the --verify count caveat verbatim; once this AC and BP-1100a-4 land, that section is stale. It is deliberately NOT in this AC's surface — BP-1100a carries no documentation_triggers and the criteria are about the generated ticket only. Raise a follow-up documentation AC rather than editing the page under this ticket."
+    - "STALE-DOC CAVEAT, DISCHARGED TO BP-1100a-5. docs/how-to/ac-traceability-store.md documents the current two-source derivation and the --verify count caveat verbatim; once this AC and BP-1100a-4 land, that section is stale. It is deliberately NOT in this AC's surface — the criteria are about the generated ticket and the approval prompt only. BP-1100a-5 owns the page and depends on both."
 delivers_to:
   agent: python-coder
-  contract: "A surface derivation that returns both the paths the requirement says its work changes and an explicit determined/undetermined outcome with a reason, plus an announcement of an undetermined surface in the generated ticket and in the generator's own report. BP-1100a-4 consumes this: narrowing what may enter the surface is only safe once a reliable positive source exists, which is why the two are ordered rather than merged."
+  contract: "Two things, and both are consumed. (1) For BP-1100a-4: a surface derivation that returns both the paths the requirement says its work changes and an explicit determined/undetermined outcome with a reason. Narrowing what may enter the surface is only safe once a reliable positive source exists, which is why the two are ordered rather than merged. (2) For the /build-ac coordinator: a stably formatted undetermined-surface block on the generator's stdout, adjacent to the ticket path the coordinator already captures, which the coordinator reproduces verbatim immediately above every build-approval question it asks. The block is the contract — its format must not change without changing the coordinator in the same commit, because the coordinator relays it rather than parsing it."
 expects_from: null
 test_required: true
 test_spec:
@@ -120,6 +197,13 @@ test_spec:
     angle: boundary
     covers: [BP-1100a-3]
     description: "THE THIRD CLAUSE. A record that offers no way to tell which referenced files change produces a ticket stating its surface could not be determined, in a place read before a coder is dispatched — and does NOT quietly emit a surface assembled from whatever paths it mentioned. Both halves asserted: an announcement alongside a confident four-path list fails."
+  - name: test_the_undetermined_statement_reaches_the_approver_not_only_the_ticket_body
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [BP-1100a-3]
+    description: "CLAUSE 2, AND THE ONLY DESCRIPTOR THAT FAILS WHEN THE STATEMENT STOPS AT THE TICKET. Two assertions, both required, over an undeterminable fixture. (a) CHANNEL: run the real generator command line and assert the undetermined-surface block and its reason appear on the stdout the coordinator captures — a run whose statement is present in the written ticket but absent from that channel FAILS here while passing test_an_undeterminable_surface_is_announced_rather_than_assembled, which is exactly the gap this descriptor exists to catch. (b) RELAY: assert the DEPLOYED coordinator (.claude/agents/build-ac.md, after scripts/build.py — not the templates/ source) reproduces that block immediately above every build-approval question it renders: Step 3, the Step 2b.2 connected-set variant, the Step 2c epic variant, and the post-review re-ask. A relay wired into Step 3 only fails (b), because the approver who answered 'review' is asked again without it. Do NOT accept an instruction telling the coordinator to open the ticket and look — clause 2 excludes 'a further check to go and find it' in terms, so a relay that reads the ticket body fails (b) even though the text would eventually be visible."
   - name: test_a_partial_surface_is_not_reported_as_a_passing_check
     target_dir: unit_tests/ac_store/
     framework: pytest
@@ -156,6 +240,14 @@ test_rationale: |
   first. Lines 2790-2793 pass on any non-empty list, so a derivation that correctly marks a
   surface undetermined while the self-check keeps printing PASS leaves the driver reading
   exactly today's green report.
+  CLAUSE 2 GETS A THIRD, SEPARATE DESCRIPTOR (added 2026-08-19), and the split is not
+  cosmetic: the ticket-level descriptor and the self-check descriptor are both satisfiable
+  by a change confined to generate_ticket_from_ac.py, and a build approver would still see
+  nothing. The approver-facing test therefore asserts on a different surface entirely —
+  the generator's stdout channel and the deployed coordinator that relays it — and is the
+  only descriptor in this contract that goes red when the statement stops at the ticket
+  body. Its two halves are also opposed on purpose: (a) alone passes on an emitted block
+  nobody relays, (b) alone passes on a relay instruction with nothing to relay.
   The BO-2400e-3 negative control is mandatory rather than optional. The cheapest way to
   make the primary file appear is to widen what qualifies as an edit surface, which the
   how-to explicitly forbids and which passes every positive test in this contract. Only a
@@ -213,6 +305,56 @@ amended_by:
       the approver is shown at the confirmation point, not only on the written ticket. Until
       that is done this AC's criteria are broader than its declared surface, which is recorded
       here rather than fixed silently. Title, notes, and every it-po-owned field untouched."
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-19
+    note: "Closes the surface gap the BA recorded on clause 2. ROUTE CHOSEN: BOTH, because neither
+      alone is implementable. The coordinator surface JOINS the edit surface — templates/agents/
+      build-ac.md added as doc_link 'modifies' — AND the generator's channel plus the coordinator's
+      relay obligation are stated as an explicit constraint. The either/or the BA offered turned out
+      to be false on inspection: /build-ac's Step 3 captures only the ticket path from the
+      generator's stdout and discards the rest, so there is no existing channel for the generator to
+      emit on and no standing instruction to relay anything. Making the generator emit without
+      editing the coordinator changes nothing the approver sees; instructing the coordinator to
+      relay without defining what the generator emits gives it nothing to relay. Both halves are now
+      in the declared surface and the constraint says so in terms.
+      SURFACE, in full, three files, all named because this AC is itself about surfaces naming the
+      right files: (1) scripts/ac_store/generate_ticket_from_ac.py (unchanged as reference_file_path
+      — still the primary and load-bearing file), (2) templates/agents/build-ac.md — the four places
+      it renders a build-approval prompt (Step 3 line 511, Step 2b.2 line 468, Step 2c line 499,
+      post-review re-ask line 546), (3) templates/skills/build-ac/SKILL.md — the §2/§3 Mode A and
+      Mode B output contracts that reproduce that prompt verbatim and would otherwise be left
+      describing a prompt that no longer exists. n_location_rule rewritten from '2' to name all
+      three enforcement points and identify (3) — the coordinator's prompts — as the load-bearing
+      one, since (1) and (2) can both be correct while the approver still sees nothing.
+      EXPLICITLY EXCLUDED, with reasons on the record. scripts/goal_to_epic.py is linked
+      'describes', NOT 'modifies': the BA's notes name its per-leaf readiness gate as a candidate
+      location, but that gate runs BEFORE ticket generation (classify_readiness at line 2250,
+      generation at line 2290), so no surface exists to report when it prompts. The goal path's
+      approval-after-generation moment is the same Step 3 block already in the surface.
+      templates/workflows/build-ac.md is not linked at all: its only mention is a frontmatter
+      description quoting the unchanged question.
+      SEVENTH TEST DESCRIPTOR added — test_the_undetermined_statement_reaches_the_approver_not_only_
+      the_ticket_body, angle reachability, placed fourth so it reads next to the clause it serves.
+      It is the only descriptor in the contract that goes red when the statement reaches the ticket
+      body and stops there, and it asserts two opposed halves: the block is present on the
+      generator's stdout channel, AND the DEPLOYED coordinator reproduces it above every approval
+      question. A relay implemented as 'open the ticket and grep' fails it by construction, because
+      clause 2 excludes a further check to go and find it. test_rationale extended to say why the
+      split from the existing ticket-level and self-check descriptors is load-bearing rather than
+      redundant.
+      CAVEAT — MIXED-TECHNOLOGY SURFACE, recorded as a constraint rather than split. assigned_agent
+      stays python-coder (the .py file is where the behaviour lives) but two of three surface files
+      are prose agent/skill templates python-coder does not own; llm-expert added to required_skills
+      and the constraint tells a driver to route those edits accordingly. Not split into two ACs: the
+      coordinator half is a few lines added to one prompt block plus its documented contract —
+      trivial by the S3 test — and separating emit from relay across two tickets institutionalises
+      the exact half-satisfaction the relay constraint forbids. Also added a deployed-layout
+      constraint: the coordinator that runs is the .claude/ copy, so templates/-only edits and
+      templates/-only assertions are invisible to every real approver.
+      delivers_to widened to name the stdout block as a second consumed contract alongside the
+      determination BP-1100a-4 depends on. criteria, title and notes untouched; no BA-owned field
+      altered."
 superseded_by: null
 covered_by: []
 implemented_by: []

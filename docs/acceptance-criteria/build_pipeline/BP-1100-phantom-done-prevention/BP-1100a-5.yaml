@@ -53,12 +53,146 @@ doc_links:
     relationship: related
     status: exists
     relevance: "KI-ACS-002 records the --verify count-not-correctness defect the page currently warns readers about, and docs/reference/false-green-mechanisms.md catalogues it as M8. Both are separate surfaces with their own lifecycles and are NOT edited here; the page must simply stop describing behaviour that has changed and must not contradict what those two still say about the part that has not."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Added by it-po 2026-08-19. The live requirement the page's worked example is built on, and the input to the post-write check that makes this prose AC verifiable: after both behaviour ACs land, regenerating BO-2400g-2 is what tells the writer whether the after-picture they wrote is the after-picture the generator actually produces. READ ONLY, and specifically NOT retagged: BP-1100a-3 refuses the one-record fix, so the page's sentence 'This is BO-2400g-2's actual tag on main, uncorrected' (line 373) stays TRUE after the change and must not be edited away as though it were stale. What goes stale is the OUTPUT the page attributes to it, not the tag."
 assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "docs/how-to/ac-traceability-store.md"
+  n_location_rule: "5 passages, all inside the single section 'How do I make sure /build-ac names
+    the right files_touched?' (lines 305-407). (1) Lines 312-319, the 'Live on main today'
+    BO-2400g-2 worked example — a before-picture the moment the derivation changes. (2) Lines
+    321-333, the two-source description of _build_files_touched, which BP-1100a-3 replaces with a
+    derivation that returns a determination. (3) Lines 335-338, the prose-fallback paragraph, which
+    BP-1100a-4 retires outright — this is the one that turns the page from incomplete into wrong.
+    (4) Lines 340-379, Route 1 / Route 2 / 'Wrong — describes', which must now be stated as the
+    COMPLETE set of routes and gain what an author gets when they use neither: an undetermined
+    surface, declared as such, and put in front of whoever is asked to approve the build. (5) Lines
+    389-406, the --verify caveat, where the count-not-correctness warning must be narrowed to the
+    part that survives. TRAP: the BO-2400g-2 output appears TWICE — once at (1) and again inside
+    (5) at lines 394-401, where the fenced '[PASS] files_touched has 4 path(s) from doc_links' block
+    and the 'None of those 4' sentence restate it. Updating (1) and leaving (5) leaves the retired
+    before-picture on the page in the very passage about not over-trusting the report. Treat the
+    worked example as 'all occurrences', not 'the first one'."
+  required_skills:
+    - documentation-expert
+    - how-to-author
+  post_write_commands:
+    - "python scripts/ac_store/generate_ticket_from_ac.py --ac BO-2400g-2 --dry-run"
+  config_schema_fragment:
+    type: object
+    description: "What the rewritten section must assert, expressed as the shape of the answer
+      rather than as wording, so the writer is constrained on substance and free on prose. This AC
+      stores nothing and changes no schema — the fragment is the acceptance shape for the page's
+      claims about the derivation, and every claim in it must be checkable against the shipped
+      behaviour of BP-1100a-3 and BP-1100a-4 rather than against this record."
+    required:
+      - surface_routes
+      - no_route_outcome
+    properties:
+      surface_routes:
+        type: array
+        items:
+          type: string
+          enum:
+            - reference_file_path
+            - edit_surface_doc_link
+        description: "The COMPLETE set of ways a file reaches the surface once both behaviour ACs
+          have landed — exactly these two, and the page must say so as a closed list. Prose
+          scanning must be ABSENT from the list of routes, not listed and marked deprecated: a
+          reader who sees it named at all will word their bullets for it. The page must also keep
+          telling authors NOT to reach for the _EDIT_SURFACE_RELATIONSHIPS constant, which stays
+          unchanged and stays the wrong fix — BP-1100a-3 forbids widening it in terms."
+      no_route_outcome:
+        type: string
+        enum:
+          - undetermined
+        description: "The only legal answer to 'what do I get if I use neither route'. Not an empty
+          list, and not a surface quietly assembled from whatever the record mentioned: an explicit
+          undetermined outcome, with the reason it could not be settled, stated on the generated
+          ticket AND put in front of whoever is asked to approve the build. The page must describe
+          the outcome as something the author will SEE at the approval gate, because that is what
+          BP-1100a-3 clause 2 makes true and it is the fact that turns 'my surface is empty' from a
+          mystery into a fixable authoring error."
+  constraints:
+    - "THE AFTER-PICTURE MUST BE OBSERVED, NOT PREDICTED. The worked example's new output must be
+      what the shipped generator actually emits for BO-2400g-2, obtained by running the post_write
+      command and reading the result — not what this AC, BP-1100a-3 or BP-1100a-4 say it ought to
+      be. Writing the after-picture from the specification is how a page becomes stale again on day
+      one, and it is the same over-trust the section itself warns about. Expect an undetermined
+      surface rather than a corrected four-path list: BP-1100a-3 forbids both widening
+      _EDIT_SURFACE_RELATIONSHIPS and retagging BO-2400g-2, so the record still supplies no
+      positive source and the honest outcome is 'could not be determined, and here is why'."
+    - "DO NOT DELETE THE --verify WARNING, NARROW IT. BP-1100a-3 stops that check reporting a PASS
+      over an UNDETERMINED surface. It still cannot confirm that a DETERMINED surface is the RIGHT
+      one — reading the files_touched block yourself remains mandatory. The criteria ask for the
+      true remainder to be kept; deleting the whole warning restores exactly the over-trust
+      KI-ACS-002 and false-green mechanism M8 describe, which is the failure this section exists to
+      prevent and the one a well-meaning cleanup pass is most likely to commit."
+    - "SCOPE FENCE, ENFORCED BY THE SURFACE. One section of one page. docs/known-issues/ac-store.md
+      and docs/reference/false-green-mechanisms.md are linked 'related', never 'modifies', and are
+      not in files_touched: KI-ACS-002 is closed by whoever fixes the readiness report, and M8 is a
+      durable pattern illustrated by this defect rather than a record of it. Contradicting either
+      is the failure mode; editing either is out of bounds. Likewise BO-2400g-2's own YAML — its
+      'describes' tag stays uncorrected on purpose, and the page's sentence saying so stays true."
+    - "DISPATCH THE LEAF AUTHOR DIRECTLY. assigned_agent is documentation-expert because
+      change_target: docs is what adds the documentation phase, but the artefact is a how-to and
+      how-to-author is the agent that writes one (both are in required_skills). documentation-expert
+      is known to dispatch a specialist and return before it finishes, so an early 'nothing changed'
+      reading is not proof the work was skipped — and the safer route is to hand this leaf to
+      how-to-author directly rather than through a delegating parent."
+    - "NO EXECUTABLE SURFACE, AND THAT IS DELIBERATE. test_required is false with a stated rationale
+      — do not add a test_spec to make the record look complete. The behaviours the page describes
+      are asserted by BP-1100a-3's and BP-1100a-4's contracts, both of which run the real generator;
+      a test here could only assert that prose contains a phrase, which passes on a page that is
+      wrong in every other sentence."
+    - "ORDERING IS A PRECONDITION, NOT A PREFERENCE. Both behaviour ACs must be DONE before this
+      leaf is picked up. Written after only BP-1100a-3, the page would document a prose fallback
+      that is about to be retired — a fresh instance of the defect this AC exists to close."
+delivers_to:
+  agent: it-po
+  contract: "The authoring-side rule, stated where an author will find it: once prose stops contributing, the ONLY ways a file reaches a generated ticket's surface are an it_requirements reference_file_path and a doc_link carrying an edit-surface relationship, and a record supplying neither yields an explicitly undetermined surface shown at the build-approval gate rather than a guess. The IT PO is the consumer because it is the agent that sets both of those fields; this page is the only place that will tell it what its choices now produce. Nothing machine-readable is delivered — the artefact is prose, and the contract is that the prose matches the shipped derivation."
+expects_from:
+  ac_id: BP-1100a-4
+  contract: "Both behaviours, shipped and observable through the real generator: from BP-1100a-4, a surface that admits a path only from a positive declaration and never from a prose mention; and from BP-1100a-3 (BP-1100a-4's own upstream, and named in this AC's depends_on for the same reason), the explicit determined/undetermined outcome with its reason, announced on the generated ticket and relayed at the build-approval gate. The page cannot be written truthfully against either one alone, and the after-picture in its worked example is read out of what the shipped generator emits for BO-2400g-2 rather than out of these two records."
 test_required: false
 test_rationale: "The whole artifact is prose in docs/how-to/ac-traceability-store.md; it adds no executable surface, so there is nothing a test could drive. The behaviours it describes are covered by BP-1100a-3's and BP-1100a-4's test contracts, both of which assert on tickets the real generator wrote. Recorded explicitly rather than left absent so test-writer skips with a stated reason instead of the silent auto-skip documented in CLAUDE.md."
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-19
+    note: "Enriched the leaf the BA left for this pass. Added estimated_complexity (M — one file and
+      one section, but five passages inside it and roughly half the section rewritten, which is past
+      the S threshold), object-form it_requirements, delivers_to, expects_from, and one doc_link.
+      reference_file_path is docs/how-to/ac-traceability-store.md — the page itself, already
+      correctly tagged 'modifies' by the BA, so files_touched is that one file and nothing else.
+      n_location_rule enumerates all five passages by line range and flags the trap that matters:
+      the BO-2400g-2 worked example appears TWICE (lines 312-319 and again at 394-401 inside the
+      --verify caveat), so an update applied to the first occurrence leaves the retired
+      before-picture standing in the very passage about not over-trusting the report. config_schema_
+      fragment states the acceptance shape rather than wording — the closed two-route list, with
+      prose scanning ABSENT rather than listed-and-deprecated, and 'undetermined' as the only legal
+      answer to 'what if I use neither'.
+      post_write_commands is the part that makes a prose AC verifiable: regenerate BO-2400g-2 and
+      read what comes back. Paired with a constraint requiring the after-picture to be OBSERVED
+      rather than predicted from the two behaviour ACs — writing it from the specification is how
+      the page went stale in the first place. BO-2400g-2's YAML added as a 'related' doc_link so
+      the writer has the input to that check without it entering the edit surface; its 'describes'
+      tag stays uncorrected on purpose, which means the page's line 373 saying so stays TRUE and
+      must not be tidied away as stale.
+      assigned_agent left as documentation-expert: change_target: docs is what actually adds the
+      documentation phase via guardrail_gates.yaml, so flipping it would gain nothing mechanically.
+      how-to-author added to required_skills instead, with a constraint telling a driver to dispatch
+      the leaf author directly — documentation-expert is known to delegate and return early, so an
+      early 'nothing changed' reading proves nothing.
+      test_required: false and its rationale are untouched, and a constraint records that no
+      test_spec may be added to make the record look complete — a prose page can only be tested by
+      asserting it contains a phrase, which passes on a page wrong in every other sentence. criteria,
+      title and notes untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

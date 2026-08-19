@@ -73,7 +73,30 @@ it_requirements:
     properties:
       independently_completable:
         type: boolean
-        description: "True when the prerequisite reaches a completed state by being built — it carries its own criteria and a single owner and can be handed to a builder as it stands. False for a composite that only rolls up from its children. Derive it from the record's own fields (the L0/L1-are-composite statement in docs/reference/ac-schema.md is the normative source); do NOT derive it from the ancestor walk, which is the very thing being narrowed. A prerequisite with independently_completable true is gated normally; only false ones may be dropped from the blocking set."
+        description: "True when the prerequisite is the kind of unit that reaches a completed
+          state BY BEING BUILT — it carries criteria of its own and describes work a builder
+          can be handed and finish. False ONLY for a unit that can never reach a completed
+          state that way at all, because it rolls up from the things beneath it. The
+          distinction is structural and permanent ('can never be completed on its own'), never
+          transient ('is not ready to hand over right now'). Derive it from the record's own
+          fields — the L0/L1-are-composite statement in docs/reference/ac-schema.md is the
+          normative source. A prerequisite with independently_completable true is gated
+          normally; only false ones may be dropped from the blocking set.
+          THREE PROXIES ARE REJECTED, and the criteria reject each of them by construction
+          rather than leaving it to review. (a) The ancestor walk — that is the very thing
+          being narrowed, so deriving the predicate from it is circular. (b) Having something
+          beneath it: P in the criteria has R beneath it and P's own record acknowledges R, and
+          this is not contrived — BO-2400g-1, the observed defect's own P, is an L2 that
+          acknowledges BO-2400g-1-i beneath it, so a has-children reading reproduces today's
+          wrong answer exactly while looking principled. (c) Whether anyone has been named to
+          build it: rejected 2026-08-19 by the Q/T pair the BA added. Being named to build
+          something is unfinished paperwork, not a structural property — the store is
+          permanently full of ACs awaiting enrichment (BP-1100a-3 and BP-1100a-4 were both in
+          that state on 2026-08-18, and this AC's own notes record that assignment is
+          deliberately omitted at authoring time). They will be built, so they must hold their
+          dependants meanwhile. Before accepting any candidate predicate, run it against the
+          real store and confirm it returns true for BO-2400g-1 — a candidate that answers
+          false there is one of the two rejected proxies wearing a different name."
   constraints:
     - "The exclusion must be NARROWED, not deleted. ACD-400a-3's guarantee — a child that names its never-independently-completable parent as a prerequisite is not held forever — must keep passing. A one-line removal of `dep not in ancestors` satisfies every sentence about R and reinstates the exact deadlock ACD-400a-3 was written to remove, on a store where nearly every freshly-authored leaf carries its parent in depends_on."
     - "The decision must be made PER PREREQUISITE ENTRY, not once per record. _classify_ac builds ONE blocking list from all of depends_on, so a record can name a buildable and a composite prerequisite side by side — ACD-400a-4 does exactly that today. A per-record short-circuit passes every single-prerequisite case and fails ACD-400a-5-i."
@@ -135,6 +158,41 @@ amended_by:
       recorded rather than fixed silently. Title and every other it-po-owned field untouched;
       the notes paragraph that had blessed all three candidate mechanisms is corrected in place
       and marked as superseded by this record."
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-19
+    note: "Closes both it-po-owned fields the BA recorded as out of step with the new Q/T pair.
+      (a) config_schema_fragment.independently_completable rewritten. The phrase 'carries its own
+      criteria and a single owner' is gone — the owner half is exactly what Q/T rejects, and a
+      fragment that keeps it would have handed the implementer the rejected proxy in the same
+      record that forbids it. The property is now defined purely as the kind of unit that reaches
+      a completed state BY BEING BUILT, with the structural/permanent versus transient distinction
+      stated explicitly ('can never be completed on its own' versus 'is not ready to hand over
+      right now'). NO RECORD FIELD IS NAMED as the discriminator, deliberately: the BA froze the
+      behaviour rather than the storage detail, and naming one here would smuggle back through
+      it_requirements exactly what the criteria decline to fix. The normative pointer stays what it
+      was — the L0/L1-are-composite statement in docs/reference/ac-schema.md. All three proxies are
+      now enumerated as rejected with the reason each fails: the ancestor walk (circular — it is the
+      thing being narrowed), having children (BO-2400g-1 is an L2 that acknowledges BO-2400g-1-i, so
+      this reproduces today's wrong answer), and owner-presence (Q/T). A concrete acceptance probe
+      is added so the rejection is checkable rather than exhortative: run the candidate predicate
+      against the real store and confirm it returns true for BO-2400g-1 — both rejected proxies
+      answer false there, so the probe catches either one under any name.
+      (b) FIFTH TEST DESCRIPTOR added — test_a_buildable_prerequisite_with_no_owner_still_holds_
+      while_an_ownerless_composite_does_not, angle criterion, placed third so it sits with the pair
+      it extends. It is opposed in the same way as the first two and for the same reason, but the
+      opposition is inside ONE fixture: Q (buildable, uncompleted, nobody named to build it) and C'
+      (a composite, also with nobody named to build it) coexist, and the single scanner run must
+      hold T while offering S'. Owner-presence classifies Q and C' identically, so it gets S' right
+      by accident and T wrong — the descriptor goes red on the T half while the S' half proves the
+      implementer did not simply delete the distinction. The has-children proxy also fails it (Q
+      acknowledges T beneath it), and so does an outright deletion of the exclusion (S' would be
+      held). Both prerequisites are deliberately ownerless so that owner-presence cannot be the
+      thing separating them. test_rationale extended with a paragraph explaining why the third pair
+      needs its own descriptor rather than a clause bolted onto the first two.
+      Nothing else touched: criteria, title, notes, doc_links, reference_file_path, n_location_rule,
+      constraints, delivers_to and expects_from are all unchanged, and the first four test
+      descriptors are kept verbatim."
 superseded_by: null
 covered_by: [ACD-400a-5-i]
 implemented_by: []
@@ -156,6 +214,13 @@ test_spec:
     angle: criterion
     covers: [ACD-400a-5]
     description: "NEGATIVE CONTROL. The same fixture store also holds composite C (never independently completed) and refinement S beneath it whose only prerequisite is C; the same real scanner run must place S in ready and must name C nowhere in the held account. A fix that deletes the distinction instead of narrowing it fails this and only this assertion."
+  - name: test_a_buildable_prerequisite_with_no_owner_still_holds_while_an_ownerless_composite_does_not
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [ACD-400a-5]
+    description: "THE Q/T PAIR, AND THE ONLY DESCRIPTOR AN OWNER-PRESENCE IMPLEMENTATION FAILS. One fixture store, one real scanner run, two opposed subjects that differ ONLY in whether they can ever be completed by being built. Q is buildable, uncompleted, acknowledges T beneath it, and has nobody named to build it; C-prime is a composite and ALSO has nobody named to build it; T names only Q as its prerequisite and S-prime names only C-prime. Assert both halves in the same run: T is absent from ready, present in blocked, and Q is named as what holds it; AND S-prime is present in ready with C-prime named nowhere in the held account. Both prerequisites are deliberately ownerless so that owner-presence cannot be what separates them — an implementation keyed on 'nobody named to build it' classifies Q and C-prime identically, gets the S-prime half right by accident, and goes red on the T half. A has-children implementation also goes red on T, because Q acknowledges T. Deleting the exclusion outright goes red on S-prime."
   - name: test_real_store_stops_offering_an_edge_case_before_its_base_behaviour
     target_dir: unit_tests/ac_store/
     framework: pytest
@@ -185,6 +250,17 @@ test_rationale: |
   composite test — that is ACD-400a-3's original defect returning, and catching it here
   is the whole reason the negative control exists. Only a rule that narrows the
   exclusion to prerequisites which can never be independently built passes both.
+  THE Q/T DESCRIPTOR IS A THIRD OPPOSED PAIR, NOT A CLAUSE ON THE FIRST TWO (added
+  2026-08-19). The P/R and C/S pair discriminates between a buildable prerequisite and a
+  composite one, but on this store those two also differ in whether anyone has been named
+  to build them, so an implementation keyed on owner-presence can pass both while being
+  wrong across most of the store. The Q/T descriptor removes that confound by making BOTH
+  prerequisites ownerless and holding everything else constant: the only difference left
+  between Q and C-prime is whether the unit can ever be completed by being built, which is
+  the property the AC is actually about. It has to be its own descriptor rather than an
+  extra assertion on the first two, because the first two must keep failing for their own
+  distinct reasons — folding the ownerless case into them would produce one test that
+  three different wrong implementations fail, and no signal about which one is present.
   The real-store test is separate from the fixture tests because the defect was found in
   the real store and not by any fixture: hand-built fixtures reproduce the author's own
   assumptions, and every fixture written for ACD-400a-3 was satisfied by the over-broad
