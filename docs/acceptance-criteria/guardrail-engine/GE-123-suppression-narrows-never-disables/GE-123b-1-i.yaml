@@ -1,6 +1,7 @@
 id: GE-123b-1-i
 components:
   - commit_guardian
+  - security_scanner
 title: "The author is told which line was declined and which file it would have left unprotected, without the commit being stopped"
 component: guardrail-engine
 level: L3

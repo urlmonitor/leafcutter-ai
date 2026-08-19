@@ -45,9 +45,18 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-19
 - **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py:134-150`, and the AC hook family generally
+
+**Second occurrence, 2026-08-19.** Staging `GE-113c-1-iii` and `GE-113c-1-v` for an
+unrelated one-line `components` edit made `check-ac-schema` fail both with *"approved code
+AC must declare a test contract — add a non-empty `test_spec`"*. Neither record has ever
+had one. They are `readiness: approved`, `change_target: code`, and have been sitting on
+`main` in that state — invisible because no commit had happened to stage them since the
+rule was introduced. The hook was not silent because they were fine; it was silent because
+it had never been shown them. A store-wide sweep would find how many more there are; the
+index-scoped hook structurally cannot.
 
 **Symptom.** These hooks derive their file list from `git diff --cached --name-only` (or
 `HOOK_TEST_FILES` under test) — never from the store. Any fact that is true of the store

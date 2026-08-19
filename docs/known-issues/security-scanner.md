@@ -7,11 +7,12 @@ status: active
 created: 2026-08-19
 last_updated: 2026-08-19
 components:
+  - security_scanner
   - commit_guardian
 related_docs:
   - docs/known-issues/commit-guardian.md
+  - docs/architecture/components/security-scanner.md
   - templates/skills/security-scanner/SKILL.md
-  - docs/architecture/components/commit-guardian.md
 ---
 
 # Known issues — security-scanner
@@ -29,10 +30,19 @@ as a pre-commit hook, so until 2026-08-19 its defects were filed under
 right now, can a credential slip past?* — unanswerable in one place: it was interleaved
 with AC-hook scoping, frontmatter enums and drift-manifest paths.
 
-The split is by **surface**, not by component vocabulary. `security_scanner` is not an
-entry in `docs/components.json`, so the frontmatter above declares `commit_guardian`,
-which is the registered component the scanner runs inside. Do not add a component id to
-satisfy this file; if the vocabulary should gain one, that is its own decision.
+The split is by **surface**. `security_scanner` is a registered component in
+`docs/components.json` as of 2026-08-19, with
+[`docs/architecture/components/security-scanner.md`](../architecture/components/security-scanner.md)
+as its `detail_ref`. It declares `depends_on: ["commit_guardian"]` — the registry has no
+`parent` field, and that dependency edge is the closest modelled relationship. The
+division of responsibility is set out in the architecture doc.
+
+Note the two component axes do not both gain an entry. `docs/components.json` (underscore
+ids) governs knowledge-graph membership and now carries `security_scanner`;
+`docs/acceptance-criteria/index.yaml` (kebab ids) governs AC file placement and id
+prefixes and deliberately does **not** — a new AC namespace would renumber every existing
+`GE-` record. Scanner ACs stay in the `guardrail-engine` namespace and carry
+`security_scanner` in their `components` list.
 
 **Scope.** Anything whose failure mode is *a real credential or vulnerability goes
 unreported*, or *a suppression removes more coverage than it claims*. Hook plumbing that

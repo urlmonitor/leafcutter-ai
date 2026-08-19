@@ -1,6 +1,7 @@
 id: GE-123b-1
 components:
   - commit_guardian
+  - security_scanner
 title: "A suppression that would leave a file with no rule able to report is refused for that file"
 component: guardrail-engine
 level: L2

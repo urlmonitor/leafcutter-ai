@@ -1,6 +1,7 @@
 id: GE-123c-3-i
 components:
   - commit_guardian
+  - security_scanner
 title: "The repository's own live suppressions produce no warning and continue to suppress exactly what they suppress today"
 component: guardrail-engine
 level: L3
