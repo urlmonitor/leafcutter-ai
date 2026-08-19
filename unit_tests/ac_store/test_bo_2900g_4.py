@@ -165,7 +165,7 @@ class TestGeneratedTicketConformsViaTheGeneratorCli:
         files the CLI actually wrote, and validate both against the real
         definition file."""
         for ac in (_DERIVED_AC, _AUTHORED_AC):
-            ac_id = ac["id"]
+            ac_id = str(ac["id"])
             with tempfile.TemporaryDirectory() as tmpdir:
                 ac_root = Path(tmpdir) / "docs" / "acceptance-criteria"
                 component_dir = ac_root / "fixture-component"
