@@ -13,7 +13,7 @@ Markdown template body, which no validator read until this one.
 Six dangling references accumulated in that blind spot across at least three
 epics (KI-BP-007): ``route-learning`` and ``capture-learning`` (loaded by the
 ``signoff`` §7 knowledge-capture step and by PO/BA/IT-PO v3),
-``agent-telemetry`` (nine ``emit_event.py`` invocations in the ``building-epics``
+``agent-telemetry`` (eight ``emit_event.py`` invocations in the ``building-epics``
 runbook), and ``import-scanner`` / ``find-context-candle`` / ``trade-analysis``
 (routing rows inherited when ``research-agent`` was copied in from a
 trading-system project). None was ever committed. Every call site treats
