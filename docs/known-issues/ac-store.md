@@ -367,7 +367,7 @@ underneath. The id churn is cosmetic; the defect is not.
 
 ---
 
-### KI-ACS-005 — `components` is required and hand-authored while the package ships its deriver
+### KI-ACS-007 — `components` is required and hand-authored while the package ships its deriver
 
 - **Severity:** blocker
 - **Status:** open
@@ -445,9 +445,19 @@ There is a real requirement underneath this: an AC lives in one directory but ca
 to more than one component. That is genuine 1:N and worth keeping. It does not justify a
 required, hand-authored, separately-spelled second field on all 3,154 records.
 
-Filed as KI-ACS-003 while this work sat uncommitted; renumbered to 005 on landing because
-main published a different KI-ACS-003 (id uniqueness) and a KI-ACS-004 in the interim.
-Same churn the entry above records, and the same cause.
+Filed as KI-ACS-003 while this work sat uncommitted, renumbered to 005 at merge time, and
+renumbered again to 007 immediately afterwards — the 005 landed as a DUPLICATE. PR #496
+merged three minutes before #497 and took both 005 and 006, so the number verified free at
+authoring was taken by the time the merge button was pressed.
+
+Worth recording rather than quietly correcting, because it is the third instance of one
+mechanism in two days and the first two are already filed: KI-ACS-003 (the AC store has no
+id-uniqueness gate) and KI-ACD-008 (id allocation reads a stale view of what is taken).
+This register has the same hole and no gate at all. Checking a number is free is not
+sufficient when the check and the merge are separated by any interval in which another PR
+can land — the property that matters is uniqueness AT MERGE, and nothing asserts it. The
+fix that would have caught all three is one gate over the merged tree, not more care at
+authoring time.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that cannot run
 is indistinguishable from one that passes).
