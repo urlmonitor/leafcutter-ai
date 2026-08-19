@@ -395,10 +395,43 @@ underneath. The id churn is cosmetic; the defect is not.
 
 - **Severity:** blocker
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-19
 - **Where:** `scripts/ac_store/validate_ac_schema.py:225-230` · `config/ac_store_schema.json:521`
   · `scripts/ac_store/_component_migration_map.py` · `scripts/check_component_vocab.py:25`
+
+**Second occurrence, 2026-08-19 — there is a THIRD copy of the vocabulary, and this entry
+undercounted.** Registering the new `security_scanner` component exposed it. After adding
+the id to `docs/components.json`, the two validators disagreed:
+
+```
+$ python3 scripts/check_component_vocab.py
+OK: all `components` values are canonical components.json ids (full tree).
+
+$ find docs/acceptance-criteria/guardrail-engine -name '*.yaml' \
+      -exec python3 scripts/ac_store/validate_ac_schema.py {} +
+  ...GE-123a.yaml: schema violation at components.1 —
+  'security_scanner' is not one of ['ac_driven_dev', 'ac_store', ... 'worktree_manager']
+```
+
+Forty-two files failed. `check_component_vocab.py` reads `docs/components.json`;
+`validate_ac_schema.py` validates against a **hand-maintained `enum` inside
+`config/ac_store_schema.json`** that duplicates the same 42 ids. Adding a component
+requires editing both, in the right order, and nothing says so — the first validator
+reports full-tree success while the second rejects every record.
+
+So the count in the text below is wrong: this is not two vocabularies bridged by a map, it
+is **three** — `docs/components.json` (underscore, graph membership),
+`docs/acceptance-criteria/index.yaml` (kebab, namespace and id prefixes, correctly
+separate), and the schema `enum` (underscore, a straight duplicate of the first with no
+mechanism keeping them in step). The entry's own prediction — *"parallel names bridged by a
+map drift by construction"* — applies to the third copy most sharply, because it is not
+even bridged by a map; it is a literal transcription.
+
+**Fix direction for the third copy specifically.** Generate the schema `enum` from
+`docs/components.json` at build time, or drop the `enum` and have the validator read the
+registry the way `check_component_vocab.py` already does. Two validators disagreeing about
+what a valid component id is means one of them is always wrong.
 
 **Symptom.** Every AC must carry a `components` list, validated non-empty against
 `docs/components.json`. Almost all of it is mechanically derivable from the `component`
