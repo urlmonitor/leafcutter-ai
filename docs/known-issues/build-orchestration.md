@@ -439,3 +439,57 @@ than treating absence of a test as absence of proof. (3) At minimum, make the ha
 what actually happened: name the AC, its `assigned_agent`, and that the lane has no phase
 for it. Do not simply skip untestable ACs — that reintroduces phantom-done through the
 front door.
+
+---
+
+### KI-BO-014 — Resolving a one-criterion build set takes ~3 minutes, because every traversal re-parses the entire AC store
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/ac_store/scan_ac_store.py` — `traverse_ac_tree`, against
+  `scripts/build_orchestration/fast_lane.py` — `resolve_connected_build_set`
+
+**Symptom.** Phase 2 of every fast-lane run — resolving the connected build set — costs
+minutes before any work begins, and the cost grows with the store rather than with the
+size of the set being resolved. Resolving a set of **one** criterion is as expensive as
+resolving a large one.
+
+**Evidence.** Measured on `main` at `ef8c6343` against the real store of **3,232** AC
+files:
+
+```
+/usr/bin/time -f "%e seconds" fast_lane.py select_connected \
+    --ac BO-2400c-1-i --ac-root docs/acceptance-criteria --exclude-structural-parent
+  -> ["BO-2400c-1-i"]
+  -> 178.32 seconds
+```
+
+Correct answer, one id, just under three minutes. Before the aiming fix (BO-2600b-1) the
+same call resolved five ids and exceeded a 120-second probe repeatedly, which was
+originally misread as a store-size problem rather than an algorithmic one.
+
+**Mechanism.** `traverse_ac_tree` opens by building a complete id→record index of its own:
+it `rglob`s `*.yaml` under the store root and YAML-parses **every** file, on **every
+call**. `resolve_connected_build_set` has already built exactly that index before calling
+it, and then calls it again once per not-done composite dependency it expands. So a run
+pays for N+1 full parses of the whole store where N is the number of composite
+expansions — never fewer than two. At roughly 90 seconds per full parse, the tight path
+costs ~178s and the wide path (structural-parent walk, pre-fix) costs a multiple of it.
+This is also why the exclusion flag looked like a performance fix: it removes traversals,
+not just criteria.
+
+**Why it is worse than a slow script.** It is a per-run tax on the lane's whole promise —
+"point at one id and get a PR" — paid before the first agent is dispatched, and it scales
+with total store size, so it worsens every time anyone authors an AC anywhere in the
+repo. It is also invisible as a defect: the command returns the right answer, so nothing
+fails and nobody files it. It surfaced only because a probe timed out.
+
+**Fix direction.** Pass the index that already exists. `traverse_ac_tree` should accept an
+optional prebuilt id→record map and use it when supplied, with the self-building path kept
+for standalone callers; `resolve_connected_build_set` then hands over its own `id_index`
+and the run drops to a single parse. Check the other `traverse_ac_tree` call sites in the
+same pass — the same re-read is paid by anything that walks the tree in a loop. A
+behavioural guard is straightforward: assert the resolver parses the store once for a
+multi-expansion set, rather than asserting a wall-clock bound, which would be flaky.
