@@ -222,7 +222,66 @@ to each in the same change — and never widen the gate to accept the default's 
 
 ---
 
-### KI-BO-010 — A grep-only test aimed at an orphaned file kept a superseded criterion looking satisfied, hiding a direct contradiction between two `done` ACs
+### KI-BO-010 — `/quick-fix`'s divergence gate is a first-token substring match, and its own remedy loops
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/workflows-js/quick-fix.js:292-306` (the BP-600e-2 divergence check)
+
+**Symptom.** After a confirmed red baseline, the workflow halts with "The test failure
+suggests the root cause may differ from your diagnosis" — on diagnoses the tests
+unanimously confirm. The whole check is:
+
+```js
+const divergenceCheck = failureMsg.length > 0 &&
+  !failureMsg.toLowerCase().includes(root_cause.toLowerCase().split(' ')[0])
+```
+
+It takes the **first whitespace-delimited token** of a prose diagnosis and asks whether
+that literal string appears in the pytest output. Any leading markdown defeats it: a
+`root_cause` beginning `` `handoff` `` yields the token `` `handoff` ``, backticks
+included, which never appears in test output that says `handoff`. A leading article
+("The adjudication branch…" → `the`) inverts the failure the other way — `the` appears in
+essentially every pytest output, so the gate silently passes regardless of whether the
+diagnosis is right. It is a coin flip decided by the first word's punctuation.
+
+**Evidence.** Observed 2026-08-18 fixing the handoff-routing defect. The red phase
+produced three failures that reproduced the diagnosis precisely — `test-writer` dispatched
+once instead of twice in both drivers, and an unparseable handoff target advancing to
+`pr-reviewer` instead of failing closed. The gate halted anyway on the backtick mismatch.
+Re-running with the identical diagnosis reworded to open with a bare `handoff` cleared it.
+Nothing about the analysis changed; one word lost two backticks.
+
+**The stated remedy does not work.** The halt message reads *"To continue, re-run
+/quick-fix with the same args."* The check is a pure function of `root_cause` and the
+failure text, with no confirmation flag and no persisted state, so re-running with the
+same args recomputes the same verdict and halts identically. The only exits are to reword
+the diagnosis until the first token happens to match, or to abandon the workflow — and the
+message advises neither.
+
+**Why this matters more than it looks.** A gate this coarse trains people to defeat it.
+The reliable way past it is to open `root_cause` with a common English word, which makes
+the check pass unconditionally — so the failure mode it converges on is not false halts
+but a permanently green gate that never reads the diagnosis at all.
+
+**Fix direction.** Delete it or make it real. A first-token substring match cannot assess
+whether a failure corroborates a diagnosis, so it should not be shaped like a verdict — at
+minimum downgrade it to an advisory `log()` that never halts. If a genuine check is wanted,
+it belongs with an agent that reads the failure and the diagnosis and judges them, and it
+needs a confirmation path so an operator who has looked at both can proceed. Whatever
+replaces it must make its own remedy reachable.
+
+Filed as KI-BO-008 while this work sat uncommitted; renumbered to 010 on landing, main
+having published a different KI-BO-008 and a KI-BO-009 in the interim.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check that cannot assess
+correctness reporting a verdict anyway), in its fail-closed form.
+
+---
+
+### KI-BO-011 — A grep-only test aimed at an orphaned file kept a superseded criterion looking satisfied, hiding a direct contradiction between two `done` ACs
 
 - **Severity:** high
 - **Status:** open · the *instance* is covered by the amended **BO-2500d-1** /
@@ -259,17 +318,25 @@ detect drift, it actively reports that a superseded promise is still being kept.
 store showed nothing wrong. Any assertion whose target is a file no code path reaches has
 this property, so the orphan is not the interesting part — the aiming is.
 
-**Fix direction.** Two separable moves. (1) Reconcile the specs — in flight, routed
-through the PO. (2) Structural: a test whose only subject is a source file should be
-detectable as such, and a source file that no command, workflow, deploy manifest or
-runtime path reaches should not be able to serve as a criterion's `implemented_by`. The
-reachability guard family `BO-2900` is the natural home; check it before authoring
-anything new. A cheap interim: when a criterion's `implemented_by` names a workflow
-file, assert that file is reachable from a command template or another workflow.
+**Update, 2026-08-19.** The amendment alone did not settle it. An adversarial review of
+PR #510 found that the three amended criteria still read `work_status: done` while their
+only proof remained the grep suite above — the branch that amended them never touched
+that file, and the executed-behaviour tests their `test_spec` names do not exist. All
+three were reset to `in_progress` in that PR. The lesson generalises: amending a
+criterion whose proof is a grep does not give it proof, and the store will happily carry
+a stronger claim on weaker evidence than it had before.
+
+**Fix direction.** Two separable moves. (1) Reconcile the specs — done in PR #510.
+(2) Structural: a test whose only subject is a source file should be detectable as such,
+and a source file that no command, workflow, deploy manifest or runtime path reaches
+should not be able to serve as a criterion's `implemented_by`. The reachability guard
+family `BO-2900` is the natural home; check it before authoring anything new. A cheap
+interim: when a criterion's `implemented_by` names a workflow file, assert that file is
+reachable from a command template or another workflow.
 
 ---
 
-### KI-BO-011 — The fast lane emits no telemetry, so the lane-comparison report can never contain fast-lane data
+### KI-BO-012 — The fast lane emits no telemetry, so the lane-comparison report can never contain fast-lane data
 
 - **Severity:** high
 - **Status:** open — no AC; the BO-2400d family needs the same reconciliation the
@@ -313,7 +380,7 @@ nobody has enumerated the rest.
 
 ---
 
-### KI-BO-012 — A documentation-only AC anywhere in a resolved build set jams the fast lane at commit, because `test_required: false` is honoured by nothing
+### KI-BO-013 — A documentation-only AC anywhere in a resolved build set jams the fast lane at commit, because `test_required: false` is honoured by nothing
 
 - **Severity:** high
 - **Status:** open — no AC

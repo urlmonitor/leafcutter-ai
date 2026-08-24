@@ -1,0 +1,142 @@
+id: BP-900h-5-i
+components:
+  - build_pipeline
+title: "A guardrail whose comparison source exists only in the package repository still reaches a verdict in a vendoring consumer"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+criteria: |
+  Given a guardrail whose job is to compare a deployed artifact against a canonical
+    copy that lives in the package repository's own source layout,
+  And a consumer install in which the package is vendored, so that canonical layout
+    does not exist beneath the install root,
+  When that guardrail is invoked inside the consumer-layout install of BP-900h-4,
+  Then it establishes whether the comparison is applicable BEFORE attempting it, and
+    reaches a verdict either way,
+  And when the canonical copy is absent while the deployed artifact is present, it
+    reports that the comparison could not be performed and names the location it
+    looked for — it does not report a difference it never measured, and it does not
+    fail the consumer for the sole reason that a package-development path is absent,
+  And when both copies are present, it performs the comparison and reports the same
+    result it would report in the package's own workspace, so the fix does not turn
+    the guardrail off for everyone,
+  And its absent-canonical handling is symmetric with its absent-deployed handling:
+    whichever side is missing, the outcome is the same shape of report naming the
+    same kind of location.
+
+  Because the hook-parity guardrail resolves its canonical location to a path that
+  exists only inside the package repository, and it guards the absence of the
+  deployed directory while not guarding the absence of the canonical one. The
+  asymmetry is the defect: in any vendoring consumer the canonical side is always
+  absent, so the guardrail fails by construction — not on a real difference, and not
+  on anything the consumer did.
+depends_on:
+  - BP-900h-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_hook_parity.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. Its canonical location resolves to a templates/ path that exists only in the package repository, and only the deployed side's absence is guarded."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300b-1-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY. BP-1300b-1-i says a guardrail that cannot locate the canonical source fails closed — asked in the package's own repository, where the canonical source is supposed to be there and its absence is a real defect. This AC is the vendoring-consumer case, where the canonical source is absent BY DESIGN and failing closed punishes the consumer for the package's layout. Read both before implementing: the reconciling rule is that the guardrail must distinguish 'the canonical source should be here and is not' from 'this install has no canonical source', and the two ACs must not be resolved by making one of them unreachable."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines which trees exist in a consumer install and which are package-development-only. The classification this AC turns on."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-900h-5
+  contract: "The three-way per-guardrail outcome — passed, failed, unable-to-run — which this AC's guardrail must land in correctly rather than defaulting to failed."
+test_spec:
+  - name: test_bp_900h_5_i_absent_canonical_reports_comparison_not_performed_and_emits_no_difference_findings
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Invoke the DEPLOYED hook-parity guardrail as a subprocess inside the BP-900h-4 consumer-layout install, where the package's canonical source layout genuinely does not exist beneath the install root. Assert three things: the recorded outcome is the comparison-not-performed category rather than failed, so the consumer is not failed for the sole reason that a package-development path is absent; the message names the canonical location it looked for; and the output contains ZERO per-file difference findings. The zero-findings assertion is the load-bearing one - the criterion forbids reporting a difference it never measured, and an implementation that reports every deployed hook as differing from an absent canonical satisfies any assertion that merely checks something was reported."
+  - name: test_bp_900h_5_i_with_both_copies_present_the_guardrail_still_detects_a_real_divergence_and_still_passes_an_identical_pair
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The did-not-turn-the-guardrail-off control, and the entry that kills the cheapest wrong fix. In an install where BOTH the canonical and the deployed copies exist, run the same deployed entry point twice: once with the two copies byte-identical - assert passed; once after seeding a real byte difference into one deployed hook - assert failed, and assert the report names the diverging file. A fix that skips the guardrail whenever the canonical location is absent is green on entry 1 and is caught only here, because it is indistinguishable from the guardrail not existing until a real divergence is put in front of it."
+  - name: test_bp_900h_5_i_absent_canonical_and_absent_deployed_produce_the_same_shape_of_report
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The symmetry clause, asserted structurally rather than on prose. Two runs of the same deployed entry point: (a) canonical absent, deployed present; (b) canonical present, deployed absent. Assert both land in the SAME outcome category, that both reports carry the same fields, and that each names a location of the same kind. Add the anti-substitution control the notes call for: assert the canonical location named in run (a) is NOT the deployed path. A guardrail that points its canonical resolution at the deployed copy when the source copy is absent compares a file with itself and passes always, which is the failure BP-1300b-2 exists for and which is green on every other entry here."
+  - name: test_bp_900h_5_i_applicability_is_decided_from_the_install_layout_not_from_the_bare_absence_of_the_path
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier, and the BP-1300b-1-i boundary held open. Drive the guardrail through the real commit-guardian hook runner, as a subprocess, in two different installs against the same absent-canonical-file condition: in the vendoring consumer install the commit is NOT blocked for that reason; in an install that does declare a canonical tree, where a canonical file is missing that should be present, the same runner DOES block. Assert both. This is the pair that separates a stated applicability decision from a blanket skip-when-absent, and it is the only entry that would notice the fix quietly disabling the check in the package's own repository. It does not re-specify BP-1300b-1-i; it asserts this AC's clause that applicability is established before the comparison is attempted."
+test_rationale: |
+  This is the edge case that most exposes a lazy fix, and each of the three wrong
+  resolutions the AC notes enumerate is green on a differently-shaped test, so the
+  entries are chosen to kill one each rather than to cover the criterion evenly.
+
+  Skipping the guardrail whenever the canonical location is absent is green on entry 1
+  and dies only on entry 2, where a real byte divergence is put in front of it in an
+  install that has both copies. Pointing the canonical resolution at the deployed copy
+  is green on entries 1 and 2 - it compares a file with itself and reports no
+  difference - and dies only on entry 3's assertion that the named canonical location
+  is not the deployed path. Failing closed unconditionally is green on entry 3 and dies
+  on entry 1 and on the first half of entry 4.
+
+  Entry 4 exists because the criterion's first clause is about a decision, not an
+  outcome: applicability must be established BEFORE the comparison is attempted. A
+  decision derived from the bare absence of the path produces the right answer in the
+  consumer and the wrong answer in the package repository, where the same absence is a
+  real defect that BP-1300b-1-i requires to fail closed. Running the same condition
+  through the same runner in two differently-classified installs is what makes that
+  distinction observable; asserting only the consumer half would let the fix resolve
+  the two ACs by making one of them unreachable, which both records forbid.
+
+  None of these entries may be written as a unit test over the guardrail's resolution
+  helper. The defect is in how the live guardrail classifies an install, and a helper
+  called with the arguments the test author already believes are right returns the
+  answer the author expects in either implementation.
+
+  Angles: criterion, deployed, failure, reachability — at the cap of four, with
+  must_block riding entry 4.
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  This is the edge case that most exposes a lazy fix. Three wrong resolutions, all of
+  which would make the immediate symptom disappear:
+
+  1. Skip the guardrail whenever the canonical location is absent, silently. That is
+     indistinguishable from the guardrail not existing, and it disables the check in
+     the package's own repository the first time a canonical path is mistyped.
+  2. Fail closed unconditionally, per BP-1300b-1-i read out of context. In a vendoring
+     consumer the canonical side is ALWAYS absent, so this blocks every consumer
+     commit forever.
+  3. Point the canonical resolution at the deployed copy when the source copy is
+     absent. That compares a file with itself and passes always — BP-1300b-2 covers
+     precisely why a deployed copy must not stand in for the canonical one.
+
+  The correct shape is a stated applicability decision that is itself observable in
+  the report, which is why the criterion demands the guardrail say WHICH location it
+  looked for rather than merely returning a status.

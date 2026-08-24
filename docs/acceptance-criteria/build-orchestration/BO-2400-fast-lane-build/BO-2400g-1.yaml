@@ -30,7 +30,7 @@ criteria: |
 depends_on: [BO-2400g, BO-2900g-1]
 doc_links:
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "The Test Writer phase is at line 327 and the prompt it sends is the ad-hoc string at line 333 — 'read its YAML from <store> and write a minimal failing test that asserts the AC behavior'. That prompt is the whole of what the lane asks for today, and it is the AC-literal-only shape the reachability floor exists to eliminate."
   - path: templates/agents/test-writer.md

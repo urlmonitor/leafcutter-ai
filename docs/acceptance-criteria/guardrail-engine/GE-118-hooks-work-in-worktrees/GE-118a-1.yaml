@@ -1,6 +1,7 @@
 id: GE-118a-1
 components:
   - commit_guardian
+  - security_scanner
 title: "check_secrets resolves scan_secrets from the layout build.py deploys, not a hardcoded .claude path"
 component: guardrail-engine
 level: L2

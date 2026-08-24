@@ -162,11 +162,121 @@ class ScanResult:
         return self.has_production_changes and bool(self.violations)
 
 
+_GIT_TIMEOUT = 30
+
+
+def _name_only(*extra: str) -> list[str] | None:
+    """Return staged path names via ``git diff --cached -z --name-only``.
+
+    ``-z`` is required, not cosmetic. Without it git C-quotes any path holding
+    a non-ASCII byte (``core.quotePath`` defaults to true), and splitting the
+    output on whitespace tears any path containing a space into two tokens.
+    Either way the resulting strings match no file, the scoped diff silently
+    comes back empty, and the guard passes on a commit it should have blocked.
+    NUL separation is unambiguous for every legal path.
+
+    Args:
+        *extra: Additional arguments appended to the git command (e.g. a ref).
+
+    Returns:
+        Repo-relative path strings, or None when the git call fails.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--cached", "-z", "--name-only", *extra],
+            capture_output=True, text=True, timeout=_GIT_TIMEOUT, check=True,
+        )
+    except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
+        print(
+            f"[contract-shrinking guard] WARNING: `git diff --name-only {' '.join(extra)}` "
+            f"failed: {exc} — falling back to the unscoped diff",
+            file=sys.stderr,
+        )
+        return None
+    return [p for p in proc.stdout.split("\0") if p]
+
+
+def _merge_scoped_paths() -> list[str] | None:
+    """Return paths differing from BOTH merge parents, or None when not merging.
+
+    A merge stages the ENTIRE incoming branch, so an unscoped ``git diff
+    --cached`` shows every test the other side ever deleted or skipped. The
+    merge author neither wrote those changes nor can improve them — they are
+    already on the branch being merged — so blocking on them only makes merging
+    impossible and trains people to reach for ``SKIP=``.
+
+    Content differing from both parents is authored BY the merge (a conflict
+    resolution, or an edit made while resolving), so it stays in scope. That is
+    what stops merge-scoping from becoming a way to smuggle weakening through.
+
+    Returns:
+        Repo-relative paths to scope to; an empty list when the merge introduces
+        no such file; or None when this is not a merge, or the merge state
+        cannot be determined (caller then uses the unscoped diff — the stricter
+        behaviour).
+    """
+    try:
+        probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True, text=True, timeout=_GIT_TIMEOUT, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"[contract-shrinking guard] WARNING: MERGE_HEAD probe failed: {exc} "
+            "— scanning the full staged diff",
+            file=sys.stderr,
+        )
+        return None
+    if probe.returncode != 0:
+        return None  # not a merge
+
+    ours = _name_only()
+    theirs = _name_only("MERGE_HEAD")
+    if ours is None or theirs is None:
+        return None
+    theirs_set = set(theirs)
+    return [p for p in ours if p in theirs_set]
+
+
+def _git_diff(paths: list[str] | None = None) -> str:
+    """Return the staged diff, optionally restricted to *paths*.
+
+    Pathspecs are prefixed with ``:(top)`` because ``--name-only`` emits
+    repo-root-relative paths while a pathspec after ``--`` is resolved against
+    the CURRENT directory. Invoked from a subdirectory — which this repo's own
+    CLAUDE.md prescribes for manual hook runs — unanchored pathspecs would match
+    nothing and turn the gate off.
+
+    Args:
+        paths: Repo-relative paths to restrict to, or None for the whole diff.
+
+    Returns:
+        The diff text.
+    """
+    cmd = ["git", "diff", "--cached"]
+    if paths:
+        cmd += ["--", *(f":(top){p}" for p in paths)]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=_GIT_TIMEOUT, check=True,
+        )
+        return result.stdout
+    except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
+        print(f"[contract-shrinking guard] ERROR: git diff --cached failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
 def _get_staged_diff() -> str:
-    """Return the staged diff as a string.
+    """Return the FULL staged diff — the basis for production-change detection.
+
+    Deliberately unscoped even during a merge. This guard's predicate spans two
+    disjoint file sets ("production changed AND a test weakened"), so narrowing
+    both halves would break the conjunction: an author could take main's
+    production edit verbatim (removing it from scope) and skip the tests it
+    broke, and the pairing would never form. The production change lands in this
+    commit whichever parent authored it, so it counts as context regardless.
 
     Uses HOOK_TEST_DIFF env var when set (for unit testing only).
-    Otherwise calls git diff --cached.
     """
     test_diff_path = os.environ.get("HOOK_TEST_DIFF")
     if test_diff_path:
@@ -175,32 +285,71 @@ def _get_staged_diff() -> str:
         except OSError as exc:
             print(f"[contract-shrinking guard] ERROR: could not read HOOK_TEST_DIFF: {exc}", file=sys.stderr)
             sys.exit(1)
-
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--cached"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as exc:
-        print(f"[contract-shrinking guard] ERROR: git diff --cached failed: {exc}", file=sys.stderr)
-        sys.exit(1)
+    return _git_diff()
 
 
-def _scan_diff(diff: str) -> ScanResult:
-    """Scan the diff for production changes and test-weakening patterns.
+def _get_weakening_diff(full_diff: str) -> str:
+    """Return the diff that test-weakening is judged against.
+
+    Outside a merge this is the full staged diff. During a merge it is narrowed
+    to files differing from both parents, so the author is judged on the
+    weakening they authored rather than on everything the incoming branch ever
+    did.
 
     Args:
-        diff: The full text of the staged git diff.
+        full_diff: The unscoped staged diff, reused verbatim when no narrowing
+            applies (also the HOOK_TEST_DIFF passthrough).
+
+    Returns:
+        The diff text to scan for weakening patterns.
+    """
+    if os.environ.get("HOOK_TEST_DIFF"):
+        return full_diff
+
+    scoped = _merge_scoped_paths()
+    if scoped is None:
+        return full_diff  # not a merge, or undeterminable — stay strict
+    if not scoped:
+        return ""  # merge introduces no content of its own
+
+    scoped_diff = _git_diff(scoped)
+    if not scoped_diff.strip():
+        # Contradiction: we named files but git produced nothing for them. That
+        # means the pathspecs did not resolve (mangled path, wrong CWD, ...) —
+        # historically the silent failure mode that turns this gate off. Say so
+        # and fall back to the strict, unscoped diff.
+        print(
+            "[contract-shrinking guard] WARNING: merge scope named "
+            f"{len(scoped)} file(s) but produced an empty diff — pathspecs did "
+            "not resolve. Falling back to the full staged diff.",
+            file=sys.stderr,
+        )
+        return full_diff
+    return scoped_diff
+
+
+def _scan_diff(diff: str, weakening_diff: str | None = None) -> ScanResult:
+    """Scan for production changes and test-weakening patterns.
+
+    The two halves of the predicate are scanned over DIFFERENT inputs during a
+    merge (see :func:`_get_staged_diff` and :func:`_get_weakening_diff`):
+    production changes over everything the commit lands, weakening only over
+    what the merge author actually authored. Outside a merge both are the same
+    text and behaviour is unchanged.
+
+    Args:
+        diff: The full staged diff — basis for production-change detection.
+        weakening_diff: The diff to judge test weakening against. Defaults to
+            *diff*, which is the correct non-merge behaviour.
 
     Returns:
         A ScanResult describing what was found.
     """
+    if weakening_diff is None:
+        weakening_diff = diff
     result = ScanResult()
 
-    # --- Production file detection ---
+    # --- Production file detection (full diff) ---
     for match in _PRODUCTION_FILE_RE.finditer(diff):
         filepath = match.group(1)
         if not _TEST_PATH_RE.search(filepath):
@@ -209,15 +358,15 @@ def _scan_diff(diff: str) -> ScanResult:
 
     # --- Test-weakening pattern detection (single-line, additive) ---
     for pattern, label in _COMPILED_WEAKENING_PATTERNS:
-        for match in pattern.finditer(diff):
+        for match in pattern.finditer(weakening_diff):
             # Extract a short context snippet (first 120 chars of the matching line)
             line = match.group(0).rstrip("\n")[:120]
             result.violations.append((label, line))
 
     # --- Deletion detection (needs both sides of the diff correlated) ---
-    for name in _find_deleted_tests(diff):
+    for name in _find_deleted_tests(weakening_diff):
         result.violations.append(("test function deleted", name))
-    for path in _find_deleted_test_files(diff):
+    for path in _find_deleted_test_files(weakening_diff):
         result.violations.append(("test file deleted", path))
 
     return result
@@ -235,7 +384,7 @@ def main() -> int:
         # Nothing staged — pass silently.
         return 0
 
-    scan = _scan_diff(diff)
+    scan = _scan_diff(diff, _get_weakening_diff(diff))
 
     if not scan.is_contract_shrinking:
         # Either no production changes, or no test weakening, or neither — OK.

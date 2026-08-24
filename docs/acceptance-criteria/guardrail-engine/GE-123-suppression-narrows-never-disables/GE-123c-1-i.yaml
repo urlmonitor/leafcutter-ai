@@ -1,6 +1,7 @@
 id: GE-123c-1-i
 components:
   - commit_guardian
+  - security_scanner
 title: "An entry carrying a fourth field, including a Windows drive letter, is caught by the same unmatchable-entry rule"
 component: guardrail-engine
 level: L3

@@ -1,6 +1,6 @@
 """
-MODULE: unit_tests/commit_guardian/test_ge_120_doc_types_deployed_resolution.py
-GOAL: GE-120 — doc_type_validators.py's ``_DOC_TYPES_JSON`` must resolve to the
+MODULE: unit_tests/commit_guardian/test_ge_118c_doc_types_deployed_resolution.py
+GOAL: GE-118c — doc_type_validators.py's ``_DOC_TYPES_JSON`` must resolve to the
     real ``config/doc_types.json`` when running from the DEPLOYED
     ``.leafcutter/scripts/commit_guardian/`` layout, not a doubled
     ``.leafcutter/leafcutter/config/...`` segment produced by a hand-counted
@@ -14,7 +14,18 @@ BUSINESS CONTEXT: config/doc_types.json declares TEN doc types (including
     ``how-to`` alias) is rejected by check-doc-frontmatter.
 ARCHITECTURE: Not needed.
 
-ROOT CAUSE, verified empirically (see AC GE-120 and the docstring of
+IDENTIFIER NOTE (2026-08-18): this module and the AC it covers were authored
+    under the id ``GE-120``, which an unrelated goal-level record
+    ("Trust that a green check actually checked something", a 43-file tree)
+    was already holding. The requirement was renumbered to ``GE-118c`` and
+    parented under GE-118; this module was renamed from
+    ``test_ge_120_doc_types_deployed_resolution.py`` to match, and its four
+    ``# covers:`` tags now name ``GE-118c``. The rename is deliberate rather
+    than cosmetic: left alone, the old filename would have resolved to a LIVE,
+    DIFFERENT record -- a confidently wrong reference rather than a merely
+    stale one.
+
+ROOT CAUSE, verified empirically (see AC GE-118c and the docstring of
     doc_type_validators.py):
 
         _DOC_TYPES_JSON = Path(__file__).resolve().parents[2] / "leafcutter" / "config" / "doc_types.json"
@@ -58,7 +69,7 @@ EXERCISE STRATEGY (documented per test-writer instructions):
     which cwd the hook is invoked from — the isolated-repo cwd only supplies
     the staged-file base and the components registry.
 
-RED BASELINE — see the test-writer sign-off comment on ticket GE-120 for the
+RED BASELINE — see the test-writer sign-off comment on ticket GE-118c for the
     exact captured subprocess output. Expected per test_rationale:
     - Test 1 (deployed/resolves): RED — resolved path does not exist; loaded
       key set is the 7-entry fallback, not config/doc_types.json's 10 keys.
@@ -108,7 +119,7 @@ _COMPONENTS_JSON = """\
   "components": {
     "commit_guardian": {
       "name": "Commit Guardian",
-      "description": "Pre-commit hook suite used by GE-120 regression tests."
+      "description": "Pre-commit hook suite used by GE-118c regression tests."
     }
   }
 }
@@ -120,20 +131,20 @@ _COMPONENTS_JSON = """\
 # for lacking one.
 _CARD_DOC_FRONTMATTER = """\
 ---
-title: "GE-120 temp agent card"
+title: "GE-118c temp agent card"
 type: card
 status: active
 created: "2026-08-18"
 last_updated: "2026-08-18"
 ---
 
-Temporary agent-card fixture for GE-120.
+Temporary agent-card fixture for GE-118c.
 """
 
 # A doc using the CANONICAL how_to spelling (not the deprecated how-to alias).
 _HOWTO_DOC_FRONTMATTER = """\
 ---
-title: "GE-120 temp how_to doc"
+title: "GE-118c temp how_to doc"
 type: how_to
 status: active
 created: "2026-08-18"
@@ -142,7 +153,7 @@ components:
   - commit_guardian
 ---
 
-Temporary how_to fixture for GE-120.
+Temporary how_to fixture for GE-118c.
 """
 
 # A `type` value absent from BOTH config/doc_types.json and the
@@ -150,7 +161,7 @@ Temporary how_to fixture for GE-120.
 # only failure signal is the type rejection itself (isolates the assertion).
 _BOGUS_TYPE_DOC_FRONTMATTER = """\
 ---
-title: "GE-120 temp undeclared-type doc"
+title: "GE-118c temp undeclared-type doc"
 type: ge120-totally-undeclared-type
 status: active
 created: "2026-08-18"
@@ -159,7 +170,7 @@ components:
   - commit_guardian
 ---
 
-Temporary undeclared-type fixture for GE-120.
+Temporary undeclared-type fixture for GE-118c.
 """
 
 # ---------------------------------------------------------------------------
@@ -168,7 +179,7 @@ Temporary undeclared-type fixture for GE-120.
 # Each script receives the deployed commit_guardian directory as argv[1],
 # inserts it at sys.path[0] (so `import doc_type_validators` / `import config`
 # resolve against the REAL deployed copy), and prints a JSON payload to
-# stdout. A fresh subprocess is used per AC GE-120's explicit instruction
+# stdout. A fresh subprocess is used per AC GE-118c's explicit instruction
 # that `importlib.reload()` masks cold-import behaviour (the module caches
 # results in `_DOC_TYPES_CACHE` at first import).
 # ---------------------------------------------------------------------------
@@ -309,7 +320,7 @@ def _init_temp_repo(base: Path) -> Path:
 
     _git(["init", "-b", "main"], cwd=repo)
     _git(["config", "user.email", "ge120test@example.com"], cwd=repo)
-    _git(["config", "user.name", "GE-120 Test"], cwd=repo)
+    _git(["config", "user.name", "GE-118c Test"], cwd=repo)
 
     docs_dir = repo / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -358,12 +369,12 @@ def _run_deployed_hook(cwd: Path, filenames: list[str]) -> subprocess.CompletedP
 # ---------------------------------------------------------------------------
 
 
-class TestGe120DeployedValidatorResolvesRealDocTypesFile(unittest.TestCase):
-    """AC GE-120: the deployed module's _DOC_TYPES_JSON must resolve to a file
+class TestGe118cDeployedValidatorResolvesRealDocTypesFile(unittest.TestCase):
+    """AC GE-118c: the deployed module's _DOC_TYPES_JSON must resolve to a file
     that actually exists, with the same key set as the real declaring file."""
 
-    def test_ge_120_deployed_validator_resolves_the_real_doc_types_file(self) -> None:
-        # covers: GE-120
+    def test_ge_118c_deployed_validator_resolves_the_real_doc_types_file(self) -> None:
+        # covers: GE-118c
         """PRODUCTION LAYOUT: import doc_type_validators from the DEPLOYED
         .leafcutter/scripts/commit_guardian/ path in a fresh subprocess and
         assert _DOC_TYPES_JSON resolves to a file that exists, with a loaded
@@ -378,7 +389,7 @@ class TestGe120DeployedValidatorResolvesRealDocTypesFile(unittest.TestCase):
 
         What must be implemented to make this green: derive the config path
         via the existing `_resolve_root.find_project_root()` resolver (per
-        AC GE-120 it_requirements), not a hand-counted `parents[N]` walk.
+        AC GE-118c it_requirements), not a hand-counted `parents[N]` walk.
         """
         if not _DEPLOYED_DOC_TYPE_VALIDATORS.exists():
             self.skipTest(f"Deployed module not found: {_DEPLOYED_DOC_TYPE_VALIDATORS}")
@@ -402,17 +413,17 @@ class TestGe120DeployedValidatorResolvesRealDocTypesFile(unittest.TestCase):
         self.assertTrue(
             payload["exists"],
             msg=(
-                "GE-120 RED: the deployed doc_type_validators._DOC_TYPES_JSON "
+                "GE-118c RED: the deployed doc_type_validators._DOC_TYPES_JSON "
                 f"resolved to '{payload['resolved_path']}', which does not "
                 f"exist. The real declaring file is at {_REAL_DOC_TYPES_JSON}. "
-                "This is the doubled-segment defect described in AC GE-120."
+                "This is the doubled-segment defect described in AC GE-118c."
             ),
         )
         self.assertEqual(
             payload["loaded_keys"],
             expected_keys,
             msg=(
-                "GE-120 RED: _load_doc_types() loaded "
+                "GE-118c RED: _load_doc_types() loaded "
                 f"{payload['loaded_keys']} instead of the real declaring "
                 f"file's keys {expected_keys}. This means the silent "
                 "DOC_FM_ALLOWED_TYPES fallback fired instead of reading "
@@ -426,8 +437,8 @@ class TestGe120DeployedValidatorResolvesRealDocTypesFile(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestGe120DeployedGuardAcceptsCardAndHowTo(unittest.TestCase):
-    """AC GE-120: the real hook, via the real run_hook.py entry point, must
+class TestGe118cDeployedGuardAcceptsCardAndHowTo(unittest.TestCase):
+    """AC GE-118c: the real hook, via the real run_hook.py entry point, must
     accept a `type: card` doc (no components) and a `type: how_to` doc."""
 
     def setUp(self) -> None:
@@ -441,8 +452,8 @@ class TestGe120DeployedGuardAcceptsCardAndHowTo(unittest.TestCase):
         self.base = Path(self._tmpdir.name)
         self.repo = _init_temp_repo(self.base)
 
-    def test_ge_120_deployed_guard_accepts_a_card_and_a_how_to_document(self) -> None:
-        # covers: GE-120
+    def test_ge_118c_deployed_guard_accepts_a_card_and_a_how_to_document(self) -> None:
+        # covers: GE-118c
         """PRODUCTION ENTRY POINT: stage a `type: card` doc (no components,
         per doc_types.json's own "Not component-linked" description) and a
         `type: how_to` doc (with components), then run the deployed hook via
@@ -461,7 +472,7 @@ class TestGe120DeployedGuardAcceptsCardAndHowTo(unittest.TestCase):
         What must be implemented to make this green: read config/doc_types.json
         (test 1's fix) AND exempt doc types the file itself marks as not
         component-linked (e.g. 'card') from the components required-field
-        check, per AC GE-120's third criterion.
+        check, per AC GE-118c's third criterion.
         """
         card_dir = self.repo / "docs" / "agents" / "cards"
         card_dir.mkdir(parents=True, exist_ok=True)
@@ -483,7 +494,7 @@ class TestGe120DeployedGuardAcceptsCardAndHowTo(unittest.TestCase):
             result.returncode,
             0,
             msg=(
-                "GE-120 RED: expected the deployed hook to accept a `type: "
+                "GE-118c RED: expected the deployed hook to accept a `type: "
                 "card` doc (no components) and a `type: how_to` doc, but got "
                 f"a non-zero exit.\n\nstdout:\n{result.stdout}\n\n"
                 f"stderr:\n{result.stderr}"
@@ -496,8 +507,8 @@ class TestGe120DeployedGuardAcceptsCardAndHowTo(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestGe120DeployedGuardRejectsUndeclaredType(unittest.TestCase):
-    """AC GE-120 must_block negative control: an undeclared `type` value must
+class TestGe118cDeployedGuardRejectsUndeclaredType(unittest.TestCase):
+    """AC GE-118c must_block negative control: an undeclared `type` value must
     still be rejected by name through the SAME production entry point."""
 
     def setUp(self) -> None:
@@ -511,8 +522,8 @@ class TestGe120DeployedGuardRejectsUndeclaredType(unittest.TestCase):
         self.base = Path(self._tmpdir.name)
         self.repo = _init_temp_repo(self.base)
 
-    def test_ge_120_deployed_guard_still_rejects_an_undeclared_type(self) -> None:
-        # covers: GE-120
+    def test_ge_118c_deployed_guard_still_rejects_an_undeclared_type(self) -> None:
+        # covers: GE-118c
         """must_block negative control through the SAME deployed entry point:
         a document whose `type` is absent from BOTH config/doc_types.json and
         the DOC_FM_ALLOWED_TYPES fallback must exit non-zero and NAME the
@@ -534,7 +545,7 @@ class TestGe120DeployedGuardRejectsUndeclaredType(unittest.TestCase):
             result.returncode,
             0,
             msg=(
-                "GE-120: expected the deployed hook to reject a doc with an "
+                "GE-118c: expected the deployed hook to reject a doc with an "
                 "undeclared `type` value, but it exited 0.\n\n"
                 f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}"
             ),
@@ -543,7 +554,7 @@ class TestGe120DeployedGuardRejectsUndeclaredType(unittest.TestCase):
             "ge120-totally-undeclared-type",
             result.stdout + result.stderr,
             msg=(
-                "GE-120: the rejection must NAME the offending type value, "
+                "GE-118c: the rejection must NAME the offending type value, "
                 "not just report a generic failure — otherwise a disabled "
                 "check and a working one are indistinguishable.\n\n"
                 f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}"
@@ -556,12 +567,12 @@ class TestGe120DeployedGuardRejectsUndeclaredType(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestGe120UnreadableDeclaringFileFailsObservably(unittest.TestCase):
-    """AC GE-120: an absent or malformed declaring file must fail observably,
+class TestGe118cUnreadableDeclaringFileFailsObservably(unittest.TestCase):
+    """AC GE-118c: an absent or malformed declaring file must fail observably,
     naming the file — never fall back silently to the built-in list."""
 
-    def test_ge_120_unreadable_declaring_file_fails_observably(self) -> None:
-        # covers: GE-120
+    def test_ge_118c_unreadable_declaring_file_fails_observably(self) -> None:
+        # covers: GE-118c
         """Point the resolver at an absent and then at a malformed
         doc_types.json and assert each produces an observable failure naming
         the file — not a silent fallback to DOC_FM_ALLOWED_TYPES.
@@ -594,7 +605,7 @@ class TestGe120UnreadableDeclaringFileFailsObservably(unittest.TestCase):
         self.assertTrue(
             payload["absent_raised"],
             msg=(
-                "GE-120 RED: an absent declaring file did not produce any "
+                "GE-118c RED: an absent declaring file did not produce any "
                 "observable failure — _load_doc_types() silently fell back "
                 f"to the built-in list. Probed path: {payload['missing_path_str']}"
             ),
@@ -603,7 +614,7 @@ class TestGe120UnreadableDeclaringFileFailsObservably(unittest.TestCase):
             payload["missing_path_str"],
             payload["absent_error"] or "",
             msg=(
-                "GE-120: the failure for an absent declaring file must name "
+                "GE-118c: the failure for an absent declaring file must name "
                 f"the file path ({payload['missing_path_str']}); got: "
                 f"{payload['absent_error']!r}"
             ),
@@ -612,7 +623,7 @@ class TestGe120UnreadableDeclaringFileFailsObservably(unittest.TestCase):
         self.assertTrue(
             payload["malformed_raised"],
             msg=(
-                "GE-120 RED: a malformed declaring file did not produce any "
+                "GE-118c RED: a malformed declaring file did not produce any "
                 "observable failure — _load_doc_types() silently swallowed "
                 f"the JSONDecodeError. Probed path: {payload['malformed_path_str']}"
             ),
@@ -621,7 +632,7 @@ class TestGe120UnreadableDeclaringFileFailsObservably(unittest.TestCase):
             payload["malformed_path_str"],
             payload["malformed_error"] or "",
             msg=(
-                "GE-120: the failure for a malformed declaring file must "
+                "GE-118c: the failure for a malformed declaring file must "
                 f"name the file path ({payload['malformed_path_str']}); got: "
                 f"{payload['malformed_error']!r}"
             ),

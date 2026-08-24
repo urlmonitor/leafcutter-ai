@@ -25,10 +25,37 @@ by GE-122e-1 fails the build on any live citation of it outside dated
 historical records — changelogs, tickets, the guardrail-engine AC tree — and
 this note is none of those. PR #453 is the durable pointer.)
 
+**RESOLVED 2026-08-18 — the two paragraphs above are a dated observation and are
+left as written; this is the current state.** The loose L2 was renumbered to
+`GE-118c` and moved into
+`docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/`,
+parented under `GE-118` (now 3 of 7 children). `GE-120` resolves to exactly one
+record — the L0 goal tree — and a store-wide sweep finds 3,185 records with
+3,185 distinct ids, zero duplicates. Three things a future authoring run should
+take from how it was resolved:
+
+- **The goal tree could not be the parent even though it was the semantically
+  right one.** `unit_tests/commit_guardian/test_ge_122e_1.py` asserts
+  `git diff origin/main -- .../GE-120-green-means-checked/` is EMPTY, so neither
+  adding a file to that folder nor appending to its `covered_by` is possible.
+  Check for a guard test over a candidate parent's folder BEFORE choosing it —
+  this is the second consecutive collision where the obvious parent was frozen.
+- **A suffix-shaped id beat a free root number.** `GE-124` was free by both
+  tests and was still rejected: `derive_parent_id()` returns `None` for a root
+  id, so the parent link would have been unpoliceable.
+- **The test module was renamed** to `test_ge_118c_doc_types_deployed_resolution.py`.
+  Unlike the earlier collision — where the old id was RETIRED and its stale
+  filename resolved to nothing — `test_ge_120_*` would have resolved to a live,
+  different record.
+
+The id-ALLOCATION defect that produced this collision is untouched and still
+open: see `docs/known-issues/ac-driven-dev.md` KI-ACD-008.
+
 ## Root-id registry for guardrail-engine, 2026-08-18
 
 Taken: GE-100..GE-113, GE-114 (loose, as `GE-114-N`), GE-115 (loose), GE-116,
-GE-117, GE-118, GE-120 (twice — see above), GE-122, GE-123.
+GE-117, GE-118 (with the suffix-shaped child GE-118c), GE-120 (was
+claimed twice — resolved 2026-08-18, see above), GE-122, GE-123.
 
 - The id between GE-118 and GE-120 is RETIRED and must never be reissued (see
   PR #453; not written out here, per the GE-122e-1 citation guard).

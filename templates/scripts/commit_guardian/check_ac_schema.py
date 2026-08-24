@@ -71,8 +71,9 @@ from typing import Any
 
 from _ac_schema_validators import (  # noqa: E402
     load_yaml, load_yaml_from_string, load_yaml_manual,
-    validate_criteria_not_pattern_duplicate, validate_deprecated_pattern_reference,
-    validate_manually, validate_pattern_bindings_completeness, validate_test_contract,
+    validate_criteria_not_pattern_duplicate, validate_declares_side_effect,
+    validate_deprecated_pattern_reference, validate_manually,
+    validate_pattern_bindings_completeness, validate_test_contract,
     validate_with_jsonschema,
 )
 
@@ -616,6 +617,12 @@ def _validate_file(
     # test_spec or an explicit test_required: false. ACs are the source of truth
     # for what test-writer must test.
     errors.extend(validate_test_contract(path, data))
+
+    # declares_side_effect gate (single-file, semantic): the declaration must be
+    # DERIVED from the AC's own criteria, never authored by opinion and never
+    # left unset when the criteria assert a durable, observable effect
+    # (BO-2900g-2 / BO-2900g-2-i).
+    errors.extend(validate_declares_side_effect(path, data))
 
     if all_ac_data is not None:
         errors.extend(validate_pattern_bindings_completeness(path, data, all_ac_data))

@@ -3,6 +3,7 @@ title: "Trust that the last check between you and a leaked credential is still o
 component: guardrail-engine
 components:
   - commit_guardian
+  - security_scanner
 level: L0
 status: active
 req_status: draft
