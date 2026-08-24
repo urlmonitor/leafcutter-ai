@@ -1,7 +1,7 @@
 id: BP-600a-1
 components:
   - build_pipeline
-title: "Quick-fix workflow operates in current worktree without branch switching"
+title: "Quick-fix operates in the current worktree when it can, and self-isolates when it cannot"
 component: build-pipeline
 level: L2
 status: active
@@ -9,13 +9,30 @@ readiness: reviewed
 priority: medium
 work_status: done
 criteria: |
-  Given a user is on branch "EPIC-SomeFeature" in an existing worktree,
-  When they invoke /quick-fix with a diagnosis specifying a file and root cause,
+  Given a user invokes /quick-fix with a diagnosis specifying a file and root cause,
+  When the workflow runs its isolation-decision guard, before any other action,
+  Then it inspects the current working directory once and takes exactly one of
+    the two paths below, and every later phase is anchored to whichever it took.
+
+  Case A — the current working directory is inside a git worktree whose current
+  branch is neither empty (detached HEAD) nor "main" nor "master":
   Then the workflow performs all operations (AC creation, test writing, fix,
-    commit) in the current worktree,
+    commit, changelog, push) in that current worktree,
   And git branch --show-current returns the same branch name both before
     and after the workflow completes,
   And no new worktree directory is created during execution.
+
+  Case B — the current working directory is not a git repository at all, or HEAD
+  is detached, or the current branch is "main" or "master":
+  Then the workflow creates one new worktree for itself, on a non-default branch,
+    before doing any other work — reusing the existing one, without failing, when
+    a worktree for the same derived slug already exists,
+  And it takes the worktree root and the branch name from what that creation step
+    itself reports, rather than assembling either by any other means,
+  And every later phase reads and writes under that worktree root, and not under
+    the directory the session started in,
+  And the branch established by that step is the branch still checked out when
+    the workflow completes.
 depends_on:
   - BP-600a
 doc_links:
@@ -28,24 +45,80 @@ doc_links:
   - path: templates/skills/build-single-ticket/SKILL.md
     relationship: contrast
     status: exists
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: >-
+      Phase 0 Steps 0.1-0.5 are the isolation decision this AC describes. Step
+      0.3 states the NEEDS_ISOLATION predicate verbatim; Step 0.4 is Case B.
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      The decision is made in JS control flow (Step 0a observes, Step 0b
+      branches on isolationCheck.needs_isolation), not delegated to an agent's
+      judgement. worktreeRoot / activeBranch set there are threaded into every
+      later phase.
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "Must not invoke worktree-agent, feature skill, or git worktree add"
+  - >-
+    Must not invoke worktree-agent or the feature skill on either path. When
+    Case B applies, the worktree must come from the canonical
+    setup_ticket_worktree.py create-only script and nothing else — see
+    BP-600a-2 for the full prohibition and its reason.
+  - >-
+    The isolation decision must be made in the workflow's own control flow from
+    a reported observation, not left to an agent to decide; the observing step
+    must be told to create nothing.
+  - >-
+    The worktree root established by Phase 0 must be threaded into every later
+    phase. A path derived from the session's starting directory after Case B has
+    run reads or writes the wrong copy of a file, silently.
   - "Workflow script must follow the pattern of existing templates/workflows-js/ scripts (export meta object with name, description, and phases)"
 delivers_to:
   agent: workflow-architect
-  contract: "Workflow script entry point (templates/workflows-js/quick-fix.js) that anchors all subsequent phases to the current worktree. Exports: { meta: { name: string, description: string, phases: string[] } }"
+  contract: "Workflow script entry point (templates/workflows-js/quick-fix.js) that establishes the worktree root and branch in Phase 0 and anchors all subsequent phases to them. Exports: { meta: { name: string, description: string, phases: string[] } }"
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Criteria rewritten to state the CONDITIONAL isolation the workflow now
+      has. The original text asserted "no new worktree directory is created
+      during execution" unconditionally; that clause is preserved verbatim, but
+      now scoped to Case A. Case B was added because two conditions the original
+      spec did not anticipate make an unconditional in-place workflow
+      unworkable in this workspace: sessions frequently start in the untracked
+      workspace parent, which is not a git repository at all and so has no
+      branch to operate on; and main is PR-only under the require-ci-lint
+      ruleset (six required checks), so a direct commit to main can never be
+      pushed. Title amended for the same reason — "without branch switching" was
+      false on the Case B path. work_status left done: the behaviour is
+      implemented in templates/skills/quick-fix/SKILL.md Phase 0 and
+      templates/workflows-js/quick-fix.js Step 0a/0b; this is a restatement, not
+      a reopening.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Amendment provenance (2026-08-24): this record was written against the
+  original strictly-in-place design and was contradicted by the shipped
+  workflow for an unknown interval. It is amended in place rather than
+  superseded, per docs/how-to/ac-traceability-store.md ("How do I amend an
+  existing AC?" — an amendment changes the criteria text; the AC ID does not
+  change). Supersession in this store is reserved for a replacement record
+  under a new ID (BO-520-1 -> BO-610-4, FIN-100c-3 -> FIN-100c-9).
+
+  The Case A path is not a legacy fallback — it is the common case, and it is
+  the reason /quick-fix still deserves the name. Isolation is the exception the
+  environment forces, not the new default posture.

@@ -1,7 +1,7 @@
 id: BP-600b-2
 components:
   - build_pipeline
-title: "Quick-fix AC uses the correct component prefix and sequential ID"
+title: "Quick-fix AC id is a next unused child suffix under its parent, in the matched component"
 component: build-pipeline
 level: L2
 status: active
@@ -9,14 +9,20 @@ readiness: reviewed
 priority: medium
 work_status: done
 criteria: |
-  Given the AC store for component "build-pipeline" already contains ACs
-    with IDs BP-001 through BP-006,
-  When the quick-fix workflow creates a new AC for a bug in the
-    build-pipeline component,
-  Then the new AC has the prefix "BP" matching the component's prefix
-    in index.yaml,
-  And its numeric suffix is the next available sequential integer
-    (never reusing a retired or existing ID).
+  Given the AC store holds the component's criteria as a hierarchy of L0
+    feature directories containing L1, L2 and L3 records,
+  When the quick-fix workflow creates a new AC for a bug in that component,
+  Then the new AC's id begins with the prefix registered for that component in
+    the AC-store index, so the record is addressable within the component that
+    actually owns the diagnosed file,
+  And the id is formed by extending its parent's id with the next unused child
+    suffix — an integer for a new L2 sibling under an L1, or a Roman numeral
+    for a technical-constraint L3 child under an L2 — rather than by taking the
+    next free number in a flat per-component sequence,
+  And no id is ever reused, including one belonging to a record that has been
+    superseded or deprecated: the numeric slot stays permanently occupied,
+  And the id the workflow chooses matches the position the file is written to
+    in the hierarchy, so the record's name and its place in the tree agree.
 depends_on:
   - BP-600b
   - BP-600b-1
@@ -24,26 +30,64 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+    relevance: >-
+      The naming convention and the rule that a superseded or deprecated id
+      permanently occupies its numeric slot.
   - path: docs/acceptance-criteria/index.yaml
     relationship: describes
     status: exists
+    relevance: "Source of the component prefix."
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: "Phase 1 Step 1.3 — determine level, id, and respect the child caps."
 assigned_agent: workflow-architect
 estimated_complexity: S
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "ID allocation must be atomic — no race condition if multiple quick-fix workflows run concurrently"
+  - >-
+    Suffix allocation must scan the parent's existing children on disk, not a
+    per-component high-water mark. The two give different answers as soon as
+    the store is a tree rather than a flat list.
+  - >-
+    Allocation must be atomic enough that two concurrent quick-fix runs under
+    the same parent cannot select the same suffix. Note this is stated as a
+    requirement, not a verified property — nothing in the workflow currently
+    locks the parent directory between reading the children and writing the
+    new file.
 delivers_to: null
 expects_from:
   ac_id: BP-600b-1
-  contract: "AC creation logic that reads index.yaml for component prefix and scans existing AC files for the highest numeric suffix"
+  contract: "AC creation logic that reads the AC-store index for the component prefix, resolves the parent node in the hierarchy, and lists that parent's existing children to find the next unused suffix"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      The criterion described a flat per-component id sequence — "IDs BP-001
+      through BP-006 ... its numeric suffix is the next available sequential
+      integer" — which is the scheme the hierarchical store retired. The
+      workflow now mints child ids by extending the parent (an integer L2
+      sibling under an L1, or a Roman-numeral L3 under an L2), so the "next
+      available integer for the component" rule would produce an id that does
+      not correspond to any position in the tree. Two original clauses are
+      kept: the prefix still comes from the component's entry in the AC-store
+      index, and an id is still never reused. The no-reuse rule is strengthened
+      to state explicitly that a superseded or deprecated record permanently
+      occupies its slot, which the flat wording only implied. A clause was
+      added requiring the chosen id to agree with the file's position in the
+      hierarchy, because those are now two separate decisions that can
+      disagree — and a record whose name and location disagree is how a child
+      becomes unreachable from its parent. Found during the BP-600 sweep, in
+      the same class as BP-600b-1 and missed only because the original brief
+      scoped to that record. Title amended. work_status left done.
 superseded_by: null
 covered_by:
   - BP-600b-2-i
@@ -54,3 +98,16 @@ implemented_by:
   - "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md#ac-bp-600b-2"
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  QUESTIONABLE implemented_by, LEFT AS FOUND. All three entries point at
+  documentation and configuration — an anchor in the schema reference, the
+  store index, and an anchor in an ADR — rather than at anything that executes.
+  The behaviour is implemented in templates/skills/quick-fix/SKILL.md Phase 1
+  and templates/workflows-js/quick-fix.js. Two of the three anchors
+  (#quick-fix-workflow-id-assignment, #ac-bp-600b-2) were not confirmed to
+  exist during this amendment. Left untouched because correcting provenance is
+  a separate decision from correcting criteria, but a record that claims to be
+  implemented by an ADR anchor is not evidence that anything runs.
