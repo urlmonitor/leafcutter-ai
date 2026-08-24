@@ -7,7 +7,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -114,6 +114,9 @@ amended_by:
   - agent: BrainCandy
     date: "2026-08-18"
     reason: "Subject re-scoped, guard deliberately not weakened. This criterion previously guarded 'removing an opinion-only gate before its mechanical replacement exists' — a shape that no longer describes anything, because after BO-2400f-11 the fast lane has a reviewer again and the mechanical gates were never a replacement for it. The anti-regression value worth keeping is the opposite direction: the drift to fear is back toward 'the reviewer said yes, so it is done'. Restated as two rejections — a change removing a mechanical proof-of-done gate from the fast lane, and a change letting any LLM verdict substitute for one — plus an explicit acceptance case so the guard cannot be read as blocking the veto-only reviewer BO-2400f-11 shipped, and a fail-closed case so an undeterminable change is not waved through. Amended in place rather than superseded so the id stays active and the '# covers:' tags in unit_tests/workflows/test_bo2500d_gate_retirement.py do not dangle under scripts/ac_store/done_proof.py."
+  - agent: BrainCandy
+    date: "2026-08-19"
+    reason: "work_status correction (not a change of intent), acting on this criterion's own STATUS CAVEAT: done -> in_progress. Same reasoning as BO-2500d-1, which see. The amended guard is correct; its proof is not. The only covering tests are string-presence assertions against templates/workflows-js/fast-lane-build.js, an orphan nothing invokes, and the executed-behaviour tests named in test_spec do not exist. Caught by adversarial review of PR #510 before merge. Flip back to done when those tests are green against the live lane."
 superseded_by: null
 covered_by: []
 implemented_by:

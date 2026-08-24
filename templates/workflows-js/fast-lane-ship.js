@@ -312,6 +312,14 @@ const selectConnectedInvocation =
   `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
   `--exclude-structural-parent`;
 
+// Derived from the command actually composed above, never asserted independently.
+// What the run REPORTS about its own scope must be read off what the run DID:
+// a hardcoded `true` here would keep telling the operator the exclusion was in
+// force after a partial revert removed the flag 60 lines up, and the one test
+// that reads this field would not notice.
+const structuralParentExcluded =
+  selectConnectedInvocation.includes("--exclude-structural-parent");
+
 const resolverResult = await agent(
   `You are the resolver phase agent for a fast-lane build.\n\n` +
   `Run this single Bash command and parse its JSON stdout (a list of AC ids):\n` +
@@ -363,14 +371,16 @@ if (acIds.length === 0) {
     status: "ok",
     message:
       `Nothing to build: the connected set for ${targetAc} is empty ` +
-      `(already done, or the id resolved to no not-done leaves), with ` +
-      `structural-parent prerequisites excluded from the dependency walk. ` +
+      `(already done, or the id resolved to no not-done leaves)` +
+      (structuralParentExcluded
+        ? `, with structural-parent prerequisites excluded from the dependency walk. `
+        : `. NOTE: structural-parent prerequisites were NOT excluded on this run. `) +
       `${resolverResult ? resolverResult.message || "" : ""}`,
     worktree_path: worktreePath,
     branch,
     ac_ids: [],
     nothing_to_build: true,
-    structural_parent_excluded: true,
+    structural_parent_excluded: structuralParentExcluded,
   };
 }
 

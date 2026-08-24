@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -24,11 +24,24 @@ criteria: |
 
   Given one fast-lane run over a resolved set of acceptance criteria,
   When the set of acceptance criteria that run records as done is compared with the set
-    the mechanical proof-of-done gates alone would have permitted it to record as done,
+    the mechanical proof-of-done gates alone would have permitted it to record as done
+    had they been applied to the SET AS RESOLVED — not to whatever set they were
+    actually handed,
   Then the first set is a subset of the second on every path the run can take,
   And no path exists on which an LLM verdict is the reason an acceptance criterion
     reaches done: the single reviewing agent can shrink the delivered set, and can never
     enlarge it.
+
+  Given a fast-lane run whose connected build set has been resolved by
+    select_connected,
+  When the set of acceptance criteria presented to the mechanical proof-of-done gates
+    is compared with the resolved set,
+  Then no acceptance criterion has been removed from it by an LLM agent's judgement,
+  And any narrowing between resolution and the gates is the result of a deterministic
+    rule — an already-done criterion, a failed claim, an explicit operator argument —
+    and never of a model's opinion about scope, risk or suitability,
+  And this holds however the narrowing agent is labelled or typed: the property is
+    about what decides the set, not about what the deciding dispatch is called.
 
   Given the same fast-lane run driven twice over the same resolved set and the same
     mechanical gate results — once with the reviewing agent returning a verdict that
@@ -138,6 +151,9 @@ amended_by:
   - agent: BrainCandy
     date: "2026-08-18"
     reason: "Amended in place (deliberately NOT superseded) to reconcile with BO-2400f-11. As written, the first conjunct — 'it contains no LLM review agent' — became false when BO-2400f-11 shipped in PR #485 on BrainCandy's explicit instruction, making templates/workflows-js/fast-lane-ship.js dispatch pr-reviewer at Phase 4.5. Both criteria were work_status: done and coexisted only because this one's proof (unit_tests/workflows/test_bo2500d_gate_retirement.py, module constant _FAST_LANE_PATH) points at templates/workflows-js/fast-lane-build.js, an orphan nothing invokes. The other two conjuncts were and remain TRUE and are kept verbatim: 'no LLM validator agent, no LLM fulfillment gate agent', and 'the only completion arbiters it lists are the mechanical proof-of-done gates'. The surviving intent is directional, so it is now stated directionally rather than positionally: at most one LLM verdict, veto-only, and the set of ACs a run marks done is always a subset of what the mechanical gates alone would have permitted. 'Exactly one reviewer, veto-only' was folded in here rather than given a fifth child, because a new id starts with no covers tags and no history. implemented_by re-pointed from the orphan to the live lane. Amendment rather than supersession also keeps this id active, so the ~24 '# covers:' tags in the gate-retirement suite do not become dangling under scripts/ac_store/done_proof.py, which flags covers tags whose target is not an active AC."
+  - agent: BrainCandy
+    date: "2026-08-19"
+    reason: "work_status correction (not a change of intent), acting on the STATUS CAVEAT the amendment itself recorded: done -> in_progress. Found by an adversarial review of PR #510 before merge. The criteria are amended and correct; the done flag was not earned. This criterion's entire proof is 23 string-presence assertions in unit_tests/workflows/test_bo2500d_gate_retirement.py against templates/workflows-js/fast-lane-build.js — an orphan nothing invokes — and that file is untouched by the branch that amended these criteria (verified: git diff --stat origin/main..HEAD on it is empty). The ~15 executed-behaviour tests named in test_spec exist nowhere in the repo (verified by grep for their names). So the amended, stronger property has zero proof against the lane that actually runs, while the record claimed done. Leaving it done would have made this the exact failure BO-2500 exists to prevent, inside BO-2500 itself. Parents BO-2500 and BO-2500d are both work_status: todo, so nothing above this becomes a falsely-done composite. Flip back to done only when the named executed-behaviour tests are green against fast-lane-ship.js — not when the grep suite is re-pointed at it."
 superseded_by: null
 covered_by:
   - BO-2500d-1-i

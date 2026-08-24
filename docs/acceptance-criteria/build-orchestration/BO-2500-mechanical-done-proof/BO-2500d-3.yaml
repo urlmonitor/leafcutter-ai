@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -78,6 +78,9 @@ amended_by:
   - agent: BrainCandy
     date: "2026-08-18"
     reason: "Wording correction; the body of the criterion was already right. The title ('...stand in for the removed review agents') and the trailing clause ('...in place of the removed review') both framed the mechanical gates as a substitute for something that was taken away. That framing is now wrong twice over: after BO-2400f-11 the fast lane has a reviewer again, and the gates were never a stand-in for review in the first place — they ARE the completion arbiters, and always were. Retitled and the trailing clause replaced with the positive statement: done-ness is established by these three gates and by nothing else. it_requirements bullet 3, which described these gates as the precondition for 'the opinion-only removal (BO-2500d-1)', was rewritten for the same reason: they are the premise that makes BO-2500d-1's veto-only guarantee satisfiable, not the enabler of a removal. delivers_to reworded off 'replacement for the removed opinion-only agents'. doc_links and test_spec re-pointed from the orphaned runner to the live lane and to executed-behaviour coverage. Amended in place rather than superseded so the id stays active and the '# covers:' tags in the gate-retirement suite do not dangle under scripts/ac_store/done_proof.py."
+  - agent: BrainCandy
+    date: "2026-08-19"
+    reason: "work_status correction (not a change of intent), acting on this criterion's own STATUS CAVEAT: done -> in_progress. Same reasoning as BO-2500d-1, which see. The corrected title and criteria are right; the done flag was not earned, because the only covering tests are string-presence assertions against the orphaned templates/workflows-js/fast-lane-build.js and the executed-behaviour tests named in test_spec do not exist. Caught by adversarial review of PR #510 before merge. Flip back to done when those tests are green against the live lane."
 superseded_by: null
 covered_by: []
 implemented_by:
