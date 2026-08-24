@@ -57,6 +57,29 @@ DECISION HISTORY:
     deploy layouts are exactly the ModuleNotFoundError trap CLAUDE.md's "New
     Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" warns
     against.
+  - 2026-08-19 [python-coder/GE-122a-2, bug-fix]: Fixed a lifecycle-folder
+    -discovery defect found by pr-reviewer (feedback-id
+    fb_2026-08-19_e1c1912f). ``_read_lifecycle_folder_names`` collapsed each
+    declared ``folders[].path`` to ``Path(entry["path"]).name`` (its last
+    component only) and relied on the caller rejoining that bare name under
+    ``tickets_root``; a folder declared more than one level deep silently
+    vanished from the walk (false negative), and two distinct declared
+    paths sharing a basename silently collapsed onto the same physical
+    directory (false positive: one file walked twice and reported as a
+    self-collision). Replaced with ``_resolve_lifecycle_folder_paths``,
+    which resolves each declared path to its full real directory relative
+    to the repository root (``lifecycle_config_path.parent.parent`` --
+    declared paths are documented as repo-root-relative, e.g.
+    ``"tickets/00_inbox"``, never ``tickets_root``-relative) and returns
+    that resolved ``Path`` directly; ``_collect_work_item_claims`` now
+    walks each resolved path as-is instead of rejoining a basename.
+    Defensively rejects (WARNING + skip, fail-open, never a crash) a
+    declared path that is absolute, or one that resolves outside the
+    repository root via ``../`` segments. See
+    unit_tests/commit_guardian/test_ge_122a_2_lifecycle_folder_paths.py for
+    the regression coverage (nested-folder false negative, shared-basename
+    false positive, flat-layout regression anchor, missing-folder
+    fail-open).
 """
 
 from __future__ import annotations
@@ -73,8 +96,55 @@ _HOOK_PREFIX = "[check_identifier_uniqueness]"
 _TICKET_STATUS_RE = re.compile(r"^status:\s*(.+)$", re.MULTILINE)
 
 
-def _read_lifecycle_folder_names(lifecycle_config_path: Path) -> list[str]:
-    """Read the lifecycle folder names from ``tickets/ticket_lifecycle.json``.
+def _resolve_one_folder_path(raw_path: str, repo_root: Path, repo_root_resolved: Path) -> Path | None:
+    """Resolve a single declared ``folders[].path`` entry to a real directory path.
+
+    Declared paths (e.g. ``"tickets/00_inbox"``) are documented as relative
+    to the REPOSITORY ROOT (the parent of the ``tickets/`` directory that
+    holds ``ticket_lifecycle.json``), never to ``tickets_root`` itself --
+    joining under ``tickets_root`` would double the ``tickets/`` segment
+    (``tickets/tickets/00_inbox``).
+
+    Args:
+        raw_path: The entry's own ``"path"`` string, exactly as declared.
+        repo_root: The repository root (``lifecycle_config_path.parent.parent``),
+            unresolved -- used to build the candidate path.
+        repo_root_resolved: ``repo_root.resolve()``, precomputed once by the
+            caller so every entry is checked against the same containment
+            boundary.
+
+    Returns:
+        The resolved absolute directory path, or None if the declared path
+        is rejected (defensive): an absolute path (declared paths are
+        documented as repo-root-relative, so an absolute entry is treated
+        as a misconfiguration, not honored verbatim) or a path that
+        resolves outside the repository root (e.g. via ``../`` segments).
+        Both cases are logged at WARNING and skipped -- fail-open per
+        malformed entry, consistent with this module's missing-config and
+        missing-folder fail-open conventions, never a crash.
+    """
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        print(
+            f"{_HOOK_PREFIX} WARNING: lifecycle folder path {raw_path!r} is absolute; "
+            "declared folder paths must be relative to the repository root. Skipping.",
+            file=sys.stderr,
+        )
+        return None
+
+    resolved = (repo_root / candidate).resolve()
+    if not resolved.is_relative_to(repo_root_resolved):
+        print(
+            f"{_HOOK_PREFIX} WARNING: lifecycle folder path {raw_path!r} resolves to "
+            f"{resolved}, outside the repository root {repo_root_resolved}. Skipping.",
+            file=sys.stderr,
+        )
+        return None
+    return resolved
+
+
+def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path]:
+    """Resolve every declared lifecycle folder to its real, full on-disk path.
 
     Reads the folder list rather than hard-coding it, per this AC's own
     it_requirement that the allowed-status-per-folder mapping -- and, by
@@ -82,14 +152,29 @@ def _read_lifecycle_folder_names(lifecycle_config_path: Path) -> list[str]:
     from the config file, never restated in code. The ``tickets/`` root
     itself is never included: it is not one of the declared folder entries.
 
+    Each entry's ``"path"`` (e.g. ``"tickets/00_inbox"``) is declared
+    RELATIVE TO THE REPOSITORY ROOT, not to ``tickets_root`` -- the config
+    lives at ``tickets/ticket_lifecycle.json``, so the repository root is
+    ``lifecycle_config_path.parent.parent``. Earlier versions of this
+    function reduced each path to ``Path(entry["path"]).name`` (its last
+    component only) and left the caller to rejoin that bare name under
+    ``tickets_root``; that silently broke on any folder declared more than
+    one level deep (the parent segment vanished, so the walk missed the
+    folder entirely) and could also collapse two DISTINCT declared paths
+    that merely share a basename onto the same physical directory (walked
+    twice, reported as two folders holding one file). Returning the fully
+    resolved path removes both failure modes: there is no longer a
+    basename to collide on, and no rejoin step for a caller to get wrong.
+
     Args:
         lifecycle_config_path: Path to ``tickets/ticket_lifecycle.json``.
 
     Returns:
-        List of folder basenames (e.g. ``["00_inbox", "01_todo", "99_done",
-        "99_rejected"]``), or an empty list if the config is missing,
-        unreadable, or unparsable (fail-open: nothing to walk rather than a
-        crash).
+        List of resolved absolute directory paths (not required to exist
+        on disk -- a missing directory is the caller's fail-open-per-folder
+        concern, not this function's), or an empty list if the config is
+        missing, unreadable, unparsable, or declares no usable folder
+        entries (fail-open: nothing to walk rather than a crash).
     """
     try:
         content = lifecycle_config_path.read_text(encoding="utf-8")
@@ -109,8 +194,18 @@ def _read_lifecycle_folder_names(lifecycle_config_path: Path) -> list[str]:
         )
         return []
 
+    repo_root = lifecycle_config_path.resolve().parent.parent
+    repo_root_resolved = repo_root.resolve()
     folders = data.get("folders", [])
-    return [Path(entry["path"]).name for entry in folders if entry.get("path")]
+    resolved_paths = []
+    for entry in folders:
+        raw_path = entry.get("path")
+        if not raw_path:
+            continue
+        resolved = _resolve_one_folder_path(raw_path, repo_root, repo_root_resolved)
+        if resolved is not None:
+            resolved_paths.append(resolved)
+    return resolved_paths
 
 
 def _read_ticket_status(ticket_path: Path) -> str | None:
@@ -157,8 +252,7 @@ def _read_ticket_status(ticket_path: Path) -> str | None:
 
 
 def _collect_work_item_claims(
-    tickets_root: Path,
-    folder_names: list[str],
+    folder_paths: list[Path],
 ) -> tuple[dict[str, list[tuple[Path, str | None]]], int]:
     """Walk every declared lifecycle folder and group files by basename.
 
@@ -169,10 +263,10 @@ def _collect_work_item_claims(
     epic's own Master_Plan.md and sub-tickets are never visited at all.
 
     Args:
-        tickets_root: The ``tickets/`` directory to walk (root itself is
-            never scanned directly -- only its declared lifecycle folders).
-        folder_names: Lifecycle folder basenames read from
-            ticket_lifecycle.json.
+        folder_paths: Fully resolved lifecycle folder directory paths (from
+            ``_resolve_lifecycle_folder_paths``) -- each is walked as its
+            own distinct directory, so two declared paths that merely share
+            a basename can never collide on the same physical directory.
 
     Returns:
         A (claims, inspected_count) tuple. ``claims`` maps each claimed
@@ -182,8 +276,7 @@ def _collect_work_item_claims(
     """
     claims: dict[str, list[tuple[Path, str | None]]] = {}
     inspected_count = 0
-    for folder_name in folder_names:
-        folder_path = tickets_root / folder_name
+    for folder_path in folder_paths:
         if not folder_path.is_dir():
             continue
         for ticket_path in sorted(folder_path.glob("TICKET-*.md")):
@@ -226,7 +319,13 @@ def scan_work_items(tickets_root: Path, lifecycle_config_path: Path) -> Namespac
     """Walk the work-items namespace and detect cross-folder identifier collisions.
 
     Args:
-        tickets_root: Path to the ``tickets/`` directory.
+        tickets_root: Path to the ``tickets/`` directory. Kept for call-site
+            and test-signature stability; folder resolution itself no
+            longer joins under this argument (see
+            ``_resolve_lifecycle_folder_paths``) -- each declared folder is
+            resolved to its own full path relative to the repository root
+            (``lifecycle_config_path.parent.parent``), which is always
+            ``tickets_root``'s parent for every real caller.
         lifecycle_config_path: Path to ``tickets/ticket_lifecycle.json``,
             the source of truth for which folders count as lifecycle
             locations.
@@ -237,9 +336,10 @@ def scan_work_items(tickets_root: Path, lifecycle_config_path: Path) -> Namespac
         inspected_count equal to the number of "TICKET-*.md" files walked
         across those folders.
     """
-    folder_names = _read_lifecycle_folder_names(lifecycle_config_path)
-    if not folder_names:
+    del tickets_root  # See Args note: retained for signature stability only.
+    folder_paths = _resolve_lifecycle_folder_paths(lifecycle_config_path)
+    if not folder_paths:
         return NamespaceVerdict(passed=True, inspected_count=0, findings=[])
 
-    claims, inspected_count = _collect_work_item_claims(tickets_root, folder_names)
+    claims, inspected_count = _collect_work_item_claims(folder_paths)
     return _build_work_items_verdict(claims, inspected_count)

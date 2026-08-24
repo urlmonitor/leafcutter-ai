@@ -44,9 +44,10 @@ issue *used to* exist explains present code.
 | Component | File | Open entries |
 |---|---|---|
 | `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 3 |
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 4 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 1 |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 5 |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | 3 |
 | `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 2 |
+| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 1 |
 
 ## Highest severity first
 
@@ -59,6 +60,28 @@ issue *used to* exist explains present code.
   reconciles branch-wide, so no commit boundary satisfies it.
 - **KI-CG-2** — `check_ticket_signoff_parity.py` silently skips check #6 on a
   wrong registry path, then exits 0.
+- **KI-TQ-2** — the exit gate's tree-purity guard false-positives on any
+  concurrent write, producing failures indistinguishable from real ones.
+- **KI-FC-1** — `ac-validator` is missing from every category's
+  `allowed_writers`, so it has never once submitted feedback.
+
+## The common shape
+
+Nine of the twelve entries are the same defect class: **a check that reports
+success while seeing less than it should**. A hook that skips one of its own
+checks and exits 0. A gate registered nowhere. A driver that commits past its own
+blockers. An agent that cannot write to the corpus it is supposed to feed. An
+oracle that shares the bug it exists to detect.
+
+None of these is visible in a passing test run — the suite was green for every
+one of them. That is worth stating plainly in a package whose purpose is to
+detect exactly this: **green tests are not evidence against this failure class,
+because this failure class is what green looks like when the check is blind.**
+
+What did find them: measuring instead of asserting; probing with synthetic
+inputs a real-artifact sweep cannot reach; deliberately breaking the
+implementation to confirm the tests notice; and agents refusing to improvise past
+their own algorithm's limits rather than producing a convenient pass.
 
 ## Provenance
 

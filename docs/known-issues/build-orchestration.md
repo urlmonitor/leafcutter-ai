@@ -45,6 +45,52 @@ them to `.gitignore` alongside the other build outputs. The current halfway stat
 **Note:** the hook's own error message points at `docs/FRONTMATTER.md`, which does
 not exist in this repository. A second, smaller dangling reference.
 
+## KI-BO-3 — FIXED — the placeholder gate flagged any document that discussed it
+
+**Fixed 2026-08-19.** Recorded because the shape recurs and the fix has a
+tripwire a future editor could remove.
+
+`scripts/build_placeholder_detection.py` backs `documentation-verifier`'s Step 6a
+scan for announced-but-unwritten documentation. Its markers matched bare words
+with no context, several under `re.IGNORECASE`:
+
+```python
+re.compile(r"\bPLACEHOLDER\b", re.IGNORECASE)
+re.compile(r"\bReplace with\b", re.IGNORECASE)
+```
+
+So the ordinary English words "placeholder" and "replace with" in running prose
+were reported as placeholder content. `templates/agents/documentation-verifier.md`
+— the agent that **calls** this helper — produced **59 false positives**. The
+document explaining the gate failed the gate.
+
+Sibling cases found by the differential tests, none of which the original report
+named: `TODO:` and `FIXME:` false-positived on a doc quoting the marker as a
+worked example *even with the colon present*, and even the structurally-anchored
+`<!-- QUESTION` pattern did.
+
+**The fix, and the tension it had to respect.** This gate exists to catch docs
+left full of scaffolding. Narrowing it too far yields a **false negative** — an
+unwritten doc sailing through — which is strictly worse than the false positive,
+because that is the phantom-done failure this package exists to prevent.
+
+The fix therefore pins **both** directions: per-marker validators requiring a
+marker to be structurally positioned as a marker (alone on its line, in an HTML
+comment, or followed by a colon), selective case-sensitivity, and exclusion of
+inline code spans — a marker someone left behind is rarely wrapped in backticks,
+whereas a marker being *discussed* almost always is. Whole-fence exclusion was
+deliberately **rejected**: a how-to can legitimately carry a real unfilled token
+inside a fence, and suppressing that would cost a real detection.
+
+Verified behaviourally in both directions: `documentation-verifier.md` 59 hits →
+0, and all six genuine scaffolding forms (`TODO: write this`, a bare
+`PLACEHOLDER` line, `<!-- PLACEHOLDER -->`, `TODO: Replace with…`,
+`<!-- QUESTION: … -->`, `FIXME: broken`) still caught.
+
+**If you touch this, keep the six MUST-DETECT tests in
+`unit_tests/test_build_placeholder_detection_context_discrimination.py`.** They
+are the only thing standing between a narrower gate and a blind one.
+
 ## KI-BO-2 — Committed agent cards drift from the AC store
 
 **Severity: low,** but it makes every build dirty the tree.

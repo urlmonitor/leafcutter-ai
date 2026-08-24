@@ -93,6 +93,35 @@ supported entry point. Nothing in the AC's `test_spec` required a CLI, and addin
 untested surface for convenience was declined — but a repair that can only be
 invoked from a test is awkward to re-run and hard to audit.
 
+## KI-CG-5 — Staged paths with non-ASCII characters are silently unattributed
+
+**Severity: low** in this repository, **medium** in a consumer project with
+non-ASCII filenames.
+
+`_get_staged_paths` in `_commit_disposition.py` uses plain
+`git diff --cached --name-only`, with no `-z` and no `--no-quote-path`. Under
+git's default `core.quotePath=true`, a staged path containing non-ASCII
+characters comes back **quote-escaped** (e.g. `"tickets/caf\303\251.md"`). That
+string does not resolve to a real path, so the attribution check silently fails
+to match it.
+
+The consequence is directional and bad: a collision the current commit **did**
+cause is reported as *unattributed*, which by design does **not** block. The
+commit proceeds.
+
+Found during the first review of `GE-122a-1-i`. It is inherited from
+`check_ac_schema.py::_get_staged_ac_paths`, which that AC's own `doc_links` name
+as its precedent — so it is a pre-existing convention rather than something the
+GE-122 work introduced.
+
+**Why it is low here:** this repository's numbered artifacts are ASCII by
+convention (`GE-122a-1.yaml`, `ADR-029-*.md`, `TICKET-*.md`). Nothing currently
+in the collection can trigger it.
+
+**Suggested fix.** Use `git diff --cached --name-only -z` and split on NUL, or
+pass `--no-quote-path`. Fix both call sites together — leaving the precedent
+unfixed means the next author copies it again.
+
 ## Fixed, recorded for context
 
 Two defects in this area were found and fixed during the same drive; they are

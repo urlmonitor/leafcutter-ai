@@ -116,6 +116,38 @@ DECISION HISTORY
   already passing, matching GE-122e-2's own sign-off comment). See the
   test-writer sign-off comment's red_baseline block for the exact per-test
   RED/GREEN-on-arrival determination and rationale for each.
+- 2026-08-19 [GE-122e-3/test-writer, exit-gate-integrity fix]: This
+  module's own local helper, formerly ``_read_lifecycle_folder_names``,
+  carried the IDENTICAL basename-collapse defect fixed in production's
+  ``_work_items_scanner._resolve_lifecycle_folder_paths`` (feedback-id
+  fb_2026-08-19_e1c1912f): it collapsed each declared
+  ``folders[].path`` to ``Path(entry["path"]).name`` and relied on the
+  caller rejoining that bare name under ``tickets_root``. Because every
+  real declared lifecycle folder sits exactly one level under tickets/,
+  this was invisible against the real collection -- the exit gate's own
+  oracle shared the blind spot of the code it verifies. Renamed to
+  ``_read_lifecycle_folder_paths``, now returns full resolved ``Path``
+  objects derived from each entry's complete declared path, never a
+  basename. Deliberately kept as an INDEPENDENT local implementation at
+  both of its call sites (``_count_work_item_files`` for AC-2's
+  independent count, and the folder-selection step in
+  ``test_reintroduced_collision_fails_in_every_namespace`` for AC-5) --
+  importing production's own ``_resolve_lifecycle_folder_paths`` was
+  considered and rejected for both: this module's whole design principle
+  (see REAL-TREE-VS-FIXTURE DECISION above) is that its oracles must never
+  call into the code under test, because an oracle built FROM the
+  implementation cannot independently prove the implementation -- it
+  would merely reproduce a shared bug as agreement rather than surface it
+  as a test failure. See
+  TestLifecycleFolderPathHelperResolvesNestedPaths for a nested-nested-
+  folder-config demonstration that the corrected helper computes a
+  different (and correct) result from the old collapsing computation.
+  Also narrowed tearDownModule's tree-purity guard from a repository-
+  global ``git status --porcelain`` to ``_GUARDED_PATHS`` (the three real
+  trees this module's fixtures actually copy from/into) after the
+  repo-global version fired falsely three times against unrelated
+  concurrent writes; the guard itself is unchanged in kind, only its
+  blast radius is narrowed.
 """
 
 from __future__ import annotations
@@ -273,18 +305,42 @@ def _count_md_files_flat(root: Path) -> int:
     return sum(1 for _ in root.glob("*.md"))
 
 
-def _read_lifecycle_folder_names(tickets_root: Path) -> list[str]:
-    """Read the lifecycle folder basenames from a copy's ticket_lifecycle.json."""
+def _read_lifecycle_folder_paths(tickets_root: Path) -> list[Path]:
+    """Read the lifecycle folders' FULL declared paths from a copy's ticket_lifecycle.json.
+
+    Returns each entry's own ``"path"`` (e.g. ``"tickets/00_inbox"``) resolved
+    against the COLLECTION root (``tickets_root.parent``) -- never reduced to
+    ``Path(entry["path"]).name``. An earlier version of this helper collapsed
+    each declared path to its basename and relied on the caller rejoining
+    that bare name under ``tickets_root``; that is the IDENTICAL
+    basename-collapse defect pr-reviewer found (and python-coder fixed) in
+    the production ``_work_items_scanner._resolve_lifecycle_folder_paths``
+    (feedback-id fb_2026-08-19_e1c1912f). It silently vanished a folder
+    declared more than one level deep and could silently collide two
+    distinct declared paths sharing a basename onto the same physical
+    directory. This helper is this test FILE's own independent oracle (see
+    the module docstring's REAL-TREE-VS-FIXTURE DECISION section: it must
+    never call into production's own resolver, or a shared bug between the
+    oracle and the code under test could not be detected by comparison) --
+    it shares the fix's *shape*, not its code.
+
+    Args:
+        tickets_root: Path to the copy's ``tickets/`` directory.
+
+    Returns:
+        List of full ``Path`` objects, one per declared folder entry,
+        resolved relative to the collection root.
+    """
     data = json.loads((tickets_root / "ticket_lifecycle.json").read_text(encoding="utf-8"))
-    return [Path(entry["path"]).name for entry in data["folders"]]
+    collection_root = tickets_root.parent
+    return [collection_root / entry["path"] for entry in data["folders"]]
 
 
 def _count_work_item_files(tickets_root: Path) -> int:
     """Count every TICKET-*.md file across the declared lifecycle folders."""
-    folder_names = _read_lifecycle_folder_names(tickets_root)
+    folder_paths = _read_lifecycle_folder_paths(tickets_root)
     total = 0
-    for name in folder_names:
-        folder = tickets_root / name
+    for folder in folder_paths:
         if folder.is_dir():
             total += sum(1 for _ in folder.glob("TICKET-*.md"))
     return total
@@ -295,8 +351,20 @@ def _count_work_item_files(tickets_root: Path) -> int:
 # ---------------------------------------------------------------------------
 
 
+# Scoped to exactly the real trees this module's fixtures copy FROM
+# (_copy_real_collection above) -- the only paths a bug in this file's own
+# fixture code could plausibly cause an accidental write to. Deliberately
+# NOT repository-global: a repo-global `git status --porcelain` fired
+# falsely three times against unrelated files touched by concurrent
+# processes, producing alarming failures that pointed at the wrong thing.
+# The guard's INTENT (prove this module never wrote to the real tree) is
+# unchanged and still mechanical, not assertion-by-fiat -- only its blast
+# radius is narrowed to match what this module could actually touch.
+_GUARDED_PATHS = ("docs/acceptance-criteria", "docs/architecture", "tickets")
+
+
 def _git_status_porcelain() -> str:
-    """Return `git status --porcelain` output for _REPO_ROOT.
+    """Return `git status --porcelain` output for _REPO_ROOT, scoped to _GUARDED_PATHS.
 
     Returns:
         The raw stdout, or "" if git is unavailable (fails open on the
@@ -305,7 +373,7 @@ def _git_status_porcelain() -> str:
     """
     try:
         result = subprocess.run(
-            ["git", "-C", str(_REPO_ROOT), "status", "--porcelain"],
+            ["git", "-C", str(_REPO_ROOT), "status", "--porcelain", "--", *_GUARDED_PATHS],
             capture_output=True,
             text=True,
             check=False,
@@ -536,11 +604,11 @@ class TestReintroducedCollisionCaughtInEveryNamespace(_RealCollectionCopyTestCas
 
         # -- work-items: duplicate a real ticket's basename into another lifecycle folder --
         tickets_root = self.root / "tickets"
-        folder_names = _read_lifecycle_folder_names(tickets_root)
+        folder_paths = _read_lifecycle_folder_paths(tickets_root)
         original_ticket = tickets_root / "01_todo" / "TICKET-20260622-AcTreeTraversalLeafFilter.md"
         self.assertTrue(original_ticket.exists(), msg=f"fixture sanity: {original_ticket} must exist in the copy.")
-        target_folder_name = next(name for name in folder_names if name != "01_todo")
-        duplicate_ticket = tickets_root / target_folder_name / original_ticket.name
+        target_folder = next(path for path in folder_paths if path != original_ticket.parent)
+        duplicate_ticket = target_folder / original_ticket.name
         self.assertFalse(
             duplicate_ticket.exists(),
             msg=f"fixture sanity: {duplicate_ticket} must not already exist -- the collection is supposed to be repaired.",
@@ -777,6 +845,77 @@ class TestUnnumberedArtifactsUnchangedByNameAndLocation(_RealCollectionCopyTestC
                 digest_after,
                 digest_before,
                 msg=f"unnumbered diagram {name!r} at {path} changed content after the pass ran -- it must be deliberately outside the repair.",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Test-infrastructure regression: this file's own _read_lifecycle_folder_paths
+# oracle must not repeat the basename-collapse defect it was fixed for.
+# ---------------------------------------------------------------------------
+
+
+class TestLifecycleFolderPathHelperResolvesNestedPaths(unittest.TestCase):
+    """Proves the fix to this test FILE's own local helper is load-bearing.
+
+    Every real lifecycle folder in this repository's ticket_lifecycle.json
+    sits exactly one level under tickets/ (tickets/00_inbox, tickets/01_todo,
+    tickets/99_done, tickets/99_rejected), so the ORIGINAL
+    ``_read_lifecycle_folder_names`` -- which collapsed each declared
+    ``folders[].path`` to ``Path(entry["path"]).name`` and let the caller
+    rejoin that bare name directly under ``tickets_root`` -- computed the
+    SAME result as full-path resolution against today's real collection.
+    That is exactly why the defect was invisible against the real tree: a
+    test run only over real data cannot distinguish "resolves paths
+    correctly" from "happens to reconstruct the right answer by
+    coincidence." This test constructs a config that declares a folder MORE
+    than one level deep, where the two computations diverge, to prove the
+    corrected helper (``_read_lifecycle_folder_paths``) is not making the
+    same coincidental-agreement mistake its own oracle-independence
+    principle warns about.
+    """
+
+    def test_nested_declared_folder_resolves_to_its_real_nested_path(self):
+        # covers: GE-122e-3 (test-infrastructure regression; the AC itself
+        # names no ticket for this -- this guards the exit gate's own oracle)
+        with tempfile.TemporaryDirectory() as tmp:
+            collection_root = Path(tmp)
+            tickets_root = collection_root / "tickets"
+            nested_folder = tickets_root / "00_inbox" / "epics" / "EPIC-Nested"
+            nested_folder.mkdir(parents=True)
+
+            lifecycle_config = {"folders": [{"path": "tickets/00_inbox/epics/EPIC-Nested"}]}
+            with (tickets_root / "ticket_lifecycle.json").open("w", encoding="utf-8") as handle:
+                json.dump(lifecycle_config, handle)
+
+            resolved = _read_lifecycle_folder_paths(tickets_root)
+
+            self.assertEqual(
+                [nested_folder],
+                resolved,
+                msg="the corrected helper must resolve the declared nested path to its real on-disk location, not collapse it to a basename.",
+            )
+
+            # Demonstrate the fix is load-bearing: recompute what the OLD
+            # collapsing helper would have produced for this SAME config,
+            # and show it diverges from -- and is wrong for -- the real
+            # nested path. This is the concrete "different value under a
+            # nested-folder config" the fix is required to prove.
+            old_collapsed_name = Path(lifecycle_config["folders"][0]["path"]).name
+            old_wrong_path = tickets_root / old_collapsed_name
+            self.assertNotEqual(
+                old_wrong_path,
+                nested_folder,
+                msg="fixture sanity: the old collapsing computation must diverge from the real nested path for this test to demonstrate anything.",
+            )
+            self.assertFalse(
+                old_wrong_path.is_dir(),
+                msg=(
+                    f"the OLD collapsing helper would have looked for work items at {old_wrong_path}, "
+                    "which does not exist on disk at all -- proving the collapsing version silently "
+                    "missed this nested folder entirely (the false-negative half of the basename-"
+                    "collapse defect fixed in production's _resolve_lifecycle_folder_paths, "
+                    "feedback-id fb_2026-08-19_e1c1912f, and mirrored here in this file's own oracle)."
+                ),
             )
 
 
