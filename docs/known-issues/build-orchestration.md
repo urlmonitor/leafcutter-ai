@@ -333,10 +333,23 @@ fails the run. The lane also has no documentation phase (it dispatches `test-wri
 **Evidence.** `grep -rn test_required` across `fast_lane.py`, `done_proof.py` and
 `mark_ac_done.py` returns **nothing**. The field is part of the AC schema and is read by
 the ticket-generation path, but the entire done-proof chain the fast lane depends on is
-blind to it. Reproduction to hand: `select_connected --ac BO-2600b-1` resolves
-`["BO-2600b-1","BO-2600b-1-i","BO-2600b-1-ii","BO-2600b-2","BO-2600b-3"]`, and
+blind to it.
+
+Reproduction, re-measured 2026-08-19 after the aiming fix (BO-2600b-1) landed in this
+same branch — the originally-recorded repro (`--ac BO-2600b-1` resolving five ids) no
+longer reproduces, because that command now carries `--exclude-structural-parent` and
+because b-1/-1-i/-1-ii are now `done`; it returns `[]`. The current standing repro is:
+
+```
+select_connected --ac BO-2600b --exclude-structural-parent
+  -> ["BO-2600b-2", "BO-2600b-3"]
+```
+
 `BO-2600b-3` is a how-to AC with `assigned_agent: documentation-expert` and
-`test_required: false`. That set cannot be built by the lane as it stands.
+`test_required: false`, so that set still cannot be built by the lane as it stands. The
+defect is unchanged; only the command that exhibits it moved. Worth noting the correction
+itself: a known-issue whose repro line has quietly stopped reproducing is the same
+stale-evidence failure this register exists to catch, one level up.
 
 **Why it is worse than it first reads.** The operator cannot avoid it. Build sets are
 resolved from the store, not chosen — so a single documentation child anywhere in a
