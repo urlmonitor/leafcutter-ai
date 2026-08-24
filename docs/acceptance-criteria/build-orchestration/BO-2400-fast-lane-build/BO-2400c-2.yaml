@@ -2,7 +2,7 @@ id: BO-2400c-2
 components:
   - build_orchestration
   - injection_builder
-title: "Extended one-hour cache TTL is configured for drives"
+title: "A drive's own record states whether the stable prefix held across its invocations"
 component: build-orchestration
 level: L2
 status: active
@@ -12,53 +12,133 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given a fast-lane drive is invoked,
-  When the prompt cache is configured for its agent invocations,
-  Then the cache TTL is set to the extended one-hour value
-  And it is not left at the default (short) TTL.
-depends_on: [BO-2400c]
+  Given a fast-lane drive that presents its assembled context bundle to more than one
+    build-context-carrying agent invocation — today the test-writer and the coder —
+    and that drive runs to its terminal payload,
+  When that terminal record is read after the drive,
+  Then the record carries a context-reuse statement for the drive that reports how many
+    context-carrying invocations the drive made, how many of those were presented a
+    stable prefix byte-identical to the one presented to the first of them, whether the
+    anchor held for the whole drive, and a fingerprint of the prefix the drive anchored on,
+  And when every one of those invocations was presented the same bytes up to and
+    including the cache breakpoint marker, the statement reports that the anchor held and
+    reports a shared count equal to the invocation count,
+  And the statement is derived from the prefixes the drive presented to its own
+    invocations, not from re-assembling the bundle after the drive, so a drive whose
+    wiring stopped reusing one bundle cannot report a held anchor.
+depends_on: [BO-2400c, BO-2400c-1-iii, BO-2400c-1-iv]
 doc_links:
-  - path: docs/architecture/components/injection-builder.md
-    relationship: describes
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
     status: exists
+    relevance: "The drive whose record this is. It obtains the bundle once and prefixes the test-writer and coder dispatches with it; those prefixes are the only thing the measurement may read."
+  - path: scripts/injection_builders.py
+    relationship: related
+    status: exists
+    relevance: "Produces the bundle and inserts the single <!-- CACHE_BREAKPOINT --> marker that delimits the prefix being measured. The marker is a textual convention in a prompt string — there is no provider cache-control block here to read."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Supplies both halves of the evidence: the recorded agent_calls whose prompts carry the presented prefixes, and HarnessResult.result, the drive's terminal payload on which the statement must appear."
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 it_requirements:
   config_schema_fragment:
-    cache_ttl:
-      type: string
-      enum: ["1h"]
-      description: "Prompt cache TTL for fast-lane drive agent invocations; set to the extended one-hour value, not the default short TTL."
-  reference_file_path: "scripts/injection_builders.py"
+    context_reuse_statement:
+      type: object
+      description: "Per-drive context-reuse statement on the fast lane's own terminal run record: the number of context-carrying invocations the drive made, the number presented a byte-identical stable prefix, whether the anchor held for the whole drive, and a fingerprint of the anchored prefix."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
   n_location_rule: "1"
   required_skills:
     - python-coder
-  post_write_commands: []
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
   constraints:
-    - "The cache_control TTL on the stable-prefix breakpoint for fast-lane drive invocations must be set to the extended one-hour value, explicitly — not left at the provider default short TTL."
-    - "The TTL value must be sourced from config so it is auditable and tunable, not a bare literal buried in the assembly path."
-delivers_to: null
+    - "Measure the prefixes the drive PRESENTED. Re-assembling the bundle at the end of the drive and comparing that to itself measures the assembler, which BO-2400c-1-i already covers, and would report a held anchor on a drive that composed its dispatches some other way."
+    - "Reuse the checksum helper BO-2400c-1-i and BO-2400c-1-iv already share for the fingerprint, so the runtime property and the recorded measurement of it cannot drift apart."
+    - "Build the statement at ONE construction site and include it from there, following the buildFastLaneDeliveryOutcome precedent (BO-2400f-4-vi). A statement assembled independently at each return site drifts between paths."
+    - "Nothing here reads provider cache statistics. leafcutter never issues the model API call — the workflow engine's agent() does, and it is handed plain prompt text — so the drive can state that it presented one prefix to N invocations and must not state that a cache was hit, a token was saved, or a cost was avoided."
+    - "The live lane writes no telemetry today: the only emit_agent_telemetry calls are in the orphaned templates/workflows-js/fast-lane-build.js, which BO-2400c-1-v removes. This statement therefore belongs on the terminal payload the lane already returns. Do NOT stand up a telemetry emission path for it — that would be a second unread artifact. If the live lane later emits per-invocation telemetry (BO-2400d-1), carry this same statement onto that record rather than recomputing it."
+delivers_to:
+  agent: python-coder
+  contract: "A per-drive context-reuse statement on the fast lane's terminal run record: { context_carrying_invocations, invocations_sharing_anchor, anchor_held, prefix_fingerprint }, readable after the drive without re-running it."
 expects_from:
-  ac_id: BO-2400c-1
-  contract: "The assembled prompt with the cache breakpoint marker on which the extended TTL is configured."
+  ac_id: BO-2400c-1-iv
+  contract: "A drive whose successive context-carrying dispatches are presented one byte-identical cacheable prefix — the runtime property whose holding or breaking this record states."
+test_required: true
 test_spec:
-  - name: test_cache_ttl_set_to_one_hour
-    target_dir: unit_tests/prompt_assembly/
-    framework: unittest
-    type: unit
-    description: "The cache TTL for fast-lane drive agent invocations is the extended one-hour value."
-  - name: test_cache_ttl_not_default_short
-    target_dir: unit_tests/prompt_assembly/
-    framework: unittest
-    type: unit
-    description: "The cache TTL is not left at the default short TTL."
+  - name: test_run_record_carries_context_reuse_statement
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "An executed harness drive's terminal payload carries a context-reuse statement reporting the invocation count, the shared-anchor count, whether the anchor held, and a prefix fingerprint."
+  - name: test_shared_anchor_count_equals_invocation_count_when_prefixes_identical
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "On a drive whose recorded context-carrying prompts share one prefix, the statement reports anchor held and a shared count equal to the number of those invocations."
+  - name: test_reported_fingerprint_matches_the_prefix_actually_presented
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "The fingerprint on the terminal payload is the fingerprint of the prefix region of the recorded agent_calls' prompts, computed with the same helper BO-2400c-1-i uses."
+  - name: test_statement_reads_presented_prompts_not_a_reassembled_bundle
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "When the drive is stubbed so a later context-carrying dispatch is composed without the obtained bundle, the statement does not report a held anchor — proving the measurement reads the presented prompts rather than re-deriving the bundle."
+test_rationale: |
+  Every test here must EXECUTE the lane under unit_tests/_workflow_engine_harness.py
+  (run_workflow_under_e2 with label_responses) and read two things from the result: the
+  recorded agent_calls' prompts, and HarnessResult.result. A test that greps
+  fast-lane-ship.js for a field name, or that unit-tests a fingerprint helper in
+  isolation, is not acceptable evidence for this criterion. That is not a hypothetical:
+  roughly 25 green unit tests plus a grep test at
+  unit_tests/workflows/test_bo2400a_runner_wiring.py:401 all stayed green for a month
+  while the bundle layer never ran once. The seam test is the load-bearing one — it is
+  the only one that fails if the measurement is computed from a re-derivation instead of
+  from what the drive presented.
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-19"
+    reason: "Re-specified from configuration to measurement. The prior version required an extended one-hour cache_control TTL. That knob does not exist and cannot: the string cache_control appears nowhere in scripts/, templates/ or config/ (verified 2026-08-18 and again 2026-08-19), and the 'cache breakpoint' is a literal <!-- CACHE_BREAKPOINT --> HTML comment inside a prompt string — a textual convention, not a provider cache-control block. leafcutter never issues the model API call; the workflow engine's agent() does, and it is handed plain prompt text. Building the criterion as written would have produced a config value nothing reads — a new phantom-done inside the feature built to prevent phantom-done. Replaced with the honest, observable half of the same intent: the drive states, in its own record, whether the stable prefix it presented held across its invocations and how many invocations shared it. Stripped from it_requirements: the config_schema_fragment.cache_ttl block, its enum ['1h'], and both constraints referencing cache_control / the provider default short TTL."
 superseded_by: null
 covered_by:
   - BO-2400c-2-i
 implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Boundary with BO-2400c-1-iv (done). That criterion asserts the PROPERTY — the prefix
+  presented to each of a run's successive dispatches is byte-identical — and requires
+  drift to be surfaced at the moment it happens. This criterion is about the RECORD: after
+  the drive is over, its own terminal payload states whether the anchor held and across
+  how many invocations, unconditionally, on drives where it held as well as drives where
+  it did not. A surfaced warning proves nothing about a drive nobody was watching; a
+  recorded count is what backs the parent L1's cost claim with evidence instead of hope.
+  The two share a fingerprint helper deliberately, so the property and the statement about
+  it cannot disagree.
+
+  Why the lane's own terminal payload and not the telemetry sink. BO-2400d's per-invocation
+  telemetry record (BO-2400d-1, done) is written by scripts/agent-health/agent_telemetry.py,
+  and the only production caller of that emit path is templates/workflows-js/fast-lane-build.js
+  — the orphaned runner that BO-2400c-1-v deletes. The LIVE lane, fast-lane-ship.js, contains
+  the string "telemetry" exactly zero times. So "add it to the existing run record" resolves,
+  today, to the record the live lane actually produces: the terminal payload it already
+  returns (target_ac, ac_ids, tests_written, files_modified, changelog_entry_path). This is
+  an addition to that record, not a parallel one. It is deliberately NOT folded into BO-2800,
+  which is about gate value rather than context reuse.
+
+  A drive that made only one context-carrying invocation reports an invocation count of one
+  and a shared count of one. That is honest — one invocation trivially shares its own prefix
+  — and a reader can tell it apart from a two-invocation drive by the count itself, which is
+  why the count is reported rather than a bare boolean.

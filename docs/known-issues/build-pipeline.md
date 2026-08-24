@@ -453,3 +453,57 @@ touch, never the class.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2's inverse. Source and deployed
 layout agree perfectly; both are missing the same file, and every consumer of it treats
 absence as a pass.
+
+---
+
+### KI-BP-008 — A version gate can skip the entire workflow-install phase and still report a successful build, leaving every deployed workflow silently stale
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720
+
+**Symptom.** The phase probes `claude --version` and compares against
+`_MINIMUM_VERSION = "2.1.154"`. When a version is detected and is below the minimum, the
+phase prints a `[WARNING]` and `return 0` — deploying nothing. `return 0` is the same
+"files written" count a genuinely no-op build returns, so the overall build reports
+success. Every deployed workflow keeps whatever content it had, indefinitely, while each
+subsequent build says everything is fine. "Stale file cleanup" does not catch it: that
+step looks for orphaned files, not out-of-date ones.
+
+**Evidence.** Observed live. `.leafcutter/workflows/fast-lane-ship.js` was **620 lines
+against 1047 in source** — 427 behind, with `grep -c "pr-reviewer"` returning `0` on the
+deployed copy and `6` on the source. The deployed copy predated PR #485 entirely: no
+review phase, no changelog phase. A fast-lane run launched against it therefore executed
+the pre-#485 lane, resolved a five-AC set instead of one, and built two criteria against
+a superseded spec. Re-running `build.py` from the main checkout in the same environment
+installed the current file immediately, so the source was never the problem.
+
+**Why the same environment behaved differently between runs.** The probe is
+`subprocess.run(["claude", "--version"], timeout=2)` and parses
+`result.stdout.strip().split()[-1]` — the **last** token. On output shaped like
+`2.1.154 (Claude Code)` that yields `Code)`, which fails `Version()` parsing, sets
+`version_known = False`, and takes the documented fail-open path that installs. So the
+fragile parse fails *safe*. The dangerous branch is the one that works: a cleanly parsed
+version below the minimum silently skips. A 2-second timeout on an external binary also
+means the two paths can alternate between runs on the same machine.
+
+**Why it matters beyond this workspace.** A consumer on an older Claude Code gets this
+permanently and invisibly: every `build.py` reports success, and their agents keep running
+whatever workflow scripts were deployed the day the gate started tripping. There is no
+warning at *use* time, only at build time, in a line that reads like an advisory.
+
+**Fix direction.** A skipped mandatory phase is not a successful build. At minimum,
+distinguish "installed 0 because there was nothing to install" from "installed 0 because I
+refused", and make the second non-zero or loudly summarised at the end of the build rather
+than mid-scroll. Better: record the deployed workflow's source revision (the build manifest
+already tracks output mappings) and have the build compare content, so a stale deployed
+file is reported as drift regardless of why it was skipped — the same defence KI-BP-005
+needs for orphans, in its out-of-date form. Also worth fixing the version parse to take the
+first token rather than the last, though note that bug is currently what keeps this
+workspace working.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in its stale form — the deployed tree holds an older
+version of something the source has moved on from.

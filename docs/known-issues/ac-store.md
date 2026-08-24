@@ -413,8 +413,8 @@ false refusals train the operator to bypass it.
 
 - **Severity:** high
 - **Status:** open — no AC authored yet; the semantics question below is the reason
-- **Occurrences:** 12
-- **First seen:** 2026-08-17 · **Last seen:** 2026-08-18
+- **Occurrences:** 15
+- **First seen:** 2026-08-17 · **Last seen:** 2026-08-19
 - **Where:** `scripts/ac_store/mark_ac_done.py`; also reached from
   `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by
   `mark_done_built_acs`
@@ -435,6 +435,14 @@ children, BO-2400f-11, and BO-2400c-1-ii/-iii/-iv was marked done through
 count is what makes the shape clear: this is not an occasional miss, it is the
 guaranteed outcome of every automated done-transition, and the only thing
 currently preventing a store full of unprovenanced dones is somebody noticing.
+
+Three more on 2026-08-19: BO-2600b-1, -1-i and -1-ii, again via
+`mark_ac_done.py --test-root`, again all three landing `implemented_by: []` after
+passing the coverage gate, again filled in by hand. Recorded not because three more
+adds information about the mechanism — it does not — but because the only reason the
+count keeps rising instead of the defect being fixed is that hand-repair is cheap
+enough each time to stay below the threshold at which anyone stops to fix it. That is
+worth being explicit about: the workaround is what is keeping the bug alive.
 
 Worth recording precisely because the gate did its job. Coverage was verified, a
 passing covers-tagged test existed for each — so the failure is not "done was
@@ -586,3 +594,46 @@ authoring time.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that cannot run
 is indistinguishable from one that passes).
+
+---
+
+### KI-ACS-009 — The documented AC-store pre-flight runs a weaker validator than the required CI gate, so a clean local check does not predict CI
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `CLAUDE.md` → "AC-store hygiene — bulk pre-flight", against the
+  `check-ac-schema` pre-commit hook that the required `AC store valid` job runs
+
+**Symptom.** There are two AC validators and they enforce different rules.
+`scripts/ac_store/validate_ac_schema.py` checks the record against the schema. The
+required CI job runs `pre-commit run check-ac-schema`, which additionally enforces
+binding completeness, field preservation (ACS-500f-1) and derived-field rules such as
+`declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight section prescribes only the
+former. Running it and seeing `OK: all N AC YAML files are valid` therefore establishes
+much less than it appears to, and the gap is invisible because both are called "the
+schema validator" in conversation.
+
+**Evidence.** PR #510, 2026-08-19. `find ... -exec validate_ac_schema.py {} +` reported
+all 82 files in the touched folder valid, and every folder-level run during authoring was
+clean. CI then failed `AC store valid` on two of those same files —
+`BO-2400c-1-v.yaml` and `BO-2600b-2.yaml` — both missing `declares_side_effect: true`,
+a rule that had merged from main mid-branch and that the prescribed command does not
+implement. Running `env --chdir=<repo> pre-commit run check-ac-schema --all-files`
+reproduced the failure locally in one command, and confirmed the fix.
+
+**Why it is worth recording rather than just remembering.** The pre-flight exists
+specifically so store violations surface in a batch instead of as a per-commit cascade.
+A pre-flight that runs a strictly weaker check than the gate it is meant to anticipate
+does not do that job, and it is the second defect found in this same CLAUDE.md section —
+the first being the bare-directory no-op now recorded as KI-ACS-001. Both share a shape:
+the documented defence was believed to be equivalent to the enforced one.
+
+**Fix direction.** Change the prescribed pre-flight command to the hook the gate actually
+runs — `env --chdir=<repo-root> pre-commit run check-ac-schema --all-files` — and keep
+`validate_ac_schema.py` only for single-file spot checks where its narrower scope is
+understood. Longer term the two should not diverge silently: either the hook calls the
+script, or the script grows the hook's rules, so there is one answer to "is this store
+valid". Note the hook reads the git **index**, so files must be staged before it can see
+them — an unstaged fix will appear not to work.
