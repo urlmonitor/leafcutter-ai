@@ -1,0 +1,222 @@
+id: GE-125a-2
+components:
+  - security_scanner
+  - commit_guardian
+title: "The four locations the project chose still receive their reduced scrutiny, and still only for the opaque-token rule"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  FIXTURE ROOT USED BY EVERY SCENARIO BELOW. Each scenario builds a throwaway
+  project root, written <root>, that is a directory of its own and contains no
+  part of this repository. Every path in these scenarios is relative to <root>.
+  No fixture may be written anywhere inside this repository's own working tree.
+  That constraint bites hardest here, because these scenarios assert that a file
+  IS exempt: a fixture placed under this repository's own tickets/,
+  docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ would be
+  exempt by way of this repository's list whatever the change under test did, so
+  it would report success while measuring nothing. Every scenario is exercised
+  the way a commit exercises the check — the files are staged in <root> and the
+  credential check runs over that staged set — not by asking the location rule
+  for a verdict on a path, and not by reading the check's own source.
+
+  Given <root> contains tickets/00_inbox/note.md, a written incident note holding
+    one line with a thirty-two-character opaque token whose measured Shannon
+    entropy is 5.17, above the 4.5 threshold, carrying no keyword the keyword
+    rule recognises and no fixed prefix the prefix rules recognise,
+  And no suppression entries are in force,
+  When it is staged and the check runs over the staged set,
+  Then the token is NOT reported for that file,
+  And the run is not blocked on account of that token,
+  Because tickets/ at the top of the project is one of the four locations this
+    project chose, and this criterion changes where the entitlement reaches
+    without changing who is entitled to it.
+
+  Given <root> contains these three further written files, each holding the same
+    token:
+      docs/retrospectives/2026-08-19-retro.md
+      docs/acceptance-criteria/guardrail-engine/GE-999.yaml
+      templates/skills/example-skill/SKILL.md
+  And no suppression entries are in force,
+  When they are staged and the check runs over the staged set,
+  Then the token is NOT reported for any of the three,
+  Because all four chosen locations keep the entitlement, not just the first one,
+    and a change that anchored one name and dropped the other three would satisfy
+    the scenario above on its own.
+
+  Given <root> contains all four chosen-location files above together with
+    src/app.py and leafcutter-web/tickets/app.py, each holding the same token,
+  And no suppression entries are in force,
+  When all six are staged and the check runs over the staged set once,
+  Then the token is reported for src/app.py and for leafcutter-web/tickets/app.py
+    and is not reported for the four chosen-location files,
+  Because the set of entitled locations must come out of this change with exactly
+    the four members it went in with — none removed, and none gained by a folder
+    below the top of the project reusing a chosen name.
+
+  Given <root> contains tickets/00_inbox/incident.md, a written incident note
+    holding four separate lines: the same opaque token, a private-key header
+    line, a cloud-access-key-shaped value, and a quoted twelve-character value
+    assigned to a field named password,
+  And no suppression entries are in force,
+  When it is staged and the check runs over the staged set,
+  Then the opaque token is not reported,
+  And the private-key line, the cloud-access-key value and the password value are
+    all reported for that file,
+  And the run's exit status reports findings present,
+  Because reduced scrutiny at a chosen location has only ever meant the
+    opaque-token rule and never the other rules, and a change to WHERE the
+    entitlement reaches must leave WHAT it removes exactly as it was.
+depends_on:
+  - GE-125a
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001's 'Scope of the exemption, precisely' section is the source for the fourth arm: the entitlement gates ENTROPY_HIGH only, and AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET still fire at these paths. Its first table is the source of the four intended-exempt rows."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is canonical; the deployed copies are build outputs. This control must be run against the built result, or it certifies a source tree nobody ships."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies the angle vocabulary. These are criterion-angle control tests; the four-line arm is a boundary test on the scope of the entitlement."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The preserved entitlement invariant: after GE-125a-1's anchoring change the chosen-location set still has exactly its four members (tickets, docs/retrospectives, docs/acceptance-criteria, templates/skills), and the exemption still removes ENTROPY_HIGH only, leaving AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET firing at those paths. GE-125a-2-i consumes this invariant and settles which repository root the four are measured from."
+expects_from: null
+it_requirements:
+  - "THIS RECORD ADDS NO PRODUCTION CODE. It is a control suite over the behaviour GE-125a-1 delivers. If satisfying it requires a production change, that change belongs to GE-125a-1 or is a defect in it — do not implement new behaviour under this record."
+  - "NOT ADMISSIBLE AS EVIDENCE THAT GE-125a-1 LANDED, and this is a hard instruction to whoever runs the gates. All four arms are GREEN ON ARRIVAL by design: at these four paths today's behaviour is already the wanted behaviour. A red-baseline check must therefore NEVER be satisfied by this record — a green run here says only that the entitlement has not been destroyed, never that anchoring was implemented. Take the red baseline for this L1 from GE-125a-1's reused-name arms. Symmetrically, GE-125a-1 is not evidence that the entitlement survived."
+  - "CLOSE AS A PAIR WITH GE-125a-1. Neither record may be marked done while the other is unfinished. The cheapest wrong implementation of this L1 narrows the entitlement to nothing, which passes every arm of GE-125a-1 and is indistinguishable from deleting the reduced scrutiny; this suite is the only thing that catches it. Per the AC-store commit convention, stage the parent GE-125a alongside both children when their work_status changes."
+  - "NOTHING HERE SHOULD EVER GO RED. If any arm of this record goes red at any point during implementation, that is the over-narrowing failure occurring in real time — stop and treat it as a blocker on GE-125a-1, not as a test to be adjusted. Do not weaken or delete an arm of this control to make a GE-125a-1 change pass."
+  - "THE FIXTURE TRAP IS AT ITS SHARPEST ON THIS RECORD, because these arms assert that a file IS exempt. A fixture written under this repository's own tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ would be exempt by way of THIS repository's list no matter what the change under test did — it would report success while measuring nothing, which is the exact false-green this control exists to prevent. Every fixture must live in a throwaway tempfile-backed root that is the scenario's own project root."
+  - "EVERY CHOSEN-LOCATION FIXTURE MUST STAY A WRITTEN FILE (.md, .yaml). Do not add an executable fixture to 'strengthen' this record: GE-125b is heading for the answer that an executable file at a chosen location LOSES the entitlement, so an assertion here that a .py under templates/skills/ stays exempt would freeze the behaviour its sibling exists to change and the two would collide. Every fixture here is prose so that every arm stays true both before and after GE-125b lands."
+  - "CREDENTIAL FIXTURES ARE ASSEMBLED AT RUNTIME FROM FRAGMENTS, following unit_tests/commit_guardian/test_scan_secrets_suppression.py, and this applies with extra force to the fourth arm's three additional shapes. A private-key header and a cloud-access-key-shaped value are the two highest-signal detectors in the scanner; committing either as a source literal would require suppressing them on a real source file, creating a genuine blind spot in the file most likely to accumulate credential-shaped data. This tree must need no allowlist entry at all."
+  - "IN THE FOURTH ARM, EACH OF THE FOUR LINES MUST PRODUCE EXACTLY ONE FINDING FROM EXACTLY ONE RULE. Verify no cross-triggering: the password line's quoted value must be long enough for GENERIC_SECRET but short enough to stay under the 4.5 entropy threshold, or the arm cannot distinguish 'entropy suppressed' from 'entropy fired via another line'. Assert on the rule identifiers reported, not merely on the finding count."
+  - "EXECUTE THE CHECK, and against the BUILT result. Drive the real multi-file entry point over real files with the prose post-filter applied as the pre-commit consumer applies it. A grep of check_secrets.py for the four chosen names would pass whether the entitlement still applied or not, which is precisely the distinction this record exists to make. Run `python scripts/build.py --target-dir .` first for any assertion about deployed behaviour."
+  - "THE EXIT-STATUS ASSERTION IN THE FOURTH ARM MUST RUN A PROCESS — the command-line entry point in a fresh subprocess with the throwaway root as working directory. Note it is green on arrival for a trivial reason (the three non-entropy findings already make the run exit non-zero), so it is a reachability guard and nothing more."
+  - "Error-handling policy per CLAUDE.md applies to any test helper that performs I/O: specific exception types, no bare except, no silently swallowed error."
+test_spec:
+  - name: test_tickets_at_project_root_still_exempts_the_opaque_token
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "CONTROL, GREEN ON ARRIVAL. tickets/00_inbox/note.md in a throwaway root, holding a runtime-assembled 5.17-entropy token, yields no ENTROPY_HIGH finding and does not block the run. Fails only if the anchoring change destroyed the entitlement it was supposed to preserve."
+  - name: test_all_four_chosen_locations_still_exempt_the_opaque_token
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "CONTROL, GREEN ON ARRIVAL. docs/retrospectives/2026-08-19-retro.md, docs/acceptance-criteria/guardrail-engine/GE-999.yaml and templates/skills/example-skill/SKILL.md are all unreported. Catches an implementation that anchored the first chosen name and dropped the other three — which the single-location arm alone would not."
+  - name: test_entitled_set_has_exactly_four_members_after_the_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "CONTROL, MIXED RUN, PARTLY GREEN ON ARRIVAL. All four chosen-location fixtures plus src/app.py and leafcutter-web/tickets/app.py staged together in one invocation: the four are exempt and the two are reported. The exempt half is green today; the leafcutter-web/tickets/app.py half is RED today and is the one assertion in this record that moves when GE-125a-1 lands — it is duplicated from GE-125a-1 to keep the no-members-gained half of the invariant inside the control, and must not be cited as this record's own evidence."
+  - name: test_entitlement_removes_only_the_opaque_token_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "CONTROL, GREEN ON ARRIVAL. tickets/00_inbox/incident.md carrying four runtime-assembled lines yields no ENTROPY_HIGH finding but does yield PRIVATE_KEY, AWS_KEY and GENERIC_SECRET findings, asserted by rule identifier and one finding per line; the CLI run exits non-zero. Catches a change that anchored the match and, in passing, widened the entitlement to every rule."
+test_rationale: |
+  READ THIS BEFORE ANY GATE DECISION ABOUT THIS RECORD. Three of the four
+  descriptors are GREEN ON ARRIVAL by design and the fourth is split. That is not
+  a gap in the contract, it is the contract: at these four paths the current
+  behaviour is already the wanted behaviour, so a control's job here is to fail if
+  the change goes too far, never to demonstrate that the change happened. It
+  follows that this record is NOT ADMISSIBLE as evidence that GE-125a-1 landed, and
+  a red-baseline or TDD-order gate must never be satisfied by a green run of this
+  suite. The red baseline for this L1 comes from GE-125a-1's reused-name arms.
+  Symmetrically, GE-125a-1 is not admissible as evidence that the entitlement
+  survived. The two must be read, and closed, as a pair.
+  The one exception is the third descriptor, which is deliberately split: its
+  four-exempt half is green today, while its leafcutter-web/tickets/app.py half is
+  red today because that path is measured EXEMPT in KI-SEC-001. That half is
+  carried over from GE-125a-1 on purpose, so that the no-members-gained side of the
+  four-member invariant is asserted inside the control rather than only across
+  siblings. It is still GE-125a-1's evidence, not this record's — do not cite it
+  here.
+  WHY THE CONTROL IS NEEDED AT ALL: the cheapest wrong implementation of this L1
+  narrows the entitlement to nothing. That passes every measured row of GE-125a-1,
+  closes the reported symptom, and is indistinguishable from deleting the reduced
+  scrutiny outright — which brings back the false positives GE-123d exists to
+  remove, and with them the pressure that makes people write suppressions. Only
+  this suite can tell the two apart.
+  THE FOURTH DESCRIPTOR IS THE SECOND HALF OF THE CONTROL. Preserving WHO is
+  entitled is not the same as preserving WHAT the entitlement removes. A change
+  that anchored the match at the project root and simultaneously widened the
+  exemption from ENTROPY_HIGH to every rule would pass the first three descriptors
+  while opening a hole far larger than the one it closed. It asserts on rule
+  identifiers rather than finding counts, because a count can be satisfied by the
+  wrong rule firing twice.
+  EVERY FIXTURE IS PROSE, deliberately and permanently. GE-125b is heading for the
+  answer that an executable file at a chosen location loses the entitlement; an
+  executable fixture here would freeze the behaviour that sibling exists to change.
+  Keeping every fixture prose is what makes all four arms remain true after GE-125b
+  lands as well as before.
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24): assigned python-coder, complexity S (a control suite that adds no production code — the work is four prose fixtures in a throwaway root plus the four-shape fourth arm). Authored it_requirements making the green-on-arrival status a hard gate instruction: not admissible as a red baseline for GE-125a-1, close-as-a-pair with GE-125a-1, and nothing here should ever go red (a red arm is the over-narrowing failure, not a test to adjust). Also pinned the sharpened fixture trap for assert-exempt scenarios, the keep-every-fixture-prose rule protecting the GE-125b boundary, runtime-assembled credential fragments with extra force on the private-key and cloud-key shapes, one-finding-per-line non-cross-triggering with assertions on rule identifiers, execute-the-check against the BUILT result, and the subprocess exit-status rule. Added four doc_links; set delivers_to to the preserved-entitlement invariant GE-125a-2-i consumes. Authored a 4-entry test_spec plus test_rationale stating the admissibility rule first and flagging the third descriptor as split. criteria, depends_on, covered_by, priority, work_status and notes unchanged."
+superseded_by: null
+covered_by:
+  - GE-125a-2-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE MANDATORY CONTROL, NOT OPTIONAL HARDENING. The cheapest wrong
+  implementation of this L1 narrows the entitlement to nothing: it makes every
+  measured row of GE-125a-1 pass, closes the reported symptom, and is
+  indistinguishable from deleting the reduced scrutiny outright. The L1's own
+  notes name the consequence — the false positives GE-123d exists to remove come
+  straight back, and the pressure that makes people write suppressions comes back
+  with them. Without this record the change cannot be told apart from a deletion,
+  so GE-125a-1 and this one must be read, and closed, as a pair.
+
+  ALL FOUR ARMS ARE GREEN ON ARRIVAL, AND THAT IS THE POINT. Say it plainly so a
+  later red-baseline check does not misread this record as untested or as
+  evidence that the change landed. At these four paths the current behaviour is
+  already the wanted behaviour; nothing here is red today and nothing here should
+  ever go red. A control's job is to fail if the change goes too far, so this
+  record earns its place by what it forbids, not by what it demonstrates. It is
+  therefore not admissible as proof that GE-125a-1 landed, and GE-125a-1 is not
+  admissible as proof that the entitlement survived.
+
+  WHY EVERY CHOSEN-LOCATION FIXTURE IS A WRITTEN FILE, deliberately. GE-125b
+  governs whether an executable file at a chosen location keeps the entitlement,
+  and the answer it is heading for is no. If this record asserted that an
+  executable file under templates/skills/ stays exempt, it would freeze the
+  behaviour its sibling exists to change and the two would collide. Every fixture
+  here is prose, so every arm stays true after GE-125b lands as well as before.
+  Do not add an executable fixture to this record to "strengthen" it.
+
+  THE FOURTH ARM IS THE SECOND HALF OF THE CONTROL. KI-SEC-001 states the scope
+  precisely — the entitlement gates the opaque-token rule only, and the keyword
+  and fixed-prefix rules still fire at these paths. A change that anchored the
+  match at the top of the project and, in passing, widened the entitlement to
+  every rule would pass the first three arms while opening a hole far larger than
+  the one it closed.
+
+  FOR THE IT PO. The token must be assembled at runtime from fragments rather
+  than written as a source literal, for the reason recorded on GE-125a-1, and the
+  three additional credential shapes in the fourth arm carry the same constraint
+  and more sharply. Per this repository's standing rule for gate and hook
+  criteria, every arm must EXECUTE the check: a grep of the check's source for
+  the four chosen names would pass whether the entitlement still applied or not,
+  which is the one thing this record exists to distinguish.

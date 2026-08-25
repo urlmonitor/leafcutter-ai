@@ -1,0 +1,221 @@
+id: GE-125
+title: "Every file that could hold a credential is actually looked at"
+component: guardrail-engine
+components:
+  - security_scanner
+  - commit_guardian
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No file loses credential detection because of where it sits.
+
+  The check that stops a credential reaching the project's permanent history
+  currently stops looking at some files entirely, and decides which ones by
+  their location rather than by what is in them. The credentials it stops
+  looking for are the ones with no recognisable shape — the modern, opaque kind
+  a service hands you — so the protection that is switched off is the only
+  protection those values ever had. Nothing is said when this happens, so a
+  clean result and an unexamined file look identical. After this goal, the
+  reduced scrutiny applies only where it was meant to and only to material that
+  cannot execute, it is applied one finding at a time rather than to whole
+  files, and wherever it applies you are told.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 is the measured record this goal exists to close, including the entropy figure, the six-path exemption measurement, the not-root-anchored finding and the three-part fix direction. Read it before decomposing; do not restate its measurements at a higher confidence than it records them."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: related
+    status: exists
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123.yaml
+    relationship: context
+    status: exists
+    relevance: "Sibling goal, deliberately NOT the parent. GE-123 governs what an AUTHOR-WRITTEN suppression line may do to a check. This goal governs an exemption nobody wrote — one compiled into the check itself. See the ADD-VS-CREATE note below. Neither may be closed as a duplicate of the other."
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-125a
+  - GE-125b
+  - GE-125c
+  - GE-125d
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  ADD-VS-CREATE — a NEW root L0 was chosen over GE-123e under GE-123.
+    GE-123e was the serious alternative and it was verified free and
+    mechanically available before being rejected: GE-123 holds 4 L1s of 7, and
+    no guard test freezes the GE-123 folder (unlike GE-120, checked and
+    rejected below). It was rejected on four grounds, in descending weight.
+
+    1. DIFFERENT SUBJECT, NOT A NARROWER ONE. GE-123's promise is about what an
+       AUTHOR-WRITTEN line may do: "a suppression is a scalpel and it currently
+       behaves like a switch." All three of its recorded evidence items are
+       defects in lines a person wrote — an entry that collapses a file's
+       coverage, an entry whose comment lands in the wrong field, an entry
+       written because of a false positive. This defect has no author and no
+       line. It is an exemption compiled into the check itself, present from the
+       day the check shipped, that no user asked for and no user can see. The
+       benefit to fix is not "my suppression behaves" but "the tool examines
+       what it claims to examine." Filing it as GE-123e would silently widen
+       GE-123's subject from suppression conduct to any mechanism that removes
+       coverage — after nineteen L2/L3 descendants have already been written
+       against the narrower reading.
+
+    2. IT WOULD MAKE THE EXISTING FENCES WEAKER, WHICH IS THE ONE THING THIS
+       RECORD MUST NOT DO. Six GE-123 records fence this defect as out of scope,
+       most sharply GE-123d-4-i and GE-123d-3: "That defect is explicitly OUT OF
+       SCOPE here. Do not repair it, do not widen it, and do not let this AC be
+       closed as a duplicate of it." A fence between two goals is structural — a
+       reader resolving it lands somewhere else and stays there. The same fence
+       between two L1 siblings under one L0 is advisory, and it has to survive
+       the one operation this repository has documented itself failing at:
+       closing a composite parent while children are unfinished. Twenty
+       composites in this store were found marked done over unfinished children
+       on 2026-08-18. If this defect were GE-123e, marking GE-123 done would
+       sweep it, and the fence would have been defeated by a roll-up rather than
+       by anyone disagreeing with it. As a separate L0, that is not reachable.
+
+    3. THE SEQUENCING RUNS THE WRONG WAY FOR A SIBLING. KI-SEC-001 states this
+       hole "should be fixed first so the new work is not built on top of it" —
+       the new work being GE-123d's proposed widening of prose exemption to the
+       generic-credential rule. A prerequisite of GE-123d cannot sit beside
+       GE-123d as a peer child of the same goal without obscuring which gates
+       which. Note the ordering claim is recorded here and in GE-125b's notes
+       only. Do NOT add a depends_on edge from any GE-123 record to this tree:
+       that would edit the fenced tree, and the fences are dated records of a
+       decision.
+
+    4. THE CUT NEEDS FOUR L1s AND ONE OF THEM IS NOT A GE-123 THESIS. GE-123 has
+       three L1 slots left, so four children would have forced a re-cut to fit a
+       cap — the exact "do not re-cut at L1" failure its own notes warn about.
+       More substantively, GE-125d (the check states where it looked less) is a
+       visibility promise, not a suppression promise; GE-123 contains no L1 of
+       that shape and would have acquired a third thesis to hold it. Capacity is
+       the tiebreaker here, not the argument.
+
+  GE-120 WAS ALSO CONSIDERED AS PARENT AND IS MECHANICALLY FORBIDDEN.
+    "Trust that a green check actually checked something" is semantically close
+    — a scanner reporting clean for a file it never entropy-scanned is green
+    without having checked. Rejected twice over. Mechanically:
+    unit_tests/commit_guardian/test_ge_122e_1.py asserts the
+    GE-120-green-means-checked folder is byte-identical to origin/main, so
+    neither a new child file nor an appended covered_by entry is possible
+    without turning that guard red; and every GE-120a..e is already at the
+    5-child L2 cap. Semantically: GE-120 is about a check that CANNOT run —
+    a missing helper, an unresolvable config, an unbuilt workspace. This check
+    runs perfectly and DECLINES to look, by policy, on purpose. That is a
+    different defect with a different fix. This is the third consecutive time in
+    this component that the semantically obvious parent turned out to be frozen
+    or capped; the standing advice to check guard tests over a candidate parent
+    BEFORE choosing it held again.
+
+  IDENTIFIER — WHY GE-125 AND NOT GE-124. GE-124 has no file but is cited in
+    GE-118c.yaml, in this component's PROJECT_CONTEXT.md and in
+    docs/known-issues/ac-driven-dev.md as the number that was REJECTED for the
+    GE-118c move. Under ADR-029's both-tests rule a citation makes a number
+    taken, and a reissued GE-124 would resolve those three passages to a live
+    record they were written to exclude. GE-125 was verified free on both tests
+    on 2026-08-19 — no file, no citation anywhere under docs/, tickets/,
+    templates/ or unit_tests/. Per this component's standing rule, re-verify at
+    MERGE time rather than trusting this sentence: three duplicate identifiers
+    were minted across this store on 2026-08-18 by checking free-ness while
+    writing.
+
+  EVIDENCE, WITH CONFIDENCE LABELS (carry them through; do not upgrade them).
+    All of the following is DIRECTLY MEASURED and recorded in KI-SEC-001, run
+    through the real exemption logic rather than reasoned from the source.
+    - The rule that is switched off is the ONLY rule that catches an opaque
+      credential. The keyword rule needs a recognisable keyword and the
+      fixed-prefix rules need a recognisable prefix; a modern service token has
+      neither. So the exempted class is not "one of five checks" — for that
+      class of value it is the whole of the protection.
+    - The exemption is granted to WHOLE FILES, per the check's own comment.
+    - The location match is a substring test, so the four intended directory
+      prefixes behave as four directory NAMES matching at any depth in any
+      subtree. Measured exempt and not intended: a path under this repository's
+      own web directory, a path under a vendored dependency, and a nested copy
+      of the skill-prompt area. Measured reported: an ordinary source path.
+    - One of the four intended locations holds executable Python, including the
+      secrets scanner's own script. A credential pasted there is unreported by
+      the tool that exists to catch it.
+
+  VERIFICATION STANDARD FOR THIS TREE — load-bearing, and unusual here.
+    A test fixture placed under any path containing one of the four names
+    MEASURES THE EXEMPTION RATHER THAN THE SCANNER, and passes for the wrong
+    reason. This is not hypothetical: it is already called out as a hard
+    technical requirement in two GE-123 subtrees for exactly this reason. Every
+    L2 in this tree must therefore state the repository-relative path of each
+    fixture explicitly and justify it, and must be exercised through the path a
+    real commit takes rather than by calling the exemption logic directly. A
+    green test whose fixture location was not deliberately chosen is not
+    evidence for anything in this tree.
+
+  DOCUMENTATION TRIGGERS — DISCHARGE THEM ONCE, NOT FOUR TIMES. All four L1s
+    carry reference-doc, and each independently needs it: the currently written
+    description of when this check looks less is wrong after any one of them
+    lands. They should be satisfied by a SINGLE consolidated rewrite of that
+    reference material, not four separate documents. Say so at L2.
+
+  DOCUMENTATION TRIGGERS — ADJUDICATED 2026-08-19, AFTER DECOMPOSITION. The four
+    L1s were decomposed concurrently by four separate agents, and each authored a
+    documentation L2: GE-125a-3, GE-125b-4, GE-125c-4, GE-125d-5. All four flagged
+    this as a collision they could not resolve alone and asked that it not be
+    settled by deleting a sibling's record.
+
+    RESOLUTION: all four are KEPT. No record is superseded. They are not four
+    claims on one artifact — they are four different content requirements for one
+    passage, and each independently forbids a second home for the statement:
+      - GE-125a-3  the four locations, recognised at the top of the project; a
+                   folder below that reuses one of those names is scanned in full
+      - GE-125b-4  reduced scrutiny is granted only by BOTH conditions together,
+                   a named location AND an admitted file kind
+      - GE-125c-4  decided one result at a time, no file set aside as a whole,
+                   judged on the value rather than the shortened copy
+      - GE-125d-5  exactly one section, parity with the check's own answer about
+                   what it declines to examine, and never describing a planned
+                   narrowing as though it had landed
+    Three of the four already frame their contribution as an amendment rather than
+    a document of their own; the fourth (GE-125d-5) asserts the one-section rule
+    for the whole goal. Superseding three of them would discard three content
+    requirements to remove a conflict that is not there.
+
+    WHAT WAS ACTUALLY MISSING is build ORDER, and it follows from a premise
+    correction measured during decomposition (see GE-125a-3 notes): the L0 above
+    says the current description "is wrong after any one of them lands". It is not
+    wrong — templates/skills/security-scanner/SKILL.md contains NO description of
+    the reduced scrutiny at all. The reference is wrong by OMISSION. There is no
+    passage to amend, so the first of the four to be built must CREATE it and the
+    other three amend what it created. Left to the IT PO to express as a sequencing
+    constraint; deliberately NOT expressed as depends_on edges between the four,
+    because that would couple four L1s to each other's delivery order for a reason
+    that disappears the moment the passage exists.
+
+    ALSO UNRESOLVED, AND A PRODUCT DECISION RATHER THAN A DRAFTING ONE: GE-125b-3
+    fixes the admitted kinds as .md, .yaml, .yml, .txt — matching GE-123d-2 so the
+    two sides stay compatible. Admitting .yaml means this repository's own AC store
+    keeps its exemption and its YAML is never scanned for opaque tokens. That
+    preserves today's behaviour rather than changing it, and removing .yaml would
+    strip an entire intended location's exemption as a side effect. If closing the
+    store was intended, the list shrinks to .md/.txt and GE-125b-1-i's second
+    fixture arm inverts. Do not decide this silently in implementation.
+
+  Authored at the PO stage; L0/L1 only. The BA decomposes to L2/L3 and the
+  IT PO adds the technical constraints. No L2, no test_spec and no
+  it_requirements were written here by design.

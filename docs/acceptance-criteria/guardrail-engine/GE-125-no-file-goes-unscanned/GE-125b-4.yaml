@@ -1,0 +1,222 @@
+id: GE-125b-4
+components:
+  - security_scanner
+  - commit_guardian
+title: "The written description of when this check looks less says that a script is never prose"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reference material that describes the secrets check today presents
+    the reduced scrutiny as applying to whole files at four named locations and
+    says nothing at all about file kind,
+  When the file-kind gate has landed,
+  Then that same reference material states, in one place, that reduced scrutiny
+    for the shapeless-value rule is granted only by both conditions together —
+    one of the four named locations AND one of the four admitted kinds, .md,
+    .yaml, .yml and .txt,
+  And it states that any other kind at those locations is fully checked,
+    including a file with no extension,
+  And it names an executable script inside the skill-prompt area as the worked
+    example, and says that the secrets scanner's own script is checked like any
+    other script,
+  And a reader can decide whether a given file is exempt from what is written
+    there, without opening the check's source,
+  Because the description that exists today is not merely incomplete after this
+    change — it is wrong, and a wrong description of a security control is how
+    this defect survived from the day the check shipped.
+
+  Given the sibling features under this goal each change part of the same
+    description,
+  When any of them lands,
+  Then the change is made by amending this one piece of reference material,
+  And no second document describing when the check looks less is created,
+  Because four separate descriptions of one rule is the condition in which they
+    start to disagree, and a reader who finds the wrong one is worse off than a
+    reader who finds nothing.
+depends_on:
+  - GE-125b
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "THE SURFACE IS `templates/skills/security-scanner/SKILL.md`, AS ONE NEW SECTION BESIDE ITS EXISTING `Allowlist`, `How path matching decides suppression`, `Secrets Detection Rules` and `False Positive Guidance` sections. The criteria promise a reader can answer the question from one place, so the material belongs in one section rather than scattered across those four. `docs/architecture/components/security-scanner.md` describes the same mechanism at component level; if it repeats any part of the rule, point it at the SKILL.md section rather than restating the rule there — a second statement is a second thing to drift."
+  - "THE PREMISE IN THE FIRST GIVEN IS WRONG IN THE SAFE DIRECTION AND MUST BE HANDLED, NOT INHERITED. The criterion says the reference presents reduced scrutiny as applying to whole files at four named locations. It does not: `templates/skills/security-scanner/SKILL.md` contains NO description of the prose exemption at all — verified 2026-08-25, its section list runs Overview, Scripts, CLI Usage, Allowlist, How path matching decides suppression, Secrets Detection Rules, Integration with Pre-Commit, False Positive Guidance, Event Schema. The reference is wrong by OMISSION. There is no passage to amend. Whoever builds this first CREATES the section; there is no failure to report and no missing file to raise."
+  - "SEQUENCING ACROSS THE FOUR DOCUMENTATION RECORDS, AND IT IS DELIBERATELY NOT A DEPENDS_ON EDGE. GE-125a-3, GE-125b-4, GE-125c-4 and GE-125d-5 are four content requirements on ONE passage, all kept by the adjudication recorded in GE-125's notes; none supersedes another. Because the passage does not exist yet, the FIRST of the four to be built creates it and the other three amend what it created. Before writing, check whether the section already exists: if it does, AMEND it; if it does not, CREATE it. No depends_on edges may be added between the four — the ordering constraint disappears the moment the passage exists, and an edge would couple four L1s to each other's delivery order permanently. Do not resolve an apparent collision by deleting a sibling's record."
+  - "THIS RECORD'S SPECIFIC CONTENT OBLIGATION, WHICH IS THE ONE THING NO SIBLING SUPPLIES: reduced scrutiny is granted only by BOTH conditions together — a named location AND an admitted file kind. The section must state the both-conditions rule, enumerate the four admitted kinds `.md`, `.yaml`, `.yml`, `.txt`, state that any other kind at those locations is fully checked INCLUDING a file with no extension, and carry an executable script in the skill-prompt area as the worked example with the secrets scanner's own script named explicitly. Do not delete or weaken a sibling's contribution while adding this one."
+  - "IT MUST DESCRIBE ONLY THE `ENTROPY_HIGH` EXEMPTION AS REPAIRED, AND SAY SO. GE-123d-4-ii separately requires the PROPOSED `GENERIC_SECRET` exemption to be written down. If both land, two descriptions of two different exemptions sit side by side and must be distinguishable by rule and by state of the world. Neither documentation obligation discharges the other. Do NOT describe a planned narrowing as though it had landed, and do NOT edit anything in the GE-123 tree from here."
+  - "OPEN PRODUCT DECISION — DOCUMENT THE LIST AS BUILT AND FLAG THAT IT IS A DECISION, NOT A DERIVATION. Enumerating `.yaml` as admitted means this repository's own acceptance-criteria store keeps its exemption and its YAML is never scanned for opaque tokens. GE-125's notes record that as an OPEN product decision. Write the list exactly as GE-125b-3 implements it and state plainly which locations that admission covers, so a reader can see the consequence. A documentation author must NOT resolve the decision by omitting or adding a kind, and must NOT write prose that implies the store is scanned when it is not."
+  - "PARITY WITH THE CODE IS THE ACCEPTANCE BAR, NOT PLAUSIBILITY. The enumerated kinds and locations must match the constants the check actually reads in `templates/scripts/commit_guardian/check_secrets.py`. A drift guard is required: if the code's admitted-kind set or location list changes and the section does not, a test must turn red. A reader who can decide a file's status from the document and get a different answer from the tool is the failure this record exists to prevent."
+  - "ADR-001 PARITY. `templates/skills/security-scanner/SKILL.md` is the canonical copy. Edit it under `templates/`, then run `python scripts/build.py --target-dir .`; the copies under `.claude/` and `.leafcutter/` are build outputs and must never be hand-edited."
+  - "THE SELF-REFERENTIAL HAZARD IS LIVE AND MUST BE HANDLED WITHOUT AN ALLOWLIST ENTRY. This section describes credential shapes inside a file that sits at a listed location, and the whole point of the change is that admitted prose there stays exempt — so a `.md` file in the skill-prompt area is the one place this text can safely live. Do not paste a real or realistic high-entropy token into it as an illustration; describe the shape. If the section as written would block its own commit, that is a signal to reword rather than to add a `.security-allowlist` entry."
+  - "TIMING. This lands with or after the gate it describes. A reference stating the both-conditions rule while the code still exempts whole files is a wrong description of a security control, which is the exact failure mode the criterion names as how this defect survived from the day the check shipped."
+test_spec:
+  - name: test_reference_states_the_both_conditions_rule_in_one_section
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "templates/skills/security-scanner/SKILL.md contains exactly one section describing reduced scrutiny for the shapeless-value rule, and that section states the grant requires a named location AND an admitted file kind together. Fails today because the file contains no such section at all — the reference is wrong by omission."
+  - name: test_reference_enumerates_the_four_admitted_kinds_and_the_default
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "That section enumerates .md, .yaml, .yml and .txt as admitted, and states that any other kind at a listed location is fully checked including a file with no extension. The default-to-reported statement is asserted separately from the enumeration: a list without it reads as an open list."
+  - name: test_reference_names_the_scanners_own_script_as_the_worked_example
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The section names an executable script in the skill-prompt area as the worked example and states that templates/skills/security-scanner/scripts/scan_secrets.py is checked like any other script. Mirrors GE-125b-2: a general statement about file kinds does not tell a reader the tool's own source is covered, which is the first thing a reader of this section will want to know."
+  - name: test_reference_kind_and_location_lists_match_what_the_code_reads
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Drift guard. The kinds and locations enumerated in the SKILL.md section are compared against the constants the canonical templates/scripts/commit_guardian/check_secrets.py actually reads. Turns red if either side changes without the other — the failure in which a reader decides a file's status from the document and the tool disagrees."
+  - name: test_exactly_one_passage_describes_reduced_scrutiny_across_the_repository
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The second Gherkin arm made mechanical: across templates/skills/ and docs/, exactly one passage describes when the secrets check gives reduced scrutiny. docs/architecture/components/security-scanner.md may reference it but must not restate the rule. Guards the four-documentation-record collision — four content requirements on ONE passage, not four documents."
+  - name: test_reference_section_does_not_block_its_own_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The real SKILL.md, staged in a throwaway repository at its own repository-relative path, passes the pre-commit secrets check with no .security-allowlist entry in force. The self-referential hazard is live: this section describes credential shapes inside a file at a listed location, and the correct resolution of a block is to reword, never to allowlist."
+test_rationale: |
+  Six descriptors, and they are documentation checks against the real file on disk
+  rather than prose review, because the criterion's promise is decidable: a reader must
+  be able to determine whether a given file is exempt from what is written there. That
+  is testable, and the first three descriptors test it clause by clause — the
+  both-conditions rule, the enumeration plus the default-to-reported statement asserted
+  separately (a list without the default reads as an open list), and the worked example
+  naming the scanner's own script.
+
+  The fourth is the one that stops this record decaying into a snapshot. A reference
+  that was accurate when written and silently diverges afterwards is worse than none,
+  because a reader who decides a file's status from it and gets a different answer from
+  the tool has been actively misled. Comparing the document's enumerations to the
+  constants the canonical check reads makes divergence a red test rather than a
+  discovery.
+
+  The fifth makes the second Gherkin arm mechanical. Four documentation records under
+  this goal are four content requirements on ONE passage, and the failure they guard
+  against — four descriptions that start to disagree — is only detectable by a check
+  that counts passages across the repository rather than inspecting one file.
+
+  The sixth covers a hazard the BA could not see: the section describes credential
+  shapes and lives at a listed location, so it can block its own commit. Staging the
+  real file through the check with no allowlist in force pins that the resolution was
+  rewording rather than a suppression entry on the scanner's own skill directory.
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The surface. Verified 2026-08-25: its sections are Overview, Scripts, CLI Usage, Allowlist, How path matching decides suppression, Secrets Detection Rules, Integration with Pre-Commit, False Positive Guidance, Event Schema — there is NO description of the prose exemption, so the reference is wrong by omission and the first of the four documentation records to be built must CREATE the section."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+    relevance: "Repeats part of the mechanism at component level and already cites KI-SEC-001. It may point at the new SKILL.md section but must not restate the rule — a second statement is a second thing to drift."
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 is the measured record of what the description must now be accurate about, including the scope of the exemption (ENTROPY_HIGH only) and the sharp edge (the scanner's own script)."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/skills/security-scanner/SKILL.md is canonical; the .claude/ and .leafcutter/ copies are build outputs and must never be hand-edited."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125b-3
+  contract: "The admitted-kind list exactly as implemented — .md, .yaml, .yml, .txt as a single closed constant with absence meaning fully checked — and the both-conditions rule it forms with the four listed locations. The reference passage enumerates what the code reads, not what was proposed, and a drift guard compares the two."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-25'
+    by: it-po
+    entry: 'Added assigned_agent documentation-expert, estimated_complexity S, ten
+      it_requirements, six test_spec descriptors, test_rationale, five doc_links and an
+      expects_from contract on GE-125b-3; set readiness reviewed. assigned_agent is
+      documentation-expert rather than llm-expert despite the surface living under
+      templates/skills/ — the content is reference documentation about a scanner behaviour,
+      not agent-behaviour prompt text, matching the precedent set on GE-123d-4-ii. The
+      it_requirements name templates/skills/security-scanner/SKILL.md as the surface and
+      record the verified fact that it contains NO description of the prose exemption today
+      (section list checked 2026-08-25), so the criterion first Given is wrong by omission
+      and the first of the four documentation records built must CREATE the section; that
+      sequencing is expressed as a check-then-create-or-amend it_requirement and explicitly
+      NOT as depends_on edges between GE-125a-3, GE-125b-4, GE-125c-4 and GE-125d-5. Also
+      added the OPEN .yaml product-decision fence in documentation form, a code-parity drift
+      guard, ADR-001 canonical-copy parity, and the self-referential hazard constraint that
+      a section blocking its own commit is reworded rather than allowlisted. criteria,
+      title, level, work_status and priority unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  THIS DISCHARGES THE reference-doc TRIGGER ON GE-125b, AND IT IS WRITTEN TO BE
+  DISCHARGED ONCE FOR THE WHOLE GOAL. GE-125 carries the instruction plainly: all
+  four L1s trigger reference-doc, each of them genuinely invalidates the current
+  description, and they are to be satisfied by a SINGLE consolidated rewrite
+  rather than four documents. The second scenario is that instruction written
+  down as an acceptance condition rather than left as advice.
+
+  RECONCILIATION NOTE FOR THE IT PO, AND FOR WHOEVER MERGES THIS TREE. GE-125a,
+  GE-125c and GE-125d are being decomposed concurrently and each carries the same
+  trigger. If a sibling tree has authored an equivalent documentation record,
+  these must be reconciled to ONE record before build rather than built twice —
+  the correct outcome is one documentation criterion for the goal, whichever L1
+  it ends up hanging from, with the other three L1s' triggers noted as discharged
+  by it. Do not resolve that by silently deleting a sibling's record; say which
+  one survives and why.
+
+  WHICH MATERIAL. The description in question is the one that tells a reader when
+  the secrets check gives something less scrutiny than usual — today that is the
+  scanner skill's own rules section, and the component's architecture page repeats
+  part of it. Naming the exact files is left to the IT PO along with the doc_links;
+  what this criterion fixes is that there is exactly one of them afterwards and
+  that it is decidable by a reader.
+
+  THE SCANNER'S OWN SCRIPT IS NAMED IN THE DOCUMENT ON PURPOSE, mirroring
+  GE-125b-2. The worked example is what makes the rule legible; a general
+  statement about file kinds does not tell a reader that the tool's own source is
+  covered, and that is the first thing a reader of this document will want to
+  know.
+
+  FENCE. This document describes the EXISTING shapeless-value exemption as
+  repaired by GE-125b. GE-123d-4-ii separately requires the PROPOSED
+  keyword-rule exemption to be written down. If both land, the two descriptions
+  sit side by side and must be distinguishable — two rules, two exemptions, two
+  states of the world. Neither documentation obligation discharges the other, and
+  nothing in the GE-123 tree may be edited from here.
+
+  NO assigned_agent OR doc_links ARE SET HERE by instruction — this record is
+  behavioural only and the IT PO enriches it. The natural implementer is the
+  documentation surface owner rather than a coder, and the reference-doc trigger
+  on GE-125b is what routes it.
+
+  IT PO RECONCILIATION ANSWER, 2026-08-25. The adjudication in GE-125's notes
+  settles the collision this record flagged: all four documentation records are
+  KEPT, none is superseded, because they are four different CONTENT requirements
+  on ONE passage rather than four claims on one artifact. This record's specific
+  contribution is the both-conditions rule — a named location AND an admitted
+  file kind — together with the enumeration of the four admitted kinds and the
+  worked example naming the scanner's own script. What was actually missing was
+  build ORDER, and it is now expressed as an it_requirement (check whether the
+  section exists; create it if not, amend it if so) rather than as depends_on
+  edges between the four, because the ordering constraint disappears the moment
+  the passage exists.

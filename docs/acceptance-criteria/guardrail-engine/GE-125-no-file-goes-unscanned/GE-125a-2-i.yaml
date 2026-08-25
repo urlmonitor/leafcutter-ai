@@ -1,0 +1,213 @@
+id: GE-125a-2-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "The top of the project is the working copy being committed from, and an undetermined top entitles nothing"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  FIXTURE ROOTS USED BY THE SCENARIOS BELOW. Each scenario builds a throwaway
+  workspace directory, written <ws>, that is a directory of its own and contains
+  no part of this repository, and inside it a secondary working copy of a project
+  at <ws>/worktrees/copy — that copy is the project whose commit is being made
+  and is written <root>. No fixture is written anywhere inside this repository's
+  own working tree: a fixture under this repository's tickets/,
+  docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ would take
+  its verdict from this repository's reduced-scrutiny list rather than from the
+  scenario's, and a scenario about which top of the project is used would then be
+  measuring a third one. Every file below holds one line with the same
+  thirty-two-character opaque token of measured Shannon entropy 5.17, no
+  suppression entries are in force, and every scenario is exercised the way a
+  commit exercises the check — the files are staged in <root> and the check runs
+  over that staged set as part of a commit made from <root>.
+
+  Given <root> contains docs/acceptance-criteria/guardrail-engine/GE-999.yaml and
+    tickets/00_inbox/note.md, both written files,
+  When they are staged and the check runs over the staged set,
+  Then the token is not reported for either,
+  Because both sit at locations this project chose, measured from the top of the
+    working copy the commit is being made from — and the enclosing workspace
+    above that copy is not the top of anything the project chose. Were the
+    enclosing workspace used instead, both files would sit below a segment named
+    worktrees, neither would be a chosen location, and every acceptance-criterion
+    file and every ticket in every secondary working copy would begin reporting a
+    credential.
+
+  Given the same <root> also contains src/vendor/tickets/handler.py,
+  When it is staged in the same run as the two files above,
+  Then the token is reported for it while the two files above stay unreported,
+  Because the anchor being the working copy is not the same as everything in a
+    secondary working copy being entitled; the reused-name folder inside that
+    copy loses the entitlement exactly as it does anywhere else.
+
+  Given the same three files and the same staged set,
+  When the check is run again with the current directory set to <root>/src rather
+    than to the top of the working copy,
+  Then all three files receive the same verdicts as in the two scenarios above,
+  Because where the author happened to be standing when they committed is not the
+    top of the project, and a verdict that moves with the current directory means
+    the same commit is checked differently depending on which folder it was made
+    from.
+
+  Given a <root> in which the top of the project cannot be determined at all,
+  And <root> contains tickets/00_inbox/note.md holding the same token,
+  When it is staged and the check runs over the staged set,
+  Then the token is reported,
+  Because with no top to measure from, no location can be shown to be one the
+    project chose, and the only safe direction is to report. Treating an
+    undetermined top as though every location qualified would hand the
+    entitlement to the whole working copy in exactly the circumstances nobody is
+    watching.
+depends_on:
+  - GE-125a-2
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records that the prose exemption is a substring test over the whole path string — which is why it performs NO root resolution at all today, and why the root question in this record cannot be measured against current behaviour. See the inference note in it_requirements."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+    relevance: "Its known-constraints section records the measured trap: the hook computes its project root from the resolved .leafcutter symlink target and therefore reads the WORKSPACE-ROOT .security-allowlist rather than the worktree's own. That measurement is for the allowlist path only."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is canonical; the deployed copies are build outputs. Relevant here because the symlinked deployed layout is the very mechanism that produces the wrong root."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies the angle vocabulary. The real-artifact angle applies to the requirement that the secondary working copy be a genuine one rather than a lookalike."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-125a-2
+  contract: "The four chosen locations that keep their reduced scrutiny — this record settles which top of the project they are measured from, and what happens when there is none."
+it_requirements:
+  - "THE WORKSPACE-ROOT CARRY-OVER IS AN INFERENCE, NOT A MEASUREMENT, AND MUST NOT BE PROMOTED TO FACT. What IS measured, and recorded in docs/architecture/components/security-scanner.md and in CLAUDE.md, is that the hook resolves .security-allowlist from the workspace root rather than the worktree, because it computes its project root from the resolved .leafcutter symlink target. That measurement covers the ALLOWLIST path only. It is NOT measured for the prose-exemption path, and it CANNOT be measured against current behaviour: per KI-SEC-001 the exemption is the substring test ('/' + prefix) in path_str, which resolves no root whatsoever, so there is no root-resolution behaviour on that path to observe today. The inference is therefore a DESIGN CONSTRAINT ON THE FIX rather than an observation of a defect: the root-resolution helper that the allowlist path uses is in reach of the anchoring change, and reusing it would import the measured wrong-root behaviour into a code path that never had it. Treat this as the hazard to design against, and record the measurement only once the anchoring change exists to measure."
+  - "DO NOT REUSE THE ALLOWLIST'S ROOT-RESOLUTION HELPER FOR THE PROSE EXEMPTION. Whatever computes the project root for the segment comparison must resolve the working copy the commit is being made from — not the resolved .leafcutter symlink target, and not the enclosing workspace. If a shared helper is used, its wrong-root behaviour must be fixed first or a separate resolver introduced; silently inheriting it converts the cheapest fix in this goal into a repository-wide false-positive event in which every acceptance-criterion file and every ticket under a secondary working copy starts reporting a credential."
+  - "THE FIRST MEASUREMENT OBLIGATION IS ON THE IMPLEMENTER, NOT ON THIS RECORD. Immediately after the anchoring change lands, run the first scenario against a real secondary working copy and record the observed root in the ticket. That is the point at which the inference above becomes measurable, and the result must be written down whichever way it falls."
+  - "THE SECONDARY WORKING COPY MUST BE A REAL ONE, made the way this project makes them (git worktree add, with the deployed layout established as a real install does it), not a directory tree that merely looks like one. This is the BA's constraint and it is the crux of the record: the trap being guarded is about HOW the top is resolved, and a hand-built lookalike may resolve by a different route than the real thing — passing while the real case fails. In particular the .leafcutter path must be present in whatever form a real install produces, since that is the mechanism that yields the wrong root."
+  - "THE ROOT MUST NOT BE DERIVED FROM THE PROCESS WORKING DIRECTORY. The third arm is the guard: running the check from <root>/src must produce identical verdicts to running it from <root>. A resolver that walks up from os.getcwd() satisfies the first two arms and fails this one, and it means the same commit is checked differently depending on which folder the author happened to be standing in."
+  - "THE ROOT MUST NOT BE DERIVED FROM THE CHECK'S OWN __file__ EITHER — that is exactly the mechanism producing the measured allowlist defect, and under the deployed symlinked layout it resolves to the workspace parent. Derive it from the repository the staged set belongs to."
+  - "UNDETERMINED ROOT MUST FAIL CLOSED — report, never exempt. This is a security default and it must be explicit in the code rather than an accident of a None comparison. Per the CLAUDE.md error-handling policy: catch the specific exception the resolution failure raises, log it at WARNING or higher so the condition is not silent, and then report. Never a bare except, never a silently swallowed error, and no try/except wrapped around the pure segment-comparison function itself."
+  - "SCOPE FENCE WITH GE-125d, held deliberately. This record settles only the VERDICT when the root cannot be determined. Whether the check ANNOUNCES that it could not determine the root, and where, belongs to GE-125d. Log at WARNING for operability as the error-handling policy requires, but do not build an announcement surface here and do not let GE-125d be closed against this record."
+  - "SCOPE FENCE WITH GE-120b, held deliberately. GE-120b is about a check that SKIPS its work in one working copy and does it in another. Here the check runs to completion and reaches a different verdict because it measured from a different place. Same symptom family, different cause; do not close either as a duplicate of the other."
+  - "CANONICAL SOURCE, ADR-001, AND THE BUILD IS LOAD-BEARING HERE. Edit templates/scripts/commit_guardian/check_secrets.py and run `python scripts/build.py --target-dir .` before testing. This record is the one where testing an unbuilt source tree is most misleading: the wrong-root behaviour arises FROM the deployed symlinked layout, so a test against the source tree cannot reproduce it at all."
+  - "THE FIXTURE TRAP, COMPOUNDED. Every fixture lives inside <ws>, a throwaway tempfile-backed workspace containing no part of this repository. A fixture inside this repository would take its verdict from this repository's list — and in a record specifically about WHICH root is used, that would mean measuring a third root entirely. Credential fixtures are assembled at runtime from fragments per unit_tests/commit_guardian/test_scan_secrets_suppression.py; no source literal and no allowlist entry."
+  - "EXECUTE THE CHECK as part of a commit made from <root>, not by calling the root resolver directly. The entire subject is which root the real invocation path arrives at, and a direct call to the resolver lets the test choose the answer."
+test_spec:
+  - name: test_chosen_locations_in_a_secondary_working_copy_stay_exempt
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "In a real secondary working copy at <ws>/worktrees/copy created the way this project creates them, docs/acceptance-criteria/guardrail-engine/GE-999.yaml and tickets/00_inbox/note.md holding a runtime-assembled 5.17-entropy token are both unreported. Fails if the root resolves to the enclosing workspace, under which both sit below a worktrees segment and neither is a chosen location. Tagged real_artifact because a hand-built lookalike worktree may resolve by a different route and pass while the real case fails."
+  - name: test_reused_name_inside_a_secondary_working_copy_is_still_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "src/vendor/tickets/handler.py inside the same secondary working copy, staged in the same run as the two chosen-location files, is reported while those two stay unreported. Separates 'the anchor is the working copy' from 'everything in a secondary working copy is entitled'."
+  - name: test_verdicts_do_not_move_with_the_process_working_directory
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The same three files and the same staged set, checked once from <root> and once with the current directory set to <root>/src, produce identical verdicts. Fails any resolver that walks up from os.getcwd() — which would satisfy the two descriptors above."
+  - name: test_undetermined_root_reports_rather_than_exempts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "In a root where the top of the project cannot be determined at all, tickets/00_inbox/note.md holding the token IS reported, and the resolution failure is logged at WARNING or higher rather than passing silently. The fail-closed default asserted at the entry point, not by inspecting a return value."
+test_rationale: |
+  THE CENTRAL CLAIM OF THIS RECORD RESTS ON AN INFERENCE AND THE CONTRACT IS SHAPED
+  TO KEEP IT LABELLED AS ONE. The workspace-root-rather-than-worktree resolution is
+  MEASURED for the .security-allowlist path and recorded as such in the component
+  architecture doc and CLAUDE.md. It is NOT measured for the prose-exemption path,
+  and it cannot be: per KI-SEC-001 that path is a substring test over the whole path
+  string and resolves no root at all, so there is no root-resolution behaviour there
+  to observe today. The hazard is therefore forward-looking — the wrong-root helper
+  is in reach of the anchoring change — and the descriptors here are written as
+  guards on the fix rather than as reproductions of a current defect. Do not restate
+  the carry-over as a measured fact anywhere downstream.
+  RED-VS-GREEN HONESTY, and it is unusual on this record. The first descriptor
+  PASSES BY ACCIDENT today: the current substring test finds the chosen names in the
+  path whatever the root is, so a green result on today's code proves nothing. It
+  begins doing real work the moment GE-125a-1's anchoring lands, which is precisely
+  when the wrong anchor becomes reachable. Read it as a guard that activates after
+  the parent's change, never as a demonstration of it, and do not admit it to a
+  red-baseline check for GE-125a-1. The fourth descriptor is the only one that is
+  cleanly red-or-absent today, since no fail-closed behaviour exists to exercise.
+  THE THIRD DESCRIPTOR IS THE DISCRIMINATOR and is why the set is four rather than
+  three. A resolver that walks up from the process working directory satisfies both
+  of the first two descriptors — it finds the right root when the check is invoked
+  from the top of the copy — and only differs when the author commits from a
+  subdirectory. That is the common case in practice and produces a verdict that
+  moves with where someone was standing.
+  THE REAL-WORKTREE REQUIREMENT IS THE BA'S AND IT IS LOAD-BEARING. The mechanism
+  under test is how the root is resolved through a deployed, symlinked layout. A
+  directory tree assembled by the test to look like a worktree may resolve by an
+  entirely different route, so it would pass while the real case fails — the same
+  measures-the-wrong-thing failure as the fixture trap, one level up. The first
+  descriptor is tagged real_artifact for that reason, and the suite must be run
+  against a built deployment, because an unbuilt source tree cannot reproduce the
+  symlink route at all.
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24): assigned python-coder, complexity M (real root resolution, a genuine secondary-working-copy fixture, and a fail-closed path). RESOLVED THE BA'S FLAGGED INFERENCE BY KEEPING IT LABELLED AS AN INFERENCE, with the reason recorded: the workspace-root resolution is measured for the .security-allowlist path only, and it cannot be measured for the prose-exemption path today because that path is a substring test resolving no root at all (KI-SEC-001), so there is no behaviour there to observe. Reframed it as a design constraint on the fix — do not reuse the allowlist's root-resolution helper — and placed the first measurement obligation on the implementer immediately after anchoring lands. Authored it_requirements adding: no root from os.getcwd(), no root from the check's own __file__ (the mechanism behind the measured allowlist defect), fail-closed on an undetermined root with a WARNING log per the CLAUDE.md policy, the real-worktree-not-a-lookalike constraint from the BA, the compounded fixture trap, the ADR-001 build step as load-bearing here specifically, and the two scope fences with GE-125d (announcement) and GE-120b (a check that did not run). Added four doc_links. Authored a 4-entry test_spec plus test_rationale recording that the first arm passes by accident today and must not be admitted to a red-baseline check. criteria, depends_on, expects_from, priority, work_status and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE PART OF THE L1 THAT CAN BE GOT WRONG WHILE LOOKING RIGHT. The L1
+  says the chosen places are "identified from the top of the project down", and
+  every scenario in the parent and its siblings assumes one obvious top. This
+  repository has a documented reason not to assume it: the same check resolves
+  its suppression file from the resolved link target under the enclosing
+  workspace rather than from the working copy, so a suppression written in a
+  worktree's own copy is silently ignored. That is recorded in the component
+  architecture doc as a live trap and in this repository's own conventions. The
+  root the check has in reach today is therefore the WRONG one for this purpose,
+  and an anchoring change that reuses it converts the cheapest fix in this goal
+  into a repository-wide false-positive event: every acceptance-criterion file
+  under a secondary working copy would start reporting a credential, and the
+  first repair anyone reaches for under that pressure is to widen the entitlement
+  again.
+
+  ALL FOUR ARMS ARE RED OR UNTESTABLE TODAY, but not for the same reason as the
+  parent's. Today the entitlement is granted by an unanchored text match, so the
+  first arm passes by accident — the chosen names appear in the path whatever the
+  top is. It stops passing by accident the moment anchoring lands, which is
+  precisely when the wrong anchor becomes reachable. Read the first arm as a
+  guard that only starts doing work after the parent's change, not as a
+  demonstration of it.
+
+  BOUNDARY WITH GE-120b, held deliberately and not to be closed as a duplicate.
+  GE-120b is about a check that skips its work in one working copy and does it in
+  another, and reports success either way — the subject there is a check that did
+  not run. Here the check runs, completes, and reaches a different verdict
+  because it measured from a different place. Same symptom family, different
+  cause, and the fix for one does not produce the other.
+
+  BOUNDARY WITH GE-125d. The fourth arm asserts only the VERDICT when the top
+  cannot be determined: nothing is entitled. Whether the check also says out loud
+  that it could not determine the top, and where it says it, belongs to GE-125d
+  and is deliberately not asserted here. Do not read this record as settling the
+  announcement, and do not close GE-125d against it.
+
+  FOR THE IT PO. The secondary working copy must be a real one made the way this
+  project makes them, not a directory that merely looks like one — the trap being
+  guarded is about how the top is resolved, and a hand-built lookalike may resolve
+  by a different route than the real thing and pass while the real case fails.
+  The token is assembled at runtime from fragments, as recorded on GE-125a-1.

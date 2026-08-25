@@ -1,0 +1,207 @@
+id: GE-125d-3
+components:
+  - security_scanner
+  - commit_guardian
+title: "Silence means nothing was withheld, and a run that withheld a great deal still speaks only once"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository whose staged set is 40 files under
+    "docs/acceptance-criteria/guardrail-engine/", every one of them under a
+    location to which the check applies reduced scrutiny — placed there
+    deliberately, because a run over reduced locations that withholds nothing is
+    the exact case this arm exists to pin — and none of them containing any
+    value the check's detection rules would have reported,
+  When the staged set is checked on the path a real commit takes,
+  Then this check writes nothing to the error stream — no header, no zero count,
+    no per-file line — and adds nothing to the output stream,
+  And the machine-readable reduction total for the run is 0,
+  Because reduced scrutiny that withheld nothing is not a gap in anyone's
+    protection, and a line printed on every commit for every prose file is the
+    fastest way to teach a reader to scroll past the one line that mattered.
+    THIS IS THE NEGATIVE CONTROL FOR THE WHOLE L1: without it, a check that
+    prints an unconditional warning satisfies every other criterion here.
+
+  Given a staged set of one file outside every reduced location, "src/app.py",
+    carrying one credential-shaped value that is reported normally, and no file
+    under any reduced location,
+  When the staged set is checked on the path a real commit takes,
+  Then the finding is reported in the way it is reported today and no reduction
+    notice is written on either stream,
+  Because the notice is scoped to the reduction and is not an ornament attached
+    to every run that found something.
+
+  Given a staged set in which 30 files under reduced locations each have at
+    least one finding withheld, 412 withheld in total,
+  When the staged set is checked on the path a real commit takes,
+  Then exactly one notice is written for the whole run: a single header carrying
+    the total of 412 withheld findings across 30 files, then at most 10 per-file
+    lines, then one final line stating how many further affected files are not
+    listed,
+  And no second notice block is written for any further file,
+  And the machine-readable reduction record for the same run still carries all
+    30 files and the full total, so the abbreviation is a display choice and not
+    a loss of information,
+  Because the granularity was chosen deliberately and the rejected forms are
+    worth naming: a paragraph per withheld finding would put hundreds of lines
+    on the error stream of an ordinary documentation commit and reproduce, as
+    noise, the invisibility this L1 exists to remove; one block per file fails
+    the same way more slowly; and announcing every file the reduction APPLIED to
+    regardless of outcome would be louder still in a store holding thousands of
+    prose files. One summary per run, spoken only when something was actually
+    withheld, with a bounded file list and an exact total, is the form that
+    someone still reads on the day it matters.
+
+  Given each of the three runs above,
+  When the run finishes,
+  Then the exit status is decided only by the findings that were reported, and
+    is identical to what it would be if this L1 had never been built,
+  Because the announcement is an audit trail and never an input to the verdict —
+    stated here as well as in GE-125d-1 because it is the property most easily
+    lost when a threshold or a rollup is added later.
+depends_on:
+  - GE-125d
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records which locations are reduced today — the acceptance-criteria store, the ticket tree, the retrospectives and the skill prompts — which is the measurement behind the announce-on-effect decision: an ordinary documentation commit touches dozens of files in those trees and withholds nothing in any of them."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Holds the same genuine-silence rule for the adjacent goal's notice — no header and no zero count when nothing was exempted — and the same one-summary-per-run shape. Cited in prose only: no depends_on edge into the GE-123 tree, and no GE-123 file may be edited."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ANNOUNCE ON EFFECT, NEVER ON APPLICATION. The notice fires only when at least one finding was actually withheld. It must NOT fire because the reduction applied to a staged file. The reduced locations include the acceptance-criteria store, the ticket tree, the retrospectives and the skill prompts, so an announce-on-application implementation would print on nearly every commit in this repository — and a notice printed on nearly every commit is read on none. This is the single decision that separates a useful notice from noise, and it must not be revisited as a configuration option."
+  - "GENUINE SILENCE on a run that withheld nothing: nothing at all on the error stream — no header, no zero count, no per-file line — and nothing added to the output stream. Measured today, main() in templates/scripts/commit_guardian/check_secrets.py already returns 0 before producing any output on such a run; that property must be PRESERVED, not re-achieved by emitting an empty or zero-valued block."
+  - "The human silence here and the always-present machine zero in GE-125d-2 are DELIBERATELY OPPOSITE and both must hold. A person is shown nothing; a caller is always given an explicit total of 0 so that absence is never a reading. This is a resolved tension, not a contradiction — do not print a zero line for symmetry with the record, and do not drop the record for symmetry with the silence."
+  - "ONE notice block per run: never one per file, never one per finding. A single header carrying the exact total and the exact affected-file count, then at most 10 per-file lines, then exactly one remainder line naming how many further affected files are not listed. No second block may be written for any further file, and the remainder line must be omitted when nothing was omitted."
+  - "The 10-line bound and the EXACT total are independent requirements and both are load-bearing. The bound stops a pathological run burying the header; the exact total stops the bound hiding the size of the gap. Do not replace the exact total with a bounded, rounded or approximate one, and do not make the bound configurable in a way that lets a caller turn the summary back into a per-file report."
+  - "Exit status must be decided ONLY by the findings that were reported, and must be identical to what the check decides today on the same input. This is the property most easily lost when a threshold or roll-up is added later: any future change that lets the withheld total influence the verdict — a cap, a ratio, a 'too much withheld' gate — is a regression against this record, not an enhancement."
+  - "The negative control must remain its own arm and must NOT be folded into a sibling as an afterthought clause. An implementation that prints an unconditional warning satisfies every other criterion in this L1; the 40-file reduced-but-clean run is the only arm that fails it."
+  - "Generate the 40-file and 30-file fixtures inside the throwaway repository at test time rather than committing them, and assemble their credential-shaped content at runtime from fragments as unit_tests/commit_guardian/test_scan_secrets_suppression.py does — so the files written into the throwaway repository are byte-identical to real content while no detection rule fires on the test source itself."
+  - "A 30-file, 412-withheld run must add no second pass over file contents and must keep the accounting O(number of findings). The notice must be assembled once per run, not incrementally appended per file, or the one-block guarantee becomes an emergent property of the loop rather than a decision."
+  - "CLAUDE.md error-handling policy applies: the emitter's writes are wrapped in a typed except that logs at WARNING or higher and never silently swallows, and a failure to emit must never change the exit status. The pure decision of whether to speak at all is not I/O and must not be wrapped (Rule 4)."
+  - "ADR-001 parity: edit templates/scripts/commit_guardian/check_secrets.py, then run `python scripts/build.py --target-dir .` and verify the deployed copy. check_hook_parity enforces all four locations; a deployed-copy-only fix is reverted by the next build."
+delivers_to: null
+expects_from:
+  ac_id: GE-125d-1
+  contract: "The notice and the per-file withheld counts it is built from. This record decides when that notice is emitted at all, and what shape it takes when the affected set is large."
+test_required: true
+test_spec:
+  - name: test_forty_reduced_files_withholding_nothing_produce_total_silence
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "40 generated files under docs/acceptance-criteria/guardrail-engine/ in a throwaway repository, none containing anything the detection rules would report, leave both captured streams empty for this check — no header, no zero count, no per-file line — and the machine-readable total is 0. THE NEGATIVE CONTROL FOR THE WHOLE L1: it is the only entry that fails an implementation printing an unconditional warning."
+  - name: test_reported_finding_outside_reduced_locations_produces_no_reduction_notice
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A single src/app.py with one reported credential-shaped value is reported in the existing format and no notice is written on either stream — the notice is scoped to the reduction, not attached to every run that found something"
+  - name: test_thirty_reduced_files_produce_exactly_one_notice_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "412 withheld findings across 30 reduced files yield one header with the exact total 412 and the exact file count 30, at most 10 per-file lines, exactly one remainder line, and no second block anywhere in the stderr buffer"
+  - name: test_remainder_line_is_absent_when_nothing_was_omitted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A run affecting exactly 10 files lists all ten and writes no remainder line; a run affecting 11 lists ten and one remainder line — the bound's own boundary, where an off-by-one is invisible in the 30-file case"
+  - name: test_exit_status_is_unchanged_across_all_three_runs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Each of the three runs exits with exactly the status the check produces for the same input with the announcement removed, proving the notice is an audit trail and never an input to the verdict"
+  - name: test_silence_and_summary_shape_hold_in_the_deployed_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After `python scripts/build.py --target-dir .`, the deployed scripts/commit_guardian/check_secrets.py reproduces both the total silence of the clean reduced run and the one-block shape of the large run"
+test_rationale: "This record's central claim is a negative — that on one class of run nothing is said at all — and a negative is only provable by capturing the real process output of a real run and asserting the buffers are empty. A test over a formatter would assert that a function returned None while an unconditional warning printed elsewhere in main() sailed past, which is precisely the failure the first arm exists to catch. The 40-file entry is therefore the load-bearing entry of the whole L1 and is kept as its own descriptor rather than a clause on a sibling. The remainder-line entry exists because the 30-file case cannot see an off-by-one at the bound: at 10 and at 11 affected files the two behaviours differ by exactly one line, and that is where the bound is actually specified. The exit-status entry compares against the check's present-day verdict on the same input rather than against a hard-coded code, so it keeps holding when a sibling changes what is reported. Fixtures are generated inside the throwaway repository with their credential-shaped content assembled at runtime from fragments, following unit_tests/commit_guardian/test_scan_secrets_suppression.py, so 40 and 30 real files exist for the run while the test source itself trips no rule. Both streams are captured separately throughout, because a merged capture cannot tell silence on stderr from silence overall."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at M. Authored eleven it_requirements. The BA's three decisions are carried in as standing constraints rather than restated rationale: announce on effect and never on application, with the reason recorded so it is not revisited as a configuration option; the deliberate opposition between this record's total human silence and GE-125d-2's always-present machine zero, with an explicit instruction not to harmonise either toward the other; and the non-blocking rule stated as a forward prohibition, since a cap or ratio gate added later is the specific way this property is lost. Measured rather than assumed: main() already returns 0 before producing any output on a run that withheld nothing, so genuine silence must be preserved rather than re-achieved by printing an empty block. Added a one-block assembly constraint so the guarantee is a decision rather than an emergent property of a per-file loop, and a fixture-generation constraint following the runtime-fragment convention in test_scan_secrets_suppression.py. Authored a six-entry test_spec plus test_rationale, including a bound-boundary entry at 10 and 11 affected files that the 30-file arm structurally cannot see. GE-123d-5 is cited in prose and as a doc_link only: no depends_on edge crosses into the GE-123 tree and no GE-123 file was edited. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE THRESHOLD IS A JUDGEMENT AND IT IS MADE HERE RATHER THAN LEFT OPEN, as the
+  L1 requires. Two decisions:
+
+    1. WHEN TO SPEAK — only when at least one finding was actually withheld, not
+       whenever the reduction applied. The difference is enormous in this
+       repository. The reduction covers the acceptance-criteria store, the
+       ticket tree, the retrospectives and the skill prompts; an ordinary commit
+       touches dozens of files in those trees and withholds nothing in any of
+       them. Announcing application rather than effect would print on nearly
+       every commit, and a notice printed on nearly every commit is read on
+       none.
+
+    2. HOW MUCH TO SAY — one summary per run, an exact total, and at most 10
+       per-file lines followed by a count of the remainder. The bound exists so
+       that a pathological run cannot bury the header; the exact total exists so
+       that the bound never hides the size of the gap; and the machine-readable
+       record keeps the complete list for anything that needs it.
+
+  WHY "AT LEAST ONE WITHHELD" IS NOT THE SAME AS "AT LEAST ONE CREDENTIAL". A
+  withheld finding is a value the check would have reported and did not. It may
+  be a false positive. That is precisely why the notice announces rather than
+  blocks, and why the number matters more than any individual line: a total that
+  jumps after a change to the reduced set is the signal, and it is visible even
+  when every individual withheld finding turns out to be benign.
+
+  THIS ARM IS WHAT MAKES THE OTHERS FALSIFIABLE. Every other criterion in this
+  L1 asserts that something is said. Only this one asserts that something is not
+  said, and an implementation that always speaks passes all of them without it.
+  It must not be folded into a sibling as an afterthought clause.
+
+  FIXTURE PLACEMENT, stated as this tree requires, and unusual in the first arm:
+  40 files under "docs/acceptance-criteria/guardrail-engine/" are all under a
+  reduced location ON PURPOSE. The usual trap in this tree is a fixture that
+  accidentally sits under a reduced path and so measures the reduction; here the
+  arm is specifically about a reduced path that withholds nothing, so the
+  placement is the scenario. The second arm's "src/app.py" is outside every
+  reduced location, also on purpose, so that the two silences have different
+  causes and an implementation cannot satisfy both by never printing anything —
+  it is GE-125d-1's positive arm that stops that.
+
+  IT-PO NOTE, 2026-08-24 — THE SILENCE IS THE STATUS QUO AND MUST BE LEFT
+  ALONE. Measured in the canonical copy: main() in
+  templates/scripts/commit_guardian/check_secrets.py returns 0 at the
+  `if not findings` guard before producing any output, so a run over 40 reduced
+  files that withheld nothing is silent today. The risk this record guards is
+  not that the silence is missing but that GE-125d-1's notice is implemented in
+  a way that breaks it — most obviously by emitting a header before the withheld
+  count is known, or by emitting a zero-valued block for symmetry with
+  GE-125d-2's always-present record. Both are ruled out above.

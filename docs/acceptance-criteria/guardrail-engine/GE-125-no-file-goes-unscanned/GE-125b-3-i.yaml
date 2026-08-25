@@ -1,0 +1,188 @@
+id: GE-125b-3-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "Admission is decided from the file's own final extension, read without regard to letter case"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four files are staged for commit in the skill-prompt area of a throwaway
+    git repository, at the repository-relative paths
+    "templates/skills/some-skill/NOTES.MD",
+    "templates/skills/some-skill/notes.md.bak",
+    "templates/skills/some-skill/Makefile",
+    "templates/skills/some-skill/notes.md",
+  And each carries one identical line holding the twenty-four-character opaque
+    token used throughout this tree,
+  And no suppression entries are in force,
+  When the staged set is checked by the pre-commit secrets check,
+  Then exactly two shapeless-value findings are reported — one for
+    "templates/skills/some-skill/notes.md.bak" and one for
+    "templates/skills/some-skill/Makefile",
+  And neither "templates/skills/some-skill/NOTES.MD" nor
+    "templates/skills/some-skill/notes.md" is reported,
+  And the check exits reporting findings present, so the commit is blocked,
+  Because an upper-case spelling of an admitted kind is the same kind; a name
+    whose final extension is not admitted is not admitted however many admitted
+    extensions appear earlier in it; and a name with no extension at all was
+    never on the list.
+
+  Given the same four files are staged from a working copy on a platform whose
+    paths use a different separator,
+  When the staged set is checked by the pre-commit secrets check,
+  Then the same two findings are reported and the same two files are silent,
+  Because a file's verdict must not depend on how the path that reached the check
+    happened to be spelled.
+depends_on:
+  - GE-125b-3
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE. The extraction rule lands in `templates/scripts/commit_guardian/check_secrets.py` beside the admitted-kind constant; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and a deployed-copy-only fix is reverted by the next `python scripts/build.py --target-dir .`. `check_hook_parity` enforces all four locations."
+  - "THE EXTRACTION RULE IS THE FINAL EXTENSION ONLY, CASE-FOLDED, WITH ABSENCE MEANING EXCLUSION — THREE PROPERTIES, ALL FAILING UNSAFE IF LEFT UNSTATED. A containment test (does the name contain an admitted extension) exempts `notes.md.bak`, which is exactly how an editor backup or a credential-bearing file renamed out of the way slips through. A case-sensitive compare reports `NOTES.MD`, which is the safe direction but is a false positive on genuinely prose material and is the kind of surprise that gets an exemption widened carelessly later to make it stop. Treating no-extension as nothing-disqualifying admits every extensionless executable in the tree. There is no third state between admitted and excluded."
+  - "NORMALISE THE PATH BEFORE DECIDING, AND DECIDE ONCE. The second arm is an observable, not an instruction — the BA left the mechanism to this record. The requirement is that one file receives one verdict regardless of how the path that reached the check was spelled: the pre-commit check receives paths from the staged set while the scanner beneath it (`templates/skills/security-scanner/scripts/scan_secrets.py`, `scan_files` / `scan_file`) can be handed paths in other forms, and the same file must not be admitted by one route and checked by the other. Case folding applies to the extension comparison; it must NOT be extended to the location match, where folding would silently widen which directories are entitled."
+  - "OPEN PRODUCT DECISION — INHERITED FROM GE-125b-3 AND NOT REOPENABLE HERE. This record refines HOW the admitted list is matched; it does not change WHICH kinds are on it. The list is `.md`, `.yaml`, `.yml`, `.txt`, and admitting `.yaml` keeps this repository's own acceptance-criteria store exempt from opaque-token scanning — recorded as an OPEN product decision in GE-125's notes. Adding or removing a kind while implementing the extraction rule, including to make one of these arms pass, is forbidden: STOP and raise it as a product question."
+  - "COORDINATION WITH GE-123d-4-i, NOT A MERGE. GE-123d-2 records the same normalisation concern for its own gate. If the extraction rule or the kind constant is ever shared between the existing `ENTROPY_HIGH` exemption and the proposed `GENERIC_SECRET` one, GE-123d-4-i's requirement binds — the gate is applied on both sides or the sharing does not happen. Neither record closes the other. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
+  - "HALF OF THE FIRST ARM IS GREEN ON ARRIVAL AND MUST BE LABELLED AS SUCH IN THE TEST ITSELF. Today every one of these four files is exempt, so `NOTES.MD is silent` and `notes.md is silent` both pass before any change. Only the two REPORTED findings — `notes.md.bak` and `Makefile` — are red today. The test name, its docstring and any red-baseline report must say which halves are which. A passing run of the silent halves must not be counted toward a red baseline and must not be cited as evidence the extraction rule exists."
+  - "THE FOUR-FILE SINGLE-RUN SHAPE IS LOAD-BEARING AND MAY NOT BE SPLIT INTO FOUR TESTS. Location, directory and content are identical across the four fixtures so the only variable is the spelling of the name, and an exact count of two across four files staged together is what shows the decision is made per file from its own name. Four separate single-file runs cannot express that count and would let a per-run decision pass."
+  - "THROWAWAY ROOT, AND ASSERT IT IS NOT ITSELF EXEMPT. All fixtures are real files inside a `tempfile`-backed throwaway git repository with the skill-prompt area constructed INSIDE that root; none may be written under this repository's own `templates/skills/` tree. Because the location match is a substring test (KI-SEC-001), assert as a precondition that the root path above the constructed directory contains none of the four segment names. Pair with GE-125b-3's `scripts/build_probe.py` control so the two silent files are evidence rather than an absence."
+  - "VERIFY BY EXECUTION. Stage the files, run the pre-commit secrets check as a process, and assert the exit status together with the parsed findings and their 1-based line numbers. Calling the extension helper with four strings discharges neither arm: it cannot show the commit was blocked and cannot express the exactly-two-across-four count."
+  - "FIXTURE TOKENS ASSEMBLED AT RUNTIME from concatenated fragments, per `unit_tests/commit_guardian/test_scan_secrets_suppression.py`. No `.security-allowlist` entry may be added for this tree."
+  - "ERROR HANDLING AND PERFORMANCE PER CLAUDE.md. Extension extraction, case folding and set membership are pure over a path string and must NOT be wrapped in try/except (Rule 4). No filesystem access is permitted in the decision — no `stat`, no read — and membership is tested against a module-level frozen set rather than a list rebuilt per call."
+test_spec:
+  - name: test_final_extension_case_folded_decides_admission_two_of_four
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "MIXED RED/GREEN — read the halves separately. Four files in one skill-prompt-area directory of a throwaway root (NOTES.MD, notes.md.bak, Makefile, notes.md) carrying the identical runtime-assembled token and staged together yield EXACTLY TWO findings, naming notes.md.bak and Makefile, with a non-zero exit. The two REPORTED halves are red today and are the evidence the extraction rule landed; the two SILENT halves (NOTES.MD, notes.md) are GREEN ON ARRIVAL because every one of these files is exempt today and must not be counted toward a red baseline."
+  - name: test_verdict_is_independent_of_how_the_path_was_spelled
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The same four fixtures reached through a path spelled with a different separator yield the same two findings and the same two silences — one file, one verdict, whichever route the path took to the check. Guards the seam between the pre-commit check's staged-set paths and the scanner's own scan_files / scan_file entry points."
+  - name: test_compound_suffix_is_not_admitted_by_an_earlier_admitted_extension
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Isolates the unsafe leak with the highest real-world payoff: notes.md.bak — an editor backup, or a credential-bearing file renamed out of the way — IS reported, and so is a .txt.old variant. Red against a containment test (does the name contain an admitted extension), which passes the parent's arms and silently exempts every renamed file."
+  - name: test_no_extension_is_exclusion_not_a_third_state
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Makefile and an extensionless script at the same listed location are both reported. Red against an implementation that treats having no extension to compare as nothing-disqualifying, which would admit every extensionless executable in the tree."
+  - name: test_live_path_control_reported_in_the_same_invocation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "GE-125b-3's scripts/build_probe.py control carried into this run: a path containing none of the four listed names, holding the identical token, IS reported. All four fixtures here sit at a listed location, so the two silences are an absence rather than evidence without it."
+test_rationale: |
+  Five descriptors for two Gherkin arms, and the expansion is deliberate. The first
+  descriptor is the criterion as written — four files, one run, an exact count of two —
+  and that single-invocation shape is load-bearing: it is what shows the decision is
+  taken per file from its own name rather than once per run. It may not be split into
+  four single-file tests.
+
+  But that descriptor is MIXED red and green, and the mixing is the trap this record
+  exists to flag. Every one of the four files is exempt today, so the two silent halves
+  pass before any code changes; only the two reported halves are red. A test-writer
+  reading a green run of the silent halves as progress would be reading the absence of
+  the fix as the fix. The descriptor is therefore named and documented as mixed, with
+  the halves labelled, and the third and fourth descriptors pull the two genuinely red
+  leaks out into tests that can only pass once the extraction rule exists — the
+  compound suffix, which a containment test silently admits, and the extensionless
+  name, which a nothing-disqualifying rule silently admits.
+
+  The second descriptor covers the separator arm, which the BA deliberately wrote as an
+  observable rather than a mechanism; it is asserted as one-file-one-verdict across the
+  seam between the pre-commit check's staged-set paths and the scanner's own entry
+  points. The fifth is the standing live-path control without which the silences prove
+  nothing. A predicate-level test over four strings was rejected for all five: it
+  cannot show a commit was blocked and cannot express the count.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records the location match as a substring test against the whole path, which is why a throwaway root must be asserted non-exempt before any silence here is treated as evidence."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125b-3
+  contract: "The admitted-kind list as a single closed constant of exactly .md, .yaml, .yml and .txt, with membership meaning admitted and absence meaning fully checked. This AC supplies the extraction rule that constant is matched against — final extension only, letter case folded, no extension meaning excluded — and may refine HOW the match is made but never WHICH kinds are on the list."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-25'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity S, eleven it_requirements,
+      five test_spec descriptors, test_rationale, four doc_links and an expects_from contract
+      on GE-125b-3; set readiness reviewed. The it_requirements state the extraction rule as
+      three properties that each fail unsafe if unstated; resolve the BA-deferred separator
+      arm as a normalise-before-deciding requirement scoped to the extension comparison only,
+      with an explicit prohibition on folding case in the LOCATION match; carry the BA GREEN
+      ON ARRIVAL flag into a hard constraint naming which halves of the first arm are red
+      (notes.md.bak, Makefile) and which pass today (NOTES.MD, notes.md), forbidding the
+      silent halves being counted toward a red baseline; forbid splitting the four-file
+      single-run shape; and inherit the OPEN .yaml product decision from GE-125b-3 as
+      non-reopenable here. Do-not-touch fence on the GE-123 tree restated. criteria, title,
+      level, work_status and priority unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THREE WAYS A CLOSED LIST LEAKS, AND ALL THREE FAIL IN THE UNSAFE DIRECTION IF
+  LEFT UNSTATED.
+    - Letter case. If matching is case-sensitive, "NOTES.MD" is checked. That is
+      the safe direction, but it is a false positive on a genuinely prose file and
+      it is the kind of surprise that gets an exemption widened carelessly later
+      to make it stop. Fold the case.
+    - Compound suffixes. If the test is "does the name contain an admitted
+      extension", then "notes.md.bak" — an editor backup, or a credential-bearing
+      file renamed out of the way — is exempt. Read the final extension only.
+    - No extension. "Makefile" has no extension to compare, and a rule that
+      treats "no extension" as "nothing disqualifying" admits every extensionless
+      executable in the tree. Absence from the list is exclusion; there is no
+      third state.
+
+  THE SEPARATOR ARM IS ABOUT ONE FILE GETTING ONE VERDICT. The check receives its
+  paths from the staged set, while the scanner beneath it can be handed paths in
+  other forms; the same file must not be admitted by one route and checked by the
+  other. This is the same normalisation concern GE-123d-2 records for its own
+  gate, expressed here as an observable rather than as a technical instruction —
+  the IT PO will decide how it is satisfied.
+
+  FIXTURE PLACEMENT, STATED AND JUSTIFIED. All four fixtures sit in one directory
+  of the skill-prompt area so that location, directory and content are identical
+  across them and the only variable left is the spelling of the name. The
+  four-file single-run shape is load-bearing: an exact count of two across four
+  files staged together is what shows the decision is made per file from its own
+  name. Real files in a throwaway git repository, token assembled at runtime from
+  fragments, driven through the pre-commit secrets check. Pair with the
+  "scripts/build_probe.py" control from the parent so the two silent files are
+  evidence rather than an absence.
+
+  ONE ARM IS GREEN ON ARRIVAL. Today every one of these four files is exempt, so
+  "NOTES.MD is silent" and "notes.md is silent" both pass before any change. Only
+  the two reported findings are red today. Do not read a passing run of the
+  silent halves as evidence the gate exists.

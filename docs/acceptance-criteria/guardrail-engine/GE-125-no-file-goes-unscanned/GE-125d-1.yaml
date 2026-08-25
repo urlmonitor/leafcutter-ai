@@ -1,0 +1,226 @@
+id: GE-125d-1
+components:
+  - security_scanner
+  - commit_guardian
+title: "A run that withheld a finding says how many and in which files, and never prints the value it withheld"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository whose staged set is three files:
+    "docs/retrospectives/2026-08-19-incident.md", carrying an opaque
+    credential-shaped value with no recognisable keyword and no recognisable
+    prefix on each of its 12th and 40th lines;
+    "templates/skills/example-skill/scripts/helper.py", carrying one such value
+    on its 7th line;
+    and "src/app.py", carrying one such value on its 5th line,
+  And the first two of those paths sit under locations to which this check
+    applies reduced scrutiny and the third does not — a placement chosen
+    deliberately, because the behaviour under test IS the announcement of that
+    reduction, and a control file outside those locations is what keeps the
+    scenario from passing on a check that announces everything,
+  And no suppression entries are in force,
+  When the staged set is checked on the path a real commit takes,
+  Then a notice is written to the error stream that names the check, states that
+    3 findings were withheld from the report across 2 files, and gives for each
+    of those 2 files its repository-relative path, how many findings were
+    withheld in it, and a stable name for the reduction that withheld them,
+  And the value found in "src/app.py" is reported as a finding in the ordinary
+    way and that file does not appear in the notice,
+  Because a reduction nobody is told about is indistinguishable from a file that
+    was read and found clean, and that indistinguishability is what let a
+    whole-file exemption compiled into this check survive from the day it
+    shipped until someone read the source.
+
+  Given the same staged set, and a distinctive marker string embedded inside
+    each of the three withheld values,
+  When the staged set is checked on the path a real commit takes,
+  Then that marker appears nowhere on the error stream and nowhere on the output
+    stream,
+  And neither stream carries the matched line, or any excerpt of it, for any
+    withheld finding,
+  Because a notice that reproduced the value the check declined to judge would
+    write a candidate credential into the terminal, into whatever captures that
+    output, and into any log that keeps it — turning a protection notice into
+    the disclosure it exists to prevent. The absence of the marker is the
+    assertion; matching the expected notice text is not, because expected text
+    still matches when the value has been printed alongside it.
+
+  Given a staged set consisting only of the two files under locations to which
+    reduced scrutiny applies, with 3 findings withheld between them and nothing
+    else reported,
+  When the staged set is checked on the path a real commit takes,
+  Then the notice is written exactly as above,
+  And the run's exit status is success — the notice does not block the commit,
+  Because this criterion is a visibility promise and not a blocking one, and
+    that is decided here explicitly rather than inherited as a default. This
+    check runs on every commit; a withheld finding is evidence of an unexamined
+    region, not of a credential. Blocking on it would stop ordinary commits
+    across a store of thousands of prose files, and the predictable response
+    would be to switch the check off — the outcome this goal exists to prevent.
+depends_on:
+  - GE-125d
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 is the measured record of the reduction this notice announces: it names the location of the decision (_PROSE_FILE_PREFIXES / _is_prose_exempt in templates/scripts/commit_guardian/check_secrets.py), records that the gate is ENTROPY_HIGH-only, and records the substring (not root-anchored) match. Carry its measurements at the confidence it states them at."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is the canonical copy. scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build.py outputs, and check_hook_parity enforces all four locations. A fix applied to a deployed copy only is reverted by the next build."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Precedent for the never-echo arm and for its assertion shape: a distinctive marker embedded in each withheld value, required to be absent from both streams, rather than matching expected notice text. Cited in prose only — no depends_on edge into the GE-123 tree, and no GE-123 file may be edited."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ADR-001 parity is mandatory. The reduction and the notice both live in templates/scripts/commit_guardian/check_secrets.py, which is the canonical copy; scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py are build.py outputs and check_hook_parity enforces all four locations. Edit the template, then run `python scripts/build.py --target-dir .` before running the tests. A deployed-copy-only fix is silently reverted by the next build."
+  - "MEASURED IN THE CANONICAL COPY ON 2026-08-24, not assumed, and load-bearing: main() returns 0 at the `if not findings` guard BEFORE producing any output, and a run whose only effect was withholding takes exactly that path today. The notice must be emitted on that path. A notice added inside the existing findings-printing block is unreachable in precisely the case this AC is about, and would pass a code review while covering nothing."
+  - "The withheld set must be derived at the point the reduction is applied — today _filter_prose_findings is called per staged file inside main(), so the withheld set for a file is exactly what that call removed from that file's findings. Do NOT derive it by re-scanning with the reduction disabled: that path also re-surfaces findings the .security-allowlist had already suppressed inside scan_files, which reintroduces the double count GE-125d-1-ii forbids."
+  - "THE NOTICE MUST NEVER CONTAIN THE MATCHED VALUE, THE MATCHED LINE, THE FINDING EXCERPT, OR ANY SUBSTRING OF ANY OF THEM. Repository-relative path, per-file withheld count and the stable reduction name are the WHOLE payload. This is a deliberate departure from the GE-113c-3-v warning contract, which does echo the offending text, and NO LATER REVIEWER MAY HARMONISE THE VALUE BACK INTO THE NOTICE for consistency with the findings report, with GE-113c-3-v, or with any sibling notice. This notice concerns a value the check has just decided NOT to report; printing it writes a candidate credential into the terminal, into CI capture and into any log that retains it, turning each wrong exemption decision into an exposure. Any change that adds the value, the line, or an excerpt of either to this notice is a regression regardless of how the surrounding text is worded."
+  - "Announce on EFFECT, never on application. The notice fires only when at least one finding was actually withheld — not whenever the reduction applied to a staged file. The reduced locations include the acceptance-criteria store, the ticket tree and the retrospectives, so announcing on application would print dozens of lines on an ordinary documentation commit and train readers to skim past the one line that mattered."
+  - "The notice must not influence the exit status in either direction. Exit status stays decided solely by the findings that were REPORTED, and must be the same decision the check makes today. A withheld finding is evidence of an unexamined region, not of a credential; blocking on it across a store of thousands of prose files would drive people to switch the check off, which is the outcome this goal exists to prevent."
+  - "The reduction must be attributed by a stable identifier drawn from a fixed, closed vocabulary defined in exactly one place, identical between two runs over the same input. Not a sentence composed per finding, and not any rendering of the value. Two notices that cannot be compared across runs cannot show anyone that the reduced set has widened, which is the standing purpose of this L1."
+  - "CLAUDE.md error-handling policy applies. The notice emitter performs I/O, so its writes are wrapped in a typed except that logs at WARNING or higher and never silently swallows — and a failure to emit the notice must never crash the commit path or change the exit status. Do not wrap the pure withheld-set accounting in try/except (Rule 4)."
+  - "The withheld-set accounting must stay O(number of findings) over the already-scanned set and must add no second pass over file contents. This check runs on every commit, over staged sets that routinely exceed a hundred files."
+  - "Keep the fixture placement the criteria specify, and keep it repository-relative and explicit: two fixtures under reduced locations because for THIS L1 the reduction is the subject, and src/app.py outside them as the control that makes the counting arm falsifiable. If GE-125a, GE-125b or GE-125c lands first and one of the two reduced paths stops being reduced, swap it for a path that still is — do NOT weaken the arm to 'some file somewhere', and do not drop the control file as redundant."
+delivers_to:
+  agent: python-coder
+  contract: "The per-run set of withheld findings — for each one, the file it was found in, the count per file, and the stable name of the reduction that withheld it — determined without the matched value leaving the check. GE-125d-2 exposes this same set to a caller, GE-125d-3 governs when it is spoken aloud, and neither can be satisfied by a reduction decision that does not carry the granting rule forward."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_notice_states_total_withheld_and_per_file_path_count_and_reduction_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "The three-file staged set of the first arm, staged in a throwaway git repository and checked through the canonical pre-commit entry point as a subprocess, writes one error-stream notice naming the check, the total 3 withheld across 2 files, and for each of the two reduced files its repository-relative path, its own withheld count and the stable reduction name"
+  - name: test_reported_control_file_is_absent_from_the_notice_and_still_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In the same run, the value in src/app.py is reported as a finding in the existing report format and src/app.py appears nowhere in the notice — the control that fails an implementation announcing every staged file"
+  - name: test_marker_embedded_in_each_withheld_value_appears_on_neither_stream
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A distinctive marker embedded inside each of the three withheld values appears on neither the error stream nor the output stream, and neither stream carries the matched line or any excerpt of it — asserted by ABSENCE of the marker, never by matching expected notice text"
+  - name: test_reduced_only_run_emits_the_notice_and_exits_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A staged set of only the two reduced files, 3 findings withheld and nothing reported, writes the notice and exits 0 — the arm that exercises the early-return path main() takes today before producing any output"
+  - name: test_single_withheld_finding_uses_the_same_notice_shape
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "One withheld finding in one reduced file still produces the header, the exact total of 1, one per-file line and the reduction name — the one-item boundary of the same shape, not a special-cased sentence"
+  - name: test_notice_reaches_the_error_stream_from_the_deployed_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After `python scripts/build.py --target-dir .`, the deployed scripts/commit_guardian/check_secrets.py produces the same notice on the same stream as the canonical templates/ copy, so a template-only or deployed-only edit cannot pass"
+test_rationale: "The claim is that a notice reaches a person, and this component already ships a guard documented as dispatching a specialist that never does — so a test asserting the message string exists in the source would reproduce the exact anti-precedent the AC's notes cite. Every entry therefore runs the check as a subprocess on the path a real commit takes, over real files staged in a throwaway git repository, and captures the two streams SEPARATELY: a merged capture cannot distinguish a correct notice from one that corrupted the findings report, which is GE-125d-1-i's subject. The never-echo entry is asserted NEGATIVELY, by embedding a distinctive marker inside each withheld value and requiring its absence from both streams, following GE-123d-5's established shape — an assertion that the notice text looks right still passes when the value has been printed alongside it, so it cannot prove a value is absent. Credential-shaped fixture content is assembled at runtime from fragments, as unit_tests/commit_guardian/test_scan_secrets_suppression.py does, so the fixture file written into the throwaway repository is byte-identical to real content while no rule fires on the test source itself. The reduced-only entry exists because main() returns 0 today before emitting anything on exactly that path, so it is the entry that fails an implementation which hangs the notice off the findings-printing block. The deployed entry exists because the file ships through build.py and check_hook_parity enforces four copies."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at M. Authored ten policy-level it_requirements. Three come from the code rather than the criteria, all measured in the canonical copy rather than assumed: main() returns 0 at the `if not findings` guard before producing any output, so a run that only withheld takes a path where a notice hung off the findings block is unreachable; the withheld set is exactly what _filter_prose_findings removes at its per-file call site in main(); and .security-allowlist suppression is applied earlier, inside scan_files, so re-scanning with the reduction disabled would reintroduce the double count GE-125d-1-ii forbids. The never-echo rule is written as a standing prohibition on harmonising the value back into the notice, so a later reviewer aligning this contract with GE-113c-3-v or with the findings report cannot undo it. Announce-on-effect and the non-blocking decision are carried in from the BA's adjudication. Authored a six-entry test_spec plus test_rationale: both streams captured separately, the withheld-value arm asserted by absence of an embedded marker per the GE-123d-5 precedent, fixture credentials assembled at runtime from fragments, and one deployed-layout entry for the build.py round trip. Added seven doc_links, all verified to exist. GE-123d-5 and GE-113c-3-v are cited in prose and as doc_links only: no depends_on edge crosses into the GE-123 tree and no GE-123 file was edited. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by:
+  - GE-125d-1-i
+  - GE-125d-1-ii
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE FIXTURE PLACEMENT IS INVERTED IN THIS TREE, AND THAT IS DELIBERATE.
+  This goal's standing verification rule is that a fixture placed under any path
+  containing "tickets/", "docs/retrospectives/", "docs/acceptance-criteria/" or
+  "templates/skills/" measures the exemption rather than the scanner, and so
+  passes for the wrong reason. For THIS L1 the reduction is the subject, so the
+  fixture MUST sit under such a path — which makes it doubly important to say so
+  rather than let a later reader assume the trap was walked into. Two of the
+  three fixtures are therefore under exempt locations on purpose, and the third,
+  "src/app.py", is outside them on purpose: it is the control that makes the
+  first arm falsifiable. Without it, an implementation that emits the notice for
+  every staged file would satisfy the counting arm.
+  "templates/skills/example-skill/scripts/helper.py" was chosen as the second
+  fixture because it is the sharp edge recorded in the known issue — that
+  location is on the prose list but holds executable Python, including the
+  secrets scanner's own script.
+
+  THE VALUE IS WITHHELD FROM THE NOTICE, and the never-echo arm is asserted
+  NEGATIVELY. GE-123d-5 holds the same rule for the adjacent notice in a
+  different tree and establishes the shape reused here: embed a distinctive
+  marker in each value and require its absence from both streams, rather than
+  matching expected notice text. Path, count and the reduction's name are the
+  whole payload; they are enough for an author to find the line in their own
+  working copy, and none of them is the credential.
+
+  WHY THE COUNT AND NOT THE LIST OF VALUES, once more in the form a reviewer
+  will need: the entire premise of announcing a reduction is that the reduction
+  is occasionally wrong. Printing the value turns every wrong decision into an
+  exposure, at the exact moment the tool believes it is being helpful.
+
+  BLOCK-VS-ANNOUNCE was decided here, not defaulted. The L1 requires the choice
+  to be explicit in either direction. It is announce-only. The siblings GE-125a,
+  GE-125b and GE-125c are the records that change what the check DOES; this one
+  changes what is KNOWN, and it holds its value even if every remaining
+  reduction turns out to be correct, because a reviewer can only agree with a
+  suppression they can see.
+
+  SIBLING COUPLING. The criteria are written against the reduction as it behaves
+  at the time of the run, not against today's specific rule, so that the record
+  stays true after GE-125a, GE-125b or GE-125c narrow what is reduced. The
+  concrete fixture paths name today's behaviour because a criterion needs
+  concrete inputs; if a sibling lands first and one of those paths stops being
+  reduced, replace the fixture with one that still is — do not weaken the arm to
+  "some file somewhere".
+
+  A GREP-ONLY TEST DOES NOT COVER THIS. The claim is that a notice reaches a
+  person. CLAUDE.md's rule for gate and hook ACs applies without qualification,
+  and this component already ships a guard documented as dispatching a
+  specialist that never does — a message defined in the source and never printed
+  passes a grep and protects nobody. The notice must be observed arriving on the
+  error stream of a real run over real files staged in a throwaway repository.
+
+  IT-PO NOTE, 2026-08-24 — WHAT THE CODE ACTUALLY DOES TODAY, measured rather
+  than assumed, because two of the requirements above depend on it. In
+  templates/scripts/commit_guardian/check_secrets.py the findings report is
+  written by bare print() with no file= argument, so it lands on STDOUT; the
+  only existing write to STDERR in that file is the WARNING emitted when
+  `git diff --cached` cannot be listed. main() computes raw findings via
+  scan_files, then applies _filter_prose_findings per staged file, then returns
+  0 immediately if the filtered list is empty — before any output at all. A run
+  that withheld everything and reported nothing therefore returns from that
+  early guard today, which is why the notice cannot be attached to the
+  findings-printing block. In the scanner,
+  templates/skills/security-scanner/scripts/scan_secrets.py, allowlist-parse
+  warnings already go to stderr and its module docstring states "never stdout",
+  so the stream convention this L1 adopts already exists and is consistent.

@@ -1,0 +1,112 @@
+id: GE-125b
+title: "Code is always checked for credentials, including where writing is allowed to be looser"
+component: guardrail-engine
+components:
+  - security_scanner
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Executable files never inherit an allowance meant for written material.
+
+  A credential pasted into a script is reported wherever that script lives —
+  including in areas set aside for writing, and including the security tooling's
+  own code. Being in a place where prose is expected is not enough; the file has
+  to actually be prose.
+depends_on:
+  - GE-125
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 names this the sharp edge: one of the four intended locations holds executable Python, the secrets scanner's own script among it, so a credential there is unreported by the tool meant to catch it."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d-4-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The fence, and it runs both ways. GE-123d-4-i requires a file-kind gate on a PROPOSED NEW exemption for the keyword-based rule, and explicitly fences the existing defect out of its own scope: do not repair it, do not widen it, do not close either as a duplicate of the other. This L1 is the repair it fences off. The two are complementary and must be closed independently — GE-123d-4-i is not discharged by this landing, and this is not discharged by GE-123d-4-i landing."
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-125b-1
+  - GE-125b-2
+  - GE-125b-3
+  - GE-125b-4
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS NOT COVERED BY GE-125a. Anchoring the locations at the top of the
+  project leaves this case wide open, because the area holding executable code
+  is genuinely one of the intended locations — it is on the list on purpose, for
+  its prompt text. Anchoring makes the entitlement reach the right directory;
+  this L1 decides what the entitlement covers once it gets there. Either can
+  land alone and the other still be violated.
+
+  THE SHARPEST INSTANCE MUST BE COVERED BY NAME, not left to follow from a
+  general rule about file kinds. The secrets scanner's own script sits inside
+  one of these locations. It is the case a future reader checks first and the
+  case that makes the whole goal legible.
+
+  RELATIONSHIP TO GE-123d-4-i — READ THIS BEFORE TOUCHING EITHER, and do not
+  attempt to tidy it. GE-123d-4-i argues for a file-kind gate on a NEW exemption
+  that has not been built; this L1 asks for one on an EXISTING exemption that
+  has been measured. They will very likely share an implementation, and
+  GE-123d-4-i already anticipates exactly that: its technical requirements say
+  that if the location data is shared between the two rules, the kind gate must
+  be applied on both sides or the sharing must not happen. This L1 satisfying
+  the kind gate on this side is what makes that sharing safe — it is a
+  coordination point, not a merge.
+    - Do NOT edit any GE-123 record while building this. Six of them cite this
+      defect by its ORIGINAL identifier and its original file, deliberately,
+      as an out-of-scope fence. The known-issues register states plainly that
+      those citations must not be repointed: they are dated records of a
+      decision and a retired-identifier stub resolves them in one hop.
+    - Do NOT close GE-123d-4-i when this lands, and do not let this be closed by
+      work done there.
+    - SEQUENCING, recorded here and nowhere else so no fenced record is
+      modified: KI-SEC-001 asks that this hole be fixed before GE-123d's
+      widening, so the new behaviour is not built on top of it. That is a
+      scheduling preference expressed from this side of the fence. It is not a
+      dependency edge, and none may be added to the GE-123 tree to express it.
+
+  WHAT COUNTS AS PROSE IS A CLOSED-LIST DECISION, not an open one. Say which
+  file kinds are admitted and default everything unrecognised to fully checked.
+  GE-123d-2 already chose the closed-list-with-report-by-default shape for the
+  adjacent problem; follow it unless there is a reason not to, and say so if
+  there is. An open list means the next file kind someone invents silently
+  arrives already exempt.
+
+  BA DECOMPOSITION, 2026-08-19 — covered_by populated with four L2 children and
+  nothing else on this record altered.
+    - GE-125b-1 — the defect itself: a script at a listed location is checked
+      while the prose beside it is not, with the must-block negative control and
+      the fixture-trap control in the same run. Children GE-125b-1-i (the gate
+      applies at every listed location, not only the one known to hold code) and
+      GE-125b-1-ii (the repair moves no verdict except the shapeless-value
+      rule's — the invariance fence with GE-123d-4-i, written from this side).
+    - GE-125b-2 — the sharpest instance covered BY NAME, as this record requires:
+      a credential in the secrets scanner's own script is reported, and the
+      skill prompt beside it is not.
+    - GE-125b-3 — the closed-list decision, made and stated: the admitted kinds
+      are .md, .yaml, .yml and .txt, the same four GE-123d-2 chose, and anything
+      else at a listed location is fully checked. The LOCATION list is not
+      touched; adopting a kind list is not adopting GE-123d-2's five locations.
+      Child GE-125b-3-i covers the three ways a closed list leaks — letter case,
+      compound suffix, no extension.
+    - GE-125b-4 — the reference-doc trigger, written to be discharged ONCE for
+      the whole goal per GE-125's instruction, with a reconciliation note for the
+      concurrently-authored sibling trees.

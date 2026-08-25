@@ -1,0 +1,237 @@
+id: GE-125b-1
+components:
+  - security_scanner
+  - commit_guardian
+title: "An executable script in a reduced-scrutiny location is fully checked while the prose beside it is not"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository whose root holds the four locations the
+    reduced-scrutiny list names — the ticket tree, the retrospectives area, the
+    acceptance-criteria store and the skill-prompt area,
+  And two files are staged for commit in one directory of the skill-prompt area,
+    at the repository-relative paths
+    "templates/skills/some-skill/scripts/helper.py" and
+    "templates/skills/some-skill/SKILL.md",
+  And both files carry one identical line holding a twenty-four-character opaque
+    token whose Shannon entropy is above the 4.5 threshold the shapeless-value
+    rule applies — the token measured in the known-issues register scores 5.17,
+  And no suppression entries are in force,
+  When the staged set is checked by the pre-commit secrets check,
+  Then exactly one shapeless-value finding is reported across the two files, and
+    it names "templates/skills/some-skill/scripts/helper.py" and the line the
+    token sits on,
+  And no finding is reported for "templates/skills/some-skill/SKILL.md",
+  And the check exits reporting findings present, so the commit is blocked,
+  Because the two files differ in nothing but their kind: a Python script is not
+    prose, so it does not inherit the reduced scrutiny its directory is entitled
+    to, while the Markdown prompt beside it still does.
+
+  Given a second commit in the same repository stages prose only, at the
+    repository-relative paths "tickets/00_inbox/TICKET-20260818-Example.md" and
+    "docs/retrospectives/retro.md", each carrying the same token on one line,
+  And no suppression entries are in force,
+  When the staged set is checked by the pre-commit secrets check,
+  Then no shapeless-value finding is reported for either file,
+  And the check exits clean, so the commit is not blocked,
+  Because gating by kind must not become deletion of the entitlement. These two
+    paths are exempt today and must still be exempt afterwards; without this arm
+    a kind gate and a removed exemption produce the same green result.
+
+  Given a third file is staged in the same repository at the repository-relative
+    path "scripts/build_probe.py", whose path contains none of the four listed
+    names, carrying the same token on one line,
+  When the staged set is checked by the pre-commit secrets check,
+  Then that file IS reported,
+  Because an arm that reports nothing is evidence only if the same token is
+    demonstrably detectable in the same repository on the same run. Without this
+    control, a fixture whose token never reached the threshold and a working
+    exemption are indistinguishable.
+depends_on:
+  - GE-125b
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The file to change is `templates/scripts/commit_guardian/check_secrets.py` and the members that carry the exemption there: `_PROSE_FILE_PREFIXES`, `_is_prose_exempt` and `_filter_prose_findings`. `scripts/commit_guardian/check_secrets.py` and `.leafcutter/scripts/commit_guardian/check_secrets.py` are build outputs per ADR-001, and `templates/commit-guardian/` holds the legacy manifest; `check_hook_parity` enforces all four locations. After editing the template run `python scripts/build.py --target-dir .` and re-run the commit_guardian suite; do not claim the change until the parity check passes over the rebuilt tree."
+  - "THE GATE MUST BE A PROPERTY OF THE FILE, NOT OF THE DIRECTORY. The decision is taken from the staged file's own name at whichever listed location it sits, so that two files in one directory differing only in extension reach different verdicts in a single run. An implementation that special-cases the skill-prompt area satisfies every arm here and leaves GE-125b-1-i red — that is the shape this requirement exists to forbid, and removing the gate must turn a test red rather than merely change a comment."
+  - "NAME EVERY ENFORCEMENT POINT BEFORE CHANGING ONE. `_filter_prose_findings` is the caller of `_is_prose_exempt` on the commit path and `_PROSE_FILE_PREFIXES` is the list it consults. If any other surface — the scanner script at `templates/skills/security-scanner/scripts/scan_secrets.py` among them, via `scan_files` / `scan_file` — consults a path list to drop shapeless-value findings, gate that one too. A constraint added only to an inert copy is a no-op, and the audit path and the commit path must not disagree about whether a file is exempt."
+  - "READ THE ADMITTED-KIND LIST, DO NOT CARRY A SECOND COPY OF IT. GE-125b-3 fixes the list as a single closed constant. This gate reads that constant; a duplicated literal list in the gate is a defect even while both copies agree, because the two drift the first time one is edited."
+  - "COORDINATION WITH GE-123d-4-i, WHICH IS A COORDINATION POINT AND NOT A MERGE. GE-123d-4-i governs the file-kind gate on the PROPOSED `GENERIC_SECRET` exemption; this AC governs it on the EXISTING `ENTROPY_HIGH` one. Its own contract already requires that if the location data is ever shared between the two exemptions, the kind gate must be applied on BOTH sides or the sharing must not happen — so if this implementation introduces a shared location list or a shared kind predicate, that requirement binds here too and every call site must go through the gate. Neither record closes the other and neither may be recorded as a duplicate. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree: six GE-123 records cite this defect deliberately as an out-of-scope fence, and the sequencing preference recorded in KI-SEC-001 (close this hole before GE-123d's widening is built on top of it) lives in prose only."
+  - "COORDINATE WITH THE SIBLING L1s RATHER THAN REVERTING THEM. GE-125a narrows the same path predicate to a root-anchored segment match and GE-125c makes the decision per finding rather than per file, both against these same members, concurrently. Reconcile with whatever is in the file at implementation time; do not restore a substring match and do not restore the file as the unit of the decision as a side effect of adding a kind gate."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file created inside a `tempfile`-backed throwaway git repository, with the four listed locations constructed INSIDE that root and the check pointed at that root. No fixture may be written under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. If the check cannot be pointed at a throwaway root, RAISE THAT INABILITY AS A DEFECT AGAINST THIS GOAL AND STOP — it is not a licence to place a fixture in a real prose tree, and it is not a licence to fall back to calling the exemption logic directly."
+  - "ASSERT THE THROWAWAY ROOT IS NOT ITSELF EXEMPT BEFORE ASSERTING ANY VERDICT. KI-SEC-001 measured the location match as a substring test against the whole path, so a temporary root whose own path happens to contain `tickets`, `retrospectives`, `acceptance-criteria` or `skills` as a segment re-arms the exemption above the constructed fixture and every arm passes for the wrong reason — including the `scripts/build_probe.py` control, which would fall silent and look like a broken fixture rather than a re-armed exemption. Assert as a precondition that the root path ABOVE the deliberately constructed directories contains none of the four names."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY DIRECT CALL. Each arm stages real files in the throwaway git repository, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers. Asserting what `_is_prose_exempt` returns is not evidence a commit was blocked, and the exact-count assertions across files staged together are not expressible that way at all (CLAUDE.md, `Gate / Workflow ACs — Verify Behaviorally, Not by Grep`)."
+  - "EXACT COUNTS ONLY. Every count assertion is an equality — exactly one across the two files in the first arm, exactly zero in the second. An at-least-one assertion is satisfied by an implementation that reports both files, which is precisely the removed-exemption failure the second arm exists to catch."
+  - "CREDENTIAL-SHAPED FIXTURE STRINGS ARE ASSEMBLED AT RUNTIME from concatenated fragments, as `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does. Do not collapse them into source literals and do not add a `.security-allowlist` entry so that literals can be committed — needing one is the signal the fragments were collapsed, and this tree is specified so that no allowlist entry is required anywhere."
+  - "ERROR HANDLING PER CLAUDE.md. The kind decision is a pure function over a path string: it must NOT be wrapped in try/except (Rule 4). Any new file or subprocess access added by the check or its tests is wrapped in a typed `except` that logs at WARNING or re-raises (Rules 1-3)."
+  - "PERFORMANCE — THIS RUNS ON EVERY COMMIT. The kind decision executes once per shapeless-value finding per staged file inside the pre-commit path. It must add no file read, no `stat`, no subprocess call and no network call: the verdict is available from the path string alone. The check must remain within its current commit-time budget for a staged set of 200 files."
+test_spec:
+  - name: test_script_and_prose_in_one_directory_report_exactly_one_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A Python file and a Markdown file in one skill-prompt-area directory of a throwaway root, carrying the identical runtime-assembled 24-character token and staged in the same commit, yield EXACTLY ONE shapeless-value finding — naming the .py path and the token's 1-based line number — and the check exits non-zero. Zero findings means the gate is absent; two means the entitlement was deleted rather than narrowed."
+  - name: test_prose_only_commit_at_listed_locations_stays_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The mandatory negative control: a ticket Markdown file and a retrospective Markdown file at listed locations in the throwaway root, each carrying the same token, yield ZERO findings and a clean exit with no allowlist entry in force. Fails against an implementation that removed the exemption instead of gating it — the failure mode the first descriptor cannot distinguish on its own."
+  - name: test_same_token_is_reported_outside_every_listed_location_in_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The fixture-trap control. In the SAME invocation as the silent arms, a file at scripts/build_probe.py in the throwaway root carrying the identical token IS reported. Without it, a token that never reached the entropy threshold and a working exemption are indistinguishable, and every silent assertion in this subtree is vacuous."
+  - name: test_throwaway_root_is_not_itself_prose_exempt
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: the throwaway root path ABOVE the deliberately constructed listed directories contains none of the segment names tickets, retrospectives, acceptance-criteria or skills, so the arms measure the scanner rather than a re-armed substring exemption. Fails loudly if a future tempfile prefix drifts into one of those names."
+  - name: test_kind_gate_is_present_in_the_deployed_check_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After running the build, the first arm's one-finding outcome is produced by the DEPLOYED scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py, not only by the canonical template — the ADR-001 revert hazard, asserted by executing the deployed copy rather than by comparing bytes."
+test_rationale: |
+  Five descriptors, and the count is forced by the fact that this criterion fails in
+  two opposite directions. Reporting the script is satisfied by deleting the exemption
+  outright, and staying silent on the prose is satisfied by changing nothing at all, so
+  no single assertion discriminates. The first two descriptors are therefore a matched
+  pair over one repository and one token: the only variable across them is the kind of
+  the file, and equality counts rather than floors are what make the pair decisive.
+
+  The third and fourth descriptors exist because the first two can both pass for reasons
+  unrelated to the change. Every path in the first two arms contains one of the four
+  listed names, so a run in which they are silent proves nothing unless the same token,
+  in the same run, is reported where the exemption cannot reach — and KI-SEC-001 records
+  that the location match is a substring test, which makes an accidentally-exempt
+  temporary root a reachable rather than theoretical hazard. The fifth descriptor covers
+  the ADR-001 revert: a fix applied only to the canonical template leaves the hook a real
+  commit actually runs unchanged until the next build.
+
+  A weaker shape — importing `_is_prose_exempt` and asserting its return value for two
+  path strings — was rejected. It cannot show that a commit was blocked, it cannot
+  express the exact-count-across-a-staged-set assertion the first arm turns on, and it
+  passes identically on wired code and on dead code.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001, second fix direction — gate the exemption by file kind, not only by path. Also carries the measured baseline this criterion inverts (templates/skills/some-skill/scripts/helper.py EXEMPT, scripts/build.py reported) and the substring-match measurement that makes a badly placed fixture pass for the wrong reason."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why templates/scripts/commit_guardian/ is canonical and the deployed copies are build outputs the next build.py overwrites."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "A file-kind gate on the ENTROPY_HIGH prose exemption in templates/scripts/commit_guardian/check_secrets.py: reduced scrutiny is granted only when a listed-location match AND an admitted-kind match both hold, decided per staged file from the file's own name. Consumed by GE-125b-1-i (which pins that it applies at every listed location), by GE-125b-1-ii (which pins that it moves no other rule's verdict), by GE-125b-2 (which pins the scanner's own source path by name) and by GE-125b-4, whose reference passage must describe the gate as landed rather than as proposed."
+expects_from:
+  ac_id: GE-125b-3
+  contract: "The closed admitted-kind list — exactly .md, .yaml, .yml and .txt — as a single named constant matched against the staged file's final extension with letter case folded. This gate reads that constant and carries no second copy of the list."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-25'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity M, thirteen it_requirements,
+      five test_spec descriptors, test_rationale, five doc_links, a delivers_to contract and
+      an expects_from contract on GE-125b-3; set readiness reviewed. The it_requirements name
+      templates/scripts/commit_guardian/check_secrets.py as canonical with the ADR-001 revert
+      hazard and the four-location check_hook_parity obligation; require the gate to be a
+      property of the file rather than of the directory so the cheap skill-prompt-area
+      special case cannot pass; require every enforcement point to be named, including
+      scan_secrets.py scan_files / scan_file, so the audit path and the commit path cannot
+      disagree; record the GE-123d-4-i relationship as a coordination point with an explicit
+      prohibition on editing any GE-123 file or adding a depends_on edge into that tree; add
+      sibling-L1 coordination against GE-125a and GE-125c; and make the throwaway root a hard
+      requirement whose absence is a defect to raise, with a precondition that the root is not
+      itself substring-exempt. criteria, title, level, work_status and priority unchanged.'
+superseded_by: null
+covered_by:
+  - GE-125b-1-i
+  - GE-125b-1-ii
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE DEFECT ITSELF, IN ITS MEASURED FORM. KI-SEC-001 ran a 5.17-entropy
+  token through the real exemption logic and recorded
+  "templates/skills/some-skill/scripts/helper.py  EXEMPT — not reported". The
+  first arm is that measurement inverted into a requirement; the red baseline for
+  it is therefore already recorded rather than needing to be discovered.
+
+  THE SECOND ARM IS A MANDATORY NEGATIVE CONTROL, not a courtesy. Deleting the
+  exemption outright passes the first arm perfectly and reintroduces exactly the
+  false positives GE-123d exists to remove. The two arms together are the
+  acceptance shape; neither alone is.
+
+  THE THIRD ARM IS THE FIXTURE-TRAP CONTROL and it is the one most easily left
+  out. Every path in the first two arms contains one of the four listed names, so
+  each of them measures the exemption as much as the scanner. A run in which the
+  exempt paths are silent proves nothing unless the same token, in the same run,
+  in the same repository, is reported somewhere the exemption does not reach.
+  "scripts/build_probe.py" was chosen for that and only that: KI-SEC-001 measured
+  the neighbouring "scripts/build.py" as reported, so it is a known-live path.
+
+  FIXTURE PLACEMENT, STATED AND JUSTIFIED (L0 verification standard).
+    - Every fixture is a real file inside a throwaway git repository created for
+      the test, at the repository-relative path named in the criteria. The paths
+      mirror the real project's layout because the layout IS the subject; the
+      files must NOT be written into this repository's own working tree, which
+      would put credential-shaped content into the real tree and require an
+      allowlist entry.
+    - The token must be assembled at runtime from fragments rather than written
+      as a source literal, following the discipline already established in
+      unit_tests/commit_guardian/test_scan_secrets_suppression.py, so that no
+      suppression is needed anywhere in this repository for this tree.
+    - Exercise this through the path a real commit takes — the pre-commit secrets
+      check over a staged set — never by calling the exemption logic with a path
+      string the test chose. A green predicate-level test does not discharge any
+      arm of this criterion.
+
+  RELATIONSHIP TO GE-125a. Every path here is a listed location at the repository
+  root, so all three arms hold both before and after the reach of the entitlement
+  is anchored. This criterion is about what the entitlement covers once it
+  arrives, not about where it arrives.
+
+  THE FENCE WITH GE-123d-4-i, AND IT RUNS BOTH WAYS. GE-123d-4-i requires a
+  file-kind gate on a PROPOSED exemption for the keyword-based rule that has not
+  been built. This criterion requires one on the EXISTING exemption for the
+  shapeless-value rule, which has been measured. They are complementary and must
+  be closed independently: GE-123d-4-i is not discharged when this lands, and
+  this is not discharged when GE-123d-4-i lands. Do not record either as a
+  duplicate of the other, do not repair one while building the other, and do not
+  edit any GE-123 record from this tree — six of them cite this defect by its
+  original identifier as a deliberate out-of-scope fence.
+
+  THE COORDINATION POINT, NOT A MERGE. GE-123d-4-i already anticipates that the
+  two rules may share the location data, and requires that if they do, the kind
+  gate is applied on both sides or the sharing does not happen. The admitted-kind
+  list chosen in GE-125b-3 is deliberately the same four kinds GE-123d-2 chose,
+  so that sharing later is a decision someone can take safely rather than a trap.
+  Adopting the same list is not the same as merging the two records.
+
+  SEQUENCING, recorded in prose deliberately and nowhere else: KI-SEC-001 asks
+  that this hole be closed before GE-123d's widening is built on top of it. That
+  is a scheduling preference expressed from this side of the fence. No depends_on
+  edge into the GE-123 tree may be added to express it.

@@ -1,0 +1,183 @@
+id: GE-125a-3
+components:
+  - security_scanner
+  - commit_guardian
+title: "The reference names the four places that get less scrutiny and says they are read from the top of the project down"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reference material a developer reads to learn what the credential
+    check looks for, which today lists the high-entropy rule among the rules that
+    are applied and says nothing anywhere about that rule being switched off,
+  When a reader wants to know whether there is anywhere the check looks less,
+  Then the reference states that there is, names the four locations, and states
+    that they are recognised as locations at the top of the project,
+  And it states that a folder anywhere below the top that reuses one of those
+    names is scanned in full,
+  Because a reader who cannot find the exemption in the reference at all has no
+    way to know it exists, and the reading they arrive at by default — that the
+    listed rules are applied everywhere — is the one this L1 is making true only
+    for reused names.
+
+  Given the same reference,
+  When a reader wants to know what "less scrutiny" removes at one of those four
+    locations,
+  Then the reference states that it removes the opaque-token rule only, and that
+    the keyword and fixed-prefix rules still apply there,
+  Because an author who believes a chosen location is unscanned will avoid
+    putting anything in it, and one who believes it is fully scanned will trust a
+    clean result it cannot give — both readings are available from a reference
+    that mentions the exemption without bounding it.
+
+  Given the same reference and the sibling criteria under GE-125b, GE-125c and
+    GE-125d, each of which also changes what is true of when this check looks
+    less,
+  When all four have landed,
+  Then a reader finds ONE passage describing when the check looks less, amended
+    once per behaviour, rather than four descriptions in four places,
+  And this criterion's contribution is an amendment to that passage rather than a
+    document of its own,
+  Because four separate accounts of one behaviour disagree with each other within
+    a release, and the goal's own instruction is that the four triggers are
+    discharged by a single consolidated rewrite.
+
+  Given the reference as amended and the check as it actually behaves,
+  When the two are compared,
+  Then every statement the reference makes about where the check looks less is a
+    statement the check bears out, and every place the check looks less is one
+    the reference does not omit,
+  And where the two disagree the check is authoritative and the disagreement is
+    raised as a defect against the criterion that owns the behaviour, rather than
+    written down as fact,
+  Because a reference that overstates coverage produces exactly the false
+    confidence this goal exists to remove, and one that understates it sends an
+    author hunting for a protection they already have.
+depends_on:
+  - GE-125a
+  - GE-125a-1
+  - GE-125a-2
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "THE ARTIFACT THIS RECORD EDITS, and the canonical copy. Its detection-rules section lists the high-entropy rule with its threshold and says nothing anywhere about the exemption — the reference is wrong by OMISSION, so there is no passage to amend and the first of the four documentation records to be built must CREATE it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "SKILL.md ships through build.py. The deployed copies are build outputs; an edit to a deployed copy leaves the shipped reference unchanged and is reverted by the next build — the failure this criterion is least able to detect from its own output."
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 supplies the bounded scope the second arm must state: the exemption gates ENTROPY_HIGH only, and AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET still fire at the four locations."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: related
+    status: exists
+    relevance: "Today the exemption is described only here, in the known-constraints section, and as a defect. That is not the reference a developer reads to learn what the check looks for, which is why the omission in SKILL.md is a real gap rather than a duplicate."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123a-4.yaml
+    relationship: context
+    status: exists
+    relevance: "The BA's cited precedent for how a review-verified documentation record is expressed in this component: test_required false, with the documentation check itself recorded in it_requirements rather than left as an empty test slot."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-125a-1
+  contract: "The settled reach of the entitlement — four locations recognised from the top of the project down, with reused names below the top scanned in full. The reference records what that criterion delivers; written before it lands, it documents an intention rather than the behaviour."
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. Edit templates/skills/security-scanner/SKILL.md and let build.py propagate it. Every deployed copy under .claude/, .gemini/, .leafcutter/, EPIC-*/ or worktrees/** is a build output; editing one leaves the shipped reference unchanged and the next build reverts it. This is the failure this criterion is least able to detect from its own output, so verify the round-trip with `python scripts/build.py --target-dir .` before sign-off."
+  - "THE PASSAGE DOES NOT EXIST YET — THIS IS CREATE, NOT AMEND, IF YOU ARE FIRST. Per the adjudication in GE-125.yaml's notes, the L0's premise that the current description 'is wrong after any one of them lands' was corrected during decomposition: SKILL.md contains NO description of the reduced scrutiny at all, so the reference is wrong by OMISSION. An author looking for a passage to amend will not find one. Whichever of the four documentation records (GE-125a-3, GE-125b-4, GE-125c-4, GE-125d-5) is built FIRST must CREATE the single passage; the other three amend what it created."
+  - "SEQUENCING CONSTRAINT, EXPRESSED HERE DELIBERATELY AND NOT AS depends_on EDGES. Before writing, check whether the single passage already exists — a sibling documentation record may have created it. If it exists, amend it in place. If it does not, create it. Do NOT add depends_on edges between the four documentation records: per the GE-125.yaml adjudication that would couple four L1s to each other's delivery order for a reason that disappears the moment the passage exists."
+  - "ONE PASSAGE, NOT FOUR. All four documentation records amend one passage in templates/skills/security-scanner/SKILL.md. Do not open a second section, and do not create a document of your own — this record's contribution is an amendment to the shared passage. GE-125d-5 owns the one-section rule for the whole goal and carries the mechanical check for it; a second home for this statement would turn that check red."
+  - "THIS RECORD'S FOUR CONTENT REQUIREMENTS, and only these, are what it adds to the shared passage: (1) that there IS somewhere the check looks less; (2) the four locations by name; (3) that they are recognised as locations at the TOP OF THE PROJECT, and that a folder anywhere below the top reusing one of those names is scanned in full; (4) that the reduced scrutiny removes the opaque-token rule ONLY, with the keyword and fixed-prefix rules still applying there. Do not write the sibling records' content — GE-125b-4 owns the both-conditions-together rule, GE-125c-4 owns per-finding decisioning, GE-125d-5 owns the section-count and announcement-parity rules."
+  - "NO CREDENTIAL-SHAPED LITERALS IN EXAMPLES. This file is scanned on every commit, so a realistic example would either trip the check or need a suppression of its own — and a suppression on this file would be a real blind spot. Describe the shapes in words, as the neighbouring documentation records in this tree do. Note the irony to avoid: templates/skills/ is itself one of the four exempt locations today, so a credential-shaped literal here would currently go UNREPORTED, which is exactly the defect the passage is describing."
+  - "PARITY, BOTH DIRECTIONS, AS A REVIEW OBLIGATION. Check every statement added here against the SHIPPED scanner's behaviour at the time of writing — not against this AC's prose and not against the sibling ACs. Nothing claimed that the check lacks; nothing omitted that the check has. Where the reference and the implementation disagree, THE IMPLEMENTATION IS AUTHORITATIVE: raise the disagreement as a defect against the code AC that owns the behaviour and do not write the intended behaviour down as though it were the actual one."
+  - "SEQUENCING AGAINST THE BEHAVIOUR. This text describes behaviour GE-125a-1 introduces, which is why depends_on names GE-125a-1 and GE-125a-2 alongside the parent. Written before that lands it documents an INTENTION, not the behaviour. Write it against the shipped result, or mark it explicitly pending and re-check it once GE-125a-1 and GE-125a-2 are both done — and note they must close as a pair, so a reference written after only GE-125a-1 may describe an entitlement that was narrowed too far."
+  - "VERIFICATION IS BY REVIEW AGAINST SHIPPED BEHAVIOUR, NOT BY AN EXECUTABLE TEST, per the BA's instruction and the GE-123a-4 precedent. Do not author code tests for this record and do not add test descriptors to it. The documentation check standing in for a test: (1) the passage exists and is the only one describing when the check looks less; (2) it names the four locations and states they are recognised at the top of the project; (3) it states that a folder below the top reusing one of those names is scanned in full; (4) it states the exemption removes the opaque-token rule only and that the keyword and fixed-prefix rules still apply; (5) two-directional parity against the shipped scanner, with the implementation authoritative on disagreement."
+  - "CLASSIFICATION NOTE, VERIFIED 2026-08-24 — do not 'correct' risk_surface to safety. This record is change_target docs with risk_surface contract_boundary. config/guardrail_gates.yaml maps docs/contract_boundary to [documentation-expert, pr-reviewer] and maps docs/safety to an EMPTY list, so choosing safety would silently remove ALL mandatory gating from a record whose only defence is review. The classification is deliberate. Note that the sibling documentation records GE-125c-4 and GE-125d-5 both carry docs/safety and are therefore ungated; that is raised as a caveat against those records and must not be used as precedent to change this one."
+test_required: false
+test_rationale: |
+  This record changes prose only, so it carries no executable behaviour and
+  test_required is false rather than test_spec being left empty — the BA asked for
+  this explicitly and cited GE-123a-4 as the in-component precedent for how a
+  review-verified documentation record is expressed. What stands in place of a test
+  is the five-part documentation check recorded in it_requirements, whose last part
+  is a two-directional parity review against the shipped scanner.
+  Parity is the part that matters and the part a test cannot cheaply take over. A
+  reference that claims the four locations are anchored at the top of the project
+  when the shipped check still substring-matches reproduces exactly the false
+  confidence this goal exists to remove; one that omits the exemption entirely — the
+  state today — leaves a reader believing the listed rules apply everywhere.
+  Mechanising that comparison would mean reading the scanner's declared location set
+  and its per-path behaviour and diffing them against the document, which is a code
+  AC of its own.
+  IT IS ALSO ALREADY OWNED ELSEWHERE, which is the decisive reason not to duplicate
+  it here. The sibling documentation record GE-125d-5 carries test_required true and
+  a mechanical test_spec covering the single-section rule and check-to-section
+  parity for the whole goal. Adding a competing parity test under this record would
+  assert the same property from a second place against the same passage — the exact
+  four-descriptions-of-one-behaviour failure the third arm of these criteria
+  forbids, reproduced at the test layer.
+  ONE GAP IS RECORDED RATHER THAN SMUGGLED IN: nothing mechanical prevents this
+  record's contribution from being written into a deployed build output instead of
+  the canonical templates/ source, and that failure is invisible in this record's
+  own output. It is pinned as the first it_requirement with a build round-trip as
+  the check, and raised as a recommended follow-up rather than turned into a test
+  under a documentation AC.
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24): assigned documentation-expert (following the BA's cited GE-123a-4 precedent for this component; note the sibling GE-125d-5 chose llm-expert for the same file, flagged as a tree-level caveat since all four documentation records amend ONE passage and should not be built by different agents), complexity S. VERIFIED THE BA'S guardrail_gates.yaml CLAIM AND UPHELD IT: config/guardrail_gates.yaml lines 209-222 map docs/safety to an EMPTY mandatory-agent list while docs/contract_boundary maps to [documentation-expert, pr-reviewer]; risk_surface contract_boundary is therefore correct and is now pinned with a do-not-correct note. Authored it_requirements covering the ADR-001 canonical-source and build round-trip, the create-not-amend correction from the GE-125.yaml adjudication, the sequencing constraint expressed WITHOUT depends_on edges between the four documentation records, the one-passage rule, this record's four content requirements fenced against the three siblings', the no-credential-literals rule, two-directional parity with the implementation authoritative, and the five-part documentation check standing in for a test. Added five doc_links. Set test_required false with a test_rationale recording that mechanical parity is already owned by GE-125d-5. criteria, depends_on, expects_from, priority, work_status and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  THIS DISCHARGES GE-125a's documentation_triggers OF [reference-doc]. The L1's
+  other children are all behavioural, so without this record the trigger has no
+  owner and would be left to fall out of a code change whose sign-off is a
+  passing suite — nothing fails if the sentence is never written.
+
+  ONE PASSAGE, NOT FOUR — this is the goal's explicit instruction and the third
+  arm above is where it is stated at L2, as the L0 asks. All four L1s in GE-125
+  carry the same trigger and each genuinely needs it, so the sibling BAs are
+  authoring documentation criteria of their own at the same time as this one. The
+  arm is written so that whichever of the four lands first creates the passage
+  and the rest amend it. If a sibling's record instead calls for a separate
+  document, that is a collision to resolve before any of them is built, not
+  after: two of the four descriptions will be stale within a release.
+
+  WHAT IS WRONG WITH THE REFERENCE TODAY IS OMISSION, NOT ERROR. The skill
+  surface lists the high-entropy rule with its threshold and says nothing about
+  the exemption; the exemption is described only in the component architecture
+  doc's known-constraints section, as a defect, and in the source comment. So the
+  first arm is not "correct a wrong sentence" — it is "there is no sentence".
+  That matters for how the arm is checked: an author looking for the passage to
+  amend will not find one.
+
+  THE FOURTH ARM IS A PARITY REQUIREMENT and it is stated because this passage is
+  being changed by four criteria in one goal. Three edits to one file in one
+  feature was already enough for a statement to survive that no longer matched
+  the code, in the GE-123 tree; four is more. Parity runs in both directions —
+  nothing claimed that the check lacks, nothing omitted that the check has.
+
+  FOR THE IT PO. Verification here is a review against the shipped behaviour, not
+  an executable test, and it should be recorded as such rather than left as an
+  empty test slot; the sibling documentation record GE-123a-4 is the precedent
+  for how that is expressed in this component. Two constraints the reviewer needs
+  to know: the canonical copy is the one under templates/ and the deployed copies
+  are build outputs, so an edit to a deployed copy leaves the shipped reference
+  unchanged — the failure this criterion is least able to detect from its own
+  output; and examples in this passage must not contain credential-shaped
+  literals, because the file is scanned on every commit and a realistic example
+  would either trip the check or need a suppression of its own.
+
+  SEQUENCING. This text describes behaviour GE-125a-1 introduces. Written before
+  that lands it documents an intention; write it against the shipped result, or
+  mark it pending and re-check it once GE-125a-1 is done.
