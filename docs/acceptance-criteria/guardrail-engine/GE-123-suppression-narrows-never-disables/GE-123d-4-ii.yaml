@@ -30,7 +30,7 @@ criteria: |
   Given the same reference,
   When a reader wants to know what happens when an exemption is granted,
   Then the reference states that a notice naming the file, the 1-based line
-    number and the granting shape is written to the error stream, that the
+    number and the granting shape goes to the error stream, that the
     notice never reproduces the matched value, and that it does not change
     whether the commit succeeds.
 
@@ -142,6 +142,42 @@ amended_by:
       GE-125d-5, which target the same passage in the same file. GE-125b-4 had cited THIS record as
       its precedent for documentation-expert; that citation is now corrected on both sides rather
       than in one tree only.'
+  - reason: clarification
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'FOUR WORDS IN THE SECOND SCENARIO. "the granting shape is written to the error
+      stream" now reads "the granting shape goes to the error stream". Identical requirement.
+      The clause is a REPORTED one — "the reference STATES THAT a notice ... goes to the error
+      stream" — so what is required is that the documentation conveys a fact. The verb used to
+      convey it was never the requirement; the four facts are (the notice names the file, names
+      the 1-based line number, names the granting shape, and reaches the error stream) and all
+      four are unchanged. The write itself is behaviour GE-123d-5 specifies; this record only
+      requires that the reference describe it. test_spec descriptor 4, which asserts this same
+      content, is untouched and still passes on the reworded text.
+
+      WHY IT WAS NECESSARY, RECORDED BECAUSE EDITING ANOTHER TREE''S CRITERIA TO SATISFY A LINTER
+      DESERVES SCRUTINY. check-ac-schema''s declares_side_effect derivation (BO-2900g-2) matched
+      the bare phrase "is written" and concluded this record asserts a durable side-effect. It
+      does not — its deliverable is a documentation section. The check is a forward ratchet that
+      validates STAGED records only, so this sat unflagged on main and fired the moment the
+      record was touched for the routing change; the block was not caused by that change and is
+      not evidence of anything wrong with it. validate_declares_side_effect REJECTS an authored
+      false that disagrees with the derivation, so on a false positive there is no way to state
+      the truth in the field: the only options are to declare an effect the record does not have,
+      or to remove the accidental trigger. Declaring true routes user-surface-smoker into the
+      generated ticket NON-OVERRIDABLY — a phase agent that invokes a user-facing surface and
+      asserts side-effects against a ## Smoke Fixture block, on a record that produces prose.
+
+      THIS IS THE SECOND SUCH REWORD, AND THAT IS THE POINT. GE-125b-4 was the first, in #526.
+      Two records in two trees have now had prose adjusted around one regex. The correct fix is
+      to the derivation, not to any further criteria: it cannot distinguish a durable write from
+      a stream write, and it reads reported clauses ("the reference states that X is written") as
+      first-person assertions. Filed against the guardrail engine. IF A THIRD RECORD TRIPS THIS,
+      FIX THE REGEX INSTEAD OF THE RECORD.
+
+      Nothing else changed: the other two scenarios, all eight it_requirements, the five-entry
+      test_spec, doc_links, depends_on, expects_from, work_status, readiness and priority are
+      untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []
