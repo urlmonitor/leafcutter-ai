@@ -1,0 +1,182 @@
+id: GE-123c-3
+components:
+  - commit_guardian
+  - security_scanner
+title: "The author is told about an unmatchable entry on the real commit path, in the one warning shape this file already uses, and the commit still proceeds"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a security allowlist whose lines 2, 3 and 4 are one entry of each
+    unmatchable shape — an appended note after a three-field entry, an appended
+    note after a two-field entry, and a rule id the scanner cannot report — and
+    whose lines 6 and 7 are two well-formed entries covering findings in
+    "src/config/foo.py" and "secrets.py",
+  And both of those files contain findings for the rules their entries name, and
+    "secrets.py" additionally contains a private-key header that no entry covers,
+  When the developer commits those files and the pre-commit secrets check runs,
+  Then the developer sees three warnings in the terminal, one per offending line,
+    each naming the allowlist file, its 1-based line number and its verbatim text,
+  And the two well-formed entries still suppress their findings — skipping is per
+    line, never per file,
+  And the private-key finding is reported and the commit is blocked on that
+    finding alone,
+  Because the warning has to reach the person on the path a real commit takes; a
+    message that only appears when the allowlist is loaded directly is a
+    correction nobody receives.
+
+  Given the same allowlist, and a set of files in which no finding survives
+    suppression,
+  When the pre-commit secrets check runs,
+  Then the three warnings are still shown,
+  And the check reports a clean result and the commit proceeds,
+  Because an entry that cannot match is a mistake in the author's instruction, not
+    a secret in the repository — this check runs on every commit, so treating a
+    cosmetic mistake as a failure would turn one typo into a repository-wide
+    outage.
+
+  Given the same allowlist,
+  When the pre-commit secrets check runs,
+  Then every warning about it is carried on the error stream and none of them
+    appear among the reported findings the check consumes,
+  And each warning has the same three-part shape as the warnings this file
+    already emits for entries that are outright malformed — same stream, same
+    information, one message per line — with no second warning convention
+    introduced for the new class,
+  Because the findings report and the diagnostics about the allowlist are read by
+    different consumers, and two message shapes describing the same file would
+    each teach the author to ignore the other.
+depends_on:
+  - GE-123c
+  - GE-123c-1
+  - GE-123c-2
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The pre-commit check imports the DEPLOYED copy of the scanner, resolved as a sibling of its own deployed location. The change is made in templates/ and must be propagated by build.py before the real path carries it."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the angle vocabulary used in this AC's test_spec, and the recipe for a single subprocess test that charges reachability, real_artifact and deployed together."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. The warning contract this criterion binds the new class to — error stream, allowlist file, 1-based line number, verbatim text, per-line skipping, non-fatal. Reuse it; do not author a second convention and do not re-specify its own scenarios."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "There are two places the scanner exists and only one of them gates a commit: the pre-commit check imports the DEPLOYED copy, resolved as a sibling of its own deployed location, and falls back to the configured scanner directory. A change present only in the templates/ source is inert on the real path. Edit the canonical template, run build.py, and verify the behaviour through the deployed layout (ADR-001)."
+  - "The warning must be delivered on the error stream and the findings report on the standard output stream must remain free of it — the pre-commit check parses that stream, and a diagnostic leaking into it would read as a finding."
+  - "The unmatchable-entry warning must never, on its own, change the check's exit status. The commit is blocked if and only if a finding survives suppression."
+  - "Exactly one allowlist-diagnostic convention exists for this file after the change: the shape already established for outright-malformed entries, extended to the new class. Two shapes describing the same file is itself the defect."
+  - "Per-line skipping is preserved: every well-formed entry in the same allowlist still loads and still suppresses, whatever its neighbours look like."
+  - "This runs on every commit in this repository and in every project the package is installed into. Loading must stay a single linear pass and must not measurably lengthen the hook's runtime."
+  - "The verification harness must run the pre-commit check as its own process against a temporary tree it owns — its own git repository, its own project root, its own allowlist — and must never create, modify or delete a .security-allowlist at any real project root, workspace root or worktree root. The live file is what the hook actually reads, so a stray write would disable the real gate as a side effect."
+  - "Fixture files must use ordinary source filenames — the per-file scan short-circuits environment-named files to a single filename-based finding and never reads their content, so such a fixture cannot produce the content findings these criteria depend on."
+  - "The blocking-finding fixture must use a rule the pre-commit check never post-filters. Its prose exemption removes high-entropy findings for files under certain path prefixes, so a high-entropy finding is the wrong choice for the arm that proves the commit is blocked."
+test_spec:
+  - name: test_unmatchable_entry_warnings_reach_the_developer_on_the_precommit_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    description: "Deploy with build.py into a temporary target, stage files in a temporary git repository whose allowlist carries one entry of each unmatchable shape plus two well-formed ones, run the pre-commit secrets check as a subprocess, and assert three warnings on the error stream — one per offending line, each naming the allowlist file, its 1-based line number and its verbatim text."
+  - name: test_wellformed_neighbours_still_suppress_and_only_the_uncovered_finding_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "In the same run, the two well-formed entries still suppress their findings, the uncovered private-key finding is reported on the findings stream, and the process exits non-zero on that finding alone."
+  - name: test_unmatchable_entries_alone_do_not_block_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: "With the same allowlist and a staged set in which no finding survives suppression, the three warnings are still on the error stream and the process exits zero — a cosmetic mistake in a file read on every commit must not become a repository-wide outage."
+  - name: test_one_allowlist_warning_convention_and_none_of_it_on_the_findings_stream
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Asserted as a property of the whole run's output: no allowlist diagnostic appears on the findings stream, and every diagnostic on the error stream matches one single shape — the same three-part shape already emitted for outright-malformed entries — so the new class did not fork the convention."
+test_rationale: |
+  This is the criterion every "the author is told" claim in the L1 rests on, and
+  the component already contains a guard documented as bringing in a specialist
+  that does no such thing — a placeholder that always reports success. Loading the
+  allowlist directly and inspecting the message proves the string exists, not that
+  it reaches anyone, so three of the four descriptors run the pre-commit check as
+  its own process against a build.py-deployed copy in a temporary git repository.
+  That single shape charges reachability, real_artifact and deployed at once, per
+  the test-angles guidance, and it is the only shape that can distinguish a warning
+  that is emitted from a warning that is received. The fourth descriptor is the
+  one-convention guard and is deliberately written over the whole run's output
+  rather than over any single message.
+delivers_to:
+  agent: documentation-expert
+  contract: "The settled announcement: what an author actually sees when an entry cannot match, on which stream, with which three pieces of information, and the guarantee that the commit is not blocked by the warning itself — the behaviour the how-to and the suppression reference describe."
+expects_from:
+  ac_id: GE-123c-2
+  contract: "The set of shapes classified as unmatchable across all three fields, each raising the existing warn-and-skip path rather than a new one."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-123c-3-i
+  - GE-123c-3-ii
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE ANTI-PRECEDENT THIS CRITERION EXISTS TO AVOID. This component already
+  contains a guard documented as automatically bringing in a specialist that does
+  no such thing — its correction path is a placeholder that always reports success.
+  A documented-but-dead correction is worse than none, because authors believe they
+  are covered. Every claim in this L1 that "the author is told" rests on this
+  criterion, so it must be discharged by exercising the path a real commit takes —
+  the pre-commit check invoking the scanner over staged files — and asserting the
+  message actually arrives there. Loading the allowlist directly and inspecting the
+  message proves the string exists, not that it reaches anyone.
+
+  THE FAIL-OPEN / FAIL-CLOSED TENSION, RESOLVED EXPLICITLY. The component's
+  standing convention is that an internal problem warns and exits zero rather than
+  blocking an unrelated commit, and the already-done precedent for a bad allowlist
+  line is warn-and-skip. Both point the same way here, and skipping is the
+  fail-closed choice on the security axis: the author immediately sees the finding
+  they were trying to suppress. Blocking the commit on a cosmetic mistake in a file
+  that is read on every commit is the one disposition that could make this fix
+  worse than the defect.
+
+  ONE CONVENTION, NOT TWO. The three unmatchable shapes come from three different
+  fields and could each acquire their own bespoke message. They must not. The third
+  arm is the guard on that, and it is written as a property of the whole file's
+  output rather than of any single message.
+
+  SCOPE. This criterion settles delivery and disposition only. Which shapes count
+  as unmatchable is decided by the two sibling criteria and their edge cases; what
+  the author reads afterwards is the two documentation criteria.
+
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-18. Two implementation facts the BA could not
+  see, both now it_requirements. First, the enforcement point that actually gates a
+  commit is the DEPLOYED scanner copy the pre-commit check resolves as a sibling of
+  its own location — a fix left in templates/ alone is inert on the real path, which
+  is precisely the "warning nobody receives" failure this criterion forbids. Second,
+  the pre-commit check post-filters high-entropy findings for prose-prefixed paths,
+  so the fixture proving the commit is blocked must use a rule that is never
+  post-filtered; a high-entropy finding would make that arm pass or fail for a reason
+  unrelated to the allowlist.

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-25
 components:
   - ac_driven_dev
 related_docs:
@@ -163,3 +163,494 @@ current pass does not consider at all.
 **Related.** KI-BO-002 (`mark_done` leaves `implemented_by: []`) — same family, other
 field, other code path.
 </content>
+
+### KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/workflows-js/plan-feature.js:1740` → `scripts/setup_ticket_worktree.py` `_git_toplevel()`
+
+**Symptom.** `/plan-feature` dies before triage, before the product-truth phase, and
+before any authoring agent runs. It returns
+`status: error — Authoring worktree creation failed (exit code 1)` with a
+`subprocess.CalledProcessError` from `git rev-parse --show-toplevel`. Nothing is
+authored and nothing is written.
+
+**Root cause — two layers, both needed to reproduce.**
+
+1. The workflow shells a **relative** path:
+   `python .leafcutter/scripts/setup_ticket_worktree.py create-ac-worktree`, dispatched
+   through a `status-checker` agent. Which copy of the script runs therefore depends on
+   the caller's working directory. In the ADR-001 self-hosting dev layout the session
+   cwd is the workspace parent (`leafcutter/`), so it selects
+   `<workspace>/.leafcutter/scripts/` — the deployed build output.
+
+2. `_git_toplevel()` defaults its anchor to `Path(__file__).resolve().parent`. That
+   directory is `<workspace>/.leafcutter/scripts/`, and `<workspace>` is **untracked** —
+   `leafcutter-ai/` is the git root, one level *down*. So `rev-parse` exits 128.
+
+The function's own docstring names this exact layout as the thing it is protecting
+against — *"the leafcutter dev layout where `leafcutter-ai/` is the git root but the
+script may be launched from its parent"* — and then defeats that intent one line later
+by asserting *"the script always lives physically inside the repository it operates
+on."* Under self-hosting the deployed copy does not.
+
+**Evidence.** Reproduced directly:
+
+```
+$ git -C /home/henzeh/projects/leafcutter/.leafcutter/scripts rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+exit: 128
+```
+
+The same command against any worktree-local copy succeeds and returns that worktree's
+root. Full traceback in the failed run's workflow result (`run_id: scanner-hardening-1`).
+
+**Why it is not caught by tests.** Unit tests for `setup_ticket_worktree.py` invoke it
+from a `tmp_path` fixture that *is* a git repository, so the default anchor always
+resolves. The failure needs the real deployed layout — a copy of the script sitting in
+an untracked parent — which no fixture reproduces. Same class as the
+`check_secrets` root-resolution defect fixed in GE-118a-1.
+
+**Fix direction.** Two candidates, not mutually exclusive:
+
+- Make `_git_toplevel()` honest about the layout it documents: on failure of the
+  script-dir anchor, fall back to locating the repository rather than raising. A
+  conservative rule that works: probe the immediate children of the workspace for git
+  toplevels and accept the result only when exactly one is found; otherwise re-raise.
+- Better, in `plan-feature.js`: stop invoking a cwd-relative `.leafcutter/` path.
+  Resolve the script from the repository the workflow is operating on, so the copy that
+  runs is never a function of where the session happens to be sitting.
+
+Whichever lands must be covered by a test that executes the script from a directory
+that is **not** a git repository, with the script itself outside the repo — otherwise
+the fixture bias that hid this recurs.
+
+**Workaround used 2026-08-18.** Patched the *deployed* copy at
+`<workspace>/.leafcutter/scripts/setup_ticket_worktree.py` with the single-candidate
+fallback above, warning on stderr when it fires. This is **build output** — `build.py`
+overwrites it from `templates/`, so the workaround evaporates on the next build and is
+not a fix.
+
+---
+
+### KI-ACD-005 — User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel"
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/workflows-js/plan-feature.js` — the PT-phase approve/edit/cancel gate (`pt-gate-mockdata`); `resolveGate()` / gate answer parsing
+
+**Symptom.** The gates that the skill documents as *user* decision points are not
+presented to a user at all. They are dispatched as prompts to a `status-checker` agent.
+That agent — correctly — replies that approving product-truth artifacts is not its job.
+Its reply is then parsed as a gate answer of `action: cancel`, and the pipeline
+discards the run. **No human was involved at any point.**
+
+**Evidence.** The final agent result in the run journal for `wf_1969bd0b-43f`:
+
+```json
+{"action": "cancel",
+ "feedback": "This request is outside status-checker's defined scope (ticket-state
+  verification and closing per docs/agents/conventions.md). status-checker has no
+  defined process for reviewing or approving mock-data-author's product-truth
+  artifacts, and no ticket_path or sign-off context was provided for this dispatch.
+  Recommend routing this approval gate to the agent/role actually responsible for
+  product-truth review ... not status-checker."}
+```
+
+The agent diagnosed the defect and named the fix in its own refusal.
+
+**Why this is worse than a hang.** A gate that cannot reach a user should **pause and
+persist** a resumable state. Instead the failure mode resolves to `cancel`, which is the
+one answer that throws work away. Any agent reply the parser cannot map to
+`approve`/`edit` becomes a destructive default.
+
+**Fix direction.** Gates must not be answered by an agent. Either surface them to the
+real user, or persist a pause record and exit with a status that says "awaiting input"
+— and re-enter via `args.resume_answer`, which the script already supports (ADR-024).
+Separately, harden the answer parser: an unrecognised or refusal-shaped reply must
+never resolve to `cancel`; fail to `pause`, never to `discard`.
+
+---
+
+### KI-ACD-006 — A run that authors zero ACs reports `status: "ok"`
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/workflows-js/plan-feature.js` — cancellation return path
+
+**Symptom.** The cancelled run returned:
+
+```json
+{"status": "ok",
+ "message": "Pipeline cancelled at the product-truth gate (mock-data-author).
+             No PR was opened. ...",
+ "cancelled_at": "pt-gate-mockdata"}
+```
+
+`status: ok` for a run that produced no ACs, opened no PR, and left a draft stranded.
+A caller that branches on `status` — which is the whole point of returning one — treats
+this as success. Verified independently: the authoring worktree
+`worktrees/guardrail-engine` had **zero commits** and **zero AC files** afterwards.
+
+**Fix direction.** `ok` should mean "the thing you asked for happened". A cancellation
+is `cancelled`; a cancellation nobody asked for is an `error`. This is the same
+false-success class as `build-feature` reporting `status: ok` with `skipped_phases: []`
+while never opening a PR — see `docs/known-issues/build-orchestration.md` KI-BO-001 for
+the sibling shape in the other workflow.
+
+---
+
+### KI-ACD-007 — Product-truth artifacts are written to the user's main checkout, not the authoring worktree
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/workflows-js/plan-feature.js` — PT phase (`mock-data-author` dispatch)
+
+**Symptom.** `mock-data-author` wrote its artifact into the **user's main checkout**
+rather than `AUTHORING_WORKTREE_PATH`, and modified a tracked file there. After the run:
+
+```
+leafcutter-ai/  (branch: main)
+  ?? docs/product-truth/mock-data/guardrails/secret-scanning.mock.json   (510 lines)
+   M docs/product-truth/index.json                                        (+68/-1)
+
+worktrees/guardrail-engine/  (branch: ac-authoring/guardrail-engine)
+  (no AC or product-truth changes at all)
+```
+
+The isolation the skill promises in §MP.1 — *"No AC files are written to the user's main
+checkout"* — does not hold for product-truth artifacts. The worktree is created, then
+not used.
+
+**Why it matters.** It leaves `main` dirty with unreviewed generated output. In this
+repo a dirty `main` is actively dangerous: a concurrent `finalize-feature` run resets it,
+and the stray files are then either lost or swept into an unrelated commit. It also
+defeats §PRR, whose orphan scan is scoped to the *authoring worktree* and to
+`docs/acceptance-criteria/` only — so a stranded product-truth draft in the main
+checkout is invisible to the recovery pre-flight that exists to catch exactly this.
+
+**Fix direction.** Anchor the PT-phase agent dispatches to `AUTHORING_WORKTREE_PATH` the
+same way the AC-stage commits are anchored with `git -C`. Then extend the §PRR orphan
+scan to cover `docs/product-truth/` alongside the AC store, so a stranded draft is
+detected on the next run rather than sitting in the user's checkout indefinitely.
+
+**Workaround used 2026-08-18.** Moved the stranded mock-data file into the
+`safety-security` worktree, reverted `docs/product-truth/index.json` on `main`, and
+removed the untracked file — restoring `main` to clean.
+
+---
+
+### KI-ACD-008 — AC id allocation misses ids owned by feature folders, and has already minted a live duplicate on main
+
+- **Severity:** high
+- **Status:** open — live duplicate currently on `main`, see below
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `/plan-feature` AC-authoring stages — the id-selection step
+
+**Symptom.** When choosing the next free AC id, the pipeline does not see ids that are
+owned by an existing **feature folder**. It picked an id that a 43-file tree already
+held, producing two records with the same `id` in the same component.
+
+**Evidence — the duplicate is on `main` right now.**
+
+```
+docs/acceptance-criteria/guardrail-engine/GE-120.yaml
+  id: "GE-120"   level: L2
+  "A guard enforces the document types the project declared, not a narrower list ..."
+
+docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+  id: GE-120     level: L0
+  "Trust that a green check actually checked something"       (+42 descendant files)
+```
+
+Ordering, from git:
+
+| When | Commit | What |
+|---|---|---|
+| 2026-08-17 16:48 | `ec8bb173a` (#453) | a tree was renamed onto `GE-120` from its now-retired predecessor id — folder + 43 files |
+| 2026-08-18 09:09 | `160d4f47a` (#466) | a **`plan-feature(AC)`** run authored a loose L2 *also* claiming `GE-120` |
+
+The tree held the id for ~16 hours before `/plan-feature` reissued it. A
+product-owner agent run manually on 2026-08-18 avoided the same trap only because it
+was told to scan both, and reported: *"Scanned BOTH the feature folders and the LOOSE
+`GE-*.yaml` files at component root (a folder-only listing under-reports)."* The
+pipeline needs that behaviour by construction, not by prompt luck.
+
+**Why nothing caught it.** See `docs/known-issues/ac-store.md` KI-ACS-001 — the
+store validator behind the *required* `AC store valid` CI check does not test id
+uniqueness, so a duplicate id merges clean.
+
+**Fix direction.** Id allocation must enumerate every `id:` field actually present in
+the component's store — walking the directory tree, not listing folder names or loose
+files alone — and must refuse to allocate an id already in use. It should also treat
+retired ids as taken: the id between GE-118 and GE-120 is recorded as retired and
+must never be reissued (see PR #453; not written out here, because the GE-122e-1
+guard fails the build on any live citation of it).
+
+**Not fixed here.** Resolving the live `GE-120` collision means renaming one of the two
+records. The loose L2 is the later claimant (#466) and is the cheaper move — 1 AC file
+plus 4 `# covers: GE-120` tags in
+`unit_tests/commit_guardian/test_ge_120_doc_types_deployed_resolution.py` — versus 43
+files for the tree. Left for a decision rather than done unilaterally, because it
+renames another author's AC and edits their tests.
+
+**Update — the collision is resolved (2026-08-18); the allocator defect above is NOT.**
+The loose L2 was renumbered from `GE-120` to `GE-118c` and moved into
+`docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/`, parented under
+`GE-118` (2 of 7 children -> 3 of 7). Its four `# covers:` tags moved with it and the test
+module was renamed to `test_ge_118c_doc_types_deployed_resolution.py`. The goal tree keeps
+`GE-120`, as its claim is test-enforced by `unit_tests/commit_guardian/test_ge_122e_1.py`.
+A suffix-shaped id was chosen over the free root number `GE-124` because
+`check_ac_parent_covered_by.py` and `scan_ac_orphans.py` derive a parent from id SHAPE and
+`derive_parent_id()` returns `None` for a root id — a root-shaped id would carry a parent
+link no gate could police. The evidence block above is left exactly as written: it records
+what was true on `main` when this issue was filed. **This entry stays open** — nothing about
+the id-allocation step has changed, and the next `/plan-feature` run can still mint a
+duplicate the same way.
+
+---
+
+### KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `templates/workflows-js/plan-feature.js:1745-1790` — the `resolve-workspace-setup-permission` step and the `permitsShell` fail-closed branch
+
+**Symptom.** Every run halts with:
+
+> Workspace-setup step 'worktree-setup' is configured to dispatch to agent
+> 'worktree-agent', whose registered charter does not permit running repository/shell
+> commands. … Fix the workspace_setup_agent configuration or
+> `config/agent_registry.json`'s `permits_shell` field for that agent.
+
+**The message is false.** `worktree-agent` has `permits_shell: true`
+(`config/agent_registry.json:1368`). Following the remedy leads an operator to a field
+that is already correct, and there is nothing there to fix.
+
+**Root cause — a lookup failure rendered as a permissions verdict.** The step reads the
+registry by dispatching a `status-checker` agent to `cat` it, then:
+
+```js
+const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+permitsShell = !!(match && match.permits_shell === true);
+```
+
+`permitsShell` is `false` for *four different reasons* — agent dispatch failed, output
+unparseable, file unreadable, or the id genuinely absent — and only the last is a
+permissions problem. All four print the permissions message. Failing closed is right;
+asserting a specific false cause is not.
+
+**Two independent causes were both present in the observed run**, which is why this is a
+blocker rather than a flake:
+
+1. **The path does not exist.** The deployed workflow reads
+   `.leafcutter/config/agent_registry.json` (relative). Verified 2026-08-19: that file
+   exists at the **workspace root** (`<workspace>/.leafcutter/config/`) but **not** in a
+   worktree's `.leafcutter/`. So the `cat` fails for any run whose cwd is a worktree —
+   deterministically, not intermittently. Same self-hosting-layout class as KI-ACD-004,
+   different resolution site.
+2. **The dispatch itself errored.** The run recorded
+   `[resolve-workspace-setup-permission] failed: API Error: Connection lost
+   mid-response`, so `permissionResult` was `null` and the parse could not have
+   succeeded regardless.
+
+Either alone produces the halt. Because a transient API error is indistinguishable in
+the output from a real mis-assignment, a reader cannot tell a retryable failure from a
+configuration one.
+
+**Evidence.** Run `wf_359683cc-51a`, 2026-08-19, from
+`worktrees/safety-security`. 3 agents dispatched, 2 completed, 1 errored; halted before
+triage and before any authoring agent, so zero ACs were produced.
+
+```
+$ ls <worktree>/.leafcutter/config/agent_registry.json
+ls: cannot access ...: No such file or directory
+$ find <workspace> -name agent_registry.json -not -path '*/worktrees/*'
+<workspace>/leafcutter-ai/config/agent_registry.json
+<workspace>/.leafcutter/config/agent_registry.json
+```
+
+**Fix direction.** Three separable changes:
+
+- **Distinguish the four outcomes.** Report `could not read the registry at <path>`,
+  `could not parse it`, `agent <id> not found in it`, and `agent <id> has
+  permits_shell: false` as different messages. Keep failing closed — the objection is to
+  the diagnosis, not the caution. This is the same "green means checked" distinction
+  `GE-120` draws, inverted: a check that could not run must not report a specific verdict
+  about what it did not see.
+- **Resolve the registry path, do not hardcode a relative one.** Use the same root
+  resolution the guardian hooks use, so the read works from a worktree as well as the
+  workspace root.
+- **Do not gate startup on a live agent dispatch to read a static local file.** The
+  workflow runtime can read it directly; routing it through a `status-checker` adds an
+  API round-trip whose failure mode is a false halt.
+
+**Why it matters beyond the message.** `/plan-feature` is the mandated entry point for
+all new work (`CLAUDE.md`, "New Work Goes Through ACs"). While this holds, that path is
+closed from any worktree, and the only way to author ACs is to dispatch the PO/BA/IT-PO
+agents by hand — which skips the triage, the gates, and the staged-commit invariant the
+workflow exists to enforce.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8, inverted — not a check
+reporting success it did not establish, but a check reporting a *specific failure cause*
+it did not establish.
+
+---
+
+### KI-ACD-010 — An ASCII comma in an AC title survives every normalisation step and lands in the epic folder name, the AC store, and Master_Plan
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:217` (`_normalize_non_ascii_punct`) and `:306`
+  (`_to_pascal_case`, the split regex)
+- **Reported by:** customer bug report 2026-08-25
+
+**Symptom.** An epic folder is created whose name ends in a comma. The punctuation is
+not cosmetic damage confined to the folder — it becomes the epic's identity, so every
+downstream field derived from that name carries the comma too.
+
+**Root cause.** Punctuation removal in this generator has exactly two paths, and an
+ASCII comma is on neither. `_normalize_non_ascii_punct()` normalises **non-ASCII**
+punctuation, symbols and separators only, so a plain `,` is untouched by construction.
+`_to_pascal_case()` then splits the normalised title on `[\s\-_]+` — whitespace, hyphen,
+underscore — and a comma is none of those either, so it is not a separator and is not
+dropped. It simply rides along inside whatever word token it is attached to and emerges
+in the PascalCase result. There is no third filter and no final whitelist, so nothing
+downstream can catch it.
+
+**Evidence.** AC `DTW-100n` produced a folder named literally
+`EPIC-ReconcileWiringNodesToRealRdkMaterials,` — trailing comma included. From there the
+comma propagated into `target_epic` on **8** ACs, into every `implemented_by` path those
+ACs carry, and into the generated Master_Plan. The name is 39 characters, which keeps it
+under the 40-character `_EPIC_NAME_MAX_CHARS` cap (`:314`), so truncation never fired and
+never incidentally clipped the trailing character — a one-character-longer title would
+have hidden the defect by accident.
+
+**Why it ranks high rather than low.** This corrupts silently and persistently. A blocked
+commit is loud and costs an hour; this lands bad data *in the AC store*, survives the
+epic, requires manual cleanup across 8 records plus their paths, and poisons any
+traceability lookup that string-matches on epic names — a search for
+`EPIC-ReconcileWiringNodesToRealRdkMaterials` will not match the folder that exists.
+
+**AC-coverage note — this is a phantom-done instance, and it should be recorded as one.**
+`ACD-1200a-3-iii` is `work_status: done` and `readiness: approved`, and it explicitly
+claims that the em-dash "and any surrounding stray punctuation" are stripped, and that
+the resulting name "does not end in a dangling separator". The observed folder name ends
+in a dangling separator. The claim is false as written, and the store says it is
+satisfied and approved. Its three tests
+(`unit_tests/ac_driven_dev/test_acd_1200a_3_iii.py`) every one construct a title
+containing an em-dash; none feeds an ASCII comma, and none feeds any ASCII punctuation at
+all. The trailing-character assertion the criterion depends on
+(`result[-1].islower() or result[-1].isdigit()`) would in fact have caught the comma — it
+was simply never given one.
+
+**Fix direction.** Strip or normalise ASCII punctuation on the same path as non-ASCII, so
+there is one place where "what is not allowed in a name" is decided. Better still, make
+the final derived name conform to an explicit `[A-Za-z0-9]` whitelist before it is used
+for anything — a whitelist cannot be defeated by a character class nobody thought of,
+which is precisely how this survived. Whatever lands must be parametrised over ASCII
+punctuation, not over one more hand-picked character.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M4 — the fixtures encode the
+punctuation the author had in mind (the em-dash they were fixing), not the punctuation
+real AC titles contain.
+
+---
+
+### KI-ACD-011 — Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:385-433` — `_truncate_pascal_at()`
+- **Reported by:** customer bug report 2026-08-25
+
+**Symptom.** A long AC title yields an epic name that stops mid-phrase, on a word that
+carries no meaning by itself.
+
+**Root cause.** `_truncate_pascal_at()` locates word starts with
+`re.finditer(r"[A-Z][a-z0-9]*")` and keeps the longest prefix that fits under the cap.
+That is a PascalCase *word boundary* and nothing more. It has no notion of content words
+versus function words, so a preposition or article that happens to fall inside the budget
+is kept and becomes the last word of the name.
+
+**Evidence.** AC `DTW-100r` produced `EPIC-WiringReconciliationActuallyLandsInThe`.
+
+**AC-coverage note — a behaviour gap, not a regression.** No existing AC claims this.
+`ACD-1200a-3-iii` requires only that truncation cut at a PascalCase word boundary, and
+`…InThe` satisfies that requirement literally: it ends on a complete word, and it passes
+the criterion's own trailing-character assertion because `e` is lowercase. File this as
+new behaviour to specify rather than as a broken promise — the promise that exists was
+kept.
+
+**Note which path this is.** `_derive_epic_name()` (`:436`) reaches truncation only when
+`_summarise_title_via_llm()` is unavailable or errors; when the summariser answers, the
+concise name it returns is used instead. So this is the offline/fallback path — which
+means it is the path CI takes, the path any key-less environment takes, and the path any
+run takes when the API is having a bad minute. The degraded path is the common one, not
+the rare one.
+
+**Fix direction.** Drop trailing stopwords after truncating, or require the fallback to
+cut at the last *content*-word boundary rather than the last word boundary. Either way,
+keep the cap — the defect is where the cut lands, not that a cut happens.
+
+---
+
+### KI-ACD-012 — The generated `Master_Plan.md` is missing six fields the repo's own ticket guard requires
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:1626` — the frontmatter block in
+  `_render_master_plan()`; against `templates/hooks/ticket_frontmatter_guard.py`
+- **Reported by:** customer bug report 2026-08-25
+
+**Symptom.** The generator emits an artifact that the repository's own pre-commit gate
+rejects. Every epic it produces therefore arrives with a Master_Plan that cannot be
+committed without either hand-editing the file or skipping the hook.
+
+**Root cause — producer and consumer disagree about the required field set.**
+`_render_master_plan()` writes frontmatter with five keys: `epic_name`, `created`,
+`status`, `components`, `source_ac`. `ticket_frontmatter_guard.py` demands rather more.
+Its `REQUIRED_FIELDS` constant (`:26`) is
+`("title", "status", "components", "created", "depends_on")`; on top of that it calls
+`_check_required_tristate()` for `requires_diagram` and `requires_adr` (`:556-557`), and
+`_check_change_target()` / `_check_risk_surface()` (`:560-561`) — the last two promoted
+from optional to REQUIRED by BO-610-4.
+
+Intersecting the two lists leaves **six** required fields the generator never writes:
+`title`, `depends_on`, `requires_diagram`, `requires_adr`, `change_target`,
+`risk_surface`. Note also that `epic_name` and `source_ac`, the two keys the generator
+does emit beyond the overlap, carry no weight with the guard at all — so the artifact is
+not merely thin, it is describing itself in a vocabulary the gate does not read.
+
+**AC-coverage note — a genuine spec gap.** No AC claims this. `ACD-1200a-8` is
+`work_status: todo` and enumerates Master_Plan **content** only; it never mentions
+frontmatter fields, so even completing it as written would not close this. There is no
+criterion anywhere stating that generated artifacts must satisfy the gates that guard
+hand-written ones.
+
+**Fix direction.** Render the full required frontmatter set. Then add a test that runs
+`ticket_frontmatter_guard` against a freshly generated Master_Plan, so the generator and
+the gate cannot drift apart again — the two are maintained independently and each is
+individually correct, which is exactly the condition under which a divergence goes
+unnoticed. The test must run the real guard rather than assert a field list, or it
+becomes a second copy of the requirement that can itself fall behind.
+
+---

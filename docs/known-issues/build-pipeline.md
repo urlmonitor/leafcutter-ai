@@ -154,8 +154,9 @@ doc_types.json` returns only `leafcutter-ai/config/doc_types.json`, inside the p
 repo. Running `build.py --target-dir <worktree>` so the worktree had its own deployed
 layout fixed it, because the walk then reaches `<worktree>/config/doc_types.json`.
 
-Note this is fail-**closed** and loud, which is the right choice (GE-120 deliberately
-removed the silent fallback to a narrower built-in list). The defect is the unreachable
+Note this is fail-**closed** and loud, which is the right choice (GE-118c — renumbered
+from `GE-120` on 2026-08-18 — deliberately removed the silent fallback to a narrower
+built-in list). The defect is the unreachable
 file, not the raised error.
 
 **Fix direction.** Either deploy `config/doc_types.json` alongside the hooks that read it —
@@ -168,7 +169,7 @@ candidate list and derive it.
 two-candidate walk with the same hardcoded `leafcutter/` directory name, so it is equally
 unreachable in this layout — but it returns `None` and `_load_diagram_types()` falls back
 **silently** to the `DOC_FM_DIAGRAM_TYPE_VALUES` constant. That is precisely the silent
-narrowing GE-120 removed from `doc_types` on 2026-08-18, still live in the file GE-120
+narrowing GE-118c removed from `doc_types` on 2026-08-18, still live in the file GE-118c
 copied its pattern from. Fixing the path resolution must cover both; see
 `docs/known-issues/commit-guardian.md` → KI-CG-002 for the fallback half.
 
@@ -212,8 +213,8 @@ $ HOOK_ROOT=<worktree> python <worktree>/.leafcutter/scripts/commit_guardian/che
 ✅ PASSED: 1 doc(s) passed frontmatter validation
 ```
 
-The deployed copy predated GE-120 entirely — it did not contain the resolver function at
-all, so it was falling back to the narrow constant that GE-120 had already deleted from the
+The deployed copy predated GE-118c entirely — it did not contain the resolver function at
+all, so it was falling back to the narrow constant that GE-118c had already deleted from the
 source. Rebuilding fixed it outright.
 
 **Why this is not KI-BP-003.** BP-003 is a *path-resolution* gap: current code that cannot
@@ -232,3 +233,277 @@ verdict — pass or fail — taken from a worktree built before the merge.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
 from the source you are reading), in its staleness form rather than its missing-file form.
+
+---
+
+### KI-BP-005 — Deleting a template leaves its deployed copy behind, and the build reports "no stale files found"
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `scripts/build.py` — the "Stale file cleanup" step, and whatever drives it from `.build_manifest.json`
+
+**Symptom.** Delete a file from `templates/` and rebuild. The build drops the entry from
+`.build_manifest.json` and prints `Stale file cleanup: (no stale files found)` — while the
+previously-deployed artifact stays on disk in `.leafcutter/`. The manifest forgets the file;
+the file itself is never removed. Nothing reports this, because the cleanup's own notion of
+"stale" is derived from the manifest it has already pruned, so a deleted template is
+invisible to the very step that exists to catch it.
+
+The result is an orphaned executable in every install that ever received the artifact,
+permanently, with no surface that mentions it. Deleting a template is a normal operation —
+this is not an exotic path.
+
+**Evidence.** Observed while removing `templates/scripts/commit_guardian/known_failing_tests.py`
+(PR #486). Template deleted, then `python scripts/build.py --target-dir . --force-breaking`:
+
+```text
+Stale file cleanup:
+  (no stale files found)
+
+$ grep -n "known_failing" .build_manifest.json
+(exit 1 — no matches; the manifest entry is gone)
+
+$ ls -la .leafcutter/scripts/commit_guardian/known_failing_tests.py
+-rw-r--r-- 1 henzeh henzeh 11458 Aug 18 11:16 .../known_failing_tests.py
+```
+
+The `11:16` timestamp is the *earlier* build, before the deletion. The file was not rewritten
+and not removed — it was simply abandoned.
+
+`.leafcutter/` is gitignored, so this never shows up in a diff and no CI gate can see it. It
+was found only by checking the deployed path by hand after distrusting the "no stale files
+found" line.
+
+**Why it matters beyond tidiness.** Tests and hooks import from the deployed tree. An orphan
+there can keep a local test green after its source is gone, while CI — which builds fresh —
+fails. That is a false green pointing the wrong way: the local run is the optimistic one. In
+this instance the orphan was removed by hand before the suite was run, specifically so the
+result would be honest.
+
+**Relationship to existing criteria.** This is the *inverse* of `BP-900g-9` ("a declared
+deploy entry whose source is missing fails the build") — there, the manifest names something
+absent; here, something present is named by nothing. It is the same shape as `BP-900g-7`
+("a registry entry naming an executable artifact that exists nowhere"), also inverted:
+artifact real, registry entry gone. Nothing in the AC store currently covers this direction,
+so an AC is probably warranted rather than a silent patch.
+
+**Fix direction.** The cleanup step must compare the deployed tree against the *new* manifest
+and remove what the manifest no longer claims — i.e. diff against the previous manifest, or
+walk `.leafcutter/` and delete unclaimed files. Pruning the manifest before computing
+staleness is the actual bug: it destroys the only record that the file was ever ours. Whatever
+the mechanism, a build that removes an entry and leaves the artifact must say so out loud
+rather than printing a clean bill of health.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in its orphan form — the deployed tree holds something the
+source no longer has.
+
+---
+
+### KI-BP-006 — `build_ac_store`'s hardcoded deploy list omits the AC-store validator and both its helpers
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `scripts/build_phases.py:851-879` (`deploy_map`), `:884-889` (the skip branch)
+
+**Symptom.** The `deploy_map` is a hand-maintained list of eleven `(source, dest)` pairs.
+Three modules the AC store depends on are not in it:
+
+- `_component_migration_map.py` — imported by `generate_ticket_from_ac.py`
+- `_ac_components.py` — imported at module scope by `validate_ac_schema.py:40`
+- `validate_ac_schema.py` itself
+
+In a consumer repo that vendors the build output, the schema validator is therefore absent,
+and the deriver that would populate the field it validates is absent too. The consequence
+lands on the AC store as a hard block — see KI-ACS-007, where 972 of 973 ACs in one
+consumer repo are invalid on a field the package computes for itself.
+
+This is the **fourth** recurrence of one failure mode. `done_proof.py`, `test_enforcement.py`,
+`ac_parent_id.py` and `ac_coverage_resolver.py` were each added to this same list after each
+one shipped broken; five of the eleven entries now carry a comment explaining why that
+specific module must not be forgotten. Those comments are evidence the mechanism does not
+work — a list that needs a warning per entry is not a list, it is a trap with annotations.
+
+**Evidence.** `grep -n "_component_migration_map" scripts/build_phases.py` returns nothing,
+while `scripts/ac_store/generate_ticket_from_ac.py` imports it. The omission is silent by
+construction: `:884-889` logs `build_ac_store: source script not found, skipping` at
+WARNING and continues, so a mistyped or missing entry never fails the build — and a module
+that was never listed produces no message at all.
+
+**Fix direction.** Stop hand-maintaining the list. Deploy `scripts/ac_store/*.py` wholesale,
+or derive the closure by walking the imports of the declared entry points. Failing that,
+add a test that imports every deployed AC-store module **from the deployed layout** in a
+fresh process — the existing unit tests import from source, which is precisely why all five
+prior instances stayed green. Treat "add the module to `deploy_map`" as a fix for the
+instance, never for the defect.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), missing-file form.
+
+---
+
+### KI-BP-007 — No gate validates a skill reference written in template prose, so six skills are loaded by name and none of them exist
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `scripts/build_phases.py:1970-1990` — the `skills_invoked` resolution loop, the
+  only skill-reference validator in the build
+
+**Symptom.** Reported from a consumer install as "those knowledge-capture skills aren't
+available in this consumer project." The report is accurate but its framing is not: nothing
+is wrong with the packaging. `build_skills` copies `templates/skills/` wholesale, and
+`route-knowledge` / `knowledge-query` deploy correctly. The skills the customer wanted were
+never written. Six distinct skills are referenced **by path** in shipped templates and have
+no directory in `templates/skills/`:
+
+| Referenced skill | Referenced from | Reference is |
+|---|---|---|
+| `route-learning` | `signoff/SKILL.md`, PO v3, BA v3, IT PO v3, `retrospective-agent`, `skills/README.md` | `Load .claude/skills/route-learning/SKILL.md` |
+| `capture-learning` | `signoff/SKILL.md`, PO v3, BA v3, IT PO v3 | `Load .claude/skills/capture-learning/SKILL.md` |
+| `agent-telemetry` | `building-epics/SKILL.md` ×8 | `python .claude/skills/agent-telemetry/scripts/emit_event.py …` |
+| `import-scanner` | `research-agent.md` | routing table — "invoke via `Bash`" |
+| `find-context-candle` | `research-agent.md` | routing table — "invoke via `Bash`" |
+| `trade-analysis` | `research-agent.md` | routing table — "invoke via `Bash`" |
+
+None has ever been committed: `git log --all -- templates/skills/<name>` is empty for all
+six, and `find … -name emit_event.py` returns nothing. The last three are not even from this
+domain — `find-context-candle` and `trade-analysis` are trading-system skills, inherited when
+`research-agent` was copied in from another project and never reconciled against this
+package's skill set.
+
+**Why this is the gate, not the artifacts.** Six independent authors, across at least three
+epics, each wrote a reference to a skill that was not there, and the build printed a success
+banner every time. `build_phases.py:1970-1990` *does* fail the build on an unresolvable skill
+id — but it resolves only the `skills_invoked` **registry field** in `agent_registry.json`.
+Every one of these six is declared in **Markdown prose inside a template body**, which no
+validator reads. So the check covers the declaration form that is mechanically generated and
+rarely wrong, and ignores the form a human hand-types — the one that actually rots.
+
+The failure is uniform because the callers are uniform: each reference site treats "skill not
+found" as a pass. `signoff` §7 is the widest blast radius, since every phase agent runs it on
+every sign-off:
+
+```text
+This step is **mandatory** — skipping it is a protocol violation. If `route-learning` or
+`capture-learning` are unavailable, log a warning and proceed (do not block sign-off).
+```
+
+Declared mandatory, then handed an unconditional escape hatch — so the escape hatch is the
+only reachable path. PO v3, BA v3 and IT PO v3 each carry their own copy of the shape ("if
+not found, log … and stop"). The eight `agent-telemetry` calls in `building-epics/SKILL.md`
+fail per-command inside a supervisor that does not check their exit status. Net effect: the
+post-execution half of `docs/architecture/agent_knowledge_system.md` has never run, and the
+epic runbook has never emitted a telemetry event — while every agent reports a clean sign-off.
+
+This is very likely the mechanism behind the pre-drive-checklist story in `CLAUDE.md`
+("23 `submit-failed` events occurred without detection — the drive completed but zero
+telemetry was captured, making the retrospective impossible"). That was diagnosed as an
+unreachable sink; an `emit_event.py` that does not exist produces the same symptom.
+
+**Evidence.** `scripts/check_skill_refs.py` resolves every prose skill path against the real
+directory set. On the tree that recorded this issue:
+
+```text
+$ python3 scripts/check_skill_refs.py
+FAIL: 21 imperative reference(s) to 6 skill(s) that do not exist in templates/skills/.
+  'agent-telemetry'      (8 references)  templates/skills/building-epics/SKILL.md
+  'capture-learning'     (4 references)  signoff/SKILL.md, PO v3, BA v3, IT PO v3
+  'find-context-candle'  (1 reference)   templates/agents/research-agent.md
+  'import-scanner'       (1 reference)   templates/agents/research-agent.md
+  'route-learning'       (6 references)  signoff/SKILL.md, README.md, PO/BA/IT-PO, retrospective
+  'trade-analysis'       (1 reference)   templates/agents/research-agent.md
+```
+
+A naive scan also flags a seventh name, `create-ac` — the control case worth keeping in mind.
+It was correctly retired into `plan-feature` (#184, `3aeb9298`), and the surviving mention at
+`plan-feature/SKILL.md:560` sits inside a `DECISION HISTORY` comment recording that migration.
+A gate that fails on it would be failing on accurate history. Two discriminators separate the
+classes, and `check_skill_refs.py` applies both: HTML comment blocks are stripped before
+scanning, and a reference only fails if its line is **imperative** (`Load …`, `python …`,
+"invoke via Bash") rather than descriptive.
+
+**Fix direction.** The gate now exists — `scripts/check_skill_refs.py`, added with this entry.
+It is not yet wired into CI or the build, so it currently only fails when run by hand. Wire it
+in as a required check (or as a `build.py` validation phase alongside the `skills_invoked`
+resolution it complements) — the same posture `skills_invoked` already has, applied to the
+declaration form that is actually used. That is what converts all six from silent runtime
+no-ops into a build error, and stops the seventh being written.
+
+Then resolve the instances: retarget `route-learning` at `route-knowledge` (which exists and
+already describes itself as the caller-friendly variant — see its `:474-511` table, written
+as though both halves shipped), decide whether `capture-learning` and `agent-telemetry` are
+authored or dropped, and delete the three trading-domain rows from `research-agent`. Remove
+the fail-open clauses in the same change — a mandatory step that warns and proceeds is
+indistinguishable from an absent one, and is what let this survive for the life of the
+feature.
+
+**Trap.** The complaint arrives as a consumer-install packaging bug and reads exactly like
+KI-BP-006 — a module missing from a deploy list. Auditing `build_skills` and the deploy
+manifest finds nothing, because nothing there is wrong. Confirm the artifact exists in
+`templates/` before investigating why it did not arrive. And do not stop at the two skills the
+customer named: the reporter sees whichever dangling reference their workflow happened to
+touch, never the class.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2's inverse. Source and deployed
+layout agree perfectly; both are missing the same file, and every consumer of it treats
+absence as a pass.
+
+---
+
+### KI-BP-008 — A version gate can skip the entire workflow-install phase and still report a successful build, leaving every deployed workflow silently stale
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720
+
+**Symptom.** The phase probes `claude --version` and compares against
+`_MINIMUM_VERSION = "2.1.154"`. When a version is detected and is below the minimum, the
+phase prints a `[WARNING]` and `return 0` — deploying nothing. `return 0` is the same
+"files written" count a genuinely no-op build returns, so the overall build reports
+success. Every deployed workflow keeps whatever content it had, indefinitely, while each
+subsequent build says everything is fine. "Stale file cleanup" does not catch it: that
+step looks for orphaned files, not out-of-date ones.
+
+**Evidence.** Observed live. `.leafcutter/workflows/fast-lane-ship.js` was **620 lines
+against 1047 in source** — 427 behind, with `grep -c "pr-reviewer"` returning `0` on the
+deployed copy and `6` on the source. The deployed copy predated PR #485 entirely: no
+review phase, no changelog phase. A fast-lane run launched against it therefore executed
+the pre-#485 lane, resolved a five-AC set instead of one, and built two criteria against
+a superseded spec. Re-running `build.py` from the main checkout in the same environment
+installed the current file immediately, so the source was never the problem.
+
+**Why the same environment behaved differently between runs.** The probe is
+`subprocess.run(["claude", "--version"], timeout=2)` and parses
+`result.stdout.strip().split()[-1]` — the **last** token. On output shaped like
+`2.1.154 (Claude Code)` that yields `Code)`, which fails `Version()` parsing, sets
+`version_known = False`, and takes the documented fail-open path that installs. So the
+fragile parse fails *safe*. The dangerous branch is the one that works: a cleanly parsed
+version below the minimum silently skips. A 2-second timeout on an external binary also
+means the two paths can alternate between runs on the same machine.
+
+**Why it matters beyond this workspace.** A consumer on an older Claude Code gets this
+permanently and invisibly: every `build.py` reports success, and their agents keep running
+whatever workflow scripts were deployed the day the gate started tripping. There is no
+warning at *use* time, only at build time, in a line that reads like an advisory.
+
+**Fix direction.** A skipped mandatory phase is not a successful build. At minimum,
+distinguish "installed 0 because there was nothing to install" from "installed 0 because I
+refused", and make the second non-zero or loudly summarised at the end of the build rather
+than mid-scroll. Better: record the deployed workflow's source revision (the build manifest
+already tracks output mappings) and have the build compare content, so a stale deployed
+file is reported as drift regardless of why it was skipped — the same defence KI-BP-005
+needs for orphans, in its out-of-date form. Also worth fixing the version parse to take the
+first token rather than the last, though note that bug is currently what keeps this
+workspace working.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in its stale form — the deployed tree holds an older
+version of something the source has moved on from.

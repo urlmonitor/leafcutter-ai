@@ -1,19 +1,132 @@
 id: BP-600f
-readiness: reviewed
-priority: medium
 components:
   - build_pipeline
-status: active
+title: "Quick-fix self-isolates off the default branch instead of committing to it"
 component: build-pipeline
-origin_agent: BrainCandy
-title: "Quick-fix workflow allows main-branch usage with explicit user confirmation"
+level: L1
+status: active
+readiness: reviewed
+priority: medium
+work_status: todo
 criteria: |
-  Given the user invokes /quick-fix while on the main or master branch,
-  When the guard phase detects the default branch,
-  Then the workflow warns that commits will land directly on main,
-  And it asks the user to confirm before proceeding,
-  And on confirmation it continues the normal phase sequence,
-  And on rejection it halts cleanly without changes.
-notes: "Authored by /quick-fix. Root cause: guard unconditionally rejects main/master instead of prompting user for confirmation."
+  Given the user invokes /quick-fix while the current working directory is on
+    the main or master branch,
+  When the isolation-decision guard runs, before any other action,
+  Then the workflow does not warn that commits will land on the default branch
+    and does not ask the user to accept that — it does not offer that outcome at
+    all, because commits to the default branch here cannot be pushed and the
+    work could never land,
+  And it instead treats the location as unusable and self-isolates into a
+    worktree on a non-default branch, by the canonical route BP-600a-2 requires,
+  And the same self-isolation happens when the working directory is in detached
+    HEAD, or is not a git repository at all,
+  And every later phase — AC creation, test, fix, commit, changelog, push —
+    runs on that branch, so the change reaches the default branch only through a
+    pull request,
+  And if the isolation step cannot complete — the canonical script cannot be
+    found, or the local default branch is behind its remote — nothing is created
+    and no work begins: the workflow halts and states which condition stopped it.
+depends_on:
+  - BP-600
+doc_links:
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: >-
+      Phase 0 Steps 0.3 and 0.4. Step 0.3's NEEDS_ISOLATION predicate names
+      main and master alongside the not-a-repo and detached-HEAD cases; Step
+      0.4.2 is the staleness halt.
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      The decision is JS control flow, not agent judgement — see the comment at
+      Step 0b, which records that the removed confirm-on-main path "offered a
+      dead end on main (PR-only: the commit cannot be pushed, so confirming
+      'yes' produced unlandable work)".
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Land the scaffold commit on origin/main before creating the epic
+      worktree" records that main is PR-only and a direct push is rejected with
+      GH013; "In-Place Workflow Specs — Protected-Branch AC Required" is the
+      standing rule this record satisfies.
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - >-
+    The main/master case must be handled by the same single isolation decision
+    as the not-a-repo and detached-HEAD cases, not by a separate guard. A
+    second, parallel branch check is a second mechanism that will drift from
+    the first.
+  - >-
+    No confirmation prompt may be offered for committing to the default branch.
+    Confirming it produced work that could not be pushed, so a gate there is not
+    a safety feature but a slower failure.
+  - "Must handle errors gracefully per the project error handling policy."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-07-10
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Criteria replaced, not narrowed. The original specified a warn-and-confirm
+      gate — warn that commits will land directly on main, ask the user to
+      confirm, and on confirmation continue the normal phase sequence. That path
+      is gone: main here is PR-only under the require-ci-lint branch-protection
+      ruleset with six required status checks, so a direct commit to main cannot
+      be pushed and confirming produced work that could never land. The workflow
+      now self-isolates on main/master rather than offering to commit there. The
+      original's clean-halt-on-rejection clause survives in altered form as the
+      final clause: the workflow still halts without creating anything when it
+      cannot proceed, but the trigger is now an isolation failure rather than a
+      user declining.
+  - reason: schema-repair
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      This record was itself a live artifact of the flat six-field AC template
+      that the same change retires — almost certainly written by a real
+      /quick-fix run against the stale BP-600b-1. It was missing level,
+      work_status, depends_on, covered_by, implemented_by, superseded_by,
+      created, doc_links, assigned_agent and amended_by, and it was an orphan:
+      no depends_on, and absent from BP-600's covered_by list, so no parent
+      claimed it. Those fields are supplied here and BP-600's covered_by now
+      lists it. Two judgement calls worth flagging: (1) level is L1 — a
+      single-letter suffix under an L0 is an L1 position in this store's naming,
+      and the id is preserved rather than renumbered into the L2 slot its
+      behavioural shape would otherwise suggest; (2) work_status is set to todo,
+      the value every sibling L1 in this folder carries, and NOT done — the
+      behaviour is implemented in the templates, but this record has no covering
+      test in covered_by, and marking it done without one is precisely the
+      phantom-done pattern check_done_proof exists to refuse.
+superseded_by: null
+covered_by: []
+implemented_by: []
 change_target: pipeline
 risk_surface: safety
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md ("an amendment changes the criteria text
+  or corrects a field on an AC that already exists; the AC ID does not change").
+  Supersession in this store is reserved for replacement by a new record under a
+  new id, which would have required renumbering this one.
+
+  Original note, retained for lineage: "Authored by /quick-fix. Root cause:
+  guard unconditionally rejects main/master instead of prompting user for
+  confirmation." The fix that note describes — prompting instead of rejecting —
+  is the behaviour this record no longer specifies. Both the original rejection
+  and the prompt were wrong for the same underlying reason, which neither
+  diagnosis reached: the problem was never what to do about being on main, it
+  was that the workflow had no way to get off it.
+
+  This record has no covering test. It is the protected-branch AC that
+  CLAUDE.md's "In-Place Workflow Specs" rule requires, and the rule exists
+  because this exact criterion was missing at ship time and had to be added
+  post-merge. Leaving it untested repeats the shape of that miss at one remove;
+  a test asserting that a main/master cwd routes to self-isolation is the
+  obvious backfill.

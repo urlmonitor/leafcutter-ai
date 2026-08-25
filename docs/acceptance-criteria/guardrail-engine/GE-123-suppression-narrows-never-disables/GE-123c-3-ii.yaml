@@ -1,0 +1,138 @@
+id: GE-123c-3-ii
+components:
+  - commit_guardian
+  - security_scanner
+title: "A suppression that could have matched but had nothing to match this time is left alone"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the security allowlist contains the well-formed entry
+    "ENTROPY_HIGH:src/config/foo.py:*",
+  And "src/config/foo.py" no longer contains any high-entropy token, because the
+    value that entry was written for has since been removed,
+  When that file is scanned through the multi-file entry point with that
+    allowlist in force,
+  Then no warning of any kind is emitted about that entry,
+  And the run's result is unaffected by its presence,
+  Because a suppression that outlives the problem it covered is not a mistake in
+    the author's instruction — it is an instruction that is simply not needed
+    today and may be needed again tomorrow.
+
+  Given the security allowlist contains the well-formed entry
+    "GENERIC_SECRET:secrets.py:12",
+  And the run scans only "src/config/foo.py", so "secrets.py" is never looked at,
+  When the run completes,
+  Then no warning is emitted about that entry,
+  Because most entries have nothing to match in most runs — a single commit
+    touches a handful of files — and reporting them would bury the warnings that
+    identify a real mistake.
+
+  Given the security allowlist contains the entry
+    "ENTROPY_HIGH:src/config/foo.py:*  # kept for the rotated token" alongside
+    the two well-formed entries above,
+  And no file in the run produces any finding at all,
+  When the run completes,
+  Then exactly one warning is emitted, and it names the line carrying the
+    appended note,
+  Because the distinction being drawn is between an entry that cannot match
+    anything ever, which is knowable from the entry alone, and an entry that
+    matched nothing this time, which is knowable only afterwards and means
+    nothing on its own.
+depends_on:
+  - GE-123c-3
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the angle vocabulary used in this AC's test_spec."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The warning trigger is a property of the entry as read and must be computed before any file is scanned. It must not depend, directly or indirectly, on how many findings the entry went on to suppress."
+  - "Do not accumulate per-entry match counts, hit flags or last-matched state for the purpose of warning. Introducing that state is what makes the rejected second signal cheap to add later by accident."
+  - "The never-matched-this-run signal is explicitly out of scope. If it is ever built, it belongs on a separate, deliberately-run surface and must not be delivered through this commit-time warning."
+  - "Reuse the single allowlist-diagnostic convention and keep it non-fatal; nothing in this criterion may change the scan's exit status."
+  - "Edit the canonical template at templates/skills/security-scanner/scripts/scan_secrets.py and propagate with build.py; never edit a deployed copy (ADR-001)."
+  - "Tests must never create, modify or delete a .security-allowlist at any real project root, workspace root or worktree root; every fixture allowlist lives under tmp_path/tempfile."
+  - "Fixture files must use ordinary source filenames — the per-file scan short-circuits environment-named files and never reads their content."
+test_spec:
+  - name: test_entry_whose_target_no_longer_has_a_finding_is_silent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A well-formed entry pointing at a real file on disk that no longer produces the finding it was written for draws no warning of any kind, and the run's result is unchanged by its presence."
+  - name: test_entry_for_a_file_outside_this_run_is_silent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A well-formed entry naming a file the run never scans draws no warning — most entries have nothing to match in most runs."
+  - name: test_only_the_unmatchable_entry_warns_when_nothing_matches_at_all
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "With one unmatchable entry and two never-matched well-formed entries in the same allowlist and no finding anywhere in the run, exactly one warning is emitted and it names the line carrying the appended note — the discriminator proving the rule keys on the entry, not on the outcome."
+test_rationale: |
+  The first two descriptors are both satisfiable by an implementation that does
+  nothing, so on their own they cannot tell a correctly-scoped rule from an absent
+  one. The third is the discriminator: placing an unmatchable entry and two
+  never-matched entries in one run with zero findings anywhere is the only shape
+  that proves the trigger is the entry rather than the outcome. All three run
+  against real files on disk through the multi-file scan entry point, because the
+  claim is about what a run produces, not about what a predicate returns.
+delivers_to: null
+expects_from:
+  ac_id: GE-123c-3
+  contract: "The single unmatchable-entry warning path, whose trigger must be the shape of an entry as read and never the count of findings it happened to suppress during a run."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE TWO SIGNALS, DELIBERATELY NOT CONFLATED. The parent L1 named two candidate
+  ways to detect a suppression that is not doing what its author thinks: the shape
+  of the entry, decidable when it is read, and the fact that it matched nothing
+  during a run, decidable only afterwards. This L1 acts on the first and
+  deliberately declines the second, and this criterion is where that decision is
+  written down and made testable rather than left as an omission a later change
+  could quietly reverse.
+
+  WHY THE SECOND SIGNAL IS REJECTED FOR NOW, in three parts: it is not evidence of
+  an error at all (a stale suppression is untidy, not wrong); the base rate is
+  overwhelming, because a commit-time scan looks at a handful of staged files while
+  the allowlist covers the whole repository, so nearly every entry would report
+  every time; and a warning that is usually wrong destroys the credibility of the
+  warning next to it that is always right.
+
+  NOT CLOSED FOREVER. A periodic report of entries that have not matched in a long
+  time, run deliberately rather than on every commit, is a reasonable separate
+  feature. It is not this one, and it must not be delivered through this warning.
+
+  THE THIRD ARM IS THE DISCRIMINATOR. Both other arms are satisfiable by a
+  do-nothing implementation. Placing an unmatchable entry and two never-matched
+  entries in the same run, with no findings anywhere, is what proves the rule keys
+  on the entry rather than on the outcome.
+
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-18. The scope fence is enforceable at the
+  level of state, not just of intent: if the loader never carries per-entry match
+  state, the rejected signal is not merely undelivered — it is unavailable, and a
+  later change cannot add it by accident. That is the strongest form of this fence
+  and is recorded as an it_requirement.

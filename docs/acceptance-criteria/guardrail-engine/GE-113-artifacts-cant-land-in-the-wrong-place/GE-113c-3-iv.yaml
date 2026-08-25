@@ -1,6 +1,7 @@
 id: GE-113c-3-iv
 components:
   - commit_guardian
+  - security_scanner
 title: "Direct unit tests for _is_suppressed cover both exploit paths"
 component: guardrail-engine
 level: L3

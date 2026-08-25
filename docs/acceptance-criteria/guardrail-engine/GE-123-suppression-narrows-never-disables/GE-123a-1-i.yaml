@@ -1,0 +1,176 @@
+id: GE-123a-1-i
+components:
+  - commit_guardian
+  - security_scanner
+title: "Every sensitively-named file in the same run is read, not just the first one, and no finding is lost between the per-file scan and the run's report"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given five files whose names mark them as environment configuration — the same
+    five-file set the measured baseline used — each containing the same four
+    lines the scanner's content rules recognise: a cloud access key in the
+    AWS_KEY form, a private-key header line, a quoted twelve-character value
+    assigned to a field named password, and a high-entropy token of at least
+    twenty characters,
+  And no suppression entries are in force,
+  When all five files are scanned in a single run through the scanner's
+    multi-file entry point — the same entry point the pre-commit secrets check
+    calls,
+  Then twenty-five findings are reported: for EACH of the five files, one
+    filename finding plus the four content findings,
+  And the run's exit status reports findings present,
+  Because the measured collapse was total across all five files, so an
+    implementation that reads the contents of the first sensitively-named file
+    it meets and short-circuits the rest still leaves four files unprotected
+    while satisfying the parent criterion, whose scenario contains only one
+    such file.
+
+  Given the same five environment-configuration files interleaved with three
+    ordinary source files, one of which is scanned before any of the five and
+    one of which is scanned after all of them,
+  And no suppression entries are in force,
+  When the same set is scanned again in reverse order in a second run,
+  Then each of the five environment-configuration files reports the same five
+    findings in both runs, and each ordinary source file reports the same
+    findings in both runs,
+  Because nothing about a file's position in the run, or about which files
+    preceded it, may decide whether that file's contents are read.
+
+  Given the same five environment-configuration files and no suppression
+    entries in force,
+  When the run completes,
+  Then the run's report contains every finding produced for every file — findings
+    that differ only in which file they came from are all present, none is
+    dropped and none is collapsed into another,
+  Because coverage demonstrated on the per-file scan alone does not reach the
+    author: a run that produces five findings per file internally but reports
+    one of each rule for the whole run is the same coverage loss one level up.
+depends_on:
+  - GE-123a-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "The third arm of this criterion is the seam angle stated as behaviour — what the per-file scan produces and what the run reports to the author are two sides of a producer-to-consumer boundary inside the same module, and only the second one protects anyone."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-123a-1
+  contract: "The per-file scan that no longer stops at the filename recognition — this criterion asserts that the same behaviour holds for every sensitively-named file in a multi-file run and that the run's report carries all of it through to the author."
+it_requirements:
+  - "All fixture files must exist as distinct real files in one tempfile-backed directory and be scanned in a SINGLE scan_files call. A test that calls the per-file scan five times in a loop asserts nothing this criterion is about and specifically cannot fail the aggregation arm."
+  - "The aggregation arm must assert on the multiset of (rule_id, file_path) pairs, never on a total count alone. An implementation that de-duplicates by rule id across files must fail this arm rather than pass on a coincidental total."
+  - "Order independence must be asserted by comparing the PER-FILE finding sets between a forward run and a reverse run of the same file list, never by comparing run totals — an order-dependent implementation can produce the same total from a different distribution across files."
+  - "The five env-named fixtures must not be five copies of one filename in five directories. Use five distinct names drawn from the forms the sensitive-filename rule recognises, so the arm cannot be satisfied by behaviour that is specific to one name."
+  - "The three ordinary source files must use ordinary .py filenames, and in the forward run one must precede all five env-named files and one must follow all of them, so the reverse run genuinely inverts their relative positions."
+  - "Exit-status arms must run the scanner's CLI entry point in a fresh subprocess with the fixture directory as the working directory, and must assert the process exit code. A returned list of findings is not an exit status."
+  - "Test fixtures must assemble every credential-shaped string at runtime from concatenated fragments rather than writing it as a source literal, so this repository continues to need no PRIVATE_KEY or AWS_KEY suppression anywhere. The existing suppression test module does this deliberately; do not collapse the fragments back into literals."
+  - "Each of the four content-rule lines in a fixture must produce exactly one finding, so that twenty-five is an exact expectation rather than a floor. Verify the chosen values do not cross-trigger a second rule."
+  - "The module under test must be loaded from the canonical templates/ path via importlib.util.spec_from_file_location, never from a deployed copy, which can be stale."
+  - "No test may write a .security-allowlist to any real project root. Every arm of this criterion runs with no allowlist present in the fixture directory."
+  - "Fixture files must not be placed under tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/. The pre-commit consumer post-filters entropy findings for those path prefixes, which would silently change the expected counts."
+test_spec:
+  - name: test_five_env_named_files_report_twenty_five_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Five distinct env-named fixtures, each carrying the same four recognised lines, scanned in a single scan_files call, return exactly twenty-five findings — five per file, with the filename rule and each of the four content rules present once per file."
+  - name: test_findings_are_identical_under_forward_and_reverse_scan_order
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The five env-named fixtures interleaved with three ordinary .py fixtures are scanned forwards and then in reverse; the per-file finding set for every one of the eight files is equal between the two runs."
+  - name: test_no_finding_is_dropped_or_collapsed_between_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The multiset of (rule_id, file_path) pairs returned for the five-file run contains all twenty-five pairs; findings that differ only in which file they came from are all present, so an aggregator that de-duplicates by rule id across files fails."
+  - name: test_cli_over_the_five_file_set_exits_nonzero_and_names_every_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    description: "The scanner CLI, run in a fresh subprocess with the fixture directory as its working directory over all five env-named fixtures, exits non-zero and its report names all five files rather than a single representative one."
+test_rationale: "This record exists because the parent's scenario contains ONE env-named file while the measured collapse was total across five, so a fix that reads the contents of the first such file it meets would pass the parent and leave four files exactly as they are today. The descriptors are therefore built on a set, not an instance, and every one of them drives the multi-file entry point: a loop over the per-file scan reproduces the exact blind spot the third arm is about and cannot fail it. RED-VS-GREEN HONESTY, so a later TDD-order check does not misread the baseline: all four descriptors are RED today, but for a reason worth stating precisely. The baseline is five findings across the five files (one filename finding each), so every count-bearing assertion fails today. The STRUCTURAL properties the second and third descriptors guard — order independence and the absence of cross-file de-duplication — already hold in the current implementation, which iterates and appends with no cross-file state. Those two descriptors are therefore red on the counts and green on the mechanism: once GE-123a-1 lands they convert into regression guards against an order-sensitive or de-duplicating rewrite, and they should be read that way rather than as independent evidence of the fix. The fourth descriptor's exit-code assertion is green on arrival for the same reason as the parent's — five filename findings already exit non-zero — so its load-bearing half is the requirement that the report name every file."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S (no code change beyond GE-123a-1; the whole cost is the multi-file fixture set); authored it_requirements pinning the single-scan_files-call rule that makes the aggregation arm falsifiable, the multiset-of-(rule_id, file_path) assertion shape, per-file rather than total comparison for order independence, five distinct filenames rather than one name in five directories, and the shared fixture/loader/allowlist constraints; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale distinguishing red-on-counts from green-on-mechanism for the order-independence and aggregation arms. Criteria, depends_on, expects_from and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHAT WAS INFERRED, AND FROM WHICH TEXT. This record was reconstructed from the
+  dangling reference in GE-123a-1's covered_by after the authoring run that
+  created it did not write the file. Three pieces of the parent were used, and a
+  reviewer should check the reading against them:
+
+    1. GE-123a-1's MEASURED RED BASELINE paragraph — "five env-named files each
+       carrying the four secret shapes above reported ZERO problems". The parent
+       records the collapse as measured across FIVE files, but its own scenario
+       exercises exactly ONE environment-named file (".env") alongside one
+       ordinary source file. The gap between the measured evidence and the
+       parent's scenario is the first arm here: a fix that works for the first
+       such file only would pass the parent and leave four of the five measured
+       files exactly as they are today. The arithmetic is the parent's own —
+       "the fix must take the env-named file to five" — multiplied across the
+       five files of the baseline: twenty-five.
+
+    2. GE-123a-1's VERIFICATION STANDARD paragraph — "a sibling audit in this
+       family found two criteria verified only against the matching logic in
+       isolation that described situations the real entry point can never
+       produce ... Coverage of the per-file scan in isolation does not discharge
+       it." Stated there as a rule about how to test, it has a behavioural
+       consequence that is testable in its own right and is the third arm here:
+       what the per-file scan produces and what the run reports to the author
+       can differ, and only the latter protects anyone. An aggregator that
+       de-duplicates by rule id across files would reproduce the collapse above
+       a correctly-fixed per-file scan.
+
+    3. GE-123a-1's delivers_to contract — "so that every downstream AC in this
+       tree can assume an env-named file has more than one suppressible
+       finding." Every downstream AC, not one file. GE-123a-2 relies on this for
+       five files at once; that reliance is only sound if the parent's behaviour
+       is established for a set, which is what this record does.
+
+  The second arm (order independence) is not stated in the parent's text; it was
+  added because the first arm's failure mode — a short-circuit that survives at
+  run level — is most cheaply hidden by an implementation whose behaviour depends
+  on what it has already seen. It is an edge case of the same behaviour, not a
+  new direction.
+
+  MEASURED RED BASELINE: as the parent records, the five-file set reported ZERO
+  findings with one suppression line present, and the same content in an ordinary
+  source file reported four. Against this criterion (no suppressions at all) the
+  baseline is five findings across the five files — one filename finding each.
+  All three arms are red.
+
+  ENV FILENAMES ARE THE SUBJECT HERE, as in the parent and for the same reason:
+  the short-circuit is what this branch is about. The tree-wide constraint against
+  environment filenames as casual illustrative examples is unaffected; the
+  ordinary files in the second arm use ordinary source filenames.
+
+  VERIFY THROUGH THE REAL MULTI-FILE ENTRY POINT with real files on disk. A test
+  that calls the per-file scan five times in a loop asserts nothing this criterion
+  is about and specifically cannot fail the third arm.

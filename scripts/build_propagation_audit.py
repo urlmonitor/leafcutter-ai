@@ -14,6 +14,16 @@ BUSINESS CONTEXT: EPIC-PortableInstallHardening discovered 5 scripts registered
     (e.g. a user-supplied tool path) do not produce broken-reference failures.
     AC BP-900c-1 adds a three-field broken-reference report entry: missing path,
     referencing template, and a suggested action.
+    AC BP-900b-1 (ticket 05_TICKET-20260611-BP-900b-1) extends the reference-extraction
+    pass to the COMPILED output tree (agents/ and skills/ under the build target, after
+    build.py has written them) rather than the source templates/ tree this module's
+    other guards already cover. That extractor —
+    ``build_referential_integrity.extract_compiled_script_path_refs()`` — lives in the
+    sibling module alongside its pre-build counterparts
+    (``extract_script_path_refs`` / ``extract_script_path_refs_with_sources``) to keep
+    the reference-extraction pass in a single location (this AC's ``n_location_rule``);
+    it is documented here because ``doc_links`` on the AC names this file as an
+    ``extends`` relationship.
 ARCHITECTURE: One public phase function ``propagation_audit``, one guard
     function ``check_broken_references``, a ``BrokenRefEntry`` dataclass, and
     a ``build_broken_ref_report`` factory. Parsing uses ``yaml.safe_load`` with a
@@ -84,14 +94,6 @@ EXTERNAL_DEPENDENCY_ALLOWLIST: frozenset[str] = frozenset([
     # (SKILL.md says "surface to the user and DO NOT improvise" — not a graceful
     # skip). A separate authoring ticket is required to create and deploy this script.
     "scripts/scaffold/new_arch_doc.py",
-    # scripts/commit_guardian/known_failing_tests.py — a commit-guardian companion
-    # script referenced by agents/commit.md to read the known-failing-tests
-    # allowlist. The script does not yet exist as a package deliverable. Allowlisted
-    # so the guard does not block; however, commit.md has no documented fallback when
-    # the script is absent and explicitly forbids --no-verify as an escape path — so
-    # absence causes a hard failure. A separate authoring ticket is required to either
-    # create and deploy this script or add a graceful-skip guard to commit.md.
-    "scripts/commit_guardian/known_failing_tests.py",
     # scripts/onboard_hook_opt_in.py — referenced in agents/onboard.md as an
     # optional standalone helper ("You can also run this step via the standalone
     # script"). The reference is advisory — onboard.md describes the same
@@ -511,4 +513,34 @@ def propagation_audit(
 #   a hard failure when absent: commit.md has no documented fallback and explicitly forbids
 #   --no-verify as an escape path. Separate authoring tickets are required for the latter
 #   two before they can be deployed. (#EPIC-BuildGuardFalsePositive/03)
+# - 2026-08-18 [python-coder/test-authoring]: Removed the
+#   scripts/commit_guardian/known_failing_tests.py allowlist entry (added
+#   2026-06-17 above). The 2026-06-17 justification ("does not yet exist as a
+#   package deliverable") had gone stale: the script DID exist as a tracked
+#   template and was deployed, but was never registered in any pre-commit
+#   config and its baseline file was never created, so it never actually ran.
+#   TQ-100d-1 specifies its replacement (config/known_failing_tests.yaml +
+#   expiry/staleness checks) under a settled design, so the dead script was
+#   deleted outright rather than wired up as a weaker competitor. commit.md
+#   no longer references it as a live invocation (only as historical prose),
+#   so the allowlist entry is no longer needed to keep the broken-reference
+#   guard green. (#TQ-100d-1)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/05_BP-900b-1]: Added a
+#   docstring cross-reference to build_referential_integrity.extract_compiled_script_path_refs(),
+#   the new post-compile counterpart to this module's pre-build guards. The actual
+#   extractor implementation lives in the sibling module (natural home alongside its
+#   two pre-build siblings, keeping the reference-extraction pass in a single location
+#   per the AC's n_location_rule); this file is documented because the AC's doc_links
+#   name it with an "extends" relationship. No functional change in this file.
+#   (#BP-900b-1)
+# - 2026-08-18 [python-coder/EPIC-DeploymentCompleteness/06_BP-900b-1-1]: Confirmed
+#   test_drift classification (ADR-003 Rule 1): EXTERNAL_DEPENDENCY_ALLOWLIST /
+#   check_broken_references() / build_broken_ref_report() already implement this
+#   AC's Gherkin in full (allowlisted references resolve, are excluded from the
+#   broken set, and the build exits zero) — authored under
+#   EPIC-BuildGuardFalsePositive/03, before this AC existed. No behavior in this
+#   file changed; the gap closed by this ticket was a missing dedicated test
+#   (unit_tests/build_guards/test_bp900b1_1_external_dependency_allowlist.py) and
+#   a missing architecture-doc section (template-compiler.md, "External-Dependency
+#   Allowlist (AC BP-900b-1-1)"). (#BP-900b-1-1)
 # ===========================================================================

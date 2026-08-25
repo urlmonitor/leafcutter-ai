@@ -111,6 +111,15 @@ class HarnessResult:
         stderr: Raw stderr from the Node.js process.
         returncode: Exit code of the Node.js process.
         error: Error message if the harness itself failed (not the script).
+        result: The workflow script's own top-level ``return`` value (the
+            terminal payload), JSON-round-tripped into a plain Python object
+            (dict / list / str / bool / None). ``None`` when the script threw
+            before returning, returned nothing, or returned ``undefined``.
+            Added for BO-2400f-11 / BO-2400f-4-vi so tests can assert on
+            terminal-payload CONTENT (status, message, named findings) rather
+            than only on which agent() calls were dispatched. Additive and
+            backward-compatible: existing consumers that never read
+            ``.result`` are unaffected.
     """
 
     agent_calls: list[AgentCall] = field(default_factory=list)
@@ -119,6 +128,7 @@ class HarnessResult:
     stderr: str = ""
     returncode: int = 0
     error: str = ""
+    result: Any = None
 
     @property
     def dispatch_count(self) -> int:
@@ -336,17 +346,22 @@ var args = Object.assign({
     // Log to stderr so pytest can surface it on failure.
     process.stderr.write('harness: script threw: ' + String(__err__) + '\n');
   }
-})().then(function() {
-  // Emit captured calls and contract violations as structured JSON to stdout.
+})().then(function(__scriptResult__) {
+  // Emit captured calls, contract violations, AND the script's own top-level
+  // return value (the terminal payload) as structured JSON to stdout.
+  // (BO-2400f-11 / BO-2400f-4-vi: terminal-payload CONTENT assertions need
+  // the actual resolved value, not just which agent() calls fired.)
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
     violations: __contractViolations__,
+    result: (typeof __scriptResult__ === 'undefined' ? null : __scriptResult__),
   }));
 }).catch(function(__topErr__) {
   process.stderr.write('harness: top-level error: ' + String(__topErr__) + '\n');
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
     violations: __contractViolations__,
+    result: null,
   }));
 });
 """
@@ -636,9 +651,11 @@ def run_workflow_under_e2(
     stdout = proc.stdout or ""
     stderr = proc.stderr or ""
 
-    # Parse the structured JSON output {calls: [...], violations: [...]} from stdout.
+    # Parse the structured JSON output {calls: [...], violations: [...], result: ...}
+    # from stdout.
     agent_calls: list[AgentCall] = []
     contract_violations: list[dict] = []
+    script_result: Any = None
 
     if stdout.strip():
         try:
@@ -661,6 +678,10 @@ def run_workflow_under_e2(
             violations = raw_output.get("violations", [])
             if isinstance(violations, list):
                 contract_violations = [v for v in violations if isinstance(v, dict)]
+            # `result` is the script's own top-level return value — absent for
+            # any shim produced before this key existed, so .get() with a
+            # None default keeps old captured stdout (if ever replayed) safe.
+            script_result = raw_output.get("result")
         else:
             raw_calls = []
 
@@ -679,6 +700,7 @@ def run_workflow_under_e2(
         stdout=stdout,
         stderr=stderr,
         returncode=proc.returncode,
+        result=script_result,
     )
 
 

@@ -1,0 +1,77 @@
+id: BO-2400f-4-ii
+components:
+  - build_orchestration
+  - changelog
+  - release_manager
+title: "A run whose whole change is exempt writes no changelog entry"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run whose entire delivered change is confined to the path families the
+    changelog-presence merge check exempts — for example a run that only edits acceptance
+    criteria and appends to a known-issues register,
+  When the run finishes and opens its pull request,
+  Then the run adds no changelog entry,
+  And the collection of changelog entries is byte-identical before and after the run,
+  And the run still reports success, because the merge check passes such a change with no
+    entry present.
+depends_on: [BO-2400f-4, BO-2400f-4-i]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/changelog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_changelog_skip:
+      type: object
+      description: "When the requirement decision is false the run records a skipped changelog step with the reason 'no releasable files changed' and emits nothing."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The skip must be recorded as a step outcome, not silently omitted, so the run's own report shows the decision was taken. Follow the repo's skip-branch rule: conditionalize the existing unconditional outcome call rather than adding a second one, or the step double-records on the skip path (CLAUDE.md, EPIC-InFlightVisibility)."
+    - "An always-emit implementation is a defect even though it would satisfy the merge check: release.yml cuts a version tag whenever a changelogs/ entry exists since the last tag, so an entry for a criteria-only run cuts a release that shipped nothing."
+    - "The covering test must assert the changelog directory is unchanged, not merely that the run reported a skip."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-4-i
+  contract: "The per-run 'changelog entry required' decision; this criterion governs the false branch."
+test_required: true
+test_spec:
+  - name: test_exempt_only_run_writes_no_changelog_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    description: "A run whose delivered change is confined to exempt path families leaves the changelog collection unchanged."
+  - name: test_exempt_only_run_still_reports_success
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "Producing no entry for an exempt-only run is a success path, not a blocker."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the counterweight to BO-2400f-4-iii. Fixing "never writes an entry" by "always
+  writes an entry" trades an unmergeable pull request for a noisy store and a stream of
+  spurious version tags — the auto-release flow treats any changelog entry added since the
+  last tag as a reason to cut one.

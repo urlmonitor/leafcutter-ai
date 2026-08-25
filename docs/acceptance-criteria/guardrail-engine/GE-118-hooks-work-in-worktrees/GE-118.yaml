@@ -35,9 +35,30 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - reason: adopt-renumbered-child
+    date: '2026-08-18'
+    by: business-analyst
+    entry: 'covered_by gained GE-118c ("A guard enforces the document types the
+      project declared, not a narrower list it kept to itself"), taking this L0
+      from 2 of 7 children to 3 of 7. GE-118c is not new work — it landed in PR
+      #466 as a loose record at the guardrail-engine namespace root claiming
+      the id GE-120, which the goal-level tree GE-120-green-means-checked/ was
+      already holding. It was renumbered into this tree because its primary
+      root cause is the same one GE-118b records: a hand-counted parents[2]
+      plus a hardcoded "leafcutter" segment resolving to a path that never
+      existed in any layout, so the gate silently no-ops. NOTE FOR ANYONE
+      READING THE STANDING RULE: the guardrail-engine PROJECT_CONTEXT and
+      GE-120''s L0 notes both say GE-118 is "deliberately NOT amended or
+      superseded" and stands as the record of the point fixes that landed.
+      That rule was written to stop the cross-cutting green-means-checked
+      POLICY being grafted onto this tree, which would put the general rule
+      beneath a specific instance. Adding a third point fix of the same shape
+      does not invert that containment. GE-118c''s own notes carry the full
+      reasoning, including why GE-120 — the semantically closer parent — is
+      mechanically forbidden.'
 superseded_by: null
-covered_by: [GE-118a, GE-118b]
+covered_by: [GE-118a, GE-118b, GE-118c]
 implemented_by: []
 change_target: code
 risk_surface: internal
