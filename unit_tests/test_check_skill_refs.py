@@ -138,5 +138,63 @@ class TestCheckSkillRefs(unittest.TestCase):
             self.assertEqual(csr.main(["--repo-root", str(Path(d))]), 2)
 
 
+class TestBundledFileReferences(unittest.TestCase):
+    """A reference into a skill bundle must resolve to the FILE, not just the directory.
+
+    Skill bundles ship executables. `python .claude/skills/agent-telemetry/scripts/
+    emit_event.py` names a real skill and a script that may or may not be there — a
+    directory-only check passes the bundle whose script was never written, which is
+    the same defect one level in.
+    """
+
+    def test_missing_bundled_script_fails(self):
+        """Skill directory present, referenced script absent → failure."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            templates = _make_templates(root, ["agent-telemetry"])
+            (templates / "skills" / "agent-telemetry" / "SKILL.md").write_text(
+                "python .claude/skills/agent-telemetry/scripts/emit_event.py --event x\n",
+                encoding="utf-8")
+            self.assertEqual(csr.main(["--repo-root", str(root)]), 1)
+
+    def test_present_bundled_script_passes(self):
+        """The same reference is clean once the script exists."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            templates = _make_templates(root, ["agent-telemetry"])
+            scripts = templates / "skills" / "agent-telemetry" / "scripts"
+            scripts.mkdir()
+            (scripts / "emit_event.py").write_text("# real\n", encoding="utf-8")
+            (templates / "skills" / "agent-telemetry" / "SKILL.md").write_text(
+                "python .claude/skills/agent-telemetry/scripts/emit_event.py --event x\n",
+                encoding="utf-8")
+            self.assertEqual(csr.main(["--repo-root", str(root)]), 0)
+
+    def test_missing_skill_md_fails(self):
+        """A bare skill directory with no SKILL.md does not satisfy a Load instruction."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            templates = _make_templates(root, ["signoff"])
+            (templates / "skills" / "signoff" / "SKILL.md").unlink()
+            (templates / "agents" / "a.md").write_text(
+                "1. Load `.claude/skills/signoff/SKILL.md` and follow it.\n",
+                encoding="utf-8")
+            self.assertEqual(csr.main(["--repo-root", str(root)]), 1)
+
+    def test_reason_distinguishes_missing_dir_from_missing_file(self):
+        """The report says which of the two failed — they need different fixes."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            templates = _make_templates(root, ["agent-telemetry"])
+            (templates / "agents" / "a.md").write_text(
+                "python .claude/skills/agent-telemetry/scripts/emit_event.py\n"
+                "1. Load `.claude/skills/nope/SKILL.md` now.\n",
+                encoding="utf-8")
+            bad, _ = csr.scan(templates, {"agent-telemetry"})
+            reasons = {rec["skill"]: rec["reason"] for rec in bad}
+            self.assertIn("has no scripts/emit_event.py", reasons["agent-telemetry"])
+            self.assertIn("no skill directory", reasons["nope"])
+
+
 if __name__ == "__main__":
     unittest.main()
