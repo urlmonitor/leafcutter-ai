@@ -127,7 +127,8 @@ amended_by:
   date: '2026-08-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/02_TICKET-20260825-GE-122d-2.md
 change_target:
   - code
   - pipeline
@@ -160,3 +161,4 @@ notes: |
   settings-as-code for it and no such script exists, so in practice it is a manual gh api
   operation. It is recorded as evidence on the ticket, and the ci.yml job name is bound to that
   evidence by a test so a rename cannot silently unbind it.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage
