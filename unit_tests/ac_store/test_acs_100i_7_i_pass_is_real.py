@@ -4,12 +4,15 @@ GOAL: Pin ACS-100i-7-i — prove that ACS-100i-7's headline result ("zero record
     refused on this rule") is a real pass and not an empty examination. The gate
     must still bite inside the whole-store pass, and a run that examined nothing
     must not be reported as success.
-BUSINESS CONTEXT: KI-ACS-001. scripts/ac_store/validate_ac_schema.py takes FILE
-    paths and does no globbing; handed a bare directory it prints "No YAML files
-    to validate." and exits 0 — a success-shaped result from a run that checked
-    nothing. The store-wide sweep prescribed in CLAUDE.md was itself a no-op from
-    2026-08-10 to 2026-08-18 for exactly this reason. Without the third test
-    below, "zero refusals" is indistinguishable from "validated nothing".
+BUSINESS CONTEXT: KI-ACS-001. scripts/ac_store/validate_ac_schema.py used to take
+    FILE paths and do no globbing; handed a bare directory it printed "No YAML
+    files to validate." and exited 0 — a success-shaped result from a run that
+    checked nothing. The store-wide sweep prescribed in CLAUDE.md was itself a
+    no-op from 2026-08-10 to 2026-08-18 for exactly this reason. Without the last
+    two tests below, "zero refusals" is indistinguishable from "validated
+    nothing". Both halves are needed: an empty examination must fail loudly, AND
+    a directory that holds records must actually be walked — a validator that
+    simply refused every directory would satisfy the first half vacuously.
 ARCHITECTURE: The "copy of the store into which one record has been added" is a
     logical copy — the real corpus's parsed records plus one record materialized
     on disk under pytest's tmp_path. The real store is never written to, and the
@@ -34,7 +37,6 @@ from _acs_100i_support import (  # noqa: E402
     SCHEMA_VALIDATOR_CLI,
     base_ac_record,
     run_cli,
-    store_relative,
     verdict,
     whole_store_pass,
     write_ac_yaml,
@@ -131,31 +133,66 @@ def test_single_file_check_reproduces_the_whole_store_refusal(tmp_path):
     )
 
 
-def test_bare_directory_run_is_not_reported_as_success():
+def test_empty_examination_is_not_reported_as_success(tmp_path):
     # covers: ACS-100i-7-i
-    """ACS-100i-7-i s3: handed a directory instead of a file path, the validator
-    must not report success for a run in which it examined no records — an empty
-    examination must be reported as such and be distinguishable from a pass.
+    """ACS-100i-7-i s3: a run in which the validator examined no records must not
+    report success — the empty examination is reported as such and is
+    distinguishable from a pass.
 
-    Currently RED (KI-ACS-001): validate_ac_schema.py prints "No YAML files to
-    validate." and exits 0. That success-shaped no-op is why CLAUDE.md's
-    prescribed store-wide sweep silently checked nothing for eight days, and why
-    ACS-100i-7's zero-refusal claim cannot be trusted without this test.
+    KI-ACS-001: the validator used to print "No YAML files to validate." and exit
+    0, so CLAUDE.md's prescribed store-wide sweep silently checked nothing for
+    eight days while reporting clean the whole time.
 
-    The real store directory is used — not a synthetic empty one — so the run is
-    unambiguously a case of "records were there and none were examined".
+    A directory holding no AC YAML is the case that reaches the empty-examination
+    branch now that a directory argument is walked recursively (see the companion
+    test below). Both spellings of "nothing to check" are covered: a directory
+    with no YAML at all, and a directory holding only non-YAML files.
+    """
+    empty_dir = tmp_path / "no-records-here"
+    empty_dir.mkdir()
+    (tmp_path / "decoys").mkdir()
+    (tmp_path / "decoys" / "README.md").write_text("not an AC\n", encoding="utf-8")
+
+    for target in (empty_dir, tmp_path / "decoys"):
+        run = run_cli(SCHEMA_VALIDATOR_CLI, str(target))
+
+        assert run.returncode != 0, (
+            "a run that examined zero records must not exit 0; passing "
+            f"{target} exited {run.returncode} with:\n{run.output}"
+        )
+        assert "OK:" not in run.output, (
+            f"an empty examination must not be reported as a pass; output:\n{run.output}"
+        )
+        assert str(target) in run.output, (
+            "the report must name what it was handed so the caller can see what "
+            f"went unexamined; output:\n{run.output}"
+        )
+
+
+def test_a_directory_argument_actually_examines_the_records_under_it():
+    # covers: ACS-100i-7-i
+    """ACS-100i-7-i s3, the other half: the empty-examination report is only an
+    honest answer when a directory that DOES hold records is genuinely walked.
+
+    A validator that refused every directory would also satisfy "never reports a
+    false pass" — vacuously, by never checking anything. This pins the behaviour
+    that makes the guarantee worth having: handed the real store, the run reaches
+    individual record files rather than reporting that it examined none.
+
+    Deliberately asserts nothing about the exit code. The store carries
+    pre-existing schema violations unrelated to this branch, and whether it is
+    momentarily clean is not this test's subject — that records were EXAMINED is.
     """
     run = run_cli(SCHEMA_VALIDATOR_CLI, str(AC_STORE_DIR))
 
-    assert run.returncode != 0, (
-        "a run that examined zero records must not exit 0; passing the "
-        f"directory {store_relative(AC_STORE_DIR)} exited {run.returncode} "
-        f"with:\n{run.output}"
+    assert "no AC YAML files were validated" not in run.output, (
+        "the real store directory holds thousands of records, so a run over it "
+        "that reports examining none is the KI-ACS-001 no-op regressing; "
+        f"output:\n{run.output[:2000]}"
     )
-    assert "OK:" not in run.output, (
-        f"an empty examination must not be reported as a pass; output:\n{run.output}"
-    )
-    assert str(AC_STORE_DIR) in run.output or AC_STORE_DIR.name in run.output, (
-        "the report must name the directory it was handed so the caller can "
-        f"see what went unexamined; output:\n{run.output}"
+    examined_a_record = ".yaml" in run.output or "OK: all " in run.output
+    assert examined_a_record, (
+        "the run must show it reached individual record files — either by naming "
+        "a .yaml file or by reporting a count of files validated; output:\n"
+        f"{run.output[:2000]}"
     )
