@@ -1,0 +1,44 @@
+id: AR-200
+title: "Every agent that has to record a verdict is able to record one"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  When a specialist checks your work, the result is written down.
+
+  Each stage of a build ends with the specialist that ran it recording what it
+  found. That record is the only durable evidence the stage happened at all --
+  the build's own report is not evidence, because a stage that did nothing can
+  report just as cleanly as one that did everything.
+
+  So a specialist that is required to record its verdict must be equipped to
+  record it. A specialist asked for a verdict it cannot physically write down
+  has only two ways out: stop the build, or leave silently and let the stage be
+  counted as passed. Neither is acceptable, and the second is invisible.
+depends_on: []
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Where phase agents, their dispatch, and their sign-off obligations are defined."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "The sign-off protocol that defines the obligation: an atomic write to the ticket record."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-200a
+implemented_by: []

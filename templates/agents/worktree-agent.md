@@ -20,31 +20,41 @@ model: haiku
 name: worktree-agent
 tools: Bash, Read
 portable: true
-signoff: true
+signoff: false
 domain: null
 produces: orchestration
 config_keys: {}
 adopter_notes: |
-  Infrastructure agent. Called by /build-feature workflow.
+  Infrastructure agent. Called by /build-feature, /fast-lane-ship and
+  /finalize-feature, always with a `schema:` constraint and a JSON return shape.
+  NOT a ticket phase (registry: tier utility, is_ticket_phase false; absent from
+  build-ticket.js phaseOrder). It carries no sign-off obligation and therefore
+  needs no write-capable tool — see AR-200a-1 and the "Why This Agent Has No
+  Sign-off Obligation" section in the body.
 pre_flight_reads:
-- required: true
+- required: false
   source: ticket_path
 inputs:
-- description: Absolute path to the ticket markdown file
-  name: ticket_path
+- description: The action to perform — "create <branch-or-ticket-path>" or
+    "remove <branch-or-worktree-path>"
+  name: action
   required: true
+  type: string
+- description: Optional absolute path to the ticket markdown file, used only to
+    derive the branch and worktree name. Never written to.
+  name: ticket_path
+  required: false
   type: file_path
 outputs:
-- description: 'Sign-off comment with status: ok | blocker | handoff'
-  name: sign_off_comment
-  type: sign_off_comment
+- description: JSON object with worktree_path, branch, status/created/removed and
+    an anomalies array, per the Machine-Parsed Dispatch Output Contract
+  name: worktree_result
+  type: json
 mutates:
-- description: Sets agents.worktree-agent to signed_off or failed
-  name: ticket_frontmatter_agents_status
-  surface: ticket frontmatter
-- description: Checks the worktree-agent checkbox with timestamp
-  name: sign_offs_checklist
-  surface: ticket body sign-offs section
+- description: Creates or removes the worktree directory, its branch, and (on
+    remove) the matching remote branch
+  name: git_worktree_and_branch
+  surface: git repository
 behavioral_patterns:
 - behavior: Do not proceed to Phase 4.
   name: Stop-and-Ask
@@ -233,10 +243,34 @@ its normal markdown output — on the interactive path, flag unusual conditions 
 `## Anomalies` section: unexpected values, unfamiliar patterns, results that
 contradict prior runs, or signals suggesting a different agent should handle it.
 
-## Sign-off (when ticket_path is provided)
+## Why This Agent Has No Sign-off Obligation
 
-If you were invoked with a `ticket_path` argument:
-1. Load `.claude/skills/signoff/SKILL.md`.
-2. On success: follow the atomic sign-off recipe for your agent name.
-3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
-4. Skip this section entirely if no `ticket_path` was provided.
+`worktree-agent` declares `signoff: false`, and that is deliberate — it is not an
+oversight to be "fixed" by re-adding a sign-off block.
+
+The reasoning (AR-200a-1):
+
+- **You are not a ticket phase.** `config/agent_registry.json` records
+  `tier: utility` and `is_ticket_phase: false` with `selection_criteria: null`,
+  and you are absent from the `phaseOrder` array in
+  `templates/workflows-js/build-ticket.js`. No ticket's `agents:` map lists you,
+  so there is no `agents.worktree-agent` key to set and no checkbox to tick.
+  Writing one in would add a sign-off the ticket never declared.
+- **Every real dispatch is machine-parsed.** `build-feature.js`,
+  `fast-lane-ship.js` and `finalize-feature.js` all dispatch you with a `schema:`
+  constraint and `JSON.parse` your reply. Under the Machine-Parsed Dispatch Output
+  Contract above, your response must be exactly one JSON value — a markdown
+  sign-off comment would break the caller.
+- **A ticket path is an argument, not an obligation.** `build-feature.js` passes
+  the ticket path as `Target:` so you can derive the branch and worktree name.
+  That is input for naming, not a mandate to write the ticket record. The
+  supervisor that owns the ticket records the phase outcome.
+
+This is the narrow exception to the "grant the capability, never remove the
+obligation" rule. Removing an obligation is only safe when the agent genuinely is
+not a phase, as established by the evidence above. If `worktree-agent` ever
+becomes phase-dispatchable, the correct fix is to grant `Edit` plus
+`requires_verification: true` — not to reinstate the obligation without the tool.
+
+Report the outcome of create/remove in your JSON payload (and its `anomalies`
+array). That payload is your record; the caller persists it.
