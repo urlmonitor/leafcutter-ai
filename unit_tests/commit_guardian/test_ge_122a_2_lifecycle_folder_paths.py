@@ -110,6 +110,15 @@ DECISION HISTORY
   templates/scripts/commit_guardian/_work_items_scanner.py as it stands
   today (commit 6d82da27 and later, pre-fix) -- see the test-writer
   sign-off comment's red_baseline block for the exact captured output.
+- 2026-08-25 [test-writer, adversarial-review follow-up, feedback-id
+  fb_2026-08-24_94dc4ba4, finding [H-3]]: Added
+  TestAliasingLifecycleFolderPathsDoNotProducePhantomSelfCollision, covering
+  the trailing-slash, "./"-prefix, and ".."-round-trip aliasing forms named
+  in the defect report -- distinct from the existing shared-basename test
+  above, which covers genuinely DIFFERENT directories that merely share a
+  basename and must stay green throughout. Reproduced directly against this
+  branch before writing: see the test-writer sign-off comment's
+  red_baseline block for the exact captured output.
 """
 
 from __future__ import annotations
@@ -511,6 +520,143 @@ class TestSharedBasenameDistinctFoldersNoCollision(unittest.TestCase):
                 "which is why the zero-findings assertion above is the primary one."
             ),
         )
+
+
+# ---------------------------------------------------------------------------
+# (b-2) ALIASING PATHS, PHANTOM SELF-COLLISION -- pr-reviewer finding [H-3]
+# (feedback-id fb_2026-08-24_94dc4ba4).
+# ---------------------------------------------------------------------------
+
+
+class TestAliasingLifecycleFolderPathsDoNotProducePhantomSelfCollision(unittest.TestCase):
+    """test_ac_aliasing_declared_paths_produce_no_phantom_self_collision.
+
+    ``_resolve_lifecycle_folder_paths`` returns one ``Path`` per DECLARED
+    config entry with no de-duplication by RESOLVED directory identity. When
+    two declared entries alias to the SAME real directory, the walk visits
+    that one directory twice and reports its single real file as if it were
+    two different claimants of itself -- a phantom self-collision, not a
+    genuine cross-folder duplicate.
+
+    Reproduced directly against this branch before writing a single test
+    below:
+
+        {"folders": [{"path": "tickets/00_inbox"},
+                     {"path": "tickets/00_inbox/"}]}
+        with one real file tickets/00_inbox/TICKET-20260101-Foo.md
+        -> passed=False, inspected_count=2 (should be 1), one finding
+           naming the SAME resolved path twice as two claimants.
+
+    Covers the three aliasing forms named in the defect report -- a
+    trailing slash, a "./" prefix, and a ".." round-trip -- each of which
+    passes ``_resolve_one_folder_path``'s existing absolute-path and
+    outside-repo-root containment checks INDEPENDENTLY (neither rejection
+    fires), so none of them is caught by that function's existing
+    defensive checks. ``TestSharedBasenameDistinctFoldersNoCollision``
+    above is the deliberate OPPOSITE case -- two declared paths sharing
+    only a BASENAME but resolving to genuinely DIFFERENT directories -- and
+    must stay green: the correct fix is de-duplication by RESOLVED path
+    identity, not by declared-string equality, not by basename, and not by
+    "collapse anything that looks similar."
+    """
+
+    def setUp(self) -> None:
+        _require_scanner(self)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    def _assert_no_phantom_self_collision(self, folder_entries: list[dict], *, label: str) -> None:
+        """Shared assertion body for every aliasing-form case below.
+
+        Args:
+            folder_entries: The two (aliasing) folder entry dicts to
+                install in this fixture's ticket_lifecycle.json.
+            label: Short case label, folded into every failure message so a
+                run covering all three forms reports which one broke.
+        """
+        lifecycle_path = _write_lifecycle_config(self.root, folder_entries)
+        tickets_root = self.root / "tickets"
+        real_file = tickets_root / "00_inbox" / "TICKET-50000001-Aliased.md"
+        _write_ticket(real_file, status="todo")
+
+        verdict = _scanner.scan_work_items(tickets_root, lifecycle_path)
+
+        self.assertTrue(
+            verdict.passed,
+            msg=(
+                f"[{label}] Two declared paths aliasing the SAME real directory "
+                "must not produce a self-collision on the one real file it "
+                f"holds. Got passed={verdict.passed}, findings={verdict.findings}."
+            ),
+        )
+        self.assertEqual(
+            verdict.inspected_count,
+            1,
+            msg=(
+                f"[{label}] inspected_count must equal the true number of "
+                "DISTINCT on-disk files (1) -- an aliasing declared entry must "
+                f"not make the same real file get walked twice. Got {verdict.inspected_count}."
+            ),
+        )
+        self.assertEqual(
+            len(verdict.findings),
+            0,
+            msg=(
+                f"[{label}] Expected zero findings, got {verdict.findings!r} -- "
+                "this is the same real file being walked twice under two "
+                "aliasing declared paths and reported as if it collided with "
+                "itself."
+            ),
+        )
+
+    def test_trailing_slash_alias_produces_no_phantom_self_collision(self):
+        # covers: GE-122a-2
+        """Bug-fix regression [H-3]: "tickets/00_inbox" and
+        "tickets/00_inbox/" (trailing slash) resolve to the identical real
+        directory.
+
+        FAILS TODAY: inspected_count == 2; one finding naming the SAME
+        resolved path twice as two claimants of itself.
+        """
+        real_config = _real_lifecycle_dict()
+        entry_plain = _folder_entry(real_config, "inbox")  # "tickets/00_inbox"
+        entry_trailing_slash = _folder_entry(real_config, "inbox")
+        entry_trailing_slash["path"] = "tickets/00_inbox/"
+        entry_trailing_slash["label"] = "inbox-trailing-slash-alias"
+        self._assert_no_phantom_self_collision([entry_plain, entry_trailing_slash], label="trailing_slash")
+
+    def test_dot_slash_prefix_alias_produces_no_phantom_self_collision(self):
+        # covers: GE-122a-2
+        """Bug-fix regression [H-3]: "tickets/00_inbox" and
+        "./tickets/00_inbox" (a "./" prefix) resolve to the identical real
+        directory.
+
+        FAILS TODAY: inspected_count == 2; one finding naming the SAME
+        resolved path twice as two claimants of itself.
+        """
+        real_config = _real_lifecycle_dict()
+        entry_plain = _folder_entry(real_config, "inbox")
+        entry_dot_slash = _folder_entry(real_config, "inbox")
+        entry_dot_slash["path"] = "./tickets/00_inbox"
+        entry_dot_slash["label"] = "inbox-dot-slash-alias"
+        self._assert_no_phantom_self_collision([entry_plain, entry_dot_slash], label="dot_slash_prefix")
+
+    def test_dotdot_roundtrip_alias_produces_no_phantom_self_collision(self):
+        # covers: GE-122a-2
+        """Bug-fix regression [H-3]: "tickets/00_inbox" and
+        "tickets/00_inbox/../00_inbox" (a ".." round-trip back to the same
+        directory) resolve to the identical real directory.
+
+        FAILS TODAY: inspected_count == 2; one finding naming the SAME
+        resolved path twice as two claimants of itself.
+        """
+        real_config = _real_lifecycle_dict()
+        entry_plain = _folder_entry(real_config, "inbox")
+        entry_dotdot = _folder_entry(real_config, "inbox")
+        entry_dotdot["path"] = "tickets/00_inbox/../00_inbox"
+        entry_dotdot["label"] = "inbox-dotdot-roundtrip-alias"
+        self._assert_no_phantom_self_collision([entry_plain, entry_dotdot], label="dotdot_roundtrip")
 
 
 # ---------------------------------------------------------------------------

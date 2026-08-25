@@ -81,6 +81,26 @@ DECISION HISTORY:
     usable claim, which the fast path cannot reproduce by returning a
     literal string. The resolver is constructed ONCE at module scope
     (_RESOLVER) to keep the per-file cost of the fast path negligible.
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, pr-reviewer findings
+    [H-2]/[H-2b], feedback-id fb_2026-08-24_94dc4ba4]: Fixed two more shapes
+    where _fast_scan_top_level_id returned a WRONG non-None answer -- the
+    dangerous case, since _read_yaml_id only falls back to a full parse when
+    the fast path returns None, so a wrong non-None answer was never
+    corrected: (1) a multi-document YAML stream ("id: GE-1\n---\nid: GE-2\n")
+    -- the fast path returned the LAST top-level id line it saw ('GE-2')
+    where a full yaml.safe_load raises ComposerError (no usable claim at
+    all); (2) a plain scalar folded across an indented continuation line
+    ("id: foo\n  bar\n") -- the fast path returned only the first line's
+    text ('foo') where a full parse folds the continuation per YAML's
+    plain-scalar line-folding rule ({'id': 'foo bar'}). Fixed by making the
+    fast path DECLINE (return None, letting the existing full-parse
+    fallback run) on both shapes, per _is_document_separator_line and
+    _plain_scalar_has_continuation, rather than attempting to reproduce
+    ComposerError detection or line-folding in the fast scan itself --
+    declining is always safe, answering wrongly is not. Re-verified the
+    equivalence harness against this repo's real ~3100-file AC collection
+    afterward to confirm the fast path's performance win survives: see the
+    sign-off comment for the exact fallback-count and wall-clock numbers.
 """
 
 from __future__ import annotations
@@ -246,6 +266,66 @@ def _strip_simple_quoted_scalar(value: str, quote: str) -> str | None:
     return inner
 
 
+def _is_document_separator_line(raw_line: str) -> bool:
+    """Detect a YAML document-separator line (``---``) at column 0.
+
+    A document separator ANYWHERE in the stream -- including as the very
+    first line -- makes this function decline outright (see
+    `_fast_scan_top_level_id`'s docstring): a multi-document stream makes
+    ``yaml.safe_load`` raise ``ComposerError`` (no usable claim at all), and
+    the fast path's single-pass line scan has no cheap way to distinguish
+    "a lone leading document-start marker" from "a real second document
+    follows" without doing the equivalent of a real parse. Declining on
+    every ``---`` line -- even a harmless leading one -- is the safe,
+    conservative choice; it costs a handful of extra full-parse fallbacks
+    against this store's real collection (see the DECISION HISTORY
+    equivalence-harness numbers), never a wrong answer.
+
+    Args:
+        raw_line: One line of raw YAML text (no trailing newline).
+
+    Returns:
+        True if `raw_line` is a document-separator line: exactly ``---``,
+        or ``---`` followed by whitespace (a directives-end marker with
+        trailing content on the same line).
+    """
+    if raw_line == "---":
+        return True
+    return raw_line.startswith("---") and len(raw_line) > 3 and raw_line[3] in (" ", "\t")
+
+
+def _plain_scalar_has_continuation(lines: list[str], id_line_index: int) -> bool:
+    """Check whether a plain-scalar ``id`` value would be folded together
+    with a following, more-indented continuation line under a full YAML
+    parse.
+
+    YAML's plain-scalar line-folding rule joins a plain scalar's first line
+    with any immediately-following line indented deeper than the key itself
+    (column 0 here), skipping blank lines, until it reaches a line at
+    column 0 or shallower. The fast path's single-line scan sees only the
+    first line and cannot reproduce this folding (see
+    "plain_scalar_continuation" in
+    unit_tests/commit_guardian/test_ge_122a_1_fast_path_equivalence.py), so
+    it must decline whenever a continuation is possible rather than guess.
+
+    Args:
+        lines: The full record's lines (``content.splitlines()``).
+        id_line_index: Index, within `lines`, of the line holding the
+            plain-scalar ``id:`` value being checked.
+
+    Returns:
+        True if the first non-blank line after `id_line_index` is indented
+        (starts with a space or tab) -- a possible continuation, so the
+        caller must decline. False if that line starts at column 0 (a new
+        top-level key, or end of content) -- no continuation is possible.
+    """
+    for line in lines[id_line_index + 1 :]:
+        if line.strip() == "":
+            continue
+        return line[0] in (" ", "\t")
+    return False
+
+
 def _fast_scan_top_level_id(content: str) -> str | None:
     """Cheaply extract a record's top-level ``id`` field via a line scan.
 
@@ -276,6 +356,24 @@ def _fast_scan_top_level_id(content: str) -> str | None:
     (no usable claim), which the fast path cannot reproduce by returning a
     literal string.
 
+    Two further shapes (pr-reviewer finding [H-2]/[H-2b], feedback-id
+    fb_2026-08-24_94dc4ba4) also force a decline, because both make this
+    function return a WRONG non-None answer rather than merely an
+    unrecognized one -- the dangerous case, since a wrong answer is never
+    corrected by the caller's None-triggered fallback:
+      - A document separator (``---``) ANYWHERE in the stream
+        (`_is_document_separator_line`) -- a multi-document stream makes a
+        full parse raise ``ComposerError`` (no usable claim at all), where
+        the fast path would otherwise return the LAST top-level ``id:``
+        line it sees, silently manufacturing a claim a full parse never
+        produces.
+      - A plain-scalar ``id`` value immediately followed by a
+        more-indented continuation line (`_plain_scalar_has_continuation`)
+        -- a full parse FOLDS the continuation into the same scalar
+        (joined with a single space), where the fast path's single-line
+        scan would otherwise return only the first line's text, silently
+        dropping the continuation.
+
     Only a line with zero leading whitespace is treated as top-level, since
     no legal top-level ``id`` in this store's schema is nested under another
     key. When more than one such line is present (a malformed duplicate
@@ -288,8 +386,11 @@ def _fast_scan_top_level_id(content: str) -> str | None:
     Returns:
         The extracted id string, or None if no line unambiguously matches.
     """
+    lines = content.splitlines()
     found: str | None = None
-    for raw_line in content.splitlines():
+    for index, raw_line in enumerate(lines):
+        if _is_document_separator_line(raw_line):
+            return None
         if not raw_line or raw_line[0] in (" ", "\t", "#"):
             continue
         if not raw_line.startswith("id:"):
@@ -308,6 +409,8 @@ def _fast_scan_top_level_id(content: str) -> str | None:
         if _contains_control_character(value):
             return None
         if not _plain_scalar_is_unambiguous_string(value):
+            return None
+        if _plain_scalar_has_continuation(lines, index):
             return None
         found = value
     return found or None

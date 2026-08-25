@@ -393,23 +393,28 @@ Parse the JSON output (a list of `{"path", "line", "marker", "context"}` dicts).
 Any non-empty list means the file contains a TODO/PLACEHOLDER/FIXME/Replace-with/
 QUESTION marker. Record every hit.
 
-**Known limitation (found during this audit, not fixed here).**
-`scan_for_placeholders`'s `\bPLACEHOLDER\b` and `\bReplace with\b` patterns (in
-`scripts/build_placeholder_detection.py`) are bare-word/phrase matches with no
-surrounding-context check, so a doc that legitimately *discusses* this detection
-mechanism — using the literal words "placeholder" or "replace with" in ordinary
-prose, exactly as this template's own body does — registers as containing
-placeholder content. Verified behaviorally: running `scan_for_placeholders` against
-this very template (`templates/agents/documentation-verifier.md`) returns 50+ hits,
-every one the descriptive English word "placeholder," none an actual unfilled
-marker. This cannot be narrowed from this template: the matching logic lives in
-`scripts/build_placeholder_detection.py`, a Python file outside llm-expert's edit
-scope (see this template's Constraints section, "No Python/SQL/frontend file
-edits"). A follow-up ticket assigned to a coder agent should scope a fix to that
-module — e.g. requiring the marker to sit at the start of a line, inside a bare
-heading, or away from verbs like "discuss/describe/document/mention" — and must
-preserve the fail-closed posture: no narrowing may risk missing a genuine leftover
-`PLACEHOLDER` copy-paste artifact.
+**Marker conventions (current — the helper was hardened, not merely re-read;
+verified 2026-08-25: this template itself scans clean).** A hit is real: the
+marker must be filled in or removed before the file counts as written.
+
+Five markers, six rules (`TODO` has two), all matched case-insensitively:
+- `TODO:` — trailing colon.
+- bare `TODO` — first real content on the line.
+- `PLACEHOLDER` — alone on its line, inside an HTML comment, or (at column 0)
+  followed by a colon.
+- `Replace with` — first real content on the line.
+- `<!-- QUESTION:` — HTML comment plus colon.
+- `FIXME:` — colon **and** first real content on the line.
+
+**The exemption.** A marker wrapped in single backticks is exempt by design —
+that is how a doc *names* a marker without tripping the scan. If a legitimate
+sentence trips it, wrap the marker in backticks; that is the fix, not
+suppressing the check or rewording the sentence.
+
+**One accepted false positive.** A list item opening with the capitalised
+word naming the `PLACEHOLDER` marker is flagged, since a genuine marker takes
+the same shape. Backticks silence it — deliberate, since a false negative
+here is a phantom-done doc, which is strictly worse.
 
 #### 6b — TBD Marker Check
 
@@ -849,6 +854,22 @@ DECISION HISTORY
   `python3 scripts/build.py --target-dir <worktree_root> --force` followed by the full
   `unit_tests/commit_guardian/` suite (`AC_ENFORCE_STRICT=1`) and confirmed no regression
   against the pre-existing baseline. (#EPIC-GE122UniquenessPassAndRepair/documentation-verifier-step6-placeholder-narrowing)
+- 2026-08-25 [llm-expert]: Removed the Step 6a "Known limitation (found during this
+  audit, not fixed here)" block — it described the PRE-FIX `scan_for_placeholders`
+  behaviour (bare-word `PLACEHOLDER`/`Replace with` matches, 50+ false-positive hits
+  against this very template) and told the reading agent that a hit here could be
+  discounted. The underlying module was fixed 2026-08-19 and hardened again on
+  2026-08-25 (see `scripts/build_placeholder_detection.py`'s own decision history);
+  a fresh scan of this template now returns zero hits. Leaving the stale note in
+  place was actively harmful: an agent reading it would treat a genuine hit as
+  known noise and wave through the exact announced-but-unwritten documentation
+  this gate exists to catch — a fail-open written in prose. Replaced it with a
+  short, current statement of the five recognised marker conventions, the
+  backtick exemption (the correct fix for a doc that legitimately discusses a
+  marker), and the one remaining accepted false positive (a list item opening
+  with the capitalised word naming the `PLACEHOLDER` marker). Left the
+  fail-closed-on-script-error instruction and the JSON parsing contract
+  (path/line/marker/context) unchanged. (#TICKETLESS reason=llm-expert-direct-dispatch-no-ticket)
 ====================================================================
 """
 

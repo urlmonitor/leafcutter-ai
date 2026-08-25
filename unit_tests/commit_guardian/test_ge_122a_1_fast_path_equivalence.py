@@ -86,6 +86,19 @@ DECISION HISTORY
   templates/scripts/commit_guardian/_uniqueness_scanners.py as it stands
   today (commit 2c6b99d6 and later): see the test-writer sign-off comment
   for the exact RED/PASS split observed per case.
+- 2026-08-25 [test-writer, adversarial-review follow-up, feedback-id
+  fb_2026-08-24_94dc4ba4]: Added two more cases to the SAME differential
+  table -- "multi_document" (H-2: a multi-document YAML stream; the fast
+  path returns the last document's id where a full parse raises
+  ComposerError and claims nothing) and "plain_scalar_continuation" (H-2b:
+  a plain scalar folded across an indented continuation line; the fast
+  path reads only the first line's 'foo' where a full parse folds it to
+  'foo bar'). Both reproduced directly against this branch before writing:
+  see the test-writer sign-off comment's red_baseline block for the exact
+  captured mismatch per case. No new test function was added -- both cases
+  ride the existing table-driven
+  test_read_yaml_id_matches_full_yaml_safe_load_for_every_shape via
+  subTest, per this file's own established convention.
 """
 
 from __future__ import annotations
@@ -419,6 +432,35 @@ _CASES: list[_Case] = [
         lambda p: _write_raw_bytes(p, b"id: GE-100   \ntitle: trailing ws\n"),
         "safe_dump never emits trailing whitespace after a scalar value; "
         "this exercises a hand-edited file's accidental trailing spaces.",
+    ),
+    # --- H-2 / H-2b (pr-reviewer finding, feedback-id fb_2026-08-24_94dc4ba4):
+    # two more shapes the fast path resolves WRONG without ever falling back
+    # to a full parse, because it returns a non-None answer in both cases. ---
+    _Case(
+        "multi_document",
+        lambda p: _write_raw(p, "id: GE-1\n---\nid: GE-2\n"),
+        "safe_dump only ever serializes a single document from a single "
+        "Python object; a multi-document stream (a '---' document "
+        "separator) is a raw, hand-authored-or-badly-merged-file shape "
+        "that cannot be produced by dumping one dict, but is exactly the "
+        "shape a bad merge/concatenation could leave on disk. A full parse "
+        "of a multi-document stream via yaml.safe_load raises "
+        "yaml.composer.ComposerError (safe_load expects exactly one "
+        "document); the fast path instead returns the LAST top-level "
+        "'id:' line it sees ('GE-2'), silently manufacturing a claim where "
+        "a full parse produces none at all.",
+    ),
+    _Case(
+        "plain_scalar_continuation",
+        lambda p: _write_raw(p, "id: foo\n  bar\n"),
+        "safe_dump's plain-scalar representer never wraps a value across "
+        "an indented continuation line -- it always emits a single-line "
+        "scalar (quoting it if a newline is embedded). A plain scalar "
+        "that DOES continue onto an indented line is a shape a full YAML "
+        "parse folds per the plain-scalar line-folding rule, joining "
+        "'foo' and 'bar' with a single space ({'id': 'foo bar'}); the "
+        "fast path's single-line scan sees only the first line and "
+        "returns 'foo', silently dropping the continuation.",
     ),
 ]
 

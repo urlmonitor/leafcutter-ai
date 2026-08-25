@@ -99,6 +99,33 @@ DECISION HISTORY:
     ``scan_work_items`` reports passed=False (empty findings -- the config
     itself is the finding) only for the ``None`` case; the declared-empty
     case is unchanged and still passes cleanly.
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, pr-reviewer finding [H-3],
+    feedback-id fb_2026-08-24_94dc4ba4]: Fixed
+    ``_resolve_lifecycle_folder_paths`` returning one ``Path`` per DECLARED
+    config entry with no de-duplication by RESOLVED directory identity. Two
+    declared entries that alias the SAME physical directory -- a trailing
+    slash ("tickets/00_inbox/"), a "./" prefix ("./tickets/00_inbox"), or a
+    ".." round-trip ("tickets/00_inbox/../00_inbox") -- each independently
+    passed ``_resolve_one_folder_path``'s existing absolute-path and
+    outside-repo-root containment checks (neither rejection fires on an
+    aliasing form), so the walk visited that one real directory TWICE and
+    reported its single real file as if it collided with itself: a phantom
+    self-collision, with ``inspected_count`` double-counted. Fixed by
+    tracking each entry's resolved ``Path`` in a ``seen_resolved_identities``
+    set and skipping any entry whose resolved path was already seen,
+    preserving declaration order (the FIRST declared alias wins the walk
+    slot; later aliases are silently absorbed, not walked a second time).
+    Deliberately de-duplicates by RESOLVED identity, not by declared string
+    or by basename -- ``TestSharedBasenameDistinctFoldersNoCollision``
+    (two declared paths that merely SHARE a basename but resolve to
+    genuinely DIFFERENT directories) is the opposite case and must stay
+    green throughout; ``Path.resolve()`` (already computed by
+    ``_resolve_one_folder_path``) already normalizes the trailing-slash,
+    "./"-prefix, and ".."-round-trip forms to an identical ``Path`` object,
+    so no additional string normalization was needed here. See
+    unit_tests/commit_guardian/test_ge_122a_2_lifecycle_folder_paths.py's
+    ``TestAliasingLifecycleFolderPathsDoNotProducePhantomSelfCollision`` for
+    the regression coverage.
 """
 
 from __future__ import annotations
@@ -221,14 +248,25 @@ def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path] |
     repo_root = lifecycle_config_path.resolve().parent.parent
     repo_root_resolved = repo_root.resolve()
     folders = data.get("folders", [])
-    resolved_paths = []
+    resolved_paths: list[Path] = []
+    seen_resolved_identities: set[Path] = set()
     for entry in folders:
         raw_path = entry.get("path")
         if not raw_path:
             continue
         resolved = _resolve_one_folder_path(raw_path, repo_root, repo_root_resolved)
-        if resolved is not None:
-            resolved_paths.append(resolved)
+        if resolved is None:
+            continue
+        # De-duplicate by RESOLVED directory identity (not declared-string
+        # equality, not basename): two declared entries that alias the same
+        # physical directory (a trailing slash, a "./" prefix, a ".."
+        # round-trip, ...) must be walked exactly once, preserving the
+        # FIRST declared entry's position -- see the DECISION HISTORY entry
+        # below for the phantom-self-collision defect this prevents.
+        if resolved in seen_resolved_identities:
+            continue
+        seen_resolved_identities.add(resolved)
+        resolved_paths.append(resolved)
     return resolved_paths
 
 

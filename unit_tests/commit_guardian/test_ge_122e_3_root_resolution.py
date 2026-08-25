@@ -178,6 +178,54 @@ FIXTURE AUTHENTICITY: every serialized artifact (AC YAML id, ADR/diagram
     produce, which is exactly the "unreadable/unparsable" half of the
     contract under test.
 
+H-1 ADDENDUM (pr-reviewer finding [H-1], feedback-id fb_2026-08-24_94dc4ba4,
+    added 2026-08-25 as a follow-up to the same GE-122e-3 contract this
+    module already pins): the "passed=False, findings=[]" fail-closed
+    contract fixed above never reaches check_identifier_uniqueness.main()'s
+    exit code. `compute_commit_disposition` (in _commit_disposition.py,
+    consumed by main() to decide BLOCK vs REPORT-ONLY) derives `.blocking`
+    ONLY from the source verdict's `Finding` objects:
+
+        blocking=any(f.attributed for f in commit_findings)
+
+    A namespace that fails with an EMPTY findings list -- exactly what this
+    module's own contract mandates for an unresolvable root/config -- can
+    never produce a single CommitFinding, so it can never set
+    `.blocking=True`. main() only falls back to the whole-collection
+    `verdict.passed` outcome when `_get_staged_paths()` itself returns None
+    (git unavailable); on an ORDINARY commit inside a real git repository,
+    an unresolvable namespace silently exits 0. Reproduced directly against
+    this branch before writing a single test below (see the test-writer
+    sign-off comment's red_baseline block for the exact captured output):
+
+        compute_commit_disposition(
+            UniquenessVerdict(passed=False, namespaces={
+                "acceptance-criteria": NamespaceVerdict(passed=False, inspected_count=0, findings=[]),
+                "decisions": NamespaceVerdict(passed=True, inspected_count=1, findings=[]),
+                "diagrams": NamespaceVerdict(passed=True, inspected_count=1, findings=[]),
+                "work-items": NamespaceVerdict(passed=True, inspected_count=1, findings=[]),
+            }),
+            staged_paths=["README.md"],
+        ).blocking
+        -> False   (expected True)
+
+        End-to-end: a real git repo with tickets/, docs/architecture/{adrs,
+        diagrams}/, tickets/ticket_lifecycle.json={"folders": []}, a staged
+        README.md, and docs/acceptance-criteria/ never created --
+        check_identifier_uniqueness.py exits 0 (expected 1); stderr prints
+        "acceptance-criteria: FAILED (0 inspected)".
+
+    WHY test_ge_122a_1_i.py (the module that already tests
+    compute_commit_disposition) IS NOT THE HOME FOR THIS: all four of that
+    file's tests stage a COLLISION scenario -- two real claimant files, one
+    or neither staged. None of them ever construct an unresolvable-root
+    NamespaceVerdict (passed=False, findings=[]) at all, so none can see
+    this gap; the fixtures this defect needs (a namespace root/config that
+    cannot be resolved) already live in THIS module
+    (TestPerNamespaceRootOrConfigAbsentOrUnreadable above). The new coverage
+    below reuses that fixture vocabulary directly rather than duplicating it
+    in a third sibling file.
+
 ARCHITECTURE / EXERCISE STRATEGY:
   - check_identifier_uniqueness.py is loaded by file path via importlib
     (matching test_ge_122a_1.py / test_ge_122e_3.py's own convention).
@@ -201,6 +249,17 @@ DECISION HISTORY
   check_identifier_uniqueness.py and its sibling scanner modules as they
   stand today (pre-fix) -- see the test-writer sign-off comment's
   red_baseline block for the exact captured output.
+- 2026-08-25 [test-writer, adversarial-review follow-up, feedback-id
+  fb_2026-08-24_94dc4ba4, finding [H-1]]: Added
+  TestUnresolvableNamespaceBlocksCommitDisposition (unit-level, all four
+  namespaces),
+  TestUnresolvableNamespaceVsUnattributedCollisionContrast (boundary pin:
+  misconfiguration blocks regardless of staged set, but a genuine collision
+  with no staged claimant stays non-blocking), and
+  TestUnresolvableNamespaceExitCodeEndToEnd (behavioral, real-git-repo,
+  subprocess exit-code confirmation) per the H-1 ADDENDUM above. Reproduced
+  directly against this branch before writing: see the test-writer sign-off
+  comment's red_baseline block for the exact captured output.
 """
 
 from __future__ import annotations
@@ -210,6 +269,7 @@ import importlib.util as _ilu
 import json
 import os
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -764,6 +824,331 @@ class TestFullyPopulatedCollectionStillPassesWithCorrectCounts(unittest.TestCase
                 ),
             )
             self.assertEqual(ns.findings, [])
+
+
+# ---------------------------------------------------------------------------
+# H-1 (pr-reviewer finding [H-1], feedback-id fb_2026-08-24_94dc4ba4): the
+# "passed=False, findings=[]" fail-closed contract fixed above never reaches
+# check_identifier_uniqueness.main()'s exit code, because
+# compute_commit_disposition derives `.blocking` ONLY from `Finding` objects.
+# See the H-1 ADDENDUM in this module's own docstring for the full defect
+# report and reproduction.
+# ---------------------------------------------------------------------------
+
+
+def _git(args: list, cwd: Path) -> subprocess.CompletedProcess:
+    """Run a real `git` subprocess against a fixture repository.
+
+    Mirrors test_ge_122a_1_i.py's own `_git` convention exactly, so both
+    files agree on how a real on-disk git fixture is driven.
+
+    Args:
+        args: Argument list appended after `git` (e.g. ["add", "."]).
+        cwd: Working directory to run git in.
+
+    Returns:
+        The completed subprocess result. Raises via check=True on failure so
+        a broken fixture setup surfaces immediately rather than masquerading
+        as a red test result.
+    """
+    return subprocess.run(
+        ["git", *args],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        check=True,
+        env={"PATH": "/usr/bin:/bin:/usr/local/bin", "HOME": str(cwd)},
+        timeout=60,
+    )
+
+
+def _init_git_repo(root: Path) -> None:
+    """Initialize a real git repository with a usable local identity.
+
+    Args:
+        root: Directory to initialize as a git repository.
+    """
+    _git(["init", "-q"], root)
+    _git(["config", "user.email", "fixture@example.invalid"], root)
+    _git(["config", "user.name", "Fixture Author"], root)
+
+
+class TestUnresolvableNamespaceBlocksCommitDisposition(unittest.TestCase):
+    """Unit-level H-1 regression: `compute_commit_disposition` must treat an
+    unresolvable namespace (passed=False, findings=[]) as BLOCKING, for
+    EVERY one of the four namespaces -- the defect lives in the SHARED
+    disposition filter (`_commit_disposition.py`'s
+    ``blocking=any(f.attributed for f in commit_findings)``), not in any one
+    scanner, so a fix scoped to only the acceptance-criteria namespace (the
+    scenario named literally in the defect report) must not be able to pass
+    this table.
+    """
+
+    def setUp(self) -> None:
+        _require_mod(self)
+
+    def _build_collection_with_one_namespace_missing(self, root: Path, missing_ns: str) -> None:
+        """Populate all four namespaces cleanly EXCEPT `missing_ns`, whose
+        own root/config is deliberately never created -- isolating that THIS
+        namespace's unresolvability alone must still block, regardless of
+        the other three being clean and resolvable.
+
+        Args:
+            root: Fixture collection root.
+            missing_ns: The one namespace name (from _ALL_NAMESPACES) to
+                leave entirely unresolvable.
+        """
+        ac_root = root / "docs" / "acceptance-criteria" / "fixture-component"
+        adr_root = root / "docs" / "architecture" / "adrs"
+        diagram_root = root / "docs" / "architecture" / "diagrams"
+        tickets_root = root / "tickets"
+
+        if missing_ns != _NS_AC:
+            _write_ac_yaml(ac_root / "GE-9001-standalone.yaml", {"id": "GE-9001", "level": "L2", "title": "Fixture AC"})
+        if missing_ns != _NS_DECISIONS:
+            _write_text(adr_root / "ADR-9001-fixture.md", "# ADR-9001 Fixture\n\nStatus: accepted\n")
+        if missing_ns != _NS_DIAGRAMS:
+            _write_text(diagram_root / "c2-9001-fixture.md", "# c2-9001 Fixture\n")
+        if missing_ns != _NS_WORK_ITEMS:
+            _write_lifecycle_config(tickets_root / "ticket_lifecycle.json", [{"path": "tickets/00_inbox"}])
+            _write_ticket(tickets_root / "00_inbox" / "TICKET-90010101-Fixture.md", status="todo")
+        # missing_ns's own root/config is deliberately never created.
+
+    def test_unresolvable_namespace_blocks_with_a_staged_path_present(self):
+        # covers: GE-122e-3
+        # covers: GE-122a-1-i
+        """AC-1 (H-1 bug-fix regression): reproduces the ticket's own unit
+        repro verbatim, for EACH of the four namespaces: a staged path
+        (README.md-shaped, present in `staged_paths` but wholly unrelated to
+        the broken namespace) must not stop an unresolvable namespace from
+        blocking.
+
+        FAILS TODAY: `compute_commit_disposition` derives `.blocking` only
+        from `any(f.attributed for f in commit_findings)`; a namespace with
+        an EMPTY findings list contributes zero CommitFindings regardless of
+        `staged_paths`, so `.blocking` stays False.
+        """
+        for missing_ns in _ALL_NAMESPACES:
+            with self.subTest(missing_namespace=missing_ns):
+                with tempfile.TemporaryDirectory() as tmp_name:
+                    root = Path(tmp_name)
+                    self._build_collection_with_one_namespace_missing(root, missing_ns)
+                    (root / "README.md").write_text("fixture\n", encoding="utf-8")
+
+                    verdict = _mod.run_uniqueness_pass(root)
+                    ns_verdict = verdict.namespaces[missing_ns]
+                    self.assertFalse(ns_verdict.passed, msg=f"fixture sanity: {missing_ns} must be unresolvable.")
+                    self.assertEqual(ns_verdict.findings, [], msg=f"fixture sanity: {missing_ns} must have no findings.")
+
+                    disposition = _mod.compute_commit_disposition(verdict, staged_paths=[str(root / "README.md")])
+
+                    self.assertTrue(
+                        disposition.blocking,
+                        msg=(
+                            f"An unresolvable {missing_ns!r} namespace (passed=False, "
+                            "findings=[]) must block the commit. Got "
+                            f"blocking={disposition.blocking}, findings={disposition.findings}."
+                        ),
+                    )
+
+    def test_unresolvable_namespace_blocks_with_nothing_staged_at_all(self):
+        # covers: GE-122e-3
+        # covers: GE-122a-1-i
+        """AC-1 (H-1 bug-fix regression), strongest form of "regardless of
+        what is staged": for EACH of the four namespaces, an unresolvable
+        root/config must block even when `staged_paths` is EMPTY -- nothing
+        at all is staged this run. A namespace that failed to resolve is a
+        MISCONFIGURATION, not a per-file collision that attribution can ever
+        legitimately excuse.
+
+        FAILS TODAY: same root cause as the staged-path variant above;
+        `disposition.blocking` stays False regardless of `staged_paths`.
+        """
+        for missing_ns in _ALL_NAMESPACES:
+            with self.subTest(missing_namespace=missing_ns):
+                with tempfile.TemporaryDirectory() as tmp_name:
+                    root = Path(tmp_name)
+                    self._build_collection_with_one_namespace_missing(root, missing_ns)
+
+                    verdict = _mod.run_uniqueness_pass(root)
+                    disposition = _mod.compute_commit_disposition(verdict, staged_paths=[])
+
+                    self.assertTrue(
+                        disposition.blocking,
+                        msg=(
+                            f"An unresolvable {missing_ns!r} namespace must block even "
+                            f"with nothing staged. Got blocking={disposition.blocking}, "
+                            f"findings={disposition.findings}."
+                        ),
+                    )
+
+
+class TestUnresolvableNamespaceVsUnattributedCollisionContrast(unittest.TestCase):
+    """Pins the boundary that must NOT change alongside the H-1 fix: an
+    unresolvable namespace root is a MISCONFIGURATION signal and must block
+    regardless of the staged set (see above), whereas a GENUINE COLLISION
+    whose claimants are ALL outside the staged diff is a DIFFERENT signal --
+    a pre-existing, reported, non-blocking backlog item, per GE-122a-1-i's
+    own contract (see test_ge_122a_1_i.py::TestNeitherClaimantStaged) -- and
+    must stay non-blocking. Both dispositions are built side by side in the
+    same test so the CONTRAST itself is the evidence: a coder cannot satisfy
+    this by making every disposition block indiscriminately, which would
+    reintroduce exactly the "every unrelated pre-existing collision blocks
+    every commit" regression GE-122a-1-i's own module docstring warns
+    against.
+    """
+
+    def setUp(self) -> None:
+        _require_mod(self)
+
+    def test_unresolvable_root_blocks_but_unattributed_collision_does_not(self):
+        # covers: GE-122e-3
+        # covers: GE-122a-1-i
+        """The unresolvable-root scenario (acceptance-criteria root missing,
+        the other three namespaces clean) must yield `disposition.blocking
+        is True` with nothing staged. Built side by side, a genuine
+        collision (two AC records both claim "GE-119") with NEITHER
+        claimant staged, over an otherwise fully-resolvable collection, must
+        yield `disposition.blocking is False` and
+        `disposition.unattributed_count == 1`.
+
+        FAILS TODAY on the unresolvable-root half only (the unattributed-
+        collision half is already correct per GE-122a-1-i and must stay
+        green): `disposition.blocking` is False for the unresolvable root,
+        making the two halves indistinguishable from the caller's point of
+        view -- exactly the bug this test exists to catch.
+        """
+        with tempfile.TemporaryDirectory() as unresolvable_dir, tempfile.TemporaryDirectory() as collision_dir:
+            unresolvable_root = Path(unresolvable_dir)
+            collision_root = Path(collision_dir)
+
+            # Scenario 1: acceptance-criteria root entirely missing; the
+            # other three namespaces resolvable and clean. Nothing staged.
+            adr_root = unresolvable_root / "docs" / "architecture" / "adrs"
+            diagram_root = unresolvable_root / "docs" / "architecture" / "diagrams"
+            tickets_root = unresolvable_root / "tickets"
+            _write_text(adr_root / "ADR-9001-fixture.md", "# ADR-9001 Fixture\n\nStatus: accepted\n")
+            _write_text(diagram_root / "c2-9001-fixture.md", "# c2-9001 Fixture\n")
+            _write_lifecycle_config(tickets_root / "ticket_lifecycle.json", [{"path": "tickets/00_inbox"}])
+            _write_ticket(tickets_root / "00_inbox" / "TICKET-90010101-Fixture.md", status="todo")
+            # docs/acceptance-criteria/ deliberately never created.
+
+            unresolvable_verdict = _mod.run_uniqueness_pass(unresolvable_root)
+            unresolvable_disposition = _mod.compute_commit_disposition(unresolvable_verdict, staged_paths=[])
+
+            # Scenario 2: a genuine collision -- two AC records both claim
+            # "GE-119" -- over an otherwise fully-resolvable collection, with
+            # NEITHER claimant in the staged set (empty this run too).
+            collision_ac_dir = collision_root / "docs" / "acceptance-criteria" / "fixture-component"
+            collision_adr_root = collision_root / "docs" / "architecture" / "adrs"
+            collision_diagram_root = collision_root / "docs" / "architecture" / "diagrams"
+            collision_tickets_root = collision_root / "tickets"
+            path_a = collision_ac_dir / "GE-119-alpha.yaml"
+            path_b = collision_ac_dir / "GE-119-beta.yaml"
+            _write_ac_yaml(path_a, {"id": "GE-119", "level": "L2", "title": "Alpha claimant"})
+            _write_ac_yaml(path_b, {"id": "GE-119", "level": "L2", "title": "Beta claimant"})
+            _write_text(collision_adr_root / "ADR-9001-fixture.md", "# ADR-9001 Fixture\n\nStatus: accepted\n")
+            _write_text(collision_diagram_root / "c2-9001-fixture.md", "# c2-9001 Fixture\n")
+            _write_lifecycle_config(collision_tickets_root / "ticket_lifecycle.json", [{"path": "tickets/00_inbox"}])
+            _write_ticket(collision_tickets_root / "00_inbox" / "TICKET-90010102-Fixture.md", status="todo")
+
+            collision_verdict = _mod.run_uniqueness_pass(collision_root)
+            collision_disposition = _mod.compute_commit_disposition(collision_verdict, staged_paths=[])
+
+            self.assertTrue(
+                unresolvable_disposition.blocking,
+                msg=(
+                    "An unresolvable namespace root must block even with nothing "
+                    f"staged. Got blocking={unresolvable_disposition.blocking}."
+                ),
+            )
+            self.assertFalse(
+                collision_disposition.blocking,
+                msg=(
+                    "A genuine collision whose claimants are ALL outside the staged "
+                    "diff must remain non-blocking (reported, unattributed) -- this "
+                    "is a DIFFERENT signal from an unresolvable root and must not be "
+                    f"collapsed into it. Got blocking={collision_disposition.blocking}."
+                ),
+            )
+            self.assertEqual(
+                1,
+                collision_disposition.unattributed_count,
+                msg=(
+                    "The unattributed GE-119 collision must still be visibly "
+                    f"counted, got unattributed_count={collision_disposition.unattributed_count}."
+                ),
+            )
+
+
+class TestUnresolvableNamespaceExitCodeEndToEnd(unittest.TestCase):
+    """Behavioral, process-boundary confirmation of the same H-1 contract:
+    the REAL CLI (check_identifier_uniqueness.py, invoked as a subprocess
+    against a REAL git repository, never a mock of git or of main()) must
+    exit non-zero when a namespace is unresolvable. Reproduces pr-reviewer's
+    finding [H-1] end-to-end scenario verbatim: tickets/,
+    docs/architecture/{adrs,diagrams}/, a ticket_lifecycle.json declaring
+    zero folders, a staged README.md, and docs/acceptance-criteria/ never
+    created at all.
+    """
+
+    def setUp(self) -> None:
+        _require_mod(self)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    def test_unresolvable_ac_root_exits_nonzero_over_real_git_repo(self):
+        # covers: GE-122e-3
+        # covers: GE-122a-1-i
+        """AC-1 (H-1 bug-fix regression, end-to-end): the exact fail-closed
+        contract's real, observable interface -- a pre-commit hook's exit
+        code -- must be non-zero when an unresolvable namespace exists,
+        regardless of what else is staged.
+
+        FAILS TODAY: exit code 0; stderr prints
+        "[check_identifier_uniqueness] acceptance-criteria: FAILED (0 inspected)"
+        but the process still exits cleanly, because `_get_staged_paths()`
+        successfully returns a real (non-None) staged list and
+        `compute_commit_disposition(verdict, staged_paths).blocking` is
+        False for a findings-less failed namespace.
+        """
+        _init_git_repo(self.root)
+        (self.root / "tickets" / "00_inbox").mkdir(parents=True, exist_ok=True)
+        _write_lifecycle_config(self.root / "tickets" / "ticket_lifecycle.json", [])
+        (self.root / "docs" / "architecture" / "adrs").mkdir(parents=True, exist_ok=True)
+        (self.root / "docs" / "architecture" / "diagrams").mkdir(parents=True, exist_ok=True)
+        (self.root / "README.md").write_text("Fixture repo for H-1 reproduction.\n", encoding="utf-8")
+        _git(["add", "README.md"], self.root)
+        # docs/acceptance-criteria/ deliberately never created.
+
+        staged = _git(["diff", "--cached", "--name-only"], self.root).stdout.splitlines()
+        self.assertEqual(
+            ["README.md"], staged, msg="fixture sanity: exactly README.md must be staged for this run."
+        )
+
+        result = subprocess.run(
+            [sys.executable, str(_CANONICAL)],
+            cwd=str(self.root),
+            capture_output=True,
+            text=True,
+            env={"PATH": "/usr/bin:/bin:/usr/local/bin", "HOME": str(self.root)},
+            timeout=60,
+        )
+
+        self.assertNotEqual(
+            0,
+            result.returncode,
+            msg=(
+                "An unresolvable acceptance-criteria root must block the commit "
+                f"(non-zero exit). stdout={result.stdout!r} stderr={result.stderr!r}"
+            ),
+        )
+        self.assertIn(
+            "acceptance-criteria: FAILED (0 inspected)",
+            result.stderr,
+            msg=f"Expected the FAILED report line in stderr. Got: {result.stderr!r}",
+        )
 
 
 if __name__ == "__main__":

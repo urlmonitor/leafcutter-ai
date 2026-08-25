@@ -89,8 +89,9 @@ both directions"*. **It was not, and the narrowing did break recall.** The
 correction is kept visible rather than edited away, because the mistake is more
 instructive than the fix.
 
-All six MUST-DETECT cases cited as proof were **uppercase** — `TODO: write
-this`, `PLACEHOLDER`, `<!-- PLACEHOLDER -->`, `TODO: Replace with…`,
+All six MUST-DETECT cases cited as proof were **uppercase** —
+`TODO: write this`, `PLACEHOLDER`, `<!-- PLACEHOLDER -->`,
+`TODO: Replace with…`,
 `<!-- QUESTION: … -->`, `FIXME: broken`. They were drawn from the same mental
 template as the patterns themselves, so they could only ever confirm what those
 patterns already did. That is one direction tested twice, not two directions.
@@ -117,30 +118,117 @@ precede it).
 That layering is forced, not stylistic. These two strings —
 
 ```
-replace with the real description                              MUST be detected
-…does not fit your project, replace with a value that matches  MUST NOT be
+DETECT   replace with the real description
+IGNORE   …does not fit your project, replace with a value that matches
 ```
 
 — are the same phrase in the same case, differing only in line position. No
 case-based rule can separate them. Adding `IGNORECASE` alone provably flags both
 or neither.
 
+> The `DETECT` / `IGNORE` labels in that block are load-bearing, not decoration.
+> Without them the first line opens with the marker phrase and this file trips
+> its own gate — which is exactly what happened, and how the residual below was
+> found. Keep any quoted marker either label-prefixed or in backticks.
+
 **Two tripwires now exist, and a fix must satisfy both:**
 
 | File | Direction | Count |
 |---|---|---|
-| `test_build_placeholder_detection_context_discrimination.py` | precision — prose about the gate stays clean | 21 |
-| `test_build_placeholder_detection_recall_floor.py` | recall — real scaffolding is still caught | 17 |
+| `test_build_placeholder_detection_context_discrimination.py` | precision — prose about the gate stays clean | 27 |
+| `test_build_placeholder_detection_recall_floor.py` | recall — real scaffolding is still caught | 32 |
 
 Do not remove either. Each was written after the gate failed in that direction.
 Every recall test names, in its docstring, the precision case it would break —
 that pairing is the specification.
 
-**Known limitation, deliberately unfixed.** A bare marker in a list item
-(`- PLACEHOLDER`) is not detected. An unfilled checklist entry and a bullet
-naming supported markers are byte-identical with opposite correct verdicts, and
-this scanner reads one line at a time with no cross-line context. Recorded for a
-human decision rather than closed with an unsatisfiable test.
+### The list-item gap — FIXED 2026-08-25, and it was never the dilemma recorded here
+
+An earlier revision of this entry called `- PLACEHOLDER` an open question needing
+a human decision, on the grounds that an unfilled checklist entry and a bullet
+naming supported markers are byte-identical. **That framing was wrong twice.**
+
+First, the tie-break already existed: a marker wrapped in single backticks is
+exempt, so `` - `PLACEHOLDER` `` is how a document names a marker — idiomatic
+markdown, and already honoured by `_is_within_inline_code`. Nothing needed
+deciding.
+
+Second, it was not a dilemma at all but a plain inconsistency. `PLACEHOLDER` was
+the **only** validator of the five that never consulted `_is_marker_at_line_start`;
+`- TODO`, `- FIXME: broken` and `- Replace with the real value` were all already
+caught. Measured before the fix:
+
+```
+caught   - TODO          caught   - FIXME: broken   caught   - Replace with …
+MISSED   - PLACEHOLDER   MISSED   1. PLACEHOLDER    MISSED   - placeholder
+```
+
+And that single omission was costing **both** directions at once, which is why it
+survived a green suite: the substituted colon test fired on a colon *anywhere* on
+the line, so prose quoting a marker mid-sentence was wrongly flagged, while a
+bulleted marker with no colon was silently missed. One missing check, a recall
+hole and a precision hole.
+
+**One deliberate asymmetry remains.** At absolute column 0 — nothing preceding,
+not even indentation — `PLACEHOLDER` still requires a colon, because
+`Placeholder text appears when a field is empty.` is an ordinary sentence and
+markdown line-wrapping produces such lines constantly. `TODO` and `FIXME` accept
+the same ambiguity and flag it; `PLACEHOLDER` is too common an English word to.
+A parity test now pins the bulleted form across all five conventions, so
+`PLACEHOLDER` cannot drift out of line again.
+
+**Accepted cost:** prose that begins a *list item* with the word "Placeholder"
+is flagged. Exactly one instance exists, in a closed ticket, and backticks
+silence it. A false negative here is phantom-done, which is the failure this
+package exists to prevent; a false positive costs a reader a few seconds.
+
+### CORRECTION — that cost was first measured wrong, by the same method twice
+
+The paragraph above originally read *"one instance exists, in a closed ticket"*
+and was written before the widening had been measured. **The real cost at the
+time was 23 false positives, not one.** The correction is kept visible because
+the way it was missed matters more than the number.
+
+`_is_marker_at_line_start` makes the bullet **optional**:
+
+```python
+_LEADING_MARKER_PREFIX = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*")
+```
+
+so bare indentation qualifies too — and in YAML block scalars and wrapped
+markdown, *every* continuation line is indented. Any prose line beginning with
+the word "placeholder" was flagged. The estimate said one because it came from a
+grep for **bulleted** forms, which is the only shape its author had in mind. The
+scanner's blind spot and the grep's blind spot were the same blind spot.
+
+A repo-wide before/after diff of the committed scanner against the working tree,
+over 4815 files, is what actually measured it:
+
+| | hits |
+|---|---|
+| before | 72 |
+| after (widened) | 94 |
+| **new** | **24 — of which 23 were false positives** |
+
+Spanning 12 AC YAML files, 4 agent templates, a generated agent card, 4 tickets
+and 2 skill docs. The unit tests were green throughout, because that corpus was
+authored from the same mental template as the grep.
+
+**Fixed** by requiring an actual bullet or ordinal for `PLACEHOLDER`
+(`_LEADING_BULLET_REQUIRED` / `_is_marker_after_bullet`), not bare indentation.
+Re-measured on the same 4815 files: **new hits 24 → 1**, that one being the
+accepted ordinal case, with 2 pre-existing false positives additionally cleared.
+Recall is untouched — every recall case carries a real bullet.
+
+`TODO`, `FIXME` and `Replace with` deliberately keep the looser rule. They
+predate this change, and `PLACEHOLDER` is a common English noun in this
+codebase's prose in a way they are not — the same asymmetry already recorded for
+its column-0 colon carve-out.
+
+**The rule this earns:** *measure a widening repo-wide before claiming its cost.*
+A grep written by the person who wrote the rule tests the shape they thought of,
+which is precisely the shape that is not the problem. A repo-scale canary over
+`docs/acceptance-criteria/` now pins this — see **KI-TQ-5**.
 
 ## KI-BO-2 — Committed agent cards drift from the AC store
 

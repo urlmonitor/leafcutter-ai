@@ -92,6 +92,79 @@ def _is_marker_at_line_start(line: str, start: int) -> bool:
     return _LEADING_MARKER_PREFIX.fullmatch(line[:start]) is not None
 
 
+# GE-122b: the PLACEHOLDER-only sibling of _LEADING_MARKER_PREFIX above, with the
+# bullet/ordinal alternation REQUIRED rather than optional. _LEADING_MARKER_PREFIX's
+# trailing `?` lets bare indentation (whitespace with no bullet or ordinal at all)
+# qualify as "marker position" -- harmless for TODO/FIXME/"Replace with" (no repo-wide
+# evidence of a false-positive cost), but for PLACEHOLDER it turned every indented,
+# line-wrapped prose paragraph that happens to start with the word "placeholder" into
+# a false positive. A real repo-wide before/after scan (committed HEAD vs working
+# tree, 4815 files) measured this precisely: BEFORE 72 hits / AFTER 94 / 24 NEW / 2
+# REMOVED, with 23 of the 24 new hits being wrapped-prose false positives across 12 AC
+# YAML files, 4 agent templates, a generated agent card, 4 tickets, and 2 skill docs.
+# The verified arithmetic for the fix: the OPTIONAL rule detects 9/9 genuine
+# bulleted/ordinal PLACEHOLDER markers but false-positives on 10/10 representative
+# wrapped-prose samples; REQUIRING an actual bullet/ordinal keeps the identical 9/9
+# detection rate while dropping false positives to 0/10 -- there is no recall cost
+# measured anywhere in this repository, only a precision gain. See
+# unit_tests/test_build_placeholder_detection_context_discrimination.py's "GE-122b
+# PRECISION REGRESSION" section and unit_tests/test_build_placeholder_detection_recall_floor.py's
+# "GE-122b (bullet-required precision fix)" section for the full test coverage this
+# regex and its helper below satisfy.
+_LEADING_BULLET_REQUIRED = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s*")
+
+
+def _is_marker_after_bullet(line: str, start: int) -> bool:
+    """Return True when only whitespace followed by a REQUIRED bullet/ordinal
+    (`-`, `*`, `+`, `1.`, `1)`) precedes `start` -- bare indentation with no
+    bullet or ordinal at all does NOT qualify.
+
+    This is PLACEHOLDER's stricter positional check (GE-122b), a sibling of
+    _is_marker_at_line_start used by every other marker validator. See
+    _LEADING_BULLET_REQUIRED's own comment for why PLACEHOLDER alone needs the
+    bullet to be mandatory rather than optional.
+    """
+    return _LEADING_BULLET_REQUIRED.fullmatch(line[:start]) is not None
+
+
+# An HTML comment opener (`<!--`) plus optional whitespace, anchored to the END
+# of whatever text precedes the marker match -- i.e. "nothing sits between the
+# comment opener and the marker except optional whitespace". Anchoring with `$`
+# against `line[:match.start()]` (rather than a per-marker literal like the old
+# `<!--\s*PLACEHOLDER\b` regex) is what lets every marker share ONE
+# implementation: the check is defined purely in terms of "what comes right
+# before this match", not "this specific marker word following `<!--`". See
+# _is_within_html_comment_marker for the GE-122 rationale.
+_HTML_COMMENT_OPENER_IMMEDIATELY_BEFORE = re.compile(r"<!--\s*$")
+
+
+def _is_within_html_comment_marker(line: str, match: re.Match[str]) -> bool:
+    """Return True when `match` is the first real content inside an HTML
+    comment opener (`<!--` plus optional whitespace) on `line`.
+
+    GE-122: `_is_placeholder_marker` used to be the ONLY validator with a
+    dedicated `<!--\\s*PLACEHOLDER\\b` branch, so the identical HTML-comment-
+    wrapped scaffolding shape ('<!-- TODO -->', '<!-- FIXME -->', '<!--
+    Replace with ... -->') escaped detection for every OTHER marker: none of
+    them had an equivalent branch, and `_is_marker_at_line_start` rejects
+    '<!-- ' as a prefix outright (it is neither whitespace nor a bullet/
+    ordinal). That per-marker literal regex was itself the defect -- a
+    hardcoded pattern for one marker cannot be kept in sync with its
+    siblings by construction. This helper instead derives the check from
+    `match.start()` and the text before it, so `_is_bare_todo_marker`,
+    `_is_fixme_marker`, `_is_replace_with_marker`, and
+    `_is_placeholder_marker` all consult the exact same implementation and
+    cannot drift apart again.
+
+    Deliberately does NOT special-case QUESTION: that marker's own regex
+    (`<!--\\s*QUESTION\\s*:`) already requires a trailing colon, which is
+    what keeps the colon-less '<!-- QUESTION -->' worked-example form clean
+    by design -- QUESTION is matched via `_default_validator`, which never
+    calls this helper, so that boundary is untouched here.
+    """
+    return _HTML_COMMENT_OPENER_IMMEDIATELY_BEFORE.search(line[: match.start()]) is not None
+
+
 def _is_placeholder_marker(line: str, match: re.Match[str]) -> bool:
     """Validator for the PLACEHOLDER marker.
 
@@ -99,27 +172,102 @@ def _is_placeholder_marker(line: str, match: re.Match[str]) -> bool:
     so a bare `\\bPLACEHOLDER\\b` regex also matches the ordinary English word
     ("the placeholder detection step...") and even an ALL-CAPS mention in a
     sentence that lists marker names ("...and PLACEHOLDER."). Case alone
-    cannot separate those last two -- both are spelled identically in caps --
-    so PLACEHOLDER additionally requires one of the structural shapes that
-    make TODO:/FIXME:/QUESTION: unambiguous markers: alone on its line,
-    wrapped in an HTML comment, or immediately followed by a colon.
+    cannot separate those last two -- both are spelled identically in caps.
 
-    The marker regex is now case-insensitive (re.IGNORECASE) so lowercase
-    and mixed-case scaffolding ("placeholder: fill this in", "Placeholder:
-    fill this in") is caught too. That widening does not need a positional
-    check the way "Replace with"/FIXME do: the alone-on-line and colon
-    checks below already compare against the literal text the regex
-    matched (not a hardcoded literal), so they are case-agnostic on their
-    own; the HTML-comment regex is matched case-insensitively for the same
-    reason.
+    A PRIOR version of this validator tried to resolve that with a bare
+    trailing-colon test (`line[match.end():match.end()+1] == ":"`) instead of
+    the positional check every sibling validator uses. That single
+    substitution was wrong in BOTH directions at once (GE-122):
+
+    - RECALL HOLE: the colon test cannot see a marker that has no colon at
+      all, so '- PLACEHOLDER', '1. PLACEHOLDER', '- placeholder' and their
+      bullet/ordinal siblings were missed, even though the identical shape
+      ('- TODO', '- FIXME: broken', '- Replace with the real value') was
+      already caught for every OTHER marker via _is_marker_at_line_start.
+    - PRECISION HOLE: the colon test fires on a colon ANYWHERE on the line,
+      with no positional requirement, so 'MISSED   placeholder: fill this
+      in' -- a line that merely QUOTES the marker mid-sentence inside a
+      fenced example -- was wrongly flagged even though "placeholder:" is
+      nowhere near the start of the line.
+
+    Both holes close the same way: replace the colon test with the
+    positional discriminator _is_marker_at_line_start, mirroring
+    _is_fixme_marker (see that validator's docstring for the general
+    rationale -- a genuine marker opens its line; a mid-sentence mention of
+    the same word/phrase never does). This validator is now structurally
+    identical to _is_fixme_marker plus the HTML-comment check every sibling
+    validator now shares via _is_within_html_comment_marker (GE-122); the
+    ad hoc, PLACEHOLDER-only `<!--\\s*PLACEHOLDER\\b` regex that used to sit
+    here was itself the original defect, so a future editor changing this
+    validator's HTML-comment handling should change the shared helper, not
+    re-introduce a per-marker literal.
+
+    One narrow refinement PLACEHOLDER needs that FIXME/TODO do not: when the
+    match sits at ABSOLUTE column 0 (nothing at all precedes it -- no bullet,
+    no ordinal, no indentation), a bare positional check cannot tell a
+    genuine marker ("Placeholder: fill this in") from an ordinary sentence
+    that simply happens to open with the word ("Placeholder text appears
+    when a field is empty."; the wrapped-paragraph lines in this module's own
+    canonical caller, templates/agents/documentation-verifier.md, that begin
+    "placeholder content..." / "Placeholder content detected..." purely
+    because of markdown line-wrapping). "PLACEHOLDER" is common enough as the
+    literal first word of an unrelated English sentence that this ambiguity
+    is worth resolving narrowly rather than accepting as a cost the way
+    TODO/FIXME do (see _is_bare_todo_marker's own docstring, where a bare
+    "TODO fix this before shipping" at column 0 is deliberately flagged
+    despite the identical ambiguity). So column-0 matches fall back to the
+    original colon-adjacency test instead of the bare positional check --
+    "Placeholder:" still qualifies, "Placeholder " followed by prose does
+    not. Anything preceded by so much as a bullet, ordinal, or indentation
+    (i.e. NOT column 0) uses the plain positional check like every sibling
+    validator, so '- PLACEHOLDER', '1. PLACEHOLDER', etc. are still caught
+    with no colon required, and a match preceded by ordinary prose text (a
+    non-bullet, non-whitespace prefix, e.g. 'MISSED   placeholder: fill this
+    in') is correctly excluded either way, whether or not a colon follows.
+
+    GE-122b (2026-08-25): that "not column 0" branch originally called the
+    shared _is_marker_at_line_start, whose _LEADING_MARKER_PREFIX regex makes
+    the bullet/ordinal OPTIONAL -- so bare indentation with no bullet at all
+    also qualified as "marker position". That is harmless for TODO, FIXME,
+    and "Replace with" (no repo-wide evidence any of them need tightening,
+    and they have used the optional form since before this fix -- do not
+    "harmonise" them onto the stricter rule below, it is deliberately
+    PLACEHOLDER-only), but for PLACEHOLDER it turned every line-wrapped prose
+    paragraph that merely opens with the word "placeholder" after markdown/
+    YAML indentation into a false positive. A real repo-wide before/after
+    scan (committed HEAD vs working tree, 4815 files) measured this
+    precisely: 24 NEW hits, 23 of them false positives spanning 12 AC YAML
+    files, 4 agent templates, a generated agent card, 4 tickets, and 2 skill
+    docs -- all wrapped prose, none a real marker. PLACEHOLDER is a common
+    English noun in this codebase's prose in a way TODO and FIXME are not
+    (the same reasoning that motivates the column-0 colon carve-out just
+    above), so it needs a stricter positional bar than its siblings: this
+    branch now calls _is_marker_after_bullet, whose _LEADING_BULLET_REQUIRED
+    regex makes the bullet/ordinal mandatory. The verified arithmetic: the
+    optional rule detects 9/9 genuine bulleted/ordinal PLACEHOLDER markers
+    but false-positives on 10/10 representative wrapped-prose samples;
+    requiring an actual bullet/ordinal keeps the identical 9/9 detection
+    rate while dropping false positives to 0/10 -- no measured recall cost,
+    only a precision gain. A future editor tempted to loosen this back to
+    the optional form should re-run that repo-wide scan first and weigh the
+    23-false-positive cost it will reintroduce.
+
+    The marker regex is case-insensitive (re.IGNORECASE) so lowercase and
+    mixed-case scaffolding ("placeholder: fill this in", "Placeholder: fill
+    this in") is caught too; the alone-on-line, HTML-comment, and
+    positional checks are all case-agnostic on their own (they compare
+    against the literal text the regex matched, not a hardcoded literal),
+    so no separate case-fold step is needed here.
     """
     if _is_within_inline_code(line, match.start(), match.end()):
         return False
     if _is_marker_line(line, match):
         return True
-    if re.search(r"<!--\s*PLACEHOLDER\b", line, re.IGNORECASE):
+    if _is_within_html_comment_marker(line, match):
         return True
-    return line[match.end() : match.end() + 1] == ":"
+    if match.start() == 0:
+        return line[match.end() : match.end() + 1] == ":"
+    return _is_marker_after_bullet(line, match.start())
 
 
 def _default_validator(line: str, match: re.Match[str]) -> bool:
@@ -160,7 +308,7 @@ def _is_replace_with_marker(line: str, match: re.Match[str]) -> bool:
     after = line[match.end() : match.end() + 1]
     if before == "/" or after == "/":
         return False
-    return _is_marker_at_line_start(line, match.start())
+    return _is_marker_at_line_start(line, match.start()) or _is_within_html_comment_marker(line, match)
 
 
 def _is_bare_todo_marker(line: str, match: re.Match[str]) -> bool:
@@ -185,7 +333,7 @@ def _is_bare_todo_marker(line: str, match: re.Match[str]) -> bool:
         return False
     if _is_marker_line(line, match):
         return True
-    return _is_marker_at_line_start(line, match.start())
+    return _is_marker_at_line_start(line, match.start()) or _is_within_html_comment_marker(line, match)
 
 
 def _is_fixme_marker(line: str, match: re.Match[str]) -> bool:
@@ -207,7 +355,7 @@ def _is_fixme_marker(line: str, match: re.Match[str]) -> bool:
         return False
     if _is_marker_line(line, match):
         return True
-    return _is_marker_at_line_start(line, match.start())
+    return _is_marker_at_line_start(line, match.start()) or _is_within_html_comment_marker(line, match)
 
 
 _MarkerValidator = Callable[[str, "re.Match[str]"], bool]
@@ -238,6 +386,17 @@ _MARKER_RULES: list[_MarkerRule] = [
     # positional check, not case, is what discriminates a real FIXME:
     # marker from a lowercase mid-sentence mention of the convention.
     (re.compile(r"\bFIXME\s*:", re.IGNORECASE), _is_fixme_marker),
+    # Bare FIXME with no colon at all -- mirrors the TODO/bare-TODO split
+    # above. FIXME previously had ONLY the colon-anchored rule, so a
+    # colon-less FIXME (e.g. '<!-- FIXME -->', GE-122) never matched any
+    # pattern at all, regardless of validator logic. _is_fixme_marker
+    # already handles both shapes identically (alone-on-line / line-start /
+    # HTML-comment), so it is reused as-is rather than duplicated. Listed
+    # directly AFTER the colon rule so a real "FIXME: ..." line still
+    # reports the more specific "FIXME:" marker text; this rule only ever
+    # fires when the colon rule did not match at all, or matched but was
+    # excluded.
+    (re.compile(r"\bFIXME\b", re.IGNORECASE), _is_fixme_marker),
 ]
 
 _SKIP_EXTENSIONS = frozenset({".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2"})
@@ -342,4 +501,50 @@ def format_placeholder_report(hits: list[dict[str, Any]]) -> str:
         for hit in file_hits:
             lines.append(f"  - Line {hit['line']}: `{hit['marker']}` — {hit['context']}")
         lines.append("")
+    lines.append(
+        "Each hit above is an unresolved marker left in generated content — fill it in "
+        "or remove it before treating the file as done. If a line only DISCUSSES a "
+        "marker rather than leaving one behind, wrap it in single backticks; inline "
+        "code is exempt from this scan by design. Recognised conventions: TODO, "
+        "PLACEHOLDER, Replace with, FIXME, `<!-- QUESTION:`."
+    )
     return "\n".join(lines)
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-08-25 00:00 [python-coder]: Fixed _is_placeholder_marker to consult the
+#   _is_marker_at_line_start positional discriminator (mirroring _is_fixme_marker),
+#   closing both a recall hole (bulleted/ordinal bare PLACEHOLDER markers like
+#   '- PLACEHOLDER' were missed) and a precision hole (the old bare colon test fired
+#   on a colon anywhere on the line, flagging mid-sentence quotes such as 'MISSED
+#   placeholder: fill this in'). A column-0 case retains the colon check as a narrow
+#   exception, since a bare marker with nothing preceding it is otherwise
+#   indistinguishable from an ordinary sentence that happens to open with the same
+#   word. Also added a short actionable footer to format_placeholder_report()
+#   explaining what a hit means and naming the five recognised marker conventions.
+#   (#TICKETLESS reason=ge122-integrity-worktree-dispatch-no-ticket)
+# - 2026-08-25 00:00 [python-coder]: GE-122 HTML-comment marker parity. Extracted
+#   _is_within_html_comment_marker(line, match) -- derived from match.start() and
+#   the text preceding it, not a per-marker literal regex -- and consulted it from
+#   _is_bare_todo_marker, _is_fixme_marker, and _is_replace_with_marker alongside
+#   their existing _is_marker_at_line_start check. Refactored _is_placeholder_marker's
+#   hardcoded `<!--\s*PLACEHOLDER\b` branch to call the same helper, so all four
+#   validators share one implementation and cannot drift apart again -- that drift
+#   (PLACEHOLDER alone catching '<!-- TODO -->'-shaped scaffolding for every other
+#   marker) was the defect. QUESTION is untouched: it is matched via
+#   _default_validator, which never calls the new helper, so its colon requirement
+#   (and the deliberate '<!-- QUESTION -->' no-colon exemption) is unaffected.
+#   (#TICKETLESS reason=ge122-integrity-worktree-dispatch-no-ticket)
+# - 2026-08-25 00:00 [python-coder]: GE-122b precision correction. The prior fix's
+#   _is_marker_at_line_start reuse made PLACEHOLDER's positional check accept bare
+#   indentation with no bullet/ordinal at all (the shared _LEADING_MARKER_PREFIX's
+#   bullet group is optional), false-positiving 23 wrapped-prose lines repo-wide
+#   (measured before/after across 4815 files: 72 -> 94 hits, 24 new, 23 of them
+#   false positives). Added _LEADING_BULLET_REQUIRED (bullet/ordinal mandatory) and
+#   _is_marker_after_bullet(), and pointed _is_placeholder_marker's non-column-0
+#   branch at the new helper instead of _is_marker_at_line_start. TODO, FIXME, and
+#   "Replace with" are deliberately UNCHANGED -- they have used the optional-bullet
+#   form since before this regression and there is no repo-wide evidence they need
+#   tightening; this is a PLACEHOLDER-only correction, not a harmonisation.
+#   (#TICKETLESS reason=ge122-integrity-worktree-dispatch-no-ticket)

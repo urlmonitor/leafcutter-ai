@@ -68,9 +68,10 @@ Public contract (consumed by six downstream ACs -- do not narrow):
 Commit-time disposition contract (ADDITIVE, GE-122a-1-i; see
 _commit_disposition.py's own module docstring for the full rationale):
     disposition = compute_commit_disposition(verdict, staged_paths)
-    disposition.blocking            -> bool
-    disposition.unattributed_count  -> int
-    disposition.findings            -> list[CommitFinding]
+    disposition.blocking                 -> bool
+    disposition.unattributed_count       -> int
+    disposition.findings                 -> list[CommitFinding]
+    disposition.unresolvable_namespaces  -> list[str] (ADDITIVE, GE-122e-3/H-1)
     commit_finding.{namespace, number, paths, attributed}
 
 Exit codes (CLI usage -- ``python check_identifier_uniqueness.py``):
@@ -123,6 +124,18 @@ DECISION HISTORY:
     whole-collection pass/fail exit code rather than treating an unrelated
     git failure as "nothing staged" -- the latter would silently let a
     broken git invocation defeat the gate entirely.
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, pr-reviewer finding [H-1],
+    feedback-id fb_2026-08-24_94dc4ba4]: main()'s exit code never observed
+    GE-122e-3's own fail-closed contract (an unresolvable namespace reports
+    `passed=False, findings=[]`) because `compute_commit_disposition`
+    derived `.blocking` solely from attributed `Finding` objects, and an
+    empty-findings namespace can never produce one -- see
+    _commit_disposition.py's own DECISION HISTORY for the fix. Also added
+    `_print_unresolvable_namespaces_summary`, printed alongside the existing
+    unattributed-count summary, so an operator reading a non-zero exit
+    additionally sees an explicit "BLOCKING: ... could not be resolved"
+    line naming which namespace(s) failed, rather than only the terse
+    per-namespace "FAILED (N inspected)" line with no stated reason.
 """
 
 from __future__ import annotations
@@ -279,6 +292,31 @@ def _print_unattributed_summary(disposition: CommitDisposition) -> None:
     )
 
 
+def _print_unresolvable_namespaces_summary(disposition: CommitDisposition) -> None:
+    """Print WHICH namespace(s) failed to resolve, when the commit is
+    blocked for that reason.
+
+    Without this, an operator reading a "FAILED (0 inspected)" line for one
+    namespace plus a bare non-zero exit code has no explicit statement that
+    the reason for blocking is a misconfiguration (an unresolvable
+    root/config) rather than an attributed collision -- this prints that
+    reason explicitly, naming every namespace that could not be resolved.
+
+    Args:
+        disposition: The CommitDisposition returned by
+            compute_commit_disposition.
+    """
+    if not disposition.unresolvable_namespaces:
+        return
+    joined = ", ".join(disposition.unresolvable_namespaces)
+    print(
+        f"{_HOOK_PREFIX} BLOCKING: the following namespace(s) could not be resolved "
+        f"at all (root/config missing, unreadable, or unparsable) -- see the FAILED "
+        f"line(s) above: {joined}",
+        file=sys.stderr,
+    )
+
+
 def main() -> None:
     """Run the pass against the current working directory and print a report.
 
@@ -318,6 +356,7 @@ def main() -> None:
 
     disposition = compute_commit_disposition(verdict, staged_paths)
     _print_unattributed_summary(disposition)
+    _print_unresolvable_namespaces_summary(disposition)
     sys.exit(1 if disposition.blocking else 0)
 
 

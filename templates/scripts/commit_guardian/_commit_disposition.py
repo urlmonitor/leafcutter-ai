@@ -34,9 +34,12 @@ ARCHITECTURE: Pure, in-memory filtering over an already-computed verdict --
 
 Public contract:
     disposition = compute_commit_disposition(verdict, staged_paths)
-    disposition.blocking            -> bool
-    disposition.unattributed_count  -> int
-    disposition.findings            -> list[CommitFinding]
+    disposition.blocking                  -> bool
+    disposition.unattributed_count        -> int
+    disposition.findings                  -> list[CommitFinding]
+    disposition.unresolvable_namespaces   -> list[str] (ADDITIVE, GE-122e-3/H-1;
+                                              see the 2026-08-25 DECISION
+                                              HISTORY entry below)
     commit_finding.namespace        -> str
     commit_finding.number           -> str
     commit_finding.paths            -> list[str]
@@ -54,12 +57,38 @@ DECISION HISTORY:
     / _work_items_scanner.py) already used in this directory. Deliberately
     does not add a second collection walk: it is a pure filter over the
     verdict that ``run_uniqueness_pass`` already produced.
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, pr-reviewer finding [H-1],
+    feedback-id fb_2026-08-24_94dc4ba4]: Fixed `.blocking` deriving SOLELY
+    from `any(f.attributed for f in commit_findings)`. GE-122e-3's own
+    "THE CONTRACT DECISION" (see
+    unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py) makes an
+    unresolvable namespace report `NamespaceVerdict(passed=False,
+    findings=[])` -- deliberately EMPTY findings, since there is nothing to
+    name; the root/config itself is the finding. Such a namespace can never
+    produce a single CommitFinding, so it could never set `.blocking=True`
+    here -- a misconfigured install (wrong/renamed collection_root, deleted
+    ticket_lifecycle.json) silently exited 0 on an ordinary commit. Fixed by
+    additionally checking `verdict.namespaces` directly for any
+    `ns_verdict.passed is False and not ns_verdict.findings` -- an
+    unresolvable namespace now blocks REGARDLESS of what is staged (it is a
+    misconfiguration of the gate itself, not a per-file collision that
+    attribution can legitimately excuse), while a genuine collision whose
+    claimants are all outside the staged diff keeps its EXISTING
+    non-blocking/unattributed treatment unchanged (GE-122a-1-i's own
+    contract, pinned by
+    TestUnresolvableNamespaceVsUnattributedCollisionContrast). Also added
+    `unresolvable_namespaces` as an ADDITIVE field (empty list when none) so
+    `main()`'s operator message can name which namespace failed to resolve,
+    rather than only exiting non-zero with no explanation -- `.blocking`,
+    `.unattributed_count`, and `.findings` keep their exact prior meaning;
+    every existing consumer of this dataclass is unaffected by a field it
+    never reads.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from _uniqueness_types import UniquenessVerdict  # type: ignore[import]
@@ -94,18 +123,40 @@ class CommitDisposition:
 
     Attributes:
         blocking: True iff at least one CommitFinding, in any namespace, is
-            attributed.
+            attributed, OR at least one namespace is unresolvable (reports
+            ``passed=False`` with an EMPTY ``findings`` list -- per
+            GE-122e-3's "THE CONTRACT DECISION", there is nothing to name
+            because the root/config itself is the finding). An unresolvable
+            namespace blocks REGARDLESS of what is staged: it is a
+            misconfiguration of the gate itself, not a property of the diff,
+            so diff-scoped attribution deliberately does not apply to it --
+            distinct from a genuine collision whose claimants are all
+            outside the staged diff, which stays non-blocking/unattributed
+            exactly as before (see `unresolvable_namespaces` below for how
+            to tell the two apart from the outside).
         unattributed_count: Count of CommitFindings, across all namespaces,
             with no claimant path in the change set. Reported-but-unattributed
             findings never block, but the count is always surfaced so a
-            silently-tolerated backlog cannot accumulate unseen.
+            silently-tolerated backlog cannot accumulate unseen. Unchanged by
+            the `unresolvable_namespaces` addition -- an unresolvable
+            namespace contributes zero CommitFindings (nothing to attribute),
+            so it never affects this count either way.
         findings: One CommitFinding per contested number across every
             namespace (mirrors the source verdict's findings 1:1).
+        unresolvable_namespaces: ADDITIVE field (GE-122e-3/H-1). Namespace
+            names whose own NamespaceVerdict reported ``passed=False`` with
+            an EMPTY ``findings`` list -- i.e. the namespace's root/config
+            could not be resolved at all, as opposed to a genuine collision.
+            Empty when every namespace was resolved (whether clean or
+            genuinely collided). Lets a caller (``main()``'s operator
+            message) name WHICH namespace failed to resolve, rather than
+            only knowing that something did.
     """
 
     blocking: bool
     unattributed_count: int
     findings: list[CommitFinding]
+    unresolvable_namespaces: list[str] = field(default_factory=list)
 
 
 def _resolve_staged(staged_paths: Iterable[str | Path]) -> set[Path]:
@@ -143,7 +194,11 @@ def compute_commit_disposition(
 
     Returns:
         The CommitDisposition: `.blocking` True iff any finding has at least
-        one claimant path in `staged_paths`.
+        one claimant path in `staged_paths`, OR at least one namespace is
+        unresolvable (`passed=False` with an empty `findings` list -- a
+        misconfiguration of the gate itself, which blocks regardless of what
+        is staged; see GE-122e-3's "THE CONTRACT DECISION" and the
+        `unresolvable_namespaces` field docstring on `CommitDisposition`).
     """
     staged_resolved = _resolve_staged(staged_paths)
 
@@ -160,8 +215,21 @@ def compute_commit_disposition(
                 )
             )
 
+    # An unresolvable namespace (passed=False, findings=[]) is a
+    # misconfiguration of the gate itself -- see GE-122e-3's "THE CONTRACT
+    # DECISION" -- never a per-file collision, so it must block regardless
+    # of the staged set. It can never produce a CommitFinding (there is
+    # nothing to name), so it must be checked directly against the source
+    # verdict rather than derived from `commit_findings`.
+    unresolvable_namespaces = [
+        namespace
+        for namespace, ns_verdict in verdict.namespaces.items()
+        if ns_verdict.passed is False and not ns_verdict.findings
+    ]
+
     return CommitDisposition(
-        blocking=any(f.attributed for f in commit_findings),
+        blocking=any(f.attributed for f in commit_findings) or bool(unresolvable_namespaces),
         unattributed_count=sum(1 for f in commit_findings if not f.attributed),
         findings=commit_findings,
+        unresolvable_namespaces=unresolvable_namespaces,
     )

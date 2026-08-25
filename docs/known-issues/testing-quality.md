@@ -140,3 +140,84 @@ from a reimplementation — read the config's full declared paths rather than
 recomputing folder discovery. Where a helper must be shared between a test and
 production code, import the production one so a bug shows up as a failure rather
 than as agreement.
+
+## KI-TQ-4 — Fixtures that never built the collection they assert over
+
+**Severity: high as a pattern.** It occurred three separate times in this epic
+and was invisible every time.
+
+Three test files asserted properties of "a collection" while their fixtures
+never created two, three, or four of its namespaces. They passed only because
+the fail-open they should have caught was masking their own incompleteness:
+
+| File | What the fixture omitted |
+|---|---|
+| `test_ge_122a_1.py::test_repaired_collection_passes_with_per_namespace_counts` | `tickets/` root and `ticket_lifecycle.json` |
+| `test_ge_122a_1_i.py` (three tests) | `docs/architecture/adrs/`, `docs/architecture/diagrams/`, `ticket_lifecycle.json` |
+
+Each was exposed only when the fail-open was closed — which is the diagnostic
+signature: **fixing a fail-open turns incomplete fixtures red.** Those failures
+look exactly like a regression in the fix, and the tempting response is to
+weaken the new assertion. That is backwards. In all three cases the assertions
+were correct as written and the setup was short.
+
+Note also how the second instance was mis-diagnosed at first. Only the
+work-items scanner logs a warning on an unresolvable root (see **KI-CG-8**), so
+the visible symptom named one missing file when three namespaces were actually
+unresolved. A silent failure made an incomplete fixture look like a smaller
+problem than it was.
+
+**Detection.** After closing any fail-open, expect newly-red tests and triage
+each with one question: *is the assertion wrong, or was the fixture never
+complete?* Complete the fixture without touching a single assertion and re-run.
+Green means the fixture was short. Still red means the fix is wrong. Wanting to
+change an assertion is the signal that you are about to paper over a real
+defect.
+
+**Suggested fix (pattern).** A shared fixture builder that constructs **all
+four** namespaces by default, so a test must opt out of one explicitly rather
+than omit it by accident. `test_ge_122a_1_i.py` now has a
+`_resolve_non_ac_namespaces` helper doing exactly this, with a comment warning
+against tidying it away.
+
+## KI-TQ-5 — A widening measured by its author's own grep
+
+**Severity: high as a pattern.** This is the sharpest instance in the register,
+because the flawed measurement and the flawed code shared one author and one
+blind spot.
+
+A matcher was widened. Its cost was estimated with a grep, and the estimate said
+"one instance". The true cost was **23 false positives across 4815 files** (see
+**KI-BO-3**'s correction). The grep searched for *bulleted* markers; the rule
+that shipped also accepted *bare indentation*. The shape that was never searched
+for is exactly the shape that was wrong.
+
+Three independent safety nets were green the whole time:
+
+| net | why it missed |
+|---|---|
+| 84 unit tests across two tripwire files | corpus authored from the same mental template as the grep |
+| a canary asserting one file scans clean | that file happened to have no indented prose starting with the word |
+| a full 3729-test suite | nothing in it scans the AC store or agent templates |
+
+**Detection.** After changing any matcher, run it over the **whole repository**
+before and after, and diff the hit sets. Not a count — the actual set, with
+enough context to judge each new hit. `git show HEAD:<file>` gives the baseline
+implementation to compare against, so this needs no branch juggling:
+
+```python
+before = load_module_from(git_show("HEAD:scripts/<matcher>.py"))
+after  = load_module_from(worktree_path)
+new    = after_hits - before_hits      # judge every element
+```
+
+**Suggested fix (pattern).** For every matcher with a false-positive cost, keep
+a **repo-scale canary** asserting zero hits over a large real corpus, not a
+handful of hand-picked files. `test_ge122b_acceptance_criteria_tree_placeholder_hits_are_zero`
+now scans all 3092 AC YAML files in ~1.3s. Scope it to the marker under test —
+that tree has legitimate `todo` hits which a naive zero-hits assertion would
+have gone red on, pushing the next author to break `TODO` instead.
+
+**The generalisation, since this register keeps rediscovering it:** an estimate
+produced by the person who wrote the rule tests their model of the rule, not the
+rule. Only running it over data nobody curated can falsify it.

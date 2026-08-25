@@ -172,6 +172,76 @@ That is the sharpest instance of this register's recurring shape: **a test
 passing for the wrong reason, where the bug and the test's blind spot are the
 same bug.**
 
+## KI-CG-7 — FIXED — the fail-closed contract never reached the exit code
+
+**Fixed 2026-08-25.** Found by the fourth adversarial review round, in the fix
+KI-CG-6 describes. KI-CG-6 made an unresolvable namespace report
+`passed=False`. It did not make anything *act* on that.
+
+`compute_commit_disposition` derived its verdict solely from findings:
+
+```python
+blocking=any(f.attributed for f in commit_findings)
+```
+
+An unresolvable namespace reports `passed=False` with an **empty** findings list
+— deliberately, since there is nothing to name; the root itself is the finding.
+It therefore contributes no `CommitFinding` and could never set
+`blocking=True`. `main()` consults `verdict.passed` only when git itself is
+unavailable, so on every ordinary commit the gate printed its complaint and
+exited **0**:
+
+```
+$ check_identifier_uniqueness.py          # docs/acceptance-criteria/ absent
+[check_identifier_uniqueness] acceptance-criteria: FAILED (0 inspected)
+exit code = 0
+```
+
+So for one full round, the headline fix of this epic was inert at the only layer
+that decides anything. The unit tests were green throughout: the 770-line
+`test_ge_122e_3_root_resolution.py` asserted on `run_uniqueness_pass` and never
+on the exit code, while `test_ge_122a_1_i.py` exercised the disposition layer but
+only ever with non-empty findings. **Neither file could construct the failing
+shape, so the gap between them was invisible to both.**
+
+`blocking` is now additionally true when any namespace is unresolvable, and an
+additive `unresolvable_namespaces` field lets the operator message name which
+one. The boundary is pinned: an unresolvable root blocks *regardless of what is
+staged* (it is a misconfiguration of the gate, not a property of the diff),
+whereas a genuine collision with no staged claimant stays non-blocking exactly
+as GE-122a-1-i specified.
+
+**The lesson worth keeping.** Every layer of this epic has now failed the same
+way once: a signal is computed correctly and then not consumed. Producing the
+right verdict is not the same as acting on it, and a test that stops at the
+verdict cannot tell the two apart.
+
+## KI-CG-8 — `scan_decisions` and `scan_diagrams` fail silently
+
+**Severity: low**, but it makes every misconfiguration harder to diagnose than
+it should be.
+
+When a namespace root is missing, `_work_items_scanner.py` logs:
+
+```
+[check_identifier_uniqueness] WARNING: cannot read <path>/tickets/ticket_lifecycle.json
+```
+
+`scan_decisions` and `scan_diagrams` in `_uniqueness_scanners.py` return
+`passed=False` for an absent root with **no log line at all**.
+
+This has already cost real diagnostic time. Three failing tests were first read
+as "the lifecycle config is missing" because that was the only namespace that
+said anything; the fixtures were in fact missing **three** roots, and the two
+silent ones were only found by printing the verdict directly. Since the
+fail-closed contract now blocks the commit, an operator hitting this sees a
+non-zero exit with one namespace named and two staying quiet.
+
+**Suggested fix.** Give the silent scanners the same WARNING the work-items
+scanner already emits. The `unresolvable_namespaces` field added for KI-CG-7
+already carries the information; this is only about surfacing it at the point of
+failure.
+
 ## Fixed, recorded for context
 
 Two defects in this area were found and fixed during the same drive; they are
@@ -186,3 +256,19 @@ listed here only so the history is legible, and are **not** open:
   than YAML's coerced value, so two records YAML considers identical looked like
   two different ids and a real collision was silently missed. Fixed by asking
   PyYAML's own resolver whether a plain scalar would be coerced.
+- **The same fast path answered wrongly on two more shapes** (found in round 4).
+  A multi-document stream (`id: GE-1\n---\nid: GE-2`) returned `GE-2` where
+  `safe_load` raises and the contract says *no claim*; a folded plain scalar
+  (`id: foo\n  bar`) returned `foo` where `safe_load` yields `foo bar`. Because
+  `_read_yaml_id` falls back to the full parse only on `None`, a *wrong* answer
+  was never corrected. Fixed by making the fast path **decline** on any shape it
+  cannot decide — declining is always safe, answering wrongly is not. The
+  performance win is intact: 3091 of 3092 real files still take the fast path,
+  0.20s.
+- **Two lifecycle folders naming the same directory produced a phantom
+  self-collision** (found in round 4). A trailing slash, a `./` prefix or a `..`
+  round-trip each passed the containment check independently, so one real ticket
+  file was walked twice and reported as colliding with itself, with
+  `inspected_count` doubled. Fixed by de-duplicating on resolved path identity,
+  preserving declaration order. Note the tests had the *opposite* case covered
+  (two folders sharing a basename but genuinely distinct) and not this one.

@@ -137,6 +137,7 @@ DECISION HISTORY
 from __future__ import annotations
 
 import importlib.util as _ilu
+import json
 import subprocess
 import sys
 import tempfile
@@ -251,6 +252,63 @@ def _write_ac_yaml(path: Path, data: dict) -> None:
         yaml.safe_dump(data, fh, sort_keys=False)
 
 
+def _resolve_non_ac_namespaces(root: Path) -> None:
+    """Make the decisions, diagrams, and work-items namespaces resolvable.
+
+    THIS COMMENT MUST NOT BE "TIDIED AWAY": every test in this file builds a
+    fixture collection that only ever populates docs/acceptance-criteria/ --
+    the other three namespaces (decisions, diagrams, work-items) are never
+    touched, because this file's collisions are deliberately scoped to
+    acceptance-criteria only (see the module docstring). Before GE-122e-3
+    (2026-08-25), an entirely-missing namespace root/config fail-opened to
+    NamespaceVerdict(passed=True, findings=[]) and `compute_commit_disposition`
+    derived `.blocking` solely from attributed findings, so the other three
+    namespaces being unresolvable was invisible to every assertion here.
+    GE-122e-3 fixed BOTH of those: an unresolvable namespace now reports
+    passed=False with an EMPTY findings list, and `.blocking` is now True
+    whenever ANY namespace is unresolvable -- regardless of what is staged,
+    per _commit_disposition.py's own "an unresolvable namespace is a
+    misconfiguration of the gate itself, not a per-file collision that
+    attribution can excuse" contract decision. Without this helper, EVERY
+    "does NOT block" assertion in this file (TestNeitherClaimantStaged,
+    TestUnattributedDoesNotBlockContrast, TestNewUncontestedRecordProducesNoFinding)
+    fails not because of any bug in attribution, but because
+    docs/architecture/adrs/, docs/architecture/diagrams/, and
+    tickets/ticket_lifecycle.json simply do not exist in the fixture -- three
+    namespaces reported as unresolvable, unconditionally blocking. This is
+    the SAME incomplete-fixture defect already fixed once, the same way, in
+    test_ge_122a_1.py's own `_build_fixture_collection` (see that function's
+    docstring for the identical precedent) -- do not reintroduce a fourth
+    copy of it by removing this call from a test's setUp.
+
+    Deliberately builds each namespace in its legitimately-EMPTY-but-RESOLVED
+    shape (an existing empty directory / a lifecycle config that declares
+    zero folders) rather than populating it with fixture data of its own --
+    see GE-122e-3's "THE CONTRACT DECISION"
+    (unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py) for why an
+    existing-but-empty root still passes cleanly, distinct from a root that
+    was never created at all.
+
+    Args:
+        root: The fixture git repository root (already `git init`-ed).
+    """
+    (root / "docs" / "architecture" / "adrs").mkdir(parents=True, exist_ok=True)
+    (root / "docs" / "architecture" / "diagrams").mkdir(parents=True, exist_ok=True)
+    tickets_root = root / "tickets"
+    tickets_root.mkdir(parents=True, exist_ok=True)
+    lifecycle_path = tickets_root / "ticket_lifecycle.json"
+    # tickets/ticket_lifecycle.json MUST exist for the work-items namespace to
+    # resolve at all -- scan_work_items reports passed=False (unresolvable)
+    # when this file is missing, unreadable, or unparsable (see
+    # _work_items_scanner.py's DECISION HISTORY, GE-122e-3), and an
+    # unresolvable namespace now unconditionally blocks every commit
+    # regardless of the staged set. Declaring zero folders keeps this
+    # namespace genuinely empty (this file plants no work-item collisions)
+    # while still being a config that WAS successfully read and parsed.
+    with open(lifecycle_path, "w", encoding="utf-8") as fh:
+        json.dump({"folders": []}, fh)
+
+
 def _staged_paths(root: Path) -> set:
     """Return the REAL git-index staged file paths as resolved absolute Paths.
 
@@ -321,6 +379,11 @@ class _RealGitRepoTestCase(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
         self.root = Path(self._tmp.name)
         _init_git_repo(self.root)
+        # See _resolve_non_ac_namespaces's own docstring: without this, the
+        # decisions/diagrams/work-items namespaces are unresolvable and
+        # unconditionally block every disposition built from this fixture,
+        # regardless of the acceptance-criteria attribution logic under test.
+        _resolve_non_ac_namespaces(self.root)
         self.ac_dir = self.root / "docs" / "acceptance-criteria" / "fixture-component"
 
 
@@ -516,6 +579,11 @@ class TestUnattributedDoesNotBlockContrast(unittest.TestCase):
 
             for root in (blocking_root, reported_root):
                 _init_git_repo(root)
+                # See _resolve_non_ac_namespaces's own docstring: without
+                # this, both fixtures' decisions/diagrams/work-items
+                # namespaces are unresolvable and unconditionally block,
+                # masking the attribution contrast this test exists to prove.
+                _resolve_non_ac_namespaces(root)
                 ac_dir = root / "docs" / "acceptance-criteria" / "fixture-component"
                 path_a = ac_dir / "GE-119-alpha.yaml"
                 path_b = ac_dir / "GE-119-beta.yaml"
