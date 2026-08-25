@@ -16,6 +16,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 _MODULE_PATH = _SCRIPTS_DIR / "build.py"
 
 spec = importlib.util.spec_from_file_location("_build", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["_build"] = _mod
 spec.loader.exec_module(_mod)

@@ -35,6 +35,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _MODULE_PATH = _REPO_ROOT / "templates" / "scripts" / "git_recovery.py"
 
 spec = importlib.util.spec_from_file_location("git_recovery", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["git_recovery"] = _mod
 spec.loader.exec_module(_mod)

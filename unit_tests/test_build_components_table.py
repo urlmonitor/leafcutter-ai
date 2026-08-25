@@ -40,9 +40,10 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 try:
-    spec = importlib.util.spec_from_file_location(
-        "build_phases", _SCRIPTS_DIR / "build_phases.py"
-    )
+    _bp_path = _SCRIPTS_DIR / "build_phases.py"
+    spec = importlib.util.spec_from_file_location("build_phases", _bp_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"could not load spec for {_bp_path}")  # noqa: TRY301
     _bp_mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_bp_mod)
     _build_components_table = _bp_mod._build_components_table

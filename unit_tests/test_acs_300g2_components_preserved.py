@@ -23,6 +23,7 @@ import importlib.util
 import json
 import unittest
 from pathlib import Path
+from typing import Any, ClassVar
 
 # ---------------------------------------------------------------------------
 # Load validate_component_minimum_schema from the canonical templates path.
@@ -42,7 +43,12 @@ try:
     _spec = importlib.util.spec_from_file_location(
         "check_components_integrity", _HOOK_SCRIPT
     )
-    _cg_mod = importlib.util.module_from_spec(_spec)
+    assert _spec is not None and _spec.loader is not None, (
+        f"could not load spec for {_HOOK_SCRIPT}"
+    )
+    # Typed Any: this module's REPO_ROOT attribute is patched below, and a
+    # dynamically-loaded module's attribute surface is not statically known.
+    _cg_mod: Any = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_cg_mod)
     # REPO_ROOT defaults to parents[2] of the canonical templates path, which
     # resolves to the templates/ subdirectory rather than the worktree root.
@@ -70,6 +76,8 @@ class TestOriginalComponentEntriesPreserved(unittest.TestCase):
     # covers: ACS-300g-2
     """
 
+    components: ClassVar[dict] = {}
+
     @classmethod
     def setUpClass(cls) -> None:
         """Load docs/components.json once for all tests in this class."""
@@ -84,7 +92,7 @@ class TestOriginalComponentEntriesPreserved(unittest.TestCase):
             raise unittest.SkipTest(  # noqa: TRY003
                 f"Failed to load docs/components.json: {exc}"
             ) from exc
-        cls.components: dict = data.get("components", {})
+        cls.components = data.get("components", {})
 
     def test_sync_platforms_is_present(self):
         """sync_platforms must exist as a key in docs/components.json."""
