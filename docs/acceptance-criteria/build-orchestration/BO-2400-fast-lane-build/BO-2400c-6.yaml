@@ -1,0 +1,161 @@
+id: BO-2400c-6
+components:
+  - build_orchestration
+  - ac_store
+title: "Resolving a connected build set reads the store once, and resolves the same set it did before"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run resolving the connected build set for one acceptance criterion,
+    against a store of acceptance-criteria records, where resolving that set requires
+    expanding two or more not-done composite dependencies,
+  When the resolution completes,
+  Then no record in the store has been read from disk and parsed more than once for
+    that resolution: the record set the resolution works from is built once and handed
+    to every step that needs it, instead of each step rebuilding it,
+  And the ordered list of ids the resolution returns is exactly the list the same store
+    produced before the reading was consolidated.
+
+  Given the same resolution,
+  When the improvement is asserted,
+  Then it is asserted as a count — the number of times store records are parsed, or the
+    number of times store files are opened, during one resolution — and never as an
+    elapsed time,
+  And a covering test that asserts a wall-clock bound does not satisfy this criterion:
+    such a test flakes on shared CI and is deleted by the first person it inconveniences,
+    leaving the criterion uncovered and the regression free to return.
+
+  Given a store in which some records take part in a dependency cycle and other records
+    are adjacent to that cycle — they depend on a cycle member, or are reachable only
+    through one — and the resolution removes the cycle members from its own working
+    view in order to produce a deterministic order,
+  When the tree is walked to find the target's subtree and its unmet prerequisites,
+  Then the walk sees the store's records as they stand on disk, including every record
+    the cycle removal took out of the working view,
+  And the resolved set is identical, member for member and in the same order, to the
+    set the same store resolved before the reading was consolidated,
+  And a resolution that returns fewer members than before while reporting no error is a
+    failure of this criterion, not an optimisation.
+depends_on: [BO-2400c, BO-2400f-1]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the tree walk that today builds a complete id-to-record index of its own on every call by globbing and parsing every file in the store, and the cycle-drain step that mutates that index in place."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "Resolves the connected build set. It has already built the record index before it walks the tree, and then walks again once per not-done composite dependency it expands — so a run pays for N+1 full parses of the whole store, never fewer than two."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-016 carries the measurement (178.32 seconds to resolve one id against 3,232 files), the mechanism, and the fix direction. Read it before implementing."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/ac_store/test_scan_ac_store_cycle.py
+    relationship: related
+    status: exists
+    relevance: "Existing cycle coverage for the tree walk. The equivalence guard in BO-2400c-6-i belongs alongside it and must not weaken what it already asserts."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    ac_tree_walk_prebuilt_index:
+      type: object
+      description: "The tree walk accepts an optional prebuilt id-to-record mapping and uses it when supplied, keeping its self-building path for callers that pass nothing. The connected-set resolver supplies the mapping it already holds — an UNDRAINED view of it — so one resolution parses the store exactly once."
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "CORRECTNESS TRAP, read before writing any code. The cycle-drain step mutates the resolver's index IN PLACE — it deletes cycle nodes — and the resolver runs it BEFORE it walks the tree. Today each walk rebuilds a pristine index of its own, so each walk still sees cycle-adjacent nodes. Handing the drained index straight to the walk would silently shrink the build set: fewer acceptance criteria, no error, the lane quietly building less than it was asked to. That is a phantom-done regression hiding inside a performance fix. The walk must be given an UNDRAINED view — snapshot the index before the drain, or drain a copy — and the equivalence guard in BO-2400c-6-i must exist before this change lands."
+    - "Sweep the other call sites of the same tree walk in the same pass. Anything that walks the tree inside a loop pays the identical re-read, and a fix applied only to the connected-set resolver leaves the defect in place elsewhere while appearing to close it."
+    - "Do NOT wire telemetry for this. The lane emits none (KI-BO-012) and standing one up here would be a second unread artifact. The accepted evidence for the cost improvement is a before-and-after wall-clock figure recorded by hand in the changelog entry for this change; the mechanical guard in the test suite is the parse count, not the clock."
+    - "Covering tests must EXECUTE the resolver — in-process against a temporary on-disk store, or as a real subprocess — and count real parses or real file opens. A test that greps the resolver or the tree walk for a parameter name, or that asserts the parameter merely exists in the signature, is NOT acceptable evidence and must be rejected at review: it passes unchanged when the argument is accepted and ignored."
+delivers_to:
+  agent: python-coder
+  contract: "A tree walk that reuses a caller-supplied record index, and a connected-set resolver that supplies its own undrained index — one full parse of the store per resolution, with the resolved set unchanged."
+expects_from:
+  ac_id: BO-2400f-1
+  contract: "The connected-set resolution whose answer — the dependency-ordered list of leaf ids — must be identical before and after this change."
+test_required: true
+test_spec:
+  - name: test_one_resolution_parses_each_store_file_at_most_once
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Against a temporary on-disk store whose target requires two or more composite expansions, the YAML loads (or file opens) of store records during one resolution are counted and no record is parsed more than once."
+  - name: test_resolved_set_unchanged_for_a_multi_expansion_target
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For a target requiring several composite expansions, the resolved ordered id list matches the recorded pre-change answer exactly — same members, same order."
+  - name: test_tree_walk_uses_the_supplied_index_instead_of_rereading
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "When the tree walk is given a prebuilt record index, no additional read of the store directory occurs during the walk — proving the argument is consumed rather than accepted and ignored."
+  - name: test_walk_receives_an_undrained_view_after_cycle_removal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "On a constructed store containing a cycle, the record set the walk is given still contains the cycle members that the drain removed from the resolver's own working view."
+test_rationale: |
+  Two things must be proved, and each has an easy wrong proof.
+
+  The cost. The only honest mechanical assertion is a count of parses or opens for one
+  resolution. A wall-clock assertion is the obvious alternative and must not be used:
+  it flakes on shared CI, and a flaky performance test is deleted long before the
+  regression it guards returns. The human-readable cost evidence — a before-and-after
+  timing figure — belongs in the changelog entry, not in the suite.
+
+  The correctness. The dangerous outcome of this change is not a crash, it is a
+  quietly smaller build set, which no existing test would notice because every existing
+  test resolves against an acyclic store. The undrained-view test and the equivalence
+  guard in BO-2400c-6-i are therefore the load-bearing coverage. Both must run against
+  a constructed fixture: the repository's own store is acyclic today, verified
+  2026-08-24 when a timed resolution run captured the resolver's diagnostic output and
+  produced no cycle warning at all, so a guard built on the live store would exercise
+  nothing while looking thorough.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400c-6-i, BO-2400c-6-ii]
+implemented_by:
+  - "scripts/ac_store/scan_ac_store.py"
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: code
+risk_surface: internal
+notes: |
+  Discharges KI-BO-016 under this L1 because the defect is exactly what the L1 names:
+  a step that starts cold and re-derives context an earlier step already worked out.
+  The sibling children (BO-2400c-1 through BO-2400c-5) all concern the prompt bundle
+  handed to agents; none touches the cost the lane pays before any agent is dispatched,
+  so this is an extension of the parent rather than a duplicate of any child.
+
+  On the "and see that it actually happened" half of the parent's promise: the lane has
+  no telemetry (KI-BO-012) and this criterion deliberately does not add any. The call
+  is to fix the cost first and measure it later. The evidence accepted for now is a
+  before-and-after wall-clock figure recorded by hand in the changelog entry — the
+  baseline is 178.32 seconds to resolve BO-2400c-1-i against 3,232 files, measured on
+  main at ef8c6343. When BO-2400c-2's context-reuse statement or a future per-invocation
+  record lands, carry the resolution cost onto that record rather than building a
+  separate path for it.
+
+  The parse count, not the clock, is the regression guard. This is a deliberate
+  asymmetry: the clock is what the operator feels and the count is what a test can
+  hold, and conflating them is how performance guards rot.

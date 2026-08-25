@@ -1,0 +1,120 @@
+id: BO-2400c-6-i
+components:
+  - build_orchestration
+  - ac_store
+title: "A cycle-adjacent subtree resolves identically before and after, proved on a constructed store"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a purpose-built store fixture containing a dependency cycle among at least two
+    records, at least one record outside the cycle that depends on a cycle member, and
+    at least one record that is reachable from the target only by passing through a
+    cycle member,
+  When the connected build set is resolved for a target in that fixture — once by the
+    resolution as it behaved before the store reading was consolidated, and once
+    afterwards,
+  Then the two answers are identical: the same ids in the same order,
+  And in particular the record reachable only through a cycle member is present in both
+    answers or absent from both, so the consolidation cannot have narrowed reachability.
+
+  Given the same fixture,
+  When the resolution removes the cycle members from its working view in order to
+    produce a deterministic order,
+  Then the removal is not observable to the tree walk: the records the walk is given
+    still include the cycle members,
+  And the resolution still reports the cycle it found, exactly as it did before, so
+    consolidating the reading did not also silence the cycle diagnostic.
+
+  Given the repository's own acceptance-criteria store,
+  When a guard for this behaviour is considered,
+  Then it is built on the constructed fixture and not on that store, because that store
+    contains no cycle today — verified 2026-08-24, when a timed resolution run captured
+    the resolver's diagnostic output and it reported none — so a guard resting on the
+    live store would pass without exercising the behaviour at all, and would keep
+    passing on the day the behaviour broke.
+depends_on: [BO-2400c-6]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds both halves of the trap: the tree walk that must see the undrained records, and the cycle-drain step that mutates the caller's index in place."
+  - path: unit_tests/ac_store/test_scan_ac_store_cycle.py
+    relationship: related
+    status: exists
+    relevance: "Existing cycle coverage for the tree walk; this guard sits alongside it and must not weaken what it asserts."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-016 — the performance defect inside which this correctness regression would hide."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    cycle_adjacent_equivalence_guard:
+      type: object
+      description: "A constructed store fixture with a cycle, a cycle-dependent record, and a record reachable only through a cycle member. The guard asserts the resolved ordered id list is identical before and after the reading consolidation, and that the record set handed to the tree walk still contains the drained cycle members."
+  reference_file_path: "unit_tests/build_orchestration/"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The fixture is constructed in the test, written to a temporary directory as real YAML files serialised the way the store is actually written. Do not point the guard at docs/acceptance-criteria — that store is acyclic, so the guard would exercise nothing."
+    - "The pre-change answer must be captured from the resolution as it behaves BEFORE the consolidation lands and recorded as the expected value, so the guard compares against observed prior behaviour rather than against what the author believes the answer should be."
+    - "This guard lands with, or before, the consolidation change — never after it. A correctness guard authored after the change it guards is written against whatever the change happened to do."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400c-6
+  contract: "The consolidated reading path — a tree walk fed a caller-supplied record index — whose equivalence with the prior behaviour this guard establishes."
+test_required: true
+test_spec:
+  - name: test_cycle_adjacent_subtree_resolves_identically
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the constructed cyclic fixture, the resolved ordered id list matches the answer recorded from the pre-consolidation behaviour, member for member and in order."
+  - name: test_record_reachable_only_through_a_cycle_member_is_not_lost
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The record reachable from the target only by passing through a cycle member appears in the post-change answer whenever it appeared in the pre-change answer."
+  - name: test_cycle_diagnostic_still_reported_after_consolidation
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The resolution against the cyclic fixture still reports the cycle it found; consolidating the reading did not silence the diagnostic."
+test_rationale: |
+  This is the guard that separates a performance fix from a phantom-done regression.
+  The naive consolidation — hand the resolver's existing index to the tree walk — is
+  wrong in exactly one situation, produces no error, and returns a smaller build set.
+  Nothing in the current suite would fail, because every existing test resolves against
+  an acyclic store, and the live store is acyclic too.
+
+  So the fixture is the whole test. A guard written against docs/acceptance-criteria
+  would be green today, green after the regression, and green forever — the most
+  expensive kind of test, because its presence is taken as coverage. Constructing the
+  cycle is what makes the assertion mean anything.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+change_target: code
+risk_surface: internal
+notes: |
+  The third scenario is unusual — a criterion about how a test must be built rather
+  than about product behaviour — and it is deliberate. The defect this guard exists to
+  catch is invisible on the live store, so "we added a cycle test" is a claim that can
+  be satisfied by a test that exercises nothing. Writing the fixture requirement into
+  the criterion is the only way the requirement survives into review.

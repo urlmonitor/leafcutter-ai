@@ -305,8 +305,8 @@ false refusals train the operator to bypass it.
 
 - **Severity:** high
 - **Status:** open — no AC authored yet; the semantics question below is the reason
-- **Occurrences:** 15
-- **First seen:** 2026-08-17 · **Last seen:** 2026-08-19
+- **Occurrences:** 18
+- **First seen:** 2026-08-17 · **Last seen:** 2026-08-24
 - **Where:** `scripts/ac_store/mark_ac_done.py`; also reached from
   `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by
   `mark_done_built_acs`
@@ -501,9 +501,32 @@ is indistinguishable from one that passes).
 **Symptom.** There are two AC validators and they enforce different rules.
 `scripts/ac_store/validate_ac_schema.py` checks the record against the schema. The
 required CI job runs `pre-commit run check-ac-schema`, which additionally enforces
-binding completeness, field preservation (ACS-500f-1) and derived-field rules such as
-`declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight section prescribes only the
-former. Running it and seeing `OK: all N AC YAML files are valid` therefore establishes
+binding completeness, field preservation (ACS-500f-1), test-contract rules, and
+derived-field rules such as `declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight
+section prescribes only the former.
+
+**A retracted correction, 2026-08-25 — and the retraction is the useful part.** On
+2026-08-24 this paragraph was edited to say the `declares_side_effect` (BO-2900g-2) example
+was fabricated and that no gate enforces the field. **That edit was wrong. The original
+text was right, and has been restored.** `check-ac-schema` does enforce it: CI failed PR
+#529 with *"declares_side_effect is authored as True but this AC's own Then clause derives
+False — the two disagree … (BO-2900g-2)"*.
+
+The mistake is worth keeping because it is this entry's own subject, one layer down. Two
+agents independently grepped `scripts/commit_guardian/` and `.leafcutter/scripts/
+commit_guardian/`, found nothing, and concluded the rule did not exist. The rule lives in
+**`templates/scripts/commit_guardian/_ac_schema_validators.py`** — `templates/` is the
+source the build deploys *from*; `scripts/commit_guardian/` in a worktree is a build output
+frozen at whenever that worktree was last built (KI-BP-004). Running the hook locally
+passed for exactly the same reason: the local hook was the stale copy, without the rule.
+
+So the sequence was: entry states a true fact → two agents check it against the deployed
+tree and get a false negative → entry is "corrected" into an untruth → CI, which builds
+before running the hooks, contradicts all of it. Local hook agreement is not evidence the
+rule is absent; it is evidence about the age of your deploy. Grep `templates/scripts/` when
+asking what a hook enforces, and treat a passing local hook as unverified until CI agrees.
+
+Running the weaker validator and seeing `OK: all N AC YAML files are valid` therefore establishes
 much less than it appears to, and the gap is invisible because both are called "the
 schema validator" in conversation.
 
