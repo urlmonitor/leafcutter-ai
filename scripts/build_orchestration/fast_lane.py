@@ -24,7 +24,14 @@ ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
     release_claim, filter_already_claimed, mark_done_built_acs, and
     check_no_stale_todo perform status-only YAML mutations (work_status field only)
     via _update_ac_work_status; all file I/O is wrapped per the Error Handling
-    Policy (Rule 1).  A CLI entry point (main()) wraps each function for
+    Policy (Rule 1).  _update_ac_work_status commits its edit via
+    _atomic_write_text (BO-2400e-3), a write-to-temp-in-the-same-directory then
+    os.replace so a reader always sees either the whole old or whole new content
+    and an interrupted/failed write never truncates the on-disk record; the CLI's
+    "claim" subcommand (BO-2400e-3-i) reads claim_build_set's own success/error
+    fields and exits non-zero with the error announced on stderr rather than
+    silently reporting success when a write could never be made.  A CLI entry
+    point (main()) wraps each function for
     subprocess-based pipeline invocation.  compute_changelog_requirement (KI-BO-001)
     imports scripts/release/check_changelog_presence.py as a module and reads its
     EXEMPT_PREFIXES attribute at call time so the fast lane's "does this run owe a
@@ -41,8 +48,10 @@ import argparse
 import datetime
 import json
 import logging
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -127,6 +136,83 @@ def _build_ac_id_to_path_index(ac_root: Path) -> dict[str, Path]:
     return index
 
 
+def _atomic_write_text(target_path: Path, text: str) -> None:
+    """Replace *target_path*'s content with *text* atomically from a reader's
+    point of view (BO-2400e-3 / BO-2400e-3-i).
+
+    The previous implementation opened *target_path* with ``"w"``, which
+    TRUNCATES the file to zero bytes the instant it is opened — before a
+    single byte of the new content has been written. Any failure after that
+    point (a write that fails partway, a process interruption) left the
+    on-disk record empty or short: real data loss on the build system's
+    source of truth.
+
+    This instead writes the new content to a temp file created in the SAME
+    directory as *target_path* (so the final swap is a same-filesystem
+    rename), then calls :func:`os.replace` to atomically swap it into place.
+    ``os.replace`` is a single filesystem rename operation — a concurrent
+    reader opening *target_path* at any point sees either the complete OLD
+    content or the complete NEW content, never a partial mixture, and the
+    ORIGINAL file is never truncated or otherwise touched by a write that
+    later fails. This is the single extra filesystem metadata operation
+    (the rename) added to the read/write pair the function already performed.
+
+    On any failure — creating the temp file, writing to it, or the final
+    rename — the temp file is removed on a best-effort basis (a cleanup
+    failure is logged, never allowed to mask or replace the original error)
+    and the triggering ``OSError`` is re-raised. The caller MUST NOT treat a
+    caught-and-logged failure here as anything but a failed write (per this
+    repo's Error Handling Policy Rule 3: "log at WARNING and return" is not
+    an acceptable substitute for propagating the failure) — *target_path* is
+    guaranteed unchanged whenever this raises.
+
+    Args:
+        target_path: Absolute path of the file to replace.
+        text: Full new file content.
+
+    Raises:
+        OSError: The temp file could not be created, written, or renamed
+            into place (e.g. a read-only directory/file, or a write that
+            fails partway through, such as under ``RLIMIT_FSIZE``).
+    """
+    tmp_fd: int | None = None
+    tmp_name: str | None = None
+    try:
+        tmp_fd, tmp_name = tempfile.mkstemp(
+            dir=str(target_path.parent),
+            prefix=f".{target_path.name}.",
+            suffix=".tmp",
+        )
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+            tmp_fd = None  # ownership transferred to the context manager
+            fh.write(text)
+        os.replace(tmp_name, target_path)
+        tmp_name = None  # swapped into place -- nothing left to clean up
+    except OSError as exc:
+        _LOG.warning("_atomic_write_text: cannot write %s: %s", target_path, exc)
+        raise
+    finally:
+        if tmp_fd is not None:
+            try:
+                os.close(tmp_fd)
+            except OSError as cleanup_exc:
+                _LOG.warning(
+                    "_atomic_write_text: failed to close leaked temp fd for %s: %s",
+                    target_path,
+                    cleanup_exc,
+                )
+        if tmp_name is not None:
+            try:
+                os.unlink(tmp_name)
+            except OSError as cleanup_exc:
+                _LOG.warning(
+                    "_atomic_write_text: failed to remove temp file %s for %s: %s",
+                    tmp_name,
+                    target_path,
+                    cleanup_exc,
+                )
+
+
 def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
     """Overwrite only the *work_status* line of an AC YAML file on disk.
 
@@ -146,13 +232,23 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
     reason narrating "Reset to work_status todo:") is never mistaken for the
     real key.
 
+    BO-2400e-3: the new bytes reach disk via :func:`_atomic_write_text`
+    rather than a truncating ``open("w")``, so an interrupted or partially
+    failed write can never leave the record zero-length or half-written —
+    the targeted single-line text edit above is unchanged; only how the
+    resulting bytes are committed to disk changed.
+
     Args:
         yaml_path: Absolute path to the AC YAML file.
         new_status: Target work_status value — ``"in_progress"``, ``"todo"``,
             or ``"done"``.
 
     Raises:
-        OSError: When the file cannot be read or written.
+        OSError: When the file cannot be read, or the new content cannot be
+            written and swapped into place (BO-2400e-3-i: the original file
+            is guaranteed unchanged whenever this is raised — the caller
+            must treat it as a failed update and MUST NOT proceed as though
+            the status had been recorded).
         ValueError: When the file contains more than one column-0
             ``work_status:`` line. Which of them is the real key is genuinely
             ambiguous, so this raises rather than editing the first and
@@ -202,12 +298,7 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
         lines.append(f"work_status: {new_status}\n")
     updated = "".join(lines)
 
-    try:
-        with yaml_path.open("w", encoding="utf-8") as fh:
-            fh.write(updated)
-    except OSError as exc:
-        _LOG.warning("_update_ac_work_status: cannot write %s: %s", yaml_path, exc)
-        raise
+    _atomic_write_text(yaml_path, updated)
 
 
 def claim_build_set(
@@ -1639,8 +1730,21 @@ def main(argv: list[str] | None = None) -> int:
             "claimed": claim_result["claimed"],
             "excluded_claimed": excluded_claimed,
             "target_refused": False,
+            "success": claim_result["success"],
+            "error": claim_result["error"],
         }
         print(json.dumps(claim_payload))
+        if not claim_result["success"]:
+            # BO-2400e-3-i: a write that could never be made must never be
+            # reported as a success. claim_result["error"] already names
+            # both the failing AC id and the underlying OS reason (see
+            # claim_build_set), so it is printed here rather than
+            # discarded -- "log at WARNING and return 0" (this repo's
+            # forbidden anti-pattern, CLAUDE.md Error Handling Policy Rule
+            # 3) would tell the caller it is safe to dispatch test-writer/
+            # coder against ACs that were never actually claimed.
+            print(claim_result["error"], file=sys.stderr)
+            return 1
         return 0
 
     if args.subcommand == "release":
