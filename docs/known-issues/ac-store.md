@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-19
+last_updated: 2026-08-25
 components:
   - ac_store
 related_docs:
@@ -552,3 +552,75 @@ understood. Longer term the two should not diverge silently: either the hook cal
 script, or the script grows the hook's rules, so there is one answer to "is this store
 valid". Note the hook reads the git **index**, so files must be staged before it can see
 them — an unstaged fix will appear not to work.
+
+---
+
+### KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `config/ac_store_schema.json` → `test_spec[].framework` and
+  `test_spec[].type`, against the ACs under `docs/acceptance-criteria/ux-prototyping/`
+  and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/`
+
+**Symptom.** `test_spec[].framework` permits exactly `unittest` and `pytest`; `test_spec[].type`
+permits exactly `unit`, `integration`, `e2e`, `behavioral`. The repo now contains a Next.js
+app under `leafcutter-web/`, and the ACs written for it declare the tests that app actually
+uses — `framework: vitest` (40 entries), `framework: playwright` (2), and `type: component`
+(12). None of those three values is in either enum, so **every one of those records fails
+the store schema right now**, on `main`, unmodified.
+
+**Why nothing has caught fire.** The required `AC store valid` job is diff-scoped by
+design — `ci.yml:210` explains the choice, and it is a defensible one. The consequence is
+that a record can be invalid indefinitely and cost nobody anything until the moment
+somebody edits it for an unrelated reason, at which point they inherit a failure they did
+not cause and cannot fix without either widening the schema or falsifying their own test
+contract. `ci.yml:212` states the intended bargain plainly — *"Touch a broken record and
+you own it"* — which is a fair rule for 57 orphaned children and an unfair one here,
+because these 29 records are not malformed. They are correct descriptions of real tests
+that the schema has no vocabulary for.
+
+This is the exact shape BO-2900g-3's MIGRATE-DO-NOT-DEFER constraint was written against:
+*"'The hook validates staged files only, so existing records are not invalidated in bulk'
+is not a mitigation — it converts an immediate, visible breakage into a landmine that
+fires on whoever next edits an untouched record for an unrelated reason."* Here the
+narrowing was never a decision at all; the schema simply predates the web app.
+
+**Evidence.** 2026-08-25, at `d37687ff`, whole-store run:
+
+```
+$ python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria
+AC schema validation FAILED:
+  ... 28 files: schema violation at test_spec ...
+```
+
+Single-record reproduction, showing it is the enum and not a malformed record:
+
+```
+$ python scripts/ac_store/validate_ac_schema.py \
+    docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-601.yaml
+AC schema validation FAILED: ... 'framework': 'vitest', 'type': 'component' ...
+exit: 1
+```
+
+28 files fail the schema validator; a 29th carries the same vocabulary and is caught only
+by the stricter hook (KI-ACS-009). The whole-store run was only possible at all because
+KI-ACS-001 was fixed on 2026-08-19 — before that the bare-directory form exited 0 without
+reading anything, which is why a population this size went unnoticed.
+
+**Fix direction.** Widen both enums rather than rewriting 29 records to say something
+untrue about themselves: add `vitest` and `playwright` to `framework`, and decide
+deliberately whether `component` joins the level axis or those 12 entries move to an
+existing level. Note the axis question is genuine and should not be settled by reflex —
+`component` is a test **level** (heavier than a unit test, lighter than e2e, renders a
+component in a DOM), so it belongs on `type` and not on `angle`; adding it to `angle`
+would repeat the level/kind muddle BO-2900g-3 exists to have removed. Whichever way it
+goes, per BO-2900g-3 the change must move the affected records in the same commit, not
+leave them for whoever touches them next.
+
+**Related.** KI-ACS-009 (the pre-flight is weaker than the gate — the reason a
+locally-clean folder run does not clear these). BO-2900g-3 (the MIGRATE-DO-NOT-DEFER
+constraint this violates). `ACS-200h`, named at `ci.yml:215` as the unbuilt whole-store
+backstop, is the check that would have surfaced this on day one.
