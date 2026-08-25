@@ -3,15 +3,14 @@ title: 'Agent Reference: how-to-author'
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-08-25
 components:
 - infrastructure
 related_docs:
 - docs/agents/conventions.md
 - docs/architecture/adrs/ADR-033-agent-model-tiers.md
-- docs/how-to/documentation/write-how-to.md
-- docs/README.md
-- tickets/09_done/EPIC-CodingAgents/21_how_to_author.md
+- config/doc_types.json
+- docs/known-issues/documentation-system.md
 description: 'Overview of Agent Reference: how-to-author.'
 ---
 # Agent Reference: `how-to-author`
@@ -113,8 +112,8 @@ Skeleton`:
    shape of output. Clear fail signal. Link to Troubleshooting when applicable.
 7. **`## Troubleshooting`** — only when known failure modes exist. Numbered
    cause → fix pairs.
-8. **`## See Also`** — cross-links to sibling explanation/reference docs and
-   `docs/README.md`.
+8. **`## See Also`** — cross-links to sibling explanation/reference docs and,
+   where a navigation entry point helps, `docs/INDEX.md`.
 
 Sections 7 and 8 are omitted when genuinely not applicable.
 
@@ -197,7 +196,7 @@ invocation because it reads the how-to at runtime.
   the how-to this agent loads at runtime. Single source of truth for the
   heading hierarchy, Prerequisites conventions, Steps + code-block rules,
   Verification conventions, Location Decision Rule, and copy-pasteable skeleton.
-- [`docs/README.md`](../../README.md) — Diataxis index defining the "do" genre.
+- [`config/doc_types.json`](../../../config/doc_types.json) — Diataxis genre mapping defining the "do" genre.
 - [`docs/agents/coding/documentation-expert.md`](./documentation-expert.md) —
   the orchestrator that dispatches to this agent. Classification table and
   dispatch contract live there.

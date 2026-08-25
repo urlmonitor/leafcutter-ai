@@ -3,15 +3,14 @@ title: 'Agent Reference: explanation-author'
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-08-25
 components:
 - infrastructure
 related_docs:
 - docs/agents/conventions.md
 - docs/architecture/adrs/ADR-033-agent-model-tiers.md
-- docs/how-to/documentation/write-explanation.md
-- docs/README.md
-- tickets/09_done/EPIC-CodingAgents/25_explanation_author.md
+- config/doc_types.json
+- docs/known-issues/documentation-system.md
 description: 'Overview of Agent Reference: explanation-author.'
 ---
 # Agent Reference: `explanation-author`
@@ -128,6 +127,6 @@ tools: Bash, Read, Edit, Write, Agent
 - [`docs/agents/conventions.md`](../conventions.md) — frontmatter schema (§1), file layout (§2), visibility classes (§3), tool allowlists (§4).
 - [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) — upstream ADR: three-tier ladder, strict-research-delegation rule.
 - [`docs/how-to/documentation/write-explanation.md`](../../how-to/documentation/write-explanation.md) — the how-to this agent loads at runtime. Single source of truth for explanation conventions.
-- [`docs/README.md`](../../README.md) — Diataxis index defining the "understand" genre.
+- [`config/doc_types.json`](../../../config/doc_types.json) — Diataxis genre mapping defining the "understand" genre.
 - [Ticket 25](../../../tickets/09_done/EPIC-CodingAgents/25_explanation_author.md) — the ticket that shipped this agent.
 - [Ticket 20](../../../tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md) — the `documentation-expert` orchestrator that dispatches here.
