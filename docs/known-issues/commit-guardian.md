@@ -799,6 +799,24 @@ whether it moves the other two.
 
 ### KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
 
+> **ID COLLISION — this entry and the one at `KI-CG-012` above share a number.** Two sessions
+> minted `KI-CG-012` independently on 2026-08-25; the other entry ("the hooks' test seams
+> disagree on both variable name and separator") was itself renumbered from `KI-CG-008` at
+> merge, which is how the collision arose. Deliberately **not** renumbered here, because the
+> inbound references do not disambiguate cleanly and a wrong renumber is worse than a flagged
+> duplicate:
+>
+> - `commit-guardian.md:953` and `build-pipeline.md:1095` cite `KI-CG-012` for an
+>   "invisible until touched" property — fits neither entry unambiguously.
+> - `BP-600d-3.yaml:186` cites it as "a third" occurrence of index-scoping — that reads as
+>   *this* entry.
+> - The 2026-08-25 10:26 changelog describes `KI-CG-012` as the `_is_leaf_ac()` / leaf-definition
+>   disagreement, which is the text now filed as **`KI-CG-013`** — so at least one inbound
+>   reference is already pointing at the wrong entry independently of this collision.
+>
+> Whoever owns this file should pick the renumber and fix all four references in one commit.
+> Next free id at time of writing is `KI-CG-017`.
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 3
@@ -1122,3 +1140,57 @@ matcher reads English correctly.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check measuring a proxy and
 reporting it as a verdict) — the proxy is "does the Then clause contain a write phrase", the
 verdict claimed is "this AC has a durable side effect", and negation is the gap between them.
+
+---
+
+### KI-CG-016 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the generated `.pre-commit-config.yaml`, `check-build-drift` entry — `files: ^leafcutter/templates/`
+
+**Symptom.** The hook exists to catch a template edited without a rebuild. Its file filter is
+`^leafcutter/templates/`, which is where templates live in a **consumer** install, where the
+package is vendored under `leafcutter/`. In this repository — the package itself — templates
+live at `templates/`. The pattern therefore matches nothing here, the hook has `pass_filenames:
+false` and no `always_run`, and pre-commit skips it. The one repository where every template
+change originates is the one repository where the drift gate does not run.
+
+**Evidence.** Observed in two consecutive commits on `fix/signoff-tool-allowlist`, which is
+what makes it unambiguous rather than inferred:
+
+```text
+commit 1 — staged five files under templates/agents/
+  Check Build Drift (leafcutter)........................(no files to check)Skipped
+
+commit 2 — staged only changelogs/ and docs/acceptance-criteria/
+  Check Build Drift (leafcutter)........................Failed
+```
+
+Skipped on the commit that changed five agent templates; ran on the commit that changed no
+template at all. The second run failed for an unrelated reason (KI-BP-011 — a manifest with no
+`output_mappings`), and only because the worktree was mid-bootstrap and briefly held an older
+config in which the entry carried `always_run: true`. Once the canonical build regenerated the
+config, the `^leafcutter/templates/` filter came back and the hook skipped again.
+
+**Why the severity is high rather than medium.** This is the gate whose absence lets every
+other deploy-staleness issue in the build-pipeline register survive. KI-BP-004 (worktree hooks
+frozen at build time) and KI-BP-008 (a skipped workflow-install phase leaving a deployed
+workflow 1497 lines stale) both propose extending `check_build_drift` as the natural home for
+the fix. Both proposals are unreachable while the hook never fires in the package repo.
+
+**Fix direction.** Derive the filter from the layout rather than hardcoding one of the two, or
+match both — `(^|/)templates/`. The same substitution appears elsewhere in the generated config
+(`check-paths-integrity` is filtered on `^leafcutter/config/paths\.json$`), so the audit should
+cover every `^leafcutter/`-anchored `files:` pattern rather than this one entry. Whatever the
+fix, it should be verified by staging a template change in the package repo and observing the
+hook actually run — the skip line is quiet and reads like a pass.
+
+**Trap.** `(no files to check) Skipped` is visually indistinguishable from a hook that ran and
+had nothing to say, and it appears in the middle of a long green hook list. Nothing in a normal
+commit surfaces the fact that the drift gate has been inert for the life of the repository.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2's filter form: source and deployed
+layouts differ, and the gate is configured against the layout it is not running in.
