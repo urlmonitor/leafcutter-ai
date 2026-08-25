@@ -1,0 +1,61 @@
+id: INF-400c-4-i
+components:
+  - infrastructure
+title: "No shipped template directs a knowledge_captured event at the telemetry sink"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
+criteria: |
+  Given four shipped surfaces instruct an agent to emit a knowledge_captured
+    event — the signoff skill's knowledge-capture section, and the knowledge
+    emission sections of the product-owner, business-analyst, and it-po v3
+    agent templates,
+  And each of the four currently names debugging/logs/agent_telemetry.jsonl
+    as the append target,
+  When the shipped template text is read,
+  Then each of the four names the declared knowledge-emission sink from
+    INF-400c-4 as the append target,
+  And no shipped template pairs the string "knowledge_captured" with the
+    telemetry sink path,
+  And the instruction to emit remains best-effort: a template states that a
+    failed append is logged and the agent still returns its primary output.
+depends_on: [INF-400c-4]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/business-analyst.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/product-owner.md
+    relationship: constrains
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: constrains
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "All four emit sites must change together — a partial repoint splits the corpus across two files"
+  - "Changing the signoff knowledge-capture section touches BO-2000a-5 in build-orchestration; that AC must be checked for contradiction before the edit lands"
+  - "Must not reintroduce the retired route-learning or capture-learning skill names (ADR-034 decision 3)"
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-4
+  contract: "The single declared knowledge-emission sink path that the templates name verbatim"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary

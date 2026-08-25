@@ -1,0 +1,55 @@
+id: INF-700a
+readiness: draft
+priority: medium
+components:
+  - infrastructure
+title: "Captured learnings reach their knowledge surface without a manual run"
+component: infrastructure
+level: L1
+status: active
+work_status: todo
+criteria: |
+  Capture completes on its own -- and says so plainly when it has not.
+
+  A learning an agent captures becomes readable knowledge on its surface as a
+  normal consequence of the work finishing, with nobody having to remember to
+  run anything. The routing step has a defined, owned point at which it runs.
+  Which point that is -- the end of a drive, finalization, a schedule, or
+  something else -- is a design decision for the BA and IT PO and is
+  deliberately not fixed by this criterion.
+
+  When it has not run, the learnings still waiting are visible and countable
+  rather than accumulating in silence, so an unwired pipeline shows up as a
+  number someone can see instead of a discovery made months later. Until the
+  trigger exists, every surface that documents this loop states plainly that
+  capture is manual: no document may imply an automatic capture that does not
+  happen (ADR-034, "Until the harvester has a caller, capture is not automatic
+  and any documentation implying otherwise is wrong").
+
+  Note for BA: scope here is the invocation/trigger question only. The sink-path
+  mismatch, the entry_kind vocabulary, and silent-discard behaviour are already
+  covered by the INF-400c L2/L3 set -- do not restate them. In particular
+  INF-400c-2-ii covers one individual event that cannot be routed, whereas the
+  visibility wanted here is the pending backlog when the routing step has not
+  run at all.
+depends_on:
+  - INF-700
+  - INF-400c
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
