@@ -13,25 +13,27 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given 16 records in the store whose declared producer carries literal
-    double-quote characters inside the value itself — 10 reading
-    `"python-coder"`, 5 reading `"test-failure-triage"` and 1 reading
-    `"documentation-expert"` — none of which string-match their unquoted twins,
-  When any one of them is checked at either entry point,
-  Then it is refused, and the refusal shows the value exactly as it stands and
-    names the unquoted form as the value to use instead.
+  Given a record whose declared producer is written with surrounding quote
+    characters in the file — 16 records do this today, 10 reading
+    `"python-coder"`, 5 `"test-failure-triage"` and 1 `"documentation-expert"` —
+    and given the two ways this store is read: a real YAML parse, which returns
+    the name without the quotes, and the fallback reader used when that parser
+    is unavailable, which returns the line's value as written and so keeps them,
+  When the same record is checked once under each reader,
+  Then both reach the same verdict about it,
+  And that verdict is the one a dispatcher would act on, because a dispatcher
+    reads the parsed value.
 
-  And given that same record,
+  Given the fallback reader specifically,
+  When it reads a quoted producer name,
+  Then the name it yields is the same name the real parser yields, so a record
+    is never accepted by one reader and refused by the other purely because of
+    how it was written.
+
+  Given any record the producer rule reports on,
   When the check finishes,
-  Then the record still carries the value it had — the check reports the
-    problem and leaves the correction to an author, so what a reader sees in
-    the file is always what a dispatcher would act on.
-
-  And given a record whose declared producer reads `python-coder` with no quote
-    characters in the value,
-  When it is checked,
-  Then it is accepted, and it and one of the 16 are not treated as two
-    different producers by anything that groups records by producer.
+  Then the record still carries the value it had — the check reports and leaves
+    the correction to an author.
 depends_on:
   - ACS-100i-9
 doc_links:
@@ -42,19 +44,89 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "Also documents the generated agent cards, which group ACs by assigned_agent — the surface a quoted duplicate silently splits."
-delivers_to: null
+  - path: templates/scripts/commit_guardian/_ac_schema_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the two quote-preserving parsers: load_yaml_manual (lines 87-109) and the ImportError fallback inside load_yaml_from_string (lines 137-145). Both do value.strip() on the raw text and never unquote, so on the no-PyYAML path the value literally carries the quote characters. On the PyYAML path it does not. That split is why the rule needs raw source text."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: "_validate_file must pass the file's raw text to the shared helper alongside the parsed dict; today it passes only the parsed dict."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    assigned_agent_quote_rule:
+      type: object
+      description: "Extension of the shared helper's signature: assigned_agent_field_errors(data, agent_ids, raw_text=None). When raw_text is supplied the helper additionally inspects the record's own `assigned_agent:` source line and refuses a scalar wrapped in a matched pair of literal quote characters, reporting {offending_value: str (verbatim, quotes included), suggested_value: str (the unwrapped form), file_path: str}. When raw_text is None the quote rule does not run and the helper says so rather than reporting a pass."
+  reference_file_path: "scripts/ac_store/validate_ac_schema.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria"
+  constraints:
+    - "THE PARSED VALUE HAS NO QUOTES — THIS RULE MUST READ RAW SOURCE. Measured on this branch 2026-08-25: all 16 records spell the field with ordinary YAML double-quoting in the SOURCE line, and yaml.safe_load returns the bare name. A store-wide scan of PARSED values therefore finds exactly 24 refusable values (23 finalize-feature-workflow + 1 create-ticket), not 40 — the 16 are INVISIBLE to any parsed-value rule. Implement the quote check against the record's own assigned_agent source line and pass that raw text into the shared helper. An implementation that inspects only the parsed dict satisfies its unit tests and does nothing whatsoever to the real store."
+    - "THE SAME RECORD YIELDS TWO DIFFERENT VALUES DEPENDING ON THE PARSER, AND BOTH MUST REFUSE. _ac_schema_validators.load_yaml_manual and the ImportError branch of load_yaml_from_string do value.strip() only — no unquoting — so with PyYAML absent the value carries the quote characters literally. With PyYAML present it does not. The helper must reach the identical refusal on both paths: refuse when the raw source scalar is quote-wrapped, AND refuse when the parsed value itself still carries leading or trailing quote characters. Covering only one path leaves exactly the drift this criterion's parent exists to close."
+    - "REFUSE, NEVER NORMALISE — AND NEVER WRITE. The check reports; it does not edit. Do not add a strip-quotes call to any reader (generate_ticket_from_ac.py, the agent-card grouping, the fast lane), because the read site that gets missed fails open in the dispatcher. Repairing the 16 records is ACS-100i-11's job, applied by an author, not by the validator."
+    - "The refusal message must show the offending value verbatim WITH its quote characters and name the unquoted form as the replacement. The parent's generic membership message is true, useless, and sends the author hunting for a missing agent — the value this criterion adds is the message, not the refusal."
+    - "Handle the single-quote and mixed spellings too. The rule is 'the scalar is wrapped in a matched pair of literal quote characters', not 'the scalar starts with a double quote'. A rule keyed to the double-quote character alone would pass a single-quoted spelling on the manual-parse path."
+    - "Do not couple this to the registry lookup. A quote-wrapped name that is ALSO unregistered — measured: 14 of the 23 finalize-feature-workflow records are quoted — must produce the quote message, not two messages and not the membership message alone. Order the checks so the quote verdict is reported first and is self-explanatory."
+    - "Re-measure the 16 at the implementing commit. The counts drift as other work lands, and a test pinning 16 without re-measuring fails for the wrong reason — a test that fails for the wrong reason gets deleted."
+delivers_to:
+  agent: python-coder
+  contract: "The raw-source seam on the shared helper: assigned_agent_field_errors gains a raw_text parameter and both entry points supply it from the file they already hold a Path to. ACS-100i-11's repair reads the same verdict to decide which source lines to unquote."
 expects_from:
   ac_id: ACS-100i-9
   contract: "The registry-membership rule and its two entry points. This criterion fixes the input normalisation that decides whether that rule ever sees a matchable name."
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - "2026-08-25 [claude]: corrected a false premise, same day it was authored, before any implementation. The original text asserted 16 records whose producer value carries literal quote characters and which 'string-match' nothing — and required they be REFUSED. That is wrong. Their raw form is `assigned_agent: \"python-coder\"`, which is ordinary YAML double-quoting: yaml.safe_load returns `python-coder`, byte-identical to the unquoted twin. Verified directly against FIN-100c-5/-6/-9 and confirmed independently by the IT PO. So those 16 records are stylistically inconsistent and semantically correct, and a rule that refused them would refuse valid records. What IS real is narrower and was buried: the fallback reader used when PyYAML is unavailable (load_yaml_manual / the ImportError branch of load_yaml_from_string) does value.strip() and never unquotes, so it yields the 14-character string including quotes. The same record therefore gets opposite verdicts depending on which reader ran — accepted on the parsed path, refused on the fallback. The criterion is rewritten to that: the two readers must agree, and must agree on the parsed value, because the parsed value is what a dispatcher acts on. Scope is narrower than before (no record is refused for being quoted) and the defect it closes is a genuine one."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 test_required: true
+test_spec:
+  - name: test_quoted_producer_is_refused_on_the_pyyaml_path
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "With PyYAML available — the real environment, where safe_load strips the quotes — the validator run as a subprocess against a fixture store containing all three quoted spellings exits non-zero and names each offending record by file path. The load-bearing test: a parsed-value-only implementation passes everything else here and fails only this."
+  - name: test_refusal_shows_the_verbatim_value_and_names_the_unquoted_replacement
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The refusal text contains the value with its quote characters intact and states the unquoted form as the value to use — not the generic 'no agent by that name is registered' message."
+  - name: test_fixture_bytes_are_unchanged_after_the_run
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The fixture files are read back byte-for-byte after the validator exits and are identical to before. A normalising implementation passes the refusal test and fails only here."
+  - name: test_unquoted_twin_passes_in_the_same_run
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An unquoted python-coder record in the SAME fixture store is accepted in the same run. Without this, an implementation that refuses every record passes the positive test."
+  - name: test_manual_parse_fallback_reaches_the_identical_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "With PyYAML made unimportable so load_yaml_manual is used — where the value literally carries the quote characters — the same fixture produces the same refusal and the same message as the PyYAML path."
+  - name: test_examined_count_is_reported_and_nonzero
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The run states how many records it examined and the assertion fails if that count is zero, so a run that resolved to no files cannot read as a clean one (KI-ACS-001)."
 test_rationale: |
   Grepping the validator for a quote-stripping expression is not evidence: it
   cannot tell a rule that runs from one that is defined and never reached, and
@@ -117,3 +189,35 @@ notes: |
   \"python-coder\" is registered", which is true, useless, and sends the author
   looking for a missing agent instead of a stray quote. The value this criterion
   adds is the message, not the refusal.
+
+  ---
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-25 — ONE FINDING THAT CHANGES THE
+  IMPLEMENTATION, RAISED AS A CAVEAT RATHER THAN AS AN EDIT TO THE CRITERIA.
+
+  The criteria describe the 16 values as ones "none of which string-match their
+  unquoted twins". Verified on this branch, that is true on ONE of the two parse
+  paths and false on the other:
+
+    - On the PyYAML path — the real one, since PyYAML is installed and
+      check_ac_schema.py's jsonschema branch is authoritative — the source line
+      is ordinary YAML double-quoting and yaml.safe_load returns the bare name.
+      It DOES string-match its unquoted twin. A store-wide scan of parsed values
+      finds 24 refusable records, not 40.
+    - On the manual-parse path (load_yaml_manual, and the ImportError branch of
+      load_yaml_from_string) the value is value.strip() of the raw text, so the
+      quote characters survive and it does NOT match.
+
+  Both halves of the criterion's intent survive this, but the implementation does
+  not: the refusal must be driven by the record's RAW SOURCE LINE, not by the
+  parsed value, or it will find nothing in the live store. That is why the
+  helper's signature gains raw_text and why the reference file for this criterion
+  is the entry point that owns the Path, not the parser.
+
+  The third scenario — that a quoted and an unquoted record are not treated as
+  two different producers by anything that groups by producer — is already
+  satisfied on the PyYAML path and is violated only on the manual-parse path,
+  which is where the seam test belongs.
+
+  Fourteen of the 23 finalize-feature-workflow records are ALSO quoted, so a
+  single record can fail both this rule and the parent's membership rule at once.
+  The message-ordering constraint above exists for those 14.

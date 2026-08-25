@@ -43,7 +43,40 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
-delivers_to: null
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: "main() already carries the exact precedent to copy: lines 375-389 print ONE run-wide WARNING to stderr when jsonschema is unimportable, rather than letting every file look like a passing schema check. The registry skip must be reported the same way, in the same place, beside the load_registry_ids() call at line 368."
+  - path: scripts/ac_store/_ac_components.py
+    relationship: related
+    status: exists
+    relevance: "The anti-pattern to correct rather than copy: components_field_errors skips its registry check with `if registry_ids:` (line 107) and says nothing at all when the registry is empty. Correct behaviour, inaudible reporting — precisely the gap this criterion closes."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    agent_registry_check_state:
+      type: object
+      description: "Three-state run outcome the shared helper returns alongside its errors, so a caller can never collapse 'nothing wrong' into 'nothing checked': {state: 'checked' | 'not_checked', reason: str|null, registry_path: str, records_examined: int}. state='not_checked' carries a non-null reason naming the resolved path and the failure (absent, unreadable, unparseable, or parsed-but-carrying-no-agent-ids). Both entry points must render reason on stderr; neither may treat state='not_checked' as a pass."
+  reference_file_path: "scripts/ac_store/validate_ac_schema.py"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria"
+  constraints:
+    - "FAIL CLOSED ON REPORTING, FAIL OPEN ONLY ON THE VERDICT. An unreadable registry must produce an explicit did-not-run result, never a silent pass and never a default-true. The producer-name verdict is suppressed so one broken registry cannot block every commit, but the SUPPRESSION ITSELF IS REPORTED — once per run, on stderr, naming the resolved registry path and the reason."
+    - "COPY THE EXISTING RUN-WIDE-SKIP PRECEDENT, NOT THE SILENT ONE. validate_ac_schema.py::main() lines 375-389 already print one WARNING for an unimportable jsonschema instead of a per-file silent pass; the registry skip goes in the same place and the same shape, loaded once for the whole run beside `registry_ids = load_registry_ids()` (line 368). Do NOT copy _ac_components.components_field_errors's `if registry_ids:` guard verbatim — it is correct and mute, and the muteness is the defect."
+    - "THREE STATES MUST BE DISTINGUISHABLE IN THE OUTPUT: checked-and-clean, checked-and-refused, and not-checked-because-<reason>. A reader of the run's summary must be able to tell them apart without inspecting the exit code, because the first and the third share an exit code of 0."
+    - "AN EMPTY OR NON-CONFORMING REGISTRY IS 'NOT CHECKED', NOT 'EVERY NAME IS INVALID' AND NOT 'EVERY NAME IS VALID'. A file containing an empty object, a file whose top-level agents key is absent, and a file that parses to a non-list all take the not_checked branch with a distinct reason. Do not let a successfully-parsed-but-empty registry silently reduce to an empty allow-list that refuses every record."
+    - "EXAMINED-COUNT STILL APPLIES. A skipped producer-name check must not suppress the run's record count: the run still reports how many records it examined, so a not-checked run over 295 records is distinguishable from a not-checked run over zero (KI-ACS-001). The skip message must never be produced by a run that simply had no input."
+    - "DO NOT RELAX THE REAL-VIOLATION POSTURE. This criterion loosens the response to an INTERNAL ERROR only. ACS-100i-9's refusal of a genuinely unregistered producer must stay a refusal and must not become a warning. The two are orthogonal, and collapsing them is the failure mode to guard against during implementation (ac-store PROJECT_CONTEXT)."
+    - "ERROR HANDLING POLICY, MECHANICALLY ENFORCED. The registry read is external I/O: try/except on the specific exceptions (OSError, ValueError / json.JSONDecodeError) with a WARNING log naming the path and the exception. No bare except (Ruff E722), no blind except Exception (BLE001), no except block that only sets a flag without logging (TRY family). Returning an empty set on failure is acceptable ONLY because the helper also returns the state object — a bare empty set is what makes the failure inaudible."
+    - "THE COMMIT-TIME SIDE MUST STILL EXIT 0 ON THIS GROUND ALONE. An unreadable registry adds a stderr line and contributes no error string to the hook's error list. Verify the hook's other checks — test contract, declares_side_effect, pattern bindings — are unaffected by the skip."
+delivers_to:
+  agent: python-coder
+  contract: "The not_checked run-state signal on the shared helper — {state, reason, registry_path, records_examined} — rendered on stderr by both entry points. Any later consumer of the producer-name rule (the fast lane's roster work under ADR-035) must read this state rather than inferring a pass from a zero exit."
 expects_from:
   ac_id: ACS-100i-9
   contract: "The registry-membership rule whose fail-open path this criterion makes audible."
@@ -56,6 +89,44 @@ implemented_by: []
 change_target: code
 risk_surface: safety
 test_required: true
+test_spec:
+  - name: test_three_registry_states_produce_three_distinguishable_outcomes
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "One fixture store, three runs varying only the registry — deleted, present-but-empty, present-and-valid. Runs 1 and 2 exit 0 AND print a skip statement naming the reason; run 3 exits non-zero naming the offending record. The three-way comparison IS the test; no single run demonstrates the property."
+  - name: test_skip_is_reported_once_per_run_not_once_per_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Over a fixture store of several records with an unreadable registry, the skip statement appears exactly once, mirroring the existing run-wide jsonschema WARNING rather than emitting a per-file line."
+  - name: test_skipped_run_still_reports_a_nonzero_examined_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "A not-checked run over a populated fixture store reports the number of records examined; a not-checked run over an empty directory reports zero-examined and does not exit 0 (KI-ACS-001)."
+  - name: test_commit_hook_skips_audibly_and_provably_saw_the_file
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/commit_guardian/check_ac_schema.py"
+    description: "The hook is driven the way it really runs — staged set via HOOK_TEST_STAGED_FILES or a real index, since _get_staged_ac_paths ignores argv — and the fixture path is asserted present in the output on the refusal case BEFORE any exit code from the skip case is trusted."
+  - name: test_empty_registry_does_not_refuse_every_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "A registry parsing to an empty object produces the not_checked state, not an empty allow-list that refuses valid python-coder records. Guards the inverted implementation of the same branch."
+  - name: test_real_violation_still_refuses_when_the_registry_is_readable
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With a valid registry the unregistered producer is still a hard refusal and is not downgraded to a warning, proving the internal-error fail-open did not leak into the real-violation path."
 test_rationale: |
   This criterion is entirely about the difference between two outcomes that a
   grep-based or exit-code-only test cannot tell apart: "checked everything,
@@ -102,3 +173,25 @@ notes: |
   always-block-on-a-REAL-violation posture of ACS-100i-9 must NOT be relaxed to
   a warning. These are orthogonal and must not be collapsed into each other
   during implementation.
+
+  ---
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-25.
+
+  THE SKIP IS NOT A REMOTE POSSIBILITY — IT IS THE DEFAULT IN A DEPLOYED INSTALL
+  UNLESS PATH RESOLUTION IS DONE RIGHT. In the package repo the registry sits at
+  `config/agent_registry.json`. In a deployed install it sits at
+  `.leafcutter/config/agent_registry.json` (verified present at that path in the
+  local deployed workspace, alongside diagram_types.json, doc_types.json and
+  feedback_categories.yaml). A helper that resolves only the first location makes
+  every deployed consumer take this criterion's not-checked branch permanently.
+  ACS-100i-9 carries the resolution constraint; this criterion is what makes the
+  failure visible if that constraint is missed.
+
+  A SECOND, RELATED SILENCE ALREADY EXISTS ON THE COMMIT-TIME SIDE and is worth
+  knowing while implementing here, though fixing it is not in scope:
+  `check_ac_schema.py::main()` reads its schema from `config/ac_store_schema.json`
+  relative to HOOK_ROOT (or cwd), and that file is not among the config files the
+  build deploys to `.leafcutter/config/`. So in a deployed consumer layout
+  `_load_schema` returns None and the hook falls back to `validate_manually`. The
+  reporting shape this criterion establishes — say which check did not run, and
+  why — is the pattern that surface will eventually need too.

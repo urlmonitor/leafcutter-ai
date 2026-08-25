@@ -40,7 +40,38 @@ doc_links:
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists
-delivers_to: null
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The three fallback sites — ac.get('assigned_agent', 'python-coder') at lines 2456, 3195 and 3235 — plus the two places the resulting value reaches the phase map: all_needed.add(assigned_agent) at line 964 (computed path, which silently drops a None) and agents_legacy[assigned_agent] = 'needed' at line 1116 (legacy path, no filter, emits the nameless phase)."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: related
+    status: exists
+    relevance: "The buildable-work scan the third scenario asserts against; its leaf predicate is the one to reuse rather than re-derive."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    assigned_agent_read:
+      type: string
+      description: "The single coalescing read that replaces ac.get('assigned_agent', 'python-coder') at every site: a present-and-null value, an absent key, and an empty string all resolve to the same default producer, and the resolution records whether the value was declared or defaulted so ACS-100i-10's ticket annotation can state which. Default value: python-coder."
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "3"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "FIX ALL THREE SITES OR THE DIVERGENCE SURVIVES. dict.get(key, default) returns the default only when the KEY IS ABSENT; a present-and-null key returns None. Verified on this branch: ac.get('assigned_agent', 'python-coder') appears at lines 2456, 3195 and 3235 and they feed different generation paths. Fixing one or two leaves the null spelling diverging on the others, and a test written against whichever site the author happened to fix will pass. Prefer one shared read used by all three over three parallel edits."
+    - "COALESCE THE EMPTY STRING TOO. The schema's minLength: 1 forbids an empty assigned_agent in a conforming record, but the commit-guardian's manual-parse fallback (load_yaml_manual, which does value.strip() on the raw line) produces an empty string from a key with no value, and that reaches the same phase map. A truthiness-based coalesce covers None, absent and empty-string in one read; an `is None` check covers only two of the three."
+    - "ASSERT ON THE SERIALIZED TICKET, NOT THE IN-MEMORY MAP. The two paths fail differently and only one is visible in a dict: the computed path builds the map by iterating phase_order, so a None in all_needed (line 964) is silently DROPPED and the record simply loses its producer phase, while the legacy path has no such filter and agents_legacy[assigned_agent] = 'needed' (line 1116) writes a literally nameless entry. It is the serialized ticket that build-feature.js reads and dispatches agentType: phaseName from, so that is where the assertion belongs. Cover both paths."
+    - "DO NOT FIX THIS BY REFUSING A NULL PRODUCER. ACS-100i-9 refuses a WRONG name; this criterion is about an ABSENT one. Turning null into an error would refuse 237 records (measured this branch) and contradicts ACS-100i-10's explicit decision that the fallback stays."
+    - "THE DEFECT IS LATENT, SO THE FIXTURE MUST CREATE IT. Verified independently on this branch: 18 records set the field to null AND declare no change_target — the legacy-path population — and 0 of those 18 sit at leaf level, so nothing in the real store reaches the nameless-phase branch today. A test that expects the real store to exhibit the bug passes vacuously. Construct the fixture record, and keep the real-store scan as a separate assertion that none of the 18 is offered as buildable."
+    - "WRITE FIXTURES THROUGH THE STORE'S OWN WRITER, not as hand-typed indented literals — the key present with no value, and the key absent, both serialised the way the store serialises. This repo has already shipped a parser that was a total no-op on every real record because synthetic fixtures reproduced a formatting bias the real serializer does not have (EPIC-PhantomDoneFilesTouched)."
+    - "Report examined-counts on the buildable scan as well: a scan that returned nothing because it read nothing must not pass as a scan that returned nothing because there was nothing to return (KI-ACS-001)."
+delivers_to:
+  agent: python-coder
+  contract: "A single coalescing producer read in generate_ticket_from_ac.py, applied at all three fallback sites, resolving absent / null / empty-string to python-coder identically and reporting whether the value was declared or defaulted — the flag ACS-100i-10's ticket annotation renders."
 expects_from:
   ac_id: ACS-100i-10
   contract: "The single meaning of 'no producer declared'. This criterion makes the code agree with that meaning; without it the two spellings still behave differently."
@@ -53,6 +84,43 @@ implemented_by: []
 change_target: code
 risk_surface: safety
 test_required: true
+test_spec:
+  - name: test_null_and_absent_producers_yield_identical_phase_lists
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Both fixture records are generated in ONE run and the two written phase lists are asserted EQUAL — not merely that each contains python-coder. Testing only the absent spelling is how this divergence survived."
+  - name: test_no_nameless_phase_in_the_written_ticket
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "A ticket generated to disk from a null-producer, no-change-target record (the legacy path) has a non-empty agent name on every phase entry. Asserted on the written file, because the empty-named key survives serialization and it is the file build-feature.js reads."
+  - name: test_all_three_fallback_sites_coalesce_a_null_producer
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Each of the three read sites (lines 2456, 3195, 3235) is exercised with a present-and-null value and resolves to python-coder. Guards the partial fix that satisfies whichever path the author happened to test."
+  - name: test_empty_string_producer_coalesces_to_the_default
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A record whose assigned_agent resolves to an empty string — reachable via the commit-guardian's manual-parse fallback — takes the same default rather than producing a blank-named phase."
+  - name: test_the_null_no_change_target_records_are_not_offered_as_buildable
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The real scanner is run over the real store at the implementing commit, the 18 records are re-measured at that commit, and none is returned as buildable — asserted both before and after the change."
+  - name: test_buildable_scan_reports_its_examined_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "The scan states how many records it examined, so an empty result from a scan that read nothing is distinguishable from an empty result from a scan that read everything (KI-ACS-001)."
 test_rationale: |
   A test that asserts `python-coder` appears in the generated ticket for a
   record with an ABSENT producer proves nothing about the null case — that is
@@ -108,3 +176,18 @@ notes: |
   costs in code. Split apart, the parent could ship as a reporting change while
   the two spellings continued to behave differently, which is the version of the
   fix that looks done and is not.
+
+  ---
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-25.
+
+  Both measurements in the notes above reproduce exactly on this branch: 237
+  records set the field to null; 18 of those declare no change_target; 0 of those
+  18 sit at leaf level (leaf taken as level in L2/L3 with an empty covered_by).
+  The latency claim therefore holds, and the fixture must manufacture the
+  condition — see the constraint.
+
+  ONE SPELLING THE CRITERIA DO NOT NAME, added to the constraints because it
+  reaches the same phase map: the empty string. `_ac_schema_validators.load_yaml_manual`
+  parses a key with no value to an empty string rather than to None, so on the
+  PyYAML-absent path a third spelling exists. A coalesce on truthiness handles all
+  three; an `is None` check handles two.

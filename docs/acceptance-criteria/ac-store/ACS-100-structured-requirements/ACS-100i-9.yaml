@@ -58,7 +58,52 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Decision 3 names this criterion as prerequisite 1: no producer joins the fast lane's roster until assigned_agent gets the same referential-integrity treatment components already receives."
-delivers_to: null
+  - path: scripts/ac_store/_ac_components.py
+    relationship: related
+    status: exists
+    relevance: "The precedent to copy — load_registry_ids() + components_field_errors() in one shared module. Copy its SHAPE, not its enforcement split: the commit-time gate does NOT import this module. It re-states the same vocabulary as a hand-maintained enum in config/ac_store_schema.json (line 548, directly under the words 'Keep this enum in sync with docs/components.json'). That second list is exactly what this criterion's last scenario forbids for agents."
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: "The commit-time entry point the required CI check actually runs (.pre-commit-config.yaml line 328 invokes the DEPLOYED copy under .leafcutter/scripts/commit_guardian/). The new call belongs in the unconditional block at lines 616-625, beside validate_test_contract and validate_declares_side_effect."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: "The store-wide entry point. It already imports _ac_components from sys.path[0] (line 45) and calls components_field_errors inside _validate_file (line 235) — the assigned_agent call goes beside it, from the same kind of shared module."
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "build_ac_store's deploy_map (~line 878). Any module a guardian hook imports must be listed there or the deployed hook raises ModuleNotFoundError. _ac_components.py is itself ABSENT from that list today while the deployed validate_ac_schema.py imports it at module scope — verified 2026-08-25; close both gaps in this change."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    assigned_agent:
+      description: "Name of the implementation agent assigned to implement this AC. Must be an id present in the `agents` array of config/agent_registry.json; the membership verdict is produced by a shared helper called from BOTH the commit-time gate and the store-wide pass. Null when unassigned. Deliberately NOT expressed as a JSON Schema enum — see the 'no second list' constraint."
+      oneOf:
+        - type: string
+          minLength: 1
+        - type: "null"
+  reference_file_path: "templates/scripts/commit_guardian/check_ac_schema.py"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria"
+  constraints:
+    - "ONE RULE, ONE MODULE. The rule body lives in a NEW shared module scripts/ac_store/_ac_agents.py, mirroring scripts/ac_store/_ac_components.py: load_agent_ids(registry_path=None) -> set[str] and assigned_agent_field_errors(data, agent_ids, raw_text=None) -> list[str]. Neither entry point may hold its own copy of the membership test or its own message string. scripts/ac_store/validate_ac_schema.py imports it exactly as it already imports _ac_components (sys.path[0] is the script dir); templates/scripts/commit_guardian/check_ac_schema.py imports it by inserting <root>/scripts/ac_store on sys.path alongside its existing _ac_schema_validators import. A single format string, defined in the helper, is what makes the two messages identical rather than merely similar."
+    - "THE COMMIT-TIME CALL MUST SIT IN THE UNCONDITIONAL BLOCK, NOT IN validate_manually(). Verified in check_ac_schema.py::_validate_file: when jsonschema and PyYAML are both importable the jsonschema verdict is authoritative and the schema_validated flag suppresses validate_manually() entirely (lines 605-614, GE-112). A rule added to validate_manually() is therefore INERT on every real commit in this repo. Put the call in the unconditional block at lines 616-625, which runs whichever parse path was taken — the seam validate_test_contract() and validate_declares_side_effect() already use."
+    - "NO SECOND LIST IN THE JSON SCHEMA. Do NOT add an enum of agent names to the assigned_agent declaration in config/ac_store_schema.json (line 254). The final scenario of this criterion — one agent added to the registry, nothing else edited anywhere, a record naming it accepted — is precisely what a schema enum breaks. Its oneOf must stay string|null; only the description may be amended to name the registry and the rule. Amend docs/reference/ac-schema.md line 51 in the same change so the written contract stops describing the field as unconstrained."
+    - "DEPLOY MANIFEST, SAME CHANGE, OR THE REQUIRED CHECK CRASHES. _ac_agents.py MUST be added to build_ac_store's deploy_map in scripts/build_phases.py (~line 878) in this change. The guardian hook runs from the DEPLOYED layout, so a module present only in the source tree raises ModuleNotFoundError at hook runtime — and because 'AC store valid' is a REQUIRED status check, that crash blocks every merge. This is the done_proof.py failure verbatim (CLAUDE.md, 'New Hook / Gate Dependencies'). While there, close the pre-existing gap: _ac_components.py is not in that deploy_map although the deployed validate_ac_schema.py imports it at module scope. Verify by running scripts/build.py and then executing the DEPLOYED hook; the unit tests import from source and cannot see this."
+    - "REGISTRY PATH RESOLUTION MUST COVER BOTH LAYOUTS. load_agent_ids() resolves config/agent_registry.json the way _ac_components.default_registry_path() resolves docs/components.json (three parents up from the module file), and must additionally fall back to <root>/.leafcutter/config/agent_registry.json, which is where a deployed install puts it (verified present at that path in the local deployed workspace). A resolution that only works inside the package repo makes the deployed hook skip the check permanently — the silent failure ACS-100i-9-ii exists to make audible."
+    - "MEMBERSHIP ONLY, NEVER DISPATCHABILITY. The accepted vocabulary is every `id` in the registry's `agents` array — verified 60 entries, of which exactly 24 carry is_ticket_phase: true. The rule must NOT filter on is_ticket_phase, deprecated, portable, tier or produces; ADR-035 Decision 1 has already settled that the dispatchable roster is a separate, hand-written set. Likewise do not derive _CODER_AGENTS (_ac_schema_validators.py line 56) or _KNOWN_CODERS (generate_ticket_from_ac.py line 146) from the registry here — a ROLE check is a different change and would silently alter which records the test-contract gate applies to."
+    - "The refusal must name three things the helper already holds: the record's file path, the offending value exactly as read, and the fact that no registered agent carries that name. A message reading only 'invalid assigned_agent' sends the author to the schema instead of to the registry."
+    - "Reading the registry is external I/O: wrap it in try/except (OSError, ValueError) and log at WARNING — never a bare except, never a silent pass (repo error-handling policy; Ruff E722/BLE001/TRY). The pure in-memory comparison of a parsed value against a set must NOT be wrapped (policy Rule 4)."
+    - "ORDERING IS PART OF THIS CRITERION'S SAFETY, NOT A COURTESY. This rule must not be enabled ahead of ACS-100i-11's correction of the records it would refuse. Within the single change, the correction hunks land FIRST and the rule second. Enabling the rule first leaves the store-wide sweep CLAUDE.md prescribes red on records the runner did not author — which is how a hygiene tool becomes 'known noise' and is then removed (KI-ACS-001; the ACS-200h whole-store gate is still unimplemented for exactly this reason)."
+delivers_to:
+  agent: python-coder
+  contract: "A shared module scripts/ac_store/_ac_agents.py exposing load_agent_ids(registry_path=None) -> set[str] and assigned_agent_field_errors(data, agent_ids, raw_text=None) -> list[str], plus an explicit run-state signal distinguishing 'checked' from 'not checked, because <reason>'. Imported unmodified by both entry points: scripts/ac_store/validate_ac_schema.py::_validate_file and templates/scripts/commit_guardian/check_ac_schema.py::_validate_file (unconditional block, lines 616-625). ACS-100i-9-i extends the same function with the raw-source quote rule; ACS-100i-9-ii consumes its not-checked signal; ACS-100i-11 scopes its correction set from its verdict."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-25
@@ -71,6 +116,51 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 test_required: true
+test_spec:
+  - name: test_store_wide_pass_refuses_unregistered_producer_naming_path_and_value
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "validate_ac_schema.py run as a real subprocess against an on-disk fixture store (records serialised through the same writer the store uses) exits non-zero, and the output names both the offending record's file path and the value finalize-feature-workflow, while naming neither the python-coder nor the test-failure-triage record."
+  - name: test_commit_hook_refuses_unregistered_producer_and_provably_saw_the_file
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/commit_guardian/check_ac_schema.py"
+    description: "The hook is executed the way it actually runs — staged set supplied via HOOK_TEST_STAGED_FILES or a real git index, not argv, since _get_staged_ac_paths ignores argv entirely — and the fixture's path appears in the refusal output before the non-zero exit is trusted."
+  - name: test_both_entry_points_return_the_same_verdict_and_the_same_message
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The identical fixture record is put through the store-wide pass and the commit-time gate in one test; both refuse and the refusal text is byte-identical, which is only achievable if one helper produced both."
+  - name: test_rule_runs_on_the_jsonschema_path_not_only_the_manual_fallback
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "With jsonschema and PyYAML both importable — the real commit environment, where schema_validated suppresses validate_manually — the unregistered producer is still refused. This is the load-bearing test: a rule placed in validate_manually passes every other test here and never fires in production."
+  - name: test_registered_producers_are_accepted_with_a_nonzero_examined_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A fixture store containing only python-coder and test-failure-triage records passes, AND the run reports a stated non-zero count of records examined — a zero-examined pass must fail this test (KI-ACS-001)."
+  - name: test_newly_registered_agent_is_accepted_with_no_other_file_edited
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An id absent from the shipped registry is added to a fixture registry only; a record naming it is then accepted. Proves the vocabulary is read at check time and fails on any hard-coded or schema-enum allow-list."
+  - name: test_deployed_hook_imports_the_shared_module_without_modulenotfound
+    target_dir: unit_tests/build_pipeline/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/build.py --target-dir <tmp>"
+    description: "build.py is run into a temporary target and the DEPLOYED check_ac_schema.py is then executed there; it must import the shared agent module and reach a verdict rather than raising ModuleNotFoundError. Source-tree unit tests cannot see this gap."
 test_rationale: |
   A test that greps a validator source file for a rule name, a constant, or an
   error string is not evidence. It passes on dead code, on a rule that is
@@ -161,3 +251,45 @@ notes: |
     a dispatchability check, and must not be implemented as one.
   - Any change to the proof chain for non-code deliverables (ADR-035 Decision 2,
     which is itself blocked on `doc_links.relationship` gaining an enum).
+
+  ---
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-25. Findings that change the implementation,
+  recorded here because they are not visible from the criteria.
+
+  1. THE BA'S "SHARED HELPER" DIRECTION IS RIGHT, BUT THE PRECEDENT IS ONLY HALF
+     SHARED. `_ac_components.py` is imported by `validate_ac_schema.py` and
+     `backfill_components.py` — and by NOTHING in the commit-guardian tree
+     (verified: a grep for components_field_errors and load_registry_ids across
+     templates/scripts/commit_guardian/ returns nothing). The guardian gets its
+     components referential integrity from a HARD-CODED enum in
+     `config/ac_store_schema.json` (line 548), whose own description says "Keep
+     this enum in sync with docs/components.json". So the components rule is
+     already enforced by two sources that can drift. Copying the precedent
+     literally would reproduce exactly the second hand-maintained list this
+     criterion's last scenario forbids.
+
+  2. THE GATE THAT ACTUALLY RUNS IS NOT `validate_manually`. In
+     `check_ac_schema.py::_validate_file`, `validate_manually()` is guarded by
+     `if not schema_validated:` (lines 605-614) — it runs ONLY when jsonschema or
+     PyYAML is unavailable. In this repo both are present, so a rule added there
+     never fires. The unconditional seam is lines 616-625.
+
+  3. SOURCE VS GENERATED, verified with `git ls-files`. All four files named in
+     the brief are TRACKED SOURCE in this repo: `scripts/ac_store/validate_ac_schema.py`,
+     `templates/scripts/commit_guardian/_ac_schema_validators.py`,
+     `config/ac_store_schema.json`, `config/agent_registry.json`. Each is ALSO a
+     build INPUT: `build_ac_store` copies `scripts/ac_store/*` to
+     `<target>/scripts/ac_store/`, `build_commit_guardian` copies the whole of
+     `templates/scripts/commit_guardian/` to `<target>/scripts/commit_guardian/`,
+     and the deployed layout carries `.leafcutter/config/agent_registry.json`.
+     `templates/scripts/ac_store/` exists but contains only `.gitkeep` — there is
+     no template copy of the validator, so nothing here can or should be
+     byte-parity checked against a template. Practical consequence: a new file
+     under `templates/scripts/commit_guardian/` deploys automatically (whole-dir
+     rglob), whereas a new file under `scripts/ac_store/` deploys ONLY if it is
+     listed in `deploy_map`.
+
+  4. `_ac_components.py` IS MISSING FROM `deploy_map` TODAY. The deployed
+     `validate_ac_schema.py` imports it at module scope (line 45), so the deployed
+     copy of the sweep cannot run. This is the same defect class the new module
+     must avoid, sitting one import away from it — fix both together.

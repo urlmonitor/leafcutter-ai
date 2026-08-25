@@ -51,7 +51,40 @@ doc_links:
   - path: docs/how-to/ac-driven-development.md
     relationship: describes
     status: exists
-delivers_to: null
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: "The store-query surface that must be able to answer 'which records declare no producer', with the examined-count reported alongside the answer."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the fallback this criterion makes visible without changing: ac.get('assigned_agent', 'python-coder') at lines 2456, 3195 and 3235. Line 3046 already records a WARN for the ABSENT spelling, but that is a validation-report line rather than a statement on the generated ticket, and it does not fire for the null spelling."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    no_producer_report:
+      type: object
+      description: "The queryable answer this criterion adds: {records_examined: int, no_producer_total: int, by_spelling: {absent: int, null: int}, leaves: {total: int, by_change_target: object}, records: array of {id, path, level, change_target, is_leaf}}. records_examined is always present and is reported alongside no_producer_total, so a zero-examined run is never readable as 'no records without a producer'. by_spelling is diagnostic only — both spellings are counted into the single no_producer_total."
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria"
+  constraints:
+    - "ONE PREDICATE FOR BOTH SPELLINGS. The query must classify on `data.get('assigned_agent') is None`, which collapses absent and present-and-null into one state. Do NOT branch on `'assigned_agent' in data` — that is exactly the distinction the criterion forbids, and it is the same dict.get subtlety that produced the defect ACS-100i-10-i fixes. Report the absent/null split as a diagnostic sub-count only, never as two conditions."
+    - "REPORT THE EXAMINED COUNT ALONGSIDE THE ANSWER, ALWAYS. A run that resolved to zero records must report zero-examined, not 'no records without a producer'. This is the same false-green shape as KI-ACS-001, where the store-wide validator reported success from a run that checked nothing for eight days while CLAUDE.md prescribed exactly that invocation."
+    - "change_target IS SOMETIMES A LIST, AND A SCALAR COMPARISON WILL UNDER-COUNT. Measured on this branch 2026-08-25 among the no-producer leaves, change_target takes at least nine shapes, six of them lists — including ['code','schema'], ['prompt'], ['schema','prompt'], ['code','prompt'], ['code','config','docs'], ['code','infrastructure'] and ['pipeline','prompt'] — alongside the scalar spellings. The prompt/docs breakdown must treat a list value as declaring EACH of its members: comparing change_target to the string 'prompt' misses the four records spelling it as a one-element list, which is most of the population this criterion is trying to surface."
+    - "THE python-coder FALLBACK STAYS. Do not remove it, do not turn it into a refusal, do not make it conditional on change_target. Roughly 748 records rely on it (measured this branch: 511 absent + 237 null of 3,385 records). This criterion adds visibility only. Replacing the default is a future criterion and is only safe once this population has been driven down."
+    - "THE 'DEFAULTED' STATEMENT MUST LAND ON THE GENERATED TICKET, not only in a log line or a validation report. generate_ticket_from_ac.py line 3046 already emits a WARN reading 'assigned_agent absent — generator defaults to python-coder', but that goes to the validation report, fires only for the ABSENT spelling, and is invisible on the artifact build-feature.js actually reads. The generated ticket must itself say the producer was defaulted rather than declared."
+    - "STATE THE LEAF PREDICATE IN CODE AND RE-MEASURE; DO NOT PIN THE CRITERION'S NUMBERS. Using 'level in (L2, L3) and covered_by empty', this branch yields 74 no-producer leaves — 2 spelling change_target as the scalar 'prompt' plus 4 spelling it as a one-element list, and 8 spelling 'docs' — against the criterion's 93 / 4 / 8. The gap is a leaf-definition difference, not a data change. Adopt the scanner's own existing leaf predicate, report which predicate produced the number, and re-measure at the implementing commit rather than hard-coding either set; a test that fails for the wrong reason gets deleted."
+    - "The store-wide totals in the criterion predate the six records of this AC set. Measured 2026-08-25 on this branch: 3,385 records, 748 with no producer (511 absent + 237 null). Re-measure at the implementing commit and follow the ACS-100i-7 precedent — run the query over the real docs/acceptance-criteria/ tree and assert the re-measured totals, paired with a fixture-store test whose numbers CAN be pinned."
+    - "Reading the store is external I/O: wrap file reads in try/except (OSError, yaml.YAMLError) and log at WARNING. A record that fails to parse must be reported, not silently dropped from the denominator — a shrinking denominator is how this report would lie."
+delivers_to:
+  agent: python-coder
+  contract: "A no-producer report keyed on `assigned_agent is None`, carrying records_examined alongside no_producer_total, a leaf-restricted breakdown by change_target that handles list-valued change_target, and the per-record list. ACS-100i-10-i consumes the same single meaning of 'no producer declared' and makes generate_ticket_from_ac.py agree with it at all three fallback sites."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-25
@@ -63,6 +96,43 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 test_required: true
+test_spec:
+  - name: test_absent_and_null_are_classified_as_one_state
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Two fixture records differing ONLY in whether the key is missing or present-and-null are classified identically by the query. An implementation reporting only one spelling passes every aggregate count test whenever the other spelling is rare."
+  - name: test_report_states_examined_count_alongside_the_answer
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "The report carries records_examined next to no_producer_total, and a run over an empty directory reports zero-examined rather than 'no records without a producer' (KI-ACS-001)."
+  - name: test_leaf_breakdown_counts_list_valued_change_target
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A fixture leaf declaring change_target as a one-element prompt list and another declaring a code+prompt list are both counted into the prompt bucket. A scalar equality comparison passes the rest of this list and fails only here."
+  - name: test_real_store_totals_match_the_remeasured_counts
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The query is run over docs/acceptance-criteria/ as it exists at the implementing commit and its totals are asserted against counts re-measured at that same commit, following the ACS-100i-7 precedent — the claim is a property of the corpus that no fixture can establish."
+  - name: test_fixture_store_totals_are_exact
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A small on-disk store with a known mix of absent, null and declared producers yields exactly the expected counts — the pinnable half of the pair, which separates 'the query is right' from 'the real store happens to contain these numbers'."
+  - name: test_generated_ticket_uses_python_coder_and_says_it_was_defaulted
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "One run of the generator against a no-producer record asserts BOTH halves on the written ticket: python-coder appears in the phase list, AND the ticket states the producer was defaulted rather than declared. Asserting only the first passes on today's silent behaviour; only the second passes on a broken fallback."
 test_rationale: |
   The claim under test is a count over the REAL store, so a fixture-only test
   cannot establish it — the property is a property of the corpus. Follow the
@@ -132,3 +202,35 @@ notes: |
   It cannot do that safely while "no producer declared" is a state nobody can
   count, because the size of the population that would silently fall back is
   unknown at the moment the switch is flipped.
+
+  ---
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-25.
+
+  RE-MEASUREMENT AT ENRICHMENT TIME (rglob over docs/acceptance-criteria/,
+  index.yaml excluded, records carrying an id only):
+    - 3,385 records total. The criterion says 3,379; six of the difference are
+      the records of this very AC set, which currently declare no producer.
+    - 748 declare no producer: 511 by absence, 237 by null. The 237 matches
+      exactly; the absent figure is 5 higher than the criterion's 506 and drops
+      by 6 the moment this enrichment lands.
+    - 18 records set the field to null AND declare no change_target, and 0 of
+      those 18 sit at leaf level — reproducing ACS-100i-10-i's measurement
+      independently.
+  None of these should be pinned in a test without re-measuring at the
+  implementing commit.
+
+  THE LEAF NUMBER IS THE ONE THAT DOES NOT REPRODUCE, and it is a definition gap
+  rather than a data change. Using "level in (L2, L3) and covered_by empty", the
+  no-producer leaves come to 74, not 93, with 2 + 4 prompt-declaring records
+  (scalar and list spellings) and 8 docs-declaring records. The docs figure of 8
+  matches; the prompt figure matches only once the list spelling is counted. The
+  implementer must adopt the scanner's own leaf predicate, state which predicate
+  produced the number, and re-measure. The criterion's own instruction to
+  re-measure already covers this; it is recorded here so the discrepancy is not
+  read as a defect at implementation time.
+
+  change_target BEING LIST-VALUED IS THE LOAD-BEARING DETAIL nobody would guess
+  from the criteria. Among the 74 no-producer leaves the field takes nine
+  distinct shapes, six of them lists. Any breakdown written against the scalar
+  spelling silently reports a smaller, wrong-shaped population — a false-green on
+  the very report this criterion exists to produce.
