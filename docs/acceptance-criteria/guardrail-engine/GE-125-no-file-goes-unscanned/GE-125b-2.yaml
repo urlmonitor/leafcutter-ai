@@ -1,0 +1,206 @@
+id: GE-125b-2
+components:
+  - security_scanner
+  - commit_guardian
+title: "A credential written into the secrets scanner's own script is reported by the secrets scanner"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository holding the four listed locations at its root,
+  And the secrets scanner's own source is staged for commit at the
+    repository-relative path it really occupies in this project,
+    "templates/skills/security-scanner/scripts/scan_secrets.py",
+  And that path sits inside the skill-prompt area, which is one of the four
+    locations entitled to reduced scrutiny,
+  And the file carries one line holding a twenty-four-character opaque token
+    whose entropy is above the shapeless-value rule's threshold,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the shapeless-value finding IS reported, naming that path and the line the
+    token sits on,
+  And the check exits reporting findings present, so the commit is blocked,
+  Because the one place the protection must not have a hole is the source of the
+    protection itself.
+
+  Given the skill's own prompt text is staged in the same commit at
+    "templates/skills/security-scanner/SKILL.md", carrying the identical line,
+  When the staged set is checked by the pre-commit secrets check,
+  Then exactly one shapeless-value finding is reported across the two files — the
+    one in the script — and none for the prompt text,
+  Because this directory is on the list for a real reason: it is where the
+    scanner documents the credential shapes it looks for, and that documentation
+    has to be able to quote them. Admitting the prose and checking the code is
+    the outcome; removing the directory from the list is not.
+depends_on:
+  - GE-125b
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE. The change lands in `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and a deployed-copy-only fix is reverted by the next `python scripts/build.py --target-dir .`. `check_hook_parity` enforces all four locations. Rebuild and re-run the commit_guardian suite before claiming this."
+  - "THE SCANNER'S OWN SOURCE PATH MUST BE PINNED BY AN EXPLICIT TEST, NOT INFERRED FROM THE GENERAL RULE. GE-125b requires this instance be covered by name. If it existed only as an instance of the extension rule, a later narrowing of that rule could reopen it without anything visibly turning red. There must be a test that names `templates/skills/security-scanner/scripts/scan_secrets.py` literally, so that deleting the general rule and deleting this guarantee are two separate failures."
+  - "BOTH THE COMMIT PATH AND THE SCANNER'S OWN PATH MUST AGREE ABOUT THIS FILE. `templates/scripts/commit_guardian/check_secrets.py` gates findings on the commit path; `templates/skills/security-scanner/scripts/scan_secrets.py` (`scan_files`, `scan_file`) is the audit surface. Whatever the audit surface does with the exemption must not contradict the commit path for this path — a file the hook blocks and the audit reports clean, or the reverse, is a worse outcome than the defect being repaired. Name every enforcement point before changing one; a constraint added only to an inert copy is a no-op."
+  - "DROPPING THE SKILL-PROMPT AREA FROM THE LOCATION LIST IS AN EXPLICITLY REJECTED IMPLEMENTATION. It passes the first arm and fails the second. That directory is where the scanner documents the credential shapes it looks for, and that documentation has to be able to quote them; GE-123d-4-i recorded the same rejection from the other side of the fence. The location list is NOT touched by this AC — gate on kind, keep all four locations."
+  - "THE FIXTURE IS NEVER THIS REPOSITORY'S REAL scan_secrets.py, AND THIS IS THE SHARPEST FIXTURE CONSTRAINT IN THE TREE. Place a small Python file at that repository-relative path INSIDE a `tempfile`-backed throwaway git repository. The fixture does not need the real scanner's contents — the path and the file kind are what is load-bearing, and a copy would drift. Writing a credential-shaped token into the real file would require a `.security-allowlist` entry on the scanner's own source, creating a genuine blind spot in the single file most likely to accumulate credential-shaped fixture data. Because the location match is a substring test (KI-SEC-001), assert as a precondition that the throwaway root path above the constructed directories contains none of the four segment names."
+  - "COORDINATION WITH GE-123d-4-i, WHICH LOOKS MOST LIKE THIS RECORD AND IS NOT IT. GE-123d-4-i also names the scanner's own source path and also requires it to be reported — but for the PROPOSED `GENERIC_SECRET` exemption, with a value that is a run of ordinary words. This AC governs the EXISTING `ENTROPY_HIGH` exemption with an opaque high-entropy token. Same file, same path, two different rules, two different states of the world. A test written for one does not discharge the other; neither closes the other; neither may be recorded as a duplicate. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
+  - "VERIFY BY EXECUTION AND BY EXACT COUNT. Stage the files in the throwaway repository, run the pre-commit secrets check as a process, and assert the exit status together with the parsed findings and their 1-based line numbers. The second arm's assertion is an equality — exactly one across the two files staged together — and it is not expressible by calling the exemption logic with a path string at all."
+  - "PAIR WITH THE LIVE-PATH CONTROL FROM GE-125b-1. Every path named in this criterion contains a listed name, so the prompt file's silence is evidence only alongside a file the exemption cannot reach that is reported in the same run. Carry the `scripts/build_probe.py` control into this invocation."
+  - "FIXTURE TOKENS ASSEMBLED AT RUNTIME from concatenated fragments, per `unit_tests/commit_guardian/test_scan_secrets_suppression.py`. No `.security-allowlist` entry may be added for this tree; needing one is the signal the fragments were collapsed into literals."
+  - "ERROR HANDLING PER CLAUDE.md. The kind decision is pure over a path string and must not be wrapped in try/except (Rule 4); any file or subprocess access added by the check or its tests is wrapped in a typed `except` that logs at WARNING or re-raises (Rules 1-3)."
+test_spec:
+  - name: test_credential_at_the_scanners_own_source_path_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The by-name pin GE-125b requires: a small Python file staged at the literal repository-relative path templates/skills/security-scanner/scripts/scan_secrets.py inside a throwaway root, carrying one runtime-assembled 24-character token, yields a shapeless-value finding naming that path and the token's 1-based line number, with a non-zero exit. Named literally so that removing the general kind rule and removing this guarantee are two distinct failures."
+  - name: test_scanner_skill_prompt_beside_it_stays_exempt_exactly_one_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The mandatory negative control and the argument against the cheap alternative: templates/skills/security-scanner/SKILL.md staged in the SAME commit with the identical line yields EXACTLY ONE finding across the two files — the script's — and none for the prompt text. Red against an implementation that drops the skill-prompt area from the location list, which would pass the first descriptor."
+  - name: test_live_path_control_reported_in_the_same_invocation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "GE-125b-1's scripts/build_probe.py control carried into this run: a path containing none of the four listed names, holding the identical token, IS reported. Both paths in this criterion contain a listed name, so the prompt file's silence is an absence rather than evidence without it."
+  - name: test_commit_path_and_audit_scan_agree_about_the_scanners_own_source_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The same throwaway-root fixture run through the security-scanner audit surface (scan_files / scan_file) and through the pre-commit check reaches the SAME verdict for templates/skills/security-scanner/scripts/scan_secrets.py. A file the hook blocks while the audit reports clean — or the reverse — is a worse outcome than the defect being repaired."
+  - name: test_scanners_own_source_is_covered_by_the_deployed_check_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After running the build, the first descriptor's outcome is produced by the DEPLOYED scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py, not only by the canonical template — the ADR-001 revert hazard, asserted by executing the deployed copy rather than by comparing bytes."
+test_rationale: |
+  Five descriptors, and the first two are a matched pair for the same reason as in the
+  parent: reporting the script is satisfied by dropping the skill-prompt area from the
+  location list, and that implementation fails only on the prompt file staged beside
+  it. The exact count of one across two files in one commit is what makes the pair
+  decisive, and it is an assertion no predicate-level test can express.
+
+  The first descriptor names the scanner's own path literally rather than parameterising
+  it, which is deliberate and is what GE-125b asks for. This is the case a future reader
+  checks first; if it existed only as an instance of the general extension rule, a later
+  narrowing of that rule could reopen it with nothing visibly turning red.
+
+  The fourth descriptor covers a seam the criteria do not mention and the BA could not
+  see: this repository has two surfaces that decide whether a file is exempt — the
+  pre-commit check and the scanner's own audit script, which is itself the file under
+  test. If only one of them is gated, the tool reports the very file the hook blocks as
+  clean. The fifth covers the ADR-001 revert, and the third is the standing live-path
+  control without which every silent assertion in this subtree is vacuous.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records the exact measurement this criterion inverts — templates/skills/security-scanner/scripts/scan_secrets.py EXEMPT, not reported, for a 5.17-entropy token — and names it the sharp edge: the tool that exists to catch a pasted credential is one of the places it cannot catch one."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "The prompt text the second arm requires to stay exempt, and the reason the skill-prompt area is on the location list at all: it is where the scanner documents the credential shapes it looks for and therefore has to quote them."
+delivers_to:
+  agent: documentation-expert
+  contract: "The pinned guarantee that a credential at templates/skills/security-scanner/scripts/scan_secrets.py is reported while templates/skills/security-scanner/SKILL.md beside it is not. GE-125b-4 names this pair as the worked example in the reference passage, so the document must describe the behaviour as landed here rather than as proposed."
+expects_from:
+  ac_id: GE-125b-1
+  contract: "The file-kind gate decided per staged file from its own final extension, applied at every listed location including the skill-prompt area, plus the throwaway-root harness and the scripts/build_probe.py live-path control. This AC adds the by-name pin at the scanner's own source path; it must be an explicit test rather than an inferred instance."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-25'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity S, ten it_requirements,
+      five test_spec descriptors, test_rationale, five doc_links, a delivers_to contract to
+      GE-125b-4 and an expects_from contract on GE-125b-1; set readiness reviewed. The
+      it_requirements require the scanner-own-source path to be pinned by a literal test
+      rather than inferred from the general rule; add a seam constraint the BA could not see
+      — the commit path (check_secrets.py) and the audit path (scan_secrets.py scan_files /
+      scan_file) must agree about this path, since the file under test is itself the audit
+      surface; record dropping the skill-prompt area from the location list as an explicitly
+      rejected implementation; make the throwaway-root fixture a hard requirement so no
+      allowlist entry is ever placed on the real scanner source; and restate the GE-123d-4-i
+      distinction (same path, different rule, different state of the world) with the
+      prohibition on editing GE-123 files or adding a depends_on edge into that tree.
+      criteria, title, level, work_status and priority unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  COVERED BY NAME ON PURPOSE, as GE-125b requires, and not left to follow from
+  the general kind rule in GE-125b-1. This is the case a future reader checks
+  first and the case that makes the whole goal legible; if it existed only as an
+  instance of an extension rule, a later narrowing of that rule could reopen it
+  without anything visibly turning red. GE-123d-4-i makes the same demand from
+  the other side of the fence for the rule it governs — the sharpest instance
+  must be pinned explicitly, not by implication.
+
+  THE MEASUREMENT THIS INVERTS. KI-SEC-001 ran a 5.17-entropy token through the
+  real exemption logic and recorded
+  "templates/skills/security-scanner/scripts/scan_secrets.py  EXEMPT — not
+  reported". Today the tool that exists to catch a pasted credential is one of
+  the places it cannot catch one.
+
+  THE SECOND ARM IS THE MANDATORY NEGATIVE CONTROL AND ALSO THE ARGUMENT AGAINST
+  THE CHEAP ALTERNATIVE. Dropping the skill-prompt area from the list would pass
+  the first arm and fail the second, and GE-123d-4-i already recorded why that
+  alternative was rejected: the prompt text in that directory is exactly the
+  writing that has to describe credential shapes, and the same prose-beside-code
+  conflict recurs wherever the two share a directory. Gating on kind solves the
+  class; dropping one directory solves one instance and creates a false positive
+  in its place.
+
+  FIXTURE PLACEMENT, STATED AND JUSTIFIED, AND SHARPEST HERE OF ANYWHERE IN THIS
+  TREE.
+    - The fixture is a file placed at that repository-relative path INSIDE a
+      throwaway git repository. It is never this repository's own
+      templates/skills/security-scanner/scripts/scan_secrets.py. Writing a
+      credential-shaped token into the real file would require an allowlist entry
+      on the scanner's own source — a genuine blind spot in the single file most
+      likely to accumulate credential-shaped fixture data.
+    - The fixture does not need to be the real scanner's contents. What is
+      load-bearing is the path and the file kind, so a small Python file at that
+      path is sufficient and is preferable to a copy that would drift.
+    - The token is assembled at runtime from fragments, never written as a source
+      literal, per the discipline already established for this repository's
+      scanner tests.
+    - Both arms are driven through the pre-commit secrets check over a staged set
+      in that repository. Calling the exemption logic with this path as a string
+      does not discharge either arm, and the second arm — an exact count of one
+      across two files staged together — is not expressible that way at all.
+    - Pair this with the "scripts/build_probe.py" control from GE-125b-1: every
+      path named here contains a listed name, so the silence of the prompt file
+      is only evidence beside a file that is reported in the same run.
+
+  THE FENCE WITH GE-123d-4-i, RESTATED HERE BECAUSE THIS IS WHERE THE TWO LOOK
+  MOST ALIKE. GE-123d-4-i also names the scanner's own source path explicitly and
+  also requires it to be reported. It governs the keyword-based rule's PROPOSED
+  exemption; this record governs the shapeless-value rule's EXISTING one. The
+  same file, the same path, two different rules, two different states of the
+  world. Neither closes the other, neither is a duplicate of the other, and a
+  test written for one does not discharge the other — the value in the line
+  differs, and so does the rule that must report it. Do not edit any GE-123
+  record from this tree and do not add a depends_on edge into it.
