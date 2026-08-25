@@ -82,9 +82,35 @@ concurrent author, since it appears in a tree you did not knowingly edit.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 3
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` — the agent-card generation phase; output at `docs/agents/cards/*.md`
+
+**Third occurrence, 2026-08-25.** Reproduced again on a clean worktree cut from `origin/main`,
+this time rewriting **four** cards with 68 insertions and zero deletions:
+`architecture-diagram-author`, `documentation-expert`, `frontend-coder`, `python-coder`. The
+build printed nothing about it — the drift was noticed only because `git status` was checked
+immediately afterwards for an unrelated reason.
+
+This occurrence is **purely the AC-store drift source**, with no template-description component:
+every added line is a new AC-index entry, e.g. `frontend-coder` gaining
+`GE-124b-3: The pin is stripped from production builds and retained in dev, test and the Atlas`
+after `#535` landed that record. So the sources are independent and either alone is enough —
+a PR that touches no agent template at all still leaves the cards stale.
+
+Not committed with the run that found it: those four files belong with whichever PR lands the
+ACs that caused the drift, and picking them up in an unrelated change invites a conflict. Which
+is itself the point — the cost of this defect is paid by whoever happens to run a build next,
+and it is always someone with no reason to care.
+
+**Same finding as `KI-BP-015`, recorded twice on the same day by two sessions.** That entry
+reports the same four cards and 63 lines against this occurrence's 68, from an independent
+build. Per this file's own rule — *"Hitting an existing issue. Increment `Occurrences` and
+update `Last seen`. Do not add a duplicate entry"* — the occurrence increment is the correct
+form and `KI-BP-015` should be folded into this entry rather than kept alongside it. Left for
+whoever consolidates: deleting another session's entry mid-flight is how the `KI-BO-019`/`020`
+collision got worse. Worth noting that two independent observers filing the same defect within
+hours is itself evidence of how often this fires.
 
 **Symptom.** The cards are generated from two sources that change constantly — each
 agent's template `description`, and the AC store — but they are **tracked files**, and the
