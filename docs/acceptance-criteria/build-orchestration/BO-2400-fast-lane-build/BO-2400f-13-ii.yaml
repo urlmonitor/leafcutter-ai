@@ -1,0 +1,205 @@
+id: BO-2400f-13-ii
+components:
+  - build_orchestration
+title: "A workspace the lane did not open for this criterion is named as foreign and left alone"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the location the fast lane would open for an acceptance criterion is occupied
+    by something this lane did not open for that criterion — an ordinary directory
+    that is no registered workspace at all, or a registered workspace belonging to a
+    different branch or a different piece of work,
+  When the run refuses,
+  Then the refusal says exactly that: the occupant is not this lane's own earlier
+    attempt at this criterion, and the lane will not enter it, move it or clear it,
+  And it names the occupied location, and when the occupant is a registered workspace
+    it names the work that workspace belongs to,
+  And the options it offers are only ones the operator carries out themselves — it
+    never offers to clear a workspace it does not own, and it offers no option that
+    throws away another party's work.
+
+  Given the same foreign occupant,
+  When the operator reads the refusal,
+  Then it does not read like the refusal for the lane's own earlier attempt
+    (BO-2400f-13-i): the two are told apart from the message alone, because the
+    operator's next move differs between them,
+  And an occupant the run cannot classify with confidence is reported as foreign
+    rather than as the lane's own, so an unrecognised occupant is never handed the
+    option that throws work away.
+depends_on: [BO-2400f-13]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Python only. The foreign verdict is the DEFAULT branch of the classification helper this criterion shares with BO-2400f-13-i; note that _worktree_exists (:232) reads only `git worktree list --porcelain`, so on its own it is structurally blind to the bare-directory occupant that actually produced KI-BO-015. A filesystem check of the target path is required alongside the porcelain read."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-015's collision half: a hand-made directory at worktrees/bo-1500a-5 is how the defect was found. It was no registered workspace, so no lookup over registered workspaces would have seen it."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fastlane_foreign_occupant_report:
+      type: object
+      description: "The `refusal` sub-object of the BO-2400f-13 payload as populated when the occupant does NOT classify as this lane's own prior attempt at this criterion. `foreign` is the DEFAULT: it is what the classifier returns whenever `own_prior_attempt` cannot be established, not a separate positive finding."
+      required: [occupant, occupied_path, occupant_branch, occupant_kind, options]
+      properties:
+        occupant:
+          type: string
+          enum: [foreign]
+          description: "There is deliberately no third value. An occupant the run cannot classify with confidence — a detached-HEAD worktree, a porcelain block with no branch line, a symlink, an unreadable path, a porcelain read that fails or parses to nothing — is FOREIGN. Guessing 'probably mine' is the failure that destroys unrecoverable work."
+        occupied_path:
+          type: string
+          description: "Absolute path, always named."
+        occupant_branch:
+          type: [string, "null"]
+          description: "The branch the occupying worktree is on, when it is a registered worktree. Null for a bare directory or a detached-HEAD occupant — and null must render as 'not a registered workspace' / 'no branch', never be omitted from the message."
+        occupant_kind:
+          type: string
+          enum: [unregistered_directory, registered_worktree_other_branch, unclassifiable]
+          description: "The two shapes fail differently and the operator's next move differs, so the message must distinguish them. `unclassifiable` is the fail-closed value and reads as foreign in every other respect."
+        options:
+          type: array
+          minItems: 1
+          description: "Every entry MUST have destructive: false. No clear, no remove, no --force, no move, no prune — the lane offers nothing it would carry out against work it does not own. Options are things the operator does themselves."
+          items:
+            type: object
+            required: [action, description, destructive]
+            properties:
+              action: {type: string}
+              description: {type: string}
+              destructive:
+                type: boolean
+                enum: [false]
+  reference_file_path: "templates/scripts/setup_ticket_worktree.py"
+  n_location_rule: "1 — the same single classification helper BO-2400f-13-i populates the other branch of. Two independent classifiers, one per record, is the defect this rule exists to prevent: they will disagree, and the disagreement will favour whichever one runs first."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  constraints:
+    - "PYTHON ONLY. Classification and message composition are in templates/scripts/setup_ticket_worktree.py, mirrored to scripts/ by build.py. No JS change is owed by this record."
+    - "TWO DETECTION MECHANISMS ARE REQUIRED, AND THE MISSING ONE IS THE DEFECT. `git worktree list --porcelain` finds registered worktrees only. The occupant that actually produced KI-BO-015 was a hand-made directory at worktrees/bo-1500a-5 — no registered worktree, invisible to any porcelain-only lookup. So occupancy detection must ALSO stat the target path. An implementation that extends _worktree_exists with a fast-lane/ prefix and stops there fixes the tidy half and leaves the half that drew blood."
+    - "FOREIGN IS THE DEFAULT, NOT A FINDING. Write the classifier so `own_prior_attempt` is the narrow, positively-established case (a porcelain block whose branch line is exactly refs/heads/fast-lane/<slug> for this slug) and everything else falls through to foreign. Written the other way round — foreign as the narrow case — a new occupant shape silently inherits the destructive option. This is the data-driven-default rule: the safe verdict must be the one you get by doing nothing."
+    - "FAIL CLOSED ON THE LOOKUP ITSELF. If `git worktree list --porcelain` fails, times out, or yields output that does not parse, the verdict is foreign with occupant_kind `unclassifiable` — not 'no occupant found', which would proceed to the failing open, and not own_prior_attempt."
+    - "NO DESTRUCTIVE OPTION MAY BE CONSTRUCTED ON THIS BRANCH AT ALL. Enforce it in the code path, not by review: the foreign branch must not have access to the clear-and-re-run option builder. A shared option list filtered at render time is how the destructive option leaks back in."
+    - "THE TWO REFUSALS MUST BE DISTINGUISHABLE FROM THE PAYLOAD ALONE — different `occupant`, different `occupant_kind` where applicable, and different option sets. A test asserting only that some refusal came back is satisfied by an implementation that calls everything foreign, which loses the whole point of the split with BO-2400f-13-i."
+    - "READ-ONLY ON THE OCCUPANT. For a foreign occupant the permitted operations are stat and the porcelain read. Not even `git status` inside it — it may not be a working tree, and running commands in another party's directory is outside what this refusal is allowed to do."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-13
+  contract: "The occupancy determination (both conditions: occupied path, and branch checked out elsewhere) and the single refusal-payload construction site, including the `occupant` discriminant whose `foreign` branch this criterion populates."
+test_required: true
+test_spec:
+  - name: test_bare_directory_occupant_is_refused_as_foreign
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE SHAPE THAT PRODUCED THE DEFECT. REAL SUBPROCESS against a REAL temporary repo where worktrees/<slug> is a plain non-empty directory registered as no worktree at all: the run refuses, classifies occupant foreign with occupant_kind unregistered_directory, and names the path."
+  - name: test_registered_worktree_on_another_branch_is_refused_as_foreign
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "A genuinely registered worktree on a different branch occupies the location: refusal classifies it foreign with occupant_kind registered_worktree_other_branch and names the branch that work belongs to."
+  - name: test_foreign_and_own_refusals_are_distinguishable_from_the_payload_alone
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The third execution the rationale demands: arrange the lane's own leftover and a foreign occupant in turn against the same fixture and assert the payloads differ in occupant AND in option set — not merely that both refused."
+  - name: test_foreign_refusal_offers_no_destructive_option
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every entry in refusal.options carries destructive false, and no option's action names clearing, removing, forcing, moving or pruning the occupant."
+  - name: test_unclassifiable_occupant_defaults_to_foreign
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE SAFETY DEFAULT. An occupant arranged so branch identity cannot be established — a detached-HEAD worktree at the location, and separately a symlink — is reported foreign, never own_prior_attempt, and is handed no destructive option."
+  - name: test_unreadable_worktree_listing_refuses_as_foreign
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "FAIL CLOSED on the lookup itself: with `git worktree list --porcelain` made to fail or return unparseable output, the run refuses with occupant foreign / occupant_kind unclassifiable — it does not report 'no occupant' and proceed to the failing open."
+  - name: test_foreign_occupant_refusal_reaches_the_operator_with_no_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Under run_workflow_under_e2 with the worktree label stubbed to a foreign refusal, the terminal payload carries the foreign classification and the occupied path through to the operator, and no agent beyond the worktree phase is dispatched."
+test_rationale: |
+  The foreign case has two shapes that fail differently and must both be executed:
+  a bare directory nobody registered as a workspace, and a registered workspace on
+  another branch. A lookup that only consults registered workspaces sees the second
+  and is blind to the first — and the first is the one that actually produced this
+  defect. Only a REAL SUBPROCESS run of the workspace command against a REAL temporary
+  repository, with each occupant genuinely arranged on disk, distinguishes an
+  implementation that handles both from one that handles the tidy case.
+
+  A third execution must confirm the two refusals differ: arrange the lane's own
+  leftover workspace and a foreign occupant in turn and assert the payloads classify
+  them differently. Asserting only that some refusal was returned is satisfied by an
+  implementation that calls everything foreign, which loses the whole point of the
+  split. Grep-shaped tests over the workspace command or the lane are NOT acceptable
+  evidence and must be rejected at review — they pass on code that never runs.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Kept separate from BO-2400f-13-i because the operator's next move genuinely differs.
+  On its own leftover the lane may offer to clear and re-run; on someone else's work it
+  may offer nothing of the sort. Collapsing the two into one criterion would produce a
+  single message that either offers a destructive option against work the lane does not
+  own, or withholds the useful option in the case where it is safe.
+
+  The last clause is the safety default, and it is the one to get right first: an
+  occupant the run cannot confidently classify is foreign. Guessing "probably mine"
+  offers a clearing option against work nobody can recover, and the guess is most likely
+  to be wrong exactly when the directory is unusual — which is when it is least likely
+  to be the lane's own.
+
+  IT enrichment note, 2026-08-25 (it-po), on how own-vs-foreign is actually determined.
+  The test is BRANCH IDENTITY, not the directory name: the occupant is this lane's own
+  earlier attempt at this criterion if and only if `git worktree list --porcelain`
+  contains a block whose `branch` line is exactly `refs/heads/fast-lane/<slug>` for THIS
+  run's slug — either at the occupied location, or elsewhere when the location is free
+  and the branch is checked out somewhere else. The directory name proves nothing;
+  KI-BO-015 was found by a hand-made directory sitting at precisely the name the lane
+  would have chosen.
+
+  Two structural consequences follow. First, the classifier is written so foreign is the
+  FALL-THROUGH and own_prior_attempt is the narrow, positively-established case; written
+  the other way round, every new occupant shape silently inherits the destructive option.
+  Second, detection needs both a porcelain read AND a filesystem stat, because
+  `_worktree_exists` consults only registered worktrees and is therefore structurally
+  blind to the bare directory that produced the defect. Extending that function with a
+  `fast-lane/` prefix and stopping there fixes the tidy half only.
