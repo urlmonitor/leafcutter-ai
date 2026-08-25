@@ -1086,9 +1086,9 @@ broken. Whichever reading wins here, negation handling is needed regardless.
 
 ### KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is
 
-- **Severity:** medium
+- **Severity:** medium → **high** (see "Third and fourth sightings" below)
 - **Status:** open
-- **Occurrences:** 1
+- **Occurrences:** 3
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE` (`:567`) and `derive_declares_side_effect()` (`:581`)
 
@@ -1126,6 +1126,41 @@ rather than assuming it is zero.
 Whatever the fix, `validate_declares_side_effect()` should not be able to leave an author
 with no acceptable value. A disagreement between an authored `false` and a derived `true` is
 currently reported as the author's error; sometimes, as here, it is the derivation's.
+
+**Third and fourth sightings, hours later, same AC family — and the reason this is now high.**
+An IT-PO enrichment pass over the 22-record `ACS-1100` tree hit the identical wall twice more:
+
+- **`ACS-1100a-2`** — *"a record whose identifier **is written** with surrounding quotes"*.
+  A description of YAML syntax. Nothing is written by anything.
+- **`ACS-1100b-2`** — *"no second traversal of the AC tree **is written** to produce a total"*.
+  A clause whose entire content is that a thing is not written.
+
+Confirmed by calling the functions directly against both records: `derived=True`,
+`authored=None`, and a real error from `validate_declares_side_effect` — with **no readiness
+gate**, so `draft` records are blocked too. Both were left `draft` and staged out rather than
+reworded.
+
+Three instances in one day, all three in the same tree, is the signal that lifts this from
+medium. The narrow phrase list was calibrated at ~3.6% of records matching, which reads as
+rare — but the matches are not uniformly distributed. They concentrate exactly where a
+component's criteria are *about* writing, and a family specifying honest coverage reporting is
+necessarily about what does and does not get written. So the false-positive rate in the
+records that discuss writes is far higher than the store-wide rate suggests, and it is worst
+precisely in the specifications most worth getting right.
+
+**The workaround is now actively harmful and should stop.** Rewording `is written` →
+`is recorded` fixed `ACS-1100d-5-i` and was reasonable once. Applied a second and third time it
+becomes a policy of bending specification prose around a regex, and — worse — it *erases the
+evidence*: every reworded record is one the calibration will never count, so the measured
+false-positive rate falls as the real one holds steady. The two records above are deliberately
+left unreworded and blocked so the defect stays visible and countable. They are the reason the
+occurrence count above is 3 rather than 1.
+
+**A note for whoever fixes this.** `ACS-1100a-3` is a genuine true positive in the same batch
+and should be used as the negative control: its `Then` clause really does persist an exemption
+record, `declares_side_effect: true` is honest there, and it must keep deriving `True` after
+any negation handling lands. A fix that silences a-2 and b-2 by weakening the phrase list
+would take a-3 with it.
 
 **Relationship to KI-CG-015.** Same function, opposite direction, filed the same day by two
 sessions that each hit one half. KI-CG-015 is the derivation returning `false` on records whose
@@ -1609,3 +1644,91 @@ marker actually costs anything.
 
 **Pattern:** a claim generalised from the one case that was measured, in a change whose whole
 purpose was to bound false positives.
+
+---
+
+### KI-CG-021 — `check-ac-schema` cannot find its schema, prints a WARNING, downgrades to "manual field validation" and exits 0 — so a weaker check reports as a passing one
+
+> **Numbered 021, not 016.** This entry was authored as `KI-CG-016` against an `origin/main`
+> that had no 016, and collided while PR #568 was open with the `enforce_commit_delegation`
+> entry another session landed at that number. Renumbered here along with its inbound
+> references. Counted as `KI-BO-024`'s collision shape, not filed separately.
+>
+> **This register is now worse than that, and it happened during this rebase.** `main` already
+> carried two `KI-CG-012` (lines 380 and 800). PR #575 then added a second `KI-CG-016` and a
+> second `KI-CG-017` — so three ids in this one file now resolve to two unrelated defects each.
+> 021 was verified free against `origin/main` immediately before this entry was written.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — the
+  `config/ac_store_schema.json` load and its fallback path · root resolution via
+  `_resolve_root.py`
+
+**Symptom.** Running the deployed hook against 16 staged AC records in a worktree:
+
+```text
+WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutter;
+         falling back to manual field validation.
+exit: 0
+```
+
+Two failures in three lines. The hook resolved its root to the **workspace root** rather than
+the worktree whose index it was validating — the same mis-resolution KI-CG-009 records for
+`check-components-integrity`. Then, not finding the schema there, it did not fail: it
+substituted a weaker check and reported success.
+
+**Why the exit 0 is the serious half.** A hook that cannot load the contract it enforces has
+not validated anything it was asked to validate — but the only trace is one `WARNING` line on
+stderr, in a pre-commit run that prints dozens. The exit code, which is the part anything
+downstream consumes, is indistinguishable from a genuine pass. An operator reading "all hooks
+passed" is reading a claim the hook did not make.
+
+It is not hypothetical here. The same staged set that this run passed contained two records
+that `validate_declares_side_effect` errors on when called directly (see KI-CG-014). The gate
+said clean; CI, which builds fresh, would have failed the required `AC store valid` check.
+The local green was not merely weak, it was **wrong about the specific change in front of it**.
+
+**Two independent defects, and both need fixing.** They are filed together because they were
+observed together and either alone still yields a false pass:
+
+1. **Root resolution.** The hook must resolve to the git toplevel of the invocation, not to an
+   ancestor workspace directory. KI-CG-009 already documents this for another hook; this is a
+   second instance, which makes it a shared-helper problem rather than a per-hook slip.
+2. **Fail-open on a missing contract.** A schema the hook is built around is not optional. If
+   it is absent, that is a broken installation and the correct behaviour is a non-zero exit
+   naming what could not be loaded. "Manual field validation" as a silent substitute is the
+   worst option: strong enough to look like it worked, weak enough to miss real errors.
+
+Note the fallback is defensible *as a fallback* — a consumer install genuinely might lack the
+schema. What is not defensible is that the caller cannot tell which mode ran. If the degraded
+mode must exist, it should exit with a distinct non-zero code, or at minimum print its verdict
+as `PASS (degraded: schema unavailable)` so the string a human greps for is not the same one a
+real pass prints.
+
+**Relationship to the deployment defect.** The reason the schema was unreachable is
+KI-BP-021 — the deployed guardian directory in this workspace is a per-file collage, and the
+same corrective build that fixed six workflows left `_ac_schema_validators.py` with **0**
+occurrences of `declares_side_effect` against 12 in the source. So the deployment bug supplied
+the broken input and this hook converted it into a green. Fixing KI-BP-021 removes this
+trigger but not the defect: any consumer install missing the config reproduces it.
+
+**Related.** KI-CG-002 (a guardrail silently swapping its enum source when the declaring file
+is unreachable — the identical shape in the diagram-type guard). The `KI-CG-012` at line 800
+(the schema hook reporting a clean pass on a file it never validated, via an empty staged set)
+— this is a third route to the same false green. KI-CG-018 (`check_ac_governance` exiting 0
+without inspecting anything) is a fourth, landed on `main` independently. Four routes to
+"exit 0 having checked nothing" in one hook family suggests it needs one audited "I did not
+actually check anything" path rather than several ad-hoc ones.
+
+**Register hygiene note.** `KI-CG-012` is used twice in this file, at lines 380 and 800, for
+two unrelated defects; PR #575 has since duplicated `KI-CG-016` and `KI-CG-017` the same way.
+That is the collision `KI-BO-024` predicts for append-the-next-free-number under concurrent
+agents, landed here three times over. Not renumbered in this change because the ids are cited
+elsewhere and picking a winner is the owner's call — flagged so it is fixed deliberately rather
+than by whoever notices next.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
+nothing and reports success).

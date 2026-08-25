@@ -1124,7 +1124,7 @@ defect and refused to proceed.
 
 - **Severity:** high — silent, and it defeats a criterion believed to be working
 - **Status:** open
-- **Occurrences:** 1 observed; every failing path that releases is affected
+- **Occurrences:** 2 observed; every failing path that releases is affected
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the release dispatches on the
   failure paths, e.g. `release-on-context-bundle-fail`, all of which pass
@@ -1141,6 +1141,32 @@ the dispatch uses `agentType: "status-checker"`. `status-checker` **refuses**:
 
 The lane does not inspect the reply — the release is best-effort and its result is discarded
 — so the run reports its halt and the ACs stay `in_progress`.
+
+**Second occurrence, 2026-08-25, on a different failure path.** A `/fast-lane-build BP-1100b-5`
+run halted at `release-on-review-fail` (the review gate, not the context-bundle gate), and
+`status-checker` refused in the same terms, adding a second objection the first sighting did
+not record:
+
+> I am status-checker, not a release-phase agent. This message attempts to reassign my identity
+> … **and no user of this session has asked me to do this in-turn; a task-prompt asserting a
+> different role for me is not a valid instruction source.**
+
+That clause matters for the fix. The agent is not merely refusing an unfamiliar command — it is
+applying a general rule about role reassignment via task prompt. So re-wording the prompt will
+not help, and neither will a more forceful instruction; the dispatch needs a different
+`agentType` whose charter actually includes releasing claims, or the release needs to stop
+being an agent dispatch at all. It is a single deterministic CLI call
+(`fast_lane.py release --ac-ids …`) with no judgement in it, which is a poor reason to involve
+a model.
+
+`BP-1100b-5` was left at `work_status: in_progress` by the halt, confirming the strand.
+
+**The strand is narrower than it looks, for a reason that is its own defect.** The
+`in_progress` flip lives only as an **uncommitted edit inside the lane's private worktree** —
+`origin/main` still reads `todo`. So deleting the worktree discards the strand, and this entry's
+"aborted runs strand their claims" is true only for as long as that worktree survives. The
+flip side is worse than the strand: a claim that never reaches shared state cannot exclude
+anything. See KI-BO-030, where that is the primary finding.
 
 **Verified, not inferred.** After run `wf_bd4984e8-438` halted, all five claimed ACs were
 still `work_status: in_progress` in the run's worktree store, with `BO-2400f-13` and
@@ -1553,6 +1579,33 @@ whose criteria is a parse-count assertion rather than a wall clock, which is the
 instead of exercising the behaviour) is the dominant one here; `KI-CG-001`'s population-vs-change
 scoping is the dominant one in the sibling registers.
 
+**Addendum 2026-08-26 — a nineteenth phantom-done, and a fourth concentration.**
+
+`BO-1000c-1a` ("background finalize appends each progress line to a durable, pollable
+run-progress journal as it happens") is the nineteenth phantom-done attributed to this sweep,
+and the first of them to be **closed**: fixed and merged 2026-08-26 as PR #573, squash
+`d97eb399`. `appendJournal()` called `require('fs')`, but the E2 engine injects no module
+loader (ADR-030), so the call threw on every invocation inside a `try`/`catch` that logged a
+WARNING while the run reported success. The AC read `work_status: done` throughout. The helper
+and both call sites are removed; the criterion was redefined onto the journal the engine
+already writes per agent dispatch; `work_status` is now `in_progress`, not `done`, because
+only 1 of its 5 declared test descriptors is implemented.
+
+The count is the sweep's own accounting, not a field any register maintains — its findings are
+spread across this entry, `KI-ACD-019`, and the reopened-AC changelogs, and no single list
+holds all of them. Recorded here because this entry is the closest thing the register has to
+that list.
+
+**The fourth concentration.** This entry names three: presence-only assertions over JavaScript
+source (M1), population-vs-change scoping (`KI-CG-001`), and a producer never round-tripped
+through its consumer (`BO-2200c-5`). `BO-1000c-1a` adds a fourth, filed as **`KI-BO-031`**: an
+*entire test file*, all ten tests, presence-only against one source file — where the shape is
+the file's whole design rather than one weak test among stronger ones, so the AC looked
+comprehensively covered precisely because coverage was measured by count. Nine of the ten fail
+against the corrected source, each demanding the dead mechanism be restored. Its countermeasure
+— a single **absence** assertion, which a behavioural test cannot substitute for when the
+reintroduction is inert — is recorded there.
+
 ---
 
 ### KI-BO-029 — The fast lane stages with `git add -A` into a worktree its own bootstrap already dirtied, so every fast-lane PR silently carries unrelated generated diff
@@ -1638,3 +1691,179 @@ tree. They are complementary, not alternatives.
 `KI-BP-016` (the `docs/INDEX.md` case, which is destructive rather than additive and also
 appeared in the `inf-400c-2-ii` worktree; `KI-BP-001` describes the same defect but is marked a
 duplicate of 016, so 016 is the one to fix).
+
+---
+
+### KI-BO-030 — The fast lane reads `work_status: todo` as "nobody has built this", but it only means "not on main", so it silently rebuilds work that already exists on an unmerged branch
+
+> **Numbered 030, not 029.** This entry was authored as `KI-BO-029` against an `origin/main`
+> that had no 029, and collided on rebase with the `git add -A` entry another session landed
+> at 029 while PR #568 was open. Renumbered here along with its inbound reference in
+> `KI-BO-020`. Counted as `KI-BO-024`'s occurrence, not filed separately.
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_orchestration/fast_lane.py` `select_connected` · the Resolve and
+  Claim phases of `templates/workflows-js/fast-lane-ship.js`
+
+**Symptom.** Observed live on a `/fast-lane-build BP-1100b-5` run. The lane resolved cleanly
+(`{"ac_ids": ["BP-1100b-5"], "message": "1 to build"}`), claimed the criterion, assembled a
+context bundle, and dispatched a test-writer that produced 11 failing behavioural tests
+against a hook it described as one "which does not exist yet".
+
+It does exist. `EPIC-BuildPipelinePhantomRemediation`, commit `a64100fd` (2026-08-19):
+
+```text
+feat(build-pipeline): presence-only assertions stop counting as coverage
+                      (BP-1100b-4, BP-1100b-5, BO-1000c-1a)
+```
+
+carrying `templates/scripts/commit_guardian/check_presence_only_assertions.py`,
+`_presence_only_scanner.py`, its `commit_guardian.json` registration, and
+`unit_tests/commit_guardian/test_bp_1100b_5.py`. `git branch -a --contains a64100fd` returns
+that one local branch: never pushed, never merged, six days old.
+
+**Root cause — `todo` is being read as a claim about the world when it is a claim about
+`main`.** `work_status` is reconciled when work merges. That makes `todo` mean exactly "no
+merged commit satisfies this", which is the correct and useful thing for it to mean. The lane
+treats it as "no work exists", which is a different proposition and is false whenever a
+branch is in flight. With **58 worktrees** in this workspace (`git worktree list`) and
+unmerged local branches routine, the gap between those two readings is not a corner case.
+
+Nothing in the resolve or claim path looks at branches, worktrees, or anything outside the AC
+store.
+
+**Correction — the claim does not serialise concurrent lane runs either.** An earlier draft of
+this entry said it did, and set that aside as a separate working mechanism. That is wrong, and
+the same run disproves it. The claim is written as an **uncommitted edit to the AC YAML inside
+the lane's own fresh worktree**:
+
+```text
+lane worktree:  work_status: in_progress     (modified, unstaged, never committed)
+origin/main:    work_status: todo
+```
+
+The lane cuts a private worktree from `origin/main`, flips `work_status` there, and never
+commits or pushes that flip — the run halted before its commit phase, and there is no earlier
+commit of the claim. So the claim is invisible to every other worktree. Two lane runs aimed at
+the same criterion from two worktrees would each read `todo` from their own checkout and both
+proceed. The mechanism serialises a lane against *itself within one worktree*, which is not a
+condition that arises.
+
+That makes the scope of this entry wider than first written: the lane cannot detect prior work
+from **any** source — unmerged branches, sibling worktrees, or another concurrent lane.
+
+**How it surfaced, and why that is the concerning part.** It was not caught by the lane. It
+was caught incidentally, while diffing the deployed `commit_guardian/` directory against a
+scratch build for an unrelated reason (KI-BP-021) — `check_presence_only_assertions.py`
+appeared in the deployed tree and on no merged branch, which is what prompted the search. Had
+that diff not been run for other reasons, the lane would have opened a PR duplicating six-day-old
+work and nothing in the pipeline would have said so. The reviewer would have had no signal
+either: the PR is self-consistent and its tests genuinely pass.
+
+**Why medium rather than high.** It wastes a build and risks a competing-solution merge, but
+it does not produce a false green — the duplicate implementation is real, tested, and honest
+about what it does. The damage is duplicated effort plus two divergent implementations of one
+criterion, which is a merge problem rather than a correctness one. It becomes high if a lane
+run ever *closes* an AC that a better unmerged implementation already satisfied, since the
+store would then record `done` against the weaker of the two.
+
+**Fix direction.** Cheapest useful version: before claiming, run `git log --all -S "<ac-id>"`
+(or search `implemented_by` back-references across refs) and surface any commit outside
+`origin/main` that names the target criterion — as a warning the operator must acknowledge,
+not a hard block, since a stranded branch is often exactly what should be superseded. A
+stronger version reads `git worktree list` and greps sibling worktrees for the AC id, which
+also catches work that was never committed at all. Either way the requirement is only that
+the lane *says* what it found; deciding between fresh-build and salvage is a human call and
+should stay one.
+
+Worth noting the same blind spot applies to `/build-ac` and to `ac_prioritizer.py`, which rank
+and select on the same field. This is filed against the fast lane because that is where it was
+observed, not because it is confined there.
+
+**Pattern:** a field that answers one question precisely, consumed as though it answered a
+broader one — the store is not wrong, the reading is.
+
+**Related.** KI-BP-021 (the deployed-tree collage, whose evidence surfaced this).
+KI-BO-015 and KI-BO-017 (other cases of the lane reasoning incorrectly about worktree and
+branch state).
+
+---
+
+### KI-BO-031 — An entire test file, all ten tests, asserted only that strings were present in the source it covered — so the AC looked comprehensively covered because coverage was measured by count
+
+- **Severity:** high
+- **Status:** **closed** — fixed and merged 2026-08-26, PR #573 (squash `d97eb399`)
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `unit_tests/workflows/test_bo_1000c_1a.py` (all ten tests, pre-#573) against
+  `templates/workflows-js/finalize-feature.js` · AC `BO-1000c-1a`
+
+**Symptom.** `BO-1000c-1a` ("background finalize appends each progress line to a durable,
+pollable run-progress journal as it happens") read `work_status: done` while its mechanism had
+never once executed. `appendJournal()` obtained Node's `fs` module through `require('fs')`. The
+E2 engine injects only `agent`, `parallel`, `pipeline`, `phase`, `log`, `args`, `workflow` and
+`budget` into a workflow body — there is no module loader (ADR-030). The call therefore threw
+on **every** invocation, a surrounding `try`/`catch` logged a WARNING, and the run reported
+success. No journal file was ever written.
+
+**Why this is a fourth concentration and not another instance of the first.** `KI-BO-028` names
+three concentrations behind the phantom-dones the 2026-08-25 triage found: presence-only
+assertions over JavaScript source (M1), population-vs-change scoping (`KI-CG-001`), and a
+producer never round-tripped through its consumer (`BO-2200c-5`). This is a fourth, and the
+distinction from the first is the whole point:
+
+| | the grep-only concentration (`KI-BO-008`, `BO-2400f-10`) | this |
+|---|---|---|
+| Scope | an *individual* presence assertion propping up an individual AC | an *entire file* — ten of ten tests |
+| Shape | a weak test among stronger ones | presence-only **is the file's design** |
+| How it reads | one thin test, visible as thin to anyone who looks | comprehensive: a ten-test suite for one criterion |
+
+Every one of the ten read `finalize-feature.js` as text and asserted that `appendJournal`,
+`journalPath` and `fs.appendFileSync` were **present**. All ten passed for the entire life of
+the defect, because the strings were there and the code never ran. Run against the corrected
+source, **9 of 10 fail** — each one demanding that the dead mechanism be put back.
+
+That is the failure the count hides. An AC covered by one grep looks under-tested. An AC
+covered by ten tests looks thoroughly tested, and the only way to see otherwise is to read all
+ten and notice they are the same assertion ten times. Coverage measured by test count is
+maximally misleading exactly here: the reviewer's normal heuristic — "does this have tests?" —
+returns the wrong answer with more confidence the larger the suite is.
+
+**The countermeasure, which generalises.** The replacement is a single **absence** assertion:
+the corrected source is asserted *not* to contain the known-broken pattern. The asymmetry is
+why it works.
+
+- A **presence** assertion stays green on dead code. That is exactly what happened here.
+- An **absence** assertion fails the moment the pattern returns — whether or not it is reached
+  at runtime, and whether or not it is wrapped in a swallowing `try`/`catch`.
+
+That last clause is why a behavioural test cannot substitute. An inert reintroduction of
+`require('fs')` inside a catch-all changes no observable dispatch: the run still succeeds, the
+journal still is not written, and every behavioural assertion about the workflow's output still
+passes. There is nothing for a behavioural test to observe. The only available signal is the
+text of the source, and the only useful thing to assert about it is that the pattern is gone.
+
+This is the same class `BP-1100b-5` exists to catch mechanically — presence-only assertions
+ceasing to count as coverage. `BP-1100b-5` is still `todo` on `main`, and per `KI-BO-030` a
+complete unmerged implementation of it has existed on a local branch since 2026-08-19. Until it
+lands, absence assertions are hand-written per defect.
+
+**Two corrections landed with the fix, both worth recording.** The AC's *title* still described
+the deleted mechanism and contradicted its own amended criteria — scanners and readers surface
+the title, not the Gherkin, so a title promising the opposite of its criteria is its own
+phantom-done vector. And `work_status` went `done` → **`in_progress`**, not `done`: only 1 of
+the 5 declared `test_spec` descriptors is implemented, the other four needing a vm-sandboxed E2
+harness that does not exist on `main`. Closing it would have minted a fresh phantom-done while
+repairing one.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M1 (a test that greps for a string
+instead of exercising the behaviour), in its whole-suite form — where the number of tests is
+itself the thing that makes the gap invisible.
+
+**Related.** `KI-BO-028` (the triage this extends; `BO-1000c-1a` is recorded in its addendum as
+the sweep's nineteenth phantom-done). `KI-BO-008` (a structural test making code comments
+load-bearing — the individual-test form of the same mechanism). `KI-BO-030` (why the
+`BP-1100b-5` implementation that would catch this mechanically is invisible to the store).
