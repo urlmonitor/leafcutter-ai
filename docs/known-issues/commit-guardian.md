@@ -815,7 +815,8 @@ whether it moves the other two.
 >   reference is already pointing at the wrong entry independently of this collision.
 >
 > Whoever owns this file should pick the renumber and fix all four references in one commit.
-> Next free id at time of writing is `KI-CG-017`.
+> Next free id at time of writing is `KI-CG-018` (`016` and `017` were both claimed on
+> 2026-08-25 by two concurrent sessions — see the note on `KI-CG-017` below).
 
 - **Severity:** high
 - **Status:** open
@@ -1143,7 +1144,15 @@ verdict claimed is "this AC has a durable side effect", and negation is the gap 
 
 ---
 
-### KI-CG-016 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes
+### KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes
+
+> **Minted as `KI-CG-016`, renumbered to `017` before merge.** A concurrent session claimed
+> `KI-CG-016` for a different defect (the delegation hook substring-matching command text) in a
+> PR authored at the same time. Renumbered here rather than there because that PR's description
+> was already written around `016`, and because filing a duplicate in the same commit that flags
+> the `KI-CG-012` duplicate would be self-defeating. Both numbers are free on `origin/main` at
+> the time of writing; if the other PR lands as something else, this entry keeps `017` regardless
+> — the number is arbitrary, the collision is not.
 
 - **Severity:** high
 - **Status:** open — no AC
