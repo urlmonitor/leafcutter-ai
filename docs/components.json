@@ -395,6 +395,42 @@
         "scripts/roadmap_query.py"
       ]
     },
+    "security_scanner": {
+      "id": "security_scanner",
+      "name": "Security Scanner",
+      "type": "infrastructure",
+      "description": "Secrets and vulnerability scanning surface: the rule set that decides what counts as a credential, the allowlist and prose-exemption mechanisms that narrow it, and the pre-commit hook and audit workflow that invoke them. Runs inside commit_guardian, which owns hook resolution and ordering; this component owns what is detected and what a suppression may remove.",
+      "detail_ref": "docs/architecture/components/security-scanner.md",
+      "status": "active",
+      "primary_code": [
+        "templates/skills/security-scanner/scripts/scan_secrets.py",
+        "templates/scripts/commit_guardian/check_secrets.py"
+      ],
+      "depends_on": [
+        "commit_guardian"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": [
+        {
+          "name": "check-secrets",
+          "type": "hook_protocol",
+          "path": "templates/scripts/commit_guardian/check_secrets.py",
+          "shape": "Pre-commit hook. Receives staged file paths, scans them via scan_files, applies the prose post-filter, and exits non-zero listing rule_id, path, line and a truncated excerpt for each surviving finding. Exit 0 means no unsuppressed findings, not that every file was inspected."
+        },
+        {
+          "name": ".security-allowlist",
+          "type": "file_contract",
+          "path": ".security-allowlist",
+          "shape": "One suppression per line, 'rule_id:file_path:line_no', split on the first two colons. line_no may be '*' to match any line; file_path is matched as a suffix of the finding path's segments. Resolved from the workspace root via the .leafcutter symlink target, NOT from the worktree, so a worktree-local copy is silently ignored."
+        },
+        {
+          "name": "/security-audit",
+          "type": "cli_command",
+          "path": "templates/skills/security-scanner/SKILL.md",
+          "shape": "Full-repository pass covering secrets, dependency CVEs and Docker configuration. Unlike the hook it is not limited to staged files."
+        }
+      ]
+    },
     "skill_registry": {
       "id": "skill_registry",
       "name": "Skill Registry",

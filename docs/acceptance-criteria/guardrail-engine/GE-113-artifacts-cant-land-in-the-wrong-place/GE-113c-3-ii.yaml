@@ -1,6 +1,7 @@
 id: GE-113c-3-ii
 components:
   - commit_guardian
+  - security_scanner
 title: "A longer allowlist path does not shadow a shorter finding path"
 component: guardrail-engine
 level: L3

@@ -1,0 +1,58 @@
+id: BO-2600b-3
+components:
+  - build_orchestration
+  - documentation_system
+title: "How-to: what a fast-lane run picks up when you aim it at one criterion"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane resolves its build set with structural-parent prerequisites always
+    excluded, and states the resolved scope in its run record before it builds,
+  When an operator reads the fast-lane how-to to decide which criterion to aim a run at,
+  Then the how-to states which work a run picks up for a given target — the target, the
+    work beneath it, and its genuine prerequisites,
+  And it states that sharing a parent is never on its own a reason for a criterion to be
+    pulled into a run, and that an operator who wants a whole branch aims at the branch,
+  And it points at where in the run's own record the resolved scope is stated, so an
+    operator can confirm the scope of a run rather than infer it from what got built.
+depends_on: [BO-2600b, BO-2600b-1, BO-2600b-2]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: modifies
+    status: exists
+    relevance: "The existing operator-facing how-to for the lane; this is where the scope rule belongs, alongside the instructions for aiming a run."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: related
+    status: exists
+    relevance: "The shipped behaviour the how-to must match. Author after BO-2600b-1 and BO-2600b-2 land so the described scope and the described record are the ones that shipped."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The how-to must describe the scope rule in operator terms — target, work beneath it, genuine prerequisites — and must not restate the resolver's internal traversal or name the command-line flag as something the operator passes, because the operator passes nothing."
+  - "It must be authored after BO-2600b-1 and BO-2600b-2 are implemented, so the scope described and the location of the scope statement in the run record both match what shipped."
+  - "It must tell the operator how to get the wider set (aim at the parent), since that is the question the tightened scope will immediately raise."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: BO-2600b-2
+  contract: "The shipped scope statement and its location in the run record, which this how-to tells the operator where to find."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Produced because BO-2600b carries documentation_triggers: [how-to] and names
+  docs/how-to/fast-lane-build.md in its doc_links. A scope rule that only exists in the
+  resolver is a rule operators discover by being surprised by it; this is the one change
+  in this family that an operator reads before their first surprising run rather than
+  after it.

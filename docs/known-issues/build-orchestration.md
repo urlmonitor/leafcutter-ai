@@ -278,3 +278,164 @@ having published a different KI-BO-008 and a KI-BO-009 in the interim.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check that cannot assess
 correctness reporting a verdict anyway), in its fail-closed form.
+
+---
+
+### KI-BO-011 — A grep-only test aimed at an orphaned file kept a superseded criterion looking satisfied, hiding a direct contradiction between two `done` ACs
+
+- **Severity:** high
+- **Status:** open · the *instance* is covered by the amended **BO-2500d-1** /
+  **BO-2500d-1-i** / **BO-2500d-3**; the *class* — an unreachable file serving as a
+  criterion's proof — has no AC and is the reason this entry stays open
+- **Occurrences:** 1
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `unit_tests/workflows/test_bo2500d_gate_retirement.py` (module constant
+  `_FAST_LANE_PATH`), against `templates/workflows-js/fast-lane-build.js`
+
+**Symptom.** Two acceptance criteria assert opposite things about the same subject and
+both read `work_status: done`. `BO-2500d-1` — *"Opinion-only gate agents are absent from
+the fast-lane phase order ... it contains no LLM review agent"* — is contradicted by
+`BO-2400f-11`, which puts a `pr-reviewer` dispatch in the fast lane at Phase 4.5, ahead
+of `mark_done`. Nothing detected the collision, because `BO-2500d-1`'s entire proof is
+~750 lines of string-presence assertions pointed at `fast-lane-build.js`, a file nothing
+invokes. The orphan cannot acquire a `pr-reviewer` reference, so the assertions stay
+green forever and the criterion reads satisfied no matter what the running lane does.
+
+**Evidence.** `grep -n "pr-reviewer" templates/workflows-js/fast-lane-ship.js` returns
+the Phase 4.5 dispatch at line ~700; the same grep against `fast-lane-build.js` returns
+nothing, which is exactly what `test_bo2500d_gate_retirement.py` asserts. `BO-2500d-1`
+also names the orphan in its `implemented_by`, so a deleted file is a done criterion's
+recorded implementation. Three sibling criteria (`BO-2500d-1-i`, `-2`, `-3`) have their
+only proof in the same file. Found while sizing `BO-2400c-1-v` (delete the orphan) — the
+deletion is what forces the contradiction into the open, and it is blocked until the
+`BO-2500d` family is amended.
+
+**Why this is worse than KI-BO-008.** That one is a grep test that constrains the wrong
+thing — noisy, but honest about what it looked at. This is a grep test that constrains a
+*dead* thing, which is strictly worse than having no test: it does not merely fail to
+detect drift, it actively reports that a superseded promise is still being kept. Two
+`done` criteria were allowed to contradict each other for roughly four weeks, and the
+store showed nothing wrong. Any assertion whose target is a file no code path reaches has
+this property, so the orphan is not the interesting part — the aiming is.
+
+**Update, 2026-08-19.** The amendment alone did not settle it. An adversarial review of
+PR #510 found that the three amended criteria still read `work_status: done` while their
+only proof remained the grep suite above — the branch that amended them never touched
+that file, and the executed-behaviour tests their `test_spec` names do not exist. All
+three were reset to `in_progress` in that PR. The lesson generalises: amending a
+criterion whose proof is a grep does not give it proof, and the store will happily carry
+a stronger claim on weaker evidence than it had before.
+
+**Fix direction.** Two separable moves. (1) Reconcile the specs — done in PR #510.
+(2) Structural: a test whose only subject is a source file should be detectable as such,
+and a source file that no command, workflow, deploy manifest or runtime path reaches
+should not be able to serve as a criterion's `implemented_by`. The reachability guard
+family `BO-2900` is the natural home; check it before authoring anything new. A cheap
+interim: when a criterion's `implemented_by` names a workflow file, assert that file is
+reachable from a command template or another workflow.
+
+---
+
+### KI-BO-012 — The fast lane emits no telemetry, so the lane-comparison report can never contain fast-lane data
+
+- **Severity:** high
+- **Status:** open — no AC; the BO-2400d family needs the same reconciliation the
+  BO-2500d family just had, and that is a product decision
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `templates/workflows-js/fast-lane-ship.js` (the absence), against
+  `scripts/agent-health/agent_telemetry.py` and `generate_health_report.py`
+
+**Symptom.** `BO-2400d` promises "See what each build costs and how long it takes". The
+telemetry module, its record schema, its failsafe and the lane-comparison report are all
+built, tested and `done`. The lane that actually runs never calls any of it.
+
+**Evidence.** `grep -c telemetry templates/workflows-js/fast-lane-ship.js` returns `0`.
+The only fast-lane emission of `agent_telemetry.py emit_agent_telemetry` is in
+`templates/workflows-js/fast-lane-build.js` — the orphan nothing invokes — at lines 128,
+197 and 301. `build_lane_comparison_report` groups records by a `lane` field and its own
+docstring states that "a lane with no records is absent from the result", so with zero
+fast-lane records the fast lane is absent from every comparison the report can produce.
+`BO-2400d-3` ("A report compares fast-lane vs heavy-pipeline cost and time per unit of
+work") is `done` and cannot be satisfied today.
+
+**The sharp part.** `BO-2400d-1-i` — "An unreachable telemetry sink is surfaced loudly,
+never silently" — is also `done`, and it guards the wrong failure. It detects a sink that
+cannot be *written*. It cannot detect a sink nobody *calls*, which is the failure actually
+present. A guard aimed one step downstream of the real gap reads as coverage.
+
+**Why it recurred.** KI-BO-006 warned that deleting the orphan would silently retire
+prompt caching. That was right about the category and counted only one instance. The
+caching half was fixed (BO-2400c-1-iii) and the entry then read as discharged, while the
+orphan had been sheltering a second capability the whole time. Found only by auditing the
+orphan's full contents while sizing `BO-2400c-1-v` — not by re-reading the KI.
+
+**Fix direction.** Decide first, build second — same order as the BO-2500d
+reconciliation. Either wire emission into `fast-lane-ship.js` and re-point `BO-2400d-1`'s
+proof at an executed dispatch, or state plainly that the fast lane is untelemetered and
+amend `BO-2400d-3` to say what it actually compares. Do NOT delete the orphan until this
+is settled — see the second blocker recorded in `BO-2400c-1-v`'s notes. The same audit is
+owed to every other capability the orphan references: two have now been found this way and
+nobody has enumerated the rest.
+
+---
+
+### KI-BO-013 — A documentation-only AC anywhere in a resolved build set jams the fast lane at commit, because `test_required: false` is honoured by nothing
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `scripts/build_orchestration/fast_lane.py` —
+  `mark_done_built_acs` / `check_no_stale_todo`; `scripts/ac_store/done_proof.py`
+
+**Symptom.** The lane resolves a connected build set, then at Phase 5 requires that
+*every* built AC ends `work_status: done`. `mark_done_built_acs` only flips ACs whose
+coverage gate passed, and the coverage gate needs at least one green `# covers:`-tagged
+test. A documentation AC has no test and declares `test_required: false` — so it is never
+in `covered_ac_ids`, never flipped, and `check_no_stale_todo` then reports it stale and
+fails the run. The lane also has no documentation phase (it dispatches `test-writer` then
+`python-coder` only), so the doc would not have been written either way.
+
+**Evidence.** `grep -rn test_required` across `fast_lane.py`, `done_proof.py` and
+`mark_ac_done.py` returns **nothing**. The field is part of the AC schema and is read by
+the ticket-generation path, but the entire done-proof chain the fast lane depends on is
+blind to it.
+
+Reproduction, re-measured 2026-08-19 after the aiming fix (BO-2600b-1) landed in this
+same branch — the originally-recorded repro (`--ac BO-2600b-1` resolving five ids) no
+longer reproduces, because that command now carries `--exclude-structural-parent` and
+because b-1/-1-i/-1-ii are now `done`; it returns `[]`. The current standing repro is:
+
+```
+select_connected --ac BO-2600b --exclude-structural-parent
+  -> ["BO-2600b-2", "BO-2600b-3"]
+```
+
+`BO-2600b-3` is a how-to AC with `assigned_agent: documentation-expert` and
+`test_required: false`, so that set still cannot be built by the lane as it stands. The
+defect is unchanged; only the command that exhibits it moved. Worth noting the correction
+itself: a known-issue whose repro line has quietly stopped reproducing is the same
+stale-evidence failure this register exists to catch, one level up.
+
+**Why it is worse than it first reads.** The operator cannot avoid it. Build sets are
+resolved from the store, not chosen — so a single documentation child anywhere in a
+subtree makes that whole subtree unbuildable by the lane, and the failure surfaces at
+Phase 5, *after* the test-writer and coder have done all their work. Worse, the halt
+message is `mark_done stale: <ids>`, which reads like a coverage failure in the code and
+sends the reader looking for a missing test that was never supposed to exist.
+
+**Note the failure is half-correct**, which is why it should not be "fixed" by loosening
+the gate. Refusing to mark a doc AC done when no doc was written is right. The defect is
+that the lane has no way to *produce* the doc and no way to *exclude* it, so a correct
+refusal presents as an unexplained jam.
+
+**Fix direction.** Three candidates, in preference order. (1) Give the lane a
+documentation phase, so a resolved doc AC is built rather than tripped over — this is the
+only option that makes the promise "point at an id, get a PR" true for a subtree that
+includes docs. (2) Teach the done-proof chain to honour `test_required: false` with a
+different proof obligation (the named doc file exists and changed in the diff), rather
+than treating absence of a test as absence of proof. (3) At minimum, make the halt say
+what actually happened: name the AC, its `assigned_agent`, and that the lane has no phase
+for it. Do not simply skip untestable ACs — that reintroduces phantom-done through the
+front door.

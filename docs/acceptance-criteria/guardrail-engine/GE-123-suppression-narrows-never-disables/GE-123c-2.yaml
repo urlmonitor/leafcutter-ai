@@ -1,6 +1,7 @@
 id: GE-123c-2
 components:
   - commit_guardian
+  - security_scanner
 title: "A note written after a two-field suppression is reported rather than absorbed into the file path it follows"
 component: guardrail-engine
 level: L2
