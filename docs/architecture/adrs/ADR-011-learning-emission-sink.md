@@ -1,22 +1,25 @@
 ---
-title: "ADR-011: Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse agent_telemetry.jsonl"
-type: "adr"
-status: "active"
-created: "2026-06-05"
-last_updated: "2026-06-05"
+title: 'ADR-011: Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse
+  agent_telemetry.jsonl'
+type: adr
+status: active
+created: '2026-06-05'
+last_updated: '2026-08-25'
 deciders:
-  - BrainCandy
+- BrainCandy
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - docs/architecture/agent_knowledge_system.md
-  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
-  - tickets/00_inbox/epics/EPIC-AgentLearningLoop/01_harvester_agent_and_adr.md
+- docs/architecture/agent_knowledge_system.md
+- docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+- docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+- tickets/99_done/EPIC-AgentLearningLoop/01_harvester_agent_and_adr.md
 related_code:
-  - templates/skills/signoff/SKILL.md
-  - scripts/knowledge/harvest_learnings.py
+- templates/skills/signoff/SKILL.md
+- scripts/knowledge/harvest_learnings.py
+description: 'Overview of ADR-011: Learning Emission Sink — Separate knowledge_emissions.jsonl
+  vs Reuse agent_telemetry.jsonl.'
 ---
-
 # ADR-011: Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse agent_telemetry.jsonl
 
 ## Status
@@ -227,3 +230,10 @@ simplification if the harvester proves unnecessary operationally.
   the config-driven path resolution convention that governs sink paths in this project.
 - EPIC-AgentLearningLoop ticket 01 — the commissioning ticket for this ADR and the
   `harvest_learnings.py` script it covers.
+- `INF-400b` (agents capture what they discover without being asked) and `INF-400c`
+  (a dedicated harvester turns raw emissions into routed knowledge) — the driving
+  requirements for this decision. `INF-400c-1` commissioned this ADR specifically.
+- [ADR-034: Knowledge Write Ownership](ADR-034-knowledge-write-ownership.md) — resolves
+  the ambiguity this ADR left open by demoting Alternative C (inline agent-side capture)
+  from "deferred, not rejected" to **rejected**, and confirms the deferred-harvest model
+  recorded here as authoritative.
