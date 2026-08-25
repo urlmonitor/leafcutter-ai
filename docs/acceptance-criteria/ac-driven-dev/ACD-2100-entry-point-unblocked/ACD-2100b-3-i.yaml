@@ -2,7 +2,7 @@ id: ACD-2100b-3-i
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A registry that holds no agent entries is reported as unusable rather than as a missing agent"
 component: ac-driven-dev

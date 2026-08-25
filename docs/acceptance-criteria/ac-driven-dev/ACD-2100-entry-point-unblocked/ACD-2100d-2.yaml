@@ -2,7 +2,7 @@ id: ACD-2100d-2
 components:
   - ac_driven_dev
   - build_pipeline
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A repair that is missing from the source an installed file is generated from is reported as not delivered"
 component: ac-driven-dev

@@ -2,7 +2,7 @@ id: ACD-2100b-5
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "The startup check reads the registry itself instead of asking an agent to read it"
 component: ac-driven-dev

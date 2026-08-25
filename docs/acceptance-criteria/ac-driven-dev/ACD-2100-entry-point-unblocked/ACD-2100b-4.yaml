@@ -2,7 +2,7 @@ id: ACD-2100b-4
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Every unresolved outcome of the startup check still stops the run before any authoring work begins"
 component: ac-driven-dev

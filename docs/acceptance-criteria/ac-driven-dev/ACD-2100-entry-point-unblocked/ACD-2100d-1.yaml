@@ -2,7 +2,7 @@ id: ACD-2100d-1
 components:
   - ac_driven_dev
   - build_pipeline
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "The installed copy of the route reaches the first user question exactly as the source copy does"
 component: ac-driven-dev

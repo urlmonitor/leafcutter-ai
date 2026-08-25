@@ -42,6 +42,7 @@ covered_by:
   - ACD-2100b
   - ACD-2100c
   - ACD-2100d
+  - ACD-2100e
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
@@ -118,3 +119,13 @@ notes: |
   know they were done, and bad if closing it would still leave the route unable
   to reach an authoring agent. ACD-2100d exists because a+b+c can all be closed
   in templates/ and every installed project stays broken until a build lands.
+
+  FIFTH CHILD ADDED 2026-08-25 (product-owner), with the user's approval:
+  ACD-2100e homes the sequence-diagram and how-to documentation triggers that
+  ACD-2100c declares and cannot house -- c is full at five L2 children and every
+  slot holds a blocker behaviour on the critical path. Both the business-analyst
+  and the it-po declined to displace a blocker or to raise the cap, and both
+  recommended a sibling. ACD-2100e adds no new requirement: it delivers the
+  documentation ACD-2100c already asked for, and it is fenced against
+  ACD-2100d-4, which is the separate reference page about which copy runs where.
+  The L1 cap under an L0 is 7, so the tree remains within limits.

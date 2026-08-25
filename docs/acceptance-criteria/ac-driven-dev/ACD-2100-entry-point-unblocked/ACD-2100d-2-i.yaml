@@ -2,7 +2,7 @@ id: ACD-2100d-2-i
 components:
   - ac_driven_dev
   - build_pipeline
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "An install that replaces a locally changed generated file says so rather than replacing it silently"
 component: ac-driven-dev

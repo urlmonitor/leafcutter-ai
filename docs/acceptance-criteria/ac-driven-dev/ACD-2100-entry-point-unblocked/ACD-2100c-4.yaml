@@ -1,7 +1,7 @@
 id: ACD-2100c-4
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "An answer that did not come from the person is refused even when it is well formed"
 component: ac-driven-dev

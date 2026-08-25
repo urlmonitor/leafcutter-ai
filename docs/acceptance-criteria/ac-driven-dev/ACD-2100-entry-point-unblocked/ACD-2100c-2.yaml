@@ -1,7 +1,7 @@
 id: ACD-2100c-2
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A run that cannot reach a person waits with a durable record instead of proceeding or discarding"
 component: ac-driven-dev

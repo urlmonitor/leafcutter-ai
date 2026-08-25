@@ -2,7 +2,7 @@ id: ACD-2100a-2
 components:
   - ac_driven_dev
   - worktree_manager
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "The setup step finds the repository it operates on even when the script itself lives outside it"
 component: ac-driven-dev

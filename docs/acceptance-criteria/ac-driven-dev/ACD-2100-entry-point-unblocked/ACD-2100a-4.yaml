@@ -1,7 +1,7 @@
 id: ACD-2100a-4
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A pause record written from inside a worktree is found again by the run that resumes"
 component: ac-driven-dev

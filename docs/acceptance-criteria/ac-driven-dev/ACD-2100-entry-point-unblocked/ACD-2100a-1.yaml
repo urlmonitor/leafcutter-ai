@@ -2,7 +2,7 @@ id: ACD-2100a-1
 components:
   - ac_driven_dev
   - worktree_manager
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "The worktree step runs the copy of the setup script that belongs to the repository being worked on"
 component: ac-driven-dev

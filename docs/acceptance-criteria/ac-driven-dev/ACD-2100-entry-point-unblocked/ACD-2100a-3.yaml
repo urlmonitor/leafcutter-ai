@@ -2,7 +2,7 @@ id: ACD-2100a-3
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "The startup charter check finds the agent registry when the run starts inside a worktree"
 component: ac-driven-dev

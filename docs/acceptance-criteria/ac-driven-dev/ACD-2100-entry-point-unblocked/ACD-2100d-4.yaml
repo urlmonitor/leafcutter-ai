@@ -2,7 +2,7 @@ id: ACD-2100d-4
 components:
   - ac_driven_dev
   - documentation_system
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A reference page states which copy of the route runs and where a repair has to land"
 component: ac-driven-dev
@@ -59,7 +59,7 @@ it_requirements:
   - "TAKE THE SOURCE-VERSUS-REGENERATED ACCOUNT FROM THE INSTALLER'S OWN MAPPING (ACD-2100d-2's deliverable), never from a hand-written list of directories. A second list is exactly the artifact that goes stale the first time a directory is added, and this page's whole value is that a reader can trust it about where to put a fix."
   - "QUOTE EACH STARTUP CHECK'S REPORT VERBATIM, never a paraphrase. The reader is holding a message on their screen and matching it to this page; a paraphrase they cannot match sends them away believing the page does not cover their case. Pair each report with what it means and what it does not mean -- KI-ACD-009's four distinct causes all printed the same permissions verdict, and separating them is the point of the ACD-2100b family."
   - "PUBLISH THE RULE AND NOT THE CURRENT DEFECT STATE. The stale deployed workflow and the evaporated 2026-08-18 workaround are the motivating incidents, but they are today's facts and belong in the known-issues entries. If any current-state measurement is stated here at all it must carry the date it was taken, or the page is wrong on the first build after it is written."
-  - "THE COMPONENT DECLARED IN FRONTMATTER MUST BE ac-driven-dev, matching this record's scalar component. That declaration is what puts the page in the component view beside the criteria it explains, and it is the mechanically checkable half of the last Then clause."
+  - "THE COMPONENT DECLARED IN THE PAGE'S FRONTMATTER components LIST MUST BE ac_driven_dev -- underscore, not the kebab ac-driven-dev. The taxonomy is two-axis and the two axes take different spellings: this AC record's scalar component field is the kebab namespace key from docs/acceptance-criteria/index.yaml, while a doc's frontmatter components list is validated by check_doc_frontmatter against the keys of docs/components.json, which are underscore graph ids. Writing the kebab form fails the very gate this clause relies on for proof. Corrected 2026-08-25 after verifying that 'ac-driven-dev' is absent from components.json while 'ac_driven_dev' is present. That declaration is what puts the page in the component view beside the criteria it explains, and it is the mechanically checkable half of the last Then clause."
   - "docs/INDEX.md IS GENERATED. Register the page by running the build and committing the regenerated index -- do not hand-edit it. A hand-edited index is reverted by the next build, which is the same class of disappearance ACD-2100d-2 exists to catch."
   - "Tracked reference subject to check-doc-frontmatter, check-doc-length and check-doc-links; keep all three passing in the same commit. Length is a real constraint here -- the page spans three layouts, an installer mapping and four startup checks, so link out rather than absorbing ADR-001 or the build-pipeline document."
   - "DO NOT ABSORB ACD-2100c's SUBJECT. The gate-provenance and pause-and-resume flow is a different page for a different reader, its two documentation triggers are recorded as unserved, and folding them in here would produce a page with two subjects while leaving those triggers formally unserved anyway."

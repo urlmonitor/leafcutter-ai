@@ -2,7 +2,7 @@ id: ACD-2100b-3
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "An agent missing from the registry and an agent denied permission produce different reports"
 component: ac-driven-dev

@@ -1,7 +1,7 @@
 id: ACD-2100c-3-i
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "An answer naming a different decision than the one being waited on is not applied"
 component: ac-driven-dev

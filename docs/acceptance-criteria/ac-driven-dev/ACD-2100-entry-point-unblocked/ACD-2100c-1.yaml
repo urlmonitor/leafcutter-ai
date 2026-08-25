@@ -1,7 +1,7 @@
 id: ACD-2100c-1
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Every decision the route records as the user's is put to the user and to no agent"
 component: ac-driven-dev

@@ -2,7 +2,7 @@ id: ACD-2100b-1
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A registry the startup check cannot read is reported as unreadable and names what it tried to read"
 component: ac-driven-dev

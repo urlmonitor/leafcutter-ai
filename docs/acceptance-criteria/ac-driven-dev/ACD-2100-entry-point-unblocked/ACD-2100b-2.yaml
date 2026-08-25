@@ -2,7 +2,7 @@ id: ACD-2100b-2
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A registry whose contents cannot be understood is reported as unusable and not as a permission verdict"
 component: ac-driven-dev

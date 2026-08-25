@@ -1,7 +1,7 @@
 id: ACD-2100a-5
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A run reaches its first question to the user from any working directory"
 component: ac-driven-dev

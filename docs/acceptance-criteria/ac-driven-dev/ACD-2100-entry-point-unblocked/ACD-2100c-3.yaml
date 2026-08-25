@@ -1,7 +1,7 @@
 id: ACD-2100c-3
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A paused run picks up at the decision it was waiting on when the answer arrives"
 component: ac-driven-dev
