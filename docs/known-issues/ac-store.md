@@ -413,8 +413,8 @@ false refusals train the operator to bypass it.
 
 - **Severity:** high
 - **Status:** open — no AC authored yet; the semantics question below is the reason
-- **Occurrences:** 15
-- **First seen:** 2026-08-17 · **Last seen:** 2026-08-19
+- **Occurrences:** 18
+- **First seen:** 2026-08-17 · **Last seen:** 2026-08-24
 - **Where:** `scripts/ac_store/mark_ac_done.py`; also reached from
   `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by
   `mark_done_built_acs`

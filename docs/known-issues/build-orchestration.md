@@ -444,12 +444,20 @@ front door.
 
 ### KI-BO-014 — Resolving a one-criterion build set takes ~3 minutes, because every traversal re-parses the entire AC store
 
-- **Severity:** high
-- **Status:** open — no AC
+- **Severity:** high → medium
+- **Status:** the N+1 re-parse is FIXED by **BO-2400c-6** / **-6-i** / **-6-ii**; the entry
+  stays open for the residual recorded at the bottom, which has no AC
 - **Occurrences:** 1
 - **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
 - **Where:** `scripts/ac_store/scan_ac_store.py` — `traverse_ac_tree`, against
   `scripts/build_orchestration/fast_lane.py` — `resolve_connected_build_set`
+
+**Kept rather than deleted, deliberately.** This register's policy is to delete a section
+when its fix lands. Not done here for two reasons: three acceptance criteria and two commit
+messages already cite `KI-BO-014` by id, and deleting it would leave those references
+dangling; and the defect as filed — N+1 full parses — is fixed while the cost it was filed
+*about* is only reduced. Closing it would read as "resolution is fast now", which is not
+what was achieved.
 
 **Symptom.** Phase 2 of every fast-lane run — resolving the connected build set — costs
 minutes before any work begins, and the cost grows with the store rather than with the
@@ -493,3 +501,34 @@ and the run drops to a single parse. Check the other `traverse_ac_tree` call sit
 same pass — the same re-read is paid by anything that walks the tree in a loop. A
 behavioural guard is straightforward: assert the resolver parses the store once for a
 multi-expansion set, rather than asserting a wall-clock bound, which would be flaky.
+
+**Outcome, 2026-08-24 — fixed as specified, and the number is worth reading carefully.**
+`traverse_ac_tree` gained an optional prebuilt `id_index`; `resolve_connected_build_set`
+now builds the index once and passes it. The correctness trap was handled the right way:
+it snapshots `dict(id_index)` **before** `_drain_cycles` mutates it and hands the traversal
+that undrained view, so cycle-adjacent subtrees still resolve. The self-building path
+survives for `goal_to_epic.py`, which holds no index. Guarded by a parse-count assertion,
+not a wall clock.
+
+Measured on the same command, `select_connected --ac BO-2400c-1-i
+--exclude-structural-parent`, returning the identical `["BO-2400c-1-i"]` throughout:
+
+```
+before:  178.32 s
+after:    27.10 s  (implementing agent's measurement)
+after:    39.11 s  (independent re-measurement, different machine load)
+```
+
+Both figures are real; the spread is load, and the honest range is roughly 4.5-6.5×.
+
+**The residual, which is why this entry stays open.** One full parse of 3,232 YAML files
+still costs ~30-40 seconds, and that is now the floor. The lane's cold start went from
+"unusable" to "noticeable", not to "fast", and it still scales with total store size — so
+it will drift back toward a minute as the store grows. Removing the repeated parse was the
+filed defect; making a single parse cheap is a different problem and needs a different
+answer, most likely a cached or incrementally-maintained index rather than a full YAML
+walk per invocation. Not filed as its own entry only because it is the same measurement in
+the same place; whoever picks it up should split it out then.
+
+Worth stating plainly so the improvement is not oversold: an operator pointing the lane at
+one criterion still waits half a minute before the first agent is dispatched.

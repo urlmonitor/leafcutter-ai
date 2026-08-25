@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: high
 roadmap_phase: phase_1
@@ -135,7 +135,9 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-2400c-6-i, BO-2400c-6-ii]
-implemented_by: []
+implemented_by:
+  - "scripts/ac_store/scan_ac_store.py"
+  - "scripts/build_orchestration/fast_lane.py"
 change_target: code
 risk_surface: internal
 notes: |
