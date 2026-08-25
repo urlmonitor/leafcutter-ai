@@ -1515,8 +1515,32 @@ worktrees/inf-400c-2-ii              7 files: docs/INDEX.md + 6 cards   (+119 / 
 
 The third is a real `/fast-lane-build INF-400c-2-ii` run. At the point that run halted in
 review, `git status` showed the seven unrelated files alongside the three the build actually
-authored. The lane halted before Step 2, so the sweep is **not** observed in a landed commit —
-but the code path is unconditional, so a run that reaches commit will include them.
+authored. The lane halted before Step 2, so **the `add -A` sweep specifically** is not observed
+in a landed commit — but the code path is unconditional, so a run that reaches commit will
+include them.
+
+**A second, independent path produces the same outcome, and this entry's own commit hit it.**
+The commit that added this section staged exactly three `docs/known-issues/` files; four landed.
+The `transform-doc-index` pre-commit hook regenerated `docs/INDEX.md` and added it to the index
+mid-commit. The regenerated line was an unrelated doc's description
+(`adopt-consolidated-output-root`: `"How to adopt…"` → `"Overview of How to adopt…"`), nothing to
+do with the change being committed.
+
+That is worth more than a footnote, because `docs/INDEX.md` is **not** in
+`check_changelog_presence.py`'s `EXEMPT_PREFIXES`. A PR consisting solely of exempt
+known-issues edits was therefore failed by the required `Changelog entry present` gate, naming
+`docs/INDEX.md` as the sole releasable file — a gate failure caused entirely by a hook's own
+output. So the family has two mechanisms, not one:
+
+| Mechanism | Stages | Reaches |
+|---|---|---|
+| bootstrap `build.py` + fast lane `add -A` | agent cards, `docs/INDEX.md` | fast-lane PRs |
+| `transform-doc-index` hook auto-add | `docs/INDEX.md` | **any** commit touching docs |
+
+The second affects every commit, not just fast-lane ones, and converts an exempt PR into a
+non-exempt one. Workaround used here: `git restore docs/INDEX.md` and re-commit with
+`SKIP=transform-doc-index`. Either add `docs/INDEX.md` to `EXEMPT_PREFIXES` or stop the hook
+auto-staging a file the author did not touch.
 
 **`add -A` is deliberate, which is why this is not a one-line fix.** The comment at
 `fast-lane-ship.js:796-802` explains it: the Changelog phase writes `emit_entry.py` output to
