@@ -51,6 +51,7 @@ implemented_by: []
 change_target:
   - prompt
 risk_surface: contract_boundary
+declares_side_effect: true
 notes: |
   THE COMMA IS THE WHOLE RISK. `[data-ac~="id"]`, the selector the built side
   derives, splits on whitespace only. One comma in a mockup's attribute value

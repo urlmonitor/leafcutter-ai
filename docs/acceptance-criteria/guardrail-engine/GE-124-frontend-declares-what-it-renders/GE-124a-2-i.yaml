@@ -22,7 +22,7 @@ criteria: |
     comment region, above the first import — and quotes the comment that was
     found in the wrong place
 
-  Given a staged `.vue` file whose `<!-- @ac UXP-100d-2 -->` comment is written
+  Given a staged `.vue` file whose `<!-- @ac UXP-100d-2 -->` comment sits
     inside its `<template>` block
   When the frontend declaration reader evaluates the file
   Then the file's declared criteria are recorded as the empty list
@@ -81,6 +81,7 @@ origin_agent: business-analyst
 created: 2026-08-25
 amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the misplaced comment to be DETECTED (for the message) while staying out of both id collections, pinned the per-dialect remediation wording, and kept the verdict code unchanged so GE-124c-4's how-to does not grow a section for a case whose remedy is 'move the comment'. Tests assert the rendered message, not a format-string constant. criteria untouched."
+  - "2026-08-25 [BrainCandy]: reworded one Given from \"whose comment is written inside its <template> block\" to \"whose comment sits inside its <template> block\". Wording only — the scenario, its When and its Then are unchanged. The Given describes where a comment already is, and \"sits\" says that more accurately. It also stops the BO-2900g-2 declares_side_effect derivation matching \"is written\" here: that derivation scans from the FIRST Then to the end of the criteria, so in a multi-scenario record it swallows every later Given and When and marked this AC as asserting a durable effect it does not assert. The derivation bug is real and recorded separately; this record does not work around it beyond saying what it meant."
 superseded_by: null
 covered_by: []
 implemented_by: []

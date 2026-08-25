@@ -59,6 +59,7 @@ change_target:
   - schema
   - prompt
 risk_surface: contract_boundary
+declares_side_effect: true
 notes: |
   WHY BOTH SURFACES AND NOT JUST THE MARKUP. The markup is what a comparison
   reads; the record is what a person reviews and approves. A design whose

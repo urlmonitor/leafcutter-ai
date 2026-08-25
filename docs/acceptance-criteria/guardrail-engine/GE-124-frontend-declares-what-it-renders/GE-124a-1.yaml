@@ -28,7 +28,7 @@ criteria: |
     ["UXP-100d-2"]
   And the file's declaration verdict is "declared"
 
-  Given three staged screen component files whose declaration lines are written
+  Given three staged screen component files whose declaration lines read
     "@ac UXP-607, UXP-607-1", "@ac UXP-607 UXP-607-1" and
     "@ac UXP-607,UXP-607-1" respectively
   When the frontend declaration reader evaluates each file
@@ -100,6 +100,7 @@ origin_agent: business-analyst
 created: 2026-08-25
 amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Named the shared reader module and its deploy-manifest obligation, pinned staged-blob reading, forbade inline id resolution (that split is GE-124c's), and fixed the record shape as the spine both tiers consume. test_spec adds a subprocess reachability run over a real staged repo because a regex unit test cannot tell a wired reader from an unwired one. criteria untouched."
+  - "2026-08-25 [BrainCandy]: reworded one Given from \"whose declaration lines are written\" to \"whose declaration lines read\". Wording only — the scenario, its When and its Then are unchanged. The Given describes pre-existing authored source, and \"read\" says that more accurately. It also stops the BO-2900g-2 declares_side_effect derivation matching \"are written\" here: that derivation scans from the FIRST Then to the end of the criteria, so in a multi-scenario record it swallows every later Given and When and marked this AC as asserting a durable effect it does not assert. The derivation bug is real and recorded separately; this record does not work around it beyond saying what it meant."
 superseded_by: null
 covered_by:
   - GE-124a-1-i
