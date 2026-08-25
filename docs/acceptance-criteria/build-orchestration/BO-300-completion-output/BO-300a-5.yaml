@@ -1,0 +1,136 @@
+id: BO-300a-5
+components:
+  - build_orchestration
+title: "The epic's work is re-read before the drive reports, and anything added after planning is named"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic whose set of work is enumerated once, when the drive fixes its plan,
+    And three further pieces of work are added to that epic after the plan is fixed
+      and before the drive ends,
+  When the drive produces its completion output,
+  Then the epic's set of work is read again at that moment and compared with the set
+    the plan was built from,
+    And each of the three that was never planned is named in the output as discovered
+      after planning and not built,
+    And the output does not state that the epic is complete,
+    And the output states what the operator should do about them,
+  So an epic that grows during a drive never loses the additions from both the built
+    list and the outstanding list at once.
+depends_on:
+  - BO-300a
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver: it enumerates the epic's work once when it plans, and produces the completion output at the end. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js. It drives no epic and so carries no counterpart to the re-read; the twin obligation here is to confirm and record that, not to add a stub."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. Extend it so the stubbed enumeration of an epic's work can return a different set on the second call than on the first, which is the only way to reproduce a mid-drive addition."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing completion-output sections and their order; the discovered-after-planning list is an addition to that output and must not disturb the four sections already specified."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the epic driver's completion path in build-feature.js. build-ticket.js drives a single piece of work and has no epic set to re-read; state in the sign-off that the twin was inspected and correctly carries no counterpart, so the twins do not silently drift into two different completion contracts."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_ticket_set_recheck.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that finds a second enumeration call in the source cannot tell whether its result reaches the output. Drive the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs with an enumeration stub that returns a larger set on its second call, and assert the emitted completion output names the additions."
+    - "DETECT AND REPORT -- DO NOT BUILD. Building the additions inside the same drive is out of scope and is not a safe default: work added during a drive can itself add more, and the drive would have no termination condition. The contract is that the additions are surfaced, named, and left outstanding."
+    - "THE COMPLETE CLAIM IS THE PART THAT MUST CHANGE. Naming the additions in a list while still emitting an epic-complete statement leaves the operator with two contradictory sentences and an archive attempt that will fail later. Suppressing the complete claim is the load-bearing half, and must be asserted on the emitted text."
+    - "COMPARE SETS, NOT COUNTS. A drive in which one piece of work was added and another removed has an unchanged count. The comparison must be by identity."
+    - "SAY WHEN, TOO. The criteria fix the latest moment the re-read must happen -- before the completion output. If the re-read is also performed earlier, at batch boundaries, that is an improvement and not a substitute: the completion-time re-read is what makes the claim in the output true at the moment it is made."
+delivers_to:
+  agent: python-coder
+  contract: "A completion output that names, by identity, every piece of the epic's work that existed at the end of the drive but not in the plan, and that withholds the epic-complete statement while any such work exists"
+expects_from: null
+test_spec:
+  - name: test_work_added_after_planning_is_named_in_the_completion_output
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the real epic workflow with an enumeration that grows by three between the plan and the end, and assert all three are named in the emitted completion output as discovered after planning."
+  - name: test_the_epic_complete_statement_is_withheld_while_unplanned_work_exists
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In the same scenario, assert the emitted output contains no statement that the epic is complete -- the defect being that the drive would have reported completion having never seen the additions."
+  - name: test_unchanged_epic_still_reports_complete_with_no_additions_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control case: an epic whose set is identical at both reads produces the existing completion output unchanged, with no discovered-after-planning entries -- so the two assertions above are attributable to the additions."
+  - name: test_the_comparison_is_by_identity_not_by_count
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "One piece of work added and one removed between the reads, leaving the count unchanged; assert the addition is still named."
+  - name: test_existing_completion_sections_are_unchanged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Assert the four sections BO-300a-2 specifies remain present and in order in the emitted output, so the new section is an addition rather than a rewrite."
+test_rationale: |
+  The failure being prevented is a sentence the drive emits, so every descriptor
+  asserts on the emitted completion text rather than on an intermediate structure --
+  a roll-up that internally knows about the additions while the output still reads
+  epic complete is the same defect with a better data model. Reproducing the
+  condition at all requires an enumeration that answers differently on its second
+  call, which no static test can express; that is what makes the harness extension
+  the natural verification. The control case is required because the cheapest way to
+  pass the first two descriptors is to stop claiming completion at all.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-300a-5-i
+  - BO-300a-5-ii
+  - BO-300a-5-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BUG-19, observed in run wf_cc2b46d9-f6f.
+
+  THE OBSERVED STATE. The batch plan was computed once at drive start and enumerated
+  ten pieces of work. Three more were committed to the epic branch twenty-six minutes
+  after planning. They were never built -- which is defensible -- AND never appeared
+  in the final output's halted or skipped lists, which is not: the drive would have
+  reported the epic complete having never seen them. The additions were invisible in
+  both directions at once.
+
+  WHY THE CONTRACT IS DETECT-AND-REPORT RATHER THAN BUILD. Extending the running plan
+  to absorb new work gives the drive no termination condition: work added during a
+  drive can itself add more, and a fifteen-hour run would become an open-ended one.
+  Reporting is also the honest contract, because the operator who added the work
+  during the drive is the one who knows whether it belongs in this drive at all.
+  The cost of reporting is a second read of a set the drive already knows how to
+  enumerate.
+
+  WHY IT SITS UNDER BO-300a. The harm is entirely in the completion output: the drive
+  told the operator it knew what had been built, and it did not. That is the promise
+  BO-300 makes.

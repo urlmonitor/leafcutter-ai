@@ -1,0 +1,181 @@
+id: BO-1900a-4-ii
+components:
+  - build_orchestration
+title: "A plan reply the drive cannot use holds the ticket back, and is never read as a ticket with no work left"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a drive about to work a ticket, which first asks for that ticket's plan of
+    phases,
+    And in the first case the reply is one the drive cannot use -- in one shape no
+      reply is returned at all, in another the reply is not a usable record, and in
+      another it is a usable record that states no ordered list of phases either way,
+    And in the second case the reply is usable and does state its ordered list of
+      phases, and every phase in that list is already signed off or marked not needed,
+  When the drive decides what to do with that ticket,
+  Then in the first case every one of those shapes produces the same outcome: the
+    ticket is held back, no phase agent is spawned for it, its recorded lifecycle state
+    is left exactly as the drive found it, and the drive reports it as held back naming
+    the plan reply as the reason,
+    And in no shape of the first case is the ticket reported as having no work left,
+      nor carried forward into a completion decision,
+    And in the second case the ticket is not held back: it is carried forward to its
+      completion decision and settled there on the evidence its phases carry,
+  So an unusable answer about what a ticket needs is an unanswered question that stops
+    the drive, and never an answer that the ticket needs nothing.
+depends_on:
+  - BO-1900a-4
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver's per-ticket planning step and the point at which its reply is turned into the list of phases to run. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver, which performs the same planning step and the same reduction of the reply to a phase list. TWIN of build-feature.js; the same hold-back must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. It cannot reach this case today -- it synthesises the phase list from the fixture's real frontmatter rather than from a planner reply, so it can neither withhold the reply nor return a partial one. Extend it to control the plan reply directly, and to expose both the dispatches a run performed and the ticket record left on disk."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1900-dispatch-preflight/BO-1900a-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling hold-back for an undetermined working copy: the established fail-closed shape in these drivers, asserted on the dispatch record rather than read from the source. This AC is the same posture applied to an undetermined plan."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "The completion-side refusal this hold-back feeds. That record forbids a done write from an empty required set; this one stops an unusable plan reply from manufacturing that empty set in the first place. Both are needed -- either alone leaves the defect reachable."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the per-ticket planning step in build-feature.js and its twin in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_plan_holdback.py"
+  constraints:
+    - "AN ABSENT REPLY IS NOT AN EMPTY PLAN. The reduction that substitutes a blank record for a missing reply, and then a blank list for a missing list, is what converts a dead planner into a completion claim. Those two substitutions in sequence are the defect; neither is defensible on its own and the pair must be replaced by an explicit unusable-reply branch, not by a safer default value."
+    - "ABSENCE OF A CLAIM IS NOT A CLAIM. The reply schema does not require the ordered list, so a reply that simply omits it is legal and validates. Test for the affirmative presence of the list and treat everything else as unusable -- not for an explicit failure with everything else treated as usable. A check written against the failure takes the usable branch on a partial reply, which is the shape a truncated or degraded planner actually produces. This mirrors the correction already made to the epic-level re-check in BO-300a-5-i; make the two read the same way."
+    - "THE LEGITIMATELY-FINISHED TICKET MUST NOT BE STRANDED. A usable reply that does state its list, where every phase in it is already signed off or not needed, is a normal and common outcome -- every resumed drive produces it. It must flow to the completion decision untouched. Without this half the fix converts a phantom-done defect into a drive that can never finish anything, and the negative cases alone cannot detect that."
+    - "HOLDING BACK MEANS WRITING NOTHING. A held-back ticket must leave the drive with its recorded state exactly as found. An implementation that holds back the dispatch but still routes the ticket through the completion decision re-creates the defect one step later, and will look correct in a test that only counts dispatches."
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a source-searching test passes on a guard that is computed and ignored. Each case must be driven through the real workflow via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and asserted on the dispatch record and the ticket record left on disk."
+    - "THE HARNESS CANNOT REACH THIS CASE YET. The harness derives the phase list from the fixture's frontmatter, so there is no planner reply for a test to withhold or corrupt. Giving the harness control of the plan reply is part of this work; without it every descriptor below is unwritable and the AC would close on a test that never exercised the condition."
+    - "BOTH TWINS IN ONE CHANGE."
+delivers_to:
+  agent: python-coder
+  contract: "A per-ticket plan that either affirmatively states its ordered list of phases, or is an explicit hold-back naming the planning failure -- never a blank list standing in for an answer that was not received"
+expects_from: null
+test_spec:
+  - name: test_no_plan_reply_holds_the_ticket_back
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive a ticket for which the planning step returns nothing at all; assert no phase agent was dispatched, the ticket record on disk is unchanged, and the run reports the ticket as held back."
+  - name: test_an_unusable_plan_reply_holds_the_ticket_back
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The planning step returns something that is not a usable record; assert the same hold-back and the same absence of any write."
+  - name: test_a_plan_reply_omitting_its_phase_list_is_not_a_ticket_with_no_work
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The load-bearing case: a reply that is a valid record but states no ordered list of phases. Assert the test first confirms the reply really did omit the list, then assert the ticket is held back and is NOT reported as having no work left."
+  - name: test_a_held_back_ticket_is_never_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "For each unusable-reply shape, assert the ticket never reaches a completion decision and no done state is written -- the route into the vacuous completion this AC exists to close."
+  - name: test_the_holdback_reason_names_the_planning_failure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Assert the reported reason names the plan reply as the cause, so an operator is not left reading a silent skip and guessing whether the ticket had work."
+  - name: test_a_ticket_whose_stated_phases_are_all_settled_is_not_held_back
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "CONTROL. A usable reply that does state its list, every phase already signed off or not needed, must be carried forward to its completion decision rather than held back -- otherwise the cheapest way to pass every case above is a drive that holds back every ticket."
+  - name: test_both_drivers_hold_back_identically_on_an_unusable_plan
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the unusable-reply scenario against each of the two twin driver scripts as they exist on disk and assert both hold back and both write nothing."
+test_rationale: |
+  A dead planner and a finished ticket are the same value by the time the drive reads
+  them -- an empty list -- so no test that inspects the drive's internal phase list can
+  tell them apart. Only a run in which the reply itself is controlled, asserted against
+  what the run dispatched and what it left on disk, distinguishes the two. Every
+  descriptor is therefore behavioral.
+
+  The omitted-list descriptor is the one that decides whether the fix is real. A suite
+  in which every failed planner returns an explicit failure and every successful one
+  returns a full list can never separate a fail-open check from a fail-closed one: both
+  pass, for two reasons that cannot be told apart. Only a reply that says nothing
+  either way separates them, which is why that descriptor must first assert the reply
+  really did omit its list.
+
+  The control descriptor is not optional. Holding back on an empty list is a one-line
+  change that passes every negative case here and strands every resumed drive -- a
+  failure that is slower to notice than the one being fixed and far more disruptive.
+
+  The done-record descriptor is included even though BO-400a-2-iv covers the completion
+  decision directly, because the two records must hold independently: closing only one
+  leaves the defect reachable by the other route, and a test that proves the route is
+  closed is cheaper than an argument that it is.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A REGRESSION INTRODUCED BY REMEDIATION, and the second route into the same vacuous
+  write BO-400a-2-iv forbids. The hardening batch made the ticket completion exit
+  write-capable; this is the input path that reaches that exit with nothing to verify.
+  Neither defect is dangerous alone -- an unusable plan that wrote nothing was merely a
+  silently skipped ticket, and a write-capable exit reached with a real phase list is
+  correct. Together they turn a dead planner into a done record.
+
+  WHAT THE FAILURE LOOKS LIKE FROM OUTSIDE. Indistinguishable from success. The
+  planning step fails, the drive substitutes a blank record for the missing reply and a
+  blank list for the missing list, concludes the ticket needs no phases, takes the
+  no-phases exit, arrives at a completion decision with an empty required set, and
+  records the ticket done. No error is raised at any step, because every step did
+  exactly what it was written to do. An infrastructure failure has been converted into
+  a completion claim by two defaults that each looked like defensive programming.
+
+  WHY THE PARTIAL REPLY IS THE DANGEROUS SHAPE. The planner's reply schema does not
+  require the ordered list, so a reply that omits it is legal and passes validation.
+  That is not a hypothetical: it is what a truncated, timed-out or degraded agent reply
+  looks like. An implementer who writes the guard against a reply that DECLARES failure
+  will take the usable branch on this shape and believe the case is covered. This is
+  the identical mistake already caught and corrected one level up, in the epic-level
+  re-check amended under BO-300a-5-i -- the same wrong polarity, in the same diff
+  family, four weeks apart. It is recorded here explicitly so the correction is made
+  once rather than discovered a third time.
+
+  WHY IT SITS UNDER BO-1900a-4. The L1 promise is that nothing is dispatched against a
+  target that has not been proven fit, and the parent L2 establishes the shape for it:
+  a question the drive cannot answer is reported as unanswered, never filled in with a
+  plausible substitute. An empty phase list standing in for a reply that never arrived
+  is that substitute, with the ticket's entire scope of work as the value being
+  invented.
