@@ -101,6 +101,28 @@ DECISION HISTORY:
     equivalence harness against this repo's real ~3100-file AC collection
     afterward to confirm the fast path's performance win survives: see the
     sign-off comment for the exact fallback-count and wall-clock numbers.
+  - 2026-08-25 [python-coder/GE-122a-1, bug-fix, pr-reviewer finding [H-4],
+    feedback-id fb_2026-08-24_94dc4ba4]: _is_document_separator_line
+    recognized only the ``---`` document-start token; ``...``
+    (document-end) -- the grammatical sibling in the same YAML production --
+    was left unrecognized entirely, so a ``...`` marker mid-stream was
+    skipped as ordinary text and the fast path fabricated a claim from
+    whatever top-level ``id:`` line followed it, the same failure mode the
+    ``---`` fix above was meant to close off. Fixed by teaching
+    _is_document_separator_line the ``...`` token with the same column-0
+    shape as ``---`` (bare, or followed by whitespace), factored through a
+    new _is_document_boundary_token(raw_line, token) helper shared by both
+    tokens. Unlike ``---``, a ``...`` decline is NOT unconditional: a lone
+    ``...`` terminating the record's LAST line is legal YAML that
+    yaml.safe_load parses cleanly (verified empirically), so
+    _is_document_separator_line now takes an `is_last_line` flag (supplied
+    by _fast_scan_top_level_id, which alone knows each line's position) and
+    only declines on a ``...`` that is NOT the last line -- i.e. one with
+    further content after it, which is the actual malformed shape (a full
+    parse raises ParserError or ScannerError there). Re-verified the
+    equivalence harness against this repo's real ~3100-file AC collection
+    afterward to confirm the fast path's performance win survives: see the
+    sign-off comment for the exact fallback-count and wall-clock numbers.
 """
 
 from __future__ import annotations
@@ -266,32 +288,77 @@ def _strip_simple_quoted_scalar(value: str, quote: str) -> str | None:
     return inner
 
 
-def _is_document_separator_line(raw_line: str) -> bool:
-    """Detect a YAML document-separator line (``---``) at column 0.
+def _is_document_boundary_token(raw_line: str, token: str) -> bool:
+    """Detect a bare YAML document-boundary token (``---`` or ``...``) at
+    column 0 of one line.
 
-    A document separator ANYWHERE in the stream -- including as the very
-    first line -- makes this function decline outright (see
-    `_fast_scan_top_level_id`'s docstring): a multi-document stream makes
-    ``yaml.safe_load`` raise ``ComposerError`` (no usable claim at all), and
-    the fast path's single-pass line scan has no cheap way to distinguish
-    "a lone leading document-start marker" from "a real second document
-    follows" without doing the equivalent of a real parse. Declining on
-    every ``---`` line -- even a harmless leading one -- is the safe,
-    conservative choice; it costs a handful of extra full-parse fallbacks
-    against this store's real collection (see the DECISION HISTORY
-    equivalence-harness numbers), never a wrong answer.
+    A separator token is only ever a separator at column 0: an INDENTED
+    occurrence is a plain-scalar continuation line, not a boundary; a
+    QUOTED or MID-VALUE occurrence is ordinary scalar content. Requiring
+    `raw_line` to literally start with `token` (never merely contain it)
+    is what keeps those shapes from being misdetected.
 
     Args:
         raw_line: One line of raw YAML text (no trailing newline).
+        token: The boundary token to check for, ``"---"`` or ``"..."``.
 
     Returns:
-        True if `raw_line` is a document-separator line: exactly ``---``,
-        or ``---`` followed by whitespace (a directives-end marker with
-        trailing content on the same line).
+        True if `raw_line` is exactly `token`, or `token` followed by
+        whitespace (space or tab) with trailing content on the same line.
     """
-    if raw_line == "---":
+    if raw_line == token:
         return True
-    return raw_line.startswith("---") and len(raw_line) > 3 and raw_line[3] in (" ", "\t")
+    return raw_line.startswith(token) and len(raw_line) > 3 and raw_line[3] in (" ", "\t")
+
+
+def _is_document_separator_line(raw_line: str, *, is_last_line: bool) -> bool:
+    """Detect a YAML document-boundary line (``---`` or ``...``) at column 0
+    that forces the fast path to decline.
+
+    YAML has two document-boundary tokens, both handled here:
+
+      - ``---`` (document-start / directives-end): a document separator
+        ANYWHERE in the stream -- including as the very first line -- makes
+        this function decline outright (see `_fast_scan_top_level_id`'s
+        docstring): a multi-document stream makes ``yaml.safe_load`` raise
+        ``ComposerError`` (no usable claim at all), and the fast path's
+        single-pass line scan has no cheap way to distinguish "a lone
+        leading document-start marker" from "a real second document
+        follows" without doing the equivalent of a real parse. Declining on
+        every ``---`` line -- even a harmless leading one -- is the safe,
+        conservative choice; it costs a handful of extra full-parse
+        fallbacks against this store's real collection (see the DECISION
+        HISTORY equivalence-harness numbers), never a wrong answer.
+      - ``...`` (document-end): the grammatical sibling of ``---``, but NOT
+        symmetric in when it forces a decline. A lone ``...`` terminating
+        the LAST line of an otherwise single, well-formed document is legal
+        YAML (``yaml.safe_load("id: GE-1\\n...\\n")`` cleanly returns
+        ``{'id': 'GE-1'}``, no raise) -- declining there would be a
+        needless fallback on ordinary, correctly-parsing content. A ``...``
+        that is NOT the last line, however, means at least one more line of
+        content follows a document-end marker with no accompanying
+        document-start token, which is illegal (a full parse raises
+        ``ParserError`` or ``ScannerError``, no usable claim at all) -- and
+        the fast path's single-line scan would otherwise skip the ``...``
+        line as ordinary unmatched text and fabricate a claim from whatever
+        ``id:`` line follows it. `is_last_line` (supplied by the caller,
+        which alone knows the line's position in the full scan) is what
+        distinguishes the two cases.
+
+    Args:
+        raw_line: One line of raw YAML text (no trailing newline).
+        is_last_line: True when `raw_line` is the final line of the
+            record's content (``lines[-1]``); only relevant to the ``...``
+            check, since ``---`` always declines regardless of position.
+
+    Returns:
+        True if `raw_line` forces the fast path to decline: a ``---``
+        boundary token anywhere, or a ``...`` boundary token that is not
+        the record's last line.
+    """
+    if _is_document_boundary_token(raw_line, "---"):
+        return True
+    return _is_document_boundary_token(raw_line, "...") and not is_last_line
 
 
 def _plain_scalar_has_continuation(lines: list[str], id_line_index: int) -> bool:
@@ -356,17 +423,20 @@ def _fast_scan_top_level_id(content: str) -> str | None:
     (no usable claim), which the fast path cannot reproduce by returning a
     literal string.
 
-    Two further shapes (pr-reviewer finding [H-2]/[H-2b], feedback-id
+    Two further shapes (pr-reviewer finding [H-2]/[H-2b]/[H-4], feedback-id
     fb_2026-08-24_94dc4ba4) also force a decline, because both make this
     function return a WRONG non-None answer rather than merely an
     unrecognized one -- the dangerous case, since a wrong answer is never
     corrected by the caller's None-triggered fallback:
-      - A document separator (``---``) ANYWHERE in the stream
-        (`_is_document_separator_line`) -- a multi-document stream makes a
-        full parse raise ``ComposerError`` (no usable claim at all), where
-        the fast path would otherwise return the LAST top-level ``id:``
-        line it sees, silently manufacturing a claim a full parse never
-        produces.
+      - A document-boundary token (``---`` ANYWHERE, or a ``...`` that is
+        not the record's last line -- `_is_document_separator_line`) -- a
+        multi-document or malformed-boundary stream makes a full parse
+        raise (``ComposerError``, ``ParserError``, or ``ScannerError``, no
+        usable claim at all), where the fast path would otherwise return
+        the LAST top-level ``id:`` line it sees, silently manufacturing a
+        claim a full parse never produces. A lone ``...`` terminating an
+        otherwise well-formed single document is excluded from this
+        decline: it is legal YAML that keeps resolving normally.
       - A plain-scalar ``id`` value immediately followed by a
         more-indented continuation line (`_plain_scalar_has_continuation`)
         -- a full parse FOLDS the continuation into the same scalar
@@ -387,9 +457,10 @@ def _fast_scan_top_level_id(content: str) -> str | None:
         The extracted id string, or None if no line unambiguously matches.
     """
     lines = content.splitlines()
+    last_index = len(lines) - 1
     found: str | None = None
     for index, raw_line in enumerate(lines):
-        if _is_document_separator_line(raw_line):
+        if _is_document_separator_line(raw_line, is_last_line=index == last_index):
             return None
         if not raw_line or raw_line[0] in (" ", "\t", "#"):
             continue

@@ -230,6 +230,53 @@ A grep written by the person who wrote the rule tests the shape they thought of,
 which is precisely the shape that is not the problem. A repo-scale canary over
 `docs/acceptance-criteria/` now pins this — see **KI-TQ-5**.
 
+## KI-BO-4 — `build.py` does not scaffold two of the four namespace roots
+
+**Severity: high. Open. Blocks registering the uniqueness gate.**
+
+A fresh consumer install gets `docs/acceptance-criteria/` (a `README.md` and an
+`index.yaml`), but **`docs/architecture/adrs/` and `docs/architecture/diagrams/`
+are never created**. With the KI-CG-7 fail-closed contract in place, both are
+unresolvable, and an unresolvable root blocks *regardless of what is staged*.
+
+Measured on a real `git commit` of one unrelated markdown file in a pristine
+install, with the gate hand-registered:
+
+```
+Check Identifier Uniqueness (GE-122 whole-collection pass).....Failed
+- exit code: 1
+[check_identifier_uniqueness] decisions: FAILED (0 inspected)
+[check_identifier_uniqueness] diagrams:  FAILED (0 inspected)
+BLOCKING: the following namespace(s) could not be resolved at all: decisions, diagrams
+```
+
+`--seed-docs` does **not** rescue it: that path creates `docs/architecture/adrs/`
+but writes its C-diagram to `docs/architecture/c1-001-system-context.md` and
+never creates a `diagrams/` subdirectory. Both documented install paths fail.
+
+So registering the gate today would make the package unusable for every new
+adopter. The fix is small — create the two roots empty, since an
+**existing-but-empty** root passes cleanly by design — but the ordering is not
+optional:
+
+1. scaffold the two roots in `build.py`
+2. **then** register the hook (see **KI-CG-9**)
+3. **then** re-run the deployed-consumer test
+
+Shipping (1) and (2) in one change produces a package that cannot be installed.
+
+**Worth noting how this was found.** Five prior review rounds tested the gate by
+importing the module or running the script from the source tree, where all four
+roots exist because this repo is not a fresh install. The defect is only visible
+in the layout the code actually ships into.
+
+**Unrelated fresh-install blockers observed in the same experiment**, each worth
+its own ticket: `check-secrets` flags ~30 `ENTROPY_HIGH` / `GENERIC_SECRET` hits
+**in the package's own deployed agent templates**, and `check-hook-parity` looks
+for `templates/scripts/commit_guardian/` in the consumer, which a consumer never
+has. With `fail_fast: true` the first aborts the run. A fresh install cannot
+currently make one clean commit, with or without the GE-122 gate.
+
 ## KI-BO-2 — Committed agent cards drift from the AC store
 
 **Severity: low,** but it makes every build dirty the tree.

@@ -221,3 +221,59 @@ have gone red on, pushing the next author to break `TODO` instead.
 **The generalisation, since this register keeps rediscovering it:** an estimate
 produced by the person who wrote the rule tests their model of the rule, not the
 rule. Only running it over data nobody curated can falsify it.
+
+## KI-TQ-6 — Six review rounds never asked what invokes the code
+
+**Severity: critical as a pattern.** It is the largest miss in this register and
+the one every other entry was standing on.
+
+Rounds one through five of adversarial review each found real defects under a
+green suite, and each verified the fix by importing the module or running the
+script directly. Round six asked a different question — *what calls this in
+production?* — and the answer was **nothing** (see **KI-CG-9**). Five rounds of
+increasingly careful verification had been measuring a component that could not
+fire.
+
+Every individual verification was accurate. None of them was the question.
+
+**Detection.** For any gate, hook, or runner, verification is not complete until
+you have answered, with a grep and not from memory:
+
+1. What config registers this? (`commit_guardian.json`, `.pre-commit-config.yaml`,
+   a CI workflow — name the file and the line.)
+2. Does it survive `build.py` into a consumer layout? Build one in /tmp and run it.
+3. Does the **production entry point** produce the observable effect — the exit
+   code, the block, the message? Not the function. The entry point.
+4. Is the output actually *seen*? A passing `pre-commit` hook's stdout is
+   discarded (**KI-CG-10**).
+
+**Suggested fix (pattern).** Every hook AC should carry a registration test:
+assert the hook's id appears in the deployed `.pre-commit-config.yaml` and that
+its script resolves. That is a three-line test which would have failed on day one
+of this epic and saved six rounds.
+
+**The general form:** *"does the code work"* and *"is the code reachable"* are
+different questions, and a test suite answers only the first. Nothing in 3772
+passing tests could distinguish this gate from a gate that had never been wired
+up, because nothing in it looked outside the source tree.
+
+## KI-TQ-7 — A test that fails as a function of branch staleness
+
+**Severity: low.** Recorded because it wastes triage time on every long-lived branch.
+
+`test_ge_122e_1.py::test_goal_record_claims_a_new_id_and_its_folder_matches_origin_main`
+diffs an AC folder against `origin/main` and fails when they differ. It therefore
+fails whenever **`origin/main` moves ahead**, regardless of what the branch
+changed. Observed here: `origin/main` gained commit `9549d9c2` (an unrelated
+epic) touching `GE-120-green-means-checked/`; this branch has **zero** commits
+touching that folder, and the test failed anyway.
+
+The tell that it is not your regression:
+
+```
+git log --oneline origin/main..HEAD -- <folder>   # empty  -> you never touched it
+git log --oneline HEAD..origin/main -- <folder>   # commits -> main moved
+```
+
+**Suggested fix.** Scope the comparison to paths the branch actually modified, or
+compare against the merge base rather than the tip of `origin/main`.

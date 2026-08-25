@@ -99,6 +99,33 @@ DECISION HISTORY
   ride the existing table-driven
   test_read_yaml_id_matches_full_yaml_safe_load_for_every_shape via
   subTest, per this file's own established convention.
+- 2026-08-25 [test-writer, adversarial-review follow-up, H-4]: The commit
+  that added `_is_document_separator_line` (see this file's H-2 entry
+  above) recognizes only YAML's DOCUMENT-START token (``---``). YAML has
+  two document-boundary tokens; ``...`` (document-end) is the grammatical
+  sibling and was left unrecognized entirely -- so a ``...`` marker
+  mid-stream is skipped as ordinary text by the fast scan rather than
+  forcing a decline, and the fast path fabricates a claim from whatever
+  top-level ``id:`` line follows it, exactly the H-2 failure mode the
+  ``---`` fix was meant to close off. Reproduced empirically against this
+  branch before writing (see the test-writer sign-off comment's
+  red_baseline block for the exact captured mismatch per case). Four new
+  DECLINE cases were added to the same table
+  ("doc_end_dots_between", "doc_end_trailing_space",
+  "doc_end_trailing_tab", "doc_end_last_line" -- the last one is a
+  precision anchor: a lone trailing ``...`` closing an otherwise-valid
+  single document is legal YAML and must keep resolving, not decline)
+  plus three RESOLVE precision anchors ("dots_in_quoted_scalar",
+  "dots_indented_continuation_not_separator", "dots_mid_value") proving a
+  fix must not start declining on every ``...`` substring it happens to
+  see. One further test,
+  test_doc_end_marker_divergence_does_not_manufacture_a_collision, was
+  added to TestFastPathDivergenceHidesARealCollision (the file's existing
+  collision-level test class) to pin the actual operator-facing harm: a
+  namespace holding one legitimate ``id: GE-500`` record plus one
+  unparsable ``...``-containing file must report NO collision on
+  'GE-500' -- today it does, because the unparsable file's fabricated
+  claim collides with the legitimate one.
 """
 
 from __future__ import annotations
@@ -462,6 +489,97 @@ _CASES: list[_Case] = [
         "fast path's single-line scan sees only the first line and "
         "returns 'foo', silently dropping the continuation.",
     ),
+    # --- H-4 (adversarial-review follow-up, same fb_2026-08-24_94dc4ba4
+    # thread): _is_document_separator_line recognizes only '---'
+    # (document-start). YAML has TWO document-boundary tokens; '...'
+    # (document-end) is the grammatical sibling and is not recognized at
+    # all, so a document-end marker mid-stream is skipped as ordinary
+    # text and the fast path fabricates a claim from whatever top-level
+    # 'id:' line follows it -- the same failure shape H-2's '---' fix was
+    # meant to close off, just for the other token. ---
+    _Case(
+        "doc_end_dots_between",
+        lambda p: _write_raw(p, "id: GE-1\n...\nid: GE-500\n"),
+        "safe_dump never emits a bare '...' document-end marker "
+        "mid-stream -- a '...'-separated malformed/concatenated file is "
+        "exactly the hand-authored-or-bad-merge shape under test here, "
+        "the document-end sibling of the already-covered 'multi_document' "
+        "('---') case above. A full yaml.safe_load of this file raises "
+        "ParserError (a second mapping follows a document-end marker with "
+        "no new document-start token, which is illegal) -- no usable "
+        "claim at all -- but the fast path does not recognize '...' as a "
+        "boundary, so it skips the line as ordinary text and returns the "
+        "LAST top-level 'id:' line it sees ('GE-500'), fabricating a "
+        "claim a full parse never produces.",
+    ),
+    _Case(
+        "doc_end_trailing_space",
+        lambda p: _write_raw(p, "id: GE-1\n... \nid: GE-500\n"),
+        "a document-end marker with trailing whitespace on the same line "
+        "is still a legal '...' token per the YAML spec (mirroring the "
+        "existing '---'-plus-whitespace branch already handled in "
+        "_is_document_separator_line for the start token); safe_dump has "
+        "no way to emit this exact malformed-stream shape. Raises the "
+        "same ParserError as doc_end_dots_between -- no usable claim -- "
+        "while the fast path again returns 'GE-500'.",
+    ),
+    _Case(
+        "doc_end_trailing_tab",
+        lambda p: _write_raw(p, "id: GE-1\n...\t\nid: GE-500\n"),
+        "a document-end marker followed by a raw tab byte; safe_dump "
+        "cannot emit this raw-byte malformed shape. A full parse raises "
+        "ScannerError (a bare tab cannot start a token) -- no usable "
+        "claim -- while the fast path still does not recognize the "
+        "'...' line as a boundary and returns 'GE-500'.",
+    ),
+    _Case(
+        "doc_end_last_line",
+        lambda p: _write_raw(p, "id: GE-1\n...\n"),
+        "a lone trailing '...' terminating an OTHERWISE single, "
+        "well-formed document is legal YAML (it cleanly closes the one "
+        "document present) -- safe_dump never emits a trailing '...' "
+        "itself, so a raw write is needed to exercise the exact token, "
+        "but this case must keep resolving to whatever a full parse "
+        "actually produces ('GE-1'), NOT decline outright: a "
+        "single-document file merely terminated by '...' is not the "
+        "malformed multi-part shape under test in the three cases above. "
+        "(Verified empirically: yaml.safe_load('id: GE-1\\n...\\n') == "
+        "{'id': 'GE-1'}, no raise.)",
+    ),
+    # --- precision anchors: '...' that is NOT a document-boundary token
+    # at all must keep resolving exactly as before -- a fix for the H-4
+    # gap above must not start declining on every '...' substring it sees.
+    # ---
+    _Case(
+        "dots_in_quoted_scalar",
+        lambda p: _write_raw(p, 'id: "a...b"\n'),
+        "a double-quoted scalar containing an embedded '...' is not a "
+        "document-boundary token at all -- it is ordinary scalar content "
+        "inside quotes; safe_dump's default representer only ever emits "
+        "single-quoted scalars, so a raw write is needed to exercise "
+        "this exact double-quoted spelling. Must keep resolving to the "
+        "literal string 'a...b', matching a full parse exactly.",
+    ),
+    _Case(
+        "dots_indented_continuation_not_separator",
+        lambda p: _write_raw(p, "id: GE-1\n  ...\n"),
+        "an INDENTED '...' is a continuation line of the plain scalar "
+        "'id' value under YAML's line-folding rule, not a document "
+        "boundary (a real '...' boundary is only ever legal at column "
+        "0); safe_dump never folds a scalar across an indented "
+        "continuation line, so a raw write exercises the exact shape. A "
+        "full parse folds this to {'id': 'GE-1 ...'} -- the fast path "
+        "must keep declining here via the PRE-EXISTING "
+        "_plain_scalar_has_continuation check (this is a precision "
+        "anchor for that already-shipped logic, not a new decline path), "
+        "and _read_yaml_id's full-parse fallback must still land on "
+        "'GE-1 ...', matching the oracle.",
+    ),
+    _Case("dots_mid_value", lambda p: _write_dumped(p, "GE-1...suffix"), None),
+    # regression/precision anchor: '...' embedded MID-VALUE in a plain
+    # scalar (not on its own line) is ordinary scalar content, never a
+    # document-boundary token -- must keep resolving to the literal
+    # string 'GE-1...suffix', matching a full parse exactly.
 ]
 
 
@@ -505,6 +623,19 @@ class TestFastPathAgreesWithFullParse(unittest.TestCase):
         case, the BOM case, the CRLF case, and the trailing-whitespace case
         are expected to already PASS -- they are regression anchors, not
         red targets; a correct fix must not break them.
+
+        H-4 ADDENDUM (2026-08-25): doc_end_dots_between,
+        doc_end_trailing_space, and doc_end_trailing_tab are RED today --
+        the fast path does not recognize a bare '...' document-end marker
+        as a boundary at all, so it fabricates a claim from whatever
+        top-level 'id:' line follows one, where a full parse raises
+        (ParserError / ScannerError, no usable claim). doc_end_last_line,
+        dots_in_quoted_scalar, dots_indented_continuation_not_separator,
+        and dots_mid_value are expected to already PASS -- precision
+        anchors proving the fix must decline ONLY on a genuine '...'
+        boundary token, never on '...' appearing inside a scalar,
+        mid-value, on an indented continuation line, or as a legal
+        single-document terminator.
         """
         for case in _CASES:
             with self.subTest(case=case.name):
@@ -620,6 +751,83 @@ class TestFastPathDivergenceHidesARealCollision(unittest.TestCase):
             msg=(
                 f"Finding must name BOTH claimant paths. Expected {expected_paths}, "
                 f"got {actual_paths}."
+            ),
+        )
+
+    def test_doc_end_marker_divergence_does_not_manufacture_a_collision(self):
+        # covers: GE-122a-1
+        """AC-1 (bug-fix regression, collision level, H-4): the actual
+        operator-facing harm named in the bug report -- not merely that
+        `_read_yaml_id` resolves a "..." document-end stream wrongly, but
+        that doing so FABRICATES A COLLISION against a real, unrelated
+        record that happens to share the same fabricated id.
+
+        Build a minimal on-disk acceptance-criteria namespace with:
+          - `legit-ge500.yaml`: a genuine, well-formed record declaring
+            `id: GE-500`.
+          - `malformed-doc-end.yaml`: an unparsable multi-part stream
+            (`"id: GE-1\\n...\\nid: GE-500\\n"` -- a document-end marker
+            followed by a second mapping, which a full yaml.safe_load
+            rejects with ParserError) that nonetheless happens to contain
+            the text "id: GE-500" after its "..." line.
+
+        Per this module's own stated contract ("a file whose id cannot be
+        determined cannot be said to have claimed a number"), the
+        malformed file must contribute NO claim at all -- so this
+        namespace must report a clean pass with NO finding naming
+        'GE-500', because only one genuine claimant (legit-ge500.yaml)
+        exists.
+
+        FAILS TODAY: the fast path does not recognize a bare '...' line as
+        a document boundary, so it skips it as ordinary text and returns
+        the LAST top-level 'id:' line it sees in malformed-doc-end.yaml
+        ('GE-500') as a real claim -- manufacturing a phantom collision
+        against legit-ge500.yaml that an operator cannot resolve, because
+        nothing is actually wrong with the legitimate file.
+        """
+        ac_root = self.root / "docs" / "acceptance-criteria" / "fixture-component"
+        path_legit = ac_root / "legit-ge500.yaml"
+        path_malformed = ac_root / "malformed-doc-end.yaml"
+        ac_root.mkdir(parents=True, exist_ok=True)
+        path_legit.write_text(
+            "id: GE-500\ntitle: Legitimate GE-500 record\nlevel: L2\n", encoding="utf-8"
+        )
+        path_malformed.write_text("id: GE-1\n...\nid: GE-500\n", encoding="utf-8")
+
+        verdict = _entry.run_uniqueness_pass(self.root)
+
+        self.assertIn(
+            _NS_AC, verdict.namespaces, msg="Verdict is missing the acceptance-criteria namespace entirely."
+        )
+        ac_verdict = verdict.namespaces[_NS_AC]
+        self.assertEqual(
+            ac_verdict.inspected_count,
+            2,
+            msg=(
+                "Both files must actually be walked (inspected_count == 2); "
+                f"got {ac_verdict.inspected_count}."
+            ),
+        )
+        finding_numbers = [str(f.number) for f in ac_verdict.findings]
+        self.assertNotIn(
+            "GE-500",
+            finding_numbers,
+            msg=(
+                "The unparsable '...'-containing file must contribute NO claim, "
+                "so 'GE-500' must not appear as a contested number -- but it "
+                f"does: {ac_verdict.findings}. This is the fabricated collision "
+                "the bug report describes: an operator would see a collision "
+                "on GE-500 they cannot resolve, since legit-ge500.yaml is "
+                "genuinely fine."
+            ),
+        )
+        self.assertTrue(
+            ac_verdict.passed,
+            msg=(
+                "Exactly one genuine claimant of 'GE-500' exists "
+                "(legit-ge500.yaml); the malformed file must contribute no "
+                f"claim, so this namespace must pass cleanly. Findings: "
+                f"{ac_verdict.findings}."
             ),
         )
 

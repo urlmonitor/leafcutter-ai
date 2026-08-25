@@ -242,6 +242,112 @@ scanner already emits. The `unresolvable_namespaces` field added for KI-CG-7
 already carries the information; this is only about surfacing it at the point of
 failure.
 
+## KI-CG-9 — THE UNIQUENESS PASS IS REGISTERED NOWHERE AND HAS NEVER RUN
+
+**Severity: critical. Open. This is the finding that reframes the whole epic.**
+
+Found in review round six, by the first reviewer to test the gate *as deployed*
+rather than by invoking it from the source tree.
+
+```
+grep "check_identifier_uniqueness" templates/scripts/commit_guardian/commit_guardian.json  -> 0
+grep "check_identifier_uniqueness" .pre-commit-config.yaml                                 -> 0
+grep -rl across every .json / .yaml / .yml / .js / .toml in the repo
+    -> docs/acceptance-criteria/.../GE-122a-1.yaml   (the AC that specifies it)
+    -> tickets/.../.pending/adr_handoff.json         (a pending handoff)
+       nothing else
+```
+
+No pre-commit hook invokes it. No CI workflow invokes it. The one registered
+hook with a similar name, `check-decision-number-uniqueness`, runs a **different
+script** (`check_adr_collision.py`).
+
+**Six review rounds and five fix commits hardened a `main()` that no runner
+calls.** The commit immediately before this one is titled *"the fail-closed
+contract was never wired to the exit code"* — and nothing reads that exit code.
+
+The epic's own `Master_Plan.md` named this outcome in advance:
+
+> The trap this epic is most likely to fall into: **a guard that is built,
+> tested green, and registered nowhere.**
+
+and its Success Criteria require *"one whole-collection uniqueness pass,
+**registered in `commit_guardian.json`** and reachable through its production
+entry point — not a second inert detector."* **That criterion is not met.** The
+epic was commissioned because three whole-collection detectors were already
+registered nowhere. It has produced a fourth.
+
+**How six rounds missed it.** Every round verified behaviour by importing the
+module or running the script directly. Not one asked what invokes it in
+production. Each round's verification was accurate and none of them addressed
+the question. The register's own recurring lesson — *a signal computed correctly
+and then not consumed* — applied to the entire component, and the reviews
+inherited the blind spot from the thing they were reviewing.
+
+**Do not register it in the same change that ships it.** See **KI-BO-4** — doing
+so today makes the package uninstallable. Required order: scaffold the missing
+namespace roots, then register, then re-run the deployed-consumer test.
+
+## KI-CG-10 — the unattributed backlog count is discarded in deployment
+
+**Severity: medium. Open.**
+
+GE-122a-1-i requires a visible count of reported-but-unattributed collisions,
+on the stated grounds that *"a visible count is what makes the backlog shrink."*
+Run directly, the gate emits it:
+
+```
+[check_identifier_uniqueness] 1 reported-but-unattributed contested number(s)
+  with no claimant in the current change set (not blocking)
+```
+
+Under `pre-commit`, a **passing** hook's stdout is discarded, and the generated
+config sets `verbose: true` on no hook. So on the non-blocking path — the only
+path this message exists for — the operator never sees it.
+
+Same shape as **KI-CG-7**, one layer further out: computed correctly, then not
+consumed. Fix by setting `verbose: true` on this hook's registration when
+**KI-CG-9** is addressed.
+
+## KI-CG-11 — `main()` derives the root from `Path.cwd()`
+
+**Severity: medium. Open.**
+
+`check_identifier_uniqueness.py`'s `main()` uses `Path.cwd()`. The package's
+canonical `find_project_root()` (git-toplevel first) sits unused in the same
+directory as `_resolve_root.py`, which 27 sibling files already import.
+
+Under `pre-commit` the cwd happens to be the repo root, so it works **by luck**.
+From any nested directory it does not:
+
+```
+$ env --chdir=<consumer>/docs python3 .../check_identifier_uniqueness.py
+BLOCKING: ... acceptance-criteria, decisions, diagrams, work-items      exit 1
+```
+
+All four namespaces unresolvable, so with the KI-CG-7 fail-closed fix in place
+it hard-blocks. Any agent or manual invocation from a subdirectory is affected.
+Adopt the shared resolver.
+
+## KI-CG-12 — `check_adr_collision.py` blocks any repo without `origin/main`
+
+**Severity: high. Open, and live on `main` today — not introduced by this epic.**
+
+This hook IS registered and required. It reads the decision-number sequence from
+`origin/main` and fails closed when that ref does not exist:
+
+```
+[check_adr_collision] BLOCKED -- could not read the decision-number sequence:
+  could not read the decision sequence on 'origin/main' (git ls-tree exited 128):
+  fatal: Not a valid object name origin/main
+[check_adr_collision] Uniqueness was not established, so this commit cannot proceed.
+```
+
+A `git init` repository has no `origin/main`. Every ADR-touching commit in any
+repo that is not a clone with a `main` branch is blocked. Found while building a
+fresh consumer install to test **KI-CG-9**; worth its own ticket independent of
+this epic.
+
 ## Fixed, recorded for context
 
 Two defects in this area were found and fixed during the same drive; they are
@@ -265,6 +371,20 @@ listed here only so the history is legible, and are **not** open:
   cannot decide — declining is always safe, answering wrongly is not. The
   performance win is intact: 3091 of 3092 real files still take the fast path,
   0.20s.
+- **The fast path answered wrongly on YAML's `...` document-end token** (found
+  in round 6). Round 5 added `_is_document_separator_line` so the fast path would
+  decline on a multi-document stream, and taught it only `---`. `...` is the
+  grammatical sibling in the same YAML production, so `"id: GE-1\n...\nid: GE-500"`
+  — a file `safe_load` refuses to parse at all — returned `GE-500` and
+  manufactured a phantom collision against a legitimate record, one the operator
+  could not resolve because nothing was wrong with the file they would inspect.
+  The round-5 fix's own docstring claimed it declined "on ANY shape it cannot
+  decide"; the equivalence table had a `---` case and zero mention of `...`, so
+  the "0 mismatches over 3092 files" verification was true only inside a blind
+  spot it shared with the fix. Fixed via a shared `_is_document_boundary_token`
+  covering both tokens. Note the boundary: a **lone trailing** `...` is legal
+  YAML terminating one document and must keep resolving — determined empirically
+  rather than assumed.
 - **Two lifecycle folders naming the same directory produced a phantom
   self-collision** (found in round 4). A trailing slash, a `./` prefix or a `..`
   round-trip each passed the containment check independently, so one real ticket
