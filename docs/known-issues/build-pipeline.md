@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-25
 components:
   - build_pipeline
 related_docs:
@@ -120,13 +120,65 @@ is also easy to mistake for another author's work. Restore with
 
 ---
 
-### KI-BP-003 — A hook deployed into the self-hosted workspace cannot find `config/doc_types.json` and hard-crashes
+### KI-BP-003 — `config/doc_types.json` is never deployed alongside the hooks that read it, so `check-doc-frontmatter` hard-crashes in the self-hosted workspace and in every adopter worktree
 
-- **Severity:** high
+- **Severity:** blocker
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 3
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** deploy layout vs `templates/scripts/commit_guardian/doc_type_validators.py:49` (`_find_doc_types_json`)
+
+**Second occurrence, 2026-08-19 — reported from a consumer install, and it is worse there
+than in the self-hosted workspace.** DIAGraph (`roche-sandbox/dia-graph`, pin `54356a92`)
+hits the identical `FileNotFoundError` inside **any git worktree**. In their deployed
+layout the only candidate that ever resolves is `<repo>/leafcutter/config/doc_types.json`
+— the file inside the submodule — and in a worktree `leafcutter/` is an empty directory
+(submodule contents are not populated, and they additionally gitignore it). Confirmed by
+contrast: the main checkout resolves and proceeds (then hits KI-CG-008); the worktree
+raises.
+
+**Third occurrence, 2026-08-25 — and it contradicts the second on exactly one point.** A
+further report describes the same unhandled `FileNotFoundError` but states it fires **on
+`main` as well**, not only inside a worktree. That is directly at odds with the
+"main resolves, worktree raises" contrast recorded above, and the disagreement is left
+open here deliberately rather than resolved by picking the more recent account: the two
+reports may simply be describing different deployed layouts, which is the whole substance
+of this issue.
+
+Only one thing distinguishes them, and it is cheap. In the failing checkout, run the
+ancestor walk and print which candidate resolves:
+
+```bash
+python -c "import sys; sys.path.insert(0, '.leafcutter/scripts/commit_guardian'); import doc_type_validators as d; print(d._find_doc_types_json())"
+```
+
+If it names a path that exists, the layout resolves and any crash is a different defect
+(likely KI-CG-008). If it names a path that does not exist, this issue is live on that
+checkout. Whoever reproduces next should paste that one line into this entry and delete
+this paragraph — do **not** widen the title to claim `main` is affected until it does,
+since the deploy-layout fix below is scoped by which candidate actually resolves.
+
+Raised to **blocker** on that evidence. This is not an edge case reachable only by
+self-hosting: leafcutter ships a `/feature` skill and a `worktree-agent` whose whole job is
+to create worktrees, and `building-epics` drives epics inside them. The hook is broken by
+the package's own recommended workflow, for every adopter, and their standing workaround is
+`SKIP=check-doc-frontmatter`.
+
+**A concrete fix the reporter proposes, and it is the right one.** Emit the config into the
+deployed tree at build time. `.leafcutter/config/` already exists and is git-tracked in a
+consumer install (it holds `commit_guardian/` and `feedback_categories.yaml`), so copying
+`config/doc_types.json` → `.leafcutter/config/doc_types.json` makes the **existing** ancestor
+walk succeed at the `.leafcutter/` level: no change to `_find_doc_types_json()`, and it works
+in worktrees because `.leafcutter/` is committed. Deploy `diagram_types.json` in the same
+phase (see KI-CG-002).
+
+**Masking trap — this workspace looks fixed and is not.** `/home/henzeh/projects/leafcutter/.leafcutter/config/`
+currently contains `doc_types.json` and `diagram_types.json`, so the walk resolves here and
+the hook passes. Neither file is deployed by any build phase: `grep -n "doc_types.json"
+scripts/build_phases.py scripts/build.py` returns **nothing**. They were placed by hand, and
+`.leafcutter/` is gitignored, so nothing records that. Any local verdict taken from this
+workspace is therefore vacuous for the defect. Verify against a freshly-built target, or
+against a consumer install.
 
 **Symptom.** `check-doc-frontmatter` aborts with an unhandled `FileNotFoundError` naming
 `<root>/.leafcutter/scripts/commit_guardian/config/doc_types.json`. The hook is deployed;
@@ -507,3 +559,97 @@ workspace working.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
 from the source you are reading), in its stale form — the deployed tree holds an older
 version of something the source has moved on from.
+---
+
+### KI-BP-009 — `.claude/skills/` is symlinked wholesale to the generated tree, so an adopter's own skills have nowhere to live and `--clean` targets them
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** the shim-install step (`scripts/build.py` `_install_shims`) ·
+  `scripts/build_phases.py:2820-2825` (`_MANAGED_ARTIFACT_DIRS`) and `:2828-2880`
+  (`clean_stale_artifacts`) · `scripts/build.py:1202-1236` (`_build_source_manifests`)
+- **Reported by:** adopter repo DIAGraph (`roche-sandbox/dia-graph`), against pin `54356a92`
+
+**Symptom.** `build.py` installs `.claude/skills` as a **symlink into the package's own
+output tree**:
+
+```text
+.claude/agents  -> ../.leafcutter/agents
+.claude/hooks   -> ../.leafcutter/hooks
+.claude/skills  -> ../.leafcutter/skills
+```
+
+Claude Code discovers project skills only at `.claude/skills/`. Because leafcutter owns that
+entire directory, an adopter's own skills have **no location that is both discoverable and
+outside the generated tree**. The only way to have a working project-local skill is to put
+it somewhere the package documents as build output. DIAGraph did exactly that — four
+adopter-owned skills (`prod-deploy`, `create-slides`, `diagraph-mcp`, `gen-ui-library`) live
+in `.leafcutter/skills/` and exist in no `templates/skills/` anywhere.
+
+**Why that placement is unsafe.** `clean_stale_artifacts` iterates `<target>/.claude/skills/`
+— following the symlink into `.leafcutter/skills/` — and removes anything whose base name is
+absent from the manifest:
+
+```python
+for item in sorted(managed_dir.iterdir()):
+    if item.name not in expected_names:
+        print(f"Removing stale artifact: {item}")
+        if item.is_dir() and not item.is_symlink():
+            _shutil.rmtree(item)
+```
+
+`_build_source_manifests` populates `skills` from `templates/skills/` subdirectory names
+only, so every adopter skill matches the removal condition and is a real directory, not a
+symlink — the `rmtree` branch. `--clean` should therefore delete all four.
+
+**Confidence.** Code reading, **not empirically confirmed** — the reporter declined to run
+it, and rightly: `clean_stale_artifacts` takes no `dry_run` parameter and `--clean`
+(`build.py:1476`, dispatched at `:1684-1685`) has no dry-run path, so the only way to observe
+the behaviour is to perform it. Confirm on a scratch copy before treating the mechanism as
+settled. **The placement problem stands regardless of how the deletion question resolves.**
+
+Mitigating factor: those files are git-tracked in the adopter repo, so a deletion shows up in
+`git status` rather than vanishing. That is the only thing separating this from their
+`site/middleware.ts` incident, where an untracked file disappeared silently and left
+production ungated for two weeks.
+
+**A second defect in the same function, found while verifying.** `_MANAGED_ARTIFACT_DIRS`
+maps `"workflows"` → `".claude/workflows"`, but the value is joined onto `claude_dir` (which
+is already `<target>/.claude`), producing `<target>/.claude/.claude/workflows`. That never
+exists, so the loop `continue`s and clean-mode has **never** cleaned workflows. The typo is
+currently load-bearing: `_build_source_manifests` returns no `"workflows"` key at all, so
+`expected_names` would be the empty set and a corrected path would delete **every** deployed
+workflow on the first `--clean`. Fix both halves together or neither.
+
+**Confidentiality angle worth flagging.** `prod-deploy/SKILL.md` in the reporting repo holds
+Roche sandbox infrastructure detail — subscription name, ACR name, Container App names,
+FQDNs. Leafcutter ships an `add-skill-to-package` skill whose stated purpose is promoting
+project-local skills *into* the shared package. Run against that skill, it would publish
+that detail into a repo owned outside the adopter. Adopter skills need a home that is
+structurally outside the promotion path, not merely one nobody has promoted yet.
+
+**The concept already exists in the code; the layout contradicts it.**
+`build_phases.py:1930` computes `project_skills_dir = target_root / ".claude" / "skills"` and
+`:2020` uses it as `in_project = (project_skills_dir / skill_id).exists()` to decide whether
+a skill is project-local. Under the symlink that predicate can never distinguish anything —
+every package skill is "project-local" and every project skill is inside the package output.
+
+**Fix direction.** Symlink **per skill** rather than symlinking the parent. `.claude/skills/`
+becomes a real directory holding one symlink per package-provided skill; `clean_stale_artifacts`
+then only removes symlinks it created, and adopter directories are structurally untouchable
+rather than protected by a list someone has to maintain. It also makes the `in_project`
+predicate at `:2020` mean what it says.
+
+Smaller fallback if per-skill symlinking is too large: have `clean_stale_artifacts` read an
+allowlist (e.g. `skills_config.json` → `project.owned_skills`) and never remove listed names.
+That is strictly weaker — it protects skills someone remembered to declare — but it is a
+same-day change.
+
+Either way, give `--clean` a dry-run path. A destructive mode whose only observation method
+is to run it destructively cannot be verified by the people most at risk from it.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2, in its ownership form: the
+deployed tree and the adopter's tree are the same directory, so the package cannot tell its
+own output from someone else's source.
