@@ -1,0 +1,265 @@
+id: BP-900h-5-ii
+components:
+  - build_pipeline
+title: "Every executable the package deploys is started in the consumer install, not only the ones a registry names"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+criteria: |
+  Given the consumer-layout install of BP-900h-4 and the three-way outcome of BP-900h-5,
+  And the set of executables the build places into that install — DERIVED by walking the
+    deployed output root itself, and NOT filtered to the entries any registry declares,
+  When each of those executables is started in a fresh operating-system process launched
+    from the deployed layout, with the package's source tree absent from the interpreter's
+    module search path,
+  Then each one reaches its entry point,
+  And an executable that instead stops before its entry point because a module, helper, or
+    data file it needs is not present in the deployed layout is recorded as unable to run —
+    the same third category BP-900h-5 establishes, never as a failure of the input — and is
+    named together with the dependency it could not resolve and the deployed location it
+    looked in,
+  And the job's conclusion is failing when any deployed executable is unable to start, with
+    the same force as when a registered guardrail is unable to run,
+  And the exercised set is derived from the deployed tree, so an executable deployed
+    tomorrow is started tomorrow without anyone editing a list — demonstrated by deploying a
+    new executable whose dependency is withheld and requiring the job to go red with no
+    change to the harness,
+  And the set is explicitly NOT narrowed to the guardrail registry, because the executable
+    an adopter runs from the command line and the helper another deployed executable imports
+    are both shipped and neither is registered anywhere the harness could read,
+  And the proof is that the executable STARTS, not that its file is present: asserting the
+    file exists in the deployed tree does not satisfy this criterion, and neither does
+    importing the module from the package's source tree, which contains every sibling by
+    construction and is therefore structurally incapable of failing,
+  And the proof is a genuinely cold process: re-importing a module inside an interpreter
+    that has already imported it does not satisfy the fresh-process clause, because it
+    re-executes inside an already-populated namespace and cannot observe a first-import
+    failure,
+  And an executable the harness declines to start — because starting it would do real work,
+    or because it needs arguments or environment the harness cannot supply — is reported as
+    not exercised, with the reason, and counted against the derived set, so the number
+    started plus the number reported unexercised equals the number deployed and a silent
+    skip cannot be mistaken for a pass,
+  And adding a named module to the deploy declaration does not satisfy this criterion: the
+    harness must be shown to go red on a tree where a dependency of an already-deployed
+    executable is withheld, whichever dependency that is.
+
+  Because on 2026-08-25 an adopter running the AC-store schema validator from a genuine
+  consumer install got an unhandled import failure naming a helper module. The validator
+  itself IS deployed — the deploy list was corrected for it — and two modules it imports at
+  module scope are not, so the executable ships and cannot start. That is the fifth
+  occurrence of one failure mode: four other modules were each added to the same
+  hand-maintained deploy list after each one shipped broken, and several of that list's
+  entries now carry a comment explaining why that particular module must not be forgotten.
+  A list that needs a warning per entry is not a mechanism; every prior fix was an entry,
+  and the entry after this one is already unwritten. Every existing test imports these
+  modules from the source tree, where the siblings resolve by construction, which is why all
+  five occurrences were green until an adopter ran the command.
+depends_on:
+  - BP-900h-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the consumer-layout install the executables are started inside. Do not stand up a second fixture; h-5 already invokes guardrails in this one and this AC widens the set it invokes."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-006 carries the verbatim reproduction and the four-prior-occurrences history, and states the rule this AC encodes: treat adding the module to the deploy list as a fix for the instance, never for the defect."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: describes
+    status: exists
+    relevance: "The deployed executable that cannot start. Note it IS deployed today — the register is stale on that point — so an AC written around 'this file is missing' would already be satisfied while the adopter's command still fails."
+  - path: scripts/ac_store/_ac_components.py
+    relationship: describes
+    status: exists
+    relevance: "Imported at module scope by the validator and absent from the deployed tree. One of the two live instances; named as the regression set the harness must catch, not as the deliverable."
+  - path: scripts/ac_store/_component_migration_map.py
+    relationship: describes
+    status: exists
+    relevance: "The second live instance, and the same module BP-900g-8's criteria named at HEAD on 2026-08-17. Still absent a week later, which is the evidence that a specified-but-unbuilt closure does not stop the next occurrence."
+  - path: scripts/build_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the hand-maintained deploy list and its per-entry warning comments. Read to size the remediation set; this AC does not ask for the list to be edited, it asks for a proof the list cannot pass by being edited."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY, and the AC most easily confused with this one. g-8 is the BUILD-side derived import closure: it makes the build refuse to ship an incomplete tree, and its own cold-import entry exercises one named script. This AC is the INSTALL-side sweep over every deployed executable, with no name in it. They fail independently — a static closure cannot see a dependency it cannot resolve statically, and a startup sweep cannot tell the author which declaration was forgotten."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-9.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY. g-9 fails the build when a DECLARED entry's source is missing. It cannot see this defect: the two helpers were never declared, so there is no entry for it to check — the same reason g-8's notes give for keeping the two separate."
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Carries the consumer-simulation job. The startup sweep runs as a step here and its non-zero conclusion must fail the job."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: criterion, reachability with must_block, real_artifact, deployed — at the four-angle cap."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Its rule that new hook and gate dependencies must be in the build deploy-manifest is the prose form of this defect, written after an earlier occurrence. The rule was written down and the fifth occurrence shipped anyway — which is the argument for a proof rather than another reminder."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "1 — one startup-sweep step in the consumer-simulation job, iterating a derived set. Four hand-written per-executable steps do not satisfy it; the count must come from the deployed tree."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/portability/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-executable startup record the sweep emits, one per executable in the derived set. Recording an outcome per executable — including the not-exercised ones — is what makes the accounting clause checkable; an aggregate count cannot distinguish a clean sweep from a sweep that skipped what it could not start."
+    required:
+      - executable
+      - outcome
+      - unresolved_dependency
+      - reason
+    properties:
+      executable:
+        type: string
+        description: "The deployed path of the executable that was started, so a failure names a thing the adopter can run themselves."
+      outcome:
+        type: string
+        description: "One of: started, unable_to_run, or not_exercised. Three values, not two — collapsing unable_to_run into a generic failure reproduces the misdiagnosis BP-900h-5 exists against, and collapsing not_exercised into started is the vacuous pass this AC's accounting clause forbids."
+      unresolved_dependency:
+        type: string
+        description: "For an unable_to_run outcome: the module, helper, or data file that could not be resolved, and the deployed location searched. Null otherwise. This is the field that turns a red sweep into a remediation list."
+      reason:
+        type: string
+        description: "For a not_exercised outcome: why the harness declined to start it. Null otherwise. Required so that declining to exercise something is a visible decision rather than an absence."
+  constraints:
+    - "DO NOT SATISFY THIS BY DEPLOYING THE TWO HELPERS. That is the fix that has been applied four times already, each time with a warning comment attached, and the fifth occurrence is the subject of this AC. Deploying them is necessary and is not sufficient; the sweep must independently go red on a tree where any dependency of any already-deployed executable is withheld."
+    - "THE SET IS DERIVED FROM THE DEPLOYED TREE, NOT FROM A REGISTRY AND NOT FROM A LIST. The executable in the live instance is invoked by adopters from the command line and by other guardrails as a subprocess; it is in no hook registry, so a set derived from the registry — which is what BP-900h-5 derives — misses it entirely. Walk the deployed output root. A set read from any list, map, allowlist or registry does not satisfy this, and the newly-deployed-executable control is the entry that proves which one was built."
+    - "A GENUINELY FRESH PROCESS, WITH THE SOURCE TREE OFF THE MODULE SEARCH PATH. Both halves are load-bearing and both have burned this repository before. Re-importing inside a live interpreter re-executes in an already-populated namespace and cannot observe a first-import failure; leaving the package source tree importable means every sibling resolves and the sweep is green on the install that shipped broken."
+    - "ACCOUNT FOR EVERY EXECUTABLE, INCLUDING THE ONES YOU DECLINE TO START. Some deployed executables do real work on invocation or need arguments the harness cannot supply. Skipping them is legitimate; skipping them silently is not, because a sweep that quietly excludes everything it found difficult is a success-shaped result from a run that checked almost nothing. Started plus not-exercised must equal the size of the derived set, asserted."
+    - "STARTING MUST NOT DO THE WORK. Prefer a mode that loads the executable and reaches its entry point without performing its side effects, and state in the sign-off which mode was used for each shape of executable. A sweep that runs the real work of every deployed command inside CI will be turned off within a month, and a turned-off sweep is the fifth occurrence again."
+    - "UNABLE-TO-RUN IS NOT FAILED. This AC inherits BP-900h-5's three-way outcome and must not collapse it. An executable that cannot start and an executable that ran and rejected its input both exit non-zero, so an exit-code-keyed classifier records the wrong one and points the adopter at their own input — which is exactly how the live instance was first reported."
+    - "ENUMERATE THE PRE-EXISTING SET IN THE SAME CHANGE. Turning this sweep on will surface every deployed executable that cannot currently start, not only the one in the register. That is the intended effect. The full set must be listed in the sign-off and each entry resolved or explicitly deferred with a date; parking them behind a skip list reintroduces the hand-maintained list this AC exists to remove."
+delivers_to:
+  agent: python-coder
+  contract: "A startup sweep over a set of deployed executables derived by walking the consumer install's deployed output root: each started in a fresh process with the package source tree off the module search path, each recorded as started, unable-to-run with the unresolved dependency named, or not-exercised with a reason, and a job conclusion that fails when any entry is unable to run."
+expects_from:
+  ac_id: BP-900h-5
+  contract: "The three-way per-entry outcome — passed, failed, unable-to-run — and the job conclusion that fails when any entry is unable to run. This AC reuses that outcome vocabulary for a wider set rather than inventing a second one."
+test_spec:
+  - name: test_bp_900h_5_ii_every_deployed_executable_starts_in_the_consumer_install_and_the_set_is_derived_from_the_deployed_tree
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Inside the BP-900h-4 consumer-layout install, derive the executable set by walking the deployed output root and start each one, asserting the recorded outcome is started. THREE NON-VACUITY ASSERTIONS ARE MANDATORY, because a for-each over a nearly-empty set is the most likely way this passes while broken: assert the derived set is non-empty and equals the set of executables actually present in the deployed tree; assert it CONTAINS the AC-store schema validator, which is the 2026-08-25 instance and is in no guardrail registry, so a registry-derived set is caught here; and assert that started plus not-exercised equals the size of the derived set, with every not-exercised entry carrying a reason. This entry is expected to be RED at authoring time — the validator cannot currently start in a consumer install — and a green result before any implementation exists means the set is empty or the source tree is still importable."
+  - name: test_bp_900h_5_ii_withholding_a_dependency_of_an_already_deployed_executable_turns_the_sweep_red_through_its_real_ci_entry_point
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier, as a three-run sequence through the SAME subprocess command the CI job invokes — never by importing the sweep. (1) Healthy install: exit 0. (2) Delete one module that an already-deployed executable imports at module scope from the deployed tree and re-run: assert non-zero, assert that executable's recorded outcome is unable-to-run asserted BY VALUE and explicitly not equal to the failed category, and assert the record names the unresolved dependency and the location searched. (3) Restore and re-run: exit 0, which is what attributes the red in run 2 to the deletion rather than to a fixture that had already broken. Then assert the consumption half from the parsed .github/workflows/ci.yml: the step running the sweep carries that identical command and does not carry continue-on-error true. Both the unable-to-run and the failed categories exit non-zero, so an assertion on exit code alone is green on a harness that collapses them."
+  - name: test_bp_900h_5_ii_the_deployed_copy_is_started_in_a_cold_process_with_the_package_source_tree_off_the_module_search_path
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "THE ENTRY EVERY PRIOR OCCURRENCE WOULD HAVE PASSED, and the reason all five stayed green. Start the DEPLOYED copy of the AC-store schema validator in a genuinely fresh interpreter process whose module search path does not include the package source tree, and assert it reaches its entry point. Then assert the harness's own blindness controls, both of which are known to produce a false green here: re-importing the module inside an interpreter that has already imported it must NOT be used, and running the same assertion against the SOURCE tree copy must be shown to pass even on a broken deployed tree — capture that contrast explicitly so the test records why the source-tree form is worthless rather than merely avoiding it. Assert the interpreter's effective search path in the child process contains no path under the package checkout; a sweep launched with the package tree importable is green on the install an adopter cannot run."
+  - name: test_bp_900h_5_ii_an_executable_deployed_after_the_sweep_exists_is_swept_without_any_change_to_the_harness
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE DERIVED-NOT-ENUMERATED CONTROL, and the only entry a hand-maintained list of today's executables cannot pass — which matters because a list is exactly what four prior fixes produced. In the consumer install, place into the deployed output root a new executable that has never existed before, importing a helper that is deliberately NOT deployed, touching no test code and no harness source. Re-run the sweep and assert the new executable appears in the report with outcome unable-to-run and its unresolved helper named. Then deploy the helper and re-run: assert the outcome becomes started. Then remove both and re-run: assert the entry disappears from the report, so its appearance was derived from the tree rather than accumulated. Every other entry in this contract is green on a sweep that iterates the executables that exist today; this one is not."
+test_rationale: |
+  Five occurrences of one defect stayed green because every test imports these modules from
+  the source tree, where the siblings resolve by construction. That single fact determines
+  the shape of this whole contract: entry 3 exists to make the cold, source-tree-excluded
+  process an asserted property rather than an intention, and it deliberately captures the
+  source-tree contrast so the record shows WHY the cheaper form is worthless instead of
+  merely omitting it. A future author who reaches for a direct import will find the reason
+  written down next to the assertion.
+
+  Entry 4 is the entry that separates this AC from the four fixes that preceded it. Each of
+  those added a name to a list, and each list was complete on the day it was written. A
+  sweep that iterates the executables present today is indistinguishable from a correct one
+  for every input that exists now, and dies only when something new is deployed — which is
+  precisely the moment nobody is looking. Introducing an executable the harness cannot know
+  about, with the paired removal so its appearance is not a fixture artifact, is the only
+  construction that goes red on an enumeration.
+
+  Entry 2's three runs and its by-value outcome assertion carry the inherited three-way
+  verdict. An executable that cannot start and an executable that rejected its input both
+  exit non-zero; the live instance was first reported as the latter. A contract that asserts
+  only a non-zero result is satisfied by a harness that reproduces that misdiagnosis, and
+  the CI-consumption half is asserted from parsed YAML because a grep for the script name is
+  green on a step marked continue-on-error.
+
+  Entry 1's accounting assertion is not defensive padding. The likeliest way this ships
+  broken is not a wrong assertion but an almost-empty derived set: some executables need
+  arguments or do real work, declining to start them is legitimate, and a sweep that quietly
+  drops each awkward one produces a passing loop over what is left. Requiring started plus
+  not-exercised to equal the derived set, with a reason on every not-exercised entry, is
+  what makes the exclusions visible.
+
+  Angles: criterion, reachability, real_artifact, deployed — at the cap of four, with
+  must_block riding entry 2. failure is not charged separately; the withheld-dependency red
+  and its restore control live inside entry 2, where the production entry point already is.
+  boundary is not charged because the criterion names no range, count or limit.
+origin_agent: BrainCandy
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS AC ADDS THAT THE BRANCH DOES NOT ALREADY HAVE. BP-900g-8 already specifies the
+  build-side answer to this defect — a derived, transitive intra-package import closure that
+  fails the build, plus one cold-import check of one named script — and it named the very
+  module still missing today. It is approved and work_status: todo. So KI-BP-006's build-side
+  half is an unimplemented specification, and authoring a second build-side AC would add a
+  duplicate rather than a defence. Do not.
+
+  Two things the branch genuinely does not cover, and both are why the fifth occurrence
+  looks different from the first four:
+
+  FIRST, THE SET. BP-900h-5 is the only AC in the family that invokes anything in a consumer
+  install, and it derives its set from the guardrail registry. The executable that broke on
+  2026-08-25 is in no registry: adopters run it from the command line and other guardrails
+  shell out to it. A registry-derived set cannot see it, and neither can a closure that was
+  never built. The deployed tree itself is the only source of truth for what an adopter can
+  run.
+
+  SECOND, THE OBSERVABLE. BP-900h-4 asserts declaring files are PRESENT. The file in this
+  instance is present — the validator is deployed today, which is the point on which the
+  register is now stale. Presence and startability are different claims, and this branch has
+  been burned by the distinction before: a file copied to a path nothing invoked, and an
+  import that failed only on true first import. An AC written around "the file is missing"
+  would read as satisfied while the adopter's command still produces a traceback.
+
+  WHY THE INSTANCE IS NOT THE DELIVERABLE. Four modules were each added to the same
+  hand-maintained deploy list after each shipped broken, and several entries in that list now
+  carry a comment explaining why that particular module must not be forgotten. Those comments
+  are the evidence: a list that needs a warning per entry is a trap with annotations. The
+  sixth entry is already unwritten. The deliverable is a sweep the list cannot pass by being
+  edited, which is what entry 4 of the test contract enforces and nothing else does.
+
+  EXPECTED SIDE-EFFECT AT IMPLEMENTATION, FLAGGED NOT SOFTENED. Turning this on will surface
+  every deployed executable that cannot currently start, not only the one in the register,
+  and may turn the consumer-simulation job red on its first run. That is the intended effect.
+  The set must be enumerated and each entry resolved or explicitly deferred with a date.
+  Parking them behind a skip list would reintroduce, inside the very sweep built to remove
+  it, the hand-maintained list that is the defect.
