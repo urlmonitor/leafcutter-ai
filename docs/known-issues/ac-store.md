@@ -609,9 +609,26 @@ is indistinguishable from one that passes).
 **Symptom.** There are two AC validators and they enforce different rules.
 `scripts/ac_store/validate_ac_schema.py` checks the record against the schema. The
 required CI job runs `pre-commit run check-ac-schema`, which additionally enforces
-binding completeness, field preservation (ACS-500f-1) and derived-field rules such as
-`declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight section prescribes only the
-former. Running it and seeing `OK: all N AC YAML files are valid` therefore establishes
+binding completeness, field preservation (ACS-500f-1) and test-contract rules.
+`CLAUDE.md`'s pre-flight section prescribes only the former.
+
+**Correction, 2026-08-24 — the `declares_side_effect` example was wrong and has been
+removed from the sentence above.** This entry originally cited `declares_side_effect`
+(BO-2900g-2) as one of the extra rules the required gate enforces. It does not enforce it.
+`declares_side_effect` appears in exactly three places in the repo —
+`scripts/ac_store/generate_ticket_from_ac.py`, `config/ac_store_schema.json` and
+`config/agent_registry.json` — and in **zero** commit-guardian hooks;
+`scripts/commit_guardian/check_ac_schema.py` enforces pattern-bindings completeness,
+`implements_pattern` field-preservation and test-contract validation, and nothing else of
+that kind. The field is described in the schema and drives `user-surface-smoker` routing
+at ticket-generation time, but no gate requires or validates it.
+
+Recorded rather than quietly edited, because the wrong example did real work before it was
+caught: it was relayed verbatim into two agent briefs on 2026-08-24 as a reason to run the
+heavier gate, and an authoring agent checked it and found it false. A known-issue is read
+as settled fact, so a plausible-but-unverified example inside an otherwise correct entry
+propagates further than a wrong entry would — the entry's substance (two validators, real
+divergence, local pass does not predict CI) is accurate and unaffected. Running it and seeing `OK: all N AC YAML files are valid` therefore establishes
 much less than it appears to, and the gap is invisible because both are called "the
 schema validator" in conversation.
 

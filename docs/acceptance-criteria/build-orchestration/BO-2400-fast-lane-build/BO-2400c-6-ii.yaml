@@ -1,0 +1,91 @@
+id: BO-2400c-6-ii
+components:
+  - build_orchestration
+  - ac_store
+title: "A caller that supplies no record set still walks the tree correctly"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a caller that walks the acceptance-criteria tree without holding a record set of
+    its own — the standalone command-line and store-scanning callers,
+  When it walks the tree,
+  Then the walk builds the record set itself, as it always has, and returns the same
+    answer it returned before the consolidation,
+  And so reusing a caller-supplied record set is an option offered to callers that
+    already hold one, never an obligation placed on callers that do not.
+
+  Given every other caller of the same tree walk in the repository,
+  When the consolidation lands,
+  Then each of those callers has been examined in the same change and either supplies
+    the record set it already holds or is recorded as having none to supply,
+  And no caller is left silently paying a full re-read of the store inside a loop while
+    the defect is reported closed.
+depends_on: [BO-2400c-6]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: "The tree walk whose self-building path must be preserved for callers that pass no index."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-014's fix direction explicitly asks that the other call sites be checked in the same pass — the same re-read is paid by anything that walks the tree in a loop."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    tree_walk_optional_index:
+      type: object
+      description: "The record-index parameter on the tree walk is optional. When it is omitted the walk builds the index itself and behaves exactly as before; when it is supplied the walk uses it and performs no directory read of its own."
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Extending this signature triggers the repository's call-site audit rule: find every existing caller, decide for each whether it can supply an index, and land those updates in the same commit. A caller left on the old signature silently keeps the slow path, and the direct tests of the walk will not notice."
+    - "The no-index path must be covered by its own test. Without one, a change that makes the index mandatory passes the whole suite as long as every in-repo caller was updated, and breaks the standalone command surface."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400c-6
+  contract: "The optional record-index parameter on the tree walk."
+test_required: true
+test_spec:
+  - name: test_tree_walk_without_supplied_index_returns_the_same_answer
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Called with no record index against a temporary on-disk store, the tree walk builds its own index and returns the identical answer to the same walk given a prebuilt index."
+  - name: test_standalone_command_surface_still_resolves
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Run as a real subprocess with no caller-supplied index in play, the command surface that walks the tree returns its expected answer — proving the optional path is reachable from outside the resolver."
+test_rationale: |
+  Signature extensions in this repository have a documented failure mode: the function
+  is changed, its direct tests pass, and every real caller keeps using the old path.
+  Here the same mistake has a second face — making the new parameter effectively
+  required — which the in-repo suite would not catch once every in-repo caller supplies
+  one, while the standalone command surface breaks. The no-index test and the
+  subprocess test are cheap and cover both faces.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Small, but it is the difference between a fix and a fix with a hole in it. KI-BO-014
+  asks for the other call sites to be swept in the same pass; without a criterion
+  saying so, that sentence lives only in a known-issues entry that the implementing
+  agent may never open.

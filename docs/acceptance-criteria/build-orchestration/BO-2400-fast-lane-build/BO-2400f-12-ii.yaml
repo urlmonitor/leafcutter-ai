@@ -1,0 +1,113 @@
+id: BO-2400f-12-ii
+components:
+  - build_orchestration
+title: "The refusal is not a second readiness filter — a producible set is never refused"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a resolved connected build set every member of which declares source-and-test
+    work proved by a passing covering test,
+  When the run examines the set for producibility,
+  Then no refusal is issued and the run proceeds to claim the set and dispatch its
+    first build agent exactly as it did before this check existed.
+
+  Given a resolved set whose members are readiness draft or reviewed rather than
+    approved, and every member of which the roster can produce,
+  When the run examines the set,
+  Then it is not refused: pointing at the acceptance criterion is the go-ahead
+    (BO-2400f, BO-2400f-2), and this check reads only what a member declares it needs
+    made, never whether anyone has approved it, prioritised it, or documented it.
+
+  Given a resolved set whose members carry no explicit declaration either way — no
+    stated proof obligation and no stated producer,
+  When the run examines the set,
+  Then those members are treated as producible source-and-test work and the run
+    proceeds, so the check refuses only on a positive declaration the roster cannot
+    satisfy and an unannotated store keeps building.
+depends_on: [BO-2400f-12]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The proceed path is proved by the presence of the downstream dispatches in the recorded agent_calls, not by the absence of a refusal string."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_producibility_default:
+      type: object
+      description: "The producible predicate is positive-declaration-only: a member is unproducible when it declares a proof obligation or a producer the roster cannot satisfy. Absence of a declaration, and every readiness or priority value, resolve to producible."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "readiness, priority, req_status and status must not appear anywhere in the producibility decision. BO-2400f-2 makes selection readiness-agnostic; a check that refuses unapproved work re-introduces the approval gate the L1 explicitly removed, under a new name."
+    - "Default to producible on an absent declaration. Defaulting to unproducible would refuse most of the store: the majority of records predate these fields."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-12
+  contract: "The producibility predicate whose false-positive behaviour this criterion bounds."
+test_required: true
+test_spec:
+  - name: test_fully_producible_set_proceeds_to_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executed under the E2 harness with a set of ordinary code criteria, the run records the claim and test-writer dispatches and returns no refusal."
+  - name: test_draft_readiness_set_is_not_refused
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A set whose members are readiness draft, with an otherwise identical shape, produces the same dispatches as an approved set — the check does not read readiness."
+  - name: test_undeclared_members_default_to_producible
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Against an on-disk fixture store of records carrying neither a stated proof obligation nor a stated producer, the resolver's verdict lists no unproducible members."
+test_rationale: |
+  A refusal gate is trivially satisfiable by refusing more than it should, and the
+  failure is asymmetric: a false refusal costs one resolution and looks like caution,
+  so nobody files it, while the lane quietly stops building work it can build. These
+  three tests are the only thing standing between a correct gate and one that has
+  become a second approval filter. They must execute the lane and assert on the
+  presence of the downstream dispatches — asserting merely that no refusal string
+  appears is satisfied by a run that crashed.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The readiness scenario is deliberate and load-bearing. The lane's L1 promise says in
+  terms that a not-yet-approved acceptance criterion is still built, and BO-2400f-2
+  makes selection readiness-agnostic. A new pre-flight gate is the natural place for
+  an approval check to reappear by accident — it sits in the same code path, reads the
+  same records, and refusing unapproved work would look like prudence to a reviewer.
+  Writing it down as a criterion is cheaper than finding it later.
+
+  The default-producible scenario protects against the opposite over-reach. 87 not-done
+  records carry test_required: false today; the great majority of the store carries no
+  such field at all. A predicate that treats silence as a declaration would refuse
+  nearly everything, and would do it on the first run after the change, which is the
+  worst possible time to discover it.
