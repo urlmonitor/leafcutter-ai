@@ -1,0 +1,146 @@
+id: ACD-2100d-1
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: approved
+priority: medium
+title: "The installed copy of the route reaches the first user question exactly as the source copy does"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a project into which the route has been installed by running the installer
+    from the current source,
+  When a run is started in that project using the installed copy and a second run
+    is started in the source checkout using the source copy under the same starting
+    directory conditions,
+  Then both runs reach the same point -- the first question the route puts to the
+    user,
+  And neither run stops at a check performed before that point,
+  And the finding rests on what the two runs did rather than on any comparison of
+    the two files.
+depends_on: [ACD-2100d, ACD-2100a-5]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 states which copy runs where; this record is the behaviour that makes the two copies agree."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The three blockers this parity behaviour has to hold for."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The source-versus-deployed boundary: templates/ is the source and .leafcutter/ is build output."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The installer whose output this record exercises rather than inspects."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The deployed angle and the BP-811 case it cites -- an AC that asserted the copy tier and never the reachability tier is the exact mistake this record's last clause forbids."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Evidence must come from executing the deployed artifact in the deployed layout in a fresh process. A file diff, a checksum comparison or a build-manifest assertion is explicitly not evidence and does not satisfy this record."
+  - "The installer must be run into a temporary target rather than against a developer's own project, so the check is repeatable and leaves nothing behind."
+  - "Both runs must be started under the same directory conditions. The only variable is which copy is running -- ACD-2100a's behaviours are directory-sensitive and varying two things at once makes a failure unattributable."
+  - "Both runs must complete their startup path with no network available, so a transport failure in one run cannot be read as a parity difference."
+  - "This record must not restate what ACD-2100a, b or c require. Its subject is that the copy the user runs is the copy that does it; a child that reads as 'sibling behaviour X but in the deployed layout' duplicates coverage and splits one behaviour's evidence across two L1s."
+  - "Must satisfy the repository error-handling policy in any harness code that ships under scripts/ or unit_tests/."
+  - "Any dependency the deployed route needs at runtime must be in the build deploy manifest. A dependency that is not deployed raises at runtime while every source-tree test passes -- this repo has that failure twice over in CLAUDE.md."
+test_spec:
+  - name: test_installed_and_source_copies_both_reach_the_first_user_question
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: >-
+      The installer is run into a temporary target project; a run started there against
+      the installed copy and a run started in the source checkout against the source
+      copy, under identical starting directory conditions, both reach the first
+      question the route puts to the user.
+  - name: test_neither_copy_halts_at_a_check_before_the_first_question
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: >-
+      Neither run's recorded outcome is a halt at a startup check, and the assertion is
+      made against each run's own recorded outcome rather than against its exit code
+      alone.
+  - name: test_parity_finding_is_produced_by_running_both_copies_not_by_diffing_them
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "the installed route invoked in the temporary target project the way a consumer invokes it, in a fresh process"
+    description: >-
+      The deployed copy is invoked through the entry point a consumer actually uses, and
+      the run advances past the startup checks -- so a deployed artifact that is
+      byte-identical and still cannot run fails this test.
+test_rationale: >-
+  The deployed workflow is currently a different program from the source one -- it
+  carries no charter gate at all -- and nobody noticed because nothing compares their
+  behaviour. A test that diffs the two files would have caught that particular
+  divergence and will not catch the next one: a deployed artifact can be byte-identical
+  and still fail to run because a dependency was not copied, or because a path resolves
+  differently in the deployed layout. This repo has that failure twice over in CLAUDE.md,
+  and docs/testing/test-angles.md records BP-811 as the cleanest statement of it -- an AC
+  that asserted the copy tier and never the reachability tier. So the evidence has to be
+  the deployed artifact running in the deployed layout in a fresh process, invoked the
+  way a consumer invokes it.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100d-3
+    contract: "A repeatable harness that installs into a temporary target project and starts a run there against the installed copy, observing how far the run gets -- the measurement ACD-2100d-3 takes before and after an install."
+  - agent: documentation-expert
+    ac_id: ACD-2100d-4
+    contract: "The confirmed behaviour of the installed copy on the startup path, which the reference page states as fact rather than as an expectation."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE MOTIVATING FACT, verified by the PO on 2026-08-25: the deployed workflow at
+  leafcutter-ai/.leafcutter/workflows/plan-feature.js is STALE -- it carries no
+  charter gate at all. The installed copy and the source copy are therefore
+  observably different programs today, and nobody noticed because nothing compares
+  their behaviour.
+
+  THE LAST CLAUSE IS THE POINT OF THE RECORD. A test that diffs the two files, or
+  checks a build manifest, passes on a deployed artifact that is byte-identical and
+  still cannot run -- a missing dependency, a path that resolves differently in the
+  deployed layout, a support file that was not copied. This repo has that failure
+  twice over in CLAUDE.md ("New Hook / Gate Dependencies Must Be in the Build
+  Deploy-Manifest" and the deployed-layout no-op trap), both of which were invisible
+  to source-tree tests. Run the deployed artifact, in the deployed layout, in a
+  fresh process.
+
+  SAME STARTING DIRECTORY CONDITIONS matters because ACD-2100a's behaviours are
+  directory-sensitive. Vary one thing: which copy is running.
+
+  BOUNDARY WITH ITS SIBLINGS. This record does not restate what a, b or c require;
+  it requires that the copy the user runs is the copy that does it. If a child here
+  reads like "sibling behaviour X but in the deployed layout", it is duplicating
+  coverage and splitting the evidence for one behaviour across two L1s.
+
+  2026-08-25 (it-po): sized L because the deliverable is largely a harness that does not
+  exist yet -- install into a temporary target, start a run there, and observe how far
+  it got -- and that harness is what ACD-2100d-3 then reuses. SEQUENCING CAVEAT RAISED
+  TO THE USER: this record's Then clause ("both runs reach the first question") cannot
+  hold until ACD-2100a-3 and ACD-2100a-5 land, because the source copy halts at the
+  charter gate today. depends_on carries only [ACD-2100d], and the build sequencer reads
+  depends_on only (KI-ACD-015, open), so nothing stops this being scheduled first. The
+  it-po does not own depends_on and has not edited it; the recommended edit is to add
+  ACD-2100a-5 to this record's depends_on before the tree is approved.

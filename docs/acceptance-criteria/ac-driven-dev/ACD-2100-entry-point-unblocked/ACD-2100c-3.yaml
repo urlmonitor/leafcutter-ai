@@ -1,0 +1,151 @@
+id: ACD-2100c-3
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "A paused run picks up at the decision it was waiting on when the answer arrives"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run that has paused at a decision point with drafted work on disk and the
+    process no longer running,
+  When the route is started again in a new process supplying the person's answer
+    for that decision point,
+  Then the new run continues from that decision point rather than repeating the
+    steps before it,
+  And the drafted work present when it paused is the work the resumed run carries
+    forward unchanged,
+  And the answer supplied is the one applied to that decision,
+  And once the resumed run has moved past the decision point no record of it
+    waiting remains on disk.
+depends_on: [ACD-2100c, ACD-2100c-2]
+doc_links:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: planned
+    relevance: "The how-to authored by ACD-2100e-2 -- this is the behaviour it walks an operator through."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: implements
+    status: exists
+    relevance: "The resume contract; the route already accepts a supplied answer on re-entry."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005's fix direction -- 'persist a pause record and exit with a status that says awaiting input, and re-enter'."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The re-entry path that accepts a supplied answer and the gate resolution it feeds."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the resume substrate and the record lifecycle this behaviour completes."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "The steps before the decision point must not re-execute on resume. Re-running them is observable as duplicated or rewritten drafted work and is the failure this record exists to prevent."
+  - "The waiting record must be cleared as part of moving past the decision point, not on process exit. A record left behind makes the run look permanently paused to anything that lists waiting runs, and the next resume then re-applies an answer to a decision already made."
+  - "Clearing the record and applying the answer must not be separately observable in a way that leaves the run both resumed and still listed as waiting if the process dies between them; the later of the two must be the one that commits the run past the gate."
+  - "The supplied answer must reach the decision through the same evaluation ACD-2100c-4 governs -- resume must not be a second, unguarded way to answer a gate."
+  - "Must satisfy the repository error-handling policy: reading and removing the record are external I/O."
+  - "Resume must be safe to attempt when no record exists: it reports that there is nothing to resume rather than starting a fresh run under the old run's identity."
+test_spec:
+  - name: test_resume_in_a_new_process_continues_from_the_decision_point
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A run paused to disk and its process exited; a second process supplying the
+      person's answer continues from that decision point and the steps before it do not
+      re-execute -- observed from the resumed run's own record of the steps it ran.
+  - name: test_drafted_work_carried_forward_is_the_work_that_was_present_at_pause
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The drafted artifacts are compared byte-for-byte between the moment of pause and
+      the moment the resumed run moves past the gate; the resumed run carries the same
+      bytes forward.
+  - name: test_supplied_answer_is_the_one_applied_to_that_decision
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Two resumes of equivalent paused runs supplying different valid answers take
+      different observable branches -- so the answer is applied rather than a default.
+  - name: test_no_waiting_record_remains_after_the_resumed_run_passes_the_gate
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      After the resumed run moves past the decision point, a fresh process that lists
+      waiting runs does not list it -- the real writer's record consumed and cleared,
+      read back by the real reader.
+test_rationale: >-
+  A new process is part of the Given because resuming inside the same process proves
+  nothing about the record: the state is still in memory, and the interval between pause
+  and resume is a human one measured in hours. Without this record the pause is just a
+  slower discard -- a run can persist a perfectly good record and still restart from the
+  beginning on re-entry, redoing the drafting and losing what was reviewed, which is why
+  the "steps before it do not re-execute" assertion is separate from the byte comparison.
+  The two-different-answers test is what distinguishes an applied answer from a default
+  that happens to match. The cleared-record assertion is read by a second fresh process
+  rather than by inspecting the store path directly, because the failure that matters is
+  that the run still looks paused to whatever lists waiting runs.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100c-3-i
+    contract: "A resume path in which the supplied answer and the decision point the run is paused at are separate bindings, both available at the point the answer is applied -- so a mismatch between them is detectable rather than already collapsed."
+  - agent: documentation-expert
+    ac_id: ACD-2100e-2
+    contract: "The resume invocation and its observable outcomes -- resumed, nothing to resume, mismatched answer -- which the how-to walks an operator through."
+expects_from:
+  - ac_id: ACD-2100c-2
+    contract: "A durable pause record naming the run and the decision point it stopped at, present in the project's own store after the process exits and readable by a later process started from any working directory."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100c-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  WITHOUT THIS THE PAUSE IS JUST A SLOWER DISCARD. ACD-2100c-2 promises the work
+  survives; this is the behaviour that gets the person back to it. The two are
+  separable because a run can persist a perfectly good record and still restart from
+  the beginning on re-entry, redoing the drafting and losing what was reviewed.
+
+  A NEW PROCESS IS PART OF THE GIVEN. Resuming inside the same process proves
+  nothing about the record -- the state is still in memory. The interval between
+  pause and resume is a human one, measured in hours.
+
+  THE FOURTH CLAUSE PREVENTS A STUCK RUN. A record left behind after a successful
+  resume makes the run look permanently paused to anything that lists waiting runs,
+  and the next resume then re-applies an answer to a decision already made. Clearing
+  it is part of resuming.
+
+  THE MISMATCHED-ANSWER CASE IS ACD-2100c-3-i: an answer naming a different decision
+  point must not be applied to the one being waited on.
+
+  ADJACENT WORK: the dropped-`edit`-feedback fix on worktrees/pf-gate-fix (5a3eae6d)
+  touches what is carried across a gate answer. It does not cover resume-after-pause.
+
+  2026-08-25 (it-po): the it_requirement routing the supplied answer through
+  ACD-2100c-4's evaluation is the one most likely to be dropped. Resume is the obvious
+  place to build a second answer path -- the answer arrives as a parameter rather than
+  on the channel -- and a second path that skips the provenance check reopens
+  KI-ACD-005 through the back door. The delivers_to contract to c-3-i names the two
+  bindings separately for the same reason ACD-2100a-2 names a candidate set: if resume
+  applies whatever answer it was handed to whatever gate it is paused at, the mismatch
+  case is not representable and c-3-i cannot be built without re-opening this record.
