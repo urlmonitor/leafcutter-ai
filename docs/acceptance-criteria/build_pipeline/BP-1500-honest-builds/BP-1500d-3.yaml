@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -24,9 +24,9 @@ criteria: |
   And a single warning line accompanied by a successful outcome does not satisfy this,
     because the build's own report is the last place this failure currently shows up,
   And the identical build, run once the record can be produced for that same
-    out-of-package project, reports success and leaves the record in place -- so the
-    failure verdict is attributable to the unproducible record and not to a build that
-    refuses every target outside its own parent folder,
+    out-of-package project, reports success and leaves the record file written to disk
+    in that project -- so the failure verdict is attributable to the unproducible
+    record and not to a build that refuses every target outside its own parent folder,
   And both verdicts are taken from running the real build against a real project
     outside the producing package's own parent folder and inspecting its reported
     outcome and the resulting tree, never from reading the build's own source for the
@@ -40,11 +40,15 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "No entry covers this defect yet. The reproduction to record is the fail-open half: the build prints one warning line and reports success when the record cannot be produced for a project outside the producing package's own parent folder."
+    relevance: "IT-PO CORRECTION 2026-08-25: the BA recorded that no entry covers this defect. KI-BP-011 now does, and its third evidence block is this child verbatim -- the ValueError from an out-of-package target is caught, downgraded to '[WARNING] could not compute output_mappings ... Direction B detection will be unavailable until next build', and the build then reports success and exits 0. KI-BP-008 is the same fail-open shape already catalogued in this file; read both."
   - path: scripts/build.py
     relationship: describes
     status: exists
-    relevance: "The build whose reported outcome this AC constrains. Read for context only -- this AC is provable only from a real run's outcome and tree."
+    relevance: "The build whose reported outcome this AC constrains. Read for context only -- this AC is provable only from a real run's outcome and tree. Its exit-status path is the load-bearing surface: the record-writing step's outcome must reach it."
+  - path: scripts/build_helpers.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The exact fail-open site. Lines ~201-213: a broad `except Exception` around _compute_output_mappings issues warnings.warn plus a _warn print and then falls through, so the manifest is written with an empty output_mappings section and the build continues to a successful outcome. This handler is the thing to change; changing only its message satisfies the report clause and leaves the outcome clause untouched, which is the failure mode this AC exists against."
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -56,19 +60,145 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
     relationship: related
     status: exists
-    relevance: "Prior art for invoking the real build against an out-of-package scratch project and asserting on its reported outcome."
+    relevance: "IT-PO CORRECTION 2026-08-25 -- A SPEC, NOT PRIOR ART. BP-900h-1 describes invoking the real build against an out-of-package scratch project and asserting on its reported outcome, but it is work_status not_started with zero implementation anywhere in the workspace and no consumer-simulation job in ci.yml. The harness comes from BP-1500d-1; this AC drives it into a failing and then a succeeding state. Read h-1 as the specification the shared harness conforms to."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
-    relevance: "Angle vocabulary: failure + reachability, the latter because the verdict must be observed through the build's real invocation surface rather than by calling an internal step."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+    relevance: "Angle vocabulary: criterion + reachability floor -- the latter because the verdict must be observed through the build's real invocation surface rather than by calling an internal step -- plus failure, which carries the paired red/green attribution."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "THE PROCESS EXIT STATUS IS THE LOAD-BEARING SIGNAL, NOT THE PRINTED REPORT. Both must change. A loud, well-worded failure message accompanied by a successful exit status leaves every automated caller exactly where it is today, and is the single most likely way for this AC to be closed without being satisfied. The report clause and the outcome clause are separate in the criteria on purpose; neither substitutes for the other."
+  - "NAME EVERY ENFORCEMENT POINT AT WHICH THE RECORD STEP'S OUTCOME IS SURFACED, AND STATE WHICH ONE ACTUALLY GATES THE EXIT STATUS. Today the outcome is surfaced three ways -- a warnings.warn, a _warn print, and an empty output_mappings section in the written manifest -- and NONE of them is load-bearing, because all three sit inside a handler that falls through to a successful build. A change applied only to the message, or only to the warning category, is a no-op with a report attached. Identify the path from the record step to the build's return value and state it explicitly in sign-off."
+  - "MUST NOT REFUSE OUT-OF-PACKAGE TARGETS WHOLESALE. A build that fails for every target outside the producing package's parent satisfies the failure clause and is a regression dressed as a fix. The paired success run is the guard against it and must not be dropped, weakened, or replaced by an assertion about the message."
+  - "The failure must be attributable from the report alone: it must name the record that could not be produced AND the project the build was aimed at, so a reader knows which install is unprotected without re-running anything."
+  - "Must be fail-closed by construction rather than by a caller remembering to check. Audit every caller of the build inside this repo -- CI jobs, build-self.sh, the worktree bootstrap path, and any workflow that shells out to build.py -- and name each one in sign-off together with whether it currently propagates the build's exit status. A build that starts failing correctly while a caller discards its status changes nothing at that caller."
+  - "Must not change the build's command-line contract. The same invocation that succeeds today for the package's own workspace must still succeed, with the same arguments and the same output root."
+  - "Must follow the project error handling policy at the record-writing boundary: the existing broad `except Exception` that downgrades a real failure to a warning must not be duplicated, and whatever replaces it must either re-raise or produce a typed failure that the build's exit path consumes."
+  - "SCOPE BOUND -- this AC governs the build's verdict when the record cannot be produced. It does not govern where the record is written (BP-1500d-1), what form its entries take (BP-1500d-2), or what a reader does when it finds no record (BP-1500d-4). In particular, do not satisfy this AC by making the record always producible; that is -1's work and would leave this enforcement floor untested."
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-1500d-1
+    contract: "A build whose process exit status is unsuccessful whenever the record cannot be produced. This is what lets every sibling's positive fixture treat a green build as evidence the record exists; without it, 'the receiving project holds no record' and 'the build succeeded' remain simultaneously observable and no sibling's happy path is trustworthy."
+  - agent: python-coder
+    ac_id: BP-1500d-2
+    contract: "The same guarantee, applied to this AC's pre-relocation state: a project that reached a green build is known to carry a producible record, so a failure after relocation is attributable to the move rather than to a build that quietly produced nothing."
+  - agent: python-coder
+    ac_id: BP-1500d-4
+    contract: "The same guarantee, which bounds BP-1500d-4's scope. Because a build that cannot produce the record now fails, an install that exists at all has one, so BP-1500d-4's could-not-read verdict covers removal, corruption and non-portability rather than also having to cover 'the build silently skipped it'."
+  - agent: documentation-expert
+    ac_id: BP-1500d-5
+    contract: "The observable form of the build's failure -- the exit status an automated caller sees and the text that names the record and the project -- which BP-1500d-5's reference must document so a reader can recognise it in their own output."
+expects_from:
+  - ac_id: BP-1500d-1
+    contract: "The out-of-package consumer-simulation harness (scratch project under a system temp root, realpath asserted NOT under package_root.parent, package copy at <scratch>/leafcutter-ai/, target otherwise empty apart from a minimal skills_config.json), plus the ability to place that harness in a state where the record CAN be produced. The second half is what makes this AC's paired success run possible; without it only the failure verdict is observable and the AC can be satisfied by a build that refuses every out-of-package target."
+  - ac_id: BP-900h-1
+    contract: "NOT SATISFIED, AND DELIBERATELY NOT A depends_on. BP-900h-1 specifies the real-build-against-a-scratch-project invocation this AC asserts on, but is work_status not_started with zero implementation. The harness is constructed by BP-1500d-1 instead. Recorded here as an unmet specification to conform to, not as a satisfied dependency."
+test_spec:
+  - name: test_bp_1500d_3_build_exits_nonzero_when_the_record_cannot_be_produced_for_an_out_of_package_target
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "THE PRIMARY ASSERTION, AND IT IS ON THE EXIT CODE. Run the real build against the harness target in the condition where the record cannot be produced, and assert the process exit status is NON-ZERO. This entry is expected RED today and that is the point: measured 2026-08-25, this exact run emits '[WARNING] could not compute output_mappings ... is not in the subpath of ...', writes a manifest with output_mappings {} (154 entries to 0), and exits 0. Do NOT retarget this assertion onto the warning string or the mapping count because the exit code is currently 0 -- exit-0-on-failure IS the defect, it is guarantee (d) of BP-1500d which the L1 states must not be dropped, and an assertion on the warning is satisfied by today's broken build. The mapping count and the warning may be asserted as SUPPORTING signals only, never as the primary one."
+  - name: test_bp_1500d_3_the_verdict_is_taken_from_the_real_build_command_line_and_reaches_an_automated_caller
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>"
+    description: "PRODUCTION ENTRY POINT, and the consumption half. Invoke the build as a SUBPROCESS through the command line a consumer or a CI step runs -- never by importing write_build_manifest or calling an internal step -- and read returncode from the child process, because that is the only thing an automated caller sees. Then assert the consumption half at every in-repo caller: parse the CI workflow as YAML and assert the step invoking the build neither carries continue-on-error true nor pipes the build into a command that masks its status. A grep for the script name is green on a step that ignores the exit code, which is the defect one level up."
+  - name: test_bp_1500d_3_the_failure_report_names_the_record_and_the_project_the_build_was_aimed_at
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The report clause, asserted separately from the outcome clause because the criteria separate them and because a build can satisfy either alone. Capture the failing build's combined output and assert it names BOTH the record that could not be produced AND the target project path. Assert on the presence of the target path specifically -- a message that says only 'could not compute output_mappings' tells a reader nothing about which install is unprotected, and that is the message today."
+  - name: test_bp_1500d_3_the_identical_build_succeeds_and_leaves_the_record_in_place_once_it_can_be_produced
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE ATTRIBUTION CONTROL, and the guard against a regression dressed as a fix. Three runs of the SAME build command line against the SAME out-of-package harness: (1) record unproducible -- non-zero exit; (2) the condition resolved so the record can be produced -- exit 0 AND the record is present in the target with a non-empty entry set; (3) the condition reintroduced -- non-zero again. Run 2 is load-bearing: without it, a build that simply refuses every target outside its own parent folder passes runs 1 and 3 perfectly while being strictly worse than today. Assert the record's presence in run 2, not merely exit 0, so a build that succeeds by skipping the record cannot pass."
+test_rationale: |
+  This child is the enforcement floor for its three siblings, not an extra. BP-1500d's
+  notes say it outright: (a) through (c) implemented over a build that still exits zero
+  when it gives up leaves the whole family unenforceable, silently, exactly as today.
+  So the contract is written to make the exit status impossible to skip.
+
+  Entry 1 asserts on the exit code and must stay that way. A probe of the current
+  build correctly observed that the ValueError is swallowed at build_helpers.py
+  ~201-213 and the process exits 0, and drew the wrong conclusion from it -- that an
+  AC asserting build failure is false as written and the assertion should move to the
+  mapping count or the warning string. Adopting that would bake the defect into the
+  spec. The red is the finding. A warning-only assertion is satisfied by today's
+  broken build, which is the definition of a test that cannot fail for the right
+  reason. The mapping count is a useful supporting signal and nothing more.
+
+  Entries 1 and 3 are deliberately separate because the criteria separate the outcome
+  clause from the message clause, and a build can satisfy either one alone. The
+  realistic partial fix here is a louder warning -- it reads like progress, passes a
+  message assertion, and leaves every automated caller exactly where it is.
+
+  Entry 4 is the attribution control and its second run is the part that will be
+  tempting to drop. Runs 1 and 3 alone are passed perfectly by a build that refuses
+  every out-of-package target, which would be a regression that closes the AC. Run 2
+  additionally asserts the record is present rather than only that the build exited 0,
+  so a build that succeeds by skipping the record cannot pass either.
+
+  Entry 2 carries the consumption half because a correct exit status is worth nothing
+  at a caller that discards it. This repo has already shipped that exact shape --
+  a verdict routed through a step carrying continue-on-error -- so the workflow is
+  parsed as YAML and asserted on as a data structure rather than grepped.
+
+  Angles: criterion and reachability -- the mandatory floor -- plus failure, which is
+  conditional and consumes no slot. deployed is not charged: the build script is run
+  from the package checkout by consumers rather than shipped into the deployed output
+  root, so the deployed-layout question belongs to the readers in BP-1500d-4 rather
+  than here. real_artifact is not charged because this AC's subject is a process exit
+  status, not a serialized artifact another tool reads back. boundary is not charged
+  because the criterion names no range, count or limit.
 origin_agent: business-analyst
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added assigned_agent (python-coder), estimated_complexity (M),
+      declares_side_effect (true -- the criteria assert the observable outcome of a
+      state-changing command, which the schema names explicitly), it_requirements in
+      LIST form, the gating contracts to -1, -2, -4 and -5, a four-entry test_spec
+      with test_rationale, and two IT-PO doc_links: build_helpers.py ~201-213 as the
+      exact fail-open site, and a corrected known-issues relevance citing KI-BP-011's
+      third evidence block and KI-BP-008. Re-labelled the BP-900h-1 link a
+      specification rather than reusable prior art -- h-1 is unstarted with zero
+      implementation, so the harness comes from BP-1500d-1. RECORDED FOR THE CODER,
+      because it was contested during enrichment: test entry 1 asserts a NON-ZERO exit
+      code and is expected RED today. A probe observed the current exit 0 and proposed
+      retargeting the assertion onto the warning string or the mapping count; that was
+      rejected, because exit-0-on-failure is the defect this AC owns and a
+      warning-based assertion is satisfied by the broken build. it_requirements is a
+      list, not the five-field object: per ACS-100i-6 the structured form is demanded
+      only by package_surface: true, and this AC registers no registry entry the build
+      reads. criteria, title, depends_on, component, components and req_status
+      untouched.
+  - reason: criteria-precision
+    by: business-analyst
+    at: 2026-08-25
+    note: >-
+      WORDING OF THE PAIRED-SUCCESS CLAUSE ONLY -- NO SCOPE CHANGE, NO NEW OR REMOVED
+      CLAUSE. "reports success and leaves the record in place" now reads "reports
+      success and leaves the record file written to disk in that project". That is
+      what "in place" always meant -- the attribution control's green run is only
+      evidence if the record is actually on disk in the receiving project, which is
+      why the it-po's test entry 4 already asserts exactly that. Saying it in the
+      criterion makes the mechanical derivation of declares_side_effect able to see
+      the durable effect. The failure clauses, the outcome clause, the message clause
+      and the scope bound are untouched, declares_side_effect stays true, and no
+      it-po field was modified.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -99,3 +229,38 @@ notes: |
   one that was never built. depends_on carries only the parent link, as the authoring
   request specified; the it-po should record the gating relationship in the contract
   fields.
+
+  IT-PO RESPONSE, 2026-08-25. The gating relationship is recorded as delivers_to
+  edges onto -1, -2, -4 and -5 rather than as depends_on, so it does not impose a
+  build order in the opposite direction from the harness dependency. The reciprocal
+  expects_from on -1 covers only the harness and the producible-record state this
+  AC's paired success run needs. Neither edge went into depends_on, so no cycle
+  exists between -1 and -3; they can land in either order.
+
+  THE EXIT CODE IS THE ASSERTION AND IT IS SUPPOSED TO BE RED. Measured 2026-08-25,
+  a real build into a temp-root target prints the could-not-compute warning, writes
+  output_mappings {} (down from 154 for an in-parent target) and exits 0. That is the
+  defect, not a reason to move the assertion. Any future amendment that relaxes test
+  entry 1 from the exit code to the warning text or the mapping count should be
+  treated as reintroducing the defect into the specification.
+
+  package_surface is deliberately NOT set: per ACS-100i-6 it means the AC registers an
+  entry in a registry the build reads to decide what a consumer receives. This AC
+  changes a build's exit path and registers nothing.
+
+  BA AMENDMENT, 2026-08-25 -- THE PAIRED-SUCCESS CLAUSE WAS MADE CONCRETE, THE SCOPE
+  WAS NOT CHANGED. "reports success and leaves the record in place" now reads "reports
+  success and leaves the record file written to disk in that project". This is the
+  same guarantee said precisely: "in place" only ever meant a record file present on
+  disk in the receiving project, and the it-po's test entry 4 already asserts the
+  record's presence in run 2 rather than exit 0 alone. The reason for the wording
+  change is mechanical and worth recording. declares_side_effect is DERIVED from this
+  AC's own Then clause rather than authored by opinion, because it non-overridably
+  routes the one phase agent that runs the real surface end-to-end and inspects the
+  resulting tree -- which is how this criterion insists both of its verdicts be
+  reached. The clause described a durable file without naming one, so the derivation
+  read false while the record declared true, and the schema check refuses that
+  disagreement. A future reader must not read this as widening the AC: the failure
+  verdict, the separate outcome and message clauses, the attribution control and the
+  scope bound against -1, -2 and -4 are all unchanged, and every it-po field --
+  including declares_side_effect: true -- is as the it-po left it.

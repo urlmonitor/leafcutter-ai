@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -47,7 +47,7 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "Source material for the reference: KI-BP-004 and KI-BP-005 are the two checks that read the record, and the entry to be opened for this defect explains why they are absent rather than degraded in a consumer install."
+    relevance: "IT-PO CORRECTION 2026-08-25: the BA recorded that an entry for this defect was still to be opened. KI-BP-011 now exists and is the primary source material -- it carries the reproduced evidence, the symptom list and the fix direction. KI-BP-004 and KI-BP-005 remain the two checks that read the record. The reference must translate KI-BP-011 into adopter-facing terms, not restate it."
   - path: docs/reference/false-green-mechanisms.md
     relationship: related
     status: exists
@@ -60,14 +60,142 @@ doc_links:
     relationship: related
     status: exists
     relevance: "House shape for a reference document in this repository -- frontmatter, structure, and level of detail."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500c.yaml"
+    relationship: related
+    status: exists
+    relevance: "IT-PO ADDITION. The boundary the reference must not cross. BP-1500c owns 'an installed copy that has fallen behind is reported'. This reference's subject is where the record lives, what makes it readable elsewhere, and what the two silent outcomes look like -- not drift reporting, and not a rebuild how-to."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. One of the two checks whose could-not-read behaviour the reference must describe from the adopter's side. Read for the observable signal only -- the reference must express what a reader SEES, never the internal branch that produces it. Its verdicts are fixed by BP-1500d-4, so the reference must be written against the post-fix behaviour, not today's warn-and-return-0."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The second such check, same treatment."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: related
+    status: exists
+    relevance: "IT-PO ADDITION -- A SPEC, NOT PRIOR ART. Describes the out-of-package consumer-simulation install this AC's procedure must be followed against, but is work_status not_started with zero implementation. The harness comes from BP-1500d-1 and is delivered to this AC."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Angle vocabulary for the executable procedure check this AC's criteria demand: criterion + reachability floor plus deployed, with failure carrying the two deliberately non-portable installs."
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: M
+it_requirements:
+  - "THE REFERENCE MUST BE FOLLOWABLE BY A READER WHO HAS ONLY THE DEPLOYED INSTALL. No step may require the producing package's source tree, its scripts/, its templates/, or its workspace layout. If a step cannot be performed without the package, it does not belong in this reference -- an adopter does not have it."
+  - "EVERY LOCATION THE REFERENCE NAMES MUST BE GIVEN RELATIVE TO THE READER'S OWN PROJECT ROOT, never to the producing package or to this repository's self-hosted workspace. A path written as it appears in this workspace is the same class of defect the reference is documenting, committed inside the documentation of it."
+  - "THE REFERENCE MUST STATE THE OBSERVABLE FORM OF BOTH SILENT OUTCOMES precisely enough for a reader to recognise each in their own terminal: what the build does when it cannot produce the record, and what a check does when it finds no readable record. Quote the actual signals -- exit status and message shape -- not a paraphrase, because the entire point is letting a reader distinguish an inert check from a passing one at a glance."
+  - "WRITE AGAINST THE POST-FIX BEHAVIOUR, NOT TODAY'S. The build currently exits 0 when it cannot produce the record, and both checks currently warn and return 0 when they cannot read one. BP-1500d-3 and BP-1500d-4 change exactly those signals. Documenting the present-day behaviour would publish the defect as the contract, so this AC cannot be completed before -3 and -4 have settled their verdicts, and the reference must be re-verified against them rather than against a draft."
+  - "EVERY COMMAND AND PATH THE REFERENCE QUOTES MUST BE COPY-PASTEABLE AND MUST HAVE BEEN EXECUTED against a real out-of-package install during authoring. A command that was written from reading source and never run is the grep-shaped acceptance this AC's criteria explicitly refuse."
+  - "THE PROCEDURE MUST BE WRITTEN SO IT CAN BE EXECUTED VERBATIM BY A TEST. Give the steps as discrete, individually runnable commands with stated expected signals, rather than as prose a human must interpret. This is what makes the falsifiability clause mechanically checkable instead of a matter of opinion, and it is the reason this documentation AC carries a test_spec at all."
+  - "SCOPE BOUND -- the reference must not become a rebuild how-to, and must not restate BP-1500c's drift guarantee. Its subject is where the record lives, what makes it readable elsewhere, and what the two silent outcomes look like from an adopter's side."
+  - "Must follow the house shape for a reference document in this repository -- frontmatter and structure per docs/reference/ -- so the doc-frontmatter guardrail accepts it and it is reachable from the documentation index."
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: BP-1500d-1
+    contract: "The out-of-package consumer-simulation harness -- the real install this reference's procedure is followed against -- plus the concrete on-disk location of the receiving project's record expressed relative to that project's own root, and the shape of its entries. The reference cannot state where an adopter's record lives until -1 has decided it."
+  - ac_id: BP-1500d-2
+    contract: "The observable form of a readable-after-relocation record and of the unreadable report, which the reference must describe so an adopter can match it after moving a project -- plus the location-keyed record artifact used as one of the two deliberately non-portable installs in the falsifiability control."
+  - ac_id: BP-1500d-3
+    contract: "The build's failure signal when the record cannot be produced: the exit status an automated caller sees and the text naming the record and the project. The reference documents this signal, so it must be settled before the reference is written or the reference will publish today's exit-0 behaviour as the contract."
+  - ac_id: BP-1500d-4
+    contract: "The two distinguishable check verdicts and their observable form -- all-clear versus could-not-read, as seen by a reader and by an automated caller. This is the raw material for the reference's central promise that a reader can tell an inert check from a passing one, and it must be settled first for the same reason as -3."
+test_spec:
+  - name: test_bp_1500d_5_following_the_reference_procedure_locates_and_reads_the_record_in_a_real_out_of_package_install
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Execute the reference's own documented procedure, step by step, against the out-of-package harness in its good state, and assert each step reaches the signal the reference says to expect. Drive the steps from the reference document itself -- parse its runnable steps rather than transcribing them into the test -- so the test goes red when the document and the behaviour diverge, which is the failure this entry exists to catch. A test that hard-codes its own copy of the procedure verifies the behaviour and says nothing about the document."
+  - name: test_bp_1500d_5_the_procedure_runs_in_a_process_that_cannot_see_the_producing_package
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the commands quoted in docs/reference/build-record-portability.md, run verbatim from the out-of-package install"
+    description: "THE READER'S ACTUAL POSITION. Run every quoted command as a SUBPROCESS with a working directory inside the relocated install and an interpreter search path containing no path under the package checkout, with the package copy absent from the tree and from every ancestor; assert those properties of the child process rather than assuming them. A procedure verified from this workspace is verified with the package present, which is the one situation the reference's reader is defined not to be in. Assert additionally that no quoted path resolves into the package or into this repository's workspace layout."
+  - name: test_bp_1500d_5_the_procedure_reaches_the_documented_failure_signal_on_both_deliberately_non_portable_installs_and_the_success_signal_again_after
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE FALSIFIABILITY CONTROL THE CRITERION DEMANDS, as five runs of the SAME procedure: (1) good install -- documented success signal; (2) record filed with the producing package instead of the receiving project -- the documented failure signal, not silence and not a passing-looking result; (3) restore -- success signal again; (4) record keyed to a location it is not being read from -- the documented failure signal again; (5) restore -- success signal. Assert the signal reached MATCHES THE ONE THE REFERENCE DOCUMENTS, not merely that something failed: a procedure that produces an undocumented error in runs 2 and 4 leaves the reader exactly as stranded as silence would. Runs 3 and 5 attribute each failure to its breakage rather than to a procedure that cannot succeed."
+  - name: test_bp_1500d_5_the_reference_documents_the_post_fix_signals_of_the_build_and_of_both_checks
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE INERT-VERSUS-PASSING PROMISE, which is the reference's central claim and the one most likely to rot. In the deployed out-of-package install, produce all three states the reference describes -- a build that cannot produce the record, a check that finds no readable record, and a check that read the record and found nothing wrong -- and assert that for each, the signal the deployed code actually emits matches the signal the reference documents for it. Assert specifically that the reference's could-not-read signal and its all-clear signal are DIFFERENT from each other as documented, and that the deployed code agrees; if the document describes two outcomes the code does not distinguish, the reference is teaching a distinction the reader cannot make. This entry is expected RED until BP-1500d-3 and BP-1500d-4 land."
+test_rationale: |
+  This AC carries a test_spec rather than test_required: false, and the reason is in
+  its own criteria: "the reference is checked by following it against real installs,
+  never by confirming that a document with the expected heading exists." That is a
+  demand for an executable check. A documentation AC accepted on "the document exists
+  and mentions the record" would be precisely the grep-shaped acceptance BP-1500d's
+  mandatory proof shape refuses -- and would be especially hollow here, because the
+  defect being documented is invisible from inside the producing package's own
+  workspace. change_target remains docs and assigned_agent remains
+  documentation-expert; the deliverable is the reference. The tests exist to make the
+  falsifiability clause mechanically checkable rather than a matter of opinion.
+
+  The single most important property of this contract is that entry 1 drives the
+  steps FROM the document rather than transcribing them into the test. A test holding
+  its own copy of the procedure verifies the behaviour and says nothing about the
+  reference, which is the artifact under test. Driving from the document is what makes
+  the test go red when the two diverge -- which is how a reference rots.
+
+  Entry 4 is the one that protects the reference's central promise. A document can
+  describe two outcomes the code does not actually distinguish, in which case it is
+  teaching a reader a distinction they cannot make in their own terminal -- worse than
+  saying nothing, because it manufactures false confidence in exactly the situation
+  this L1 exists to fix. It is also the entry that pins the ordering: today the build
+  exits 0 when it cannot produce the record and both checks warn and return 0 when
+  they cannot read one, so a reference written now would publish the defect as the
+  contract. Entry 4 is expected RED until BP-1500d-3 and BP-1500d-4 have settled.
+
+  Entry 3 is the criterion's own mandated control, written as five runs rather than
+  two reds, and it asserts the signal MATCHES the documented one rather than merely
+  that something failed. A procedure that produces an undocumented error on a broken
+  install leaves the reader as stranded as silence would; reaching a documented
+  failure signal is the whole value of the reference.
+
+  Entry 2 encodes the reader's actual position. The reference is defined for someone
+  who does not have the producing package in front of them, so verifying its commands
+  from this workspace verifies them in the one situation its reader is not in.
+
+  Angles: criterion, reachability, deployed -- plus failure, which is conditional and
+  consumes no slot. Three core angles, under the cap of four. seam is not charged: the
+  document/behaviour boundary is real but is asserted structurally by entry 1 driving
+  from the document, rather than as a producer-consumer signature. real_artifact is not
+  charged because the artifact under test is prose, and the record's serialized form is
+  charged on BP-1500d-2. boundary is not charged because the criterion names no range,
+  count or limit.
 origin_agent: business-analyst
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Kept assigned_agent as documentation-expert (the BA set it and it is correct --
+      the deliverable is the reference). Added estimated_complexity (M),
+      it_requirements in LIST form, expects_from on all four siblings, a four-entry
+      test_spec with test_rationale, and five IT-PO doc_links: BP-1500c as the
+      boundary the reference must not cross, both drift readers as the source of the
+      adopter-facing signals it must describe, BP-900h-1 re-labelled a specification
+      rather than prior art, and test-angles for the executable procedure check.
+      Corrected the known-issues relevance: the BA wrote that an entry was still to be
+      opened, but KI-BP-011 now exists and is the primary source material. AUTHORED A
+      test_spec RATHER THAN test_required: false, deliberately -- the criteria demand
+      the reference be proved by FOLLOWING it against real installs and explicitly
+      refuse document-existence acceptance, which is a demand for an executable check.
+      change_target stays docs. declares_side_effect is NOT set: the deliverable is
+      prose, and the durable side-effects this reference describes are asserted by -1
+      through -4. it_requirements is a list, not the five-field object: per ACS-100i-6
+      the structured form is demanded only by package_surface: true. criteria, title,
+      depends_on, component, components and req_status untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -102,3 +230,25 @@ notes: |
   ORDERING. The reference can only be checked against installs produced by BP-1500d-1
   through -4, so it is the last of the five to become verifiable. depends_on carries
   only the parent link, as the authoring request specified.
+
+  IT-PO RESPONSE, 2026-08-25. assigned_agent confirmed as documentation-expert. The
+  ordering the BA describes is wired as expects_from on all four siblings, and it is a
+  hard sequencing constraint rather than a preference: -3 and -4 CHANGE the very
+  signals this reference documents. Today the build exits 0 when it cannot produce the
+  record, and both checks warn and return 0 when they cannot read one. A reference
+  written before those land would publish the defect as the contract, which is a worse
+  outcome than having no reference -- it would tell an adopter that exit 0 means their
+  install is fine. This AC must be authored last and re-verified against the settled
+  behaviour.
+
+  A test_spec IS AUTHORED HERE, and that is deliberate rather than an oversight of the
+  docs change_target. The criteria refuse document-existence acceptance in terms and
+  demand a followed procedure with a falsifiability control, which is an executable
+  check by definition. test_required: false would have quietly converted this AC back
+  into the grep-shaped acceptance its own text forbids. The load-bearing property of
+  the contract is that entry 1 drives its steps FROM the document rather than
+  transcribing them, so the test goes red when document and behaviour diverge.
+
+  package_surface is deliberately NOT set: per ACS-100i-6 it means the AC registers an
+  entry in a registry the build reads to decide what a consumer receives. This AC
+  publishes a reference document and registers nothing.

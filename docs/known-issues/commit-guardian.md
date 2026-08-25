@@ -906,7 +906,7 @@ piece of work across the hook family rather than one hook at a time.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 3 records in one family, all on 2026-08-25
+- **Occurrences:** 7 records in two families, all on 2026-08-25 (3 × `BO-2400e`, 4 × `BP-1500d`; the two families were resolved in opposite directions — see the amendment below)
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `derive_declares_side_effect` and `_DURABLE_EFFECT_RE` in `scripts/commit_guardian/_ac_schema_validators.py:560-607`; enforced by `validate_declares_side_effect`; rule is BO-2900g-2
 
@@ -988,6 +988,70 @@ in one pass.
 authoring a derived field, and correct the nine records. Widening `_DURABLE_EFFECT_RE` is the
 more invasive change and the sweep does not support it — no record is failing because the pattern
 was too strict about a value someone tried to set to `false`.
+
+---
+
+**AMENDED 2026-08-25 — a second family hit this the same day and resolved it the opposite way.
+Occurrences 3 → 7.** `BP-1500d-1` through `BP-1500d-4` were enriched independently that day, all
+four authored `declares_side_effect: true`, all four rejected. Same defect, same hook, different
+resolution: instead of flipping to `false`, the BA amended the Then clauses to name the artifact
+concretely, and the derivation then agreed. Both families are now in the store with **opposite**
+values on the same question — `BO-2400e` says `false` on records whose subject is bytes surviving
+on disk, `BP-1500d` says `true`. That inconsistency is now the most urgent thing here.
+
+**The one-directional argument above does not support reading 2, and this is load-bearing.** The
+inference is that "only an over-eager author produces them all in the same direction." That is not
+so. A too-narrow pattern **also** produces exclusively `authored true / derives false`, because
+under-matching can only ever fail to fire — it is structurally incapable of producing
+`authored false / derives true`. The observed 9-0 split is therefore equally consistent with both
+readings and discriminates between them not at all. The zero is a property of the failure mode,
+not evidence about its cause.
+
+`BP-1500d-1` is the decisive counterexample. Its Then clause read *"that project holds its own
+record of what the build put there ... a copy of the project taken without the producing package
+still carries it"* — a durable file by any ordinary reading — and derived `false`. Verified with a
+negative control isolating vocabulary as the only variable:
+
+| Then-clause phrasing | Derives |
+|---|---|
+| `Then a record file is written into that project` | `True` |
+| `Then that project holds its own record of what the build put there` | `False` |
+
+Identical claim, opposite verdict. The pattern **was** under-matching a real durable effect, so
+reading 1 is not hypothetical, and "correct the nine records" would have written `false` onto four
+records that genuinely do write files.
+
+**Sweep numbers reconcile.** An independent read-only sweep the same day counted **12**
+disagreements against this entry's **9**. Not a contradiction: that sweep ran on a tree predating
+the `BO-2400e-3 / -3-i / -4` repair, and 9 + 3 = 12. Both counts are correct at their own commit.
+
+**The structural fix neither entry names: there is no code-side reconciliation.** The sibling field
+`package_surface` has exactly the two-sided design this one lacks — `check_package_surface_declaration.py`
+(ACS-100i-8, commit-msg stage, confirmed installed) reconciles the registry entries a change
+*actually adds* against the declarations of the ACs it cites. Its own registration comment states
+the reason: *"the declaration is under the author's control and can simply be omitted, but the
+registration cannot be."* `declares_side_effect` has only the prose side, which is why reading 2 is
+dangerous on its own — telling authors to stop setting the field, with nothing checking what the
+code does, makes omission both correct-by-policy and free. Omission derives `false` and passes
+**silently**, switching off `user-surface-smoker`, described in this repo as the one automatic guard
+against code that is built but not wired into anything.
+
+Detection is admittedly harder here than for `package_surface`: "a registry key appeared" is a JSON
+diff, whereas "this change writes a durable artifact" means recognising `open(...,'w')`,
+`write_text`, `shutil.copy` and friends. And ACS-100i-8's own config records CONCESSION 3 — its
+watched-registry enumeration goes stale unless extended in the same change. A side-effect
+equivalent inherits that weakness.
+
+**Revised recommendation.** Reading 1 and reading 2 are both real and neither alone is sufficient.
+Keep the field author-set but make it a deliberate BA decision rather than an IT-PO reflex; demote
+the regex from decider to cross-check that reports disagreement, which is the one thing it already
+does well; and add the landing-time reconciliation so omission is not free. Reconcile the
+`BO-2400e` / `BP-1500d` split deliberately in one pass rather than one blocked commit at a time —
+and note that a standing "name durable artifacts concretely in Then clauses" authoring rule is a
+poor substitute, because it asks every author to write for a matcher and collides directly with the
+customer register the PO/BA are required to use.
+
+---
 
 **Read alongside KI-CG-014, which the sweep above structurally could not see.** That entry is
 the mirror image of this one: the derivation returning `true` where it should return `false`,
