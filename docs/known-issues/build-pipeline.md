@@ -43,6 +43,13 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 ### KI-BP-001 — The documented self-host build command destroys `docs/INDEX.md` on every run
 
+> **DUPLICATE of KI-BP-016 — verified 2026-08-25. Fix there, delete this.**
+> Same phase, same symptom, same fix direction; KI-BP-016 carries the correct root cause
+> (the read root and the write root are computed differently at `build.py:1028-1030`, so
+> `docs_root` is honoured when writing and ignored when reading). Kept for now only so the
+> id is not silently reused; the register's own rule is to increment `Occurrences` rather
+> than file twice. Reproduction and confirmation live under KI-BP-016.
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 4
@@ -79,6 +86,16 @@ concurrent author, since it appears in a tree you did not knowingly edit.
 ---
 
 ### KI-BP-002 — Generated agent cards are tracked but never regenerated, so every build dirties six of them
+
+> **DUPLICATE of KI-BP-015 — verified 2026-08-25.** Both describe `docs/agents/cards/*.card.md`
+> as tracked build outputs with no freshness gate that drift and get rewritten on every build;
+> filed a week apart at different severities. Keep one and increment `Occurrences` on it.
+>
+> **Do not fix the cards themselves.** The mechanism wanted is a repo-wide generated-artifact
+> ratchet, and BP-1500a already specifies it — including the trap that makes the naive version
+> useless: the check must be computed over *every* tracked generated artifact, not the subset
+> in the change under review, because the drifted artifact is by definition never in that
+> subset.
 
 - **Severity:** medium
 - **Status:** open
@@ -147,6 +164,31 @@ is also easy to mistake for another author's work. Restore with
 ---
 
 ### KI-BP-003 — `config/doc_types.json` is never deployed alongside the hooks that read it, so `check-doc-frontmatter` hard-crashes in the self-hosted workspace and in every adopter worktree
+
+> **RE-VERIFIED 2026-08-25 — LIVE, and the entry's open contradiction is settled.**
+> Reproduced against a fresh `git init` adopter repo built into `/tmp` (a real repo matters:
+> several hooks resolve their root via `git rev-parse --show-toplevel` and pass vacuously
+> outside one — two earlier probes returned a false green for exactly that reason).
+> `_find_doc_types_json()` resolved to a path with `EXISTS: False` and
+> `check_doc_frontmatter.py` raised `FileNotFoundError` at `doc_type_validators.py:113`,
+> exit 1. A clean build leaves `.leafcutter/config/` holding only `commit_guardian/` and
+> `feedback_categories.yaml`, against 21 files in source `config/`. `grep doc_types.json`
+> across `build_phases.py`, `build.py` and `build_helpers.py` returns **zero hits** — there
+> is no deploy site at all. The one config file that *is* deployed is `commit_guardian.json`
+> at `build_phases.py:1450-1453`, which is exactly where this one should have gone.
+>
+> **The second-vs-third-occurrence disagreement was not a contradiction — the two reports
+> were describing different layouts.** The discriminator is whether the checkout root
+> contains `config/doc_types.json`. A *package-repo* checkout resolves (the ancestor walk
+> finds the repo root, which has `config/`); an *adopter* repo root raises, on `main` as
+> well as in worktrees; the self-hosted workspace parent raises and is masked here only by
+> hand-copied files sitting in `.leafcutter/config/` dated Aug 18 and Aug 25. Any verdict
+> taken from this workspace or its worktrees is vacuous. The title should say the adopter's
+> `main` is affected, not only worktrees.
+>
+> **Do not close this by hand-copying the file into the deploy phase.** That is the fourth
+> occurrence of the same shape; see KI-BP-018. Unblock adopters that way if you must, but
+> the entry closes with BP-900g-8.
 
 - **Severity:** blocker
 - **Status:** open
@@ -355,6 +397,24 @@ from the source you are reading), in its staleness form rather than its missing-
 
 ### KI-BP-005 — Deleting a template leaves its deployed copy behind, and the build reports "no stale files found"
 
+> **RE-VERIFIED 2026-08-25 — LIVE.** Removed `templates/scripts/commit_guardian/check_eval_staleness.py`
+> from a scratch package and rebuilt into an adopter: exit 0, `(no stale files found)`, and the
+> deployed copy still present carrying the *previous* build's timestamp.
+>
+> **The reassurance is not a weak check — it is an unrelated check wearing the right label.**
+> `build.py:1676-1679` prints the message; `_cleanup_stale_paths` (`build.py:1262-1292`) only
+> iterates `_PRE_CONSOLIDATION_PATHS` (`:1187-1199`), eleven hardcoded *legacy migration*
+> paths. It has nothing to do with deploy orphans and structurally cannot see one.
+>
+> **Two corrections to the entry's evidence.** (1) The "manifest entry is gone" framing
+> overstates it: `.build_manifest.json` never tracked commit_guardian scripts in the first
+> place — its `templates` section covers only `templates/agents/`, and `output_mappings`
+> covers only agents/skills/commands/rules/workflows-js. The orphan itself is exactly as
+> described. (2) Deleting an **agent** template *does* fail the build
+> (`[ERROR] [REGISTRY] Agent 'brainstorm-worker': template_path ... does not exist`, exit 1),
+> so the gap is scoped to artifact classes that have no registry behind them. That is a
+> useful narrowing of the fix and an argument that the registry pattern is the one that works.
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 1
@@ -437,6 +497,28 @@ source no longer has.
 ---
 
 ### KI-BP-006 — `build_ac_store`'s hardcoded deploy list omits the AC-store validator and both its helpers
+
+> **RE-VERIFIED 2026-08-25 — PARTIALLY FIXED, consequence still LIVE (still a blocker).**
+> `validate_ac_schema.py` **was** added to `deploy_map` by `912d3f2d` (*"deploy all 13
+> ac_store scripts to consumer installs"*, #500, 2026-08-19) — one day after this entry was
+> filed. The list is now 18 entries, not eleven; the cited line refs have moved to
+> `build_phases.py:878-918` and `:923-928`.
+>
+> **Both helpers are still undeployed.** `grep "_ac_components\|_component_migration_map"
+> scripts/build_phases.py` returns nothing. The consequence is unchanged, it just arrives as
+> an import crash rather than a missing file: running the deployed
+> `validate_ac_schema.py --help` in an adopter gives
+> `ModuleNotFoundError: No module named '_ac_components'`, exit 1.
+> `_component_migration_map.py` fails softer — a warning and an empty map.
+>
+> **Why patching the list will not close this, which the entry does not record.**
+> `_manifest_ac_store_scripts` (`build.py:331-349`) derives the AC-store set with `iterdir()`
+> over source while its docstring claims it matches what `build_ac_store` deploys. That
+> derived set feeds the broken-reference guard — one of only six gates that can fail the
+> build — so the guard treats `_ac_components.py` as deployable because it exists in source.
+> The only hard gate that could catch this is fed by a set that contradicts the hand-list it
+> polices. This is the fourth round of "add the missing module"; see KI-BP-018 and build
+> BP-900g-8/-9 instead.
 
 - **Severity:** blocker
 - **Status:** open
@@ -592,6 +674,23 @@ absence as a pass.
 
 ### KI-BP-008 — A version gate can skip the entire workflow-install phase and still report a successful build, leaving every deployed workflow silently stale
 
+> **RE-VERIFIED 2026-08-25 — LIVE.** On a scratch adopter I truncated
+> `.leafcutter/workflows/fast-lane-ship.js` to one line (source: 1047) and rebuilt with
+> `CLAUDE_CODE_VERSION=2.0.100`. Result: exit 0,
+> `[WARNING] Claude Code >= 2.1.154 required for workflow scripts. Detected: 2.0.100. Skipping.`,
+> then `Stale file cleanup: (no stale files found)` — and the file still one line. The gate
+> was driven through the env var read at `build_phases.py:684`, which feeds the identical
+> comparison as the `claude --version` probe, so the branch under test is the same one. The
+> skip is `build_phases.py:708-713` (`print(...); return 0`).
+>
+> **Do not "fix the version parse" as the remedy.** The fragile last-token parse at `:693`
+> currently falls through to the fail-open branch at `:715-719`
+> (`[WARNING] Claude Code version unknown. Installing workflow scripts (fail-open).`), which
+> fired on every unforced run in this workspace — it is the only reason workflows install
+> here at all. Correcting the parse converts a working fail-open into a clean, silent skip
+> and makes this defect *more* dangerous. The safe fix is content comparison (BP-1500c),
+> which needs BP-1500d's manifest first. Fix the parse after that, or not at all.
+
 - **Severity:** high
 - **Status:** open — no AC
 - **Occurrences:** 1
@@ -648,6 +747,29 @@ its `--clean` entry has never executed, so nothing reaps what this phase decline
 ---
 
 ### KI-BP-009 — `.claude/skills/` is symlinked wholesale to the generated tree, so an adopter's own skills have nowhere to live and `--clean` targets them
+
+> **RE-VERIFIED 2026-08-25 — LIVE, and worse than recorded. Severity should rise.**
+> The entry marked the deletion as *code reading, not empirically confirmed*, because
+> `--clean` has no dry-run path. It is now confirmed. On a scratch adopter I placed
+> `adopter-prod-deploy/SKILL.md` under `.leafcutter/skills/` and ran a `--clean` build:
+> `Removing stale artifact: .../.claude/skills/adopter-prod-deploy`, and the directory was
+> gone. It deletes through the symlink via the `rmtree` branch, exactly as predicted.
+>
+> **The new finding is more serious than the `--clean` case.** I then tried the obvious
+> adopter workaround — replace the symlink with a *real* `.claude/skills/` directory — and
+> ran an **ordinary build with no flags**. Output: `✓ removed stale: .claude/skills`, then
+> `shim: .claude/skills -> skills (symlink)`. The adopter's directory was gone. `.claude/skills`
+> is in **both** `_PRE_CONSOLIDATION_PATHS` (`build.py:1189`) and `shim_map`
+> (`build_helpers.py:331`), so `_cleanup_stale_paths` `rmtree`s any real directory there and
+> the shim then replaces it — on every build, reported with a **green checkmark**.
+>
+> So the adopter has no safe placement at all: inside the symlink, `--clean` reaps it;
+> outside it, the default path reaps it. This is no longer "nowhere good to put it" — it is
+> "the build deletes your work and calls it success."
+>
+> Same constant confirms KI-BP-010: `_MANAGED_ARTIFACT_DIRS["workflows"] = ".claude/workflows"`
+> is joined as `claude_dir / subdir_name`, yielding `<target>/.claude/.claude/workflows`. The
+> `--clean` run touched no workflow.
 
 - **Severity:** high
 - **Status:** open
@@ -1117,6 +1239,26 @@ but they are read by agents from the deployed tree, so the ratchet is the smalle
 
 ### KI-BP-016 — `build.py` honours `docs_root` when writing the doc index but ignores it when reading, and overwrites the real index with "No docs found."
 
+> **RE-VERIFIED 2026-08-25 — LIVE. Absorbs KI-BP-001, which is the same defect.**
+> Reproduced with the exact command CLAUDE.md documents (`--target-dir .` from the workspace
+> parent, with the real `skills_config.json` and its `docs_root: "leafcutter-ai/docs/"`):
+> `docs/INDEX.md` went from 221 lines with zero `"No docs found"` to 57 lines with nine, and
+> the build printed `✓ wrote leafcutter-ai/docs/INDEX.md` and exited 0. Isolating
+> `generate_doc_index.py` reproduced the numbers exactly: repo root → 221 lines / 0 stubs,
+> workspace root → 57 lines / 9 stubs.
+>
+> Root cause confirmed at `build.py:1028-1030` — `output_path` is built from
+> `target_root / config["docs_root"]` while `content` comes from `generate_index(target_root)`.
+> Write honours `docs_root`; read ignores it.
+>
+> One precision on "every run": the *second* consecutive build is a no-op, because the stub it
+> wrote now matches what it reads. It destroys the index every time the index is in its
+> correct state — i.e. immediately after every `git checkout -- docs/INDEX.md`, which is
+> exactly the loop that made it look like "every run".
+>
+> **The build does not merely fail to reveal this — it reports it as a green success**, on a
+> tracked file that CLAUDE.md points agents at, in a form trivially committed by accident.
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 1
@@ -1191,6 +1333,25 @@ ordinary output.
 
 ### KI-BP-017 — `scripts/feedback/` is never provisioned into a worktree, so the documented signoff feedback call crashes and every affected phase records `(submit-failed)`
 
+> **RE-VERIFIED 2026-08-25 — LIVE, on a real worktree rather than a fixture.** Running the
+> documented call in `worktrees/ge122-acs` gives
+> `can't open file '.../scripts/feedback/submit_feedback.py': [Errno 2] No such file or directory`,
+> exit 2 — byte-identical to the recorded evidence. **14 of 54 live worktrees are in this
+> state**, including `EPIC-DeploymentCompleteness`, `ci-ac-gate`, `consumer-install` and
+> `ge122-acs`.
+>
+> **Root cause refined, and it changes the fix.** The entry says the directory is never
+> provisioned. In fact `setup_ticket_worktree._bootstrap` *does* run `build.py` at step 5, and
+> when that succeeds `install_shims` creates the shim — which is why the other 40 worktrees
+> have it. So the real defect is that **a skipped or failed bootstrap build is
+> indistinguishable from a successful one** (KI-BP-018). Adding the symlink to
+> `setup_ticket_worktree.py` is still worth doing, but it treats the symptom.
+>
+> *Naming trap for anyone checking coverage:*
+> `unit_tests/build_guards/test_bp017_shim_relative_targets.py` is about **AC BP-017**
+> (relative symlink targets), which is a different thing from this register entry
+> **KI-BP-017**. It is not coverage for this.
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 1
@@ -1253,3 +1414,128 @@ is `KI-FC-001` — so it must land together with that fix, not before it.
 
 **Pattern:** a build output that reaches the project root and not the worktrees, called
 through a path that only resolves at the project root.
+
+---
+
+### KI-BP-018 — No build phase can fail the build, the deploy set is hand-listed in ~26 places, and nothing verifies the deployed tree is complete
+
+- **Severity:** blocker
+- **Status:** open — ACs exist and are approved but unbuilt: BP-900g-8 (derive the closure) and BP-900g-9 (fail closed)
+- **Occurrences:** 1 (structural; it is the mechanism behind KI-BP-003, 005, 006, 008, 009, 012, 016 and 017)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build.py` `_run_phases` (~:1097-1184), `main` return at ~:1714, `_manifest_ac_store_scripts` (~:331-349); `scripts/build_referential_integrity.py:270`
+
+**Why this entry exists.** The register holds fifteen distinct build defects and the great
+majority are instances of one thing. Filing them individually has produced four rounds of the
+same fix. This entry records the mechanism so the next one is not filed as a sixteenth
+symptom.
+
+**Three findings, each reproduced against a real build into a scratch adopter repo
+(`git init`, target under `/tmp`, never under the package's own parent — a target under
+`package_root.parent` relativizes cleanly and is not representative).**
+
+**1. No build phase can fail the build.** `_run_phases` sums *file-write counts*. A phase that
+deployed 0 of its 18 scripts and a phase with nothing to do return the same integer. `main()`
+prints the sum and returns 0. The `_install_shims` result list and the `_install_hooks` return
+string are both discarded — so `pre-commit install` can fail, print a red `ERROR: pre-commit
+install failed`, and the build still reports success **with no git hooks installed**.
+
+Exactly six things can exit non-zero: config-schema validation (skipped when `jsonschema` is
+absent and under `--dry-run`), agent-registry validation (skipped under `--dry-run`), the
+broken-script-reference guard, the untracked-source guard (no-ops without git), self-description
+enforcement (**defaults to `warning`, i.e. off**), and the deploy-path collision guard. Plus
+uncaught exceptions — a `shutil.copy2` failure aborts, but a *missing source* does not.
+
+Fifteen fail-open sites were catalogued; none changes exit status. The highest-consequence:
+
+| Site | Effect | Signal |
+|---|---|---|
+| `build_helpers.py:651-661` | `pre-commit install` failed, no hooks installed | red text, discarded |
+| `template_compiler.py:33-37` | see KI-BP-019 — every agent loses its frontmatter | **none, any stream** |
+| `build.py:1590-1599` | corrupt `agent_registry.json` downgrades `error` → `warning`, disarming the gate that exists to catch it | bare `except … pass` |
+| `build_halt_guard.py:61-69, 89-101` | corrupt lock or no git permanently disarms the breaking-change gate | unlogged |
+| `build_referential_integrity.py:198-202, 241-245` | an unreadable template's broken references pass a **hard** gate | DEBUG |
+| `build_ac_store_scaffold.py:75-90` | template read failure prints `"already present, skipping"` | success-shaped |
+| `build_phases.py:89-105`, `injection_builders.py:275-282, 349-356` | unreadable `components.json` / `doc_types.json` / `paths.json` rendered as apology strings **injected into shipped agent prompts** | the prompt itself |
+
+**2. The deploy set is hand-listed in ~26 independent places and derived in none.** Sixteen
+deploy sources, plus six *mirrors* of those lists living in other files — `build.py:416` and
+`:657` are the second and third copies of the seven-entry workflow-tools list; `build.py:576`,
+`:582`, `:702` and `build_phases.py:916-917` are **four** copies of the
+`goal_to_epic.py`/`build_ac_mode_detection.py` pair. Plus two shim maps, two clean-target lists
+and three phase registries. Roughly fourteen `glob`/`rglob`/`iterdir` scans do exist — but they
+feed the *manifest and guard* side, never the deploy side.
+
+That asymmetry is the whole defect. `_manifest_ac_store_scripts` (`build.py:331-349`) derives the
+AC-store set by `iterdir()` over source, and its docstring claims it "match[es] what
+`build_ac_store` deploys." It does not. That derived set feeds the broken-reference guard — one
+of the six gates that *can* fail the build — so the guard believes `_ac_components.py` is
+deployable because it exists in source. **The only hard gate that could catch a deploy omission
+is fed by a set that contradicts the hand-list it is supposed to police.** Adding entries to
+`deploy_map` cannot close this; it is why KI-BP-006 recurred.
+
+**3. Nothing verifies the deployed tree is complete.** `main()` runs two post-build passes and
+both only print: `scan_for_placeholders` greps three hardcoded files for TODO markers, and
+`check_referential_integrity` validates the ten path-valued keys of `skills_config.json` — its
+own docstring calls it "a post-build warning phase (non-blocking)". `return 0` follows
+immediately.
+
+The function that would do the job — `build_referential_integrity.extract_compiled_script_path_refs()`,
+which scans the **compiled output tree** — exists, is unit-tested, and has **no production call
+site**. Verified: the only references are its own module, a docstring cross-link in
+`build_propagation_audit.py`, and `unit_tests/test_bp_900b_1.py`. Its docstring says the wiring
+was "intentionally out of this ticket's `files_touched` scope."
+
+The nearest live check is the *pre-build* reference guard, blind here by construction: it scans
+source templates rather than the deployed tree, matches only `python scripts/<path>` and
+`sys.path.insert(...)` forms so a plain `import` of an undeployed sibling is invisible, and
+cannot model a caller's CWD — which is why `scripts/feedback/submit_feedback.py` passes while
+failing in every worktree (KI-BP-017).
+
+**Evidence.** One adopter build finished with `_ac_components.py` missing, `doc_types.json`
+missing, an orphaned `check_eval_staleness.py` whose template had been deleted, and a **1-line**
+`fast-lane-ship.js` (source: 1047 lines). Exit 0. Stale cleanup printed `(no stale files found)`.
+A grep of the build log for `PLACEHOLDER`, `INTEGRITY` and `SCRIPT-REF` returned nothing.
+
+**Fix direction.** Build BP-900g-8 and BP-900g-9 — both already `readiness: approved`,
+`priority: high`, `work_status: todo`. Derive the closure (including the config and data files a
+script reads, not only the modules it imports, per BP-900g-8-ii) and make an incomplete deploy
+exit non-zero. Wiring `extract_compiled_script_path_refs()` is a large part of the work already
+written. Do **not** fix this by adding to `deploy_map`.
+
+**Pattern:** a build whose report is a count of what it wrote, in a system where the failure
+mode is not writing something.
+
+---
+
+### KI-BP-019 — A missing `pyyaml` strips the frontmatter from every deployed agent, silently, with no output on any stream
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/template_compiler.py:33-37`
+
+**Symptom.** The `yaml` import is wrapped in `except ImportError`, which sets a module flag and
+prints **nothing** — not a warning, not a log line, not a stderr byte. `parse_frontmatter` then
+returns `{}` for *every* template it is given.
+
+**Consequence.** Every compiled agent loses `name`, `description`, `model` and `tools`. The
+sign-off and verification blocks are never appended because the fields that trigger them are
+absent. `build_skills` cannot see `internal` or `deprecated`, so skills that should be withheld
+ship. The build prints `Total files written: N` — the same N as a correct run, because the files
+*are* written — and exits 0.
+
+**Why it is worth an entry of its own.** This is the largest single silent degradation in the
+pipeline and it is invisible in the one place anyone would look: the build's own output. Every
+other fail-open site in KI-BP-018 leaves at least a warning or a wrong file; this one leaves a
+complete, plausible, populated output tree in which every agent has been quietly lobotomised.
+
+**Fix direction.** It should not be caught at all — `pyyaml` is a hard requirement of the
+compiler, and an environment without it cannot produce a correct build. Let the `ImportError`
+propagate, or re-raise with a message naming the missing dependency. If the catch must stay for
+some caller, it must at minimum print to stderr and set a non-zero exit path. Subsumed by
+BP-900g-9's fail-closed principle but worth fixing on sight; it is one line.
+
+**Pattern:** an exception handler that makes a missing dependency indistinguishable from a
+satisfied one.
