@@ -313,8 +313,19 @@
                 }
             ]
         },
+        "package_surface": {
+            "description": "Explicit declaration that this AC registers a PACKAGE SURFACE — an entry in a registry the build reads to decide what a consumer project receives (config/agent_registry.json, config/skill_registry.json, config/paths.json, templates/scripts/commit_guardian/commit_guardian.json). Set it to true, deliberately, when the AC's work brings such a surface into existence. This declaration is the SOLE trigger for the structured it_requirements obligation below (ACS-100i-6): the obligation is no longer inferred from assigned_agent or from how the AC spells its component, because that proxy both over-matched (243 of the store's 280 refusals were records registering no config key at all) and under-matched (440 records spelling the namespace 'build-pipeline' were invisible to it). Absent or false means no structured implementation spec is demanded, whatever the AC's agent, component or components values. Registering a surface without declaring it here is caught at landing time by the check-package-surface-declaration commit hook (ACS-100i-8), which reconciles the registry entries a change actually adds against the declarations of the ACs it cites.",
+            "oneOf": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "it_requirements": {
-            "description": "Technical requirements for implementing this AC. May be a multi-line string, a list of requirement strings, or — for package-surface ACs (assigned_agent=python-coder, component in build_pipeline/build-orchestration) — a structured object with machine-checkable implementation fields (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands). Set by it-po during technical enrichment.",
+            "description": "Technical requirements for implementing this AC. May be a multi-line string, a list of requirement strings, or — for ACs declaring `package_surface: true` — a structured object with machine-checkable implementation fields (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands). Set by it-po during technical enrichment. NOTE: whenever the object form is used it is held to ALL five fields by the object branch below, independently of the package_surface declaration (ACS-100i-6-i) — narrowing the trigger must never become a way to file a half-populated structured spec.",
             "oneOf": [
                 {
                     "type": "string",
@@ -328,7 +339,7 @@
                 },
                 {
                     "type": "object",
-                    "description": "Structured implementation spec required for package-surface ACs (assigned_agent=python-coder, component in build_pipeline/build-orchestration). Must include all five required implementation fields.",
+                    "description": "Structured implementation spec required for ACs declaring `package_surface: true`. Must include all five required implementation fields. This branch's `required` list is enforced for EVERY record that uses the object form, declared or not — see ACS-100i-6-i.",
                     "required": [
                         "config_schema_fragment",
                         "reference_file_path",
@@ -409,7 +420,12 @@
                             "angle": {
                                 "type": "string",
                                 "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec is taken as-is and gets no generator-added entries. Omit when the angle has not been classified."
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
+                            },
+                            "surface_invoked": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "BO-2900g-3: the entry-point field, carried under the name the (now-retired) ticket-facing definition already used. Names the CLI, hook script, slash command, or agent entrypoint a reachability-kind test must actually invoke, or holds the single 'entry point is not declared' sentinel when nothing upstream named one. Optional here — the generator's own reachability descriptor states the same fact via its 'asserts' field (BO-2900g-1-i) when this is omitted."
                             },
                             "description": {
                                 "type": "string",
@@ -556,6 +572,7 @@
                     "research_analysis",
                     "review_system",
                     "roadmap",
+                    "security_scanner",
                     "skill_registry",
                     "skills_system",
                     "sql_coding",
@@ -707,25 +724,18 @@
         }
     },
     "if": {
-        "description": "Package-surface AC detection: applies when the AC is assigned to python-coder and belongs to a build-pipeline or build-orchestration component.",
+        "description": "Package-surface AC detection (ACS-100i-6): applies when, and only when, the record explicitly declares `package_surface: true`. Neither assigned_agent nor component (nor components) is consulted — a package surface can be registered from any namespace by any agent, and how a record spells its component must never change this verdict (ACS-100i-6-ii).",
         "properties": {
-            "assigned_agent": {
-                "const": "python-coder"
-            },
-            "component": {
-                "enum": [
-                    "build_pipeline",
-                    "build-orchestration"
-                ]
+            "package_surface": {
+                "const": true
             }
         },
         "required": [
-            "assigned_agent",
-            "component"
+            "package_surface"
         ]
     },
     "then": {
-        "description": "For package-surface ACs, it_requirements MUST be a structured object (not a plain string or array) with the five required implementation fields. This prevents fictional or thin specs from reaching the coder.",
+        "description": "For records declaring a package surface, it_requirements MUST be a structured object (not a plain string, an array or null) with the five required implementation fields. This prevents fictional or thin specs from reaching the coder.",
         "required": [
             "it_requirements"
         ],

@@ -1,0 +1,114 @@
+id: GE-123c-4
+components:
+  - commit_guardian
+  - security_scanner
+title: "Someone writing their first suppression can find out how to write one instead of copying a neighbouring line"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a developer whose commit has just been blocked by the secrets check on a
+    value they know is not a secret,
+  And they open the how-to guide that explains how to work with the commit-time
+    checks,
+  When they look for how to stop that one finding being reported,
+  Then they find a section on suppressing a finding that names the file
+    suppressions are written in, describes an entry as three parts — which check,
+    which file, which line — and says what each part may contain, including that
+    the third part is either a single line number or the marker meaning every
+    line,
+  And they can write a working entry from that section alone, without opening the
+    file to copy an existing line,
+  Because the accepted forms are learned by imitation today, and imitation is
+    exactly how the observed mistake was made.
+
+  Given the same section,
+  When the developer wants to record why they added the entry,
+  Then the section states that an explanatory note cannot be appended to the end
+    of an entry and must be written on its own line above it, and shows both
+    spellings side by side — the appended note that is rejected and the note on
+    its own line that is accepted,
+  Because the whole point of the note is that its author believed it was harmless,
+    and a rule they never read cannot correct them.
+
+  Given the same section,
+  When the developer wants to know what happens if they get an entry wrong,
+  Then the section states that an entry which cannot match anything is reported in
+    the terminal, naming the file and the line, and is then ignored — and that the
+    commit is not blocked by that warning on its own,
+  And the wording of the warning shown matches what the check actually prints,
+  Because a described correction that does not happen, or happens differently, is
+    worse than none: this component already contains one guard documented as doing
+    something it does not do, and authors believed it.
+depends_on:
+  - GE-123c
+  - GE-123c-3
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "The target document has no suppression section today — its headings cover creating, modifying, disabling and deleting a hook, and troubleshooting. This is a new section, not an edit to an existing one, and it must be reachable from the document's own navigation rather than buried at the end."
+  - "The warning text shown must be COPIED from what the check actually prints, not paraphrased. Take it from the implementation settled by the announcement criterion, after that criterion is green — a how-to that shows a message nobody ever sees sends the reader looking for the wrong thing."
+  - "Keep the task guidance here and the grammar-plus-rejection list in the reference document. Two copies of the same grammar drift, and the sibling reference AC owns that copy."
+  - "Illustrative entries must use ordinary source filenames and must not contain credential-shaped literals: this file is itself scanned on every commit, and a realistic-looking example would either trip the check or have to be suppressed, which is a self-inflicted instance of the defect being documented."
+  - "Do not use an environment-file name as a generic example. The per-file scan short-circuits those to a single filename-based finding and never reads their content, so such an example would be unreachable and misleading."
+  - "Documentation check for this AC: (1) the document contains a suppression section that names the allowlist file and describes all three parts of an entry, including that the third part is either a decimal line number or the marker meaning every line; (2) it shows the rejected appended-note spelling and the accepted note-on-its-own-line spelling side by side; (3) it states that an unmatchable entry is reported naming the file and the line, is then ignored, and does not on its own block the commit; (4) the warning wording it shows is character-identical to what the check prints."
+  - "Verification is by review against the shipped behaviour, not by an automated test. Do not author code tests for this AC."
+test_required: false
+test_rationale: |
+  This AC changes prose only, so it carries no executable behaviour and
+  test_required is false rather than test_spec being left empty. Its verification
+  is the four-part documentation check recorded in it_requirements, performed
+  against the behaviour the announcement criterion actually ships. The one clause
+  that could rot silently is the quoted warning wording; it is protected here by
+  ordering — this AC depends on the announcement criterion — and by the parity arm
+  the sibling reference AC carries.
+delivers_to: null
+expects_from:
+  ac_id: GE-123c-3
+  contract: "The settled behaviour to describe: which entry shapes are rejected as unmatchable, the exact warning an author sees, the stream it appears on, and the guarantee that the warning alone never blocks a commit."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: safety
+notes: |
+  WHY A HOW-TO AND NOT ONLY A REFERENCE. Writing a suppression is a task a person
+  performs by hand, under time pressure, immediately after being blocked. The
+  reference that lists the accepted forms is the right place for the grammar; it is
+  not where someone in that position looks, and it is not organised around the task
+  they are trying to complete. The parent L1 triggered both kinds deliberately and
+  neither substitutes for the other.
+
+  THE THIRD CRITERION IS THE ONE THAT CAN GO STALE. It quotes behaviour owned by
+  the code criteria in this L1, so the wording it shows must be taken from what the
+  check actually prints rather than paraphrased — a how-to that shows a warning
+  nobody ever sees sends the reader looking for the wrong thing.
+
+  ORDER. This depends on the announcement criterion being settled; documenting a
+  message before its shape is fixed guarantees the two disagree.
+
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-18. Assigned documentation-expert, not
+  python-coder: the surface is prose in docs/, which is not a build-deployed file,
+  so no template/deployed parity applies here (it does apply to the sibling
+  reference AC, whose target ships through build.py). test_required is false with
+  the documentation check written out in it_requirements, because inventing code
+  tests for a prose change produces a test that asserts a string is present in a
+  file — a shape this project has repeatedly found to pass on dead content.

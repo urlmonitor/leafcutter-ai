@@ -371,7 +371,40 @@ _HARNESS = os.path.join(
 
 class TestDispatchGuardBehavior(unittest.TestCase):
     """AC-3 (BO-2000e-2), behavioral: the coder guard must open when tests
-    demonstrably exist and stay closed when they do not."""
+    demonstrably exist and stay closed when they do not.
+
+    ON THE RESULT STATUS IN THE GUARD-OPEN CASES BELOW. These scenarios run in
+    the harness's NON-record mode (``recordMode = !!scenario.tickets``), where no
+    ticket .md exists at all, so every post-dispatch record read-back is
+    unreadable and the drive can never confirm the ticket complete. Since
+    BO-400a-2-iii the driver reports that condition with its own failure
+    vocabulary (``blocked``) instead of contradicting itself with ``ok``, so
+    ``blocked`` is the correct status here — for a reason that has nothing to do
+    with this AC.
+
+    ``assert_guard_did_not_fire`` therefore replaces the incidental
+    ``status == "ok"`` assertion with the discriminating one: whichever status
+    the drive reports, it must not be the BO-2000e-2 coder refusal. That refusal
+    is identifiable — it names the coder as ``failing_phase`` — so the assertion
+    still fails if the guard wrongly closes, which is what these tests exist to
+    catch.
+    """
+
+    def assert_guard_did_not_fire(self, result, coder="python-coder"):
+        """The drive was not stopped by the BO-2000e-2 coder refusal."""
+        self.assertNotEqual(
+            (result or {}).get("failing_phase"),
+            coder,
+            f"the drive halted on the '{coder}' phase, which is the signature of "
+            "the BO-2000e-2 Test Requirements refusal. Tests demonstrably exist "
+            f"for this scenario, so the guard must stay open. Result: {result}",
+        )
+        self.assertNotIn(
+            "BO-2000e-2",
+            str((result or {}).get("message") or ""),
+            "the drive returned the BO-2000e-2 coder-guard blocker even though "
+            f"tests demonstrably exist for this scenario. Result: {result}",
+        )
 
     def _run_scenario(self, **scenario) -> dict:
         """Execute build-ticket.js against stubbed globals; return
@@ -424,7 +457,7 @@ class TestDispatchGuardBehavior(unittest.TestCase):
             "test files, even though ## Test Requirements is absent. Blocking "
             "here is the deadlock that made every AC-generated ticket unbuildable.",
         )
-        self.assertEqual(out["result"]["status"], "ok")
+        self.assert_guard_did_not_fire(out["result"])
 
     def test_coder_blocked_when_test_writer_wrote_nothing(self):
         # covers: BO-2000e-2
@@ -497,7 +530,7 @@ class TestDispatchGuardBehavior(unittest.TestCase):
             "python-coder must be dispatched on resume when a prior drive's test "
             "files still exist on disk.",
         )
-        self.assertEqual(out["result"]["status"], "ok")
+        self.assert_guard_did_not_fire(out["result"])
 
     def test_coder_blocked_on_resume_when_prior_tests_are_gone(self):
         # covers: BO-2000e-2
@@ -525,7 +558,7 @@ class TestDispatchGuardBehavior(unittest.TestCase):
         )
 
         self.assertIn("python-coder", out["dispatched"])
-        self.assertEqual(out["result"]["status"], "ok")
+        self.assert_guard_did_not_fire(out["result"])
 
 
 if __name__ == "__main__":

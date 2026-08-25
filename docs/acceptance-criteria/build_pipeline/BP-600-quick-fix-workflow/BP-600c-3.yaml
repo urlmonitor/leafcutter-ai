@@ -1,7 +1,7 @@
 id: BP-600c-3
 components:
   - build_pipeline
-title: "Quick-fix workflow runs the test after the fix and confirms it passes (green phase)"
+title: "Quick-fix confirms the test passes under strict enforcement, then proves it is coupled to the fix"
 component: build-pipeline
 level: L2
 status: active
@@ -13,10 +13,28 @@ criteria: |
   When the workflow reaches the green-phase verification step,
   Then it dispatches the test-runner agent targeting the same test file
     from the red phase,
+  And the run is required to be made under strict AC enforcement, on the same
+    terms and for the same reason as the red phase,
+  And the workflow rejects the verdict outright — halting, and naming the
+    command that was actually run — whenever the runner cannot evidence that
+    the strict setting was in force,
   And the test-runner reports all tests PASSED,
-  And if the test still fails the workflow halts with a warning:
-    "The fix did not resolve the failing test -- the root cause may be
-    different than diagnosed."
+  And if the test still fails the workflow halts before committing anything,
+    reporting the failure and that the fix did not resolve the bug.
+
+  And green-after-red is then treated as insufficient on its own, because a
+    test can pass for a reason unrelated to the fix,
+  When the green verdict has been accepted,
+  Then the workflow proves the test is coupled to the fix: it reverts the fix,
+    confirms the test goes red again, restores the fix, and confirms the test
+    is green once more,
+  And if the test stays green with the fix reverted, the workflow halts and
+    refuses to mark the criterion done — a test that passes without the fix is
+    evidence of nothing,
+  And if the restore step does not put the fix back, the workflow halts and
+    says so explicitly, so the fix is never left reverted in the working tree,
+  And only when the revert produced red, the restore produced green, and the
+    fix is confirmed back in place does the workflow proceed to commit.
 depends_on:
   - BP-600c
   - BP-600c-2
@@ -28,6 +46,20 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and
+      "Real-artifact behavioral spot-check before declaring done" are the
+      standing rules the mutation proof implements at workflow level.
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      Phase 4. The green verdict is gated on strict_command_run exactly as the
+      red phase is; the mutation proof is a separate step whose three booleans
+      must all hold before Phase 5 runs.
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
@@ -35,16 +67,49 @@ it_requirements:
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
   - "Must reuse the same test file path from the red phase — no re-discovery"
+  - >-
+    Must apply the same strict-enforcement verification as the red phase: read
+    back the command the runner ran and reject the verdict when the strict
+    prefix is absent. A default run cannot distinguish a real pass from a
+    downgraded failure on a not-yet-done AC, so an unqualified green is not a
+    green.
   - "Must halt the workflow (not just warn) if the fix does not resolve the failing test"
+  - >-
+    Must run the mutation proof as a distinct gate after the green verdict, not
+    as an optional extra, and must report all three of its outcomes separately
+    (red without the fix, green with the fix restored, fix actually restored)
+    so a partial completion cannot read as a pass.
+  - >-
+    Must treat a failure to restore the fix as its own halt with recovery
+    instructions. Leaving the fix reverted after a proof step is a worse
+    outcome than never running the proof.
 delivers_to:
   agent: workflow-architect
-  contract: "Green-phase result: { test_file: string, all_passed: boolean, failures: string[] }"
+  contract: "Green-phase and mutation-proof result: { passed: boolean, strict_command_run: string } from the strict green run, plus { red_without_fix: boolean, green_with_fix_restored: boolean, fix_restored: boolean } from the mutation proof. The commit phase proceeds only when passed, red_without_fix, green_with_fix_restored and fix_restored are all true."
 expects_from:
   ac_id: BP-600c-2
   contract: "Red-phase result containing test_file path to reuse for green-phase verification"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Two changes. First, the same strict-enforcement correction applied to
+      BP-600c-2: "the test-runner reports all tests PASSED" was accepted
+      unqualified, and an unqualified pass is exactly what the xfail downgrade
+      manufactures for a not-yet-done AC. The workflow now rejects a green
+      verdict whose reported command lacks the strict prefix. Second, and
+      larger, the mutation proof was entirely absent from this record. It is
+      not an optional hardening — BP-600d-3 now names it as the precondition
+      for the commit phase, so without it stated here that record expected a
+      contract this one did not describe. The delivers_to contract was
+      rewritten to the shape actually produced and actually consumed: the old
+      { test_file, all_passed, failures[] } was neither. The verbatim halt
+      string was replaced with a description of what the halt must convey, for
+      the same reason as on BP-600c-2 — the quoted text never matched the
+      emitted string. Title amended. work_status left done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
@@ -52,3 +117,17 @@ covered_by:
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  UNRESOLVED CONTRADICTION WITH THIS RECORD'S OWN CHILD. BP-600c-3-i
+  (work_status: done) requires the green phase to run not only the new test but
+  also existing tests that import or reference the fixed file, and to halt on
+  any newly-broken related test before committing. The shipped green phase runs
+  the single new test file and nothing else, so a fix that repairs its own test
+  while breaking a neighbour reaches the commit phase unchallenged. The
+  mutation proof added above does not close this: it proves the test is coupled
+  to the fix, which is a different question from whether the fix broke anything
+  else. Left stated rather than amended away, for the same reason as
+  BP-600c-2-i — this is an unbuilt requirement, not an obsolete one.

@@ -29,6 +29,11 @@ DECISION HISTORY:
     explicit test_required: false — and blocks the contradictory test_spec +
     test_required:false state. Runs on staged files only (forward ratchet; does not
     retroactively fail the store). The AC is the source of truth for tests. (AC BO-2000e)
+  - 2026-08-18 [python-coder/BO-2900g-2]: Added derive_declares_side_effect() and
+    validate_declares_side_effect(). The declaration must be DERIVED from an AC's own
+    criteria text (a durable, observable effect asserted in its Then clause), never
+    authored by opinion. Wired into check_ac_schema.py's per-file validation pass
+    (staged files only — forward ratchet, same posture as validate_test_contract).
 """
 
 from __future__ import annotations
@@ -540,3 +545,111 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
             )
 
     return errors
+
+
+# ---------------------------------------------------------------------------
+# declares_side_effect derivation (BO-2900g-2 / BO-2900g-2-i)
+# ---------------------------------------------------------------------------
+
+# Matches the FIRST Gherkin "Then" clause (line-start, case-insensitive); the
+# derivation reads everything from that point to the end of the criteria text
+# so a trailing "And" continuation of the Then clause is considered too — the
+# same reasoning check_ac_schema's other Gherkin-aware helpers already use.
+_THEN_CLAUSE_START_RE = re.compile(r"\bThen\b", re.IGNORECASE)
+
+# Durable, observable-outside-the-process effect phrases. Deliberately narrow
+# and phrase-based (not single common words like "created" or "recorded" in
+# isolation) so the derivation marks a STRICT subset of the store rather than
+# "everything that ever writes anything" — a derivation that marks everything
+# is indistinguishable from one that marks nothing one gate later (BO-2900g-2
+# constraints). Calibrated against the real on-disk store at authoring time:
+# ~3.6% of records with a Then clause matched (114 of 3148).
+_DURABLE_EFFECT_RE = re.compile(
+    r"written to disk|written to a file|\bis written\b|\bare written\b|"
+    r"writes? (?:a|the|an) (?:file|record)|persist(?:ed|s)?\b|"
+    r"saved to disk|\bis saved\b|\bare saved\b|"
+    r"saves? (?:a|the|an) (?:file|record)|record is persisted|"
+    r"created on disk|removed from disk|deletes? (?:a|the|an)? ?file|"
+    r"state-changing command|leaves the system in a different state|"
+    r"changes? the system.s state|commits? (?:a|the) (?:change|transaction)|"
+    r"pushed to|deployed to|updates? the (?:database|store)|"
+    r"a file is written|a record is persisted",
+    re.IGNORECASE,
+)
+
+
+def derive_declares_side_effect(data: dict[str, Any]) -> bool:
+    """Derive whether an AC's own criteria assert a durable, observable effect.
+
+    BO-2900g-2: the declaration that routes a ticket's ``user-surface-smoker``
+    phase agent must be DERIVED from the record's own Then clause — a file
+    written, a record persisted, a state-changing command — never authored by
+    opinion. Only the Gherkin ``Then`` clause (and anything after it, e.g. a
+    trailing ``And``) is examined; a durable-effect phrase appearing only in a
+    ``Given`` clause does not count, because the Given describes pre-existing
+    state, not what this AC's own work does.
+
+    Args:
+        data: Parsed AC YAML content.
+
+    Returns:
+        True when the criteria's Then clause asserts a durable, observable
+        effect; False when criteria are absent, contain no Then clause, or
+        the Then clause asserts only a returned value / in-memory result.
+    """
+    criteria = data.get("criteria")
+    if not criteria or not isinstance(criteria, str):
+        return False
+    match = _THEN_CLAUSE_START_RE.search(criteria)
+    if match is None:
+        return False
+    then_onward = criteria[match.start():]
+    return bool(_DURABLE_EFFECT_RE.search(then_onward))
+
+
+def validate_declares_side_effect(path: Path, data: dict[str, Any]) -> list[str]:
+    """Validate that ``declares_side_effect`` matches what the criteria derive.
+
+    Runs on staged files only (forward ratchet — the existing store is not
+    retroactively validated, same posture as ``validate_test_contract``).
+
+    Two failure shapes, both required by BO-2900g-2's "never silently
+    overwritten, never silently ignored" constraint:
+
+    - The Then clause asserts a durable effect but ``declares_side_effect``
+      is absent/null/false — the record must gain the declaration.
+    - ``declares_side_effect`` is explicitly authored and DISAGREES with the
+      derived value in either direction — the disagreement is reported by
+      record id rather than silently resolved either way.
+
+    Args:
+        path: Filesystem path to the AC file (for error messages).
+        data: Parsed AC YAML content.
+
+    Returns:
+        List of error message strings; empty when the declaration matches
+        the derivation (including the common case where both are False/absent).
+    """
+    derived = derive_declares_side_effect(data)
+    authored = data.get("declares_side_effect")
+
+    if authored is None:
+        if derived:
+            return [
+                f"{path}: criteria assert a durable, observable effect (a file "
+                f"written, a record persisted, a state-changing command) but "
+                f"declares_side_effect is not set — add declares_side_effect: "
+                f"true. This value must be DERIVED from the AC's own Then "
+                f"clause, not authored by opinion (BO-2900g-2)."
+            ]
+        return []
+
+    if bool(authored) != derived:
+        return [
+            f"{path}: declares_side_effect is authored as {authored!r} but this "
+            f"AC's own Then clause derives {derived!r} — the two disagree. "
+            f"Fix the authored value or the criteria text; a derived value must "
+            f"never be silently overwritten and a disagreement must never be "
+            f"silently ignored (BO-2900g-2)."
+        ]
+    return []

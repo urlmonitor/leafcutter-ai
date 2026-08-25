@@ -1,0 +1,147 @@
+id: GE-123
+title: "Trust that the last check between you and a leaked credential is still on"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - security_scanner
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Narrowing a security check never switches it off.
+
+  Some checks are the last thing standing between an ordinary mistake and a
+  credential written into the project's permanent history. Today a single line
+  written to quiet one noisy result can leave a whole file unexamined, and
+  nobody is told; a line that does nothing at all looks exactly like a line
+  that works; and describing a security problem in writing is treated as
+  causing one. After this goal, narrowing what a check reports only ever
+  narrows it — no file quietly loses its protection, an instruction that
+  cannot do what it says announces itself while you are still writing it, and
+  writing about a risk is no longer confused with taking one.
+depends_on: []
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Adjacent and complementary, NOT a duplicate. GE-113c-3-v closes the MALFORMED-entry hole (a suppression whose target path has zero path segments, and a line with no separator at all) and is already done. GE-123 covers what remains: a WELL-FORMED entry that still collapses a file's coverage to nothing, an entry that parses into something other than what its author wrote, and the file kind that is never read at all. Do not close either as a duplicate of the other, and do not re-author -v's scenarios here."
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-123a
+  - GE-123b
+  - GE-123c
+  - GE-123d
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE THROUGH-LINE (keep it — every L1 is an instance of it).
+    A suppression is a scalpel and it currently behaves like a switch. The
+    promise this goal makes is threefold and each part is separately testable:
+    a suppression NARROWS what is reported; it never reduces a file's effective
+    coverage to nothing; and it never quietly fails to do what its author
+    believes it does. Any decomposition that loses one of the three has lost
+    the goal.
+
+  WHY THE L1 CUT IS SHAPED THIS WAY (do not re-cut at L1).
+    The obvious cut — one L1 per observed defect — was rejected: it produces a
+    set of point fixes and hides the fact that two of the three defects are
+    instances of one invariant. This component has a documented history of
+    exactly that failure (four successive point patches in the same area, see
+    the component context note on GE-120). The cut used instead is by
+    guarantee:
+      - GE-123a — the coverage FLOOR: what gets examined is decided by a file's
+        contents, not by its name. This is the specific gap that makes the
+        collapse reachable.
+      - GE-123b — the INVARIANT that gap is an instance of: no single
+        suppression may take a file's effective coverage to zero, whatever the
+        file and whatever the entry. GE-123a can be fixed while GE-123b is
+        still violated by some other route, and vice versa, which is why they
+        are two L1s rather than one.
+      - GE-123c — HONESTY of the instruction: an entry that cannot ever match
+        says so. Distinct benefit (the author's belief is corrected) and a
+        distinct failure mode (silence, not over-suppression).
+      - GE-123d — the OPPOSITE error: the check firing on writing that merely
+        describes a risk. It belongs in this goal because it is the pressure
+        that makes people reach for a suppression in the first place — every
+        false positive is a reason to write another line, and every line
+        written is a chance to disable something. Fixing only the suppression
+        side while leaving the noise in place treats the symptom.
+
+  EVIDENCE, WITH CONFIDENCE LABELS (carry them through; do not upgrade them).
+    DIRECTLY MEASURED: five files whose names mark them as configuration, each
+    containing a cloud access key, a private-key header, a password assignment
+    and a high-entropy token, produced ZERO reported problems and a clean exit
+    with one suppression line in place. The same content in an ordinary source
+    file produced four. The mechanism is that a file recognised by its name
+    contributes exactly one result — the name itself — and its contents are
+    never read, so that single result is the only thing a suppression has to
+    silence.
+    DIRECTLY OBSERVED: a suppression line carrying a trailing explanatory
+    comment has the comment absorbed into a field the author did not intend to
+    fill, so the entry never matches anything and never warns. The author
+    believes something is suppressed that is not.
+    DIRECTLY OBSERVED, WITH COST: writing that describes a dangerous-looking
+    value is exempt for one kind of finding in requirements and ticket text but
+    not for another, so documentation about the check blocks the commit. Cost
+    to date: three rounds of rewording on one real change, today.
+
+  BOUNDARY WITH THE ALREADY-DONE WORK — read before decomposing.
+    GE-113c-3 (segment-suffix matching) and GE-113c-3-v (zero-segment and
+    separator-free entries rejected with a warning) are both done. -v already
+    specifies the warn-and-skip behaviour, the warning's information content
+    (source file, one-based line number, verbatim offending text), the
+    per-line-not-per-file rule, and the requirement that blank and comment
+    lines stay silent. GE-123c must EXTEND that mechanism to the entries -v did
+    not contemplate — an entry that parses successfully into something other
+    than what was written — and must reuse its warning contract rather than
+    inventing a second one. Re-specifying -v's scenarios here would reopen
+    completed work.
+
+  INHERITED, NOT REPEALED.
+    This component's deliberate fail-open convention (an internal error means a
+    warning and exit zero, never a blocked unrelated commit) and GE-120's rule
+    that a check which cannot run must say so both apply here unchanged. The
+    specific tension to resolve at L2, explicitly and per scenario: this check
+    runs on every commit, so a hard error on a cosmetic mistake becomes a
+    repository-wide outage. -v's precedent is warn-and-skip, which fails closed
+    because the author immediately sees the finding they were trying to hide.
+    Follow it unless a scenario gives a reason not to, and say so when it does.
+
+  AUTHORING CONSTRAINT THAT MUST SURVIVE DECOMPOSITION.
+    Do NOT use an environment-file name as a generic illustrative example of "a
+    file with a finding" anywhere in this tree. A sibling audit found that such
+    files are short-circuited to a single name-based result and their contents
+    are never scanned, which made two existing criteria describe scenarios that
+    are unreachable through the real entry point. The collapse behaviour itself
+    is the subject of GE-123a and must of course be described — the constraint
+    is on casual examples elsewhere, which must use ordinary source filenames.
+
+  VERIFICATION STANDARD FOR THIS TREE.
+    Every claim here was measured through the path a real commit takes, not
+    through a direct call to the matching logic. The same standard applies to
+    the tests: a sibling audit in this exact family found two criteria that
+    were verified only against the matcher in isolation and described
+    situations the real entry point can never produce. Unit-level coverage of
+    the matcher does not discharge any L2 in this tree on its own.
+
+  Authored at the PO stage; L0/L1 only. The BA decomposes to L2/L3 and the
+  IT PO adds the technical constraints.

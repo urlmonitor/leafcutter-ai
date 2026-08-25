@@ -1,0 +1,169 @@
+id: BO-2900f-1-ii
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A gate recorded more than once is adjudicated from its latest entry, and the duplication is surfaced rather than erased"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a work item whose record carries two entries for the same delivery gate,
+    because that gate was reached twice within one drive -- retried after an
+    adjudicated failure, or re-entered when the drive resumed,
+  When the drive reads the record back to decide that gate's verdict,
+  Then the verdict for that gate is taken from the LATEST entry for it and from no
+    other entry,
+    And when the earlier entry says the gate passed and the later one says it failed,
+      the gate is adjudicated failed -- a stale pass never outlives a later failure,
+    And when the earlier entry says the gate failed and the later one says it passed,
+      the gate is adjudicated passed -- a retry's success is never discarded in favour
+      of the failure that preceded it,
+    And the drive reports the duplication to the operator, naming the gate and how
+      many entries that gate carries, so a gate that was recorded twice is visible in
+      the run's own output rather than silently tolerated,
+    And the drive leaves the record exactly as its authors wrote it: it does not
+      delete, rewrite, reorder or collapse an entry it did not itself write,
+    And a gate carrying exactly one entry is adjudicated from that entry and is not
+      reported as duplicated,
+  So a gate reached twice still yields one correct verdict, and the audit trail that
+    produced that verdict survives intact.
+depends_on:
+  - BO-2900f-1
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver and its per-phase dispatch loop, including the retry and resume paths that can reach a gate twice. The adjudication and the duplicate report belong here. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js; the same latest-entry adjudication and duplicate report must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. It must be able to stage a record that already carries two entries for one gate, in either outcome order, so the adjudication can be driven over a real run rather than asserted against a hand-built verdict object."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The write-side half of this behaviour, split out on 2026-08-18: the recording agent updates its existing entry instead of appending a second, so the duplicate this AC adjudicates around stops being produced. Neither AC substitutes for the other -- this one keeps a verdict correct when a duplicate exists, that one stops the duplicate existing."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the parser-strict entry heading the adjudication reads, and states that the record is append-only and that an agent never edits another agent's lines -- which is why the driver may read and report duplicates but may not remove them."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the post-dispatch verdict derivation in build-feature.js and its twin in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_phase_signoff_verification.py"
+  constraints:
+    - "READ-ONLY OVER THE RECORD -- THIS IS THE LOAD-BEARING CONSTRAINT. The driver adjudicates; it never edits the record to make the adjudication come out tidy. Deleting or rewriting a heading another agent wrote means the driver is editing another agent's audit history to cover a write-side defect, and it is also outside the drive's mutation surface: the record is append-only, and status rewriting and whole-record deletion are the only other channels. Any implementation that removes, merges or renumbers an existing entry fails this AC even if every verdict it produces is correct."
+    - "LATEST WINS IN BOTH DIRECTIONS, AND BOTH DIRECTIONS ARE TESTED. Keeping the FIRST entry silently reports a stale failure over a retry's success; keeping the most FAVOURABLE entry silently reports a stale pass over a later failure. Only recency decides. Test the fail-then-pass and the pass-then-fail orders separately -- an implementation that keys on outcome rather than order passes one of them."
+    - "RECENCY MUST BE DERIVED FROM THE RECORD'S OWN ORDERING, NOT FROM A CLOCK COMPARISON ALONE. Two entries for one gate can carry the same timestamp to the minute; the append order is the tiebreak. An adjudication that compares timestamps only is non-deterministic on same-minute retries, which is the common case for a fast retry."
+    - "SURFACE THE DUPLICATE, DO NOT SWALLOW IT. The count of duplicated entries is reported on the run's own output alongside the verdict (the implementation reports it as duplicate_signoff_entries). A duplicate that only affects which entry was read, and is never named, leaves the write-side defect invisible for as long as the adjudication keeps compensating for it."
+    - "SINGLE-ENTRY CONTROL CASE. A gate with one entry must adjudicate from it and must NOT appear in the duplicate report. Without this the AC is satisfiable by an implementation that reports every gate as duplicated."
+    - "BOTH TWINS IN ONE CHANGE. A latest-entry rule landed in only one driver produces two drivers that disagree about the verdict for the same record."
+delivers_to:
+  agent: python-coder
+  contract: "A per-gate verdict derived from the latest entry for that gate, plus a duplicate report naming each gate that carries more than one entry and its entry count. Consumed by BO-400a-2-ii's completion trigger and by the run's outcome roll-up; the duplicate count is the operator-visible signal that BO-2900f-2-ii's write-side rule has not held."
+expects_from: null
+test_spec:
+  - name: test_verdict_for_a_duplicated_gate_is_taken_from_the_latest_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the real workflow over a record that already carries two entries for one gate and assert the verdict the run carries forward is the one in the later entry -- asserted on the verdict, never on how many entries the file ends with."
+  - name: test_a_stale_pass_does_not_outlive_a_later_failure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Entries in pass-then-fail order: assert the gate is adjudicated failed. Catches an implementation that keeps the first entry or the most favourable one."
+  - name: test_a_retry_success_is_not_discarded_by_the_earlier_failure
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The opposite order -- fail-then-pass -- asserted to adjudicate passed. The pair is what proves recency rather than outcome is the selector; one alone does not."
+  - name: test_duplicate_entries_are_counted_and_reported_with_the_gate_name
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Assert the run's output names the duplicated gate and its entry count, so the write-side defect is visible to the operator rather than absorbed by the adjudication."
+  - name: test_the_drive_leaves_every_existing_entry_untouched
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Capture the record before and after the adjudication over a duplicated gate and assert it is unchanged -- no entry deleted, rewritten, reordered or merged. This is the clause that distinguishes this AC from the write-side half and must fail any driver that de-duplicates on disk."
+  - name: test_a_single_entry_gate_adjudicates_normally_and_is_not_reported_as_duplicated
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control case over the canonical phase set with no duplicates: every gate adjudicates from its one entry and the duplicate report is empty."
+test_rationale: |
+  This AC is now about a verdict, not about a file, and the distinction decides every
+  descriptor. The earlier version asserted that the record ends with one entry per
+  gate; that is unsatisfiable from the driver, whose only channels over the record are
+  append, a status-line rewrite and whole-record deletion -- none of which can remove
+  a single heading -- and it would be wrong even if it were possible, because the
+  heading belongs to another agent's audit trail. So the cardinality-on-disk
+  assertions are retired here and re-stated on BO-2900f-2-ii, where the writer that
+  actually produces the duplicate can be held to them.
+  What survives is the part that was always the driver's: given a record it did not
+  write, produce the right verdict from it. The two ordering descriptors are the
+  load-bearing pair -- either alone is passed by an implementation that selects on
+  outcome instead of recency, and selecting on outcome is the cheapest wrong fix. The
+  untouched-record descriptor is the guard against the retired requirement creeping
+  back in as an implementation detail: a driver that quietly deletes the older heading
+  would pass every other descriptor here.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - "2026-08-18 BrainCandy: restated as an adjudication-only criterion and the write-side half split out to BO-2900f-2-ii. The original required the on-disk record to end with exactly one entry per gate. The driver cannot satisfy that -- its entire mutation surface over the record is append, a status-line rewrite and whole-record deletion, none of which removes a single entry -- and it should not: the duplicate originates at the agent that writes the entry, so making the driver delete it means one agent rewriting another agent's audit history to cover a write-side bug. Production evidence: ticket 03 of EPIC-DeploymentCompleteness carries two `commit (status: ok)` entries ten minutes apart, both written by the commit agent. Retired from this AC: exactly-one-entry-on-disk, no-second-entry-appended, and entry-count-equals-gate-count. Retained and sharpened: latest entry decides the verdict in both orderings, duplicates are counted and surfaced. Added: the driver must not rewrite or delete entries it did not write, stated positively as a design constraint."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The adjudication half of BUG-23 (run wf_cc2b46d9-f6f). Ticket 03's record carried the
+  delivery gate twice while carrying no entry at all for test-runner -- both halves of
+  the parent's cardinality invariant broken on one work item, in opposite directions,
+  in the same drive.
+
+  WHY THE WRITE SIDE LEFT THIS AC (2026-08-18). The original criteria bound one actor
+  to two jobs: decide correctly from a record, and guarantee the shape of that record.
+  The driver can only do the first. The second belongs to whoever appends -- the phase
+  agent -- and is now BO-2900f-2-ii, parented under BO-2900f-2 because that L2 is the
+  exactly-one-entry-per-gate cardinality invariant and this is its write-side
+  enforcement. Read the two together: BO-2900f-2-ii stops the duplicate being written;
+  this AC keeps the verdict correct for every record already carrying one, and makes
+  the duplicate visible so the write-side failure is not permanently masked by the
+  read-side compensation.
+
+  THE THREE SIBLINGS UNDER BO-2900f-1 ARE NOW ONE FAMILY. -1-i adjudicates a gate that
+  reported success and left no entry; -1-iii requires the check to be applied to every
+  dispatched gate on every work item; this one adjudicates a gate that left two. All
+  three are read-back rules over a record the driver did not author, which is the
+  boundary the amendment restores.
+
+  CARRIES A KNOWN TRAP FORWARD. BO-2900f's notes record that the earlier gap-free-
+  records work shipped a double-recording bug because a skip-branch call was added
+  while the pre-existing unconditional call was left in place, and that the structural
+  test was blind to it. That trap now lives where it belongs, on the write-side AC; the
+  residue here is the constraint that recency, not outcome, selects the surviving
+  verdict -- the same class of mistake, one layer up.

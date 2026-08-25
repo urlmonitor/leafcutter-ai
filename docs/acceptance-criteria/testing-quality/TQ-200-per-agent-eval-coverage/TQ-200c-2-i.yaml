@@ -1,0 +1,200 @@
+id: TQ-200c-2-i
+components:
+  - testing_quality
+  - ac_store
+title: "Work that needs only one layer of proof is not made to carry the other"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of prompt-shaped work whose whole behaviour is settled by
+    deterministic checks — a declaration is well-formed, a rule is obeyed, two
+    records agree, a step really was dispatched — with no question about a model's
+    output remaining,
+  When the proof it will be asked for is decided,
+  Then it is asked only for deterministic proof, and no judged proof is demanded of
+    it,
+  And an existing deterministic proof of that kind is not rewritten, re-homed or
+    reclassified as judged in order to satisfy the new demand,
+  And in the mirror case — work whose whole behaviour is a question about a model's
+    output, with no deterministic surface to check — only judged proof is demanded,
+    and no deterministic proof is invented to accompany it,
+  And a demand that a piece of work carries no proof of any kind remains reachable
+    only in the way TQ-200c-2 permits, so preventing over-demand here does not
+    restore the free pass.
+depends_on:
+  - TQ-200c-2
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the routing answer is produced and therefore where over-demand would be introduced, and the file this L3 edits; also the source of the last clause's constraint, since the free pass it grants today (line 2773) must not come back as the remedy for over-demand. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched (only edit-surface relationships do — generate_ticket_from_ac.py:104-106)."
+  - path: unit_tests/agents/test_test_writer_seam_rule_scope.py
+    relationship: related
+    status: exists
+    relevance: "A live instance of the first clause. Verified present 2026-08-18: a hand-written deterministic test over prompt-surface behaviour. It is cheap, it works, and converting it to an eval would make a settled question expensive and non-deterministic. It is the concrete artifact the second clause protects. MUST NOT be edited by this AC — its survival unchanged is the assertion, which is why it is 'related' and not an edit surface."
+  - path: unit_tests/test_bo_2100a_3_phase_order_gates.py
+    relationship: related
+    status: exists
+    relevance: "Second live instance, verified present 2026-08-18: phaseOrder membership, a pure structural fact. Same protection applies, and the same reason for staying off the edit surface. Between them these two files establish that the repository ALREADY writes the mechanically-checkable layer by hand — the capability being added is routing, not a replacement for these."
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+    relevance: "The cost side of the over-demand failure. Verified 2026-08-18: the artifact-mode agents each declare `timeout: 900` and a per-row /tmp sandbox copy, and every row is a live model invocation. Routing a deterministic question into this harness turns a millisecond assertion into a fifteen-minute-budget model call with a probabilistic outcome."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ unit_tests/agents/ -q"
+  config_schema_fragment:
+    type: object
+    description: "A cardinality constraint on TQ-200c-2's required_proof_kinds, not a new structure. Every value from one kind to two must be reachable, and the emptiness case stays governed by TQ-200c-2's provenance rule. Stated as a fragment so the coder has one place to read the whole legal answer space."
+    properties:
+      required_proof_kinds:
+        type: array
+        items:
+          type: string
+          enum:
+            - asserted
+            - judged
+        uniqueItems: true
+        maxItems: 2
+        description: "Legal values: [asserted], [judged], [asserted, judged], or []. An implementation that can only ever emit one of these fails: always-both fails this L3, only-ever-one fails TQ-200c-3, and always-empty is the original defect."
+  constraints:
+    - "Deterministic-only work must receive NO judged demand. The over-reaction to the L1's evidence is to route every prompt-shaped requirement to an eval; that is the same identity keying with the sign flipped, and it is expensive and non-deterministic where a millisecond assertion already answers the question."
+    - "No existing deterministic test may be rewritten, moved or reclassified as judged to satisfy the new demand. The two named prompt-surface tests in this record's doc_links must remain untouched, in place, and deterministic; assert their content is byte-identical after the change rather than merely that they still pass."
+    - "Judgment-only work must receive NO manufactured deterministic demand. Asking for an assertion that cannot settle the question is precisely how 115 of 124 named test contracts on prompt work came to be named and never written — the same failure re-introduced from the other side."
+    - "Restraint here must not restore the free pass. An empty required_proof_kinds remains reachable only under TQ-200c-2's provenance rule, and this L3 may not be cited as licence for a default of silence. This is the single most likely place to reintroduce the parent defect."
+    - "The routing must be capable of every cardinality from one kind to two, on the same code path. An implementation that hardcodes both, or that treats the two kinds as mutually exclusive, satisfies one of this L3 and TQ-200c-3 and fails the other; the pair is what makes the router a router."
+delivers_to: null
+expects_from:
+  ac_id: TQ-200c-2
+  contract: "The derived routing answer {required_proof_kinds, derived_from}. This L3 constrains its cardinality — no kind is added that the work does not need, and no kind is removed to avoid adding one — and adds no new structure of its own."
+test_required: true
+test_spec:
+  - name: test_deterministically_settled_prompt_work_is_asked_only_for_deterministic_proof
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-2-i]
+    description: "A record whose whole behaviour is a structural fact — a declaration is well-formed, a registry and a template agree — is answered with the asserted kind only, and no judged kind appears in the demand."
+  - name: test_judgment_only_work_is_not_given_a_manufactured_deterministic_demand
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-2-i]
+    description: "THE MIRROR CASE. A record whose whole behaviour is a question about a model's output receives the judged kind alone. Inventing an accompanying assertion is how 115 named tests came to be named and never written."
+  - name: test_existing_deterministic_prompt_tests_are_left_byte_identical
+    target_dir: unit_tests/agents/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [TQ-200c-2-i]
+    description: "The two live hand-written prompt-surface tests named in this AC's doc_links are asserted unchanged on disk after the change — not merely still passing. A conversion that keeps them green while re-homing them as evals passes any pass/fail check and fails here."
+  - name: test_restraint_does_not_restore_the_free_pass
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-2-i]
+    description: "Work with no clear layer must not fall through to an empty demand. Asserts that any empty required_proof_kinds still carries a provenance derived from what the work says, per TQ-200c-2's fourth clause. 'Do not over-demand' is one careless step from 'when in doubt, demand nothing'."
+  - name: test_every_cardinality_from_one_kind_to_two_is_reachable_on_one_path
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-2-i]
+    description: "Three records on the same code path yield [asserted], [judged] and [asserted, judged] respectively. An implementation that always demands both fails this L3; one that can only ever demand one fails TQ-200c-3. Written as one test so the pair cannot be satisfied by two divergent paths."
+  - name: test_no_deterministic_prompt_question_is_routed_into_the_eval_harness
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-2-i]
+    description: "PRODUCTION ENTRY POINT: over a COPY of real store records whose behaviour is purely structural, drives the real generation command and asserts no judged demand reaches the eval harness. Artifact-mode eval rows carry a 900-second budget and a live model call per row, so over-demand is a cost regression as well as a correctness one."
+test_rationale: |
+  This L3 is a prohibition, so almost every test asserts an ABSENCE, and absences are the
+  easiest thing to prove vacuously. Each test is therefore paired with a positive assertion
+  about the same record: the deterministic case asserts the asserted kind IS demanded and
+  the judged kind is not, the mirror case the reverse. A test that only checks "no judged
+  demand" passes on an implementation that demands nothing at all — which is the parent
+  defect, and exactly what the fourth test exists to separate.
+  The protection of the two existing prompt-surface tests is specified as a byte-identity
+  assertion rather than a pass/fail one on purpose. The plausible bad implementation keeps
+  those tests green while converting or re-homing them, which any pass/fail check accepts.
+  The cardinality test is written as a single test over three records because the failure it
+  catches is a relationship between answers, not a property of one: an implementation with
+  two divergent code paths can satisfy the individual cases and still be unable to produce a
+  mixed demand from the path the real work takes.
+  The reachability test runs over real store records rather than fixtures because the
+  population at risk is the 444 prompt-assigned requirements, and the cost of getting this
+  wrong is measured in live model calls, not in assertions.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path,
+      expects_from (TQ-200c-2's routing answer), and a six-entry test_spec with rationale.
+      Retagged the generator doc_link describes -> modifies. The two unit_tests doc_links stay
+      'related' deliberately: this AC asserts they are UNCHANGED, so they must not enter
+      files_touched — naming a protected file as an edit surface is the BP-1100a-4-i inversion.
+      criteria, title and notes untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE OVERCORRECTION THIS PREVENTS. The obvious over-reaction to "444 llm-expert
+  requirements were asked for nothing" is "route every llm-expert requirement to an
+  eval". That satisfies a naive reading of TQ-200c-2 and is wrong in three separate
+  ways, which is why it is written down as a criterion rather than left to judgment:
+    - It is keyed on the producer's name again — the exact defect TQ-200c-2's third
+      clause forbids — merely with the sign flipped.
+    - It is expensive and non-deterministic where the repository already has a cheap,
+      deterministic answer. Verified 2026-08-18: artifact-mode eval rows in
+      scripts/evals/agent_eval_config.json carry `timeout: 900` and a per-row sandbox
+      copy of the product-truth store, and every row is a live model call. Turning
+      unit_tests/test_bo_2100a_3_phase_order_gates.py — a structural membership check
+      — into an eval buys nothing and costs a model invocation plus a flake surface.
+    - It corrodes the distinction the whole L1 rests on. If everything prompt-shaped
+      is judged, "judged" stops carrying information and the routing decision is once
+      again a single boolean, just a different one.
+
+  THE MIRROR CLAUSE IS NOT SYMMETRY FOR ITS OWN SAKE. Demanding an accompanying
+  deterministic test of a purely judgment-shaped question is how the store filled up
+  with named tests nobody wrote: an author asked for a deterministic proof of
+  something no assertion can settle, and it stayed unwritten. Of the 124 named test
+  contracts on llm-expert requirements, 115 do not exist anywhere in unit_tests/.
+  Manufacturing a deterministic proof to satisfy a rule is the same failure being
+  re-introduced from the other side.
+
+  RELATIONSHIP TO c-3 — THESE ARE NOT IN TENSION. c-3 requires that BOTH layers CAN be
+  asked for at once and that neither displaces the other. This L3 requires that both
+  are not asked for when only one is needed. Together they say: the number of layers
+  demanded is a property of the work, and every value from one to two must be
+  reachable. An implementation that always demands both fails this L3; one that can
+  only ever demand one fails c-3. The pair is what makes the router a router.
+
+  THE LAST CLAUSE EXISTS BECAUSE THIS L3 IS THE OBVIOUS PLACE TO REINTRODUCE THE BUG.
+  "Do not over-demand" is one careless step from "when in doubt, demand nothing",
+  which is generate_ticket_from_ac.py:2773 again. Restraint here is bounded by
+  TQ-200c-2's fourth clause, and the boundary is stated so an implementer cannot cite
+  this L3 as licence for a default of silence.

@@ -1,0 +1,129 @@
+id: ACD-400a-5-i
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: high
+title: "When a refinement names both a buildable prerequisite and a composite one, only the buildable one is reported as holding it"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a three-deep chain in the store: a composite "C" that only reaches a completed
+    state by the things beneath it reaching one, a unit "P" beneath C that is buildable
+    in its own right and has not been completed, and a refinement "R" beneath P,
+  And R names BOTH P and C as its prerequisites,
+  When the scanner is asked which work is ready to be picked up,
+  Then R is not offered as ready,
+  And the account of what is holding R names P,
+  And that account names P alone — C does not appear among the reasons R is held, at
+    any depth of the chain above R.
+depends_on: [ACD-400a-5]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+    relevance: "Same surface as the parent. This case exercises the mixed prerequisite list, which the parent's fixtures keep separate: _classify_ac (line 262) builds ONE blocking list from all of depends_on, so the buildable/never-buildable decision has to be made per entry, not once for the record."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-400a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The composite half of this case is ACD-400a-3's guarantee, asserted here in the presence of a second, genuine prerequisite so the two rules are shown to compose rather than merely coexist."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  reference_file_path: "scripts/ac_store/scan_ac_store.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The GRANULARITY constraint on the parent's predicate. Nothing new is stored and no new predicate is introduced — this record fixes where the parent's independently_completable test is applied: once per prerequisite entry, inside the comprehension that builds the blocking list, never once per record before it. The distinction is invisible in the parent's homogeneous fixtures and is the only thing separating the three candidate implementations."
+    required:
+      - evaluation_scope
+    properties:
+      evaluation_scope:
+        type: string
+        enum:
+          - per_prerequisite_entry
+        description: "The only legal value. per_prerequisite_entry means the independently_completable test is evaluated for each id in depends_on independently, so one record may have one prerequisite dropped and another retained. A per-record short-circuit — dropping the whole gate as soon as any ancestor appears in the list — returns R as ready and passes every single-prerequisite test the parent specifies."
+  constraints:
+    - "The decision must be evaluated once per prerequisite ENTRY. This is the whole content of this record. A per-record short-circuit is the natural implementation of the parent's rule and returns R as ready while passing every homogeneous fixture the parent specifies."
+    - "A composite prerequisite must be absent from the held account at ANY depth above R, not merely at the immediate parent level. The criteria say 'at any depth of the chain above R', so a fix that only skips the direct parent leaves C surfacing from further up the ancestor walk."
+    - "The buildable prerequisite must still be NAMED, not merely counted. An account that reports R as held without saying P holds it satisfies the first clause and leaves the operator unable to act, which is the same silence ACD-400a-5's real-store observation was found by."
+    - "Assert on the scanner's real output over a real on-disk fixture chain, never on the source text. The three candidate implementations differ by one condition inside a comprehension and are indistinguishable to any structural test."
+    - "Do not introduce a second code path for the mixed case. The mixed list is the general case and the homogeneous lists are its special cases; a branch that handles 'both kinds present' separately will drift from the branch that handles one kind."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400a-5
+  contract: "The narrowed blocking rule in scan_ac_store._classify_ac and its independently_completable predicate. This L3 neither introduces a predicate nor changes what it means — it fixes the granularity at which the parent's predicate is applied, so it must be implemented against that rule rather than alongside it."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (S — the same single
+      comprehension as the parent, constrained rather than extended), object-form it_requirements
+      naming scripts/ac_store/scan_ac_store.py as reference_file_path plus the
+      per_prerequisite_entry granularity constraint, delivers_to (null — this L3 reports nothing
+      downstream) and expects_from (ACD-400a-5's narrowed rule). doc_links needed no retagging:
+      scan_ac_store.py was already correctly tagged 'modifies'. The BA-authored test_spec and
+      test_rationale are kept verbatim — the two opposed assertions are precisely what separate
+      the three candidate implementations. criteria, title and notes untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_spec:
+  - name: test_mixed_prerequisites_report_only_the_buildable_one_as_holding
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [ACD-400a-5-i]
+    description: "Writes a real on-disk C -> P -> R fixture chain where R lists both P (buildable, not done) and C (composite) as prerequisites, runs the real scanner entrypoint, and asserts R is held, that P is named as holding it, and that C is named nowhere in R's held account."
+  - name: test_mixed_prerequisites_hold_is_not_lifted_by_the_composite_entry
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [ACD-400a-5-i]
+    description: "Over the same fixture, asserts R is absent from ready — an implementation that decides per RECORD instead of per prerequisite (dropping the whole gate the moment any ancestor appears in the list) returns R as ready and fails here while passing every single-prerequisite test."
+test_rationale: |
+  This case exists because it is the only one that separates all three candidate
+  implementations by their observable output, and because the two ways of getting it
+  wrong are invisible in the parent's fixtures. The present code returns R as ready. A
+  fix that deletes the ancestor exclusion returns R as held but names both P and C. A fix
+  that narrows the exclusion correctly but applies it per RECORD rather than per
+  PREREQUISITE — dropping the whole gate as soon as any ancestor appears in the list —
+  also returns R as ready, and passes every single-prerequisite test the parent
+  specifies. Only a per-entry rule passes both assertions here.
+  The assertions are on the named blockers in the scanner's real output over a real
+  on-disk fixture, never on the source text: the discriminating difference between the
+  three implementations is one condition inside a comprehension and is invisible to any
+  structural test.
+notes: |
+  WHY THIS IS AN L3 AND NOT A CLAUSE OF ACD-400a-5. The parent states the rule for a
+  refinement whose prerequisite list is homogeneous — all buildable (R) or all composite
+  (S). This case is the mixed list, and it is where the rule's GRANULARITY is decided: the
+  exclusion has to be evaluated per prerequisite entry, because one record can name both
+  kinds at once. That granularity is not derivable from the parent's clauses, which is
+  exactly the test of whether an edge case deserves its own record.
+
+  THE CHAIN IS REALISTIC, NOT CONTRIVED. A refinement that lists both its immediate parent
+  and a composite further up is a shape the authoring agents produce today: ACD-400a-4
+  itself carries depends_on [ACD-400a, ACD-400a-3] — a composite and a buildable
+  prerequisite side by side, one level up from this exact chain.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L3; the IT
+  PO sets assigned_agent, it_requirements, estimated_complexity and the contracts.

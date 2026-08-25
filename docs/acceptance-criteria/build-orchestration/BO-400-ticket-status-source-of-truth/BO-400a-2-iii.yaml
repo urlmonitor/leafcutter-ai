@@ -1,0 +1,127 @@
+id: BO-400a-2-iii
+components:
+  - build_orchestration
+title: "A ticket with any needed phase skipped, blocked or unrecorded is never recorded done"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three tickets carried by one drive --
+      the first has a needed phase that was held back and never dispatched,
+      the second has a needed phase that was dispatched and reported a blocker,
+      the third has a needed phase that was dispatched and reported success but
+        whose sign-off is absent from the ticket's record,
+  When the drive finishes each of the three,
+  Then none of the three has its recorded lifecycle state changed to done,
+    And each ticket's record still names the phase that is outstanding,
+    And the drive's report lists each of the three as not completed and names the
+      outstanding phase,
+    And a drive that cannot read a ticket's record back at all leaves that ticket's
+      state untouched and reports it as not completed, rather than assuming the
+      earlier phases were enough,
+  So missing, blocked and unreadable evidence all read as not done, and only evidence
+    that is present and positive can produce a done record.
+depends_on:
+  - BO-400a-2
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver and its per-ticket phase loop. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js; the same refusal must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. Extend it to expose the ticket-record writes a run performed, so each negative case is proven by executing the workflow and observing that no completion write occurred."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling parity violation: a completion attempt refused because the record still carries needed phases. This AC is the driver-side refusal that should mean that script-level refusal is never reached."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the ticket-completion decision in build-feature.js and its twin in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NOT BY GREP. A test that searches the workflow source for a guard condition passes on an implementation where the guard is computed and then ignored -- the precise failure fast-lane-build.js shipped. Each negative case must be driven through the real workflow via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and must assert that NO completion write was performed."
+    - "FAIL CLOSED ON UNREADABLE EVIDENCE. An implementation that treats a record it cannot read as 'no outstanding phases found' converts an I/O failure into a done state. Absence of a readable record is the strongest not-done signal there is, and must be handled as its own case, not folded into the empty-list path."
+    - "ONE NEGATIVE CASE PER CONDITION. Four conditions are named in the criteria -- held back before dispatch, dispatched and blocked, dispatched and unrecorded, record unreadable. A single combined test leaves three of them unexercised, and the observed run exhibited the third condition specifically."
+    - "MUST LAND WITH BO-400a-2-ii. The positive write and this refusal are one change. Landing the write alone produces a driver that records done for tickets whose gates never ran -- turning an inverse-phantom-done defect into a real one."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900f-1-i
+  contract: "The adjudication that a phase reporting success without leaving a sign-off is a failed phase -- the input that makes the third case here decidable"
+test_spec:
+  - name: test_phase_held_back_before_dispatch_blocks_the_done_record
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive a ticket whose needed phase is held back before it is dispatched and assert the run performed no completion write and reported the ticket as not completed, naming the outstanding phase."
+  - name: test_phase_reporting_a_blocker_blocks_the_done_record
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive a ticket whose needed phase returns a blocker and assert no completion write occurred and the blocker's phase is named in the run's report."
+  - name: test_phase_reporting_success_without_a_signoff_blocks_the_done_record
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The condition observed in the production run: a phase returns success but leaves no sign-off. Assert no completion write occurred."
+  - name: test_unreadable_ticket_record_leaves_the_state_untouched
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Make the ticket record unreadable at the moment the completion decision is taken and assert the run wrote nothing and reported the ticket as not completed rather than as done."
+  - name: test_a_fully_signed_off_ticket_still_records_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control case: the same driver, one ticket with every needed phase signed off, asserted to record done -- so the four refusals above are attributable to their conditions and not to a driver that never writes at all."
+test_rationale: |
+  Every case here is an absence, and absences are exactly what a source-reading test
+  cannot distinguish: the broken driver and the fixed one both contain completion
+  code. Each descriptor therefore executes the real workflow and asserts on whether a
+  write happened. The control case is not optional -- without it, a driver that was
+  simply reverted to never writing at all would pass all four refusals and look
+  correct, which is the state the store is in today.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The fail-closed half of BUG-22 (run wf_cc2b46d9-f6f). BO-400a-2-ii adds the
+  completion write that was missing; this AC bounds it.
+
+  WHY THIS IS AUTHORED AS ITS OWN RECORD RATHER THAN A CLAUSE. The defect is an
+  absent write, so the obvious remedy is to add one. An added write with no negative
+  boundary is strictly worse than the defect: today the store under-reports work that
+  really landed, which is recoverable by hand; an unbounded write would over-report
+  work that never ran, which is not visibly recoverable at all. Separating the two
+  records makes it impossible to land the write without also landing the refusal.
+
+  THE THIRD CASE IS THE ONE THE PRODUCTION RUN ACTUALLY HIT. Tickets 01, 03 and 09
+  each had at least one phase that ran, returned success, and left no sign-off. That
+  case is only decidable once BO-2900f-1-i's verification exists -- which is why it
+  is recorded here as an expects_from rather than re-derived.

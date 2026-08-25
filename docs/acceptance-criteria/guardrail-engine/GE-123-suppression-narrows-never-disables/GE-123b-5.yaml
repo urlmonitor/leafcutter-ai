@@ -1,0 +1,165 @@
+id: GE-123b-5
+components:
+  - commit_guardian
+  - security_scanner
+title: "The reference says when a suppression is declined, what it is judged against, and what the author will see"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the section of the reference document that describes the forms a
+    suppression may take and the ways an entry is matched against a file,
+  When a reader wants to know whether an entry they have written will always take
+    effect,
+  Then the reference states that an entry which would leave a file with no rule
+    still able to report anything about it is DECLINED for that file, that the
+    file's results are reported as though the entry were not there, and that no
+    other file in the run and no other entry in the same allowlist is affected,
+  Because the section as written presents matching as the only question — an entry
+    either matches a file or it does not — and a reader who has only that section
+    will believe every well-formed entry they write is honoured.
+
+  Given the same section,
+  When a reader wants to know what the decision is judged against,
+  Then the reference states that it is judged against every suppression in force
+    for that file taken together rather than one entry at a time, so that the same
+    outcome is reached whether the author writes one broad entry or several narrow
+    ones that add up to the same thing,
+  And it states that the quantity counted is the rules still able to report on the
+    file and not the results the file happens to produce, so that quieting the only
+    result a file currently produces is an ordinary narrowing,
+  And it states that an entry pinned to a single line number never removes a rule's
+    ability to report on the file, and that narrowing a file down to one remaining
+    rule is still narrowing,
+  Because each of these is a boundary a reader will otherwise cross by accident,
+    and the longhand form — one narrow entry per rule — is the form the existing
+    task guidance actively encourages.
+
+  Given the same section,
+  When a reader wants to know what they will see when an entry of theirs is
+    declined,
+  Then the reference states that a notice is written to the error stream naming the
+    allowlist file, the 1-based line number, the declined line verbatim and the file
+    it would have left with nothing able to report on it,
+  And it states that the notice does not stop the commit and does not by itself
+    change whether the run reports a problem — what the run reports is decided by
+    the results alone,
+  Because an author who sees results they expected to have quieted needs to be able
+    to find out why from the document, and an author who fears a too-broad line will
+    take the repository down needs to read that it will not.
+
+  Given the same section,
+  When the reader compares it against the check as it behaves,
+  Then every case the reference presents as declined is one the check declines, and
+    every case it presents as honoured is one the check honours,
+  And where the two disagree the implementation is authoritative and the
+    disagreement is raised as a defect rather than written down as fact,
+  Because a reference that describes a refusal the check does not make invites
+    authors to write entries no one is protecting them from, and one that omits a
+    refusal the check does make leaves them reading their own results as a bug.
+depends_on:
+  - GE-123b
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "The canonical copy. Its allowlist section and its path-matching subsection describe the suppression modes as purely a matching question; that description is what this L1's guarantee invalidates."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: "The task guidance that encourages writing suppressions out longhand, one narrow entry per rule. That is exactly the shape the accumulated-collapse rule declines, which is why the reference must say the decision is taken against every entry in force together."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The reference ships through build.py. templates/skills/security-scanner/SKILL.md is the canonical source; every deployed copy is a build output and must never be hand-edited."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Edit the canonical source at templates/skills/security-scanner/SKILL.md and let build.py propagate it (ADR-001). Editing a deployed copy under .claude/, .gemini/, .leafcutter/, EPIC-*/ or worktrees/** leaves the shipped reference unchanged."
+  - "The addition extends the existing allowlist section and its path-matching subsection. That subsection currently answers only 'does this entry match this file'; the new material answers 'and is it then honoured'. Keep it in the same section — a separate section on declined entries would leave the matching subsection reading as complete when it is not."
+  - "Do not restate the suppression grammar or the accepted and rejected entry forms. GE-123c-5 owns that list and two copies of a grammar drift. This addition is about disposition, not about spelling."
+  - "STATE THE COUNTED QUANTITY EXPLICITLY: the rules still able to report on the file, never the results the file currently produces. The findings-based reading is the natural one and it is wrong — under it, quieting the only result a file produces would read as a refusal, which contradicts the documented ordinary use of the allowlist. This one sentence is the difference between a reader who can predict the behaviour and one who cannot."
+  - "STATE THE THREE BOUNDARIES a reader will otherwise cross by accident, because each is a case that stays honoured: an entry pinned to a single line number, an entry that leaves one rule still able to report, and an entry that names every rule but is pinned to one line. A reference that describes only the refusal reads as though breadth itself were forbidden."
+  - "The notice description must reuse the announcement contract the sibling code ACs define — error stream, allowlist file path, 1-based line number, verbatim text, plus the affected file — and must not invent a second wording or a second set of fields for the document. Describe the INFORMATION carried, not a literal message string, so the wording stays free to change without the reference going stale."
+  - "State plainly that the notice is not fatal: the commit is not stopped and the run's outcome is decided by the reported results alone. This is the half a reader is most likely to assume wrongly, and assuming it wrongly makes authors avoid a legitimate feature."
+  - "PARITY, BOTH DIRECTIONS, and it is a review obligation rather than an automated one: check every declined case and every honoured case described here against the shipped scanner's behaviour at the time of writing, not against this AC's prose and not against the sibling ACs. Where the reference and the implementation disagree, THE IMPLEMENTATION IS AUTHORITATIVE — raise the disagreement as a defect against the code AC that owns it rather than documenting the intention as fact."
+  - "SEQUENCING: this text describes behaviour the sibling code ACs under this L1 introduce, including the notice. Written before they land it documents an intention. Write it against the shipped result, or mark it explicitly as pending and re-check it once they are done."
+  - "Examples must not contain credential-shaped literals, and any illustrative allowlist line must use an ordinary source filename. This file is scanned on every commit, and an environment-named example is unreachable in any case because such a path is short-circuited to its name-based result."
+  - "Documentation check for this AC, in place of an automated test: (1) the section states that an entry which would leave a file with no rule able to report is declined for that file, with the file reported as though it were absent and no other file or entry affected; (2) it states that the judgement is made against every suppression in force for the file together, that the counted quantity is rules still able to report rather than results produced, and it names the three boundary cases that stay honoured; (3) it states the notice's fields and that the notice is not fatal; (4) PARITY, BOTH DIRECTIONS — every declined case listed is one the check declines and every honoured case is one it honours, verified against the shipped scanner with the implementation authoritative on disagreement."
+  - "Verification is by review against the shipped behaviour. Do not author code tests for this AC, and do not add test descriptors to it."
+test_required: false
+test_rationale: |
+  This AC changes prose only, so it carries no executable behaviour and
+  test_required is false rather than test_spec being left empty. What is asserted in
+  place of a test is the four-part documentation check recorded in it_requirements,
+  whose last part is a two-directional parity review against the shipped scanner.
+  Both directions of failure land on the reader in the same place: a reference that
+  describes a refusal the check does not make tells an author they are protected
+  from a mistake nobody is catching, and a reference that omits a refusal the check
+  does make leaves an author reading their own restored results as a defect and
+  filing it as one. Mechanising the parity would mean deriving the declined and
+  honoured cases from the scanner and diffing them against prose, which is a code AC
+  of its own and out of scope here; it is raised as a recommended follow-up rather
+  than smuggled into a documentation AC.
+delivers_to: null
+expects_from:
+  ac_id: GE-123b-1
+  contract: "The settled disposition and the settled definition: that a well-formed entry which would leave a file with no rule able to report is declined for that file rather than blocked or merely announced, and that the quantity counted is the rules still able to report rather than the results produced. The notice's field list comes with it from GE-123b-1-i, the whole-allowlist and order-independent judgement from GE-123b-4, and the honoured-narrowing boundaries from GE-123b-3. The reference records what those ACs decide; written before they settle it documents an intention rather than the behaviour."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: safety
+notes: |
+  THIS DISCHARGES THE PARENT L1's documentation_triggers OF [reference-doc]. GE-123b
+  declares that trigger and its other four children are all code ACs assigned to
+  python-coder, so until this record existed the trigger had no owner. With this
+  record GE-123b has five children, which is exactly the hard cap — any further
+  documentation for this L1 must be authored as an L3 under the child whose content
+  it records, as the neighbouring GE-123d-4-ii was.
+
+  WHY THE REFERENCE IS PART OF THE FEATURE AND NOT A FOLLOW-UP. The suppression
+  section as it stands answers exactly one question — does this entry match this
+  file — and presents matching as the whole of the behaviour. After this L1 lands
+  that description is not merely incomplete, it is wrong: there is a well-formed,
+  correctly-matching entry that is nonetheless not honoured. A reader working from
+  the unamended section will write such an entry, see the results they tried to
+  quiet, and have nowhere to find out why.
+
+  THE SECOND ARM IS THE LOAD-BEARING ONE, and it carries the two statements the
+  reader cannot infer. The first is that the judgement is made against every
+  suppression in force together: the existing task guidance encourages writing
+  suppressions out longhand, one narrow entry per rule, so the accumulated form is
+  the one authors will actually hit, and a reference that describes only single
+  over-broad entries will read as though the longhand form were safe. The second is
+  that the counted quantity is the rules still able to report rather than the
+  results produced — the findings-based reading is the natural one and under it the
+  ordinary, documented use of the allowlist would look like a refusal.
+
+  THE THIRD ARM'S NON-FATAL CLAUSE IS NOT DECORATION. The disposition chosen by the
+  sibling code AC is refuse-and-announce specifically because this check runs on
+  every commit and a hard error over one too-broad line becomes a repository-wide
+  outage. If the reference describes the notice without saying it is not fatal, the
+  readers who most need the feature are the ones most likely to avoid it.
+
+  THE FOURTH ARM IS A PARITY REQUIREMENT and is stated because this document is
+  being changed by three ACs in the same tree: GE-123a-4 amends the detection-rules
+  section, GE-123c-5 extends the suppression grammar, and this record amends the
+  suppression modes. Three edits to one file in one feature is exactly the situation
+  where a statement survives that no longer matches the code.
+
+  SCOPE, AGAINST THE SIBLINGS. This record answers "when is a suppression declined,
+  and what happens then". GE-123c-5 answers "is this suppression form accepted".
+  GE-123a-4 answers "is a name-matched file's content examined". Cross-reference
+  rather than restate; the grammar has exactly one home.

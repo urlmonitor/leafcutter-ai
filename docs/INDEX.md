@@ -44,6 +44,7 @@ task, then pull only those files.
 | phantom done prevention | [docs/architecture/components/phantom-done-prevention.md](docs/architecture/components/phantom-done-prevention.md) | Container-level overview of the BP-1100f phantom-done-prevention gates: five checks that prove a durable change by its real effect and stated intent (not by dispatch topology), each anchored to a fixed point relative to dispatch and to the done state. Groups the L3 sequence diagram that documents the end-to-end verification flow. |
 | release manager | [docs/architecture/components/release-manager.md](docs/architecture/components/release-manager.md) | Semantic version computation and schema diff checking system for managing structured releases of the leafcutter-ai package. |
 | roadmap | [docs/architecture/components/roadmap.md](docs/architecture/components/roadmap.md) | Phase-based roadmap that tracks current outcomes, exit criteria, and the tickets advancing each outcome toward the stable MVP target. |
+| security scanner | [docs/architecture/components/security-scanner.md](docs/architecture/components/security-scanner.md) | Secrets and vulnerability scanning surface: the rule set that decides what counts as a credential, the allowlist and prose-exemption mechanisms that narrow it, and the pre-commit hook and audit workflow that invoke them. |
 | skill registry | [docs/architecture/components/skill-registry.md](docs/architecture/components/skill-registry.md) | Registry of all available skills with metadata on usage context, allowed tools, and configuration constraints for agent invocation. |
 | stakeholder delivery | [docs/architecture/components/stakeholder-delivery.md](docs/architecture/components/stakeholder-delivery.md) | Stakeholder-facing delivery of product value: a presentation agent that renders approved value propositions into self-contained HTML decks and tailored stakeholder communications. |
 | supervisor spawn topology | [docs/architecture/components/supervisor-spawn-topology.md](docs/architecture/components/supervisor-spawn-topology.md) | Supervisor Spawn Topology — Flattened Agent Dispatch Chain |
@@ -127,7 +128,6 @@ task, then pull only those files.
 | finalize feature | [docs/how-to/finalize-feature.md](docs/how-to/finalize-feature.md) | Step-by-step guide for running /finalize-feature to merge a feature branch, |
 | goal to epic | [docs/how-to/goal-to-epic.md](docs/how-to/goal-to-epic.md) | Task-oriented guide: invoke /build-ac with a goal-level AC ID to generate a full EPIC folder of tickets in one command. |
 | inject project knowledge into agents | [docs/how-to/inject-project-knowledge-into-agents.md](docs/how-to/inject-project-knowledge-into-agents.md) | Overview of How to inject project knowledge into a portable agent. |
-| known failing tests baseline | [docs/how-to/known-failing-tests-baseline.md](docs/how-to/known-failing-tests-baseline.md) | How to Use the Known-Failing Tests Baseline |
 | managing pre commit hooks | [docs/how-to/managing-pre-commit-hooks.md](docs/how-to/managing-pre-commit-hooks.md) | Step-by-step guide for enabling, disabling, configuring, and opt-ing in to pre-commit hooks in the leafcutter commit_guardian system. |
 | adopt consolidated output root | [docs/how-to/output-layout/adopt-consolidated-output-root.md](docs/how-to/output-layout/adopt-consolidated-output-root.md) | How to adopt the consolidated output root (.leafcutter/) |
 | product truth schema reference | [docs/how-to/product-truth-schema-reference.md](docs/how-to/product-truth-schema-reference.md) | Field-by-field reference for the four product-truth schemas — Flow, Mock Data, Mockup, and Classifier eval — including required fields, enums, id patterns, and which fields are authored vs derived. |
@@ -170,6 +170,7 @@ task, then pull only those files.
 |------|------|-------------|
 | consolidated output root | [docs/explanation/consolidated-output-root.md](docs/explanation/consolidated-output-root.md) | The Consolidated Output Root |
 | tdd workflow | [docs/explanation/tdd-workflow.md](docs/explanation/tdd-workflow.md) | This explanation describes how Test-Driven Development works inside leafcutter's |
+| traceability guardrails | [docs/explanation/traceability-guardrails.md](docs/explanation/traceability-guardrails.md) | Which mechanical guardrails currently enforce the links between acceptance criteria, code, tests, documentation and product-truth flows; which layer each one runs in; where the holes are; and which AC families are planned to close them. |
 
 ## Conventions
 

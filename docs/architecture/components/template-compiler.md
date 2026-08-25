@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-06-08
+last_updated: 2026-08-18
 components:
   - template_compiler
 ---
@@ -31,6 +31,139 @@ The Template Compiler transforms templates from `templates/agents/`, `templates/
 ## Integration
 
 The `build-self.sh` script invokes the compiler for local development. Consumer installs run `python leafcutter-ai/scripts/build.py --target-dir .` to deploy compiled artifacts.
+
+## Standalone Script Deployment
+
+`build_template_standalone_scripts` (scripts/build_phases.py) deploys every
+top-level `.py` file under `templates/scripts/` (non-recursive) verbatim to
+`<output_root>/scripts/`. This includes `goal_to_epic.py` (a thin delegator
+to the full implementation deployed separately at
+`<output_root>/scripts/ac_store/goal_to_epic.py` by `build_ac_store`, kept
+this way to stay under the 400-line file-size limit) and
+`build_ac_mode_detection.py` (a full copy, small enough to duplicate
+safely). `install_shims()` (scripts/build_helpers.py) then creates a
+relative-symlink shim at `<target>/scripts/<name>` for each, resolving to
+the deployed copy (AC BP-900a-2).
+
+## Deployed ac_store Import Contract (AC BP-900a-3)
+
+Once `build_ac_store` has deployed the ac_store scripts to a consumer project
+(AC BP-900a-1), the deployed `<output_root>/scripts/ac_store/` directory is
+guaranteed **importable** as a Python package by any process that adds it to
+`sys.path` — this is the contract the agent templates rely on at runtime.
+`templates/agents/build-ac.md` embeds the exact mechanism twice (its
+`readiness-check-drift` and `dry-run` steps), and
+`templates/skills/ac-scanner/SKILL.md` documents the underlying script the
+same templates shell out to:
+
+```python
+import sys
+sys.path.insert(0, "{{config.output_root}}/scripts/ac_store")
+from scan_ac_store import traverse_ac_tree
+```
+
+Two properties make this importable:
+
+- **`__init__.py` is present.** `build_ac_store`'s `deploy_map` deploys all
+  13 ac_store files, including `scripts/ac_store/__init__.py`, so the
+  deployed directory is a valid Python package rather than a bare directory
+  of scripts. `__init__.py` is intentionally empty (zero bytes) — it
+  introduces no import-time side effects, so importing the package (or any
+  of `ac_prioritizer`, `generate_ticket_from_ac`, `scan_ac_store` from
+  within it) never runs unexpected code as a side effect of the `sys.path`
+  insert.
+- **No broken internal cross-module imports.** None of `ac_prioritizer.py`,
+  `generate_ticket_from_ac.py`, or `scan_ac_store.py` import each other via a
+  path that only resolves when `ac_store`'s *parent* directory (rather than
+  `ac_store` itself) is on `sys.path`, so inserting
+  `<output_root>/scripts/ac_store` directly — as the templates above do — is
+  sufficient for all three modules to import without `ImportError`.
+
+Regression coverage for this contract runs the real `build.py --target-dir`
+into a fresh directory, then imports the three named modules from a fresh
+subprocess seeded only with the deployed `scripts/ac_store` path — reproducing
+the templates' own `sys.path.insert` pattern rather than importing from the
+source tree, which would mask a deploy-manifest gap (`unit_tests/test_bp_900a_3.py`).
+
+## Compiled-Output Script Reference Scan (AC BP-900b-1)
+
+`build_referential_integrity.extract_compiled_script_path_refs(compiled_root)`
+is the post-compile counterpart to `extract_script_path_refs()` /
+`extract_script_path_refs_with_sources()` (which scan the SOURCE `templates/`
+tree and are wired into `build.py`'s pre-build guard,
+`_check_script_reference_guard`, before `_run_phases()` writes any output).
+`extract_compiled_script_path_refs` instead scans the COMPILED output tree
+(e.g. `<target>/.claude/agents/` and `<target>/.claude/skills/`) written by a
+`build.py --target-dir` run, recursively over every `.md` file, and returns
+`set[tuple[str, str]]` of `(relative_template_path, referenced_script_path)`
+so each script-path reference can be traced back to the compiled template
+that names it. It reuses the same three extraction patterns
+(`python3 scripts/<path>`, `python scripts/<path>`, and both quote variants of
+`sys.path.insert(<N>, 'scripts/<path>')`) as its source-tree siblings.
+
+As of this AC, `extract_compiled_script_path_refs` is a standalone, read-only
+scan (it never raises; unreadable files are skipped) — no production call
+site invokes it as part of `build.py`'s phase list yet. Wiring it into an
+actual post-compile validation phase is a documented follow-up, not part of
+this AC's scope.
+
+## Broken-Reference Report Entry Schema (AC BP-900c-1)
+
+When the build-time guard finds a script path referenced by a compiled
+template but absent from the deployable script set, it reports the failure as
+a `BrokenRefEntry` (`scripts/build_propagation_audit.py`). Every entry names
+all three of the following fields — none may be empty or omitted:
+
+- **`missing_path`** — the `scripts/<path>` string that was referenced but is
+  not in the deployable script set (e.g. `scripts/ac_store/ac_prioritizer.py`).
+- **`referencing_templates`** — the compiled template path(s) that reference
+  the missing script (e.g. `agents/build-ac.md`). When multiple templates
+  reference the same missing path, `build_broken_ref_report` consolidates them
+  into a single entry's `referencing_templates` tuple instead of emitting one
+  entry per template (AC BP-900c-1-1). `emit_broken_ref_report_jsonl` writes
+  this field to JSONL as `referencing_template` (singular key, string or list
+  value) (AC BP-900c-2).
+- **`suggested_action`** — a corrective action drawn from a finite, named set
+  of constants: `ACTION_ADD_DEPLOY_PHASE` ("add a deploy phase in
+  build_phases.py"), `ACTION_ADD_TO_ALLOWLIST` ("add to the
+  external-dependency allowlist"), or `ACTION_COMMIT_UNDER_TEMPLATES` (the
+  directory already has a deploy phase, so the source file is merely missing
+  or untracked — commit it under `templates/scripts/`) (AC BP-900c-3). The
+  three-field entry shape is stable across all three action values; only the
+  chosen action varies with the missing path's classification.
+
+`build_broken_ref_report(refs_to_sources, deployed_scripts, allowlist=None)`
+is the factory that produces the list of `BrokenRefEntry` instances for a
+build run.
+
+## External-Dependency Allowlist (AC BP-900b-1-1)
+
+`EXTERNAL_DEPENDENCY_ALLOWLIST` (`scripts/build_propagation_audit.py`) is a
+`frozenset[str]` of `scripts/<path>` strings that the reference guard treats
+as intentionally external — scripts that agent or skill templates reference
+but that this repository does not, and is not expected to, deploy itself
+(e.g. `scripts/build.py`'s own self-reference, or
+`scripts/inline_adr/append_entry.py`, which doc-enforcer's SKILL.md already
+guards with an explicit "if present" check). Each entry carries an inline
+comment explaining why the path is legitimately out of scope rather than a
+deploy-phase gap.
+
+`check_broken_references(refs, deployed_scripts, allowlist=None)` and
+`build_broken_ref_report(refs_to_sources, deployed_scripts, allowlist=None)`
+both resolve a reference against `deployed_scripts | allowlist` before
+deciding it is broken, defaulting `allowlist` to
+`EXTERNAL_DEPENDENCY_ALLOWLIST` (merged with the empty
+`KNOWN_UNDEPLOYED_ALLOWLIST`) when the caller passes `None` — which is the
+path `build._check_script_reference_guard` exercises in production, since it
+calls `build_broken_ref_report` without an explicit `allowlist` argument.
+Per AC BP-900b-1-1: when a referenced script path (e.g.
+`scripts/external_tool.py`) is listed in `EXTERNAL_DEPENDENCY_ALLOWLIST`,
+the guard treats the reference as resolved, and it does NOT appear in the broken-reference
+set or report, even though the path is absent from `deployed_scripts` — so
+the build exits zero on that reference alone (assuming no other broken
+references exist). A reference that is neither deployed nor allowlisted is
+still reported broken; the allowlist only resolves the paths it explicitly
+names.
 
 ## CI and Fresh-Clone Test Requirements
 

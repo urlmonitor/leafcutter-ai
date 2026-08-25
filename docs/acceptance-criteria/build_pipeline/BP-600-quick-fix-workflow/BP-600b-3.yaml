@@ -1,7 +1,7 @@
 id: BP-600b-3
 components:
   - build_pipeline
-title: "Quick-fix AC persists after the fix ticket lifecycle closes"
+title: "Quick-fix AC persists after the run ends, however the run ends"
 component: build-pipeline
 level: L2
 status: active
@@ -9,12 +9,18 @@ readiness: reviewed
 priority: medium
 work_status: done
 criteria: |
-  Given the quick-fix workflow has completed end-to-end (fix committed
-    and ticket closed),
-  When the user lists AC files under docs/acceptance-criteria/,
-  Then the AC YAML file created by the quick-fix workflow still exists,
+  Given the quick-fix workflow has finished — whether it ran through to a
+    pushed commit, halted at a guard, or escalated to the full build pipeline,
+  When the user lists AC files under the AC store,
+  Then the AC YAML file created by the workflow still exists at the path it
+    was written to,
   And its status field is "active",
-  And it is not deleted or moved by the ticket lifecycle close step.
+  And no phase of the workflow deletes, moves, reverts or archives it, including
+    the close phase and the escalation path,
+  And this holds on the abort paths specifically, which are the ones that
+    matter: a run that stops after the AC is written has produced a real
+    criterion describing a real bug, and that criterion is worth keeping even
+    though the fix never landed.
 depends_on:
   - BP-600b
   - BP-600b-1
@@ -25,23 +31,65 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: >-
+      Stated twice, deliberately: as "This AC YAML file is permanent" in Phase
+      1, and again in the Constraints section as "do NOT delete or move any AC
+      YAML written by this workflow after creation, even if the workflow aborts
+      mid-run". The escalation path repeats it a third time.
 assigned_agent: workflow-architect
 estimated_complexity: S
+declares_side_effect: true
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "Ticket lifecycle close must never delete or modify AC store files"
+  - >-
+    No phase may delete or modify AC store files as cleanup. This applies to
+    every halt path, not only the successful close — an abort is the case where
+    a cleanup step would look most reasonable and would do the most harm.
 delivers_to: null
 expects_from:
   ac_id: BP-600b-1
   contract: "AC YAML file path created during the AC phase — must not be included in any cleanup or archival logic"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      The criterion's premise and its final clause both referred to a ticket
+      lifecycle that does not exist. It read "the quick-fix workflow has
+      completed end-to-end (fix committed and ticket closed)" and "it is not
+      deleted or moved by the ticket lifecycle close step" — the fourth and
+      fifth appearance of the ticket artifact no version of /quick-fix has ever
+      produced (see BP-600d-3, BP-600d-4 and BP-600d-4-i, all amended on this
+      date for the same reason). The substance of the record was always true
+      and is kept: the AC file persists, its status stays active, and nothing
+      removes it. The premise is widened from "completed end-to-end" to "however
+      the run ends", because the abort and escalation paths are where the
+      guarantee actually earns its keep, and the original phrasing excluded
+      exactly those cases by assuming a successful finish. Title amended.
+      work_status left done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  Found during the BP-600 sweep, in the same class as BP-600b-1 and missed only
+  because the original brief scoped to that record.
+
+  This criterion is the reason BP-600f still exists to be repaired. That record
+  was written by a real /quick-fix run against the old flat template, and it
+  was wrong in almost every field — but it was still on disk six weeks later,
+  which is what made it fixable rather than a bug nobody could reconstruct. The
+  guarantee is worth more on the runs that go badly than on the ones that go
+  well.

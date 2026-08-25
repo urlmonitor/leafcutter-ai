@@ -1,0 +1,88 @@
+id: BO-2400f-4-i
+components:
+  - build_orchestration
+  - changelog
+title: "Whether the run owes a changelog entry is decided by the merge check's own rule, not a copied list"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has taken its built set to green and the change it is about to
+    deliver touches at least one file outside the path families the repository's
+    changelog-presence merge check treats as exempt (changelog entries themselves, ticket
+    records, acceptance criteria, and known-issue registers),
+  When the run decides whether it owes a changelog entry,
+  Then the decision is "an entry is required",
+  And the decision is obtained by applying the merge check's own rule to the run's
+    delivered change, so the run's answer and the merge check's verdict can never
+    disagree,
+  And when the merge check's set of exempt path families is changed, the run's decision
+    changes with it in the same edit — there is no second copy of the exempt list to keep
+    in step.
+depends_on: [BO-2400f-4]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_changelog_requirement:
+      type: object
+      description: "Decision for one run: {required: bool, releasable_paths: [str]}. 'required' is true exactly when the changelog-presence merge check would fail the run's diff for want of an added entry."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The exempt path families must be read from the changelog-presence gate module (scripts/release/check_changelog_presence.py) — import its rule, do not restate its prefixes. A hardcoded duplicate of the list in the lane is the defect this criterion exists to prevent, and it drifts silently."
+    - "Reuse the gate's own pure decision function rather than re-deriving 'releasable' from a path prefix comparison written afresh in the lane."
+    - "The decision must be computed from the run's actual delivered diff against the branch point, not from the coder's self-reported files_modified alone — a coder report is an agent claim, and the merge check reads git."
+    - "The covering test must prove the single-source property behaviourally: alter the gate's exempt set within the test and assert the lane's decision follows. A test that only asserts 'a .py change requires an entry' passes equally on a hardcoded copy."
+delivers_to:
+  agent: python-coder
+  contract: "The per-run 'changelog entry required' decision plus the releasable paths that drove it, consumed by the entry-producing step (BO-2400f-4-iii) and the exempt no-op path (BO-2400f-4-ii)."
+expects_from:
+  ac_id: BO-2400f-4
+  contract: "The green, committed change the run is about to open a pull request for."
+test_required: true
+test_spec:
+  - name: test_releasable_change_requires_changelog_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "A run whose delivered change touches a non-exempt path is told an entry is required."
+  - name: test_requirement_decision_follows_the_gate_rule
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    description: "Changing the changelog-presence gate's exempt path families changes the lane's requirement decision, proving no duplicate list exists in the lane."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The single-source property is the point of this criterion, not the yes/no answer. A
+  lane that carries its own copy of the exempt prefixes satisfies "produces an entry when
+  needed" on the day it ships and silently disagrees with the gate the first time the gate
+  changes — which has already happened once: docs/known-issues/ was added to the exempt
+  set on 2026-08-18.

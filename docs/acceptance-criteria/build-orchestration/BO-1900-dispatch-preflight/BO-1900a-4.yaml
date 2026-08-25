@@ -1,0 +1,140 @@
+id: BO-1900a-4
+components:
+  - build_orchestration
+title: "Resolving an epic target says the isolated working copy is not yet determined, never a stand-in location"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a request to drive an epic, identified only by where that epic's work is kept
+    in the work store,
+  When the target is resolved, before any isolated working copy has been created or
+    chosen for the drive,
+  Then the resolved target states that the isolated working copy is not yet
+    determined,
+    And it does not carry the epic's own work-store folder, nor any other existing
+      location, in place of that working copy,
+    And a consumer reading the resolved target can tell not-yet-determined apart from
+      a real location, without comparing it against the epic's work-store folder to
+      discover that the two are the same,
+    And once a later step establishes the isolated working copy, the resolved target
+      carries that location and no longer reads as undetermined,
+  So no later step can send a phase agent to work in the shared clone while believing
+    it is working in the epic's own copy.
+depends_on:
+  - BO-1900a
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The target resolver that runs first in the epic path and emits the resolved target consumed by every later step. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver, which performs the equivalent target and working-copy resolution. TWIN of build-feature.js; the same not-yet-determined contract must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. It currently supplies a working copy up front so the script skips its ambient check; extend it to run the resolver with none supplied and to capture the resolved target the run produced."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The isolation guarantee this defect quietly undermines: a stand-in location points phase agents at the shared clone instead of the drive's own copy."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the target resolver in build-feature.js and the equivalent resolution in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_target_resolver_worktree.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that reads the resolver's source proves nothing about the value a run emits. Execute the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs with no working copy supplied and assert on the resolved target the run produced."
+    - "NOT-YET-DETERMINED MUST BE UNAMBIGUOUS ON ITS OWN. A consumer must be able to recognise it without knowing the epic's work-store folder to compare against. The defect was harmless in the observed run only because a later step happened to overwrite the value; a consumer that reads it first has no way to notice."
+    - "ABSENT IS NOT A LOCATION. Whatever represents not-yet-determined must not be a path-shaped value that any consumer could join, open, or run a command in. This is the fail-closed clause: the wrong value here sends agents to commit in the shared clone."
+    - "TEST THE HAND-OFF, NOT ONLY THE RESOLVER. Assert that after the step which establishes the working copy, the resolved target carries it -- otherwise a fix that always reports undetermined would pass the negative case and break every drive."
+    - "BOTH TWINS IN ONE CHANGE."
+delivers_to:
+  agent: python-coder
+  contract: "A resolved target in which the isolated working copy is either a location that was actually established for this drive, or an unambiguous not-yet-determined marker -- never a plausible-looking substitute"
+expects_from: null
+test_spec:
+  - name: test_epic_target_resolves_with_the_working_copy_not_yet_determined
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run the real workflow's epic resolution with no working copy supplied and assert the resolved target reports the working copy as not yet determined."
+  - name: test_the_resolved_target_never_carries_the_work_store_folder_as_the_working_copy
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The exact observed defect: assert the resolved target's working copy is not equal to the epic's work-store folder, and is not any other pre-existing location."
+  - name: test_not_yet_determined_is_recognisable_without_comparison
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Assert a consumer can classify the resolved target as undetermined from the target alone, without being told the epic's work-store folder -- the property that would have let a downstream step catch this."
+  - name: test_the_working_copy_appears_once_a_later_step_establishes_it
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Control case: after the step that establishes the isolated copy, assert the resolved target carries that location and no longer reads as undetermined."
+  - name: test_both_drivers_resolve_the_same_way
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the same scenario against each of the two twin driver scripts as they exist on disk and assert both produce the same undetermined contract -- the twins' stated obligation, verified rather than asserted in a comment."
+test_rationale: |
+  The emitted value was path-shaped and plausible, so nothing short of inspecting what
+  a run actually produced can distinguish the defect from correct behaviour -- and the
+  observed run masked it entirely, because a later step overwrote the value before
+  anyone read it. Every descriptor therefore runs the real resolver and asserts on the
+  value it emitted. The control case is essential: reporting undetermined forever
+  passes the two negative descriptors and breaks every drive, so the hand-off has to
+  be pinned in the same suite. The last descriptor exists because the twin obligation
+  is currently enforced only by a comment in the file headers.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1900a-4-i
+  - BO-1900a-4-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BUG-01, observed at the second journal entry of run wf_09a91c7e-d5f. The resolver
+  returned an epic target whose isolated-working-copy value was a verbatim copy of the
+  epic's work-store folder. A work-store folder is not a working copy.
+
+  WHY THIS IS RECORDED EVEN THOUGH NOTHING BROKE. In the observed run the value was
+  overwritten by the very next step, so the drive behaved correctly. That is luck, not
+  design: any consumer that reads the resolved target before that step -- and every
+  new consumer is written against the resolver's stated output -- would run phase
+  agents against the shared clone rather than the epic's branch, and commit there.
+  The failure mode is silent, is a wrong-place write, and is discovered after the
+  fact.
+
+  WHY THE FIX IS A CONTRACT AND NOT A CORRECTION. There is no correct working-copy
+  value to emit at resolution time, because none has been created yet. The only honest
+  output is that the question is not yet answered, said in a way a consumer cannot
+  mistake for an answer. Emitting a plausible substitute is the specific behaviour
+  being forbidden.
+
+  WHY IT SITS UNDER BO-1900a. The L1 is that nothing is spawned against a target that
+  has not been proven fit. A target whose working copy is undetermined is by
+  definition not yet fit to dispatch against; the companion L3 BO-1900a-4-i states the
+  refusal.

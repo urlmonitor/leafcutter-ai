@@ -343,13 +343,14 @@ flowchart TD
 - BO-2500c-1: Fixtures for serialized data are produced by the real serializer, not hand-typed
 - BO-2500c-2: Parser and validator tests round-trip through the real on-disk artifact
 - BO-2500c-3: An independent real-artifact behavioral check runs for parsers, validators, and hooks
-- BO-2500d-1: Opinion-only gate agents are absent from the fast-lane phase order
-- BO-2500d-1-i: Removing a gate before its mechanical replacement exists is rejected
+- BO-2500d-1: The fast lane carries at most one LLM verdict, and that verdict can only withhold delivery — never confer done
+- BO-2500d-1-i: Removing a mechanical proof-of-done gate, or letting an LLM verdict stand in for one, is rejected
 - BO-2500d-2: The opinion-only gate agents remain present in the heavy pipeline
-- BO-2500d-3: The mechanical proof-of-done gates stand in for the removed review agents in the fast lane
+- BO-2500d-3: The mechanical proof-of-done gates are the fast lane's completion arbiters
 - BO-2500e-6: The required CI done-proof gate covers JS-covered ACs
 - BO-2600a-3: build-ac leaf path is unchanged when the connected build set is just the target AC
 - BO-2600a-4: build-ac emits a dependency-ordered epic when the connected build set has more than one AC
+- BO-2900f-2-ii: An agent recording an outcome for a gate it has already recorded updates that entry instead of appending a second
 - BO-400a-1: ticket-supervisor sets status to in_progress at drive start
 - BO-400a-1-i: Ticket already in_progress from a previous failed run
 - BO-400a-2: ticket-supervisor sets status to done when all agents complete

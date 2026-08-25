@@ -685,19 +685,26 @@ serial per-commit hook cascade — child-limit caps, missing parent `covered_by`
 and schema-invalid fields (e.g. a list-valued `test_rationale` that must be a string):
 
 ```bash
-find docs/acceptance-criteria/<component> -name "*.yaml" -exec python scripts/ac_store/validate_ac_schema.py {} +
+python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>
 ```
 
-**Do NOT pass a bare directory.** `validate_ac_schema.py` takes file paths and does no
-globbing of its own. Given a directory it prints `No YAML files to validate.` and **exits
-0** — a success-shaped result from a run that checked nothing. This instruction previously
-prescribed the bare-directory form, so the documented defence against store rot was itself
-a no-op from 2026-08-10 until 2026-08-18.
+A directory argument is walked **recursively**, so this reaches AC YAML at every depth —
+records directly under a component directory and records inside a feature folder alike.
+`index.yaml` is skipped, being the component registry rather than an acceptance criterion.
 
-Use `find -exec` rather than a shell glob: AC YAML sits at more than one depth (some files
-are directly under `docs/acceptance-criteria/`), so a fixed-depth pattern like `*/*.yaml`
-silently skips whole directories — the same failure in a smaller costume. Before believing
-a pass, confirm the command actually named some files.
+A run that resolves to **zero** files now **exits non-zero**. That matters more than it
+sounds: until 2026-08-19 the script did no globbing of its own, so a bare directory matched
+nothing, printed `No YAML files to validate.` and exited **0** — a success-shaped result
+from a run that checked nothing. This very instruction prescribed the bare-directory form
+from 2026-08-10 until 2026-08-18, so the documented defence against store rot was itself a
+no-op for eight days, and reported clean the whole time.
+
+Two habits survive the fix, because they are about *your* command rather than the script:
+
+- Avoid a fixed-depth shell glob like `*/*.yaml` — it silently skips whole directories.
+  Pass the directory and let the script walk it, or use `find -exec`.
+- Before believing a pass, confirm the run actually named some files. `OK: all N ... valid`
+  states N for exactly this reason.
 
 (Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10; bare-directory no-op found
-2026-08-18.)
+2026-08-18, fixed 2026-08-19 — KI-ACS-001.)

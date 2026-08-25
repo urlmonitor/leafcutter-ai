@@ -1,0 +1,110 @@
+id: BO-3000
+title: "Phase driver routes a `handoff` phase result to the named agent instead of recording it as a successful phase"
+component: build-orchestration
+components:
+  - build_orchestration
+status: active
+level: L2
+readiness: approved
+priority: high
+work_status: todo
+origin_agent: BrainCandy
+change_target: pipeline
+risk_surface: internal
+criteria: |
+  Given templates/workflows-js/build-feature.js declares `handoff` as a valid
+    `status` value in PHASE_RESULT_SCHEMA (line 147)
+  And the failure-adjudication block of driveTicketPhases() (lines 618-711)
+    guards its blocker handling with
+    `if (resultStatus === "blocker" || resultStatus === "failed")` at line 643
+  When a phase agent returns `{ status: "handoff", ... }` naming an upstream
+    agent that must do work before this phase can proceed
+  Then the driver MUST NOT fall through the guard and record the phase as
+    completed, and MUST NOT advance to the next phase in phaseOrder
+  And the driver MUST re-dispatch the agent named in the handoff so the named
+    upstream phase actually runs again
+  And the ticket's sign-off state for the named upstream phase MUST reflect that
+    it was re-run, not left at `needed`
+
+  Given a phase agent returns `{ status: "handoff", ... }` whose handoff target
+    cannot be parsed into a known phase agent name
+  When driveTicketPhases() adjudicates that result
+  Then the driver MUST return a `blocked` result that names the failing phase
+  And it MUST NOT report the phase as successful and MUST NOT advance the loop
+
+  Given the sibling driver templates/workflows-js/build-ticket.js carries the
+    identical PHASE_RESULT_SCHEMA `handoff` enum entry (line 80) with no handler
+  When a phase agent returns `status: handoff` under that driver
+  Then build-ticket.js MUST apply the same handoff routing behaviour as
+    build-feature.js, so the two drivers cannot diverge
+
+  Given the existing `cross_agent` classification branch (line 677) that skips a
+    phase after a classified blocker
+  When the handoff handler is added
+  Then the `cross_agent` branch MUST remain present and behaviourally unchanged
+
+  Given the JS workflow test harness at unit_tests/_workflow_engine_harness.py
+  When BO-3000 is verified
+  Then the covering test MUST execute the driver through the harness with a
+    stubbed phase agent returning `status: handoff` and assert on the observed
+    dispatch sequence and returned result
+  And a grep-only / structural assertion over the JS source MUST NOT be accepted
+    as coverage for this AC
+  And the bug symptom ("a `handoff` result is silently recorded as a SUCCESSFUL
+    phase and the driver advances to the next phase while the named agent is
+    never re-dispatched") must not occur
+covered_by: []
+implemented_by: []
+notes: |
+  Authored by /quick-fix.
+
+  ROOT CAUSE. `handoff` is declared as a valid value in the PHASE_RESULT_SCHEMA
+  status enum (templates/workflows-js/build-feature.js line 147) but has NO
+  handler anywhere in the file — `grep -c handoff` returns exactly 1, the enum
+  entry itself. The adjudication branch at line 643 tests only
+  `resultStatus === 'blocker' || resultStatus === 'failed'`, so the `handoff`
+  status falls through that guard entirely and reaches the phase-completed path.
+
+  RED BASELINE CONFIRMS THIS EXACTLY. unit_tests/workflows/test_bo_3000_handoff_routing.py
+  is already captured and RED: 3 tests fail, showing test-writer dispatched once
+  instead of twice in BOTH drivers, and an unparseable handoff target advancing to
+  pr-reviewer instead of failing closed. The diagnosis is confirmed — proceed with
+  the fix.
+
+  THE FIX. Add a `handoff` branch that re-dispatches the agent named in
+  `handoff_target` (or, absent a parseable target, returns a `blocked` result
+  naming the phase) rather than letting the loop advance.
+
+  FIELD EVIDENCE. Observed live in EPIC-BuildPipelinePhantomRemediation ticket 07:
+  python-coder returned `status: handoff` at 17:15 asking test-writer to update one
+  stale assertion; test-writer was never respawned and still shows `needed`, while
+  the driver advanced through pr-reviewer, ac-validator, ac-fulfillment-gate and
+  commit — all four independently re-discovered the same unfixed regression and
+  blocked. A blocker was inverted into a pass and four downstream agent invocations
+  were wasted rediscovering it.
+
+  IMPORTANT CONSTRAINTS:
+  (1) This worktree is at /home/henzeh/projects/leafcutter/worktrees/handoff-routing
+      on branch fix/handoff-routing — the session cwd is NOT a git repository, so
+      EVERY git command MUST use
+      `git -C /home/henzeh/projects/leafcutter/worktrees/handoff-routing`, never a
+      bare `git`. Do not run `git worktree add` or invoke worktree-agent; the
+      worktree already exists.
+  (2) The identical defect exists in the sibling driver
+      templates/workflows-js/build-ticket.js at line 80 (same enum, same single
+      occurrence, same missing handler) — fix it in the same pass and keep both
+      handlers consistent; do NOT treat the second file as scope expansion
+      requiring escalation.
+  (3) Do not weaken or delete the `cross_agent` branch at line 677 while doing
+      this; it is a related but separate defect.
+  (4) Do NOT modify or weaken the three tests in
+      unit_tests/workflows/test_bo_3000_handoff_routing.py to make them pass —
+      they are the specification; change the drivers until the tests go green.
+      Per CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep', a
+      grep-only structural test is NOT acceptable coverage; the existing tests
+      drive the real JS through unit_tests/_workflow_engine_harness.py.
+
+  NOTE ON IDENTITY. This record was created by an earlier pass of this same
+  /quick-fix run and is reused rather than duplicated under a fresh id: the red
+  baseline already tags `# covers: BO-3000`, so allocating BO-3001 would orphan
+  that coverage link.

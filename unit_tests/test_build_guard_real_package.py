@@ -341,7 +341,7 @@ def test_fresh_clone_build_guard_exits_0() -> None:
 
 
 def test_commit_guardian_missing_scripts_in_templates() -> None:
-    """templates/scripts/commit_guardian/ must contain the 3 previously-missing scripts.
+    """templates/scripts/commit_guardian/ must contain the 2 previously-missing scripts.
 
     After PR #180 restored templates/scripts/feedback/, three scripts were still
     missing from templates/scripts/commit_guardian/:
@@ -354,8 +354,16 @@ def test_commit_guardian_missing_scripts_in_templates() -> None:
     - tests/test_transform_decision_history.py
     - unit_tests/commit_guardian/test_check_test_fixture_bloat.py
 
-    This test asserts that all 3 files are present in the tracked template source
-    so that build.py deploys them and they remain importable after a fresh clone.
+    known_failing_tests.py was later deleted outright (2026-08-18): it was a
+    dead pre-commit gate — never registered in any pre-commit config and its
+    baseline file never existed — and TQ-100d-1 specifies an approved
+    replacement with a different design (config/known_failing_tests.yaml +
+    expiry/staleness checks). Its removal took tests/test_known_failing_tests.py
+    (its only test subject) with it, so it is no longer asserted here.
+
+    This test asserts that the remaining 2 files are present in the tracked
+    template source so that build.py deploys them and they remain importable
+    after a fresh clone.
 
     AC BP-1200a-1-ii (follow-up: zero collection errors).
     """
@@ -368,7 +376,6 @@ def test_commit_guardian_missing_scripts_in_templates() -> None:
     )
 
     required_scripts = [
-        "known_failing_tests.py",
         "transform_decision_history.py",
         "check_test_fixture_bloat.py",
     ]
@@ -583,6 +590,18 @@ def test_guard_source_paths_match_deployable_set() -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-18 [python-coder/test-authoring]: Removed known_failing_tests.py
+#   from test_commit_guardian_missing_scripts_in_templates()'s required_scripts
+#   (it was one of the 3 scripts added by the 2026-06-29 entry below). The
+#   script itself was deleted from templates/scripts/commit_guardian/: it was
+#   never registered in any pre-commit config and its baseline JSON file never
+#   existed, so it was a complete no-op gate. TQ-100d-1 specifies an approved
+#   replacement with a different design (config/known_failing_tests.yaml with
+#   expiry dates and stale-entry detection), so the old script was deleted
+#   rather than wired up as a weaker, name-colliding competitor. Its only test
+#   subject, tests/test_known_failing_tests.py, was deleted alongside it.
+#   transform_decision_history.py and check_test_fixture_bloat.py are
+#   unaffected and remain required. (#TQ-100d-1)
 # - 2026-06-30 [BrainCandy/guard-manifest-consistency]: Added
 #   test_guard_source_paths_match_deployable_set. Closes the LOW finding from
 #   the BP-900f re-review: _get_source_paths_for_guard duplicates the per-group

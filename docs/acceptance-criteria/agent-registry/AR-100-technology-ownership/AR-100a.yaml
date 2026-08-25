@@ -1,0 +1,42 @@
+id: AR-100a
+title: "The automation that drives your work is maintained by someone who knows how it is built"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Leafcutter's own orchestration has a dedicated owner, not a borrowed one.
+
+  The workflows that run your builds, plan your features and finalise your
+  changes are written to their own house rules and proven by their own test
+  harness. Changes to them are handled by a specialist who knows those rules,
+  so the automation you depend on every day keeps working correctly as it grows.
+depends_on:
+  - AR-100
+doc_links:
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: specifies
+    status: exists
+    relevance: "The authoring discipline this specialist must hold."
+  - path: docs/reference/workflow-constraints.md
+    relationship: specifies
+    status: exists
+    relevance: "The structural rules that make an orchestration change safe."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - reference-doc

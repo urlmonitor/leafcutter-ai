@@ -28,9 +28,21 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: XS
 it_requirements:
-  - "Must group broken references by missing_path — not emit duplicate entries for the same missing script"
-  - "The referencing_template field must be a list when multiple templates reference the same missing script"
-  - "Consolidation must be deterministic — same input always produces the same grouped output"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the grouping pass that consolidates entries by missing_path"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must group broken references by missing_path — not emit duplicate entries for the same missing script"
+    - "The referencing_template field must be a list when multiple templates reference the same missing script"
+    - "Consolidation must be deterministic — same input always produces the same grouped output"
+  notes: |
+    Determinism requires a sorted grouping key — iterating a set produces a
+    stable-looking result locally and a different order in CI, which turns any
+    output-comparison test into a flake.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

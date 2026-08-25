@@ -15,14 +15,26 @@ criteria: |
   the file and line — you should not have to navigate the full build pipeline
   to get it fixed properly. A single command takes your diagnosis, ensures the
   fix is backed by a formal acceptance criterion, proves correctness through
-  tests, and closes the full lifecycle (commit, PR, ticket done) without ever
-  leaving your current branch. Speed and discipline are not in tension.
+  tests, and closes the full lifecycle (commit, changelog, PR) without asking
+  you to think about branches, worktrees, or which gates apply. Speed and
+  discipline are not in tension.
 depends_on:
   - BP-300
 doc_links: []
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: back-link-repair
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      BP-600f existed on disk from 2026-07-10 but was absent from this list and
+      carried no depends_on of its own, so no parent claimed it. Added here and
+      given depends_on there in the same change. The L0 value statement was also
+      touched: "without ever leaving your current branch" was contradicted by
+      the conditional self-isolation the workflow now performs (see BP-600a-1
+      and BP-600f), and is replaced with the promise that actually holds — the
+      user does not have to think about branches, whether or not one is created.
 superseded_by: null
 covered_by:
   - BP-600a
@@ -30,6 +42,7 @@ covered_by:
   - BP-600c
   - BP-600d
   - BP-600e
+  - BP-600f
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

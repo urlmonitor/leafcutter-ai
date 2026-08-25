@@ -1,0 +1,152 @@
+id: BO-2900f-1-i
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A gate that reports success but leaves no entry in the work item's record is adjudicated failed, not passed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a work item that requests two gates,
+    And the drive runs both, and both report success,
+    And afterwards the first gate's entry is present in the work item's own record
+      while the second gate's entry is absent,
+  When the drive reads the record back to decide what happened,
+  Then the second gate is adjudicated as failed,
+    And the failure states that the gate reported success while leaving no entry,
+      and names the gate,
+    And the work item is not treated as having that gate complete,
+    And the first gate, whose entry is present, is unaffected,
+    And the adjudication is made from the record that was read back, never from the
+      gate's own report of itself,
+  So a gate's word for its own success is never sufficient, and a gate that left no
+    trace fails rather than passing quietly.
+depends_on:
+  - BO-2900f-1
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver and its per-phase dispatch loop -- the producer that today accepts a phase's own success report. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js; the same read-back must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness that loads the real workflow and records which phase agents were dispatched. Extend it so a stubbed phase can report success while leaving the record untouched, which is the only way to reproduce this defect."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The roll-up side: a non-passing outcome must not be counted as a pass. This AC supplies the outcome for the case the roll-up would otherwise never see, because today no entry is produced at all."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Defines what a landed sign-off looks like in a work item's record -- the shape the read-back has to find before it may credit the gate."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the post-dispatch outcome handling in build-feature.js and its twin in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_phase_signoff_verification.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that finds a read-back call in the source cannot tell a read-back whose result is consumed from one whose result is discarded -- and a discarded read-back is the single most likely wrong implementation here. Drive the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs with a phase stub that reports success and writes nothing, and assert the run's outcome for that phase is a failure."
+    - "THE READ-BACK MUST BE THE DECIDING INPUT. It is not enough to read the record and log a warning. The verdict the drive carries forward -- the one that decides whether the next phase runs and whether the work item completes -- must be the one derived from the record. An implementation that reads, warns, and proceeds on the agent's own report leaves the observed defect fully intact while appearing fixed."
+    - "FAIL CLOSED ON AN UNREADABLE RECORD. If the record cannot be read back, the gate is adjudicated failed, not passed. Absent evidence must never resolve to success -- that is the whole content of this AC and its parent L1."
+    - "DO NOT NARROW TO ONE GATE. The observed run showed the defect on test-runner for one ticket and on pr-reviewer for another, and showed both gates recording correctly on a third. The verification therefore belongs to the generic post-dispatch path and must not be attached to a named phase; a per-gate special case reproduces exactly the per-ticket unreliability this AC exists to end."
+    - "BOTH TWINS IN ONE CHANGE. The file headers declare the drivers twins; a read-back landed in only one produces two drivers with different trust models."
+delivers_to:
+  agent: python-coder
+  contract: "A per-gate verdict derived from the work item's record rather than from the gate's own report -- consumed by BO-400a-2-ii's completion trigger and by the run's outcome roll-up"
+expects_from: null
+test_spec:
+  - name: test_gate_reporting_success_with_no_record_entry_is_adjudicated_failed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the real workflow with a phase stub that returns success and writes nothing to the record, and assert the run's outcome for that phase is a failure naming the phase."
+  - name: test_gate_with_a_present_record_entry_still_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control case: the same driver, a phase that reports success and does write its entry, asserted to pass -- so the failure above is attributable to the missing entry and not to a driver that now fails everything."
+  - name: test_the_verdict_carried_forward_is_the_one_derived_from_the_record
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "With a phase reporting success and leaving no entry, assert the drive does not proceed as though that phase completed -- the downstream effect, not just an emitted warning. Distinguishes a consumed read-back from a discarded one."
+  - name: test_unreadable_record_adjudicates_the_gate_failed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Make the record unreadable at the moment of the read-back and assert the gate is adjudicated failed rather than credited from its own success report."
+  - name: test_verification_is_not_specific_to_any_named_gate
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the same scenario once per gate in the canonical phase set, each time with that gate reporting success and leaving no entry, and assert every one is adjudicated failed -- the generic-path requirement, exercised over the real phase list rather than a hand-picked pair."
+test_rationale: |
+  The defect is a true statement (the gate ran and succeeded) paired with a missing
+  artifact, so nothing about the gate's own return value distinguishes the broken
+  system from the fixed one. Only a run in which the record is observed after the
+  dispatch can tell them apart, which is why every descriptor executes the workflow.
+  The third descriptor is the load-bearing one: the cheapest wrong fix is to read the
+  record and emit a warning while still trusting the agent, and that implementation
+  passes descriptors one, two and four while leaving the production behaviour
+  unchanged. The fifth descriptor exists because the observed failures were
+  per-ticket and per-gate rather than deterministic, so a fix verified on a single
+  gate would look green and remain unreliable.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BUG-23, observed in run wf_cc2b46d9-f6f. Recorded per completed ticket:
+
+    ticket 01 -- recorded: test-writer, python-coder, commit;
+                 MISSING despite returning ok: test-runner, pr-reviewer
+    ticket 03 -- recorded: test-writer, python-coder, pr-reviewer, commit,
+                 commit (DUPLICATE); MISSING: test-runner
+    ticket 09 -- recorded: test-writer, python-coder, test-runner, commit;
+                 MISSING: pr-reviewer
+
+  Transcripts confirm the missing agents really ran and really returned success --
+  one test-runner dispatch is recorded in the run metadata as having returned ok
+  while ticket 01 carries no test-runner entry and still names that phase as needed.
+
+  IT IS NOT ONE BROKEN AGENT, AND THAT IS THE WHOLE POINT. Ticket 09 records
+  test-runner correctly; ticket 03 records pr-reviewer correctly. Recording is
+  unreliable per ticket, which is strictly worse than a deterministic bug: from a
+  ticket alone you cannot distinguish "this gate was skipped" from "this gate ran and
+  did not record". The parent L1's guarantee -- a check that never ran is never
+  mistaken for a check that passed -- fails in the one direction nobody looks at,
+  because here the check DID run and still left silence behind.
+
+  WHY THIS LIVES UNDER BO-2900f-1. The parent invariant is exactly one entry per
+  requested gate, with no gaps and no duplicates. This AC is the driver-side
+  enforcement of the no-gaps half at the moment the gap is created; the sibling
+  BO-2900f-1-ii covers the no-duplicates half, which the same run also exhibited.
+
+  BOUNDARY. This AC is about a gate that ran. BO-2900f-2 covers a gate that was
+  switched off and must still emit a skipped entry; BO-2900f-3 covers how non-passing
+  outcomes roll up. Keep the three distinct.

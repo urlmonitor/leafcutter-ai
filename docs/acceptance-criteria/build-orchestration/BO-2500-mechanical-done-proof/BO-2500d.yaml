@@ -2,7 +2,7 @@ id: BO-2500d
 components:
   - build_orchestration
   - review_system
-title: "Keep the rigor, drop the slow review overhead"
+title: "Keep the rigor, drop the review steps that only ever handed out approval"
 component: build-orchestration
 level: L1
 status: active
@@ -12,18 +12,24 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Retire the slow opinion-only review steps once proof-of-done is mechanical.
+  Retire the approval-granting review steps; a review that stays can only hold work back.
 
-  Because completion is now proven mechanically, the extra review steps that only
-  ever gave a green opinion can be removed — cutting time and cost from every
-  build without weakening the guarantee that a feature is truly done.
+  Because completion is now proven mechanically, the extra review steps whose only
+  contribution was a green opinion are removed from the fast lane — cutting time and
+  cost from every build. What the fast lane keeps is a single reviewer that can stop
+  a change from being delivered when something looks wrong. It can withhold; it can
+  never grant. Done-ness is still established by the mechanical proof alone, so the
+  guarantee that a feature marked done is genuinely done is unchanged.
 depends_on: [BO-2500]
 doc_links: []
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Reconciled with BO-2400f-11 by amendment, not supersession. As written this L1 promised that the opinion-only review steps are simply gone from the fast lane, and BO-2500d-1 spelled that out as 'no LLM review agent'. That is contradicted by BO-2400f-11 (done, shipped PR #485 on BrainCandy's instruction), which dispatches pr-reviewer at Phase 4.5 of templates/workflows-js/fast-lane-ship.js. The two 'done' criteria coexisted only because BO-2500d's proof (unit_tests/workflows/test_bo2500d_gate_retirement.py, _FAST_LANE_PATH) points at templates/workflows-js/fast-lane-build.js, an orphan nothing invokes and which BO-2400c-1-v deletes. The distinction that survives is directional: the mechanical gates alone grant done-ness; a reviewer may only withhold delivery. Restated on that basis. Amendment (rather than supersession) also keeps the BO-2500d-* ids active, so the ~24 '# covers:' tags in the gate-retirement suite do not become dangling under scripts/ac_store/done_proof.py."
 superseded_by: null
 covered_by:
   - BO-2500d-1
@@ -34,3 +40,18 @@ implemented_by: []
 documentation_triggers: [component-diagram]
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Boundary for anyone decomposing this L1 (recorded 2026-08-18):
+
+  IN scope — the fast lane. Exactly one review agent is permitted in it, and its
+  verdict is a delivery veto only. The property to specify is directional, not
+  positional: removing the reviewer must never turn a not-done AC into a done one,
+  and no LLM verdict may be the reason an AC reaches done. Today's wiring already
+  satisfies this, and the ordering it uses (review at Phase 4.5, mark_done at
+  Phase 5) is the CORRECT one and must not be inverted — marking ACs done before
+  the review would leave a veto-blocked run with ACs recorded done and nothing
+  committed, which is precisely the phantom-done shape BO-2500 exists to prevent.
+
+  OUT of scope — BO-2500d-2, which covers the heavy pipeline. The heavy pipeline
+  retains its review, validator, and fulfillment-gate agents unchanged. Nothing in
+  this amendment touches it.
