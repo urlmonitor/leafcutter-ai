@@ -6,7 +6,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 criteria: |
@@ -50,6 +50,7 @@ created: 2026-06-05
 amended_by: []
 superseded_by: null
 covered_by: [INF-400c-2-i]
-implemented_by: []
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 change_target: code
 risk_surface: contract_boundary

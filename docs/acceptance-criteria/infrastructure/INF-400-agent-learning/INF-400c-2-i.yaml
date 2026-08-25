@@ -6,7 +6,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 criteria: |
@@ -37,7 +37,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "tests/knowledge/test_harvest_learnings.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 change_target: code
 risk_surface: internal
