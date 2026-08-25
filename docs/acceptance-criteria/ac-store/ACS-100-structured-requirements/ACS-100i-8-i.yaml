@@ -1,0 +1,80 @@
+id: ACS-100i-8-i
+components:
+  - ac_store
+  - precommit_hooks
+title: "Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a change that adds a new entry to a package registry,
+  And the only acceptance criterion it cites carries `package_surface: false`,
+  When the change is evaluated at commit time,
+  Then the change is refused,
+  And the refusal states that the cited record denies registering a package
+    surface while the change adds one, and names both the record and the entry —
+  so that an incorrect declaration is reported as a contradiction between the
+  record and the change, not as a missing field.
+
+  And given a change that adds a new entry to a package registry and cites no
+    acceptance criterion at all,
+  When it is evaluated,
+  Then the change is refused,
+  And the refusal states that a change adding a package-registry entry must cite
+    the acceptance criterion that declares it,
+  And the refusal names the registry file and the entry key.
+
+  And given a change that adds a new entry to a package registry and cites three
+    acceptance criteria, exactly one of which carries `package_surface: true`,
+  When it is evaluated,
+  Then the change is allowed, and the two records that made no declaration are
+    not reported — one declaring record is sufficient.
+depends_on: [ACS-100i-8]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-8
+  contract: "The registration-versus-declaration reconciliation whose three adversarial paths this criterion pins."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: safety
+notes: |
+  Three paths, each an adversarial reading of ACS-100i-8.
+
+  Scenario 1 is the difference between omission and denial. Both must be
+  refused, but they are different acts and the message should say which one it
+  saw: an omission is an oversight, a `false` on a change that adds a
+  registration is a contradiction a reviewer needs to read as such.
+
+  Scenario 2 is the hole flagged as Concession 2 on the parent, closed rather
+  than merely documented. Note the cost, and confirm it before building: this
+  refuses any package-registry addition not traceable to an acceptance
+  criterion. That is consistent with the standing project rule that new work
+  goes through acceptance criteria, but it is a real blast radius — every
+  registry edit made outside the AC path stops working. If that is judged too
+  aggressive, the alternative is to accept scenario 2 as an open hole and say so
+  in the known-issues entry; what is NOT acceptable is leaving it unstated,
+  because an uncited change is precisely how an undeclared surface would arrive.
+
+  Scenario 3 stops the check being over-strict in the ordinary multi-AC case,
+  where one behavioural AC declares the surface and its siblings do not.

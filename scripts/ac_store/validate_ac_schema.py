@@ -22,6 +22,11 @@ additional property constraints.
 
 Exits non-zero if any file fails validation; exits zero if all pass.
 
+Exits non-zero ALSO when the run examined no records at all — a directory
+argument, or arguments that are not .yaml/.yml files. This validator takes FILE
+paths and does no globbing, so a bare directory resolves to nothing; reporting
+that as success would be a pass the run did not earn (ACS-100i-7-i).
+
 AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
 """
@@ -269,7 +274,16 @@ def _validate_file(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Validate AC YAML files and return exit code (0 = ok, 1 = errors, 2 = usage error)."""
+    """Validate AC YAML files and return an exit code.
+
+    Args:
+        argv: Argument list; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        0 when at least one record was examined and all passed; 1 when a record
+        failed OR when the run examined no records at all (a directory argument
+        or non-YAML arguments — see ACS-100i-7-i / KI-ACS-001); 2 on usage error.
+    """
     args = argv if argv is not None else sys.argv[1:]
 
     if not args:
@@ -312,13 +326,30 @@ def main(argv: list[str] | None = None) -> int:
         if schema_warning is not None:
             print(f"WARNING: {schema_warning}", file=sys.stderr)
 
+    # Arguments that contributed no record to the run, with the reason. Used to
+    # report an EMPTY EXAMINATION explicitly instead of exiting 0 (KI-ACS-001).
+    unexamined: list[str] = []
+
     for arg in args:
         path = Path(arg)
         if not path.exists():
             all_errors.append(f"{path}: File not found.")
             continue
+        if path.is_dir():
+            unexamined.append(
+                f"{path}: is a DIRECTORY. This validator takes FILE paths and does no "
+                "globbing of its own, so nothing under it was examined. Use "
+                f'`find "{path}" -name "*.yaml" -exec python3 '
+                "scripts/ac_store/validate_ac_schema.py {} +` — note AC YAML sits at "
+                "more than one depth, so a fixed-depth shell glob silently skips "
+                "whole directories."
+            )
+            continue
         if path.suffix not in {".yaml", ".yml"}:
-            continue  # Skip non-YAML files silently
+            unexamined.append(
+                f"{path}: is not a .yaml/.yml file, so it was not examined."
+            )
+            continue
         errors = _validate_file(path, registry_ids, schema)
         all_errors.extend(errors)
         files_checked += 1
@@ -330,8 +361,18 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if files_checked == 0:
-        print("No YAML files to validate.")
-        return 0
+        # An empty examination is NOT a pass. Reporting it as one is how the
+        # store-wide sweep prescribed in CLAUDE.md silently checked nothing for
+        # eight days (KI-ACS-001) — a validator that cannot distinguish "clean"
+        # from "I was given nothing" is worse than no validator, because it is
+        # consulted for reassurance. Exit non-zero and name what went unexamined.
+        print(
+            "AC schema validation EXAMINED NO RECORDS — this run is not a pass:",
+            file=sys.stderr,
+        )
+        for note in unexamined or ["(no arguments resolved to an AC YAML file)"]:
+            print(f"  {note}", file=sys.stderr)
+        return 1
 
     if files_checked == 1:
         print(f"OK: {args[0]} is valid.")
