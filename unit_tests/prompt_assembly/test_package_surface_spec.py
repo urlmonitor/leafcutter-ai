@@ -1,8 +1,14 @@
 """
 test_package_surface_spec.py — TDD stubs for ticket 04 (EPIC-PromptAssemblyHardening).
 
-Tests that package-surface ACs (assigned_agent=python-coder, component in
-[build_pipeline, build-orchestration]) carry a machine-checkable implementation spec.
+Tests that package-surface ACs carry a machine-checkable implementation spec.
+
+A record is a package surface because it SAYS SO — ``package_surface: true`` — not
+because of what agent it is assigned to or how its component happens to be spelled
+(ACS-100i-6). The fixtures below declare the surface explicitly for that reason; the
+original ``assigned_agent=python-coder`` + ``component in [build_pipeline,
+build-orchestration]`` proxy is retained on them only so the tests that exercise
+``validate_ac.py``'s deprecated legacy fallback still reach it.
 
 These tests are intentionally RED before implementation:
   - AC-1/AC-2 (BO-2000d-1, BO-2000d-1-i): schema conditional enforcement
@@ -35,7 +41,12 @@ def _load_schema() -> dict:
 
 
 def _make_package_surface_ac(**overrides) -> dict:
-    """Return a minimal package-surface AC (assigned to python-coder, build_pipeline)."""
+    """Return a minimal AC that DECLARES a package surface.
+
+    ``package_surface: true`` is what makes this a package surface to the schema —
+    the ``assigned_agent`` / ``component`` pair below is the deprecated legacy proxy,
+    kept only so the ``validate_ac.py`` tests still exercise that fallback path.
+    """
     base = {
         "id": "BO-999a-1",
         "title": "Test package-surface AC",
@@ -43,6 +54,7 @@ def _make_package_surface_ac(**overrides) -> dict:
         "status": "active",
         "criteria": "Given a package-surface AC When it is validated Then impl fields are required.",
         "assigned_agent": "python-coder",
+        "package_surface": True,
         "readiness": "draft",
         "priority": "high",
     }

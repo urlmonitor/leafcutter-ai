@@ -22,6 +22,11 @@ additional property constraints.
 
 Exits non-zero if any file fails validation; exits zero if all pass.
 
+Exits non-zero ALSO when the run examined no records at all — a directory
+argument, or arguments that are not .yaml/.yml files. This validator takes FILE
+paths and does no globbing, so a bare directory resolves to nothing; reporting
+that as success would be a pass the run did not earn (ACS-100i-7-i).
+
 AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
 """
@@ -325,7 +330,16 @@ def _resolve_ac_yaml_paths(args: list[str]) -> tuple[list[Path], list[str]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Validate AC YAML files and return exit code (0 = ok, 1 = errors, 2 = usage error)."""
+    """Validate AC YAML files and return an exit code.
+
+    Args:
+        argv: Argument list; defaults to ``sys.argv[1:]``.
+
+    Returns:
+        0 when at least one record was examined and all passed; 1 when a record
+        failed OR when the run examined no records at all (a directory argument
+        or non-YAML arguments — see ACS-100i-7-i / KI-ACS-001); 2 on usage error.
+    """
     args = argv if argv is not None else sys.argv[1:]
 
     if not args:
