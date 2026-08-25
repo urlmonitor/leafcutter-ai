@@ -988,3 +988,73 @@ in one pass.
 authoring a derived field, and correct the nine records. Widening `_DURABLE_EFFECT_RE` is the
 more invasive change and the sweep does not support it — no record is failing because the pattern
 was too strict about a value someone tried to set to `false`.
+
+**Read alongside KI-CG-014, which the sweep above structurally could not see.** That entry is
+the mirror image of this one: the derivation returning `true` where it should return `false`,
+because it matches a write phrase inside a *negated* clause. The sweep counted disagreements
+among the **38 records that carry the field**, and reported `authored false, derives true: 0`.
+That zero is real but narrow — it means nobody had yet tried to author `false` against a `true`
+derivation. KI-CG-014 is what happens when someone does: the attempt is rejected and there is no
+value the author can honestly write. So the sweep's conclusion that the pattern is not too strict
+holds; it says nothing about the pattern being too *loose*, which is a different axis and is also
+broken. Whichever reading wins here, negation handling is needed regardless.
+
+---
+
+### KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE` (`:567`) and `derive_declares_side_effect()` (`:581`)
+
+**Symptom.** `derive_declares_side_effect()` searches the Gherkin `Then` clause for
+durable-effect phrases with a plain regex. It has no notion of negation, so a criterion
+asserting that a write must **not** happen derives the same `True` as one asserting that it
+must. `validate_declares_side_effect()` then rejects the record unless it declares
+`declares_side_effect: true` — and rejects an authored `false` as a disagreement. The author
+is left with no way to state the truth: the only value the hook accepts is the wrong one.
+
+**Evidence.** Hit live on 2026-08-25 authoring `ACS-1100d-5-i`, whose `Then` clause read
+*"a referral is not a pass: no finished status **is written** while the referral stands"*.
+`_DURABLE_EFFECT_RE` matches `\bis written\b`; the record asserts an abstention and has no
+durable effect at all. CI failed the required `AC store valid` check with *"criteria assert
+a durable, observable effect … add declares_side_effect: true."*
+
+This is not cosmetic. `derive_declares_side_effect()`'s own docstring states the field
+"routes a ticket's `user-surface-smoker` phase agent" — so a forced `true` does not merely
+record a wrong fact, it dispatches a smoke-test phase to look for side effects the AC
+guarantees will not occur. The wrong value propagates from the store into ticket generation.
+
+Worked around in `ACS-1100d-5-i` by rewording `is written` → `is recorded`, with the reason
+recorded in that file's notes so it is not "corrected" back. That is a workaround, not a fix:
+it makes one record's phrasing dodge the matcher while every future author hits the same wall,
+and it puts pressure on criteria wording to satisfy a regex rather than to read well.
+
+**Fix direction.** The derivation is deliberately narrow and phrase-based — the code comments
+argue, correctly, that a matcher marking everything is worthless. Keep that. Add negation
+handling: reject a match whose phrase is governed by a preceding negator (`no`, `not`,
+`never`, `must not`, `is not`) within the same clause. Then extend the calibration the
+comments already describe — *"~3.6% of records with a Then clause matched (114 of 3148)"* —
+to report how many of those matches are negated, which measures the false-positive rate
+rather than assuming it is zero.
+
+Whatever the fix, `validate_declares_side_effect()` should not be able to leave an author
+with no acceptable value. A disagreement between an authored `false` and a derived `true` is
+currently reported as the author's error; sometimes, as here, it is the derivation's.
+
+**Relationship to KI-CG-015.** Same function, opposite direction, filed the same day by two
+sessions that each hit one half. KI-CG-015 is the derivation returning `false` on records whose
+whole subject is bytes surviving on disk; this is it returning `true` on a record that asserts
+nothing is written. Its sweep of the 38 populated records found nine disagreements, all
+`authored true / derives false`, and reasoned from that one-directionality that the pattern is
+not too strict. That reasoning is sound and untouched by this entry — an over-loose match on a
+negated clause is a separate defect that the sweep could not detect, because the affected record
+carries no authored value to disagree with. Two entries rather than one merged entry, because the
+fixes are independent: KI-CG-015 argues about who owns the field, this one about whether the
+matcher reads English correctly.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check measuring a proxy and
+reporting it as a verdict) — the proxy is "does the Then clause contain a write phrase", the
+verdict claimed is "this AC has a durable side effect", and negation is the gap between them.
