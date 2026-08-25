@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   Given an epic completes successfully,
   And none of the completed tickets have any entries in their files_touched frontmatter,
@@ -24,6 +24,23 @@ assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "The manual_tests array must never be empty — generate generic suggestions when no files_touched data is available"
+test_spec:
+  - name: test_bo300a2_1_manual_tests_section_renders_with_zero_files_touched
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Executing build-epic.js to completion under the E2 workflow harness with every completed ticket reporting an empty files_touched list still produces a Step 6 message containing the Things to manually test section with at least one bullet, so the section is neither empty nor omitted."
+  - name: test_bo300a2_1_manual_tests_are_generic_when_no_files_touched
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "In the same zero-files_touched run every captured manual_tests entry is a non-empty generic suggestion and none interpolates a per-file path, so the suggestions degrade to generic rather than emitting blank file hints."
+test_rationale: |
+  This is an edge case of the runtime message assembly, so it can only be proven
+  by driving build-epic.js through the E2 workflow harness with mocked ticket
+  results that carry no files_touched and reading the value the script returns.
+  Asserting on the source text of the manual-tests array literal would prove
+  nothing about the zero-files_touched path, which is the path under test.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

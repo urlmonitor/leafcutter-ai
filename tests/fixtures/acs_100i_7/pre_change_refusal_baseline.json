@@ -1,40 +1,24 @@
 {
-  "_comment": "Pre-change whole-store refusal baseline for ACS-100i-7. Recorded by test-writer BEFORE the package-surface trigger narrowing lands. 'unrelated_refusals' maps repo-relative AC path -> the refusal messages that are NOT attributable to the top-level package-surface if/then rule (they survive removal of that block). After the narrowing these must be byte-identical: none added, none removed. A shrunken set means the implementation loosened validation generally instead of narrowing the trigger.",
-  "measured_at_commit": "9b16d013",
-  "measured_on": "2026-08-19",
+  "_comment": "Whole-store refusal baseline for ACS-100i-7. Records the refusal messages that are NOT attributable to the top-level package-surface if/then rule. The guard test asserts this set is byte-identical: none added, none removed, no message changed. A shrunken set normally means validation was loosened generally instead of the trigger narrowed. REGENERATED 2026-08-25: the original 37-record baseline was measured at 9b16d013 before PR #518 narrowed the trigger. PR #493 then legitimately FIXED 9 of those 37 records by adding the required components list to nine ux-prototyping ACs, each of whose sole refusal message was \"components is a required property\". Their disappearance is a repair, not a loosening \u2014 every other refusal, including the untouched UXP records failing on test_spec shape, is unchanged. Regenerate ONLY in a commit that can point at the record edit explaining each removal; never to make a red assertion go green.",
+  "measured_at_commit": "969d7bc0",
+  "measured_on": "2026-08-25",
+  "supersedes": {
+    "measured_at_commit": "9b16d013",
+    "measured_on": "2026-08-19",
+    "unrelated_refusal_count": 37
+  },
   "store_dir": "docs/acceptance-criteria",
   "index_yaml_excluded": true,
-  "store_record_count": 3232,
-  "total_refused": 280,
-  "refused_on_package_surface_rule": 243,
-  "unrelated_refusal_count": 37,
+  "store_record_count": 3256,
+  "total_refused": 28,
+  "refused_on_package_surface_rule": 0,
+  "unrelated_refusal_count": 28,
   "unrelated_refusals": {
     "docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1-i.yaml": [
       "[{'name': 'test_about_route_smoke', 'target_dir': 'leafcutter-web/tests/', 'framework': 'playwright', 'type': 'e2e', 'description': 'The route-smoke harness loads /about headlessly: a non-200 or any console/render error fails the run (check reports failing); a 200 /about with no console/render error passes.'}] is not valid under any of the given schemas"
     ],
     "docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/BP-1400c-1.yaml": [
       "[{'name': 'test_route_smoke_job_present_and_blocking', 'target_dir': 'unit_tests/build_pipeline/', 'framework': 'pytest', 'type': 'unit', 'description': 'Parse .github/workflows/ci.yml and assert a web-app route-render job exists, invokes the Playwright route-smoke harness, is path-filtered on leafcutter-web/**, and does NOT set continue-on-error (blocking).'}, {'name': 'test_route_smoke_harness_iterates_all_routes', 'target_dir': 'leafcutter-web/tests/', 'framework': 'playwright', 'type': 'e2e', 'description': \"The route-smoke harness enumerates the app's routes (from leafcutter-web/app/**, including /about) and asserts each loads with HTTP 200 and no console/render error; a route returning non-200 or emitting a console error fails the run (non-zero exit).\"}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-300-product-truth-store/UXP-300.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-400-define-a-feature/UXP-491.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-410-flow-render/UXP-492.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-420-architecture/UXP-493.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-515.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-516.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-590.yaml": [
-      "'components' is a required property"
     ],
     "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-602.yaml": [
       "[{'name': 'buildFlowGraph_omits_ac_nodes_by_default', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"buildFlowGraph(flow) with the default showAcNodes produces zero nodes of kind 'ac' and zero 'implements' edges, even when steps/branches reference ACs; only step/branch/decision nodes are present.\"}, {'name': 'flow_explorer_defaults_show_ac_nodes_off', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': 'With no persisted preference, ExplorerInner mounts with showAcNodes false so no AC nodes render initially.'}] is not valid under any of the given schemas"
@@ -56,12 +40,6 @@
     ],
     "docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-605a.yaml": [
       "[{'name': 'show_acs_preference_restored_from_localstorage', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'component', 'description': \"With localStorage 'flows:showAcNodes' set to '1', a fresh mount of ExplorerInner initializes showAcNodes true (preference restored across reload); with '0' or absent it initializes false.\"}, {'name': 'show_acs_init_is_ssr_safe', 'target_dir': 'leafcutter-web/components/flows/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': 'The initializer returns false when window is undefined and does not throw when localStorage access fails.'}] is not valid under any of the given schemas"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-530-request-classifier/UXP-531.yaml": [
-      "'components' is a required property"
-    ],
-    "docs/acceptance-criteria/ux-prototyping/UXP-530-request-classifier/UXP-592.yaml": [
-      "'components' is a required property"
     ],
     "docs/acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-607-1.yaml": [
       "[{'name': 'mock_default_override_to_live_shows_live_badge', 'target_dir': 'leafcutter-web/lib/data/__tests__/', 'framework': 'vitest', 'type': 'unit', 'description': \"With LEAFCUTTER_MOCK defaulting to mock, a request carrying ?mock=0 resolves to live, the badge reads 'live'/real, and views are served from the real repo.\"}] is not valid under any of the given schemas"

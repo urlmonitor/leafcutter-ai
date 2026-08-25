@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500e.yaml
 criteria: |
   Given the active gh CLI account has silently reverted to an Enterprise Managed
@@ -38,6 +38,37 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_gh_account_is_switched_and_verified_before_pr_creation_is_attempted
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a recording gh shim on PATH reporting an EMU account, the ordered invocation log shows
+    `auth switch` then `auth status` strictly before the first PR-creation call.
+- name: test_rest_api_fallback_opens_the_pr_when_the_cli_create_is_emu_blocked
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With the gh shim failing `pr create` with an "Enterprise Managed User"/GraphQL error, the
+    workflow then invokes `gh api -X POST repos/<org>/<repo>/pulls` and the run reports the PR as opened.
+- name: test_pr_number_and_url_are_surfaced_after_the_rest_fallback
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: The number and URL parsed from the REST response appear in the workflow's final output,
+    so an EMU reversion degrades the path but not the user-visible result.
+- name: test_non_emu_failure_is_reported_as_an_error_and_does_not_trigger_the_rest_fallback
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: Discrimination control — when `pr create` fails for an unrelated reason, the workflow returns
+    an error carrying the stderr and issues no `gh api ... /pulls` call.
+- name: test_cli_create_success_skips_the_rest_fallback
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: When `gh pr create` succeeds, no REST fallback call is made and the CLI-returned PR reference
+    is the one surfaced.
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1

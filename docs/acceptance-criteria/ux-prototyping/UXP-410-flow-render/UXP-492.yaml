@@ -3,10 +3,12 @@ readiness: reviewed
 priority: medium
 title: "A flow renders live in the Atlas, coloured by each step's acceptance-criteria status"
 component: ux-prototyping
+components:
+  - ux_prototyping
 level: L1
 status: active
 req_status: approved
-work_status: done
+work_status: in_progress
 criteria: |
   As a product owner, when I open the Atlas /flows view I see each stored flow drawn
   as a graph whose steps are coloured by the live work_status of the acceptance criteria
