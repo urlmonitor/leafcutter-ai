@@ -92,6 +92,7 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+declares_side_effect: true
 it_requirements:
   - "ADR-001 parity is mandatory. The reduction and the notice both live in templates/scripts/commit_guardian/check_secrets.py, which is the canonical copy; scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py are build.py outputs and check_hook_parity enforces all four locations. Edit the template, then run `python scripts/build.py --target-dir .` before running the tests. A deployed-copy-only fix is silently reverted by the next build."
   - "MEASURED IN THE CANONICAL COPY ON 2026-08-24, not assumed, and load-bearing: main() returns 0 at the `if not findings` guard BEFORE producing any output, and a run whose only effect was withholding takes exactly that path today. The notice must be emitted on that path. A notice added inside the existing findings-printing block is unreachable in precisely the case this AC is about, and would pass a code review while covering nothing."

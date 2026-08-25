@@ -29,8 +29,8 @@ criteria: |
   And it names an executable script inside the skill-prompt area as the worked
     example, and says that the secrets scanner's own script is checked like any
     other script,
-  And a reader can decide whether a given file is exempt from what is written
-    there, without opening the check's source,
+  And a reader can decide whether a given file is exempt from what that
+    description says, without opening the check's source,
   Because the description that exists today is not merely incomplete after this
     change — it is wrong, and a wrong description of a security control is how
     this defect survived from the day the check shipped.
@@ -206,6 +206,30 @@ amended_by:
       from a location-only enumeration. expects_from contract, test_rationale and notes
       updated. No GE-123 file was edited. title, level, component, components, depends_on,
       readiness, work_status and priority unchanged.'
+  - reason: clarification
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'ONE PHRASE REWORDED, NO REQUIREMENT CHANGED. The Then-clause continuation read
+      "a reader can decide whether a given file is exempt from what is written there"; it now
+      reads "... from what that description says". Same obligation, and the new wording is the
+      plainer one — "what is written there" names the CONTENT of the reference material, and
+      the sentence is about a reader reading it, not about anything this AC writes. The reword
+      was prompted by check-ac-schema''s declares_side_effect derivation (BO-2900g-2), whose
+      _DURABLE_EFFECT_RE matched the bare phrase "is written" here and concluded this record
+      asserts a durable side-effect. It does not: its Then clause asserts the CONTENT of a
+      documentation passage. Recording the mechanics honestly, because rewording prose to
+      change a gate outcome is exactly the move that deserves scrutiny — the derivation is
+      not authorable around. validate_declares_side_effect REJECTS an authored false that
+      disagrees with the derivation, so on a false positive the only two options are to
+      declare a side-effect the record does not have, or to remove the accidental trigger.
+      Declaring true is the actively harmful one: generate_ticket_from_ac.py reads this field
+      and routes user-surface-smoker into the ticket as needed, NON-OVERRIDABLY, and that
+      agent invokes a user-facing surface and asserts side-effects against a ## Smoke Fixture
+      block. A documentation ticket has no surface to invoke, so the phase would have been
+      fail-closed on a record whose real gate is documentation-verifier (already carried via
+      risk_surface: contract_boundary). Filed against the guardrail engine as the over-broad-
+      derivation defect. Only the two words changed; every requirement, it_requirement,
+      test_spec descriptor, field and the rest of the criteria are untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []
