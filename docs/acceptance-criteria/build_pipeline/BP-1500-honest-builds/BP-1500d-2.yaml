@@ -1,0 +1,102 @@
+id: BP-1500d-2
+components:
+  - build_pipeline
+title: "The record still reads after the project is moved, copied or opened somewhere else"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given a project outside the producing package's own parent folder that received a
+    real build and carries its own record of what the build put there,
+  When the whole project is moved or copied to a different location, the producing
+    package is left behind, and the record is read at the new location,
+  Then the record reads there without being rebuilt,
+  And each of its entries still resolves to the artifact it describes inside the
+    project as it now sits, so what the record says is true of the copy in front of
+    the reader rather than of the place the record happened to be written,
+  And reading is demonstrated to FAIL, before it may be accepted as passing, on a
+    deliberately non-portable record -- one whose entries are keyed to the location
+    the record was written in -- which must be reported as unreadable at the new
+    location, naming the record and the project, rather than being silently accepted
+    or read as an empty record,
+  And that same deliberately non-portable record still reads at its original location,
+    and the good record reads at both locations, so the red is attributable to the
+    record's form and not to a project that was already broken by the move,
+  And every verdict is reached by relocating a real install and reading it where it now
+    sits, never by reading the build's own source for the presence of a
+    location-independent form.
+depends_on:
+  - BP-1500d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "No entry covers this defect yet. The reproduction to record is that a record written in one location cannot be read from another, so the same install opened elsewhere is unreadable even when the record travelled with it."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build that writes the record whose form this AC constrains. Read for context only -- this AC is not provable from its source."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The unreadable-record case degrades to the absent-record case, which is the fail-open variant: a check with nothing to read looks exactly like a check that passed."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the producing package's own workspace is an unrepresentative build target, and therefore why the relocation must start outside it."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: related
+    status: exists
+    relevance: "Prior art for the out-of-package consumer-simulation install this AC relocates."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: real_artifact + deployed + failure, with the location-keyed record as the load-bearing negative control."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS CHILD OWNS. Point (c) of the guarantee in BP-1500d's notes: the record
+  stays readable wherever the project is later opened, moved or copied. This is a
+  distinct failure from BP-1500d-1's: a record can be filed correctly inside the
+  receiving project, travel with it, and still be unreadable the moment the project
+  moves, because its entries are keyed to where the producing package happened to
+  sit on disk when it was written. The file arrives; the meaning does not.
+
+  WHY THE READ-AT-ORIGIN CONTROL IS IN THE CRITERIA. A two-run move-and-fail pair
+  cannot separate a working readability check from a relocation that broke the
+  project for some unrelated reason. Reading the deliberately non-portable record at
+  its original location -- where it must still read -- is what makes the red at the
+  new location attributable to the record's form.
+
+  SAME FAILURE FAMILY AS BP-016 / BP-017, one layer deeper: build output keyed to
+  one machine's directory layout and useless anywhere else. The difference is that
+  those broke loudly at the point of use, whereas this degrades into an unreadable
+  record, which the checks that read it currently treat as nothing to do.
+
+  UNREADABLE IS NOT THE SAME AS FALLEN BEHIND. This child says nothing about whether
+  the install matches what the package now holds -- that is BP-1500c's guarantee and
+  is not re-derived here. This is BP-1500c's prerequisite: there is nothing to
+  compare against until a record can be read in the project being checked.
+
+  ORDERING. Presupposes the record produced by BP-1500d-1. depends_on carries only
+  the parent link, as the authoring request specified; the it-po should express the
+  producer/consumer edge as expects_from BP-1500d-1.

@@ -17,6 +17,7 @@ ARCHITECTURE: Tests invoke main() directly with an argv list and assert on the f
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -36,9 +37,29 @@ class TestEmitEventRecord(unittest.TestCase):
     def test_deployed_path_exists(self):
         """The script must live at the path every call site names."""
         # covers: BP-400a-1
+        # covers: INF-400g-1
         target = (_REPO_ROOT / "templates" / "skills" / "agent-telemetry"
                   / "scripts" / "emit_event.py")
         self.assertTrue(target.is_file(), f"{target} must exist — 8 call sites invoke it")
+
+    def test_source_is_executable(self):
+        """The script carries the executable bit, not just a shebang.
+
+        INF-400g-1's criteria say "exists and is executable". Its it_requirements
+        accept "chmod +x OR shebang line", so a shebang alone arguably satisfied it —
+        but a shebang on a mode-644 file is an incoherence, and an AC marked done on
+        the weaker reading is the kind of claim nobody can check later. The bit is
+        asserted here so the mode survives a future rewrite of this file; build.py
+        copies with shutil.copy2, which preserves it into the deploy target.
+        """
+        # covers: INF-400g-1
+        target = (_REPO_ROOT / "templates" / "skills" / "agent-telemetry"
+                  / "scripts" / "emit_event.py")
+        self.assertTrue(
+            os.access(target, os.X_OK),
+            f"{target} must be executable — INF-400g-1 requires it, and the file "
+            "carries a #! line which is meaningless without the mode bit",
+        )
 
     def test_appends_exactly_one_valid_json_line(self):
         """One invocation appends one parseable line, and exits 0."""

@@ -1,0 +1,210 @@
+id: BO-2400f-13-iv
+components:
+  - build_orchestration
+title: "A free location is never refused, and the run that proceeds says its workspace is new"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane is pointed at an acceptance criterion whose workspace location is
+    free and whose build branch is checked out nowhere,
+  When the run's first phase finishes,
+  Then no refusal is issued, and the run carries on into resolving the connected build
+    set and dispatching its agents exactly as it did before this check existed,
+  And it is not refused merely because a branch of that name once existed, or because
+    an earlier run for the same acceptance criterion has already ended and left the
+    location free.
+
+  Given the same run,
+  When the operator reads what the first phase reported,
+  Then a workspace opened new for this run is distinguishable from one carried over
+    from anywhere else, so the operator never has to guess which of the two they got,
+  And the report identifies the mainline point the workspace was cut from, so the
+    operator can tell what mainline a later green result was measured against.
+depends_on: [BO-2400f-13]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The proceed path and the new report fields are Python. Read _create_fastlane_worktree (:503) before implementing: the residual state this criterion names — branch exists, no worktree registered — already has a live code path there (branch_already_exists at :529 takes the checkout-only `git worktree add <path> <branch>` form), and that path reuses the OLD branch tip rather than cutting from the latest origin/main. See the IT enrichment caveat in notes."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The lane must carry the first-phase report through to the operator. The guard added by BO-2400f-13 branches on `outcome === \"opened\"`; the newness and base-commit facts ride on that same payload and must not be dropped between Phase 1 and the terminal outcome."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The proceed path is proved by the presence of the downstream dispatches in the recorded agent calls, never by the absence of a refusal in the text."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fastlane_opened_workspace_report:
+      type: object
+      description: "The `outcome: opened` branch of the BO-2400f-13 payload — the honest non-refusal. These fields exist so the ABSENCE of a refusal is trustworthy rather than merely quiet: a green run in a carried-over workspace looks identical to a green run in a fresh one, and the difference is which mainline the result means anything against."
+      required: [outcome, worktree_path, branch, created, base_commit, base_matches_origin_main]
+      properties:
+        outcome:
+          type: string
+          enum: [opened]
+        worktree_path:
+          type: string
+          minLength: 1
+        branch:
+          type: string
+        created:
+          type: boolean
+          description: "True when THIS run made the workspace. HOW IT IS DETERMINED: set at the single construction site from which code path was taken, never inferred afterwards from whether the directory exists — by the time the payload is built it always does."
+        base_commit:
+          type: string
+          description: "HOW IT IS DETERMINED: `git -C <worktree_path> rev-parse HEAD` after the workspace is opened — the commit the workspace ACTUALLY sits on, read from the workspace, not the commit-ish that was passed to `git worktree add`. Those differ on the residual-branch path, and reporting the intended one rather than the real one is the exact dishonesty this field exists to prevent."
+        base_matches_origin_main:
+          type: boolean
+          description: "HOW IT IS DETERMINED: base_commit == `git rev-parse origin/main` at the same moment. Carried explicitly because BO-2400f-3's latest-mainline promise is invisible from a green result, and because the residual-branch path in _create_fastlane_worktree can legitimately produce false. False is not a failure — it is a fact the operator is owed."
+  reference_file_path: "templates/scripts/setup_ticket_worktree.py"
+  n_location_rule: "2 in templates/scripts/setup_ticket_worktree.py — the `opened` payload construction in cmd_create_fastlane_worktree (:1311, gaining base_commit and base_matches_origin_main) and the `created` determination at the branch point (:1294-1304) — plus pass-through in templates/workflows-js/fast-lane-ship.js so the facts reach the operator rather than dying in Phase 1."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/workflows/ unit_tests/build_orchestration/ -q"
+  constraints:
+    - "SPANS BOTH LANGUAGES, thinly. The report fields are Python (templates/scripts/setup_ticket_worktree.py); carrying them to the operator is JS pass-through (templates/workflows-js/fast-lane-ship.js). python-coder owns both extensions per config/agent_registry.json, but the second file must be in the coder's budget or the facts are computed and thrown away."
+    - "THE RESIDUAL STATE IS THE ONE A NAIVE FIX GETS WRONG, and it already has a live code path. Branch fast-lane/<slug> exists, no worktree is registered for it, the location is free — this is what EVERY finished prior run leaves behind. _create_fastlane_worktree already handles it via _branch_exists (:529) and the checkout-only `git worktree add <path> <branch>` form. A new occupancy check that treats branch EXISTENCE as branch OCCUPANCY turns the lane's normal steady state into a blanket refusal. The condition is 'checked out in some worktree', read from `git worktree list --porcelain` — never 'the ref resolves'."
+    - "AN EXISTING EMPTY DIRECTORY IS NOT AN OCCUPANT. Verified live 2026-08-25: `git worktree add` into an existing empty directory succeeds. Refusing on it is a false refusal, and false refusals are the asymmetric failure this criterion exists to catch — they cost one check, look like caution, and nobody files them."
+    - "PROVE THE PROCEED PATH BY PRESENCE, NEVER BY ABSENCE. The covering test must assert the downstream dispatches HAPPENED. Asserting that no refusal came back is satisfied by a run that crashed in Phase 1, which is precisely today's behaviour."
+    - "base_commit IS READ FROM THE WORKSPACE, not from the argument passed to git. On the fresh path they agree; on the residual-branch path they do not, and the whole value of the field is that it tells the truth in the case where they differ."
+    - "DO NOT SILENTLY 'FIX' A DIVERGENT BASE under this criterion. Resetting or rebasing a reused residual branch onto origin/main is a behaviour change nobody specified, and it would discard commits from a prior attempt. Report base_matches_origin_main: false and let the fact be visible. See the caveat in notes — reconciling the residual-branch path against BO-2400f-3's latest-mainline promise is a decision for BrainCandy, not for the implementer."
+delivers_to:
+  agent: python-coder
+  contract: "The `outcome: opened` payload — `{outcome: \"opened\", worktree_path, branch, ac_store_path, created, base_commit, base_matches_origin_main}` — consumed by the fast-lane-ship.js Phase 1 guard, which proceeds to Phase 2 (Resolve) on this and only this outcome, and carries created / base_commit / base_matches_origin_main into what the operator reads."
+expects_from:
+  ac_id: BO-2400f-13
+  contract: "The discriminated payload and its single construction site, and the occupancy determination whose negative verdict — location free AND branch checked out nowhere — is the precondition of this criterion."
+test_required: true
+test_spec:
+  - name: test_free_location_proceeds_to_the_downstream_dispatches
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "LOAD-BEARING, and asserted by PRESENCE. Under run_workflow_under_e2 with the worktree label stubbed to an `outcome: opened` payload, the recorded agent_calls contain the resolve-connected, test-writer and coder dispatches — not merely the absence of a refusal, which a crash also satisfies."
+  - name: test_residual_branch_without_a_registered_worktree_is_not_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "THE STATE EVERY FINISHED PRIOR RUN LEAVES BEHIND. REAL SUBPROCESS against a REAL temporary repo where fast-lane/<slug> exists as a branch, no worktree is registered for it, and the location is free: the payload is `outcome: opened`, not a refusal."
+  - name: test_existing_empty_directory_at_the_location_is_not_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An existing EMPTY worktrees/<slug> directory yields `outcome: opened` — git accepts it (verified live 2026-08-25), so refusing on it is a false refusal."
+  - name: test_opened_payload_reports_whether_the_workspace_is_new
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The payload's `created` flag is true for a workspace this run made and distinguishable from any carried-over case, so the operator never has to guess which of the two they got."
+  - name: test_opened_payload_names_the_commit_the_workspace_actually_sits_on
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "base_commit equals `git -C <worktree> rev-parse HEAD` in the real temp repo — asserted against the real sha, not merely non-empty — and base_matches_origin_main agrees with a direct comparison to `git rev-parse origin/main`."
+  - name: test_divergent_base_is_reported_rather_than_corrected
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "In the residual-branch state with origin/main advanced past the old branch tip, the run still opens, reports base_matches_origin_main false with the real base_commit, and has NOT reset, rebased or fast-forwarded the branch — the prior attempt's commits are intact."
+  - name: test_a_completed_and_cleaned_up_prior_run_does_not_block_the_next
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Full cycle in the real temp repo: open a workspace, remove it and deregister it, then re-run for the same AC id — the second run opens rather than refuses, proving the gate is not a blanket refusal on anything built before."
+  - name: test_free_location_run_reaches_the_workspace_command_through_its_real_entry_point
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/setup_ticket_worktree.py create-fastlane-worktree <slug>"
+    description: "The proceed path is reachable from the argv the lane actually composes, run against the DEPLOYED copy build.py produces, returning `outcome: opened` with the report fields present."
+test_rationale: |
+  A refusal gate is trivially satisfied by refusing too much, and the failure is
+  asymmetric: a false refusal costs one check and looks like caution, so nobody files
+  it, while the lane quietly stops building work it could build. This criterion is the
+  only thing standing between a correct gate and one that has become a blanket refusal
+  on anything that has ever been built before.
+
+  Execute the lane under unit_tests/_workflow_engine_harness.py against a free location
+  and assert on the PRESENCE of the downstream dispatches. Asserting merely that no
+  refusal came back is satisfied by a run that crashed. Add a REAL SUBPROCESS run of the
+  workspace command against a REAL temporary repository in the residual state — a branch
+  of that name exists but no workspace is registered for it — and assert the payload
+  reports a workspace opened new for this run, together with the mainline point it was
+  cut from. That residual state is the one a naive fix gets wrong, because it is the
+  state every finished prior run leaves behind.
+
+  Grep-shaped tests are NOT acceptable evidence for any part of this and must be
+  rejected at review.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The counterweight to BO-2400f-13. Without it, the cheapest implementation that passes
+  BO-2400f-13, BO-2400f-13-i, BO-2400f-13-ii and BO-2400f-13-iii is one that refuses
+  every run, and the whole lane stops. Written as a criterion rather than trusted to
+  reviewers, on the same reasoning BO-2400f-12-ii is written for the producibility gate.
+
+  The second scenario is the Product Owner's honesty point and it is not decoration. The
+  reason an operator must be able to see that the workspace is new is that BO-2400f-3's
+  promise — the latest mainline — is invisible from the result. A green run in a carried-
+  over workspace looks identical to a green run in a fresh one, and the difference is
+  which mainline the result means anything against. Saying it out loud in the first
+  phase's report is what makes the absence of a refusal trustworthy rather than merely
+  quiet.
+
+  IT enrichment CAVEAT, 2026-08-25 (it-po) — raised, not resolved, because resolving it
+  would be rewriting the criterion. This record's first scenario and BO-2400f-3's
+  latest-mainline promise are in tension on exactly one state, and that state is the
+  common one.
+
+  The residual state is: branch fast-lane/<slug> exists, no worktree is registered for
+  it, the location is free. Every finished prior run leaves it behind. This record says
+  such a run must NOT be refused. But _create_fastlane_worktree (:529) already handles it
+  by the checkout-only form `git worktree add <path> <branch>`, which puts the workspace
+  on the OLD BRANCH TIP — not on the latest origin/main. So the run proceeds, as this
+  record requires, into a workspace that does not satisfy BO-2400f-3.
+
+  The enrichment does not paper over this. `base_commit` is specified as read FROM the
+  workspace (`git -C <worktree> rev-parse HEAD`), never from the commit-ish handed to
+  git, and `base_matches_origin_main` is carried explicitly so the divergence is visible
+  in the first phase's report rather than discovered from a green result later. That
+  makes the criterion's second scenario do real work: it is the mechanism by which this
+  tension becomes observable instead of silent.
+
+  What the implementer must NOT do is resolve it unilaterally. Resetting or rebasing a
+  reused residual branch onto origin/main would discard a prior attempt's commits, and
+  refusing the residual state would contradict this record's first scenario. Whether the
+  lane should re-cut, reuse-and-report, or something else is a product decision for
+  BrainCandy. Until it is taken, report the fact.

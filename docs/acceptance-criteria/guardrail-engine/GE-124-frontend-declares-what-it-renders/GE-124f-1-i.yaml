@@ -1,0 +1,97 @@
+id: GE-124f-1-i
+readiness: approved
+priority: high
+title: "Only the page root names a design — a leaf that names one is a defect"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+criteria: |
+  Given a staged leaf component that is not a page root
+  And one of its elements carries `data-screen="plant-listing"`
+  When the chain reader evaluates the file
+  Then a finding is reported naming the file and the element, stating that a
+    design name belongs on the page root only
+  And the leaf is not recorded as realising that design
+
+  Given a staged page whose page root carries a design name
+  And whose leaf components carry criterion pins and no design name
+  When the chain reader evaluates the page
+  Then exactly one design is recorded for that page
+depends_on:
+  - GE-124f-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "ENFORCE THE MOCK-DATA IFF DIRECTLY: FrontendComponent.screen != null iff role == 'page-root'. Both halves are violations — a leaf carrying data-screen is reported, and a page root's design name must attach to the page root record and nowhere else. Implement the check on the record, so the invariant is enforced once rather than at each consumer."
+  - "THE FINDING NAMES THE FILE AND THE ELEMENT (line and opening tag, already on the element record from GE-124b-1), and states the rule — a design name belongs on the page root. It is its own finding code, distinct from an unresolvable design name (GE-124f-1): here the name may be perfectly valid, it is in the wrong place."
+  - "THE LEAF MUST NOT BE RECORDED AS REALISING THE DESIGN even though the name resolves. Detecting the misplacement and then also recording the link would give the chain two answers to 'what design is this page?', which is the consequence the PO names."
+  - "EXACTLY ONE DESIGN PER PAGE, ENFORCED AS CARDINALITY. Two data-screen attributes on one page root, or a page root plus a leaf both carrying one, must not produce two chain records for that page — every comparison built on the chain (GE-124f-2) breaks when the page has two answers."
+  - "This rule depends entirely on the page-root identification rule GE-124f-1 is required to state explicitly. If that rule is fuzzy, this AC becomes a source of false findings on legitimate nested route layouts — check the two against each other before implementing."
+delivers_to: null
+expects_from:
+  ac_id: GE-124f-1
+  contract: "The first-hop record whose one-design-per-page cardinality this edge case protects, and the page-root identification rule whose negative it enforces"
+test_spec:
+  - name: test_ge_124f_1_i_leaf_carrying_a_design_name_is_reported_and_records_no_design
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A non-page-root component with data-screen yields a finding naming the file and the element, with its own code, AND no chain record linking that leaf to the design. Assert both — detecting the misplacement and still recording the link is the natural half-implementation and gives the chain two answers."
+  - name: test_ge_124f_1_i_a_page_root_with_pinned_leaves_records_exactly_one_design
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A page root with a design name whose leaf components carry only criterion pins yields exactly one design record for the page. Assert the count is one, not that a design was recorded."
+  - name: test_ge_124f_1_i_two_design_names_in_one_page_do_not_produce_two_chain_records
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A page root carrying two data-screen attributes, and separately a page root plus a leaf each carrying one, both yield at most one chain record for that page plus the appropriate finding. This is the cardinality form the first two tests do not reach."
+test_rationale: |
+  The half-implementation this AC must exclude is specific: report the misplaced attribute and
+  ALSO record its link, which satisfies the first criteria clause while producing exactly the
+  two-answers-per-page state the PO names as the consequence. So the first test asserts both the
+  finding and the absence of the link. The cardinality test goes beyond the criteria because
+  the criteria's second scenario only covers the well-formed case; the malformed cases (two
+  attributes on the root, or root plus leaf) are where a chain consumer would actually break,
+  and they are cheap to assert once the record exists.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the mock-data iff to be enforced on the record rather than at each consumer, gave the misplacement its own finding code (the name may be valid, it is in the wrong place), and added the cardinality cases — two attributes on a root, or root plus leaf — which the criteria do not reach and which are where a chain consumer actually breaks. Flagged the dependency on GE-124f-1's page-root rule being explicit, or this AC produces false findings on nested route layouts. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The mock-data artifact states this as an "if and only if": a component has a
+  design name exactly when its role is page root; a leaf carries the criterion
+  pin only.
+
+  The consequence the PO names is the reason it is enforced rather than merely
+  documented: a design name on a leaf produces a page claiming to be two
+  screens, and every comparison built on the chain then has two answers to the
+  question "what design is this page?".
+
+  IT-PO NOTE (2026-08-25). This AC is only as sound as GE-124f-1's page-root
+  identification rule. In a Next.js app with nested layouts there is a real
+  question about whether a layout file is a page root; if that is left fuzzy,
+  this check will report legitimate files. Settle the rule in GE-124f-1 before
+  implementing this one.

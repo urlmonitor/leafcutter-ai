@@ -1,0 +1,143 @@
+id: GE-124g-3
+readiness: approved
+priority: high
+title: "Declarations are counted on their own axis and never added into a coverage figure"
+component: guardrail-engine
+components:
+  - knowledge_management
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+criteria: |
+  Given a set of criteria in which 8 are declared on screen, 3 are covered by a
+    test, and 2 are both
+  When any report counts them — the build output, the proof-of-done report, or
+    the Atlas
+  Then the declared count and the covered count are shown as two separate
+    figures
+  And no figure is shown whose value is the two added together or otherwise
+    combined
+
+  Given a criterion that is declared on screen and has no covering test
+  When it is displayed anywhere coverage is shown
+  Then it is not shown in the same visual state as a criterion that has a
+    covering test
+  And its state names what it has — declared — rather than a degree of coverage
+
+  Given a reader opens any of those reports
+  When they read the declared figure
+  Then the report states what a declaration means and what it does not: that
+    something on screen claims the criterion, and that this is not evidence the
+    criterion works
+
+  Given any attempt to configure a report to include declarations in its
+    coverage figure
+  When the configuration is loaded
+  Then no such setting exists
+depends_on:
+  - GE-124g
+  - GE-124g-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/knowledge-management.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THREE CONSUMERS, ONE COUNTING FUNCTION. The build output, the proof-of-done report and the Atlas must all derive their figures from ONE shared two-axis counting function rather than each computing its own. A rule enforced in one report and not the others fails at whichever surface a given person happens to read, and the Atlas is the one most likely to be missed because it renders the store directly and does not go through the build output."
+  - "CROSS-STACK BOUNDARY — FLAG FOR SPLIT IF THE COUNTING CANNOT BE SHARED. The Atlas is TypeScript/React (leafcutter-web/, vitest); the build output and proof-of-done report are Python. A single shared function is only possible if the Atlas consumes a machine-readable artifact the Python side emits. Prefer that: emit the two-axis counts as structured data and have the Atlas render them. If the Atlas must compute its own, this AC needs a split into a python-coder half and a frontend-coder half with a matching delivers_to/expects_from pair — raise it rather than letting one implementer silently own both stacks."
+  - "TWO AXES ARE TWO INDEPENDENT COUNTS PLUS THEIR OVERLAP, NEVER A SUM. Report declared, covered, and both-as-an-overlap; never declared+covered, never a single percentage combining them. The worked figures in the criteria (8 declared, 3 covered, 2 both) are chosen so any summing or double-counting bug is visible in the output."
+  - "THE VISUAL-STATE CLAUSE IS AS LOAD-BEARING AS THE COUNTING CLAUSE. A report can keep two honest columns and still colour a declared-only criterion the same green as a covered one, at which point every reader draws the conclusion the summed figure would have given them — and the numbers are defensible in the review that follows, which makes it worse. The declared-only state must be visually distinct AND must be labelled by what it has ('declared'), not by a degree of coverage ('partial', '50%', 'amber')."
+  - "THE CAVEAT SITS NEXT TO THE NUMBER, not in a linked document. Each report states inline what a declaration means and what it does not. A caveat one click away is a caveat nobody reads, and this is the surface where the false confidence is actually formed."
+  - "THE FIGURES MUST NOT COUNT WHAT WAS NOT EXAMINED. Criteria that GE-124e-4's diff scoping did not evaluate, criteria that GE-124e-1 recorded out-of-scope, and pages GE-124f-1-ii recorded outside-the-chain must each be absent from or separately labelled in these figures — never folded into either axis. A figure counting the unexamined as satisfied is the friendlier face of the same defect."
+  - "NO CONFIGURATION KEY MAY FOLD DECLARATIONS INTO A COVERAGE FIGURE, and such a key must be refused by name if supplied (GE-124g-1-i)."
+delivers_to:
+  agent: python-coder
+  contract: "One shared two-axis counting function — declared, covered, and their overlap, never summed — emitted as structured data and consumed identically by the build output, the proof-of-done report and the Atlas; plus a visual state for 'declared' that no reader can mistake for 'covered', labelled by what it has rather than by a degree of coverage, and an inline caveat next to each figure. Unexamined, out-of-scope and outside-the-chain records are excluded from both axes rather than folded into either."
+expects_from:
+  ac_id: GE-124g-1
+  contract: "The separate declared_by / pinned_by fields on a criterion record that make a two-axis count possible without inferring one axis from the other"
+test_spec:
+  - name: test_ge_124g_3_declared_and_covered_are_two_figures_and_no_combined_figure_exists
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Over the worked set (8 declared, 3 covered, 2 both) the counting function reports declared=8, covered=3, overlap=2, and NO field of its output equals 11, 9, or any other combination of the two. Assert the absence of a combined value, not just the presence of the two — the defect is an extra number, not a missing one."
+  - name: test_ge_124g_3_all_three_reports_derive_their_figures_from_the_same_function
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Change one record in a temp store and assert the figures reported by the build output, the proof-of-done report and the Atlas's data source all move together. Behavioural agreement, not an import assertion — a report holding its own count agrees today and diverges on the next change."
+  - name: test_ge_124g_3_declared_only_criterion_renders_in_a_state_distinct_from_covered
+    target_dir: leafcutter-web/__tests__/
+    type: unit
+    angle: criterion
+    description: "In the Atlas, a declared-only criterion renders with a state distinct from a covered criterion, labelled 'declared' rather than with any degree-of-coverage word. The colouring clause is where two honest columns still mislead every reader, so it is asserted on the rendered component."
+  - name: test_ge_124g_3_unexamined_and_out_of_scope_records_are_in_neither_axis
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Records that diff scoping did not evaluate, records recorded out-of-scope by GE-124e-1, and pages recorded outside-the-chain by GE-124f-1-ii appear in neither the declared nor the covered figure. A figure counting the unexamined as satisfied is the same defect wearing a friendlier face."
+test_rationale: |
+  The counting defect is an EXTRA number, so the first test asserts that no output field equals
+  any combination of the two axes — asserting the two correct figures exist would pass on a
+  report that also shows a summed total. The agreement test is behavioural rather than
+  structural because three reports each holding their own count will agree on the day they are
+  written and diverge on the next change, which is precisely how one surface ends up honest and
+  another not. The colouring test lives in the Atlas's own suite because that is where the
+  rendered state exists, and it is the clause the PO calls as load-bearing as the counting: two
+  honest columns plus one green badge produce the same wrong conclusion, with defensible numbers
+  behind it. Note the cross-stack split flagged in it_requirements — if the Atlas cannot consume
+  the shared function's output, this AC needs two implementers.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required ONE shared two-axis counting function across all three consumers and flagged the cross-stack boundary — the Atlas is TypeScript/vitest while the other two are Python, so either it consumes a structured artifact from the Python side or this AC needs a python-coder/frontend-coder split with a matching contract pair. Also required unexamined, out-of-scope and outside-the-chain records to be excluded from both axes, and the caveat to sit inline next to the number. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLACE 3 OF FOUR. The PO's words: a number that silently mixes the two is the
+  same defect wearing a friendlier face.
+
+  THE COLOURING CLAUSE IS AS LOAD-BEARING AS THE COUNTING CLAUSE and is why the
+  second scenario exists separately. A report can keep two honest columns and
+  still colour a declared-only criterion the same green as a covered one, at
+  which point every reader takes the same wrong conclusion the summed figure
+  would have given them — and the numbers are defensible in the review that
+  follows, which makes it worse.
+
+  Three consumers are named because a rule enforced in one report and not the
+  others is a rule that fails at whichever surface a given person happens to
+  read. The Atlas is the one most likely to be missed: it renders the store
+  directly and does not go through the build output.
+
+  The third scenario puts the caveat next to the number rather than in a
+  document nobody opens.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25) — THE ONE CROSS-STACK AC IN THIS TREE. Two
+  of the three named consumers are Python and the third (the Atlas) is
+  TypeScript with its own vitest suite. The AC is assigned python-coder on the
+  assumption that the Atlas consumes a structured artifact the Python side
+  emits, which is also the design that makes "one counting function" true. If
+  that assumption is rejected, this AC must be split into a python-coder half
+  and a frontend-coder half with a matching delivers_to/expects_from pair —
+  flagged rather than resolved unilaterally, because the split changes what the
+  Atlas is allowed to compute.

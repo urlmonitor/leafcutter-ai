@@ -1,0 +1,105 @@
+id: GE-124b-4
+readiness: approved
+priority: high
+title: "A how-to shows an author how to pin one element to one criterion"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given an author has a component whose rendered output includes one element
+    that is the visible answer to one criterion
+  When the author opens the element-pin how-to
+  Then the how-to shows the attribute written on an element in each of the five
+    supported file shapes, including the space-separated multi-criterion form
+  And it states that the pin is optional and that a component with no pinned
+    element is a normal, passing state
+  And it states that a pin never replaces the component-level declaration, and
+    shows the block report an author gets when they try
+  And it states that criteria with nothing to point at — a validation rule, a
+    sort order, a debounce — are declared at component level and pinned nowhere
+depends_on:
+  - GE-124b
+  - GE-124b-1
+  - GE-124b-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/pinning-frontend-elements-to-acs.md"
+    relationship: describes
+    status: planned
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b-5.yaml"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components, description) and stay within the check_doc_length budget."
+  - "THE FIVE MARKUP EXAMPLES MUST BE EXECUTABLE. Each is a complete opening tag in its file shape, written so the test contract can extract it verbatim and feed it to the real pin reader. An example the reader would not accept teaches the author a form that fails, which is worse than no example."
+  - "THE BLOCK REPORT SHOWN MUST BE THE REAL ONE. Reproduce the message the commit-tier check actually emits for an undeclared-but-pinned file (GE-124c-1-i), captured from the check rather than paraphrased. A paraphrased report drifts from the printed text and stops matching what the author is staring at."
+  - "TASK GUIDANCE ONLY — DO NOT DUPLICATE THE CONTRACT. GE-124b-5 is the authoritative reference for the attribute name, value grammar, resolution rule, production stripping and what the pin does not prove. This page links to it; two documents describing one contract drift, and the reference is the one the four consumers are written against."
+  - "THE 'WHEN NOT TO PIN' CLAUSES ARE REQUIRED CONTENT, not softening. An author told only how to add a pin will add one to every element, and a pin on every element makes the marker meaningless — that is the failure this page is most able to cause."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the how-to document (see GE-124a-4's notes on the mechanical consequence for the test contract)."
+delivers_to:
+  agent: frontend-coder
+  contract: "The task-level guidance an author follows when adding an element pin, including when not to add one. Its markup examples are the executable contract: each, extracted verbatim, must be accepted by the shared pin reader, and the block report it reproduces must equal the text the commit-tier check emits."
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The attribute name, whitespace-separated multi-value form and optionality this how-to documents, plus the pin record whose acceptance of each example the test contract asserts"
+test_spec:
+  - name: test_ge_124b_4_every_markup_example_is_accepted_by_the_real_pin_reader
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Extract each fenced markup example from the how-to, place it in a temp file of the matching extension, run the SHARED pin reader over it and assert a pin is recorded with the expected ac_ids — including the multi-criterion example yielding one pin with two ids. This goes red the day the reader's value grammar and the guidance disagree."
+  - name: test_ge_124b_4_reproduced_block_report_matches_the_text_the_check_emits
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the commit-tier check over an undeclared-but-pinned fixture, capture its message, and assert the how-to's quoted block report contains that message. A hand-written approximation drifts silently and sends the author looking for wording that no longer exists."
+  - name: test_ge_124b_4_howto_states_optionality_and_the_two_when_not_to_pin_cases
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The document contains a section stating that a component with no pinned element is a normal passing state, and a section stating that behaviour-only criteria (validation rule, sort order, debounce) are declared and pinned nowhere. These two clauses are the ones an author-facing page most easily loses."
+test_rationale: |
+  For a how-to, the only test worth writing is one that fails when the guidance and the code
+  disagree — anything else is a spell-check. Two of the three tests are therefore seam tests:
+  the examples are executed against the real pin reader, and the reproduced block report is
+  compared to the text the real check emits. Both go red on exactly the drift that hurts an
+  author, and neither can be satisfied by prose that looks right. The third test is a content
+  assertion, kept because the two 'when not to pin' clauses have no executable counterpart and
+  their absence is the specific way this page causes harm — a pin on every element.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the markup examples to be executable against the real pin reader and the quoted block report to be captured from the real check rather than paraphrased, so the page goes red on drift. Bounded it against GE-124b-5 (task guidance here, contract there). criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for the `how-to` entry in GE-124b's `documentation_triggers`. The
+  reference-doc entry is GE-124b-5 — deliberately a separate AC, because the
+  two documents have different readers: this one is read once by an author
+  mid-task, GE-124b-5 is read by the four consumers of the attribute contract.
+
+  The "when not to pin" clauses carry weight the how-to would otherwise leak:
+  an author told only how to add a pin will add one everywhere, and a pin on
+  every element makes the marker meaningless.
+
+  IT-PO NOTE (2026-08-25). The five markup examples are executable, but only
+  the React shapes have a real application in this repo to be checked against
+  (leafcutter-web). The .vue / .svelte / .html examples are exercised against
+  the shared pin reader, which is framework-agnostic — that is sufficient for
+  this AC and is the honest limit of what can be verified today.

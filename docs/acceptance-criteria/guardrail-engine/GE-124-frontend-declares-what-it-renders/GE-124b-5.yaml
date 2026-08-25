@@ -1,0 +1,116 @@
+id: GE-124b-5
+readiness: approved
+priority: high
+title: "One reference doc holds the data-ac contract for all of its consumers"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given the `data-ac` attribute is consumed by four things at once — the
+    commit-tier check, the reverse-direction CI gate, the Atlas, and the test
+    selector derived from it
+  When a reader opens the `data-ac` reference doc
+  Then it states the attribute name and the space-separated multi-value form
+  And it states the resolution rule — every value must resolve to a criterion in
+    the acceptance-criteria store, and a value that resolves to nothing is a
+    defect reported as its own verdict
+  And it states the production-stripping and dev/test/Atlas-retention behaviour
+  And it states, in its own section, what the attribute does NOT prove: that it
+    records on-screen presence, never correctness, and is never coverage
+  And it names each of the four consumers and what each one reads from the
+    attribute
+depends_on:
+  - GE-124b
+  - GE-124b-1
+  - GE-124b-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/reference/data-ac-attribute.md"
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/reference/ with check_doc_frontmatter-compliant frontmatter (title, type: reference, status, created, last_updated, components, description) and stay within the check_doc_length budget."
+  - "NAME THE FOUR CONSUMERS BY THEIR REAL ARTIFACTS, not by role: the commit-tier check (scripts/commit_guardian/check_frontend_ac_declaration.py), the CI-tier gate (scripts/commit_guardian/check_ui_ac_declared.py), the Atlas (leafcutter-web), and the derived test selector (GE-124f-3). A reference that names roles rather than artifacts cannot be checked for staleness and cannot be reached from the code."
+  - "STATE THE TWO GRAMMARS AND WHY THEY DIFFER. The @ac comment line tolerates commas and whitespace (GE-124a-1); the data-ac attribute value is whitespace-separated ONLY, because the derived selector uses the CSS attribute-membership operator `[data-ac~=\"<id>\"]`, which splits on whitespace. A comma inside a data-ac value produces a selector that matches nothing. This is the single most likely authoring mistake and it belongs here, not in a how-to."
+  - "RECORD THE FRAMEWORK-COVERAGE GAP FROM GE-124b-3. The production strip is implemented for leafcutter-web via the Next.js SWC transform, which is React-only; a Vue, Svelte or plain-HTML application joining the repo needs its own equivalent. Stating the gap is what stops a future reader assuming the contract is enforced everywhere."
+  - "THE 'DOES NOT PROVE' SECTION IS REQUIRED CONTENT AND MUST NOT DRIFT FROM GE-124g'S WORDING — presence, not proof; on screen, not correct; a signpost, not a result. GE-124g-5 holds the standing rule; this doc is where a consumer-author lands first, so it must carry the same line or the rule is discovered too late."
+  - "Cross-link to GE-124g-5's evidence reference rather than restating its four blocked places; one authoritative statement, reachable from here."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the reference document."
+delivers_to:
+  agent: python-coder
+  contract: "The single authoritative statement of the data-ac contract — name, whitespace-only value grammar and its selector-derived reason, resolution rule, production-strip/retention behaviour with its React-only coverage gap, the four named consuming artifacts, and the does-not-prove section — that the commit check, the CI gate, the Atlas and the test selector are each written against."
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The attribute name, value grammar and pin record shape {id, file, line, element, attribute, ac_ids[], state} the reference doc describes to its four consumers"
+test_spec:
+  - name: test_ge_124b_5_documented_value_grammar_agrees_with_the_real_pin_reader
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Extract the doc's accepted-value examples and its explicitly-rejected examples (notably a comma-separated value) and run the real pin reader over each: accepted examples must yield the documented ac_ids, rejected examples must not. A reference doc whose grammar the reader disagrees with is worse than no reference."
+  - name: test_ge_124b_5_documented_selector_form_matches_the_selector_the_code_derives
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The selector form printed in the doc, instantiated for a criterion id, equals the string GE-124f-3's derivation function returns for that id. Derive both at test time; comparing the doc against a hard-coded literal only proves the test and the doc agree."
+  - name: test_ge_124b_5_all_four_named_consumers_exist_at_the_paths_the_doc_gives
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Every artifact path the doc names as a consumer resolves to a file that exists in the repo. This is the staleness ratchet: when a check is renamed or moved, the reference goes red instead of quietly pointing at nothing."
+  - name: test_ge_124b_5_does_not_prove_section_is_present_and_uses_the_standing_wording
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The document carries a dedicated section stating the attribute records on-screen presence, never correctness, and is never coverage, in GE-124g's wording. This section is required content, not a courtesy — it is the one a doc trimmed for length loses first."
+test_rationale: |
+  A reference doc's failure mode is not being wrong on the day it is written; it is becoming
+  wrong afterwards while still reading authoritatively. Three of the four tests are therefore
+  agreement tests against live code — the value grammar against the real reader, the selector
+  form against the real derivation, and the four consumer paths against the filesystem — so
+  the document goes red when the code moves under it. Only the does-not-prove section is
+  asserted as content, because it has no executable counterpart and it is the section a
+  length-trimmed doc loses first, which is exactly the substitution GE-124g exists to block.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the four consumers to be named as real artifact paths (making staleness checkable), required the two grammars and the selector-derived reason for their difference to be stated here, and routed GE-124b-3's React-only strip-coverage gap into this doc. Tests are agreement tests against the live reader, the live selector derivation and the filesystem. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for the `reference-doc` entry in GE-124b's `documentation_triggers`.
+  The PO's reason: the attribute is a contract with several consumers at once,
+  and its name, multi-value form, resolution rule, production-stripping
+  behaviour and — explicitly — what it does NOT prove need one authoritative
+  place to live.
+
+  The "does not prove" section is required content, not a courtesy. GE-124g-5
+  writes the standing rule about what each kind of evidence is worth; this doc
+  is the place a consumer-author lands first, so it must carry the same line or
+  the standing rule will be discovered too late.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). This doc is the natural home for two
+  facts that would otherwise be lost between ACs: the deliberate difference
+  between the @ac line grammar and the data-ac value grammar (the `~=` selector
+  operator is the reason), and the React-only scope of the production strip
+  built by GE-124b-3.

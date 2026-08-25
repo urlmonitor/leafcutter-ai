@@ -1,0 +1,226 @@
+id: BO-2400f-13-i
+components:
+  - build_orchestration
+title: "Refusing on the lane's own leftover workspace says what is in it and whether that attempt shipped"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane is pointed at an acceptance criterion it has already built or
+    already attempted,
+  And that earlier attempt's workspace for the same criterion is still there,
+  When the run refuses,
+  Then the refusal identifies the occupant as this lane's own earlier attempt at the
+    same acceptance criterion, rather than as an unexplained obstruction,
+  And it reports whether that workspace holds changes the earlier attempt never
+    committed, so the operator knows before choosing whether clearing it loses
+    anything,
+  And it reports whether that earlier attempt got as far as opening a pull request,
+    naming it when one exists, so the operator can tell the residue of a finished run
+    from the debris of a run that died,
+  And the options it offers cover at least three: look inside the workspace, clear it
+    and re-run, or aim the lane elsewhere — with the clearing option marked as
+    throwing away whatever that workspace holds.
+
+  Given the same leftover workspace,
+  When the run refuses,
+  Then it does not step back into that workspace, does not build in it, and does not
+    clear it on the operator's behalf, however empty it looks,
+  And it does not bring it up to date against the current mainline either, because
+    what the operator is owed is a workspace cut from the latest mainline
+    (BO-2400f-3), and an earlier attempt's workspace is not that.
+depends_on: [BO-2400f-13]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The whole of this criterion is Python and lands here: classification, the uncommitted-changes read, and the published-attempt read all happen inside cmd_create_fastlane_worktree before any payload is printed. Nothing in this criterion is JS. Mirror to scripts/ via build.py."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-015 names the non-idempotency half as the more serious one: re-running the lane on an acceptance criterion it has already built fails against its own prior workspace. Three such workspaces exist right now."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fastlane_own_occupant_report:
+      type: object
+      description: "The `refusal` sub-object of the BO-2400f-13 payload, as populated when the occupant classifies as `own_prior_attempt`. Every field here is READ from the occupant, never templated — a refusal that always reports 'no uncommitted changes' reads perfectly and will get someone's work thrown away."
+      required: [occupant, uncommitted_changes, published, options]
+      properties:
+        occupant:
+          type: string
+          enum: [own_prior_attempt]
+          description: "HOW IT IS DETERMINED: parse `git worktree list --porcelain`; the occupant is this lane's own earlier attempt at THIS criterion if and only if a porcelain block exists whose `branch` line is exactly `refs/heads/fast-lane/<slug>` for this run's slug, and (a) that block's worktree path realpath-equals the occupied location, or (b) the location is free and that block sits elsewhere (the branch-checked-out-elsewhere condition). Branch identity is the test — not the directory name, which any hand-made directory can imitate. Anything else, including a detached-HEAD block, a missing branch line, or a porcelain read that fails, is FOREIGN (BO-2400f-13-ii)."
+        uncommitted_changes:
+          type: [boolean, "null"]
+          description: "HOW IT IS DETERMINED: `git -C <occupant path> status --porcelain` — true when stdout is non-empty (this counts untracked files, which is the conservative reading and the right one here). Null ONLY when the command cannot run or exits non-zero. Null must render as 'could not be determined', NEVER as clean, and must not be used to mark any option non-destructive."
+        published:
+          type: object
+          description: "Whether the earlier attempt got as far as shipping. Deliberately split into a cheap local signal and an expensive remote one, because the remote one cannot be relied on."
+          required: [pushed, pr_url, pr_lookup]
+          properties:
+            pushed:
+              type: [boolean, "null"]
+              description: "HOW IT IS DETERMINED, and this is the RELIABLE half: `git rev-parse --verify --quiet refs/remotes/origin/fast-lane/<slug>` — true when the ref resolves, i.e. the attempt pushed its branch. Purely local, deterministic, no network, no auth. This is the signal that actually distinguishes the residue of a finished run from the debris of one that died."
+            pr_url:
+              type: [string, "null"]
+              description: "HOW IT IS DETERMINED, and this is the UNRELIABLE half: `gh pr list --head fast-lane/<slug> --state all --json url,state`. Null whenever it was not attempted or did not succeed."
+            pr_lookup:
+              type: string
+              enum: [ok, unavailable, not_attempted]
+              description: "Three-valued ON PURPOSE. `not_attempted` and `unavailable` must never be rendered as 'no pull request was opened' — that is the same silent-false-negative defect as reporting an unread workspace as clean."
+        options:
+          type: array
+          minItems: 3
+          description: "At least three, each with an explicit `destructive` boolean: inspect the workspace (destructive: false), clear it and re-run (destructive: true), aim the lane elsewhere (destructive: false)."
+          items:
+            type: object
+            required: [action, description, destructive]
+            properties:
+              action: {type: string}
+              description: {type: string}
+              destructive: {type: boolean}
+  reference_file_path: "templates/scripts/setup_ticket_worktree.py"
+  n_location_rule: "1 — a single classification-and-report helper called from cmd_create_fastlane_worktree, feeding the one refusal-payload construction site BO-2400f-13 establishes. Do not scatter the three reads (branch identity, status, published) across separate return sites."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/build_orchestration/ -q"
+  constraints:
+    - "PYTHON ONLY. Every determination in this criterion happens in templates/scripts/setup_ticket_worktree.py and is mirrored to scripts/ by build.py. The lane (fast-lane-ship.js) only relays the refusal BO-2400f-13 already taught it to relay — no JS change is owed by this record. Stated explicitly so the scope is not silently widened."
+    - "CLASSIFICATION IS BY BRANCH IDENTITY, NOT BY PATH. `own_prior_attempt` requires a `git worktree list --porcelain` block whose branch line is exactly `refs/heads/fast-lane/<slug>` for THIS run's slug. A directory sitting at worktrees/<slug> proves nothing — KI-BO-015 was found by a hand-made directory at exactly that path. When branch identity cannot be established, the occupant is FOREIGN (BO-2400f-13-ii), and foreign gets no destructive option."
+    - "THE UNCOMMITTED READ MUST FAIL CLOSED. `git -C <occupant> status --porcelain` failing, or the occupant not being a working tree at all, yields null — 'could not be determined' — never false. A false 'clean' is the failure mode that destroys unrecoverable work, and it is completely silent."
+    - "THE PUBLISHED READ IS TWO SIGNALS, NOT ONE, AND THE HONEST ANSWER ABOUT `gh` IS THAT IT IS EXPENSIVE AND UNRELIABLE HERE. setup_ticket_worktree.py today shells out to `git` and nothing else — introducing `gh` adds network latency to a first-phase check, a `gh` binary dependency, and an auth surface this repo is already known to trip (EMU-blocked accounts make `gh` calls fail for reasons unrelated to whether a PR exists). So: `pushed` (a local `git rev-parse --verify refs/remotes/origin/fast-lane/<slug>`) is MANDATORY and carries the criterion's meaning; the `gh` PR lookup is OPTIONAL, best-effort, must be timeout-bounded (<= 5s) and must never fail the run. An implementation that ships `pr_lookup: not_attempted` and a correct `pushed` satisfies this criterion; an implementation that reports `pr_url: null` as 'no pull request was opened' does not."
+    - "READ-ONLY ON THE OCCUPANT, ABSOLUTELY. `git status` and `git rev-parse` are the only commands permitted against it. No fetch, no merge, no rebase, no checkout, no prune, no `worktree remove` — not even when it looks empty. Bringing it up to date is the plausible-looking wrong implementation the notes warn about: it silently breaks BO-2400f-3's latest-mainline promise, and the operator cannot see that it happened."
+    - "Covering tests must EXECUTE against a real occupant. A hand-made dict or a grep for the phrases proves the message template exists, not that any value was looked up. The clean/dirty PAIR is the load-bearing shape: one test alone is satisfied by a constant."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-13
+  contract: "The refusal payload's `refusal` sub-object and its single construction site, plus the `occupant` discriminant whose `own_prior_attempt` branch this criterion populates. Also the occupancy determination itself — this criterion adds no new detection, only the reporting of an occupant BO-2400f-13 has already found."
+test_required: true
+test_spec:
+  - name: test_leftover_holding_an_uncommitted_change_is_reported_as_holding_work
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "REAL SUBPROCESS against a REAL temporary repo in which a REAL fast-lane/<slug> worktree has been left with one uncommitted edit: the payload reports uncommitted_changes true."
+  - name: test_clean_leftover_is_reported_as_clean
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The other half of the load-bearing PAIR, same fixture shape but the leftover left clean: uncommitted_changes is false. Only the pair proves the value was read rather than templated — either test alone passes against a constant."
+  - name: test_leftover_on_the_criterions_own_branch_classifies_as_own_prior_attempt
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A worktree registered on refs/heads/fast-lane/<slug> for this AC id classifies as own_prior_attempt, and the operator-facing message says so rather than describing an unexplained obstruction."
+  - name: test_unreadable_occupant_reports_uncommitted_state_as_undetermined_not_clean
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "FAIL CLOSED. With the occupant arranged so `git status` inside it cannot succeed, uncommitted_changes is null, the message says it could not be determined, and no option is marked non-destructive on the strength of it."
+  - name: test_pushed_prior_attempt_is_distinguished_from_an_unpushed_one
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Against a real local 'origin' remote in the temp repo, a leftover whose branch was pushed reports published.pushed true and one that was not reports false — the local, deterministic half of 'did that attempt ship', asserted without any network."
+  - name: test_pr_lookup_failure_is_reported_as_unavailable_not_as_no_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "With `gh` absent from PATH or failing, pr_url is null AND pr_lookup is 'unavailable' or 'not_attempted', and the operator-facing message never states that the earlier attempt opened no pull request."
+  - name: test_refusal_offers_at_least_three_named_next_steps_with_only_clearing_destructive
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "refusal.options has >= 3 entries covering inspect / clear-and-re-run / aim elsewhere; exactly the clearing option carries destructive true."
+  - name: test_refusing_run_neither_enters_updates_nor_clears_the_leftover
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The second scenario, executed: after the refusal the leftover's file tree, its HEAD sha and its checked-out branch are identical to before, it still exists, and no fetch/merge/rebase has moved it toward the current mainline."
+  - name: test_own_leftover_refusal_reaches_the_operator_with_no_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Under run_workflow_under_e2 with the worktree label stubbed to an own_prior_attempt refusal, the terminal payload carries the occupant classification, the uncommitted-changes fact and the published fact through to the operator, and no agent beyond the worktree phase is dispatched."
+test_rationale: |
+  The two facts this refusal must carry — whether the leftover workspace holds
+  uncommitted changes, and whether that attempt opened a pull request — can only be
+  proved by reading a real workspace. A test built on a hand-made dict, or one that
+  greps for the phrases, proves that the message template exists, not that the values
+  in it were ever looked up. Both defects are silent: a refusal that always says "no
+  uncommitted changes" reads perfectly and will get someone's work thrown away.
+
+  So: run the workspace command as a REAL SUBPROCESS against a REAL temporary
+  repository in which a REAL prior workspace has been left in each of the two states
+  that matter — clean, and holding an uncommitted change — and assert the payload
+  reports them differently. Pair that with an execution of the lane under
+  unit_tests/_workflow_engine_harness.py asserting the refusal reaches the operator and
+  no agent is dispatched. Grep-shaped or source-ordering tests are NOT acceptable
+  evidence here and must be rejected at review.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the case KI-BO-015 calls the more serious half: a build tool that cannot be
+  re-run on the same input. At the time of authoring, worktrees/bo-1500a-5,
+  worktrees/bo-2400e-3 and worktrees/bo-2900g-3 are all present on fast-lane branches,
+  so re-running those three acceptance criteria aborts at the first phase today.
+
+  The second scenario is where a plausible-looking wrong implementation lives. "Reuse
+  the workspace" and "refresh it first" both look like helpfulness and both break
+  BO-2400f-3's promise of the latest mainline — the operator would get a green result
+  measured against a mainline that no longer exists, with no way to notice. Clearing it
+  automatically is worse and was explicitly deferred by the Product Owner: the
+  provably-clean-and-already-landed shortcut is a possible future criterion, not part of
+  this one.
+
+  IT enrichment note, 2026-08-25 (it-po), on the pull-request half — said plainly rather
+  than specified into something that cannot be built. "Did that attempt open a pull
+  request" has no cheap, reliable local answer. `setup_ticket_worktree.py` shells out to
+  `git` and nothing else today; asking `gh pr list --head fast-lane/<slug>` would add a
+  network round trip to the lane's FIRST-phase check, a `gh` binary dependency, and an
+  auth surface this repo is already known to trip — an EMU-blocked account makes `gh`
+  fail for reasons that have nothing to do with whether a pull request exists.
+
+  So the criterion is met in two parts. The load-bearing, mandatory signal is LOCAL:
+  `git rev-parse --verify --quiet refs/remotes/origin/fast-lane/<slug>` answers "did that
+  attempt push its branch", which is what actually separates the residue of a finished
+  run from the debris of one that died, and it is deterministic and testable without a
+  network. The pull-request URL itself is best-effort, timeout-bounded and OPTIONAL; when
+  it is not obtained the payload says `pr_lookup: unavailable` or `not_attempted`. What is
+  NOT acceptable is rendering either of those as "no pull request was opened" — that is
+  the same silent false negative as reporting an unread workspace as clean, and it is the
+  reason `pr_lookup` is three-valued instead of `pr_url` simply being nullable.

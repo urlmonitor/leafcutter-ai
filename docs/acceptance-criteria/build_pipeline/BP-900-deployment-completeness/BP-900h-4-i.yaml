@@ -1,0 +1,268 @@
+id: BP-900h-4-i
+components:
+  - build_pipeline
+title: "The declaring-file proof runs against every install layout an adopter produces, so a file that resolves in one layout is not accepted as proof for the rest"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+criteria: |
+  Given the consumer-layout install and the declaring-file inspection of BP-900h-4,
+  And the set of install layouts a real adopter produces rather than the single
+    layout the fixture builds today,
+  When the inspection is run,
+  Then it is run once per layout in that set and each layout carries its own verdict,
+    named in the report by layout, so a green overall result cannot be produced by one
+    layout answering for the others,
+  And the set contains at least these four layouts, each present for a reason the
+    report states: (a) an install whose package directory is named as the project's own
+    bootstrap documentation prescribes; (b) an install whose package directory carries a
+    DIFFERENT name of the adopter's choosing; (c) a git worktree created from an install
+    of shape (a) or (b), which is the layout the package's own feature-branch workflow
+    and its worktree agent create; and (d) the package's self-hosted checkout, which
+    must keep passing,
+  And every declaring file a deployed guardrail reads is found under the deployed output
+    root of EVERY layout in the set, resolved on BP-900h-4's terms — from that layout's
+    deployed output root alone, never from the package checkout, a parent directory, or
+    the invoking process's working directory,
+  And no declaring file is located by a candidate path that spells out any particular
+    package-directory name, so an adopter who names the directory something other than
+    the one name the current lookup is written against is not thereby a broken install,
+  And an absent declaring file is reported loudly and by name in the layout where it is
+    absent: neither a narrower built-in list of permitted values, nor a substitute rule,
+    nor an empty result may be produced in its place, so the fail-closed posture that was
+    deliberately established for the document type vocabulary is preserved rather than
+    traded away for a green run,
+  And the presence of each declaring file is asserted directly by the inspection rather
+    than inferred from its reader completing without complaint, because a reader that
+    returns nothing when its file is absent produces the same silence as a reader whose
+    file is present — the sibling vocabulary lookup behaves exactly this way today, so
+    a reader-driven inspection is green on the layout that is broken,
+  And the multi-layout inspection is demonstrated to FAIL when one declaring file is
+    removed from exactly one layout's deployed output root while the others stay intact,
+    with the report naming the layout, the file, the guardrail that reads it, and the
+    deployed location it was expected at, and to pass again once the file is restored,
+    because a per-layout proof that stays green when one layout is incomplete is the
+    single-layout proof under a longer name.
+
+  Because on 2026-08-25 the same lookup produced two contradictory field reports and both
+  were accurate. Where the package is installed under the directory name one report's
+  adopter used, the lookup's second candidate resolves in the main checkout and fails
+  inside a git worktree, because the worktree's copy of that directory is empty. Where the
+  package is installed under the directory name this project's own bootstrap
+  documentation prescribes, neither candidate ever resolves and the lookup fails
+  everywhere, main checkout included. The disagreement was never about whether the defect
+  exists; it was about which layout the reporter was standing in. A proof anchored to one
+  layout can only ever settle one of those reports, and today's fixture is anchored to one
+  layout.
+depends_on:
+  - BP-900h-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the consumer-simulation install that this AC turns into a SET. Note h-1's criteria already fix the package directory to one name — that is exactly the single-layout anchoring this AC widens, so h-1's fixture is the base case (layout a), not the whole set."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-003 carries the three field reports and the ancestor-walk probe. The second and third reports contradict each other on whether the main checkout is affected; the reconciliation — both are correct, for different install directory names — is the reason this AC exists and should be read before implementing."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "KI-CG-002 is the silent half. The sibling vocabulary lookup shares the identical two-candidate walk and returns nothing rather than raising, so its own behaviour cannot be used as evidence that its file arrived. This is the concrete case behind the assert-presence-directly clause."
+  - path: templates/scripts/commit_guardian/doc_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: "The lookup whose candidate list spells out a package-directory name. Named as the regression instance, NOT as the deliverable — a fix that only edits this file leaves the sibling lookup and the next declaring file exactly as they are."
+  - path: config/doc_types.json
+    relationship: describes
+    status: exists
+    relevance: "Regression instance — the declaring file confirmed unreachable from a genuine consumer install on 2026-08-25."
+  - path: config/diagram_types.json
+    relationship: describes
+    status: exists
+    relevance: "The next instance, already waiting. Its reader degrades silently instead of raising, which is why the inspection must assert presence rather than watch a reader succeed."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-ii.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY, and the AC most easily confused with this one. g-8-ii makes the BUILD refuse to ship an install whose declaring files are not in the deploy manifest. This AC says nothing about the manifest: it asserts that the arrival is proven in every layout an adopter has. A complete manifest still fails here if the lookup is written against one directory name."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY. g-10-i owns the prohibition on falling back to a substitute rule when a declaring file is absent at runtime. This AC does not re-specify that prohibition; its loud-failure clause exists so that a fix for the layout problem cannot be landed by reinstating the narrower built-in list that was deliberately removed."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Its worktree pre-commit-config guidance is what puts an adopter in layout (c) in the first place, and its repository-structure section is where the prescribed package directory name is written down. Both are facts the layout set is built from."
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Carries the consumer-simulation job. The per-layout runs and the job conclusion this AC constrains are configured here."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: criterion, deployed, failure, reachability with must_block — at the four-angle cap."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: true
+it_requirements:
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "one per layout in the set — at least four, and the count must come from the layout set the harness enumerates rather than from four hand-written steps"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/portability/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-layout verdict record the inspection emits, one per layout in the set. Recording a layout identity alongside each finding is what makes 'one layout cannot answer for the others' checkable rather than aspirational — an aggregate pass/fail cannot express it."
+    required:
+      - layout
+      - package_dir_name
+      - is_worktree
+      - deployed_root
+      - missing
+    properties:
+      layout:
+        type: string
+        description: "The layout's identity as reported, e.g. the prescribed-name install, the differently-named install, the worktree of one of them, or the self-hosted checkout. Present so a failure names WHERE it happened."
+      package_dir_name:
+        type: string
+        description: "The directory name the package occupies in this layout. The variable the whole defect turns on; recording it is what makes the name-independence claim falsifiable."
+      is_worktree:
+        type: boolean
+        description: "Whether this layout is a git worktree of the install rather than its main checkout. The distinguishing fact between the two contradictory field reports."
+      deployed_root:
+        type: string
+        description: "The deployed output root this layout's declaring files were resolved from, and the only root they may be resolved from."
+      missing:
+        type: array
+        items:
+          type: object
+        description: "Per missing declaring file: the file, the guardrail that reads it, and the deployed location it was expected at. Empty for a layout that passes."
+  constraints:
+    - "THE LAYOUT SET IS THE DELIVERABLE; THE FIVE KNOWN FILES ARE NOT. A change that copies today's declaring files into the deployed tree makes every layout green and leaves the lookup written against one directory name, so the next declaring file, and the next adopter with a different directory name, reproduce this entry exactly. The regression files named in doc_links are the set the harness must be shown to catch, not the work."
+    - "DERIVE THE NAME, NEVER SPELL IT. No candidate path may contain a literal package-directory name. An implementation that adds a third hardcoded candidate for the currently-prescribed name passes every layout that exists today and fails the differently-named layout, which is why that layout is in the set and is not optional."
+    - "THE WORKTREE LAYOUT MUST BE A REAL GIT WORKTREE, not a copied directory. The reported trigger is that a directory which is populated in the main checkout is empty in a worktree; a copy reproduces the contents and therefore reproduces neither the trigger nor the defect."
+    - "DO NOT REINSTATE A NARROWER BUILT-IN LIST. The fail-closed posture on the document type vocabulary was established deliberately by removing exactly such a fallback. Restoring one would turn every layout in this set green while returning the behaviour to what it was before that removal, and the resulting failures would surface later as wrong verdicts on valid documents rather than as a missing file."
+    - "ASSERT THE FILE, NOT THE READER. For every declaring file, the inspection asserts the file's presence under the layout's deployed output root directly. Driving the reader and observing that it did not complain is green for a reader that returns nothing when the file is absent — the sibling vocabulary lookup does precisely this today, so the reader-driven form is known to be blind before it is written."
+    - "THE SELF-HOSTED LAYOUT IS A CONTROL, AND ITS LOCAL RESULT IS NOT EVIDENCE. This workspace currently holds hand-placed copies of two declaring files in its deployed output root, placed as a workaround and recorded nowhere because that tree is not tracked. Any verdict taken from it is vacuous for this defect. Layout (d) exists to prove the fix does not break the package's own checkout, never to demonstrate that declaring files arrive."
+    - "PER-LAYOUT VERDICTS, NOT A FIRST FAILURE. Every layout in the set is run and reported even when an earlier one has already failed, so one run tells the author the whole remediation set. A harness that stops at the first failing layout turns four layouts into four fix-run cycles, and each intermediate run is green for the layouts it never reached."
+delivers_to:
+  agent: python-coder
+  contract: "A layout-parameterised consumer-install fixture — the same build and the same declaring-file inspection run against an enumerated set of install layouts differing in package-directory name and in main-checkout-versus-worktree — emitting one verdict record per layout and a job conclusion that fails when any layout is incomplete."
+expects_from:
+  ac_id: BP-900h-4
+  contract: "The consumer-layout install and the per-guardrail declaring-file inventory whose resolution is anchored to the deployed output root alone. This AC parameterises that fixture by layout rather than replacing it, and inherits its resolution rule unchanged."
+test_spec:
+  - name: test_bp_900h_4_i_every_declaring_file_is_present_in_every_layout_and_each_layout_has_its_own_verdict
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Build the real scripts/build.py into each layout in the set and assert, per layout, that every declaring file in BP-900h-4's inventory resolves under THAT layout's deployed output root. NON-VACUITY IS MANDATORY AND HAS TWO HALVES, because a for-each over an empty set is green on a broken install: assert the layout set is non-empty and contains all four shapes the criterion names, and assert the declaring-file inventory is non-empty and contains the document type vocabulary confirmed unreachable on 2026-08-25. Assert the report carries one verdict record per layout, keyed by layout identity — an aggregate pass is indistinguishable from a run that exercised one layout, which is the state of the fixture today."
+  - name: test_bp_900h_4_i_an_install_whose_package_directory_carries_a_different_name_resolves_every_declaring_file
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE NAME-INDEPENDENCE ENTRY, and the half of the defect a deploy fix does not touch. Build two installs that differ in exactly one respect — the name of the directory the package occupies, one being the prescribed name and one an arbitrary name chosen inside the test — and assert both resolve every declaring file, with identical verdict records apart from the recorded directory name. Then assert the anti-hardcode control: in the differently-named install, plant a readable decoy of one declaring file at the path the CURRENT lookup spells out, and assert the inspection neither resolves nor names that decoy path. An implementation that adds one more literal candidate for the prescribed name passes the first half and dies only on the decoy assertion, which is the difference between deriving the location and enumerating today's two guesses."
+  - name: test_bp_900h_4_i_a_git_worktree_of_a_consumer_install_resolves_every_declaring_file_and_goes_red_when_one_is_removed_from_it_alone
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE REPORTED TRIGGER, plus the negative control the criterion demands, in one three-run sequence against a REAL git worktree created from the consumer install — never a copied directory, since a copy reproduces the contents that the worktree lacks. (1) Worktree layout after a successful build: exit 0 and no missing entries. (2) Remove exactly one declaring file from the WORKTREE layout's deployed output root only, leaving every other layout intact, and re-run: assert non-zero, assert the report names the layout, the file, the guardrail that reads it and the location it was expected at, and assert the other layouts are still reported as passing — an implementation that reports the whole run as failed without attributing it to a layout is indistinguishable from the single-layout proof. (3) Restore and re-run: exit 0. Run 3 is what attributes the red in run 2 to the removal rather than to a fixture that had already broken."
+  - name: test_bp_900h_4_i_the_layout_sweep_runs_through_its_real_ci_entry_point_and_the_self_hosted_checkout_still_passes
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Invoke the sweep as a SUBPROCESS through the same command line the CI job runs — never by importing the inspection — and assert exit 0 across a healthy set including the self-hosted checkout layout, then non-zero with one layout sabotaged. Assert the consumption half by parsing .github/workflows/ci.yml as YAML: the step invoking the sweep carries that identical command and does not carry continue-on-error true, so a non-zero verdict actually fails the job. Parse the workflow into a data structure — a grep for the script name in the file text is green on a step that is continue-on-error. The self-hosted half is a control against the cheapest wrong fix, which is to make the lookup strict enough that only a consumer layout can satisfy it."
+test_rationale: |
+  The fixture is the subject of this AC, so the layout set is load-bearing in a way the
+  assertions are not. BP-900h-4 already anchors resolution to the deployed output root and
+  already plants decoys at the three places that made the original defect invisible — that
+  work is done and this contract does not repeat it. What h-4 cannot express is that the
+  guarantee must hold in more than one layout, because it builds one. Every entry here is
+  therefore parameterised by layout, and the per-layout verdict assertion appears in three
+  of the four entries: an aggregate pass is exactly what a single-layout fixture already
+  produces, so any contract that accepts one is satisfied by the state that shipped broken.
+
+  Entry 2 is the entry a deploy-the-file fix cannot pass. Copying the declaring files into
+  the deployed tree makes entries 1, 3 and 4 green, because they are all about whether the
+  file is there. Only the decoy half of entry 2 distinguishes a location that is derived
+  from one that is spelled out, and the differently-named install is the layout in which
+  that distinction has a consequence. The two contradictory field reports differ on nothing
+  else, which is why the name is the variable the test varies.
+
+  Entry 3 insists on a real git worktree because the trigger is structural, not incidental:
+  a directory populated in the main checkout is empty in a worktree. A copied directory
+  carries the contents and so reproduces neither the trigger nor the defect, and a test
+  written against a copy is green on the exact install that fails.
+
+  Entry 4's self-hosted half is a false-positive control rather than coverage. The cheapest
+  wrong fix here is a lookup strict enough that only a consumer layout satisfies it, which
+  would trade an adopter-facing blocker for a package-development one and would be green on
+  entries 1 to 3 taken alone.
+
+  Angles: criterion, deployed, failure, reachability — at the cap of four, with must_block
+  riding entry 4. seam and real_artifact are not charged: the subject is a directory tree
+  across layouts, not a serialized artifact crossing a producer-consumer signature, and the
+  cold-process claim belongs to BP-900h-5-ii rather than here. boundary is not charged
+  because the criterion names no range or limit; the four layouts are an enumerated set,
+  and entry 1's non-vacuity assertion covers its completeness.
+origin_agent: BrainCandy
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS AC ADDS THAT THE BRANCH DOES NOT ALREADY HAVE. The deployment half of this
+  defect is specified. BP-900g-8-ii makes the build refuse to ship an install whose
+  declaring files are not in the deploy manifest; BP-900h-4 proves empirically that they
+  arrived; BP-900h-5 requires a guardrail that cannot locate them to be reported as unable
+  to run rather than as a failure. All three are approved and all three are work_status:
+  todo, so KI-BP-003's deployment half is an unimplemented specification, not an
+  unspecified defect — do NOT author a fourth AC for it.
+
+  What none of them says is that the guarantee must hold in more than one install layout,
+  and that is the half the 2026-08-25 evidence adds. Deploying the file into the tree does
+  not make the lookup independent of the package directory's name, and every fixture in
+  this branch builds exactly one layout, with h-1's criteria fixing the package directory
+  to one specific name. Two adopters can therefore both be right about contradictory
+  symptoms while every AC in the branch is satisfied.
+
+  THE CONTRADICTION IS RESOLVED, NOT LEFT OPEN. KI-BP-003 asks the next reproducer to settle
+  whether the main checkout is affected. It was settled on 2026-08-25 and the answer is that
+  both reports are correct for different install directory names: under the name one
+  adopter used, the second hardcoded candidate resolves in the main checkout and fails in a
+  worktree; under the name this project's own bootstrap documentation prescribes, neither
+  candidate ever resolves and it fails everywhere. That is why the layout set has to vary
+  the directory name AND the worktree-ness independently — either variable alone reproduces
+  one report and hides the other.
+
+  WHY THE PACKAGE BREAKS ITS OWN RECOMMENDED WORKFLOW. Layout (c) is not an exotic case.
+  This package ships a feature skill and a worktree agent whose whole job is to create
+  worktrees, and its epic runbook drives work inside them. The standing adopter workaround
+  is to skip the guardrail entirely, which is a guardrail that has been switched off for
+  every adopter who followed the documented workflow.
+
+  SCOPE LINE HELD DELIBERATELY. This AC constrains the PROOF — which layouts it runs in and
+  what it asserts in each. It does not re-specify the runtime degradation prohibitions in
+  BP-900g-10-i and -ii, and it does not own the sibling vocabulary lookup's silent fallback,
+  which is recorded against the commit-guardian component. Both are referenced from the
+  criteria only as constraints on what an acceptable fix may not do, because a fix that
+  reinstates a narrower built-in list would turn every layout in this set green.

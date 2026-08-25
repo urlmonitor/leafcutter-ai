@@ -1,0 +1,111 @@
+id: BP-1500d-1
+components:
+  - build_pipeline
+title: "The record of what was installed is written into the project that received it, and accounts for that project"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given a project directory that is neither the producing package nor anywhere inside
+    the producing package's own parent folder,
+  When a real build is run against that project and the resulting tree is inspected,
+  Then that project holds its own record of what the build put there,
+  And the record's entries name the artifacts that are actually present in that project,
+    so the record is an account of THAT install and of no other,
+  And the record is reachable from inside that project alone -- a copy of the project
+    taken without the producing package still carries it, so a consumer who never has
+    the producing package to hand still has a record,
+  And the inspection is demonstrated to FAIL, before it may be accepted as passing, on
+    each of two deliberately non-portable installs: one where the record was filed with
+    the producing package instead of the receiving project, and one where the receiving
+    project's record is present but accounts for nothing -- because an inspection that
+    stays green on a record filed in the wrong place, or on a record that names nothing,
+    has not been shown to run at all,
+  And the same inspection returns a clean result on the good install both before and
+    after those two deliberate breakages, so each red is attributable to the breakage
+    and not to a fixture that was already broken,
+  And every verdict is reached by inspecting the receiving project's tree after a real
+    build into it, never by reading the build's own source for the presence of a
+    record-writing step.
+depends_on:
+  - BP-1500d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "No entry covers this defect yet. KI-BP-004 and KI-BP-005 are the two checks that read the record and therefore have nothing to read in any project that never received one."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build under test. Read for context only -- this AC is not provable from its source."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M2 (the deployed layout differs from the source you are reading), plus the absent-check variant: a check that is missing is indistinguishable from a check that passed."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the producing package's own workspace is an unrepresentative build target, and therefore why the fixture must sit outside it."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: related
+    status: exists
+    relevance: "Prior art for the out-of-package consumer-simulation install this AC needs. Reuse that fixture shape rather than standing up a third one."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary for the proof: deployed + real_artifact + failure, with the two deliberate breakages as the load-bearing entries."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS CHILD OWNS. Points (a) and (b) of the guarantee stated in BP-1500d's
+  notes: the record belongs to the project the build wrote into, and it travels
+  with that project. (b) is a consequence of (a) rather than a separate mechanism
+  -- once the record is inside the project, copying the project copies it -- so
+  the two are kept in one child instead of being split into two that would pass
+  or fail together.
+
+  THE EMPTY-RECORD NEGATIVE CONTROL IS NOT PADDING. A record that is filed in the
+  right place and accounts for nothing is portable, readable, and useless, and it
+  satisfies every other clause here. Without that second breakage the inspection
+  can be closed by writing an empty record into the receiving project, which is a
+  worse outcome than today because it also silences the two checks while looking
+  correct.
+
+  OVERLAP WITH BP-1500a -- flagged, deliberately not owned. Because the record is
+  filed with the producing package today, a build aimed at someone else's project
+  overwrites the producing package's own record with facts about that other build.
+  That consequence is a build leaving an edit in a tree it was not aimed at, which
+  is BP-1500a's promise ("a build leaves the repository it is run from exactly as
+  it found it"). It is cited here and owned there. No clause above asserts anything
+  about the producing package's own tree.
+
+  ORDERING. BP-1500d-2, -3 and -4 all presuppose the record produced by this child.
+  depends_on carries only the parent link, as the authoring request specified; the
+  it-po should wire the intra-family ordering as delivers_to / expects_from, with
+  this AC as the producer of the receiving project's record.
+
+  FOR THE IT-PO. The observable effect here is a file written into a tree outside
+  the process, so declares_side_effect is a live candidate on this record. The
+  fixture constraint is load-bearing: the scratch project must be created outside
+  the producing package's parent folder, because inside it the defect does not
+  appear -- that layout is the one place the current behaviour looks correct, which
+  is how this survived to now.

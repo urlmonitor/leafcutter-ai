@@ -1,0 +1,203 @@
+id: BO-2400f-13-iii
+components:
+  - build_orchestration
+title: "The occupied-workspace refusal costs one check, holds no claim, and touches neither store nor occupant"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run that refused because the workspace it resolved to was already
+    occupied,
+  When the run's ending is inspected,
+  Then it meets the same inertness standard BO-2400f-12-i already states for the
+    pre-work refusal — the acceptance-criteria store is left as it was found, no
+    acceptance criterion is claimed, nothing needs releasing, and the release step
+    (BO-2400f-10) is not reached,
+  And it meets that standard from an earlier point in the run than BO-2400f-12-i does,
+    because this refusal comes before the connected set is even resolved: at the
+    moment it is issued, no agent has been dispatched, no set has been resolved, and
+    the operator has paid for one check.
+
+  Given the same refusing run,
+  When the occupant that was sitting at the location is examined afterwards,
+  Then it is exactly as the run found it: the run did not enter it, alter it, or take
+    it away,
+  And the branch that occupant had checked out is still checked out in the same place,
+  And no new branch, and no new workspace, exists anywhere as a result of the run.
+
+  Given the same refusal issued twice against unchanged conditions,
+  When the two endings are compared,
+  Then both name the same occupant for the same reason, and nothing about the
+    repository differs between them — refusing is not a transition, and repeating it
+    costs only the check.
+depends_on: [BO-2400f-13]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The zero-dispatch half of this criterion is a JS property: the Phase 1 guard must RETURN the refusal, not fall through to Phase 2 (Resolve) at :304. Note the existing failure shape at :277 already returns — the trap is that a refusal branch added alongside it, rather than ahead of it, still reaches the resolver on a payload that happens to carry a path."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The untouched-occupant and no-new-branch halves are Python properties, and they are an ORDERING constraint on cmd_create_fastlane_worktree: occupancy must be decided before _create_fastlane_worktree is reached, so neither `git worktree add -b` nor `git branch` ever runs on a refusing path."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-12-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The inertness standard this criterion references rather than restates, including the release trap: every other pre-commit halt in this family MUST release, and this branch must NOT."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The dispatch assertions come from an executed run's recorded agent calls; the state assertions come from a real repository compared before and after."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fastlane_occupied_refusal_is_inert:
+      type: object
+      description: "Not a new payload field — a property of the refusing path, expressed as the set of writes it is forbidden to perform. The refusing path's ONLY outputs are the terminal refusal payload and the process exit status."
+      properties:
+        forbidden_writes:
+          type: array
+          description: "Nothing on this list may execute on a refusing run, in the workspace command or in the lane."
+          items: {type: string}
+          examples:
+            - ["git worktree add (with or without -b)", "git branch / git checkout -b", "creating the worktrees/<slug> directory", "git worktree prune", "git worktree remove", "any write inside the occupant", "any write to docs/acceptance-criteria/", "the claim writer (BO-2400f-8)", "the done marker (BO-2400f-9)", "the release writer (BO-2400f-10)", "a marker, lock or state file of any kind"]
+        forbidden_dispatches:
+          type: array
+          description: "The lane must record ZERO agent dispatches after the worktree phase on a refusing run."
+          items: {type: string}
+          examples:
+            - ["resolve-connected", "claim", "test-writer", "coder", "pr-reviewer", "changelog", "commit", "pull-request", "release"]
+        permitted_reads:
+          type: array
+          description: "Exhaustive. Anything not on this list is a scope violation on the refusing path."
+          items: {type: string}
+          examples:
+            - ["git worktree list --porcelain", "stat / listdir of the target path", "git -C <own occupant> status --porcelain (BO-2400f-13-i only)", "git rev-parse --verify --quiet refs/remotes/origin/fast-lane/<slug>", "git rev-parse origin/main"]
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1 in templates/workflows-js/fast-lane-ship.js — the Phase 1 guard must RETURN ahead of the Phase 2 `phase(\"Resolve\")` call at :304 — plus the ordering constraint in templates/scripts/setup_ticket_worktree.py that no branch or directory is created before occupancy is decided."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/workflows/ unit_tests/build_orchestration/ -q"
+  constraints:
+    - "SPANS BOTH LANGUAGES, and the split matters. Zero-dispatch is a JS property in templates/workflows-js/fast-lane-ship.js (the guard returns before Phase 2). Occupant-untouched and no-new-branch are Python properties in templates/scripts/setup_ticket_worktree.py (an ordering constraint on cmd_create_fastlane_worktree). Satisfying one and not the other satisfies neither criterion. python-coder owns both extensions per config/agent_registry.json."
+    - "THE RELEASE TRAP, INHERITED FROM BO-2400f-12-i AND WORSE HERE. The refusing branch must NOT invoke the release step (BO-2400f-10). It precedes the claim by TWO phases, so it holds nothing to release; releasing would flip acceptance criteria a concurrent run legitimately holds in_progress back to todo. It will look correct in review — it is only wrong in the presence of a concurrent run, which is exactly what an occupied workspace signals."
+    - "ORDER OF OPERATIONS IS THE WHOLE OF THE NO-NEW-BRANCH CLAUSE. The natural shape of a fix is: compute the branch name, create it, then check the location. That leaves a stray fast-lane/<slug> branch behind on every refusal and nobody notices until the branch list is unreadable. Occupancy must be decided BEFORE _create_fastlane_worktree (:503) is called at all — note that function creates the branch and the worktree in one `git worktree add -b` call, so reaching it at all is already a violation."
+    - "THE REFUSING PATH MUST NOT CREATE THE WORKTREES DIRECTORY EITHER. cmd_create_fastlane_worktree currently calls `worktrees_dir.mkdir(parents=True, exist_ok=True)` at :1284, before the lookup. mkdir of the PARENT worktrees/ directory is pre-existing and idempotent, but the per-slug directory must not be created, and the before/after comparison in the covering test will catch a fix that creates it speculatively."
+    - "NO PRUNING, EVER, ON THE REFUSING PATH. `git worktree prune` is the tempting reflex when a registration looks stale, and it is a WRITE: it silently deregisters worktrees whose directories are temporarily unreachable (an unmounted volume, a slow network mount). The repeatability test is what catches it — the first run prunes and looks correct, the second sees a different world."
+    - "REPEATABILITY IS BYTE-STABLE, not merely 'refuses again'. Two runs against unchanged conditions must name the same occupant for the same reason AND leave the repository identical — same branch set, same registered-worktree set, same occupant content hash, same AC store bytes. A half-fix that leaves one small trace looks correct once and only diverges on the second run."
+    - "Prove it by execution, not by grep. A test that greps the refusing branch for the absence of a call proves nothing: the write can happen in a helper the grep never sees, and it passes just as happily when the branch is unreachable — which is the current state of this code."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-13
+  contract: "The refusing branch itself — the point in Phase 1 at which the run ends on an occupied workspace, before the connected set is resolved and before any agent is dispatched. This criterion adds no new detection and no new payload field; it constrains what that branch is allowed to do."
+test_required: true
+test_spec:
+  - name: test_occupied_workspace_records_zero_dispatches
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "LOAD-BEARING. Under run_workflow_under_e2 with the worktree label stubbed to a refusal, agent_calls contains exactly the worktree dispatch and nothing else — no resolve-connected, no claim, no test-writer, no coder, no review, no changelog, no commit, no pull-request."
+  - name: test_refusing_run_does_not_invoke_the_release_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE INHERITED TRAP. The refusing run records no release dispatch and no claim dispatch — it neither takes nor returns a claim, so a concurrent run's in_progress claims survive it."
+  - name: test_refusing_run_creates_no_branch_and_no_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "REAL SUBPROCESS against a REAL temporary repo with a REAL occupied location: the set of local branches and the set of registered worktrees are identical before and after, and in particular fast-lane/<slug> does not exist afterwards if it did not before. This is the compute-branch-before-checking-location defect."
+  - name: test_refusing_run_leaves_the_occupant_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After the refusal the occupant's file tree hash, its HEAD sha and its checked-out branch are unchanged, it has not been moved or removed, and the branch it held is still checked out at the same path."
+  - name: test_refusing_run_leaves_the_ac_store_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Every file under the fixture docs/acceptance-criteria/ is byte-identical before and after the refusing run — no work_status change, no marker file, no rewrite."
+  - name: test_repeated_refusal_is_byte_stable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "THE HALF-FIX CATCHER. Two consecutive refusing runs against unchanged conditions name the same occupant for the same reason, and the branch set, registered-worktree set, occupant contents and AC store bytes are identical after each — a stray branch, a marker, or a pruned registration only diverges on the second run."
+test_rationale: |
+  This criterion is entirely negative — the claim is that nothing happened — and a
+  negative is the easiest thing in the world to fake. A test that greps the refusing
+  branch for the absence of a call proves nothing, because the change can happen in a
+  helper the grep never sees, and it passes just as happily when the branch is
+  unreachable.
+
+  Prove it the only way that holds. Execute the lane under
+  unit_tests/_workflow_engine_harness.py and assert the recorded dispatches are empty
+  for the refusing run. Separately, run the workspace command as a REAL SUBPROCESS
+  against a REAL temporary repository with a REAL occupied location, and compare the
+  repository before and after — the occupant's contents, the set of branches, and the
+  set of registered workspaces must all be unchanged.
+
+  The repeatability run is what catches the half-fix: a refusal that leaves one small
+  trace behind — a marker, a stray branch, a pruned registration — looks correct once
+  and only diverges on the second run.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This references BO-2400f-12-i's standard rather than restating it, on purpose: the two
+  refusals must be inert in the same way, and writing the property out twice invites the
+  two copies to drift. What is new here is the second scenario. BO-2400f-12-i is about
+  the acceptance-criteria store; this is about the occupant, which BO-2400f-12-i never
+  had to consider because its refusal has nothing sitting in front of it.
+
+  The release trap is inherited too, and it is subtle. Every other pre-commit halt in
+  this family MUST release (BO-2400f-10); this branch must NOT, because it precedes the
+  claim by two whole phases. An implementer copying the sibling pattern will add the
+  release call and it will look right in review — it is only wrong in the presence of a
+  concurrent run, which is exactly the situation an occupied workspace signals.
+
+  "No new branch exists as a result of the run" is the trace worth naming explicitly. The
+  natural shape of a fix is to work out the branch, then check the location; a fix that
+  gets those the wrong way round leaves a branch behind on every refusal, and nobody
+  notices until the branch list is unreadable.
+
+  IT enrichment note, 2026-08-25 (it-po). Two code-level facts make the no-new-branch
+  clause concrete. First, _create_fastlane_worktree (:503) creates the branch AND the
+  worktree in a single `git worktree add -b` call, so there is no partial state to worry
+  about — but equally, reaching that function at all on a refusing path is already a
+  violation. Occupancy must be decided upstream of it, in cmd_create_fastlane_worktree.
+  Second, that command calls `worktrees_dir.mkdir(parents=True, exist_ok=True)` at :1284
+  BEFORE the lookup at :1289. Creating the shared worktrees/ parent is pre-existing and
+  idempotent and is not what this criterion is about; creating the per-slug directory is,
+  and the before/after comparison will catch a fix that does it speculatively.
+
+  One further write worth forbidding by name, because it is the reflex an implementer
+  reaches for when a registration looks stale: `git worktree prune`. It is a write. It
+  deregisters worktrees whose directories are momentarily unreachable, and it is exactly
+  the kind of small trace the repeatability test exists to catch — correct-looking on the
+  first run, a different world on the second.

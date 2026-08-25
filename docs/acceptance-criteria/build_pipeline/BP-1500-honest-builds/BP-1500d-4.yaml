@@ -1,0 +1,111 @@
+id: BP-1500d-4
+components:
+  - build_pipeline
+title: "A check that finds no readable record says so, instead of returning the all-clear it returns when nothing is wrong"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given a project outside the producing package's own parent folder that received a
+    real build, and a check that can only do its job by reading that project's record
+    of what the build put there,
+  And that project's record is absent, or is present but cannot be read where the
+    project now sits,
+  When the check runs in that project,
+  Then the check reports that it could not read the record, and names the project and
+    the record it looked for,
+  And that report is distinguishable, to a reader and to an automated caller, from the
+    all-clear the check gives when it did read the record and found nothing wrong -- so
+    a check that is protecting nobody cannot be mistaken for one that has just cleared
+    the install,
+  And this verdict concerns only whether a record could be read; whether the install
+    has fallen behind what the package now holds is a separate judgement that this
+    behaviour neither makes nor replaces,
+  And the check is demonstrated to FAIL, before it may be accepted as passing, against
+    a deliberately non-portable install: starting from an install where the check gives
+    the all-clear, removing the record must change the result to the could-not-read
+    report, replacing it with a record keyed to a location it is not being read from
+    must do the same, and restoring the good record must return the all-clear -- so
+    each change of verdict is attributable to the record and not to an install that was
+    already broken,
+  And every run is against a real install produced by a real build into a project
+    outside the producing package's own parent folder, never against the check's source
+    read for the presence of an error branch.
+depends_on:
+  - BP-1500d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-004 and KI-BP-005 are the two checks that read the record. In any project that never received one they are ABSENT rather than degraded, and an absent check looks exactly like a passing one. No entry covers that consequence yet."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The fail-open variant this child exists against: a check that is missing is indistinguishable from a check that passed."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "Produces the record these checks read. Read for context only -- this AC is provable only from running the checks in a real out-of-package install."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the checks appear to work in the producing package's own workspace and are inert everywhere else."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: related
+    status: exists
+    relevance: "The same proof discipline one layer up -- a deployed guardrail's declaring files inspected in a real consumer-layout install, with a delete-and-restore negative control. Reuse its fixture and its three-run attribution pattern; it does not cover the record itself."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: failure + deployed + reachability, the last because the verdict must be observed through the check's real invocation surface."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT THIS CHILD OWNS, AND WHY IT IS NOT BP-1500c. BP-1500d's own criteria state it:
+  "The checks that exist to tell you whether anything has drifted or been altered all
+  read that account, so wherever it is missing or unreadable they protect nobody --
+  and say nothing about it." That sentence is the subject here. The judgement being
+  demanded is about the READABILITY of the record, not about what the record, once
+  read, says. BP-1500c owns "an installed copy that has fallen behind is reported" and
+  is deliberately not restated: BP-1500d is its prerequisite, because drift cannot be
+  reported against a record that was never written in the project being checked.
+
+  A check can satisfy BP-1500c perfectly in the producing package's own workspace and
+  be entirely inert in a consumer install. That is evidence point 4 of BP-1500d's
+  notes, and it is the reason BP-1500c must not be accepted on evidence gathered only
+  inside this workspace.
+
+  THE THREE-RUN CONTROL IS LOAD-BEARING. Remove the record, see the could-not-read
+  report; substitute a location-keyed record, see it again; restore, see the all-clear.
+  A single red proves the check can fail; it does not prove that the red was caused by
+  the record. The restore run is what attributes it. This mirrors the discipline
+  already applied in BP-900h-4 and BP-900h-1.
+
+  THE DISTINGUISHABILITY CLAUSE IS THE ONE TO GUARD AT IMPLEMENTATION TIME. An
+  implementation that logs "no record found" and then returns the same clean verdict
+  satisfies the wording of the reporting clause and changes nothing that matters. The
+  criterion therefore requires the two outcomes to be distinguishable to an automated
+  caller, not only to a human reading output.
+
+  ORDERING. Presupposes the record produced by BP-1500d-1 and the readability
+  guarantee of BP-1500d-2 for its positive case. depends_on carries only the parent
+  link, as the authoring request specified.

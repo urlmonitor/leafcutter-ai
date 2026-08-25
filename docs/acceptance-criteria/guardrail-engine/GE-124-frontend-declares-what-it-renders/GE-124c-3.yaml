@@ -1,0 +1,151 @@
+id: GE-124c-3
+readiness: approved
+priority: high
+title: "An unstaged file is not examined at all, and a fully declared change passes"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given `components/shell/logo.tsx` is an in-scope screen component with no
+    component-level declaration
+  And it is not in the staged set
+  When the commit-tier declaration check runs
+  Then no finding of any kind is reported for `components/shell/logo.tsx`
+  And the commit is not rejected on its account
+  And no pass record is produced for it either — an unstaged file is not
+    examined, and not examined is not passed
+
+  Given the staged set contains `components/flows/realization-badge.tsx`, whose
+    component-level declaration names UXP-607 and UXP-607-1
+  And it pins two elements, and every declared and pinned id resolves
+  When the commit-tier declaration check runs
+  Then the commit proceeds
+  And one pass record is produced for that file naming the criteria it declares
+    and the number of pinned elements
+
+  Given `components/shell/logo.tsx` is later edited and staged, still with no
+    component-level declaration
+  When the commit-tier declaration check runs
+  Then it is examined on that run and reported as missing its declaration
+
+  Given the staged set contains no in-scope screen components at all
+  When the commit-tier declaration check runs
+  Then the commit proceeds
+  And no finding of any kind is reported
+depends_on:
+  - GE-124c
+  - GE-124c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e-4.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111c-1.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE SUBJECT SET IS git's STAGED CHANGE LIST — `git diff --cached --name-only --diff-filter=ACMR` including renames via -M so the file's current path is the one examined. Never a repository walk, never a glob over the working tree. This mirrors the established staged-files-only scoping in check_ac_circular_deps, check_ac_schema Phase 2, GE-111c-1 and ACS-400e-2; an unexamined convention here is one refactor away from a whole-tree scan that fails on the entire existing frontend."
+  - "NOT EXAMINED IS A THIRD STATE, NOT A PASS AND NOT A FINDING. An unstaged file must appear in NO output collection — not in findings, not in pass records, not in any count the run produces. If the check emits a structured report, an unstaged file must be absent from it entirely; being present with a 'skipped' or 'clean' marker reintroduces exactly the reading this scenario forbids."
+  - "THE PASS RECORD IS A RECORD, NOT A BANNER. One per examined in-scope file, naming the criteria declared and the number of pinned elements (mock record gf-commit-realization-badge). Its language is constrained by GE-124e-5 and its counting by GE-124g-3: it may say declared, never verified, covered or proven. Malformed pins (GE-124b-1-ii) do not count towards the pinned-element number."
+  - "AN EMPTY IN-SCOPE SET IS A PROCEED, NOT A FAILURE. A staged set containing no in-scope screen components exits 0 with no findings — the false-positive guard GE-117d-2 also carries. An empty verdict set must not read as 'nothing was checked, therefore fail'."
+  - "ONE DIFF-SCOPING PRINCIPLE, TWO SUBJECT TYPES. This AC and GE-124e-4 are the same rule; here the subject is a file path and the diff selects it directly, there the subject is a criterion id and needs two routes. Implement them as two applications of one stated principle, and do not let either grow a cutoff, an exempt list or a backfill counter — scenario 3 IS the backfill mechanism."
+  - "Must handle errors gracefully per the project error handling policy; the partially-unreadable staged set is GE-124c-3-i's contract."
+delivers_to:
+  agent: python-coder
+  contract: "The staged-set-scoped examined set plus the two quiet outcomes: an unstaged file appears in NO collection the run produces, and an examined, fully-resolved file yields one pass record naming its declared criteria and its pinned-element count. The examined set comes from git's staged change list, never from a tree walk."
+expects_from:
+  ac_id: GE-124c-1
+  contract: "The block/proceed decision whose two silent branches this AC specifies, and the finding/pass record shapes that an unstaged file must be absent from entirely"
+test_spec:
+  - name: test_ge_124c_3_unstaged_undeclared_file_appears_in_no_collection_and_does_not_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo, commit an undeclared component, then stage an unrelated file and run the hook via subprocess: exit 0, and the undeclared file's path appears in NO output — not in findings, not in pass records, not in any count. Assert absence from every collection, not merely that the run passed."
+  - name: test_ge_124c_3_fully_declared_staged_file_yields_one_pass_record_with_its_counts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The realization-badge worked case: one pass record naming UXP-607 and UXP-607-1 and a pinned-element count of 2. Also assert a malformed pin in the same file does not increment that count."
+  - name: test_ge_124c_3_the_same_file_is_examined_once_it_is_staged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run the hook twice in one temp repo — first with the legacy undeclared file unstaged (silent), then with the same file edited and staged (blocked). This pair is the backfill mechanism the whole tree relies on instead of a cutoff, and it is only observable across two real runs against a real index."
+  - name: test_ge_124c_3_empty_in_scope_staged_set_proceeds_with_no_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A staged set of only .py and .md files exits 0 with an empty finding list. Guards against an empty verdict set being read as 'nothing was checked, therefore fail'."
+test_rationale: |
+  Everything this AC promises is about what the check does NOT do, and negative behaviour is
+  only observable at the entry point over a real git index — an in-process call cannot
+  distinguish 'the file was not in the staged list' from 'the file was examined and passed
+  silently'. So all four tests run the real hook against a temp repo. The two-run test is the
+  one that carries the most weight: it demonstrates the backfill mechanism that lets this tree
+  ship with no dated cutoff and no exempt population, and a single-run test cannot show it. The
+  absence assertions are written against every output collection rather than against the exit
+  code, because a 'skipped' entry in a structured report is precisely the not-examined-read-as-
+  passed conflation the criteria forbid.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [business-analyst]: made the staged-set scoping explicit rather than implied, alongside GE-124e-4's rebuild onto diff-scoping. Added the not-examined-is-not-passed clause, and the third scenario showing the same file examined once it is staged — the mechanism by which legacy screens are backfilled."
+  - "2026-08-25 [it-po]: technical enrichment. Pinned the subject set to git's staged change list with rename handling (matching GE-111c-1 and check_ac_schema Phase 2), required an unstaged file to be absent from EVERY output collection rather than marked skipped, and constrained the pass record's contents (malformed pins excluded from the count) and its language (GE-124e-5, GE-124g-3). All four tests run the real hook over a real index because the promises here are negative. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124c-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  VERDICTS 3 and 4 of four — NOT REPORTED and PASS. They are one AC because
+  they share the single guarantee that matters here: the check is quiet unless
+  something is wrong with something you changed.
+
+  STAGED-SET SCOPING IS STATED, NOT ASSUMED. The commit tier is naturally
+  scoped to the staged set, and that is exactly why it was worth writing down:
+  an unexamined convention is one refactor away from becoming a whole-tree scan
+  that fails on the entire existing frontend. Scenario 1 fixes it, and its last
+  clause fixes the reading that matters — an unstaged file is NOT EXAMINED, and
+  not examined is not passed. Mirrors GE-124e-4 scenario 4 at the other tier.
+
+  ONE PRINCIPLE, TWO SUBJECT TYPES. This AC and GE-124e-4 are the same rule:
+  only what the change touched is evaluated. Here the subject is a file path and
+  the diff selects it directly; there the subject is a criterion id and the diff
+  selects it through two routes. Matches the house pattern —
+  `check_done_proof --mode ci-changed`, the diff-scoped component-vocabulary CI
+  job, GE-111c-1 ("Only links whose source the commit staged are evaluated"),
+  and the presence-only-assertion staged-hunks ratchet.
+
+  SCENARIO 3 IS THE BACKFILL MECHANISM, and it is why no cutoff or exempt list
+  is needed anywhere in this tree: the existing untouched frontend is not
+  retrofitted, and each legacy file joins the guardrail on the day someone next
+  edits it. The mock-data invariant is explicit that a
+  missing-component-declaration finding implies its subject is staged.
+
+  The fourth scenario is the false-positive guard that GE-117d-2 also carries —
+  a diff with nothing in scope must produce zero verdicts, not a set of
+  satisfied ones, and an empty verdict set must read as proceed rather than as
+  "nothing was checked, therefore fail".
+
+  The pass record in scenario 2 is deliberately a RECORD, not a success banner.
+  GE-124g-3 constrains how it may be counted, and GE-124e-5 constrains the
+  language a pass may use.

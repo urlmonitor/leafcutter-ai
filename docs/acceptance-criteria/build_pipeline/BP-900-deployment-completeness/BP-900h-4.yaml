@@ -69,8 +69,76 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle vocabulary: deployed + real_artifact + failure, with the deliberately-incomplete-install negative control as the load-bearing entry."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION, and the scope line for this AC. h-4-i owns the LAYOUT MATRIX - package-directory name independence, the real-git-worktree layout, per-layout verdicts, the no-narrower-built-in-list prohibition, and the assert-the-file-not-the-reader rule. This AC must build the fixture h-4-i parameterises, not a second one, and must not re-specify any of those clauses."
+  - path: templates/scripts/commit_guardian/doc_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The reader behind the 2026-08-25 reproduction: its two-candidate ancestor walk resolves to .leafcutter/scripts/commit_guardian/config/doc_types.json, which does not exist in a genuine adopter install. Named as the regression instance the fixture must be shown to catch, not as the deliverable."
+  - path: scripts/ac_store/_ac_components.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The helper-module half of the same reproduction - validate_ac_schema.py IS deployed and this sibling is not, so the deployed executable raises ModuleNotFoundError. Confirms that a declaring file can be a module, which is why the inventory must not be limited to non-code files."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Carries the field reports and the ancestor-walk probe evidence for this defect class. Read before building the fixture, so the fixture reproduces the reported condition rather than a convenient approximation of it."
+  - path: unit_tests/test_bp_900g_4.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Prior art for standing up a consumer install inside a test. Reuse the construction; do not reuse any assertion that resolves against the package tree."
+  - path: unit_tests/test_bp_900g_6_paths.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Second prior-art fixture for the same construction, and the source of the output-root prefix discipline this inspection's resolution rule extends."
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "1 — one declaring-file inspection step in the consumer-simulation job, iterating a DERIVED inventory. The number of files inspected must come from that inventory, never from hand-written per-file steps; a step per known file is the hand-maintained list this AC exists to remove, wearing YAML."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir /tmp/lc-consumer-probe"
+    - "env -u PYTHONPATH python /tmp/lc-consumer-probe/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py docs/known-issues/build-pipeline.md"
+    - "env -u PYTHONPATH python /tmp/lc-consumer-probe/.leafcutter/scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    - "python -m pytest unit_tests/portability/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The declaring-file inventory record the inspection walks, one entry per (guardrail, declaring file) pair. It is a record rather than a bare path list because the criterion demands a missing file be named together with the guardrail that reads it and the location it was expected at, and because the ownership classification - ours to ship versus the operating system's - must be an asserted property rather than a rule buried in a filter."
+    required:
+      - declaring_file
+      - read_by
+      - expected_at
+      - ownership
+      - derivation
+    properties:
+      declaring_file:
+        type: string
+        description: "The file the guardrail reads. May be non-code or a helper module; both halves of the 2026-08-25 reproduction are in scope and an inventory limited to JSON misses the module half."
+      read_by:
+        type: string
+        description: "The deployed guardrail that reads it. Required by the criterion's naming clause and by the fact that a bare missing-path report tells the author nothing about who broke."
+      expected_at:
+        type: string
+        description: "The path under the scratch install's deployed output root where it must be found, and the only path a resolution may return. Asserting on this rather than on exit code is what distinguishes an inspection that failed for the right reason from one that failed while pointing at the package checkout."
+      ownership:
+        type: string
+        description: "ours_to_ship or external. The classification the does-not-manufacture-failures clause turns on. An entry with no ownership value is a filter decision made silently, and a filter that excludes everything satisfies the exclusion clause exactly as well as a correct one."
+      derivation:
+        type: string
+        description: "How this entry was derived from the deployed guardrail rather than typed in. Present so a hand-written inventory is visible as such in the report instead of passing as a derived one."
+  constraints:
+    - "THE INSTALL MUST BE A GENUINE ADOPTER LAYOUT, AND ITS DEFINING PROPERTY IS AN ABSENCE. On 2026-08-25 a real consumer install was built at a scratch root with the package checked out at leafcutter-ai/ (the directory name CLAUDE.md documents) and `python scripts/build.py --target-dir <consumer root>` run against it. In that install neither `<consumer>/config/` nor `<consumer>/leafcutter/` exists - confirmed by direct listing - and that absence is precisely why the two hardcoded candidates in the doc-types ancestor walk both miss. A fixture in which either directory exists is not this layout and is green on the install that shipped broken. Assert the absence as a fixture precondition, not as an incidental property."
+    - "THE TWO REPRODUCED BLOCKERS ARE THE FIXTURE'S ACCEPTANCE SET, AND BOTH MUST BE RED BEFORE ANY FIX. From that install: `python .leafcutter/scripts/ac_store/validate_ac_schema.py <ac>.yaml` raises ModuleNotFoundError for _ac_components (validate_ac_schema.py IS deployed; its helpers _ac_components.py and _component_migration_map.py are not), and `python .leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <doc>.md` raises FileNotFoundError naming .leafcutter/scripts/commit_guardian/config/doc_types.json. If the fixture is green on either before the implementation lands, the fixture is resolving against the package tree and every assertion built on it is worthless."
+    - "COLD PROCESS, PACKAGE SOURCE TREE OFF sys.path. Every existing unit test in this family imports from the source tree, which contains every module and every config by construction - that is why five prior instances of this class stayed green. A test that imports from scripts/ does not satisfy this AC. Launch the inspection and every probe as a subprocess whose working directory is not the package tree and whose interpreter search path contains no path under the package checkout, and assert that property of the child process rather than assuming it."
+    - "ADDING THE NAMED FILES IS NECESSARY AND NOT SUFFICIENT. The register's rule applies verbatim: treat adding the module or the config to the deploy list as a fix for the instance, never for the defect. The same deploy list has been patched four times for this class, five of its eleven entries carry a warning comment about that specific module, and a sixth instance surfaced on 2026-08-25 - check_ac_parent_covered_by.py cannot import derive_parent_id in a deployed layout and exits 0 silently. Reachability must hold by construction or by a gate that fails, never by someone remembering. The inspection must be shown to go red on a tree where any inventory entry is withheld, whichever entry that is."
+    - "IDENTIFY THE ENFORCEMENT POINT THAT ACTUALLY GATES, AND NAME EVERY ONE THE CHANGE TOUCHES. This inspection is only as strong as the CI step that consumes its exit code. Name in the sign-off every place the verdict is surfaced and state which one is load-bearing; a verdict routed only through a step that logs, or through a step carrying continue-on-error, is a no-op with a report attached. The same trap exists on the build side, where the deploy_map skip branch logs at WARNING and continues."
+    - "WHATEVER THE INSPECTION SURFACES ON FIRST RUN MUST BE ENUMERATED, NOT SKIPPED. Turning this on will reveal a pre-existing set of unreachable declaring files larger than the five in the 2026-08-18 record and the two reproduced on 2026-08-25. That is the intended effect. List the full set in the sign-off and resolve each entry or defer it explicitly with a date. A skip list reintroduces the hand-maintained list inside the mechanism built to remove it."
+    - "STAY LOUD - DO NOT RESOLVE A MISSING DECLARING FILE BY NARROWING THE RULE. The fail-closed posture on the document type vocabulary was established deliberately by GE-118c, which removed exactly such a fallback; the sibling diagram-types walk still returns None and degrades silently to a built-in constant and is the next instance waiting. A change that makes the inspection green by restoring a narrower built-in list is a regression even though the error disappears. BP-900h-4-i owns this prohibition in full; it is repeated here only as a bound on what an acceptable fix for THIS AC may do."
+    - "PACKAGE-DIRECTORY NAME INDEPENDENCE IS BP-900h-4-i's, NOT THIS AC's - BUT DO NOT FORECLOSE IT. h-4-i owns the layout matrix and the rule that no candidate path may spell a package-directory name, because the same lookup fails differently under different adopter names: with the package at `leafcutter/` the second candidate resolves in a main checkout and fails inside a git worktree, and with it at `leafcutter-ai/` it fails everywhere. Both adopter reports were correct. Build this fixture so h-4-i can parameterise it by layout - the package-directory name and the deployed output root must be inputs to the fixture, not constants inside it - and do not stand up a second fixture there."
 delivers_to:
   agent: python-coder
   contract: "A consumer-layout install fixture whose declaring-file resolution is anchored to the deployed output root alone, plus the per-guardrail declaring-file inventory it inspects. BP-900h-5 invokes the guardrails inside this same fixture rather than standing up a second one."
@@ -147,10 +215,26 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-18
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added it_requirements in package-surface object form (the declaring-file
+      inventory record with its ownership and derivation fields, plus eight
+      constraints) and five IT-PO doc_links - the h-4-i scope line, the two readers
+      behind the 2026-08-25 reproduction, the known-issues register, and the two
+      prior-art consumer-install fixtures. The AC previously carried no it_requirements
+      at all, so generate_ticket_from_ac.py --verify emitted no Implementation Notes
+      section and the coder had only the criteria to work from. Anchored to a genuine
+      adopter install built on 2026-08-25 with the package at leafcutter-ai/, in which
+      neither <consumer>/config/ nor <consumer>/leafcutter/ exists and both the
+      ModuleNotFoundError and the FileNotFoundError reproduce. criteria, title,
+      depends_on and req_status untouched.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by: [BP-900h-4-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-900h-4.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

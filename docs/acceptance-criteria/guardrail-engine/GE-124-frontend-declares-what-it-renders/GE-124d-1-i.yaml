@@ -1,0 +1,105 @@
+id: GE-124d-1-i
+readiness: approved
+priority: high
+title: "No setting can put every path on the warn tier at once"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+criteria: |
+  Given a configuration that attempts to place the whole repository on the warn
+    tier — a bare wildcard entry, a repository-root entry, or a global
+    warn-everywhere switch
+  When the commit-tier declaration check loads its configuration
+  Then the configuration is rejected and the reason names the entry that was
+    refused
+  And the check continues with block as the default for every path
+
+  Given the warn list names three specific directories
+  When a file outside all three has no component-level declaration and is staged
+  Then the verdict for that file is "block", never "warn"
+depends_on:
+  - GE-124d-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-1-i.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "REFUSE THE ENTRY, DO NOT SILENTLY DROP IT. A wildcard that is quietly ignored leaves the author believing the whole repository is on warn while it is not, producing the opposite surprise later. The refusal must name the offending entry and state that the warn tier is per-path by design."
+  - "THE REFUSED SET IS ENUMERATED, NOT PATTERN-GUESSED: a bare wildcard (`*`, `**`, `**/*`), the repository root (``, `.`, `/`, `./`), and any global switch key (e.g. a `warn_all` or `enforcement_mode` key in the frontend_ac_declaration section). The third is the important one — the blanket escape arrives as a NEW KEY, not as a clever list entry, so the config loader must reject unknown enforcement-shaped keys rather than ignoring them."
+  - "REFUSING THE CONFIG MUST NOT DISABLE THE CHECK. After the refusal the run continues with block as the default for every path, including the other, legitimate warn_paths entries if any. An implementation that aborts on bad config turns a rejected wildcard into a bypass."
+  - "THIS IS DISTINCT FROM GE-124g-1-i AND BOTH ARE NEEDED. Here the refusal is about WHETHER A FILE MUST DECLARE; there it is about WHAT A DECLARATION IS WORTH. Two different configuration surfaces, two different rules, and GE-124g-1-i's third scenario explicitly states that this escape does not reach the four GE-124g places."
+delivers_to: null
+expects_from:
+  ac_id: GE-124d-1
+  contract: "The warn-list lookup and its commit_guardian.json frontend_ac_declaration.warn_paths surface, whose blanket forms this edge case forbids at load time"
+test_spec:
+  - name: test_ge_124d_1_i_wildcard_and_root_entries_are_refused_by_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "For each blanket form ('*', '**', '.', '/', ''), load the config through the real hook and assert the output names the refused entry. Assert the entry is NAMED, not merely that loading did not crash — a silent drop passes any 'no exception' assertion."
+  - name: test_ge_124d_1_i_a_global_warn_everywhere_key_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A frontend_ac_declaration section carrying a warn-everywhere / enforcement-mode key is refused with the key named. This is the form the blanket escape actually arrives in — a new key added by the first person who finds the guardrail inconvenient — and a list-only validator never sees it."
+  - name: test_ge_124d_1_i_after_a_refusal_the_check_still_blocks_and_still_honours_valid_entries
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With a config containing both a wildcard and one legitimate directory, the run exits non-zero for an undeclared file outside that directory, and still warns for one inside it. An implementation that aborts on bad config would turn the rejected wildcard into exactly the bypass it was refused for."
+  - name: test_ge_124d_1_i_files_outside_three_listed_directories_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "With three specific directories listed, a staged undeclared file outside all three has verdict 'block'. The contrapositive of the mock-data invariant that verdict == 'warn' implies the subject's tier is 'warn'."
+test_rationale: |
+  A rule stated as an absent feature is re-added by the first person who wants it, so the
+  behaviour under test is a REFUSAL, and refusals are only meaningful if they are audible: every
+  test asserts the offending entry or key is named in the output, never merely that nothing
+  crashed. The second test targets the shape the escape really takes — a new config key, not a
+  clever list entry — which a list-only validator would never see and which no scenario in the
+  criteria makes explicit. The third test is the over-correction guard: the shortest way to
+  "reject the configuration" is to abort the run, which converts the refused wildcard into the
+  very blanket bypass it was refused for.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Enumerated the refused set and added the case that matters most — a NEW enforcement-shaped config key, which is the form a blanket escape actually arrives in and which a list-only validator cannot see. Required the run to continue blocking (and honouring valid entries) after a refusal, so rejecting bad config cannot itself become the bypass. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The PO's words: "A blanket 'warn everywhere' setting would silently repeal the
+  whole L0 and must not exist." Stated here as a rejected configuration rather
+  than as an absent feature, because an absent feature is re-added by the first
+  person who finds the guardrail inconvenient, whereas a rejected configuration
+  makes the refusal visible at the moment of the attempt.
+
+  Rejecting the configuration rather than ignoring it is deliberate: a
+  wildcard that is silently dropped leaves the author believing the whole
+  repository is on warn while it is not, which produces the opposite surprise
+  later.
+
+  IT-PO NOTE (2026-08-25). The criteria describe the blanket attempt as a list
+  entry or a switch. In practice it arrives as a new config key someone adds,
+  so the config loader has to reject unknown enforcement-shaped keys — a
+  validator that only inspects warn_paths entries would pass the very case this
+  AC exists to stop.

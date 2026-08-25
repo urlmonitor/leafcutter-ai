@@ -1,0 +1,85 @@
+id: GE-124a-1-ii
+readiness: approved
+priority: high
+title: "An element attribute never populates the file's declared criteria"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given a staged screen component file that has no leading comment block
+  And the file contains the element `<li className={styles.edgeRow} data-ac="KM-ADM-004">`
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the empty list
+  And the file's declaration verdict is "missing"
+  And "KM-ADM-004" appears only in the file's element-pin record, never in its
+    declared-criteria list
+depends_on:
+  - GE-124a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "TWO SEPARATE COLLECTIONS IN THE RECORD, NOT ONE MERGED LIST. The shared reader must emit declares[] and pins[] as distinct fields that are never unioned at any point in the pipeline. A single merged 'ac_ids' convenience field — even one added later for a report — reintroduces the substitution this AC exists to block, because every downstream consumer would then read one list and lose which surface each id came from."
+  - "The declaration scan is bounded to the leading comment region (GE-124a-2); the pin scan is over element attributes. A whole-file grep for '@ac' or for an id pattern would collapse the two surfaces at the source and make this AC untestable."
+  - "The separation must hold in the persisted store fields too: declared_by is populated only from declares[], pinned_by only from pins[] (GE-124g-1). Verify the two paths at the boundary, not only in memory."
+delivers_to: null
+expects_from:
+  ac_id: GE-124a-1
+  contract: "The per-file declaration record this edge case asserts is not populated from the element surface — declares[] and pins[] are separate fields on that record and are never unioned"
+test_spec:
+  - name: test_ge_124a_1_ii_element_pin_does_not_appear_in_declares
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The detail-drawer worked case: a file with no leading comment and one data-ac element yields declares == [], verdict 'missing', and 'KM-ADM-004' present in the pin collection only. Assert membership in both collections explicitly — asserting only that declares is empty passes on a reader that also drops the pin."
+  - name: test_ge_124a_1_ii_no_merged_id_collection_is_exposed_by_the_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "For a file carrying BOTH a component declaration and element pins with disjoint ids, assert that no field of the emitted record equals the union of the two sets. This is the regression guard against a convenience field added later for a report."
+test_rationale: |
+  Asserting `declares == []` alone is the false green: it passes on a reader that discards the
+  pin entirely, which would satisfy this AC while breaking GE-124b-1 and GE-124e-2. The test
+  therefore asserts both collections at once. The second test guards the failure that actually
+  happens over time — someone adds a merged convenience field for a report, and every consumer
+  quietly loses which surface an id came from. That is a shape question about the record, so a
+  unit test on the real emitted record is the right instrument; no entry-point run adds
+  information here, because the separation is a property of the record itself.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Stated the two-collections-never-unioned rule as a standing constraint on the record (including the persisted declared_by / pinned_by fields), and added a seam test that forbids a merged convenience field — the way this separation is actually lost. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The `detail-drawer.tsx` worked case from the mock-data artifact. This is the
+  data-model half of GE-124's LIMIT 1 (presence, not behaviour): the two
+  surfaces are stored separately, so no downstream consumer can accidentally
+  read an element pin as a component-level declaration. The enforcement half —
+  the file is still reported for the missing floor, and reported ONCE — is
+  GE-124b-2 and GE-124c-1-i.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). The separation has to survive the whole
+  pipeline, not just the parse: the store-side twin of this rule is GE-124g-1's
+  declared_by / pinned_by split. Both are fed from these two collections, so a
+  merge here would silently defeat that AC too.
