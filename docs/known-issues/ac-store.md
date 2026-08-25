@@ -501,26 +501,32 @@ is indistinguishable from one that passes).
 **Symptom.** There are two AC validators and they enforce different rules.
 `scripts/ac_store/validate_ac_schema.py` checks the record against the schema. The
 required CI job runs `pre-commit run check-ac-schema`, which additionally enforces
-binding completeness, field preservation (ACS-500f-1) and test-contract rules.
-`CLAUDE.md`'s pre-flight section prescribes only the former.
+binding completeness, field preservation (ACS-500f-1), test-contract rules, and
+derived-field rules such as `declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight
+section prescribes only the former.
 
-**Correction, 2026-08-24 — the `declares_side_effect` example was wrong and has been
-removed from the sentence above.** This entry originally cited `declares_side_effect`
-(BO-2900g-2) as one of the extra rules the required gate enforces. It does not enforce it.
-`declares_side_effect` appears in exactly three places in the repo —
-`scripts/ac_store/generate_ticket_from_ac.py`, `config/ac_store_schema.json` and
-`config/agent_registry.json` — and in **zero** commit-guardian hooks;
-`scripts/commit_guardian/check_ac_schema.py` enforces pattern-bindings completeness,
-`implements_pattern` field-preservation and test-contract validation, and nothing else of
-that kind. The field is described in the schema and drives `user-surface-smoker` routing
-at ticket-generation time, but no gate requires or validates it.
+**A retracted correction, 2026-08-25 — and the retraction is the useful part.** On
+2026-08-24 this paragraph was edited to say the `declares_side_effect` (BO-2900g-2) example
+was fabricated and that no gate enforces the field. **That edit was wrong. The original
+text was right, and has been restored.** `check-ac-schema` does enforce it: CI failed PR
+#529 with *"declares_side_effect is authored as True but this AC's own Then clause derives
+False — the two disagree … (BO-2900g-2)"*.
 
-Recorded rather than quietly edited, because the wrong example did real work before it was
-caught: it was relayed verbatim into two agent briefs on 2026-08-24 as a reason to run the
-heavier gate, and an authoring agent checked it and found it false. A known-issue is read
-as settled fact, so a plausible-but-unverified example inside an otherwise correct entry
-propagates further than a wrong entry would — the entry's substance (two validators, real
-divergence, local pass does not predict CI) is accurate and unaffected. Running it and seeing `OK: all N AC YAML files are valid` therefore establishes
+The mistake is worth keeping because it is this entry's own subject, one layer down. Two
+agents independently grepped `scripts/commit_guardian/` and `.leafcutter/scripts/
+commit_guardian/`, found nothing, and concluded the rule did not exist. The rule lives in
+**`templates/scripts/commit_guardian/_ac_schema_validators.py`** — `templates/` is the
+source the build deploys *from*; `scripts/commit_guardian/` in a worktree is a build output
+frozen at whenever that worktree was last built (KI-BP-004). Running the hook locally
+passed for exactly the same reason: the local hook was the stale copy, without the rule.
+
+So the sequence was: entry states a true fact → two agents check it against the deployed
+tree and get a false negative → entry is "corrected" into an untruth → CI, which builds
+before running the hooks, contradicts all of it. Local hook agreement is not evidence the
+rule is absent; it is evidence about the age of your deploy. Grep `templates/scripts/` when
+asking what a hook enforces, and treat a passing local hook as unverified until CI agrees.
+
+Running the weaker validator and seeing `OK: all N AC YAML files are valid` therefore establishes
 much less than it appears to, and the gap is invisible because both are called "the
 schema validator" in conversation.
 
