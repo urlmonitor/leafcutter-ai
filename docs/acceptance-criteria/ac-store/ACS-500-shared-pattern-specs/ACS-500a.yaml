@@ -32,15 +32,18 @@ amended_by:
     at: 2026-08-19
     note: >-
       Referent clarification only — the feature is not restated and nothing is
-      added to scope. AMBIGUOUS: the sentence read "The pattern definition lives in
-      the existing component registry". WRONG BINDING AVAILABLE: this repo has a
-      two-axis component taxonomy and "component registry" names neither surface
-      uniquely — a reader could bind it to docs/components.json (the graph
-      vocabulary, underscore ids) or to docs/acceptance-criteria/index.yaml (the
-      AC-store namespace, kebab ids). DAMAGE: pattern ACs written into either one
-      are unreachable, implements_pattern references do not resolve, and the hook
-      and the authoring-side inventory scan read different places. DETERMINED FROM
-      CODE, NOT FROM THE PHRASE: check_ac_pattern_refs.py resolves
+      added to scope. THE SENTENCE WAS FALSE, NOT AMBIGUOUS: it read "The pattern
+      definition lives in the existing component registry". "The component
+      registry" is NOT ambiguous in this repo — ADR-009 names it in a table row,
+      "Component registry | docs/components.json", and ADR-008 records that the
+      scalar `component` axis and the `components` graph axis are two
+      intentionally separate registries. So the phrase had a settled referent and
+      the sentence asserted something untrue about it: pattern definitions do not
+      live in docs/components.json. DAMAGE: an implementer who trusts the sentence
+      writes pattern ACs into the component registry, where implements_pattern
+      cannot resolve them and neither the hook nor the authoring-side inventory
+      scan will ever look. DETERMINED FROM CODE, NOT FROM THE PHRASE:
+      check_ac_pattern_refs.py resolves
       implements_pattern through _ac_store_index.get_ac_index(store_root), and that
       index is built by rglob("*.yaml") over docs/acceptance-criteria, keyed by AC
       id (_AC_STORE_DIR = "docs/acceptance-criteria"). The authoring-side inventory
