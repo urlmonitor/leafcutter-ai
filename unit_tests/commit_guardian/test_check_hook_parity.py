@@ -887,6 +887,7 @@ class TestConfigLoadFailOpen(unittest.TestCase):
             entry,
             msg="BP-100i-4: 'check-hook-parity' must be registered in the canonical manifest.",
         )
+        assert entry is not None  # narrows for mypy; assertIsNotNone already raised above
         self.assertIn(
             "files",
             entry,

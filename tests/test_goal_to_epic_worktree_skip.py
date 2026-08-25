@@ -153,6 +153,12 @@ class TestMainSkipsWorktreeWhenBothPathsSupplied(unittest.TestCase):
             call_kwargs.kwargs.get("inbox_dir")
             or (call_kwargs.args[2] if len(call_kwargs.args) > 2 else None)
         )
+        assert supplied_store_root is not None, (
+            "run() was called without an ac_store_root — cannot build a Path from None."
+        )
+        assert supplied_inbox_dir is not None, (
+            "run() was called without an inbox_dir — cannot build a Path from None."
+        )
         self.assertEqual(
             Path(supplied_store_root),
             self._tmp_path,

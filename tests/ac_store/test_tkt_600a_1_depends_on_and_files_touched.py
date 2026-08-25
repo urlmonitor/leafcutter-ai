@@ -265,6 +265,9 @@ class TestDependsOnIsGuardValid:
         child_ticket = next(tickets_dir.glob(f"TICKET-*-{child_id}.md"))
         fm = _parse_frontmatter(child_ticket.read_text(encoding="utf-8"))
         depends_on = fm.get("depends_on")
+        assert depends_on is not None, (
+            f"generated ticket has no depends_on field in frontmatter: {fm!r}"
+        )
 
         assert "TKTX-600a" not in depends_on, (
             f"structural-parent AC id leaked verbatim: {depends_on!r}"
