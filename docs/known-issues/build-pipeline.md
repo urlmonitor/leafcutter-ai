@@ -959,3 +959,130 @@ consumer install's registry is reachable by anything that runs against deployed 
 from the source you are reading), in a validates-against-itself sub-form: the only layout
 the check has ever run in is the one where target and source are the same directory, so it
 has never been able to fail.
+
+---
+
+### KI-BP-013 — The mypy gate checks only changed files, so untouched debt is invisible until an unrelated edit drops a wall of it on whoever touched the file
+
+- **Severity:** low
+- **Status:** open — the gate is informational, so this costs attention rather than merges
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the `Type-check changed files (mypy, informational)` job in `.github/workflows/ci.yml`
+
+**Symptom.** The job type-checks the files a PR changed. A file that has never been changed
+since the job was introduced has never been checked, however much it violates. The first commit
+to touch it — for any reason, of any size — inherits every accumulated error as a red check on
+its own PR.
+
+**Evidence.** PR #541 changed **two lines** in
+`unit_tests/build_orchestration/test_bo2400f_lifecycle.py`: a `chmod` widened from a file to its
+containing directory, plus the matching restore in `finally`. The mypy job went red with **22
+errors**, all `"None" not callable`, at lines scattered from 324 to 1366 — nowhere near the
+edit.
+
+Confirmed pre-existing rather than introduced, by running mypy against `origin/main`'s
+unmodified copy of the same file:
+
+```
+$ git show origin/main:unit_tests/build_orchestration/test_bo2400f_lifecycle.py > /tmp/main_copy.py
+$ mypy /tmp/main_copy.py --ignore-missing-imports
+Found 22 errors in 1 file (checked 1 source file)
+```
+
+Same 22. Meanwhile mypy is green on `main` itself, because `main` never changes that file.
+
+**Why it matters more than the severity suggests.** The signal is anti-correlated with
+responsibility: the person who least touched the file gets the whole report. The rational
+response is to shrug, and shrugging at a red check is a habit worth not building — especially on
+a job that would otherwise be a useful early warning. It also makes the gate useless as a ratchet:
+debt cannot decrease, because nothing ever forces a file to be looked at.
+
+**Related shape.** `KI-CG-015` and `KI-CG-012` describe the same "invisible until touched"
+property in the AC-schema hooks, where the consequence is worse because those gates are blocking.
+This is the same design choice with a softer landing.
+
+**Fix directions.** Either run mypy over the whole tree with a baseline file (so existing errors
+are recorded and only *new* ones fail — the standard ratchet), or keep changed-files scoping but
+report pre-existing errors separately from ones the PR introduced, so the diff-attributable count
+is visible at a glance. The second is cheaper and preserves the current signal; the first
+actually retires the debt.
+
+---
+
+### KI-BP-014 — The commit agent can stall indefinitely waiting on the autofix agent it dispatched, leaving a fully-staged commit unmade and no error
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the pre-commit-failure → `precommit-autofix` → retry path in the `commit` agent template
+
+**Symptom.** The commit agent hit a `check-ac-schema` failure, dispatched the autofix agent as
+designed, and then never retried. It returned after **~76 minutes** with the message *"HEAD
+confirmed unchanged (commit did not silently land). Waiting for the autofix agent to complete
+before retrying."* — a status update, not a result. The autofix agent had in fact completed
+successfully and applied a correct one-line fix.
+
+**State it left behind.** Benign but easy to misread: all five intended files correctly staged,
+`HEAD` unchanged, nothing lost. The agent's own report was accurate about what it had *not* done,
+which is the reason nothing broke. But no commit existed, no error was raised, and the caller had
+no signal other than the elapsed time.
+
+**Why it is worth an entry.** The failure mode is a hang, not a crash, so nothing surfaces it —
+no timeout, no failed status, no retry cap. From the caller's side it is indistinguishable from
+"still working" for as long as you are willing to wait. Recovery was trivial once noticed
+(re-run the hooks, confirm they pass, commit from the main loop with `COMMIT_AGENT_MODE=1`), but
+noticing depended on a human wondering why it was taking so long.
+
+**What this does NOT indicate.** The autofix path itself worked: the fix was correct and its
+report was accurate and well-reasoned. The gap is purely in the parent's wait-and-retry step.
+
+**Fix direction.** Bound the wait and make the outcome explicit. The parent should either
+re-check the hooks and retry once the child reports completion, or return a `blocker` naming the
+autofix agent and the hook that failed. "Waiting" is not a terminal state a caller can act on.
+
+---
+
+### KI-BP-015 — `docs/agents/cards/*.card.md` are committed build outputs with no freshness gate, so they drift from the AC store they describe
+
+- **Severity:** low
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `docs/agents/cards/`, generated by `scripts/generate_agent_cards.py` and run as part of `build.py`
+
+**Symptom.** The cards list the acceptance criteria each agent is assigned. They are generated
+from the AC store, committed to the repo, and regenerated only when someone happens to run
+`build.py`. A PR that adds ACs does not regenerate them, and no hook or CI job compares the
+committed cards against the store — so `main`'s cards silently fall behind `main`'s own store.
+
+**Evidence.** Running `build.py` into a fresh worktree taken from `origin/main` at `3f3a6a3e`
+— changing nothing else — left four cards modified, 63 added lines, purely additive:
+
+```
+docs/agents/cards/python-coder.card.md              +52
+docs/agents/cards/documentation-expert.card.md       +8
+docs/agents/cards/architecture-diagram-author.card.md +2
+docs/agents/cards/frontend-coder.card.md             +1
+```
+
+The additions are ACs that are already on `main`: `BO-2400c-6`, `-6-i`, `-6-ii` (merged in
+#529/#536) and the `BO-2400f-12` and `BO-2400f-13` families (merged in #534). Their PRs added the
+records without regenerating the cards, and every gate passed — including `Check Agent Diagrams`,
+which validates card *structure* rather than card *currency*.
+
+**Why it is low and not lower.** Nothing breaks. But these cards are a knowledge-plane surface:
+they are what an agent reads to learn which criteria it owns. A card that omits three criteria an
+agent is assigned is quietly wrong at exactly the moment it is being trusted, and the omission
+grows with every AC-adding PR.
+
+**Not fixed here deliberately.** Regenerating them is one `build.py` run, but doing it inside an
+unrelated PR buries a 63-line generated diff in a review about something else — and it would
+repair this instance without preventing the next one.
+
+**Fix direction.** A CI check that regenerates the cards and fails if the working tree changes
+(the standard generated-artifact ratchet, and the same shape as the existing
+`Check Product-Truth Derived-Data Drift (generator --check)` job, which already does exactly this
+for a different generated surface). Alternatively stop committing them and generate on demand —
+but they are read by agents from the deployed tree, so the ratchet is the smaller change.

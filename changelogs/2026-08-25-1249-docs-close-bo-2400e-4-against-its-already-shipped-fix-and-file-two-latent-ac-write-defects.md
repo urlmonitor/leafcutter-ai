@@ -65,3 +65,10 @@ silently.
 **Verification:** `AC_ENFORCE_STRICT=1 pytest unit_tests/build_orchestration/`
 → 141 passed, 4 xfailed, 4 subtests passed. `validate_ac_schema.py` on the
 BO-2400 folder → `OK: all 82 AC YAML files are valid`.
+
+**Correction (2026-08-25, post-merge).** The ids above are wrong as published.
+PR #538 landed its own `KI-BO-019` and `KI-BO-020` seventeen minutes before this
+entry's PR merged, and the two collided on `main`. #538 was first and keeps those
+numbers; the entries described above were renumbered **`019 → 022`** and
+**`020 → 023`**. `KI-BO-021` is unaffected. The body is left as written rather than
+silently rewritten — see `KI-BO-024` for why this kept happening.

@@ -1,12 +1,12 @@
 """
-MODULE: unit_tests/build_orchestration/test_ki_bo_020_valueerror_escapes_call_sites.py
+MODULE: unit_tests/build_orchestration/test_ki_bo_023_valueerror_escapes_call_sites.py
 GOAL: RED-under-the-hood (XFAIL-marked) test stubs pinning the CORRECT contract
     for the three call sites of
     scripts/build_orchestration/fast_lane.py::_update_ac_work_status that
-    currently leak its ValueError (KI-BO-020,
+    currently leak its ValueError (KI-BO-023,
     docs/known-issues/build-orchestration.md).
 
-THE DEFECT (KI-BO-020). `_update_ac_work_status`
+THE DEFECT (KI-BO-023). `_update_ac_work_status`
 (scripts/build_orchestration/fast_lane.py:130-210) deliberately raises
 `ValueError` at :180-185 when an AC YAML record contains more than one
 column-0 `work_status:` line -- correctly refusing to guess which line is the
@@ -50,7 +50,7 @@ WHAT REMOVING THE DECORATOR WILL PROVE. Once a future change widens the
     below and re-running this file must show 4 passed, 0 failed. An
     `unexpected success` (XPASS) on any of these tests before that fix lands
     would itself be a signal worth investigating -- it would mean the
-    described escape no longer reproduces the way KI-BO-020 documents it.
+    described escape no longer reproduces the way KI-BO-023 documents it.
 
 FIXTURE-AUTHENTICITY MANDATE. The base records for all four tests are
     copied byte-for-byte from real, on-disk, PO-reviewed AC YAML files in
@@ -75,7 +75,7 @@ would make it hard to tell this file's deliberate xfails apart from that
 masking:
 
     AC_ENFORCE_STRICT=1 python -m pytest \
-        unit_tests/build_orchestration/test_ki_bo_020_valueerror_escapes_call_sites.py -v
+        unit_tests/build_orchestration/test_ki_bo_023_valueerror_escapes_call_sites.py -v
 """
 
 from __future__ import annotations
@@ -169,7 +169,7 @@ def _set_work_status_line(text: str, new_status: str) -> str:
 def _duplicate_work_status_line(text: str) -> str:
     """Insert a second column-0 `work_status:` line directly after the first.
 
-    This reproduces the KI-BO-020 ambiguous-record shape (the condition that
+    This reproduces the KI-BO-023 ambiguous-record shape (the condition that
     makes `_update_ac_work_status` raise `ValueError`) by editing the real
     fixture's own line in place -- not by hand-authoring a synthetic record.
     """
@@ -243,7 +243,7 @@ class _RealAcStoreMixin:
 
 
 class TestClaimBuildSetDoesNotLeakValueError(_RealAcStoreMixin, unittest.TestCase):
-    """KI-BO-020 call site 1: scripts/build_orchestration/fast_lane.py:289."""
+    """KI-BO-023 call site 1: scripts/build_orchestration/fast_lane.py:289."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -256,14 +256,14 @@ class TestClaimBuildSetDoesNotLeakValueError(_RealAcStoreMixin, unittest.TestCas
 
     @unittest.expectedFailure
     def test_claim_build_set_does_not_leak_valueerror(self) -> None:
-        # covers: KI-BO-020
+        # covers: KI-BO-023
         """claim_build_set must not propagate ValueError to its caller.
 
         A malformed record (two column-0 work_status: lines) sits in the
         middle of the requested build set alongside two clean records. The
         call must return a payload -- not raise -- so the caller (the
         fast-lane runner) can still see what was claimed and decide whether
-        to release it. Today this raises uncaught (KI-BO-020); the widened
+        to release it. Today this raises uncaught (KI-BO-023); the widened
         except clause at fast_lane.py:289 must come off this test once that
         lands.
         """
@@ -275,7 +275,7 @@ class TestClaimBuildSetDoesNotLeakValueError(_RealAcStoreMixin, unittest.TestCas
         except ValueError as exc:
             self.fail(
                 "claim_build_set leaked ValueError instead of catching it "
-                f"(KI-BO-020, fast_lane.py:289): {exc!r}"
+                f"(KI-BO-023, fast_lane.py:289): {exc!r}"
             )
 
         self.assertIsInstance(
@@ -300,7 +300,7 @@ class TestClaimBuildSetDoesNotLeakValueError(_RealAcStoreMixin, unittest.TestCas
 
 
 class TestClaimedRecordsAreNotStrandedWhenClaimAborts(_RealAcStoreMixin, unittest.TestCase):
-    """KI-BO-020 consequence 1: the lost claim payload strands flipped records."""
+    """KI-BO-023 consequence 1: the lost claim payload strands flipped records."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -313,11 +313,11 @@ class TestClaimedRecordsAreNotStrandedWhenClaimAborts(_RealAcStoreMixin, unittes
 
     @unittest.expectedFailure
     def test_records_already_flipped_are_not_stranded_when_claim_aborts(self) -> None:
-        # covers: KI-BO-020
+        # covers: KI-BO-023
         """No AC may be left work_status: in_progress on disk without being
         named in the returned `claimed` list.
 
-        This is THE strand described in KI-BO-020: claim_build_set flips
+        This is THE strand described in KI-BO-023: claim_build_set flips
         `id_first` to in_progress before it reaches the malformed `id_bad`
         record. If the ValueError then escapes, the caller never receives
         the payload naming `id_first` as claimed, so nothing downstream ever
@@ -349,7 +349,7 @@ class TestClaimedRecordsAreNotStrandedWhenClaimAborts(_RealAcStoreMixin, unittes
                 "claim_build_set raised ValueError and returned no payload "
                 f"at all, but {in_progress_ids!r} were already flipped to "
                 "in_progress on disk before the exception escaped "
-                f"(KI-BO-020 strand): {exc_raised!r}"
+                f"(KI-BO-023 strand): {exc_raised!r}"
             )
 
         assert result is not None  # narrows type for the check below
@@ -361,7 +361,7 @@ class TestClaimedRecordsAreNotStrandedWhenClaimAborts(_RealAcStoreMixin, unittes
             "Records left work_status: in_progress on disk without being "
             f"reported in the returned 'claimed' list: {stranded!r}. Such "
             "records are invisible to every downstream release-on-failure "
-            "path (KI-BO-020 strand).",
+            "path (KI-BO-023 strand).",
         )
 
 
@@ -372,7 +372,7 @@ class TestClaimedRecordsAreNotStrandedWhenClaimAborts(_RealAcStoreMixin, unittes
 
 
 class TestReleaseClaimCompletesDespiteOneBadRecord(_RealAcStoreMixin, unittest.TestCase):
-    """KI-BO-020 consequence 2: the mechanism that un-sticks a stranded AC breaks."""
+    """KI-BO-023 consequence 2: the mechanism that un-sticks a stranded AC breaks."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -388,7 +388,7 @@ class TestReleaseClaimCompletesDespiteOneBadRecord(_RealAcStoreMixin, unittest.T
 
     @unittest.expectedFailure
     def test_release_claim_completes_every_record_despite_one_bad_record(self) -> None:
-        # covers: KI-BO-020
+        # covers: KI-BO-023
         """release_claim must still release every OTHER record even when one
         record in the middle of the list cannot be updated.
 
@@ -396,7 +396,7 @@ class TestReleaseClaimCompletesDespiteOneBadRecord(_RealAcStoreMixin, unittest.T
         that aborts its loop on the escaping ValueError (today's behaviour)
         releases `id_first` (processed before the bad record) but never
         reaches `id_last` -- which is exactly the "everything after the
-        offending record stays in_progress forever" failure KI-BO-020
+        offending record stays in_progress forever" failure KI-BO-023
         documents for this call site (fast_lane.py:347). Once the except
         clause there is widened to also catch ValueError -- matching the
         existing per-record `except OSError: ... continue` shape already
@@ -412,7 +412,7 @@ class TestReleaseClaimCompletesDespiteOneBadRecord(_RealAcStoreMixin, unittest.T
         except ValueError as exc:
             self.fail(
                 "release_claim aborted mid-loop instead of skipping the bad "
-                "record and continuing (KI-BO-020, fast_lane.py:347): "
+                "record and continuing (KI-BO-023, fast_lane.py:347): "
                 f"{exc!r}. id_last ({self.id_last!r}) was never reached and "
                 "stays in_progress forever without this fix."
             )
@@ -428,7 +428,7 @@ class TestReleaseClaimCompletesDespiteOneBadRecord(_RealAcStoreMixin, unittest.T
             "todo",
             "The record positioned AFTER the bad one in the id list must "
             "still be released to todo -- an aborting loop leaves it "
-            "permanently in_progress (KI-BO-020 consequence 2, the "
+            "permanently in_progress (KI-BO-023 consequence 2, the "
             "un-sticking mechanism itself breaking).",
         )
 
@@ -439,7 +439,7 @@ class TestReleaseClaimCompletesDespiteOneBadRecord(_RealAcStoreMixin, unittest.T
 
 
 class TestMarkDoneBuiltAcsDoesNotLeakValueError(_RealAcStoreMixin, unittest.TestCase):
-    """KI-BO-020 call site 3: scripts/build_orchestration/fast_lane.py:462."""
+    """KI-BO-023 call site 3: scripts/build_orchestration/fast_lane.py:462."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -452,7 +452,7 @@ class TestMarkDoneBuiltAcsDoesNotLeakValueError(_RealAcStoreMixin, unittest.Test
 
     @unittest.expectedFailure
     def test_mark_done_built_acs_does_not_leak_valueerror(self) -> None:
-        # covers: KI-BO-020
+        # covers: KI-BO-023
         """mark_done_built_acs must not propagate ValueError to its caller.
 
         All three records were built and all three passed their coverage
@@ -471,7 +471,7 @@ class TestMarkDoneBuiltAcsDoesNotLeakValueError(_RealAcStoreMixin, unittest.Test
         except ValueError as exc:
             self.fail(
                 "mark_done_built_acs leaked ValueError instead of catching "
-                f"it (KI-BO-020, fast_lane.py:462): {exc!r}"
+                f"it (KI-BO-023, fast_lane.py:462): {exc!r}"
             )
 
         self.assertIsInstance(result, dict)

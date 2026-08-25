@@ -690,7 +690,11 @@ specifying it.
 
 ---
 
-### KI-BO-019 — A CRLF acceptance-criterion record is rewritten LF end-to-end by a single `work_status` flip, and every value-level check still passes
+### KI-BO-022 — A CRLF acceptance-criterion record is rewritten LF end-to-end by a single `work_status` flip, and every value-level check still passes
+
+> **Renumbered 2026-08-25 from KI-BO-019.** PR #538 landed its own KI-BO-019 at 14:51 UTC;
+> PR #539 landed this one at 15:09 UTC and the two collided on `main`. #538 was first, so
+> it keeps the number and this entry moves. See KI-BO-024.
 
 - **Severity:** high
 - **Status:** open — latent, zero live instances today
@@ -733,7 +737,14 @@ existing byte-level cases.
 
 ---
 
-### KI-BO-020 — `_update_ac_work_status` raises `ValueError`, all three call sites catch only `OSError`, and the escape strands acceptance criteria in `in_progress` permanently
+### KI-BO-023 — `_update_ac_work_status` raises `ValueError`, all three call sites catch only `OSError`, and the escape strands acceptance criteria in `in_progress` permanently
+
+> **Renumbered 2026-08-25 from KI-BO-020**, for the same collision described on KI-BO-022.
+> Note the coincidence worth reading: main's KI-BO-020, landed by PR #538 seventeen minutes
+> earlier, describes the *same consequence* — aborted runs stranding their claims — by a
+> different mechanism (its release path dispatches `status-checker`, which refuses the
+> role). Two independent branches found two independent causes of one symptom on the same
+> day. Both are real; neither supersedes the other.
 
 - **Severity:** high
 - **Status:** open — latent, zero live instances today
@@ -1073,3 +1084,63 @@ rather than asking an agent to run it. Whatever the shape, **read the reply**: a
 result is discarded cannot distinguish "released" from "refused", which is precisely how this
 stayed invisible. A release that did not release should surface in the halt payload next to
 the failure that triggered it.
+
+---
+
+### KI-BO-024 — "Append the next free number" is not a workable id convention under concurrent agents, and on 2026-08-25 it finally shipped a duplicate to `main`
+
+- **Severity:** medium
+- **Status:** open — the immediate duplicates are repaired; the convention that produced them is not
+- **Occurrences:** 9 in a single day (2026-08-25), of which 1 reached `main`
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+- **Where:** the "Adding an issue" instruction at the top of every `docs/known-issues/*.md`
+
+**Symptom.** The convention says to append using "the next free number". A branch reads the
+file, picks the next number, and by the time it lands that number is taken. There is no
+reservation, no allocator, and no check — the number is chosen against a snapshot and
+validated by nothing.
+
+**This is no longer a near-miss.** Every prior occurrence was caught by re-reading
+`origin/main` immediately before landing. On 2026-08-25 that defence failed for the first
+time, because the collision landed *inside the window between the final check and the merge*:
+
+| | |
+|---|---|
+| PR #539 renumbered 017/018/019 → **019/020/021**, checked against `origin/main` at `eed3601c` | ~14:40 UTC |
+| PR #538 merged, publishing **its own** KI-BO-019 and KI-BO-020 | 14:51 UTC |
+| PR #539 merged | 15:09 UTC |
+| `main` now carries two KI-BO-019 and two KI-BO-020 | — |
+
+Repaired by this entry's PR: #538 was first and keeps the numbers; #539's entries moved to
+`KI-BO-022` and `KI-BO-023`, taking a test filename and its 21 internal references with them,
+plus two published changelog entries whose pointers had gone stale.
+
+**Nine occurrences in one day.** `KI-BO-008 → 014 → 015`; `KI-CG-010 → 012`; `KI-BO-016/017/018
+→ 017/018/019 → 019/020/021 → 022/023`. Three of those were *second* renumbers — the file moved
+again while the first renumber was being written.
+
+**Why the current defence cannot be made to work.** "Re-read the free number against
+`origin/main` at the moment of landing" is already written into this file (under KI-BO-014) and
+was followed. It is a time-of-check-to-time-of-use race, and the window is the merge queue.
+Narrowing it does not close it. There is also no way to see numbers reserved in a *branch* or
+in someone's uncommitted working copy — while writing this entry, two candidate numbers had to
+be skipped because a concurrent session held them uncommitted, which no amount of checking
+`origin/main` would have revealed.
+
+**The cost is not the renumbering.** It is that every reference goes stale at once: section
+headings, `# covers:` tags, test filenames, cross-references between entries, commit messages,
+and already-merged changelog entries. The 019 → 022 move above touched four files and 20-odd
+references, and a missed one silently points a reader at someone else's defect.
+
+**Fix directions, cheapest first.**
+
+1. **Make the number non-sequential.** A date-plus-slug id (`KI-BO-20260825-crlf-rewrite`) cannot
+   collide, needs no allocator, and no coordination. Loses ordering, which the file does not
+   currently preserve anyway — `main` today lists 016 between 013 and 014.
+2. **Allocate at merge, not at authoring.** Author with a placeholder and have a hook or the
+   merge queue assign the number. Removes the race but needs tooling and rewrites references.
+3. **Detect rather than prevent.** A pre-commit hook and CI check that fails on a duplicate
+   `### KI-XX-NNN` heading in any known-issues file. This does not stop the collision, but it
+   turns a silent duplicate on `main` into a blocked merge, and it is a few lines. **Worth doing
+   regardless of which of the above is chosen** — it is the only one of the three that would
+   have caught 2026-08-25 before it landed.
