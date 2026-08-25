@@ -1,0 +1,89 @@
+id: BP-1500b
+components:
+  - build_pipeline
+title: "What you remove from the source is gone from what you installed"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Delete it once and it is really gone -- and the build never claims otherwise.
+
+  When something is removed from the package, the copy that was previously
+  installed goes with it, so no abandoned file survives to be loaded by mistake.
+  If one does survive, the build says so and names it, instead of finishing with
+  a clean bill of health that stops anyone looking.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-005 (high) is the observed defect, with a reproduction against a real template deletion in PR #486."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The stale-file cleanup step and the record of previously deployed files it reads."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A REVIEWED L2 DRAFT ALREADY EXISTS for this L1 at /tmp/selfhost_leaf_orphans.yaml.
+  Its criteria, it_requirements and test_spec were reviewed and verified; only its
+  id and parent are wrong (it was written at BP-900h-5, which is now a live
+  unrelated approved record). Re-id it as the first L2 of BP-1500b and keep its
+  content. Do not re-derive it.
+
+  THE OBSERVED DEFECT. Removing a template dropped its entry from the build's
+  record of deployed files and printed "Stale file cleanup: (no stale files
+  found)", while the artifact remained on disk carrying the timestamp of the
+  earlier build. The cleanup derives "stale" from the record it has already
+  pruned, so a deleted template is invisible to the one step that exists to catch
+  it. Pruning the record before computing staleness IS the bug -- it destroys the
+  only evidence the file was ever ours. Deleting a template is a normal
+  operation, not an exotic path.
+
+  TWO FAILURES, NOT ONE. The abandoned file and the reassuring report are
+  separate. An implementation that removed the orphan but said nothing would be
+  an improvement; one that keeps printing a clean sweep over a surviving file is
+  not, and this L1 rejects it explicitly. "No stale files found" is what stops
+  anyone looking -- the orphan was found only by distrusting that line and
+  checking the path by hand.
+
+  TWO CONSTRAINTS THAT MUST SURVIVE TO L2.
+
+  - The verdict must come from reading the deploy target on disk after the build.
+    That tree is gitignored, so no version-control-derived file list -- staged,
+    committed or diffed -- can ever reach an orphan in it.
+  - Do NOT satisfy this by emptying the deploy target before each build.
+    Project-owned files live alongside the deployed artifacts there; wiping it
+    converts a cleanup defect into data loss.
+
+  WHY IT MATTERS BEYOND TIDINESS. Tests and hooks import from the deployed tree,
+  so an orphan can keep a local run green after its source is gone while CI,
+  which builds fresh, fails. That is a false green pointing the wrong way -- the
+  local run is the optimistic one. And the orphan persists in every install that
+  ever received the artifact, which is why this is not a self-hosting-only
+  concern.
+
+  PRIOR ART AND BOUNDARIES. BP-100b-3 ("stale workflow artifacts are removed
+  during build cleanup") is done, but scoped to the workflows output directory
+  only and silent about the build's report -- reuse its mechanism, do not treat
+  it as coverage. This L1 is the inverse of BP-900g-9 (a declared deploy entry
+  whose source is missing fails the build): there the record names something
+  absent, here something present is named by nothing. Same inversion against
+  BP-900g-7. Neither inverse direction is covered today.
