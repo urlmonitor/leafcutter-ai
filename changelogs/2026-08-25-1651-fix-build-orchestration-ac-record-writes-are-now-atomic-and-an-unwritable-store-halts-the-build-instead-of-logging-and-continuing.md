@@ -78,3 +78,11 @@ release-on-failure step timed out too, stranding both ACs in `in_progress` —
 the exact failure shape filed the same day as `KI-BO-020`. Nothing was lost
 (the claim was never committed) and the implementation was finished by hand
 from the workflow's red baseline.
+
+**Correction (2026-08-25, post-merge).** The `KI-BO-020` referenced above was
+renumbered to **`KI-BO-023`** after colliding on `main` with PR #538's own
+KI-BO-020, which landed first. Both entries describe aborted runs stranding their
+claims, by two different mechanisms found independently on the same day — #538's
+release path dispatches `status-checker`, which refuses the role; `KI-BO-023` is
+the unhandled `ValueError` escaping all three call sites. Either reading fits the
+run described above. See `KI-BO-024`.

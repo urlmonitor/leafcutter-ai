@@ -821,3 +821,92 @@ Four entries now describe the same root-resolution surface, which argues for one
 work across the hook family rather than one hook at a time.
 
 **Pattern:** a gate whose silence is structurally indistinguishable from a pass.
+
+---
+
+### KI-CG-015 — `declares_side_effect` is authored by the IT-PO pass and derived by the schema check, and on records about writing files the two systematically disagree
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 3 records in one family, all on 2026-08-25
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `derive_declares_side_effect` and `_DURABLE_EFFECT_RE` in `scripts/commit_guardian/_ac_schema_validators.py:560-607`; enforced by `validate_declares_side_effect`; rule is BO-2900g-2
+
+**Symptom.** `check-ac-schema` requires the authored `declares_side_effect` to equal a value
+derived from the record's own Then clause, and rejects the commit when they differ. Three
+acceptance criteria in the `BO-2400e` family — `BO-2400e-3`, `BO-2400e-3-i` and `BO-2400e-4` —
+each carried `declares_side_effect: true`, hand-written by the 2026-08-17 IT-PO enrichment pass,
+and each was rejected the first time the file was staged after the derivation rule shipped. All
+three had to be flipped to `false`.
+
+**The rule is right and the flips were correct.** The docstring is explicit that the value must
+be DERIVED and "never authored by opinion", so the hand-authored `true` was the anomaly, not the
+derivation. This entry is not a request to change that.
+
+**What is worth attention is what the derived value now says.** All three records are *about*
+durable writes — the AC titles are "An interrupted update never destroys the work record it was
+updating", "A store that cannot be written is announced…", and "Recording progress on a
+requirement changes the progress and nothing else". Their Then clauses read:
+
+- "the record still contains everything it contained before the update"
+- "no record in the store has been changed"
+- "changes exactly those thirty-three values and nothing else in the store"
+
+None matches `_DURABLE_EFFECT_RE`, which wants `written to disk`, `is persisted`,
+`updates the (database|store)` and similar. So the store now says `declares_side_effect: false`
+on three records whose entire subject is bytes surviving on disk. Each carries an `amended_by`
+note explaining why, because the value reads as an error without one.
+
+**Two readings, and they need different fixes.**
+
+1. *The pattern is too narrow.* It was calibrated to match ~3.6% of records (114 of 3,148),
+   deliberately, so that the derivation marks a strict subset. But a Then clause that says the
+   record is unchanged, or that nothing else in the store changed, is describing a durable
+   effect in ordinary English. Widening it risks the "marks everything" failure the constraint
+   was written against, so this is a judgement call, not an obvious fix.
+2. *The IT-PO should not author this field at all.* Three-for-three disagreement in one family
+   suggests the enrichment pass is writing a derived field by opinion. If the field is derived,
+   the authoring step should omit it and let the deriver own it — which would have surfaced this
+   in 2026-08-17 rather than a week later, one record at a time, at commit time.
+
+**Why it stayed hidden for a week.** The hook validates only the files in a commit's index, so a
+record authored before the rule shipped is never checked until something unrelated touches it.
+All three surfaced on the same day only because all three happened to be staged that day. The
+same "invisible until touched" property is recorded for a different gate in KI-CG-012, and for
+mypy in KI-BP-013.
+
+**The sweep, run 2026-08-25.** The derivation was run read-only over the whole store to size
+this. Result:
+
+```
+records scanned            : 3338
+with declares_side_effect  :   38
+DISAGREE with derivation   :    9
+  authored true,  derives false : 9
+  authored false, derives true  : 0
+```
+
+Three facts follow, and each narrows the fix.
+
+1. **The disagreement is 100% one-directional.** Nine records say `true` where the derivation
+   says `false`; **not one** goes the other way. A too-narrow pattern and an over-eager author
+   would both produce disagreements, but only an over-eager author produces them all in the same
+   direction. That is strong evidence for reading 2 over reading 1.
+2. **Nine live landmines remain**, on top of the three already repaired. Each will block a commit
+   the first time anyone touches that file, at an unrelated moment, exactly as the three did:
+
+   ```
+   BO-2400g-4    BO-2400g-4-i   BO-2900g-1    BO-2900g-2   BO-2900g-2-i
+   BO-2900g-4    BP-1100g-4     BP-1100g-4-i  BP-1100g-5-i
+   ```
+3. **`BO-2900g-2` is in the list.** The acceptance criterion that *establishes* the derive-never-
+   author rule violates its own rule. Whatever else is decided, that one should be fixed on sight.
+
+Also worth noting: only **38 of 3,338** records carry the field at all, so this is a sparsely
+populated field where a quarter of the populated values are wrong — small enough to fix by hand
+in one pass.
+
+**Fix direction.** Given the one-directional result, prefer reading 2: stop the IT-PO pass
+authoring a derived field, and correct the nine records. Widening `_DURABLE_EFFECT_RE` is the
+more invasive change and the sweep does not support it — no record is failing because the pattern
+was too strict about a value someone tried to set to `false`.
