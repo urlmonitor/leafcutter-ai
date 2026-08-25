@@ -79,13 +79,24 @@ _REAL_SCHEMA_VALID_AC = (
 def _invalid_package_surface_ac_data() -> dict[str, Any]:
     """Build the exact defect scenario described in ACS-200e's notes field.
 
-    A package-surface AC (assigned_agent: python-coder, component:
-    build-orchestration) whose it_requirements is a plain list of strings
+    A package-surface AC whose it_requirements is a plain list of strings
     instead of the structured object config/ac_store_schema.json's if/then
-    block (lines ~682-717) requires. Every other field is filled in with a
-    schema-valid value so the ONLY violation present is the it_requirements
-    shape — this isolates the defect the same way the two real AC files that
-    triggered this ticket did.
+    block requires. Every other field is filled in with a schema-valid value so
+    the ONLY violation present is the it_requirements shape — this isolates the
+    defect the same way the two real AC files that triggered this ticket did.
+
+    The surface is declared with `package_surface: true`. It used to be INFERRED
+    from `assigned_agent: python-coder` + a build-* component, and this fixture
+    relied on that inference to produce its violation. ACS-100i-6 replaced the
+    inferred trigger with the explicit declaration, so without the flag this
+    record is now legitimately valid and the fixture would silently stop
+    exercising anything — a false green in the very test that exists to catch
+    false greens.
+
+    This test's subject is unchanged: ACS-200e is about the standalone validator
+    actually loading the schema and agreeing with the commit hook. The
+    package-surface rule is only the vehicle used to construct an invalid
+    record, so updating how that record is made invalid does not weaken it.
     """
     return {
         "id": "ACS-999",
@@ -94,8 +105,7 @@ def _invalid_package_surface_ac_data() -> dict[str, Any]:
         "components": ["build_orchestration"],
         "status": "active",
         "criteria": (
-            "Given a package-surface AC assigned to python-coder in a "
-            "build-orchestration component\n"
+            "Given an AC that declares a package surface\n"
             "When it_requirements is a plain list instead of the required "
             "structured object\n"
             "Then the schema must reject it"
@@ -103,6 +113,7 @@ def _invalid_package_surface_ac_data() -> dict[str, Any]:
         "readiness": "approved",
         "priority": "high",
         "assigned_agent": "python-coder",
+        "package_surface": True,
         "it_requirements": [
             "This is a plain list, not the required structured object",
             "Second requirement string",

@@ -113,7 +113,7 @@ created: 2026-08-13
 amended_by:
   - "2026-08-13 expert-review remediation: added the `skipped` term-collision note (BO-2100b-2 uses the word behaviourally, this tree uses it as a record outcome)."
 superseded_by: null
-covered_by: []
+covered_by: [BO-2900f-1-i, BO-2900f-1-ii, BO-2900f-1-iii]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

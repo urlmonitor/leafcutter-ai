@@ -111,8 +111,51 @@ const WORKTREE_SCHEMA = {
   properties: {
     git_type: { type: 'string' },
     branch: { type: 'string' },
+    // The root of the worktree the check POSITIVELY identified. Optional:
+    // when it is absent the isolated working copy stays undetermined and the
+    // drive holds back (BO-1900a-4-i) rather than substituting the ambient
+    // directory.
+    worktree_path: { type: 'string' },
   },
   required: ['git_type', 'branch'],
+}
+
+/**
+ * Reply shape of the post-dispatch record read-back (BO-2900f-1-i).
+ *
+ * `readable: false` is a first-class answer, not an error to be swallowed: an
+ * unreadable record adjudicates the gate FAILED. Absent evidence must never
+ * resolve to success.
+ */
+const RECORD_READBACK_SCHEMA = {
+  type: 'object',
+  properties: {
+    readable: { type: 'boolean' },
+    ticket_path: { type: 'string' },
+    lifecycle_status: { type: 'string' },
+    needed_phases: { type: 'array', items: { type: 'string' } },
+    signoffs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { agent: { type: 'string' }, status: { type: 'string' } },
+      },
+    },
+    signed_off_agents: { type: 'array', items: { type: 'string' } },
+    error: { type: 'string' },
+  },
+  required: ['readable'],
+}
+
+/** Reply shape of the ticket-completion write (BO-400a-2-ii). */
+const COMPLETION_WRITE_SCHEMA = {
+  type: 'object',
+  properties: {
+    status: { type: 'string' },
+    ticket_path: { type: 'string' },
+    error: { type: 'string' },
+  },
+  required: ['status'],
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +259,417 @@ function sortByCanonicalPriority(phases) {
 }
 
 // ---------------------------------------------------------------------------
+// Record adjudication — pure functions over a ticket record read back off disk
+//
+// TWIN: mirrors build-feature.js. Keep in sync with that file.
+//
+// BUG-23 (run wf_cc2b46d9-f6f): phase agents returned `status: ok` and left no
+// sign-off in the ticket's record — ticket 01 lost test-runner AND pr-reviewer,
+// ticket 03 lost test-runner, ticket 09 lost pr-reviewer. A gate's word for its
+// own success is therefore never sufficient: the verdict the drive carries
+// forward is derived from the record that was read back, never from the gate's
+// own report of itself (BO-2900f-1-i).
+// ---------------------------------------------------------------------------
+
+/**
+ * Sign-off statuses that count as a gate having PASSED.
+ *
+ * Anything else the record can carry — blocker, failed, question, handoff — is
+ * evidence the gate did not pass and must never satisfy the completion trigger
+ * (BO-400a-2-iii).
+ *
+ * @type {Array<string>}
+ */
+const POSITIVE_SIGNOFF_STATUSES = ["ok", "signed_off"];
+
+/**
+ * Every sign-off entry the record carries for one agent, in record order.
+ *
+ * @param {object|null} record
+ * @param {string} agentName
+ * @returns {Array<{agent: string, status: string}>}
+ */
+function signoffEntriesFor(record, agentName) {
+  if (!record || !Array.isArray(record.signoffs)) {
+    return [];
+  }
+  return record.signoffs.filter((s) => s && s.agent === agentName);
+}
+
+// BO-2900f-1-ii — "the latest entry is the one that counts" is implemented at
+// the two places that need it (adjudicatePhaseAgainstRecord and
+// completionVerdictFromRecord), each of which already holds the entries array
+// to report its length. A latestSignoffFor() helper existed here and was never
+// called by either; it is removed rather than left as a second, untested
+// definition of the same rule.
+
+/**
+ * True when a sign-off entry represents a passing outcome.
+ *
+ * @param {{status: string}|null} entry
+ * @returns {boolean}
+ */
+function isPassingSignoff(entry) {
+  return (
+    !!entry &&
+    POSITIVE_SIGNOFF_STATUSES.indexOf(String(entry.status)) !== -1
+  );
+}
+
+/**
+ * Adjudicate ONE dispatched gate against the record that was read back.
+ *
+ * This is the single generic post-dispatch verification (BO-2900f-1-iii): it
+ * belongs to the path every dispatch returns through, NOT to any named gate.
+ * A per-gate call site would satisfy the gates it touches and leave the next
+ * gate anyone adds unguarded — which is exactly how the observed run held on
+ * one ticket and lapsed on the next.
+ *
+ * Fails closed: an unreadable record adjudicates the gate failed.
+ *
+ * @param {object|null} record — the read-back reply
+ * @param {string} phaseName
+ * @returns {{verified: boolean, reason: string|null, entries: number}}
+ */
+function adjudicatePhaseAgainstRecord(record, phaseName) {
+  if (!record || record.readable !== true) {
+    return {
+      verified: false,
+      entries: 0,
+      reason:
+        `the '${phaseName}' gate reported success but its outcome could not be ` +
+        `confirmed: the ticket's record could not be read back` +
+        (record && record.error ? ` (${record.error})` : "") +
+        ". Absent evidence is adjudicated failed, never credited.",
+    };
+  }
+  const entries = signoffEntriesFor(record, phaseName);
+  if (entries.length === 0) {
+    return {
+      verified: false,
+      entries: 0,
+      reason:
+        `the '${phaseName}' gate reported success while leaving no sign-off ` +
+        `entry in the ticket's record`,
+    };
+  }
+  const latest = entries[entries.length - 1];
+  if (!isPassingSignoff(latest)) {
+    return {
+      verified: false,
+      entries: entries.length,
+      reason:
+        `the latest sign-off entry for the '${phaseName}' gate in the ticket's ` +
+        `record reads status '${latest.status}', which is not a passing outcome`,
+    };
+  }
+  return { verified: true, entries: entries.length, reason: null };
+}
+
+/**
+ * Decide FROM THE RECORD whether the ticket may be recorded done.
+ *
+ * BO-400a-2-ii: the trigger is the sign-offs actually present in the ticket's
+ * own record — never the drive's in-memory tally of phases it thinks it ran
+ * (the report and the record would then agree because they share one
+ * unverified source), and never the delivery phase alone (a successful commit
+ * proves code landed, not that the review and test gates ran).
+ *
+ * BO-400a-2-iii: held back, blocked, unrecorded and UNREADABLE all read as not
+ * done. An unreadable record is handled as its own case rather than folded
+ * into the empty-list path, because "no outstanding phases found" and "could
+ * not look" must never produce the same answer. THE UNREADABLE CHECK RUNS
+ * FIRST, ahead of the empty-required-set refusal below: a record that could not
+ * be opened cannot support any claim about what the ticket names, and the two
+ * conditions co-occur (a deleted record read back for a ticket whose phases are
+ * all not_needed). Ordering, not presence, is what this clause turns on — both
+ * refusals are correct in isolation.
+ *
+ * BO-400a-2-iv: AN EMPTY REQUIRED SET IS NOT A SATISFIED ONE, and this function
+ * is the only place that can say so for every caller. The loop below collects
+ * the phases that failed to prove themselves and reads an empty collection as
+ * success; over an empty required set that collection is empty for the exactly
+ * opposite reason — nothing was looked at. The two are separated HERE, before
+ * the verdict is formed, rather than computed as `completed: true` and
+ * overridden afterwards (an override is one refactor away from the defect
+ * returning). And HERE rather than at whichever branch happens to reach this
+ * function today: the vacuous decision is reachable from every route into it —
+ * BO-1900a-4-ii is a second, independent one — so a guard placed on one route
+ * leaves the rest live.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {object|null} record — the last record read back during the drive
+ * @param {{requiredPhases: Array<string>, unverifiedReasons: object,
+ *          skippedAgents: Array<string>, dispatchedAgents: Array<string>}} ctx
+ * @returns {{completed: boolean, unreadable: boolean, noPhaseRequired: boolean,
+ *            outstanding: Array<{agent: string, reason: string}>,
+ *            duplicates: Array<{agent: string, entries: number}>}}
+ */
+function completionVerdictFromRecord(record, ctx) {
+  const required = ctx.requiredPhases || [];
+
+  // BO-400a-2-iii — UNREADABLE ANSWERS FIRST, and the order is the whole guard.
+  // `noPhaseRequired` is a claim about what the ticket's frontmatter SAYS; this
+  // branch is the admission that the frontmatter was never read. When both
+  // conditions hold, letting the empty-set refusal answer first reports
+  // `unreadable: false` about a record nobody could open, discards
+  // `record.error`, and sends the operator to edit the agents: map of a file
+  // that is not there — a statement about the contents of a file the drive could
+  // not open. "No outstanding phases found" and "could not look" must never
+  // produce the same answer, least of all when the second is the true one.
+  //
+  // Nothing is lost by deciding it here: over an empty required set the map
+  // below yields `outstanding: []`, so this branch returns the same not-done
+  // verdict the empty-set refusal would have, and keeps the diagnosis with it.
+  if (!record || record.readable !== true) {
+    return {
+      completed: false,
+      unreadable: true,
+      noPhaseRequired: false,
+      duplicates: [],
+      outstanding: required.map((agentName) => ({
+        agent: agentName,
+        reason:
+          "the ticket's record could not be read back, so no sign-off could be " +
+          "confirmed" +
+          (record && record.error ? ` (${record.error})` : ""),
+      })),
+    };
+  }
+
+  // BO-400a-2-iv — the ticket names no phase for this drive to verify, so no
+  // evidence was inspected and none could have been. Its own verdict, not a
+  // satisfied one: there is nothing here to be outstanding, which is why the
+  // per-phase loop below cannot detect this state and why the answer has to be
+  // decided before that loop is ever reached.
+  //
+  // Reached only once the record has been READ, which is what makes the claim
+  // it makes true: by here `record.readable === true`, so "this ticket names no
+  // phase" is a fact established from the file rather than assumed about one
+  // that could not be opened.
+  if (required.length === 0) {
+    return {
+      completed: false,
+      unreadable: false,
+      noPhaseRequired: true,
+      outstanding: [],
+      duplicates: [],
+    };
+  }
+
+  const outstanding = [];
+  const duplicates = [];
+
+  for (const agentName of required) {
+    const entries = signoffEntriesFor(record, agentName);
+    if (entries.length > 1) {
+      duplicates.push({ agent: agentName, entries: entries.length });
+    }
+    if (entries.length === 0) {
+      let reason;
+      if (ctx.unverifiedReasons && ctx.unverifiedReasons[agentName]) {
+        reason = ctx.unverifiedReasons[agentName];
+      } else if ((ctx.skippedAgents || []).indexOf(agentName) !== -1) {
+        reason =
+          `'${agentName}' was skipped after a cross_agent blocker and left no ` +
+          `sign-off entry in the record`;
+      } else if ((ctx.dispatchedAgents || []).indexOf(agentName) === -1) {
+        reason =
+          `'${agentName}' is still needed and was never dispatched, so the ` +
+          `record carries no sign-off entry for it`;
+      } else {
+        reason = `'${agentName}' left no sign-off entry in the record`;
+      }
+      outstanding.push({ agent: agentName, reason });
+      continue;
+    }
+    const latest = entries[entries.length - 1];
+    if (!isPassingSignoff(latest)) {
+      outstanding.push({
+        agent: agentName,
+        reason:
+          `the latest sign-off entry for '${agentName}' in the record reads ` +
+          `status '${latest.status}', not a passing outcome`,
+      });
+    }
+  }
+
+  return {
+    completed: outstanding.length === 0,
+    unreadable: false,
+    noPhaseRequired: false,
+    outstanding,
+    duplicates,
+  };
+}
+
+/**
+ * The phases whose sign-offs the completion decision requires.
+ *
+ * Union of what the drive was asked to run and what the RECORD still names as
+ * needed (the record is the source of truth), minus phases the driver
+ * deliberately deferred — an epic member's pull-request phase is opened once
+ * per epic by finalize-feature, so it must not block the ticket forever.
+ *
+ * @param {Array<string>} drivenPhases
+ * @param {Array<string>} recordNeededPhases
+ * @param {Array<string>} deferredPhases
+ * @returns {Array<string>}
+ */
+function requiredPhasesForCompletion(drivenPhases, recordNeededPhases, deferredPhases) {
+  const deferred = deferredPhases || [];
+  const out = [];
+  for (const name of (drivenPhases || []).concat(recordNeededPhases || [])) {
+    if (!name) continue;
+    if (deferred.indexOf(name) !== -1) continue;
+    if (out.indexOf(name) === -1) out.push(name);
+  }
+  return out;
+}
+
+/**
+ * The phases a ticket CLAIMS are already complete.
+ *
+ * Used only when the drive has nothing to dispatch. "What the drive was asked
+ * to run" is then empty, and a completion decision taken from an empty required
+ * set is vacuous: it says yes to every ticket, including one whose frontmatter
+ * reads signed_off while its record carries no sign-off entry at all — the
+ * BUG-23 signature, inverted into a phantom-done write. The honest basis is
+ * what the ticket itself claims: every agent in its map except the ones it
+ * declares not_needed. Each of those must still be backed by a passing entry in
+ * the record before the ticket may be recorded done.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {Array<{agent: string, status: string}>} orderedPhases
+ * @returns {Array<string>}
+ */
+function claimedPhasesForCompletion(orderedPhases) {
+  const out = [];
+  for (const entry of orderedPhases || []) {
+    if (!entry || !entry.agent) continue;
+    if (entry.status === "not_needed") continue;
+    if (out.indexOf(entry.agent) === -1) out.push(entry.agent);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// The plan reply the drive cannot use (BO-1900a-4-ii)
+//
+// TWIN: mirrors build-feature.js. Keep in sync with that file.
+//
+// The reduction these two functions replace was `ticketPlan || {}` followed by
+// `plan.ordered_phases || []`. Each substitution looks like defensive
+// programming; in sequence they convert a dead planner into a completion claim.
+// A missing reply becomes a blank record, a missing list becomes a blank list,
+// the drive concludes the ticket needs no phase, takes its no-phases exit, and
+// arrives at a completion decision with an empty required set. Nothing throws,
+// because every step did exactly what it was written to do.
+// ---------------------------------------------------------------------------
+
+/**
+ * Why the drive cannot use this plan reply — or null when it can.
+ *
+ * Pure. The polarity is deliberate and is the whole of the fix: the reply must
+ * AFFIRMATIVELY carry an ordered list of phases, and everything else is
+ * unusable. A check written the other way round — look for a reply that
+ * DECLARES failure, treat the rest as usable — takes the usable branch on a
+ * reply that simply omits the list, and an omitted list is precisely what a
+ * truncated, timed-out or degraded planner produces.
+ * This is the same correction already made to the epic-level re-check in
+ * compareEpicTicketSets (`readable !== true`, not `readable === false`).
+ *
+ * DEFENCE IN DEPTH, stated accurately. `ordered_phases` is in the `required`
+ * list of the planner schema this driver hands to agent() (TICKET_PLANNER_SCHEMA
+ * in build-feature.js, PLANNER_SCHEMA in build-ticket.js), and the E2 engine
+ * validates against that schema before the object ever reaches this function, so
+ * a SCHEMA-CONFORMING reply that omits the list cannot arrive here. What CAN
+ * arrive here — and what no schema can rule out — is the engine returning
+ * nothing at all, or something that is not a record: the two branches above,
+ * both genuinely reachable. The third branch is kept as the backstop for a reply
+ * that bypasses or outlives that validation, and it costs nothing.
+ *
+ * An earlier version of this comment justified the function by calling the
+ * omission "legal under TICKET_PLANNER_SCHEMA's optional list". That was false —
+ * the guard is right and the reason given for it was not. Corrected rather than
+ * deleted, because a false rationale left in a comment is how the next round
+ * talks itself into the next defect.
+ *
+ * A stated EMPTY list is usable: it is an answer. Only "no reply / not a
+ * record / states no list either way" is not.
+ *
+ * @param {*} reply — the ticket-planner reply, verbatim
+ * @returns {string|null}
+ */
+function unusablePlanReason(reply) {
+  if (reply === null || reply === undefined) {
+    return "the planning step returned no reply at all";
+  }
+  if (typeof reply !== "object" || Array.isArray(reply)) {
+    return (
+      `the planning step returned a ${Array.isArray(reply) ? "list" : typeof reply}, ` +
+      `which is not a usable plan record`
+    );
+  }
+  if (!Array.isArray(reply.ordered_phases)) {
+    return (
+      "the planning step returned a record that states no ordered list of " +
+      "phases either way"
+    );
+  }
+  return null;
+}
+
+/**
+ * The hold-back payload for a ticket whose plan reply could not be used.
+ *
+ * Pure. Sibling of the worktree-undetermined hold-back above and deliberately
+ * shaped like it: an unanswered question stops the drive rather than being
+ * filled in with a plausible substitute. Holding back means WRITING NOTHING —
+ * the caller returns this before any read-back, any completion decision and any
+ * phase dispatch, so the ticket's recorded state is left exactly as found.
+ *
+ * The reported reason names the PLANNING failure. It deliberately does not
+ * describe the ticket as having no work left (it is not known whether it has
+ * work — the reply that would have said so never arrived) and does not send the
+ * operator looking for a phase that failed or a sign-off that is owed, because
+ * no phase was ever identified, let alone dispatched.
+ *
+ * @param {string} recordPath
+ * @param {string} reason — from unusablePlanReason()
+ * @param {object} resolved — the drive's resolved target
+ * @returns {object}
+ */
+function buildPlanHoldback(recordPath, reason, resolved) {
+  return {
+    status: "error",
+    plan_undetermined: true,
+    abort_reason: "ticket-plan-unusable",
+    action_required: "obtain_ticket_plan",
+    resolved_target: resolved,
+    ticket_path: recordPath,
+    ticket_completed: false,
+    not_completed: true,
+    held_back: true,
+    plan_failure_reason: reason,
+    message:
+      `Held back before spawning any phase agent: the plan of phases for ` +
+      `"${recordPath}" is UNDETERMINED because ${reason}. The drive therefore ` +
+      `never learned which phases this ticket has, and an unusable plan reply ` +
+      `is an unanswered question — it is NOT an answer that the ticket needs ` +
+      `nothing. The ticket's recorded lifecycle state is left exactly as it ` +
+      `was found, no completion decision was taken for it, and no phase agent ` +
+      `was spawned.`,
+    suggested_action:
+      "Re-run the ticket-planner for this ticket and confirm its reply carries " +
+      "an ordered_phases list. Nothing in the ticket's own record needs " +
+      "correcting: the planning step failed before the record was consulted.",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
 // ---------------------------------------------------------------------------
 
@@ -272,6 +726,266 @@ function parseAgentJson(raw, ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// Record I/O — the drive's only channel to the ticket's own record
+//
+// TWIN: mirrors build-feature.js. Keep in sync with that file.
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the ticket's record back off disk after a gate has run.
+ *
+ * The reply — not the gate's own report — is the deciding input for that
+ * gate's verdict (BO-2900f-1-i). Reading and merely logging a warning while
+ * still trusting the agent leaves the observed defect fully intact.
+ *
+ * @param {string} recordPath — absolute path to the ticket .md
+ * @returns {Promise<object>} the read-back reply (readable:false when it failed)
+ */
+async function readTicketRecordBack(recordPath) {
+  return await agent(
+    `Read the ticket record at "${recordPath}" back off disk RIGHT NOW and report what it actually contains. ` +
+    `Do not infer, do not remember, do not trust any earlier report about this ticket — open the file. ` +
+    `Report: "lifecycle_status" (the frontmatter status: value), "needed_phases" (every agent in the frontmatter agents: map whose value is "needed"), ` +
+    `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
+    `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
+    `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
+    `Return ONLY the JSON object, no prose.`,
+    {
+      agentType: "status-checker",
+      schema: RECORD_READBACK_SCHEMA,
+      label: "signoff-readback",
+      phase: "Phase Dispatch",
+    }
+  );
+}
+
+/**
+ * Write the done lifecycle state into the ticket's OWN record.
+ *
+ * BUG-22: the observed run reported four completed batches while every ticket
+ * in the store still read `status: todo`, which blocks finalize-feature's
+ * archive check. A report is not a record.
+ *
+ * Only ever called once per ticket, and only after
+ * completionVerdictFromRecord() confirmed every required phase carries a
+ * passing sign-off in the record itself.
+ *
+ * @param {string} recordPath
+ * @param {Array<string>} confirmedPhases
+ * @returns {Promise<object>} the write reply
+ */
+async function writeTicketCompletion(recordPath, confirmedPhases) {
+  return await agent(
+    `Record the ticket at "${recordPath}" as complete in its own record. ` +
+    `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. ` +
+    `Edit the ticket's frontmatter so that "status:" reads done. Change nothing else — do not touch the agents: map, the ## Sign-offs checklist, or the ## Comments section. ` +
+    `If the record cannot be written, return {"status": "error", "error": "<what went wrong>"} rather than reporting success. ` +
+    `Return ONLY the JSON object: {"status": "ok"|"error", "ticket_path": "${recordPath}"}.`,
+    {
+      agentType: "status-checker",
+      schema: COMPLETION_WRITE_SCHEMA,
+      label: "ticket-completion-write",
+      phase: "Phase Dispatch",
+    }
+  );
+}
+
+/**
+ * Build the driver's per-ticket outcome payload.
+ *
+ * Pure. `ticket_completed` is the machine-readable verdict; `not_completed`
+ * and `outstanding_phases` make the same fact readable to an operator, so a
+ * ticket that ran every phase but could not be confirmed is never presented
+ * as completed work (BO-400a-2-iii).
+ *
+ * @returns {object}
+ */
+function buildTicketOutcome(spec) {
+  const completedAgents = spec.completedPhases.map((p) => p.agent);
+  const skippedOut = spec.skippedPhases.map((p) => ({
+    agent: p.agent,
+    reason: p.reason,
+  }));
+  const base = {
+    // Provisional. The not-completed branch below overwrites it — see the
+    // comment there for why this field cannot stay "ok" on that path.
+    status: "ok",
+    ticket_path: spec.recordPath,
+    title: spec.title,
+    resolved_target: spec.resolvedTarget,
+    completed_phases: completedAgents,
+    skipped_phases: skippedOut,
+  };
+
+  // BO-2900f-1-ii — surface the duplicate, do not swallow it. Set BEFORE the
+  // completed/not-completed branch, because the completed path is precisely
+  // where a duplicate is otherwise invisible: the adjudication resolved it
+  // cleanly from the latest entry, and with no outstanding-phase list for the
+  // operator to inspect, an unreported duplicate leaves the write-side defect
+  // (BO-2900f-2-ii) masked for as long as this read-side rule keeps
+  // compensating for it. Omitted entirely when there are no duplicates — a
+  // report naming every gate is indistinguishable from no report at all.
+  if (spec.verdict.duplicates && spec.verdict.duplicates.length > 0) {
+    base.duplicate_signoff_entries = spec.verdict.duplicates;
+  }
+
+  if (spec.verdict.completed && spec.writeApplied) {
+    base.ticket_completed = true;
+    base.recorded_status = "done";
+    base.message = spec.noPhasesToRun
+      ? `Ticket "${spec.title}" had no phase left to run, and its own record ` +
+        `carries a passing sign-off for every phase it names. Recorded done ` +
+        `without dispatching any phase agent.`
+      : `Ticket "${spec.title}" driven to completion and recorded done in its own record. ` +
+        `${completedAgents.length} phase(s) completed` +
+        (skippedOut.length > 0
+          ? `, ${skippedOut.length} skipped (cross_agent blockers).`
+          : ".");
+    if (spec.noPhasesToRun) {
+      base.no_phases_dispatched = true;
+    }
+    return base;
+  }
+
+  // BO-400a-2-iii — `status` is the machine-readable signal in these drivers:
+  // every other failure exit (the coder guard, the null-result guard, the
+  // retry cap, design/halt) emits blocked or error, and build-feature.js's epic
+  // loop branches on exactly that vocabulary. Leaving "ok" here while the same
+  // payload carries `ticket_completed: false`, `not_completed` and an
+  // outstanding-phase list inverts the signal for every caller that reads the
+  // field first — and this payload is returned verbatim as the whole script
+  // result, with no compensating re-derivation anywhere.
+  base.status = "blocked";
+  base.ticket_completed = false;
+  base.not_completed = true;
+  base.outstanding_phases = spec.verdict.outstanding;
+  if (spec.unverifiedPhases.length > 0) {
+    base.unverified_phases = spec.unverifiedPhases.map((u) => u.agent);
+  }
+  if (spec.writeError) {
+    base.completion_write_error = spec.writeError;
+  }
+  if (spec.noPhasesToRun) {
+    base.no_phases_dispatched = true;
+  }
+
+  // BO-400a-2-iv — the refusal taken over an EMPTY required set needs its own
+  // wording, and this is why. The standard message below counts outstanding
+  // phases and the standard advice tells the operator to re-run the phase that
+  // failed or supply the sign-off it owes. With no phase required of the ticket
+  // at all there is no count to state, nothing to re-run and nothing that owes
+  // a sign-off, so that advice names nothing the operator can act on and sends
+  // them looking for a phase failure that never happened. What IS actionable is
+  // the ticket's own list of phases: it is the thing that is wrong.
+  if (spec.verdict.noPhaseRequired) {
+    base.no_phase_required = true;
+    base.message =
+      `Ticket "${spec.title}" was NOT recorded complete: it names no phase for ` +
+      `this drive to verify. Its own list of phases — the agents: map in its ` +
+      `frontmatter — is absent, empty, or marks every phase it names as ` +
+      `not_needed, so the required set was empty and NOTHING about this ticket ` +
+      `was verified. An empty set of outstanding phases means nothing was ` +
+      `looked at, never that everything passed.`;
+    base.suggested_action =
+      "Correct the ticket's own list of phases: edit the agents: map in its " +
+      "frontmatter so it names the phases this ticket actually requires, then " +
+      "re-run the drive. Do not look for a failed phase or a missing sign-off — " +
+      "this ticket asked for neither, which is the problem.";
+    return base;
+  }
+
+  const detail = spec.verdict.outstanding
+    .map((o) => `${o.agent} (${o.reason})`)
+    .join("; ");
+  base.message =
+    `Ticket "${spec.title}" was NOT recorded complete. ` +
+    (spec.verdict.unreadable
+      ? `Its record could not be read back, so the lifecycle state was left untouched. `
+      : `${spec.verdict.outstanding.length} needed phase(s) are outstanding in the ticket's own record: ${detail}. `) +
+    (spec.writeError ? `The completion write failed: ${spec.writeError}. ` : "") +
+    `${completedAgents.length} phase(s) confirmed` +
+    (skippedOut.length > 0 ? `, ${skippedOut.length} skipped.` : ".");
+  base.suggested_action =
+    "Inspect the ticket's ## Comments section. A phase named above ran and " +
+    "returned success without leaving its sign-off: re-run that phase (or add " +
+    "the sign-off it owes) and re-run the drive. The ticket stays out of the " +
+    "completed set until its own record can prove every needed phase passed.";
+  return base;
+}
+
+/**
+ * Take the completion decision for this ticket and record it.
+ *
+ * THE SINGLE EXIT for a ticket that reaches the end of its drive — whether it
+ * ran twelve phases or none. Read-back → adjudicate against the record → write
+ * done only if the record proves it → emit the outcome payload.
+ *
+ * It exists because the empty-needed-phase case used to bypass all of that with
+ * a bare `{status: "ok"}` carrying no `ticket_completed` key. build-feature.js's
+ * epic loop filters on exactly that key, so a ticket whose phases were all
+ * already signed_off landed in the incomplete set and blocked the epic while
+ * naming nothing to fix — and the block was unrecoverable, because a re-run is
+ * byte-identical and there is no sign-off left to add. Worse, it is reached by
+ * following this driver's own remediation advice ("add the sign-off it owes",
+ * which flips the last agent to signed_off and empties the needed set) and by a
+ * transient completion-write failure. Keeping both exits on one path is what
+ * stops the next one being added off it.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {{recordPath: string, title: string, record: object|null,
+ *          basePhases: Array<string>, deferredPhases: Array<string>,
+ *          completedPhases: Array<object>, skippedPhases: Array<object>,
+ *          unverifiedPhases: Array<object>, unverifiedReasons: object,
+ *          dispatchedAgents: Array<string>, noPhasesToRun: boolean}} spec
+ * @returns {Promise<object>} the per-ticket outcome payload
+ */
+async function concludeTicket(spec) {
+  const record = spec.record;
+
+  const requiredPhases = requiredPhasesForCompletion(
+    spec.basePhases,
+    (record && record.needed_phases) || [],
+    spec.deferredPhases
+  );
+
+  const verdict = completionVerdictFromRecord(record, {
+    requiredPhases,
+    unverifiedReasons: spec.unverifiedReasons || {},
+    skippedAgents: (spec.skippedPhases || []).map((p) => p.agent),
+    dispatchedAgents: spec.dispatchedAgents || [],
+  });
+
+  let writeApplied = false;
+  let writeError = null;
+
+  if (verdict.completed) {
+    const writeResult = await writeTicketCompletion(spec.recordPath, requiredPhases);
+    if (writeResult && writeResult.status === "ok") {
+      writeApplied = true;
+    } else {
+      writeError =
+        (writeResult && writeResult.error) ||
+        "the completion write returned no usable result";
+    }
+  }
+
+  return buildTicketOutcome({
+    recordPath: spec.recordPath,
+    title: spec.title,
+    resolvedTarget,
+    completedPhases: spec.completedPhases || [],
+    skippedPhases: spec.skippedPhases || [],
+    unverifiedPhases: spec.unverifiedPhases || [],
+    verdict,
+    writeApplied,
+    writeError,
+    noPhasesToRun: spec.noPhasesToRun === true,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
 // Read the worktree path from args if provided. If args.worktree_path is set,
@@ -292,17 +1006,45 @@ if (!ticketPath) {
 }
 
 // If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = args && args.worktree_path;
+const callerWorktreePath = (args && args.worktree_path) || null;
+
+/**
+ * The resolved target this drive emits for its consumers.
+ *
+ * BO-1900a-4: `worktree_path: null` is the unambiguous not-yet-determined
+ * marker. It is deliberately NOT a path-shaped stand-in — absent is not a
+ * location, and a consumer must be able to tell "not determined" from a real
+ * location using the target alone, without comparing it against the ticket's
+ * or epic's work-store folder to discover the two are the same.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ */
+const resolvedTarget = {
+  target_type: "ticket",
+  epic_path: null,
+  ticket_path: ticketPath,
+  worktree_path: null,
+};
 
 let gitInfo = null;
 
-if (!callerWorktreePath) {
-  // Fall back to the git info check when no worktree_path is provided in args.
+if (callerWorktreePath) {
+  resolvedTarget.worktree_path = callerWorktreePath;
+} else {
+  // No caller-supplied working copy. The ambient git check may POSITIVELY
+  // identify one — .git as a file on a non-protected branch is a real,
+  // verified worktree, and its root is reported explicitly. What the check
+  // must never do is answer the question by reaching for whatever is nearest:
+  // if it cannot identify a worktree, the working copy stays undetermined and
+  // the drive holds back (BO-1900a-4-i).
   const worktreeCheck = await agent(
-    "Run these two shell commands and report the results as JSON:\n" +
+    "Run these shell commands and report the results as JSON:\n" +
     "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
     "2. `git branch --show-current` — reports the current branch name\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\" }",
+    "3. `git rev-parse --show-toplevel` — reports the absolute root of the working copy you are in\n" +
+    "Report worktree_path ONLY from command 3, and ONLY when command 1 said \"file\". " +
+    "If any command fails, or .git is a directory, omit worktree_path entirely — do NOT substitute the current directory, the ticket's folder, or any other location you can find.\n" +
+    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<absolute path, omit if unknown>\" }",
     { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
   );
 
@@ -312,16 +1054,48 @@ if (!callerWorktreePath) {
     return {
       status: "error",
       worktree_required: true,
+      resolved_target: resolvedTarget,
       message:
         "build-ticket.js must run inside a git worktree, not the main clone. " +
         "The current working directory has .git as a " + (gitInfo.git_type || 'unknown') +
-        " (branch: " + (gitInfo.branch || 'unknown') + "). " +
+        " (branch: " + (gitInfo.branch || 'unknown') + "), so there is no isolated " +
+        "working copy for this drive and no phase agent will be spawned. " +
         "Create a worktree first:\n" +
         "  /worktree create <branch-name>\n" +
         "Then re-run /build-feature from inside the worktree.",
       action_required: "create_worktree",
     };
   }
+
+  if (gitInfo && gitInfo.git_type === "file") {
+    resolvedTarget.worktree_path = gitInfo.worktree_path || null;
+  }
+}
+
+// BO-1900a-4-i — the refusal that makes the marker load-bearing. An unanswered
+// question about where the work belongs stops the drive instead of being
+// answered by whatever is nearest: no fallback to the process's current
+// directory, to the ticket's folder in the work store, or to any other
+// location the driver could reach for.
+if (!resolvedTarget.worktree_path) {
+  return {
+    status: "error",
+    worktree_undetermined: true,
+    abort_reason: "worktree-undetermined",
+    resolved_target: resolvedTarget,
+    message:
+      "The isolated working copy for this drive is UNDETERMINED — no worktree " +
+      "was supplied by the caller and the ambient git check could not identify " +
+      "one. No phase agent has been spawned. build-ticket.js will NOT fall back " +
+      "to the directory the process happens to be running in, to the ticket's " +
+      "folder in the work store, or to any other existing location: an agent " +
+      "sent to the wrong working copy commits in the wrong repository, and that " +
+      "is discovered only after the fact.",
+    action_required: "establish_worktree",
+    suggested_action:
+      "Establish the isolated working copy first — run /worktree create <branch-name> " +
+      "— then re-run with args: { ticket_path: '<path>', worktree_path: '<absolute worktree root>' }.",
+  };
 }
 
 // -------------------------------------------------------------------------
@@ -335,8 +1109,16 @@ const plannerResult = await agent(
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
 )
 
-const plan = plannerResult || {};
-const orderedPhases = plan.ordered_phases || [];
+// BO-1900a-4-ii — an unusable plan reply holds the ticket back. It is never
+// reduced to a blank record and then to a blank list, which is what turned a
+// dead planner into a `status: done` write.
+const planReason = unusablePlanReason(plannerResult);
+if (planReason) {
+  return buildPlanHoldback(ticketPath, planReason, resolvedTarget);
+}
+
+const plan = plannerResult;
+const orderedPhases = plan.ordered_phases;
 const filesTouched = plan.files_touched || [];
 const title = plan.title || ticketPath;
 
@@ -372,20 +1154,12 @@ let hasTestRequirements =
 const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 
 // -------------------------------------------------------------------------
-// Phase 2 — Guard: if no phases are needed, exit cleanly
+// Phase 2 — Guard: compute the phases this drive will dispatch
 // -------------------------------------------------------------------------
 
 const neededPhases = sortByCanonicalPriority(
   orderedPhases.filter((p) => p.status === "needed")
 );
-
-if (neededPhases.length === 0) {
-  return {
-    status: "ok",
-    message: `No phases to run for ticket "${title}". All agents are already signed_off or not_needed.`,
-    ticket_path: ticketPath,
-  };
-}
 
 // -------------------------------------------------------------------------
 // Phase 3 — Sequential phase loop
@@ -393,16 +1167,76 @@ if (neededPhases.length === 0) {
 
 phase('Phase Dispatch')
 
+// BO-1900a-4-i — the pre-dispatch working-copy check. Unreachable in the
+// normal flow (the worktree guard above already held the drive back), and
+// deliberately kept anyway: the refusal belongs at the point where a phase
+// agent would be spawned, so a future edit that reorders the guard cannot
+// silently start dispatching against an undetermined working copy.
+if (!resolvedTarget.worktree_path) {
+  return {
+    status: "error",
+    worktree_undetermined: true,
+    abort_reason: "worktree-undetermined",
+    resolved_target: resolvedTarget,
+    ticket_path: ticketPath,
+    message:
+      "Held back before spawning any phase agent: the isolated working copy " +
+      "for this drive is UNDETERMINED. No substitute location is used.",
+    action_required: "establish_worktree",
+  };
+}
+
+// deferredPhases: build-ticket.js drives one standalone ticket, so nothing is
+// deferred to an epic-level step. Kept as an explicit empty list rather than a
+// bare [] at the call site so the twin's epic-member case (which defers
+// pull-request) lines up line-for-line with this one.
+const deferredPhases = [];
+
+// No phase left to run. NOT a reason to skip the completion decision: the
+// ticket's record already holds whatever evidence exists, and it is the only
+// thing that can say whether this ticket is done. Bypassing the read-back here
+// is what made an already-finished ticket unrecoverably block its epic when
+// this driver's twin drove it (see concludeTicket's header for the full
+// failure).
+//
+// The required set is what the ticket CLAIMS is complete, not what the drive
+// ran — the drive ran nothing, and an empty required set would say yes to every
+// ticket, including one whose frontmatter reads signed_off while its record
+// carries no sign-off entry at all.
+if (neededPhases.length === 0) {
+  return await concludeTicket({
+    recordPath: ticketPath,
+    title,
+    record: await readTicketRecordBack(ticketPath),
+    basePhases: claimedPhasesForCompletion(orderedPhases),
+    deferredPhases,
+    completedPhases: [],
+    skippedPhases: [],
+    unverifiedPhases: [],
+    unverifiedReasons: {},
+    dispatchedAgents: [],
+    noPhasesToRun: true,
+  });
+}
+
 const retryCounts = {};
 const completedPhases = [];
 const skippedPhases = [];
 
+// Post-dispatch verification state (BO-2900f-1-i/-iii).
+//   unverifiedPhases — gates that reported success and could not be confirmed
+//                      against the record. Their verdict is FAILED.
+//   lastRecord       — the most recent readable read-back. The completion
+//                      decision is taken from this and nothing else, so it is
+//                      never taken from the drive's own tally (BO-400a-2-ii).
+const unverifiedPhases = [];
+const unverifiedReasons = {};
+const dispatchedAgents = [];
+let lastRecord = null;
+
 for (const currentPhase of neededPhases) {
   const phaseName = currentPhase.agent;
   retryCounts[phaseName] = retryCounts[phaseName] || 0;
-
-  let phaseResult;
-  let retryLoop = true;
 
   // -----------------------------------------------------------------------
   // Test Requirements guard (BO-2000e-2): refuse to dispatch a coder phase
@@ -424,6 +1258,17 @@ for (const currentPhase of neededPhases) {
           ? `, and the test-writer phase did not report any test files it wrote.`
           : `, and no test-writer phase is scheduled for this ticket.`),
       ticket_path: ticketPath,
+      resolved_target: resolvedTarget,
+      not_completed: true,
+      ticket_completed: false,
+      outstanding_phases: [
+        {
+          agent: phaseName,
+          reason:
+            `'${phaseName}' is needed and was held back before dispatch: no ` +
+            `tests exist for this ticket (BO-2000e-2)`,
+        },
+      ],
       failing_phase: phaseName,
       classification: "halt",
       suggested_action: testWriterRan
@@ -438,16 +1283,64 @@ for (const currentPhase of neededPhases) {
     };
   }
 
+  let phaseResult;
+  let retryLoop = true;
+
   while (retryLoop) {
     retryLoop = false;
 
+    // The trailing pointer block is load-bearing, not decoration (BO-1900d-1).
+    // templates/agents/_signoff_block.md — carried by 30 agent templates,
+    // including every phase agent — opens with
+    // "## Sign-off (when ticket_path is provided)" and closes with
+    // "Skip this entire section if no `ticket_path` was provided". A gate handed
+    // the path only as narrative ("for ticket: <path>") has to decide for itself
+    // whether its own conditional is satisfied, which is a very plausible
+    // mechanism for BUG-23 having been INCONSISTENT rather than uniformly
+    // absent: on run wf_cc2b46d9-f6f ticket 09 recorded test-runner and lost
+    // pr-reviewer while ticket 03 did the reverse.
+    //
+    // Prose is the ONLY channel. agent(prompt, opts) accepts exactly
+    // {agentType, schema, label, phase, model, effort, isolation} — an extra
+    // `ticket_path` key placed in opts is dropped before the agent ever sees it,
+    // so putting it there would look like a fix and pass nothing. The literal
+    // `key: value` token below is the in-repo convention for this channel
+    // (build-epic.js:357 hands worktree_path the same way).
+    //
+    // TWIN: mirrors build-feature.js. Keep in sync with that file.
     phaseResult = await agent(
       `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.` +
       (phaseName === 'test-writer'
         ? ` You MUST also return "tests_written": a list of the test file paths you created or extended, and "red_baseline_verified": true only if you ran those tests and confirmed they fail. Return "tests_written": [] if you wrote no tests (for example if you self-skipped) — an empty list is the correct, honest answer and will stop the coder phase rather than let it run untested. Do not list a file you did not actually write.`
-        : ''),
+        : '') +
+      `\n\nYou WERE invoked with the arguments below. Your sign-off protocol is ` +
+      `therefore in force: record your outcome in this ticket's own record before ` +
+      `you return.\n` +
+      `ticket_path: ${ticketPath}\n` +
+      `worktree_path: ${resolvedTarget.worktree_path}`,
       { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch' }
-    )
+    );
+
+    // ------------------------------------------------------------------
+    // THE VERIFICATION POINT (BO-2900f-1-i / -iii)
+    //
+    // One generic point, reached exactly once per dispatch, for EVERY gate —
+    // not one added at each gate's call site. The observed defect was not a
+    // broken gate, it was an inconsistently applied check: ticket 09 recorded
+    // test-runner correctly while ticket 01 did not, and ticket 03 recorded
+    // pr-reviewer correctly while ticket 01 did not. Anchoring the check to
+    // the dispatch path is what makes the guarantee a property of the drive
+    // rather than of a lucky work item.
+    // ------------------------------------------------------------------
+    dispatchedAgents.push(phaseName);
+
+    const phaseRecord = await readTicketRecordBack(ticketPath);
+    if (phaseRecord && phaseRecord.readable === true) {
+      lastRecord = phaseRecord;
+    } else {
+      lastRecord = null;
+    }
+    const verdict = adjudicatePhaseAgainstRecord(phaseRecord, phaseName);
 
     // ------------------------------------------------------------------
     // Failure detection
@@ -459,8 +1352,13 @@ for (const currentPhase of neededPhases) {
     // on a terminal error or is skipped mid-run. Without this guard a null
     // result falls through the blocker/failed check below and the phase is
     // silently recorded as completed — letting the driver proceed to commit /
-    // pull-request on incomplete work. Treat an absent result or unrecognized
-    // status as a halt so the ticket stops rather than shipping half-done.
+    // pull-request on incomplete work. It is also the difference between a
+    // structured blocker and a stack trace: the test-writer branch further down
+    // dereferences phaseResult.tests_written, which throws on null and aborts
+    // the whole drive. Treat an absent result or unrecognized status as a halt
+    // so the ticket stops rather than shipping half-done.
+    //
+    // TWIN: mirrors build-feature.js. Keep in sync with that file.
     if (!phaseResult || !resultStatus) {
       return {
         status: "blocked",
@@ -550,10 +1448,9 @@ for (const currentPhase of neededPhases) {
       const classifyResult = await agent(
         `Classify this blocker for ticket ${ticketPath}, failing phase ${phaseName}. Retry count: ${retryCounts[phaseName]}/${MAX_RETRIES}. Blocker detail: ${JSON.stringify(phaseResult)}. Return classification as one of: mechanical | cross_agent | design | halt.`,
         { agentType: "brainstorm-lead", schema: CLASSIFY_SCHEMA, label: 'failure-classifier', phase: 'Phase Dispatch' }
-      )
+      );
 
-      const classification =
-        classifyResult && classifyResult.classification;
+      const classification = classifyResult && classifyResult.classification;
 
       if (classification === "mechanical") {
         if (retryCounts[phaseName] < MAX_RETRIES) {
@@ -618,36 +1515,66 @@ for (const currentPhase of neededPhases) {
     if (phaseName === 'test-writer') {
       const testsWritten = Array.isArray(phaseResult.tests_written)
         ? phaseResult.tests_written.filter((p) => typeof p === 'string' && p.trim())
-        : []
+        : [];
       if (testsWritten.length > 0) {
-        hasTestRequirements = true
-        log(`test-writer wrote ${testsWritten.length} test file(s) (red baseline ${phaseResult.red_baseline_verified === true ? 'verified' : 'NOT verified'}) — coder phases unblocked.`)
+        hasTestRequirements = true;
+        log(
+          `test-writer wrote ${testsWritten.length} test file(s) for "${title}" ` +
+          `(red baseline ${phaseResult.red_baseline_verified === true ? "verified" : "NOT verified"}) ` +
+          `— coder phases unblocked.`
+        );
       } else {
-        log('test-writer returned no tests_written evidence — coder phases remain blocked.')
+        log(
+          `test-writer returned no tests_written evidence for "${title}" — ` +
+          `coder phases remain blocked.`
+        );
       }
     }
 
-    completedPhases.push({ agent: phaseName, result: phaseResult });
+    // The verdict the drive carries forward is the one derived from the
+    // record — never the gate's own report. A gate that reported success and
+    // left no entry (or whose record could not be read) is FAILED here, and
+    // is not carried forward as a completed phase. The drive continues so the
+    // remaining gates still run and are reported, but the ticket can no
+    // longer be recorded complete.
+    if (!verdict.verified) {
+      unverifiedPhases.push({ agent: phaseName, reason: verdict.reason });
+      unverifiedReasons[phaseName] = verdict.reason;
+      log(
+        `VERIFICATION FAILED for '${phaseName}' on ${ticketPath}: ${verdict.reason}. ` +
+        `The gate is adjudicated failed and is NOT counted as completed.`
+      );
+    } else {
+      if (verdict.entries > 1) {
+        log(
+          `'${phaseName}' carries ${verdict.entries} sign-off entries in ${ticketPath}; ` +
+          `the latest entry is the one that counts (BO-2900f-1-ii).`
+        );
+      }
+      completedPhases.push({ agent: phaseName, result: phaseResult });
+    }
   }
 }
 
 // -------------------------------------------------------------------------
-// Phase 4 — Return success summary
+// Phase 4 — Completion decision, taken FROM THE RECORD (BO-400a-2-ii/-iii)
 // -------------------------------------------------------------------------
+// BUG-22: the observed run's payload named four completed batches while every
+// ticket in the store still read `status: todo`. The work was real and
+// committed; the record claimed nothing happened, which blocks the epic
+// archive check. The missing half is this write — and its boundary: the write
+// happens only when the ticket's OWN record proves every needed phase passed.
 
-return {
-  status: "ok",
-  ticket_path: ticketPath,
+return await concludeTicket({
+  recordPath: ticketPath,
   title,
-  completed_phases: completedPhases.map((p) => p.agent),
-  skipped_phases: skippedPhases.map((p) => ({
-    agent: p.agent,
-    reason: p.reason,
-  })),
-  message:
-    `Ticket "${title}" driven to completion. ` +
-    `${completedPhases.length} phase(s) completed` +
-    (skippedPhases.length > 0
-      ? `, ${skippedPhases.length} skipped (cross_agent blockers).`
-      : "."),
-};
+  record: lastRecord,
+  basePhases: neededPhases.map((p) => p.agent),
+  deferredPhases,
+  completedPhases,
+  skippedPhases,
+  unverifiedPhases,
+  unverifiedReasons,
+  dispatchedAgents,
+  noPhasesToRun: false,
+});

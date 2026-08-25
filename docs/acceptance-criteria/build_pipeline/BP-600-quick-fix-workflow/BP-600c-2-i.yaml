@@ -1,7 +1,7 @@
 id: BP-600c-2-i
 components:
   - build_pipeline
-title: "Quick-fix workflow halts when red-phase test errors out rather than failing cleanly"
+title: "Quick-fix workflow halts when a test errors out rather than failing cleanly"
 component: build-pipeline
 level: L3
 status: active
@@ -12,12 +12,21 @@ criteria: |
   Given the test-writer has produced a test file,
   When the workflow runs the red-phase test,
   And the test runner returns an ERROR (import failure, syntax error,
-    fixture not found) rather than a FAILED assertion,
+    fixture not found, or a selection that ran no tests at all) rather than
+    a FAILED assertion,
   Then the workflow halts with a message distinguishing the error from
     an expected test failure,
   And it reports the specific error to the user rather than treating
     it as the expected red phase,
-  And it does not proceed to the fix-application phase.
+  And it does not proceed to the fix-application phase,
+  And the error outcome is examined BEFORE the pass/fail verdict is read,
+    because a run that never reached its assertions reports "did not pass" —
+    so a workflow that checks the boolean first reads the error as a good red
+    phase and applies the fix anyway,
+  And the same distinction is made on the green side: an error there is
+    reported as a test that could not run, not as a fix that did not work,
+    and the message states that the fix is still applied so no one goes
+    looking for lost work.
 depends_on:
   - BP-600c-2
 doc_links:
@@ -27,6 +36,14 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      The runner result schema carries an outcome tri-state
+      (passed/failed/error) alongside the boolean, and both the red and green
+      phases branch on outcome === 'error' before reading the boolean. The
+      halt reasons are red_phase_error and green_phase_error.
 assigned_agent: workflow-architect
 estimated_complexity: S
 it_requirements:
@@ -34,15 +51,68 @@ it_requirements:
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
   - "Must distinguish ERROR (test infrastructure failure) from FAILED (assertion failure) in test-runner output"
+  - >-
+    The boolean pass/fail field cannot carry this distinction on its own — an
+    error and a failure both report "did not pass". A separate outcome value is
+    required, and it must be a required field of the runner result so a runner
+    that omits it cannot be silently read as a clean failure.
+  - >-
+    The error branch must be evaluated before the pass/fail branch on both the
+    red and green sides. Ordering is the whole guard: placed after, it is
+    unreachable for the red case it exists to catch.
 delivers_to: null
 expects_from:
   ac_id: BP-600c-2
   contract: "Red-phase result containing outcome field — ERROR status triggers this edge case halt"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: implementation-reconciliation
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      This criterion had no implementation and no covering test from its
+      authoring on 2026-06-05 until 2026-08-24. The gap was found during the
+      BP-600 amendment sweep and closed on this branch. covered_by and
+      implemented_by are populated here for the first time. criteria was
+      extended, not rewritten: every original clause is kept verbatim, and
+      three facts learned from building it are added — that an empty selection
+      counts as an error, that the error branch must be evaluated BEFORE the
+      pass/fail boolean (a collection error reports "did not pass", so the
+      ordering is the guard), and that the green side needs the same
+      distinction plus a statement that the fix is still applied. work_status
+      is left at todo exactly as found; see the note below, because todo now
+      understates this record rather than overstating it.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py::TestBP600WorkflowRunnerErrorIsNotAResult::test_ac_bp600c2i_red_phase_collection_error_halts_before_fix"
+  - "unit_tests/workflows/test_quick_fix_workflow.py::TestBP600WorkflowRunnerErrorIsNotAResult::test_ac_bp600c2i_green_phase_error_distinguished_from_failure"
+implemented_by:
+  - templates/workflows-js/quick-fix.js
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  THIS RECORD WAS NEVER FALSELY DONE — THE STORE WAS HONEST HERE. It carried
+  work_status: todo for its whole life, correctly, because nothing implemented
+  it. What went wrong was the reverse of phantom-done: its parent BP-600c-2 was
+  marked done, and a reader who stopped at the parent would not have seen that
+  this constraint on it was unbuilt. The defect was real — an import error in
+  the red phase reported "did not pass", which the workflow read as a good red
+  phase and proceeded to apply a fix on the strength of a test that had never
+  executed a single assertion.
+
+  work_status is left at todo per the instruction not to change it, but that
+  value is now stale in the safe direction: the behaviour is implemented in
+  templates/workflows-js/quick-fix.js and covered by the two tests named in
+  covered_by, each mutation-proved (disabling the guard turns the test red).
+  Promoting it to done is a deliberate decision for the owner, not something
+  this amendment should take; the done-proof gate should now be satisfiable,
+  since a covering test bearing this AC's covers-tag exists.
+
+  Worth recording: expects_from on this record already named an "outcome field"
+  in the red-phase result at authoring time in June. The requirement was
+  specified correctly and the implementation simply never grew the field. The
+  criterion was right and waiting for two and a half months.

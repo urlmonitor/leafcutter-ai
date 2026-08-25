@@ -55,7 +55,7 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: related
     status: exists
-    relevance: "KI-BO-014 carries the measurement (178.32 seconds to resolve one id against 3,232 files), the mechanism, and the fix direction. Read it before implementing."
+    relevance: "KI-BO-016 carries the measurement (178.32 seconds to resolve one id against 3,232 files), the mechanism, and the fix direction. Read it before implementing."
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
@@ -141,7 +141,7 @@ implemented_by:
 change_target: code
 risk_surface: internal
 notes: |
-  Discharges KI-BO-014 under this L1 because the defect is exactly what the L1 names:
+  Discharges KI-BO-016 under this L1 because the defect is exactly what the L1 names:
   a step that starts cold and re-derives context an earlier step already worked out.
   The sibling children (BO-2400c-1 through BO-2400c-5) all concern the prompt bundle
   handed to agents; none touches the cost the lane pays before any agent is dispatched,

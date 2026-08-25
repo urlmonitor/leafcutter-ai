@@ -15,15 +15,44 @@ criteria: |
   Each recognized pattern — whether an atomic component like a sortable table
   or a composite like a CRUD list page wired to a paginated collection — has
   exactly one AC that defines its behavior. All consuming pages reference this
-  single definition. The pattern definition lives in the existing component
-  registry; no separate catalog is needed.
+  single definition. A pattern definition is an ordinary AC YAML record living in
+  the AC store itself, at
+  docs/acceptance-criteria/<component>/<feature-folder>/<id>.yaml, addressed by its
+  AC id; no separate catalog is needed. It is NOT an entry in docs/components.json
+  and NOT an entry in docs/acceptance-criteria/index.yaml.
 depends_on: [ACS-500]
 doc_links: []
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-11
-amended_by: []
+amended_by:
+  - reason: clarification
+    by: business-analyst
+    at: 2026-08-19
+    note: >-
+      Referent clarification only — the feature is not restated and nothing is
+      added to scope. THE SENTENCE WAS FALSE, NOT AMBIGUOUS: it read "The pattern
+      definition lives in the existing component registry". "The component
+      registry" is NOT ambiguous in this repo — ADR-009 names it in a table row,
+      "Component registry | docs/components.json", and ADR-008 records that the
+      scalar `component` axis and the `components` graph axis are two
+      intentionally separate registries. So the phrase had a settled referent and
+      the sentence asserted something untrue about it: pattern definitions do not
+      live in docs/components.json. DAMAGE: an implementer who trusts the sentence
+      writes pattern ACs into the component registry, where implements_pattern
+      cannot resolve them and neither the hook nor the authoring-side inventory
+      scan will ever look. DETERMINED FROM CODE, NOT FROM THE PHRASE:
+      check_ac_pattern_refs.py resolves
+      implements_pattern through _ac_store_index.get_ac_index(store_root), and that
+      index is built by rglob("*.yaml") over docs/acceptance-criteria, keyed by AC
+      id (_AC_STORE_DIR = "docs/acceptance-criteria"). The authoring-side inventory
+      scan uses find docs/acceptance-criteria -name "*.yaml", and index.yaml's own
+      worked example stores pattern AC ACS-500a-1 as a plain AC file in the
+      component feature folder and lists it in the parent's covered_by. The two
+      surfaces therefore AGREE — there is no disagreement to adjudicate; the
+      original phrase was simply wrong about both candidates. NOW PINNED: the AC
+      store itself, by AC id, with both candidate registries named and excluded.
 superseded_by: null
 covered_by: [ACS-500a-1, ACS-500a-2, ACS-500a-3]
 implemented_by: []

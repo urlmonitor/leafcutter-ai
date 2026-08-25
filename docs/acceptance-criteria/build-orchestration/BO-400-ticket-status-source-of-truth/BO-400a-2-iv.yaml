@@ -1,0 +1,173 @@
+id: BO-400a-2-iv
+components:
+  - build_orchestration
+title: "A completion decision reached with no phase required of the ticket never records it done"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three tickets carried by one drive, none of which names any phase the drive
+    is required to verify --
+      the first carries no list of phases at all,
+      the second carries an empty list,
+      the third names phases of which every one is marked as not needed,
+    And for none of the three was any phase dispatched, and none of the three carries
+      any sign-off,
+  When the drive takes each ticket's completion decision,
+  Then none of the three is recorded as done, and each ticket's recorded lifecycle
+    state is left exactly as the drive found it,
+    And the drive reports each of the three as not completed,
+    And the stated reason names that the ticket itself names no phase for the drive to
+      verify, and points the operator at the ticket's own list of phases as the thing
+      to correct -- not at re-running a phase, and not at supplying a sign-off, neither
+      of which exists to act on,
+    And a fourth ticket in the same drive, which does name phases and whose every named
+      phase already carried a sign-off before the drive began, is still recorded done,
+  So a required set with nothing in it reads as nothing was proved, never as everything
+    passed.
+depends_on:
+  - BO-400a-2
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver's single ticket exit, where the completion decision is taken and the done record is written. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver, which carries the same single exit and the same completion decision. TWIN of build-feature.js; the same refusal must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. It cannot reach this case today -- it derives the ticket's needed phases from the fixture's real frontmatter, so it can never present a drive with an empty required set. Extend it to drive a ticket that names no phase, and to expose the ticket record left on disk plus the payload the run returned."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The positive write this AC bounds, and the control case: a ticket whose phases were ALL already signed off before the drive must still be recorded done. A fix that satisfies this AC by refusing to write must be visibly caught by that behaviour."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400a-2-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling refusal for phases that exist but are skipped, blocked or unrecorded. This AC is the case that record leaves open: the set of phases to inspect is itself empty, so every one of that record's per-phase checks passes vacuously."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the ticket-completion decision in build-feature.js and its twin in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "GUARD THE DECISION, NOT THE ROUTE. A guard placed where the drive notices it has no phases to run only covers the one route that reaches the vacuous decision by that path; the decision itself is reachable from every route, and a second route into it already exists (BO-1900a-4-ii). The refusal must live at the point where completion is decided, so that no caller can reach a done write through an empty required set regardless of how it got there."
+    - "AN EMPTY REQUIRED SET IS NOT A SATISFIED ONE. The natural implementation collects the phases that failed to prove themselves and treats an empty collection as success. Over an empty required set that collection is empty for the opposite reason. These two states must be distinguished before the verdict is formed, not repaired afterwards -- an implementation that computes the same verdict and then overrides it is one refactor away from the defect returning."
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that finds the guard in the source passes on a guard that is computed and ignored. Each case must be driven through the real workflow via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and asserted on the ticket record left on disk and the payload the run returned."
+    - "THE HARNESS CANNOT REACH THIS CASE YET. The harness synthesises the ticket's needed phases from the fixture's real frontmatter, so it currently cannot present the drive with an empty required set at all. Extending it to drive a ticket that names no phase is part of this work, not a prerequisite someone else supplies; without that extension every descriptor below is unwritable and the AC would be closed on a test that never exercised the condition."
+    - "THE REASON MUST BE ACTIONABLE. The existing not-completed message tells the operator to re-run the outstanding phase or add the sign-off it owes. With no phase at all that instruction names nothing the operator can do, and sends them looking for a phase failure that never happened. The no-phase case needs its own wording, naming the ticket's list of phases as the thing to fix, and that wording must be asserted."
+    - "THE ALREADY-SIGNED-OFF TICKET MUST STILL RECORD DONE. BO-400a-2-ii's behaviour is the boundary this refusal must not cross: a non-empty required set whose every phase carries a real sign-off is a genuine completion and must keep writing. A fix that suppresses the write whenever no phase ran during THIS drive breaks every resumed drive."
+    - "BOTH TWINS IN ONE CHANGE."
+delivers_to: null
+expects_from:
+  ac_id: BO-400a-2-ii
+  contract: "The completion write this refusal bounds -- the positive path that must remain reachable for a non-empty required set whose phases all carry sign-offs"
+test_spec:
+  - name: test_a_ticket_naming_no_phases_at_all_is_not_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive a ticket whose list of phases is absent entirely and assert the ticket record on disk is unchanged, no done state was written, and the run reported the ticket as not completed."
+  - name: test_a_ticket_with_an_empty_phase_list_is_not_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The same assertion for a ticket that carries an empty list of phases rather than none -- a distinct shape that reaches the same vacuous decision and would be missed by a guard written against absence only."
+  - name: test_a_ticket_whose_every_phase_is_not_needed_is_not_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A ticket naming phases of which every one is marked not needed; assert no done record was written. This is the shape most likely to be judged legitimate by an implementer and waved through."
+  - name: test_the_not_completed_reason_names_the_missing_phase_list_not_a_missing_signoff
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Assert the reason the run reports points the operator at the ticket's own list of phases, and does not instruct them to re-run a phase or add a sign-off -- neither of which exists in this case."
+  - name: test_a_ticket_signed_off_before_the_drive_still_records_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "CONTROL. A ticket naming phases, every one already carrying a sign-off before the drive began and none dispatched during it, must still be recorded done -- so the three refusals above are attributable to the empty required set and not to a driver that stopped writing."
+  - name: test_both_drivers_refuse_the_vacuous_completion_identically
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the no-phase scenario against each of the two twin driver scripts as they exist on disk and assert both leave the ticket untouched -- the twin obligation verified rather than asserted in a comment."
+test_rationale: |
+  The condition is an absence acting on an absence: no phases required, and therefore
+  no evidence of failure to find. A source-reading test cannot separate the broken
+  driver from the fixed one, because both contain a completion write and both contain
+  the phase loop -- the difference is only in what the loop concludes when it never
+  runs. Every descriptor therefore executes the real workflow and asserts on the ticket
+  record left on disk.
+
+  Three separate negative descriptors exist because the three shapes are three
+  different inputs that happen to converge, and a guard written against any one of them
+  leaves the other two live. The all-not-needed shape is called out specifically: it is
+  the one an implementer is most likely to consider a legitimate completion.
+
+  The control descriptor is load-bearing rather than decorative. The cheapest way to
+  pass every refusal above is to stop writing done records at all -- which is the state
+  this AC family started in, and which BO-400a-2-ii exists to prevent returning to.
+
+  The last descriptor exists because both drivers must refuse identically and nothing
+  today verifies that; the twin obligation is currently carried only by a comment in
+  the file headers.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A REGRESSION INTRODUCED BY REMEDIATION. This is not a defect the hardening batch
+  found; it is one the hardening batch created. Before the fix, a ticket with no phase
+  to run left the drive by a separate route that wrote nothing at all -- harmless.
+  The fix made every ticket leave by the single completion exit, which is the right
+  shape, and made that exit write-capable. It did not guard the case where the exit is
+  reached having verified nothing. So the batch whose entire purpose is preventing
+  phantom-done shipped, in the same diff, the purest phantom-done there is: a ticket
+  for which zero phases were required, zero were dispatched and zero sign-offs exist,
+  recorded as done.
+
+  THE GUARD WAS APPLIED ONE LAYER TOO SHALLOW. The code's own docstring already names
+  this hazard -- an empty required set would say yes to every ticket -- and a guard was
+  written for it, but placed at the branch where the drive notices it has no phases to
+  run, rather than at the decision that turns a required set into a verdict. Anything
+  that reaches the decision by another route is unguarded, and BO-1900a-4-ii is exactly
+  such a route. Two bugs, one missing guard, and the second one is only reachable
+  because the first one exists.
+
+  WHY THIS IS A SEPARATE RECORD FROM BO-400a-2-iii. That sibling covers phases that
+  exist and did not prove themselves: skipped, blocked, unrecorded, unreadable. Every
+  one of its checks is a check performed per phase. Over an empty set of phases all of
+  them pass, and they pass silently. The set being empty is a different condition from
+  anything in the set being bad, and it needs its own record or the fix for one will
+  keep being read as the fix for both.
+
+  WHAT THE OPERATOR SEES TODAY. Nothing. That is the whole problem: the ticket reads
+  done, no phase failed, no message was emitted, and there is no artifact anywhere that
+  says the drive verified nothing. The defect is only visible by noticing that a ticket
+  marked done has no sign-offs -- which is the manual audit the done record exists to
+  make unnecessary.

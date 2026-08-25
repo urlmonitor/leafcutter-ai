@@ -31,6 +31,7 @@ covered_by:
   - BO-1900a-1-i
   - BO-1900a-1-ii
   - BO-1900a-3
+  - BO-1900a-4
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

@@ -51,7 +51,7 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: related
     status: exists
-    relevance: "KI-BO-014 — the performance defect inside which this correctness regression would hide."
+    relevance: "KI-BO-016 — the performance defect inside which this correctness regression would hide."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

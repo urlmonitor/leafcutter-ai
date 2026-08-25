@@ -8,7 +8,7 @@ component: build-orchestration
 level: L1
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   After an epic drive completes successfully, the output tells the user
   what the epic accomplished (title and ticket count), where the worktree
@@ -21,13 +21,60 @@ doc_links:
   - templates/workflows/build-feature.md
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the epic completion return in build-feature.js (the live /build-feature epic driver) and the four-section completion formatter in build-epic.js (the legacy epic-supervisor driver, deprecated by ADR-006 but still deployed by the workflows-js copy step in scripts/build_phases.py). Both are reachable at run time, so a completion contract that lands in only one of them makes the operator's output depend on which driver happened to run."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "./build-self.sh"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p 'test_*.py'"
+  notes: |
+    SURFACE. The completion output is a JS workflow body, which is the python-coder
+    surface per the repo convention (see BO-2000e-2). This L1 governs the EPIC drive's
+    completion output only; the single-ticket driver (templates/workflows-js/build-ticket.js)
+    is governed by the sibling L1 BO-300b and must not be edited under this AC.
+
+    OBSERVED STATE AT BACKFILL TIME (2026-08-18), stated so the next implementer does not
+    trust the done flag blindly: build-epic.js carries all four sections -- Summary,
+    Worktree path, Things to manually test, Finalize command -- and returns them in
+    `message` alongside `worktree_path` and `manual_tests`. build-feature.js, which is the
+    driver /build-feature actually invokes, returns only the one-line Summary sentence
+    (`Epic "<title>" complete. N batch(es) run, M ticket(s) completed.`) with
+    `worktree_path` present as a field but no Worktree, Tests, or Finalize section in the
+    message and no `manual_tests` at all. The criteria are therefore satisfied on the
+    legacy driver and NOT on the live one. Closing that gap is the substance of any
+    remaining work under this L1.
+
+    REDEPLOY IS PART OF THE CHANGE. Workflow bodies execute from the deployed
+    .claude/workflows/ copy, not from templates/. An edit to templates/workflows-js/ that
+    is not followed by ./build-self.sh is inert at run time and will appear to work in a
+    source-reading test while changing nothing an operator sees.
+
+    VERIFY BY EXECUTION, NOT BY GREP (CLAUDE.md, "Gate / Workflow ACs"). No test in
+    unit_tests/ asserts anything about the completion output today -- `manual_tests`,
+    "Finalize command" and "Things to manually test" have zero hits under unit_tests/.
+    A test that greps build-feature.js for the section headings would pass on a string
+    that is never emitted. Assert on the emitted completion text by driving the workflow
+    through a harness in the style of unit_tests/prompt_assembly/harness_build_ticket_guard.mjs.
+    The post_write_commands suite above is the existing regression gate for edits to these
+    workflow bodies (43 tests, green at backfill time); it is a floor, not coverage of
+    this AC's own behaviour.
+
+    FINALIZE COMMAND ARGUMENT. The criteria require the epic NAME, not a raw path.
+    build-epic.js derives it as `epicPath.split("/").pop()`. Any second implementation
+    must produce the identical bare-name form -- /finalize-feature takes a bare string
+    branch stem and mis-parses a path.
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- "2026-08-25 BrainCandy: work_status done -> todo. This record claimed done while four of its leaf children (BO-300a-1, BO-300a-2-1, BO-300a-3, BO-300a-4) have no covering test, which the required Proof-of-done gate surfaced the first time this file entered a PR diff. The claim was already known to be false in this record's own notes below: the four completion-output sections are satisfied by the legacy build-epic.js driver and NOT by build-feature.js, the driver /build-feature actually invokes, and that note names closing the gap as the remaining work under this L1. Nothing was implemented or reverted here — a flag that asserted work nobody had done is corrected to match the record's own account of itself. Only work_status changed; criteria, level, readiness, req_status, status and the children are untouched, and the new child BO-300a-5 (added to covered_by in this same PR) is genuinely done and stays done."
+- "2026-08-18 BrainCandy: backfilled it_requirements as the structured package-surface object required by the assigned_agent=python-coder + component=build-orchestration conditional in config/ac_store_schema.json (lines 709-744). This record had NO it_requirements at all and failed schema validation identically at git HEAD and in the working copy -- pre-existing debt, not a regression. Backfilled now because adding the covered_by back-link for the new child BO-300a-5 puts this file into the commit diff, and the required CI 'AC store valid' check is diff-scoped: touch a broken record and you own it. criteria, work_status, readiness, status and req_status are unchanged."
 superseded_by: null
-covered_by: [BO-300a-1, BO-300a-2, BO-300a-3, BO-300a-4]
+covered_by: [BO-300a-1, BO-300a-2, BO-300a-3, BO-300a-4, BO-300a-5]
 implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
 change_target: code

@@ -3,7 +3,7 @@ components:
   - testing_quality
   - ac_store
   - commit_guardian
-title: "Changing one coverage-tag reader without the other is blocked, not merely noted"
+title: "Changing one coverage-tag rule without the others is blocked, not merely noted"
 component: testing-quality
 level: L3
 status: active
@@ -14,19 +14,21 @@ priority: high
 roadmap_phase: phase_1
 created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
 criteria: |
-  Given the two coverage-tag readers agree over the committed unit-test tree and
-    the parity check passes,
-  When one reader's recognition behaviour is changed and the other is left
-    unchanged — for example the done-proof reader is taught to accept a tag
-    spelling, or to reject an id shape, that the commit-time check still treats
-    the old way — and the parity check is run again,
-  Then the parity check fails and blocks, naming the capture whose verdict
-    differs and which of the two readers changed its answer
+  Given every coverage-tag recognition rule in the closed set named by TQ-100b-5 —
+    R1, R1f, R2 and R3 there — agrees over the committed unit-test tree and the
+    parity check passes,
+  When exactly one of those rules has its recognition behaviour changed and every
+    other rule in the set is left unchanged — for example the done-proof reader
+    (R1) is taught to accept a tag spelling, or to reject an id shape, that the
+    other rules still treat the old way — and the parity check is run again,
+  Then the parity check fails and blocks, naming the capture whose verdict differs
+    and which rule of the set changed its answer
   And the blocking run and the earlier passing run go through the same entry
     point over the same tree, so the difference in outcome is attributable to the
-    readers' behaviour and not to a different check being invoked
-  And restoring the mirrored change to the second reader makes the same entry
-    point pass again.
+    rules' behaviour and not to a different check being invoked
+  And mirroring the same change into every other rule in the set makes the same
+    entry point pass again, so mirroring into only one of the remaining rules is
+    not sufficient to clear the block.
 depends_on:
   - TQ-100b-5
 doc_links:
@@ -36,19 +38,19 @@ doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
     relationship: relates-to
     status: exists
-    relevance: "The parity comparison this AC is the negative control for. Its it_requirements name which gate consumes the verdict; this AC requires that gate to BLOCK."
+    relevance: "The parity comparison this AC is the negative control for, and the record that holds the AUTHORITATIVE CENSUS of the rule set (R1, R1f, R2, R3, measured 2026-08-19). Read its criteria for the set membership before writing any run here; its it_requirements name which gate consumes the verdict, and this AC requires that gate to BLOCK."
   - path: scripts/ac_store/test_enforcement.py
     relationship: implements
     status: exists
-    relevance: "READER 1 of 2 — COVERS_TAG_RE at :57. The one-sided change in the blocking run should be applied to a temp copy of THIS module (e.g. accept a spelling reader 2 rejects), never to the working tree."
+    relevance: "RULE R1 — COVERS_TAG_RE at :57. The one-sided change in the blocking run should be applied to a temp copy of THIS module (e.g. accept a spelling the other rules reject), never to the working tree."
   - path: scripts/commit_guardian/check_test_ac_tags.py
     relationship: relates-to
     status: exists
-    relevance: "READER 2 of 2, deployed copy. Its check currently runs in WARN mode behind the commit_guardian test_ac_tag_enforcement key — a warn-mode path is precisely what this AC forbids as sufficient, so read how its exit status is produced before wiring the parity verdict."
+    relevance: "RULE R2, deployed copy. Its check is gated by the commit_guardian test_ac_tag_enforcement key in warn mode — a warn-mode path is precisely what this AC forbids as sufficient, so read how its exit status is produced before wiring the parity verdict. Measured 2026-08-19: scripts/commit_guardian/ is a build output not tracked in git, so this path is absent until build.py has run."
   - path: templates/scripts/commit_guardian/check_test_ac_tags.py
     relationship: implements
     status: exists
-    relevance: "Reader 2's SOURCE OF TRUTH (build.py overwrites the scripts/ copy). The 'mirrored change' run must mirror into this file, or the third run passes for the wrong reason on a copy the build discards."
+    relevance: "R2's SOURCE OF TRUTH (build.py overwrites the scripts/ copy). The 'mirrored change' run must mirror into this file, or the third run passes for the wrong reason on a copy the build discards."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
@@ -63,6 +65,7 @@ it_requirements:
   - "The mirrored-change run must mirror into reader 2's SOURCE (templates/scripts/commit_guardian/check_test_ac_tags.py), not only its build.py-generated copy under scripts/. A third run that passes against a patched deployed copy passes for a reason the next build erases."
   - "The block message must name the diverging capture and which of the two readers changed its answer. 'Parity check failed' with no operand is not actionable and does not satisfy the criterion."
   - "The one-sided change used in the test must be a genuine recognition difference (accept a spelling the other rejects, or reject a shape the other accepts), not a cosmetic edit. A whitespace or comment change that leaves behaviour identical must NOT block — assert that too, or the guard is indistinguishable from a file-hash comparison."
+  - "BA CENSUS CORRECTION 2026-08-19 — the seven it_requirements above assume a two-reader set and name only R1 and R2. The criteria now range over the four-member set named in TQ-100b-5 (R1, R1f, R2, R3). Two consequences are unpriced above: the mirrored-change run must mirror into R3's source (templates/scripts/commit_guardian/check_ac_coverage.py) and into R1f's fallback literal (templates/scripts/commit_guardian/check_done_proof.py:92-95) as well as R2's, and the block message must name the changed rule out of four rather than out of two. An IT-PO re-pass is owed; estimated_complexity S was set against two readers."
 test_spec:
   - name: test_agreeing_readers_pass_through_the_parity_entry_point
     target_dir: unit_tests/commit_guardian/
@@ -88,6 +91,12 @@ test_spec:
     type: integration
     angle: seam
     description: "Run 3 of 3. Mirror the same recognition change into reader 2's SOURCE (templates/scripts/commit_guardian/check_test_ac_tags.py, rebuilt), rerun the identical entry point over the identical tree, and assert it passes again. Closes the three-run proof and pins the producer/consumer vocabulary re-alignment at the real seam — mirroring only the deployed copy under scripts/ must not be sufficient."
+  - name: test_mirroring_into_only_some_of_the_remaining_rules_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Added 2026-08-19 with the referent clarification. Between runs 2 and 3, mirror the recognition change into ONE of the remaining rules and leave the others on the old behaviour, then invoke the identical entry point: it must still block. Without this, a guard that only ever compares one pair reports a clear result while a third rule is still out of step."
 delivers_to: null
 expects_from:
   ac_id: TQ-100b-5
@@ -112,6 +121,29 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: clarification
+  by: business-analyst
+  at: 2026-08-19
+  note: >-
+    Amended in step with its parent TQ-100b-5, same defect. AMBIGUOUS: the criteria
+    said "the two coverage-tag readers", "which of the two readers changed its
+    answer" and "restoring the mirrored change to the second reader"; the title said
+    "without the other". WRONG BINDING AVAILABLE: "the other" and "the second"
+    presume a set of size two and bind to whichever second rule the implementer
+    picked. DAMAGE HERE IS WORSE THAN IN THE PARENT, because this is the negative
+    control: mirror the change into one other rule, watch the block clear, and the
+    guard is certified working while a rule still out of step is never exercised —
+    a must_block control that passes without ever having blocked on the real set.
+    Measured 2026-08-19, the set has four members, not two (census recorded in
+    TQ-100b-5's amendment: R1, R1f, R2, R3). NOW PINNED: the criteria defer to
+    TQ-100b-5's named closed set rather than restating a count, the change is
+    "exactly one rule changed, every other left unchanged", the block message names
+    which rule of the set changed, and the clearing condition is mirroring into
+    EVERY other rule with an explicit statement that mirroring into only one of the
+    remaining rules is not sufficient. Added one test_spec entry asserting the
+    partial-mirror case still blocks. it_requirements left as the IT PO wrote them
+    apart from one additive entry flagging the unpriced R3/R1f mirroring; an IT-PO
+    re-pass is owed.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -126,5 +158,11 @@ notes: |
   and the check run as a process, not simulated by handing the comparison two
   fabricated result sets — a fabricated pair exercises the diff and leaves the
   readers themselves unproven.
+
+  THE MIRROR STEP IS OVER THE WHOLE SET, NOT OVER "the other one" (added
+  2026-08-19). The set has four members, so the run that clears the block must
+  mirror into every rule that did not change. A partial mirror that clears the
+  block would mean the guard is only watching a pair, which is the same hole one
+  level down from the one this AC exists to close.
 change_target: code
 risk_surface: contract_boundary

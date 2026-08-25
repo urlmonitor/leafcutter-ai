@@ -1,7 +1,7 @@
 id: BP-600d-4-i
 components:
   - build_pipeline
-title: "Quick-fix workflow handles the case when no PR exists for the current branch"
+title: "Quick-fix opens a PR when none exists, only on explicit user confirmation"
 component: build-pipeline
 level: L3
 status: active
@@ -9,13 +9,23 @@ readiness: reviewed
 priority: medium
 work_status: done
 criteria: |
-  Given the commit has completed and the workflow reaches the close phase,
-  When no open PR exists for the current branch,
-  Then the workflow pushes the commit to origin but does not attempt
-    to create a new PR,
-  And it reports to the user: "Changes pushed. No open PR found for
-    this branch -- create one with /pull-request if needed.",
-  And the ticket lifecycle still closes normally with status: done.
+  Given the fix commit and the changelog commit have completed and the workflow
+    reaches the close phase,
+  When no open PR exists for the branch the workflow is on,
+  Then the workflow first pushes the commits to origin, and halts with recovery
+    instructions if that push fails — nothing further is attempted unpushed,
+  And before running any PR command it switches the GitHub CLI to the non-EMU
+    account, on every run, without assuming an earlier session already did so,
+  And it then shows the user the proposed PR title and body and asks whether to
+    open it,
+  And it creates the PR only after the user explicitly agrees — opening a PR is
+    an outward-facing action and is never automatic,
+  And if the user declines, the workflow stops with the work pushed and no PR
+    created, and reports the branch comparison URL instead,
+  And when it does create the PR it supplies the body from a file rather than
+    inline on the command line, so that an AC id or other bare identifier in the
+    body is not interpreted by the shell and published corrupted into the PR,
+  And it never merges the PR — merging remains the user's decision.
 depends_on:
   - BP-600d-4
 doc_links:
@@ -25,23 +35,87 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "EMU account: open epic PR before drive" documents why the account switch
+      is mandatory before any gh pr command, and the REST fallback if the CLI
+      is blocked anyway.
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: "Phase 7, Steps 7.1-7.5, is the implementation of this criterion."
 assigned_agent: workflow-architect
 estimated_complexity: S
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "Must not create a new PR — only detect and report the absence of one"
+  - >-
+    Must create the PR only behind an explicit user-confirmation gate: detect
+    the absence of a PR, present the proposed title and body, and wait for an
+    affirmative reply before invoking PR creation. A negative or absent reply
+    means no PR — report the compare URL and stop.
+  - >-
+    Must run `gh auth switch --user urlmonitor` before any `gh pr` command, on
+    every run. The default account is EMU-blocked for the createPullRequest
+    mutation and PR creation fails with an authorization error without it.
+  - >-
+    Must pass the PR body with `--body-file`, never inline `--body`. A body
+    containing a bare identifier such as an AC id is shell-interpolated and a
+    "command not found" line has been published into a real PR body this way.
+    The body file must be produced with the Write tool, never a heredoc or an
+    inline interpreter.
+  - >-
+    Must not merge the PR, and must not treat an existing PR as an error: when
+    `gh pr list --head <branch>` already reports one, report its URL and skip
+    the creation gate entirely.
+  - >-
+    Push failure is a halt, not a warning. The fix is committed locally but
+    invisible on the remote, and the work is not closed until the push succeeds.
 delivers_to: null
 expects_from:
   ac_id: BP-600d-4
-  contract: "Close-phase logic that uses gh pr list --head <branch> to check for existing PR — empty result triggers this edge case"
+  contract: "Close-phase logic that uses gh pr list --head <branch> to check for an existing PR — an empty result is what triggers this edge case"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Reversed the central clause. The original said the workflow "pushes the
+      commit to origin but does not attempt to create a new PR" and told the
+      user to run /pull-request themselves; the matching it_requirement said
+      "Must not create a new PR — only detect and report the absence of one".
+      The workflow now DOES create one. The substance of the amendment is the
+      gate, not the capability: creation happens only after an explicit user
+      confirmation, and a decline still ends with the work pushed and no PR,
+      which is the original behaviour preserved as the refusal path. Three
+      operational constraints that are part of the same phase were made
+      explicit because each has already failed in a real run: the non-EMU
+      account switch before any gh pr command, --body-file rather than inline
+      --body (a bare AC id was shell-interpolated into a published PR body),
+      and the no-merge boundary. The it_requirements entry that forbade PR
+      creation was rewritten for the same reason — it contradicted the shipped
+      behaviour outright. The original's ticket-lifecycle clause ("the ticket
+      lifecycle still closes normally with status: done") is dropped: this
+      workflow has no ticket, which is the same pre-existing gap recorded on
+      BP-600d-3. Title amended to match. work_status left done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  Why a PR became mandatory rather than optional: after BP-600f, /quick-fix
+  never operates on main. The branch it works on is always a feature branch,
+  and main is PR-only under the require-ci-lint ruleset, so nothing the
+  workflow produces can land without a PR. "Push and leave it" is no longer a
+  complete close — it is an unfinished one. The confirmation gate is what keeps
+  that from becoming an unattended outward-facing action.

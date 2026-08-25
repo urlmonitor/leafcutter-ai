@@ -35,7 +35,7 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: related
     status: exists
-    relevance: "KI-BO-014's fix direction explicitly asks that the other call sites be checked in the same pass — the same re-read is paid by anything that walks the tree in a loop."
+    relevance: "KI-BO-016's fix direction explicitly asks that the other call sites be checked in the same pass — the same re-read is paid by anything that walks the tree in a loop."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -86,7 +86,7 @@ implemented_by:
 change_target: code
 risk_surface: internal
 notes: |
-  Small, but it is the difference between a fix and a fix with a hole in it. KI-BO-014
+  Small, but it is the difference between a fix and a fix with a hole in it. KI-BO-016
   asks for the other call sites to be swept in the same pass; without a criterion
   saying so, that sentence lives only in a known-issues entry that the implementing
   agent may never open.

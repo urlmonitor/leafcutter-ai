@@ -170,6 +170,7 @@ task, then pull only those files.
 |------|------|-------------|
 | consolidated output root | [docs/explanation/consolidated-output-root.md](docs/explanation/consolidated-output-root.md) | The Consolidated Output Root |
 | tdd workflow | [docs/explanation/tdd-workflow.md](docs/explanation/tdd-workflow.md) | This explanation describes how Test-Driven Development works inside leafcutter's |
+| traceability guardrails | [docs/explanation/traceability-guardrails.md](docs/explanation/traceability-guardrails.md) | Which mechanical guardrails currently enforce the links between acceptance criteria, code, tests, documentation and product-truth flows; which layer each one runs in; where the holes are; and which AC families are planned to close them. |
 
 ## Conventions
 

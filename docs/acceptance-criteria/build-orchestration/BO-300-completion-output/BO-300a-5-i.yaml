@@ -1,0 +1,158 @@
+id: BO-300a-5-i
+components:
+  - build_orchestration
+title: "An epic whose work set is not affirmatively confirmed re-read is reported unverified, and pre-existing or removed work raises no false alarm"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a drive producing its completion output,
+    And in the first case the completion-time re-check of the epic's set of work
+      does not affirmatively confirm that it read that set -- in one shape it
+      states outright that the set could not be read, and in another it makes no
+      statement either way while still returning a list of work, including a
+      plausible-looking list naming only some of the work the drive already knew
+      about,
+    And in the second case the re-check does affirmatively confirm it read the
+      set, and that set is unchanged except that one piece of work was already
+      complete before the drive started, and one planned piece has since been
+      removed from the epic,
+  When the completion output is produced,
+  Then in the first case every one of those shapes produces the same outcome: the
+    epic is reported as not verified complete, the output names that the set was
+    not confirmed read and why, no statement that the epic is complete is
+    emitted, and no piece of work absent from the unconfirmed list is named as
+    removed on the strength of that list,
+    And in the second case nothing is named as discovered after planning,
+    And the removed piece is named as no longer present rather than as unbuilt,
+    And the piece that was already complete before the drive is not named at all,
+  So only an affirmative confirmation that the set was read counts as a verified
+    read -- a re-check that never claims it could read the set is treated exactly
+    as one that says it could not -- and the check stays quiet when nothing was
+    added.
+depends_on:
+  - BO-300a-5
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver's completion path, where the re-read happens and where its failure must be handled. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js; confirm it carries no epic re-read counterpart rather than adding one."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. Extend it so the enumeration stub can fail on its second call, omit its readability claim entirely, and so the two sets can differ by a removal rather than an addition."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the epic driver's completion path in build-feature.js; build-ticket.js carries no counterpart, which the sign-off must state explicitly"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_ticket_set_recheck.py"
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_recheck_readable_flag_polarity.py"
+  constraints:
+    - "FAIL CLOSED. A re-read that fails must not be treated as a re-read that found nothing new. Those two states produce opposite outputs and are trivially confused by a single empty-result path; an implementation that returns an empty set on error re-creates the original defect exactly, while appearing to have fixed it."
+    - "ABSENCE OF A CLAIM IS NOT A CLAIM. Test for the affirmative confirmation and treat everything else as unverified -- not for an explicit denial with everything else treated as verified. A reply that simply omits its readability claim is a legal reply, it is the shape a partial or truncated enumeration produces, and a check written against the denial takes the verified branch on it. The reply schema must require the confirmation, and the guard must require it to be true, mirroring the sibling record read-back rather than the looser form."
+    - "NO FALSE ALARM, OR THE SECTION GETS IGNORED. If work that was already complete before the drive, or work removed during it, shows up as discovered after planning, every drive emits the section and operators learn to skip it. That failure is slower and harder to detect than the original, so the negative cases are as load-bearing as the positive one."
+    - "A REMOVAL IS NOT AN ADDITION. Work that was planned and is now gone is a different event with a different action, and must be reported as such rather than left silently absent from both lists -- which is the same class of omission BUG-19 is."
+    - "AN UNCONFIRMED LIST SUPPORTS NO REMOVAL CLAIM. When the set was not confirmed read, work missing from the reply must not be reported as removed from the epic: the reply gives no basis for a statement about the store."
+    - "VERIFY BY EXECUTION. Each case must be driven through the real workflow via the harness and asserted on the emitted completion output."
+delivers_to: null
+expects_from:
+  ac_id: BO-300a-5
+  contract: "The completion-time re-read and the comparison by identity whose failure, unconfirmed and no-change paths this scenario bounds"
+test_spec:
+  - name: test_unreadable_work_set_reports_the_epic_not_verified_complete
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Make the second enumeration fail and assert the emitted output reports the epic as not verified complete, names the reason, and contains no epic-complete statement."
+  - name: test_an_omitted_readable_flag_with_a_full_list_withholds_the_complete_claim
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The re-check returns the full list of work but makes no readability claim at all; assert the epic is reported not verified complete and no epic-complete statement is emitted. Distinct from the declared-failure case above: this reply never says it failed."
+  - name: test_an_omitted_readable_flag_with_a_partial_list_is_not_a_verified_read
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The re-check enumerates some of the known work and makes no readability claim; assert no epic-complete statement, the set is not recorded as verified, and the unenumerated work is not named as removed."
+  - name: test_a_recheck_that_does_claim_readable_still_verifies_normally
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "CONTROL. The same drive with a re-check that does confirm it read the set, and an unchanged work set, must still report the epic complete -- otherwise the cheapest way to pass the negatives is to stop verifying anything."
+  - name: test_unchanged_work_set_names_nothing_as_discovered_after_planning
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Both reads return the same set, including one piece of work already complete before the drive; assert no discovered-after-planning entries are emitted."
+  - name: test_work_removed_during_the_drive_is_reported_as_no_longer_present
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A planned piece is absent from the second read; assert it is named as no longer present and not as unbuilt or as an addition."
+  - name: test_an_empty_second_read_is_not_treated_as_a_failed_read_or_the_reverse
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Distinguish an epic that genuinely contains no work from a read that failed, asserting the two produce different outputs -- the error path this AC exists to keep separate."
+test_rationale: |
+  Both halves are absences, and both are invisible to a test that only exercises the
+  happy path: an implementation that returns an empty set when the re-read fails
+  passes BO-300a-5's every descriptor and silently restores the original defect. The
+  descriptors here are therefore all negative or error cases, driven through the real
+  workflow and asserted on the emitted text.
+
+  Two of them exist because a declared failure and a missing confirmation are
+  different replies that must produce the same outcome. A suite in which every
+  successful enumeration claims it was readable and every failed one claims it was
+  not can never tell a fail-open check from a fail-closed one: both pass, for two
+  reasons that cannot be separated. Only a reply that says nothing either way
+  distinguishes them, so each such test must first assert the reply really did omit
+  the claim, and the affirmative control must stay green throughout.
+
+  The empty-versus-failed descriptor remains because an empty set and a failed read
+  are the same value in the most likely implementation, and once they are conflated
+  the fail-closed guarantee is decorative.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - "2026-08-18 BrainCandy: broadened the first case from 'the set cannot be read back' to 'the re-check does not affirmatively confirm it read the set', and added the partial-list shape. As authored, the criteria named only the reply that says it FAILED, so an implementer reading it writes a check for that denial -- which is exactly the live defect: the epic re-check reply schema declares no required list and the guard tests for the denial, so a reply that simply OMITS its readability claim is legal, takes the VERIFIED branch, and a partial enumeration then yields no additions, no withholding, and an 'Epic complete' statement. That is BUG-19's failure mode occurring inside the guard built to prevent it. The sibling record read-back is correct by contrast: it requires the confirmation and treats anything other than an affirmative true as unverified. 'Could not read' and 'did not confirm it could read' are different statements, and the point of failing closed is that they must produce the same outcome -- so the AC now says so, and adds that work missing from an unconfirmed list must not be reported as removed, since such a reply gives no basis for a claim about the store. Amended the title (it named only the narrower shape), added the ABSENCE OF A CLAIM IS NOT A CLAIM and AN UNCONFIRMED LIST SUPPORTS NO REMOVAL CLAIM constraints, added three test_spec descriptors naming the tests that now cover this (the unconfirmed-with-full-list and unconfirmed-with-partial-list cases plus the affirmative control that keeps the negatives non-vacuous), added their test file to post_write_commands, and extended test_rationale. Covered by unit_tests/prompt_assembly/test_epic_recheck_readable_flag_polarity.py. work_status left todo -- the fix is not built yet."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The fail-closed and no-false-alarm boundary for BUG-19's fix (BO-300a-5).
+
+  Two ways the fix fails. It can fail open -- a re-read error yielding an empty set,
+  or a re-read reply that never claims it read anything being taken as a verified
+  read, either of which reads exactly like an epic that did not grow and restores the
+  reported-complete defect at the moment the store is least readable. Or it can fail
+  loud -- naming already-complete or removed work as unplanned additions on every
+  drive, at which point the section is noise and the operator stops reading it, which
+  is the same outcome as not emitting it.
+
+  The removal case is included deliberately: BUG-19 is an omission defect, and
+  silently dropping a piece of work that vanished from the epic is the same omission
+  with the sign reversed.

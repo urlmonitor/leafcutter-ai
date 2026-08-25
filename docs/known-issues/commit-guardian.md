@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-19
+last_updated: 2026-08-25
 components:
   - commit_guardian
 related_docs:
@@ -352,7 +352,11 @@ contract differ, so compliance with the message is not compliance with the gate.
 
 ---
 
-### KI-CG-008 — The hooks' test seams disagree on both variable name and separator, so verifying a hook the wrong way exits 0 having checked nothing
+### KI-CG-012 — The hooks' test seams disagree on both variable name and separator, so verifying a hook the wrong way exits 0 having checked nothing
+
+> **Renumbered at merge, 2026-08-25: filed as `KI-CG-008`, now `KI-CG-012`.** `main`
+> independently minted its own `KI-CG-008` (plus 009-011) while this branch was in flight.
+> Same collision `KI-BO-016` records, in a second register on the same day.
 
 - **Severity:** high
 - **Status:** open — no AC
@@ -390,3 +394,265 @@ naming what could not be resolved, rather than exiting 0 having examined nothing
 explicitly-provided list that matches nothing is a caller error, never a pass. Until then,
 the reliable way to prove a hook saw your files is the one used here: re-run it with a
 deliberately invalid file alongside the real ones and confirm it fails on the invalid one.
+### KI-CG-009 — `check-components-integrity` resolves the repo root to the main checkout instead of the worktree, so a branch-only `detail_ref` doc is reported missing
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_components_integrity.py` — `_repo_root()` (`:134-175`), the module-level `REPO_ROOT` binding (`:127`), and the `detail_ref` existence check `doc_path = root / detail_ref` (`:657`)
+- **Reported by:** customer bug report, 2026-08-25
+
+**Symptom.** Committing in a git worktree, the hook reports a component's `detail_ref`
+architecture doc as missing even though the doc exists on the branch being committed. The
+file is there and is reachable; the hook is reading a *different*, perfectly valid checkout
+and truthfully reporting that the doc is not in that tree. The failure message does not name
+the root it used, so it reads as "you forgot to write the doc" while the doc sits in front of
+you.
+
+**Root cause.** `_repo_root()` — added by `ACS-300g-6` — resolves the root by running
+`git rev-parse --show-toplevel`, which is CWD-based and therefore correct inside a worktree.
+Its fallback is not. The fallback is `Path(__file__).resolve().parents[2]`, and in a worktree
+`.leafcutter` is commonly a **symlink** to the workspace parent's `.leafcutter` — the layout
+this package's own `CLAUDE.md` → "Worktree pre-commit config" explicitly recommends.
+`Path.resolve()` follows that symlink before `parents[2]` is taken, so the fallback lands on
+the **main workspace checkout** rather than on the worktree being committed to. The one
+resolution path meant to be the safety net is the path that walks out of the repository you
+are committing to.
+
+There is a second, independent half. The module-level `REPO_ROOT` (`:127`) is bound to that
+same `__file__`-relative expression **at import time** and is only corrected inside `main()`.
+Any code path reading `REPO_ROOT` before or outside `main()` therefore gets the wrong root no
+matter what `_repo_root()` would have returned — `validate_component_entry`'s own
+`doc_path = REPO_ROOT / detail_ref` (`:433`) is exactly such a consumer. Repairing only the
+fallback expression leaves this half live.
+
+**Why it matters.** The file exists, on the branch being committed; the hook simply computes
+the wrong root. The symlinked `.leafcutter` layout is not an exotic setup someone talked
+themselves into — it is the documented, supported one, so a hook that breaks under it is the
+thing that is wrong, not the layout. The practical workaround is `SKIP=`, which is precisely
+the reflex this repo is trying to eliminate: a guard that must be bypassed to commit correct
+work teaches people to bypass guards. There is a false-green corollary too — a `detail_ref`
+that exists in the main checkout but *not* on the branch being committed passes this gate for
+the same reason, landing a registry entry that points at a doc the branch does not contain.
+
+**Evidence.** Reported by a customer on 2026-08-25, committing from a worktree whose
+`.leafcutter` was a symlink to the workspace parent's. The code facts are directly readable:
+`REPO_ROOT: Path = Path(__file__).resolve().parents[2]` at `:127`, under a comment stating
+*"main() updates this via _repo_root()"*, and `_repo_root()`'s two fallback branches at
+`:161-174`, both returning `_fallback = Path(__file__).resolve().parents[2]`. The helper's
+docstring claim that it is *"correct regardless of where the hook file lives (e.g. via a
+.leafcutter symlink into another repo)"* holds only for the `git rev-parse` branch, not for
+the fallback sitting immediately beneath it.
+
+**AC coverage — already claimed, and already once phantom-done.** `ACS-300g-6` ("Component
+integrity hook resolves REPO_ROOT to the actual repository top-level") names this invocation
+path in its criteria verbatim: *"invoked through the `.leafcutter` symlink install path (so
+that `Path(__file__).resolve().parents[2]` resolves to `<repo>/.leafcutter` rather than the
+real repository root)"*. It was marked `work_status: done` on 2026-07-08 (commit `4216ddcf`)
+and stayed that way for six weeks; it was reopened to `todo` on 2026-08-18 because the shipped
+fix swapped a `__file__`-anchored root bug for a CWD-anchored one, and because its test never
+exercised a symlinked `.leafcutter` or a linked worktree at all. So this is **incomplete
+coverage on an AC that was already marked done** — a phantom-done instance with a paper trail,
+not virgin territory, and the current customer report is that same defect resurfacing from a
+second direction. Anyone picking this up should read that record's `notes` before writing a
+line of code. Store anomaly worth recording alongside it: `ACS-300g-6` carries
+`covered_by: []` while its `implemented_by` names a test file — the coverage link that would
+have exposed the gap was never made.
+
+**Fix direction.** Never resolve the root through the `.leafcutter` symlink. Prefer the
+`git rev-parse --show-toplevel` result and, when it fails, derive the root from the **CWD**
+rather than from `__file__` — the question being asked is "which tree is being committed to",
+and `__file__` cannot answer that once the hook is reached through a link. Bind `REPO_ROOT`
+lazily, or thread the resolved root into every consumer the way `validate_new_component`
+already does, so no caller can read the import-time fallback. Heed the trap recorded on
+`ACS-300g-6`: the obvious regression test cannot fail, because a test run with the CWD already
+at the worktree top-level returns the right root against broken and fixed code alike. A test
+for this must exercise a symlinked `.leafcutter` **and** place the CWD somewhere other than
+the worktree top-level, or it will be green against the defect — which is how this survived
+the first time.
+
+**Relationship to KI-BP-003.** Same symlinked-worktree setup, different defect, and the
+distinction decides the fix. `KI-BP-003` is a **missing-artifact** failure: `config/doc_types.json`
+was never deployed into the layout the hook runs in, so no amount of correct root resolution
+would have found it and the repair belongs in the deploy manifest. This is a **wrong-tree**
+failure: the file exists, on the branch being committed, and the hook reads a different
+checkout — deploying more files fixes nothing here.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the same family — a hook that
+cannot reach a file it depends on because it is wrong about where it is — though M2's
+mechanism is the deploy manifest and this one's is root resolution through a symlink.
+
+---
+
+### KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable
+
+- **Severity:** blocker
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** `templates/scripts/commit_guardian/frontmatter_validators.py:226-250`
+  (`validate_paths`), crash at `:245`
+- **Reported by:** adopter repo DIAGraph (`roche-sandbox/dia-graph`), against pin `54356a92`
+
+**Symptom.** The hook aborts with an unhandled traceback rather than emitting a validation
+error:
+
+```text
+File ".leafcutter/scripts/commit_guardian/frontmatter_validators.py", line 246, in validate_paths
+    full_path = project_root_path / p
+                ~~~~~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for /: 'PosixPath' and 'dict'
+```
+
+**Root cause.** `validate_paths` guards that the *field* is a list and never that its
+*elements* are strings:
+
+```python
+path_fields = ["related_docs", "related_code", "architecture_diagrams"]
+
+for field in path_fields:
+    paths = fm.get(field)
+    if not paths or not isinstance(paths, list):
+        continue
+    for p in paths:
+        full_path = project_root_path / p     # p may be a dict
+```
+
+An adopter whose convention labels each related doc with its Diataxis genre —
+
+```yaml
+related_docs:
+  - explanation: docs/explanation/architecture.md
+```
+
+— hands YAML a mapping, so `p` is `{"explanation": "docs/explanation/architecture.md"}` and
+`Path / dict` raises. Nothing in the package declares which shape is canonical:
+`doc_types.json` says nothing about `related_docs`, and the hook's own README describes only
+"path existence of `related_docs` / `related_code`". So an adopter has no way to learn the
+constraint except by crashing into it.
+
+**Scope.** Not an outlier in the reporting repo — it is the dominant convention there. Of
+50 documents under `docs/**/*.md` declaring `related_docs`, **at least 33** use the mapping
+form. Every one of them is uncommittable, and because the hook crashes rather than failing,
+the practical workaround is `SKIP=check-doc-frontmatter` — which is worse than a strict
+gate, since it teaches the reflex that also disables the ~40 hooks that were working.
+
+**Reproduce.** From a checkout where the declaring config is reachable (otherwise KI-BP-003
+masks this by crashing first):
+
+```bash
+python .leafcutter/scripts/commit_guardian/check_doc_frontmatter.py docs/reference/configuration.md
+```
+
+**Scope note.** `check_adr_cross_reference._doc_mentions_adr` also consumes `related_docs`
+but does a raw case-insensitive substring match over the whole file, so it is unaffected.
+`validate_paths` is the only consumer that indexes into the elements.
+
+**Fix direction.** Normalise the element before use and decide deliberately which form is
+canonical — then say so somewhere an author will read. Accepting both is cheap:
+
+```python
+for p in paths:
+    if isinstance(p, dict):
+        candidates = [v for v in p.values() if isinstance(v, str)]
+    elif isinstance(p, str):
+        candidates = [p]
+    else:
+        errors.append(f"Unsupported entry in '{field}': {p!r}")
+        continue
+    for c in candidates:
+        if not (project_root_path / c).exists():
+            errors.append(f"Broken path in '{field}': '{c}' does not exist")
+```
+
+Whichever shape wins, the validator must **reject an unsupported shape with a message**
+rather than raise. A hook that crashes on valid-looking YAML cannot be complied with, only
+bypassed.
+
+**Pattern:** the inverse of the usual false-green — a gate so brittle that the only
+available response is to turn it off, taking every sibling hook with it.
+
+---
+
+### KI-CG-010 — `check-roadmap-schema` never validates the roadmap, and the roadmap would fail it if it did
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_roadmap_schema.py:27` — `SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"`
+
+**Symptom.** The hook resolves its schema at `<git-root>/leafcutter/config/roadmap.schema.json`.
+In this repository the git root **is** the package, so the real path is
+`config/roadmap.schema.json` with no `leafcutter/` segment. The file it looks for does not
+exist, so the hook takes its fail-open branch and reports an advisory skip. Every commit
+touching `docs/roadmap.json` has passed a check that never ran.
+
+The second half is worse than the first: **if the hook ever found its schema, the roadmap
+would fail it.** Every phase in `docs/roadmap.json` carries a `components` key, and the
+schema's phase item declares `additionalProperties: false` over exactly six permitted
+properties — `description`, `exit_criteria`, `id`, `status`, `tickets_advancing_outcome`,
+`title`. `components` is not among them. So fixing the path alone converts a silent no-op
+into a blocked commit on an unrelated change.
+
+**Evidence.** Verified 2026-08-25 while rewording a phase_1 exit criterion.
+`ls <repo>/leafcutter/config/roadmap.schema.json` → no such file. The schema's own
+`properties.phases.items` was read directly: six properties, `additionalProperties: false`.
+The hook reported no failure on the commit that changed `docs/roadmap.json`.
+
+This is the same shape as `KI-BP-003` and `KI-CG-002` — a guardrail that cannot reach its
+own declaring file in the self-hosted layout — and the third instance found. Unlike
+`KI-CG-002`, which narrows an enum, this one skips the check entirely.
+
+**Fix direction.** Resolve the schema the way `KI-CG-009`'s repair does, from the running
+artifact's own location rather than a hardcoded `leafcutter/` segment that assumes a
+consumer layout. Land the `components`-vs-schema disagreement in the **same** change —
+either add `components` to the phase schema or drop it from the roadmap — because repairing
+the path first turns a dormant no-op into an immediate merge blocker. Note the regression
+test must run with the CWD somewhere other than the layout under test, or it will be green
+against both the broken and the fixed resolver.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that reports
+success having checked nothing) and M2 (a guardrail that cannot reach a file it depends on).
+
+---
+
+### KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/regenerate_roadmap_mirror.py:155-163` — the frontmatter block
+
+**Symptom.** The generator emits a fixed six-line frontmatter: `title`, `type`, `status`,
+`created`, `last_updated`, `components`. Two defects follow.
+
+It never emits `description`, so any `description` present in `docs/roadmap.md` is **deleted
+on every regeneration**. The comment above the block says the frontmatter is "required by
+check_doc_frontmatter.py", which is exactly the convention the omission violates.
+
+And `created` is written from the regeneration timestamp
+(`date_only = generated_at[:10]`, line 154), so a file created on one date silently claims
+it was created today, every time the mirror is rebuilt. `created` is supposed to be
+immutable; only `last_updated` should move.
+
+**Evidence.** Verified 2026-08-25 in the commit that reworded a phase_1 exit criterion. A
+one-line change to `docs/roadmap.json` produced a 16-line diff in `docs/roadmap.md`: the
+criterion itself, the two generated timestamps, quoting and indentation churn, and the
+removal of `description: Overview of Project Roadmap.`. `created` moved `2026-08-17` →
+`2026-08-25` on a file that plainly was not created that day.
+
+Not currently merge-blocking — `check-description-field` is not among the six required CI
+checks — so this erodes quietly.
+
+**Fix direction.** Emit `description` in the generated frontmatter, and preserve the
+existing `created` value when the mirror already exists rather than stamping the
+regeneration date. Both are small, and both are worth doing together with a test that
+regenerates twice and asserts the only field that moves is `last_updated`.
+
+**Related.** This is `KI-BP-002`'s shape in another file — a tracked generated artifact that
+drifts every time it is rebuilt — and `BP-1500a` is the acceptance criterion written against
+that class. The roadmap mirror is not currently in `BP-1500a`'s scope; worth checking
+whether it should be when that AC is built.

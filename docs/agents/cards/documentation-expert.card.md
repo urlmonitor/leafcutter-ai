@@ -209,6 +209,7 @@ flowchart TD
 - BO-2500b-4: How-to: local pre-commit proof-of-done feedback and the required CI gate
 - BO-2500c-4: How-to: author real-artifact fixtures and round-trip tests
 - BO-2500c-5: Reference: fixture policy and real-producer fixture rules
+- BO-2600b-3: How-to: what a fast-lane run picks up when you aim it at one criterion
 - BO-2900a-4: How-to: prove a criterion done through the real way in, and what to do when the guard refuses
 - BO-2900b-4: How-to: keep capabilities and their automation connected in both directions
 - BO-2900c-3: How-to: the reverse-direction content of the connection guide — stale calls, renames and removals
@@ -221,6 +222,7 @@ flowchart TD
 - BP-100b-10: Drift hook docs include a developer checklist for adding new template categories
 - BP-100b-8: Build pipeline diagram includes the workflow scripts phase
 - BP-100b-9: Consolidated output root doc lists .claude/workflows/ as a shimmed output
+- BP-1100a-5: The guidance on getting a generated ticket's surface right describes the derivation that actually runs
 - BP-1200a-2: The CI test command is documented as the single authoritative way to run the suite from a clean checkout
 - BP-200c-4: Agents README documents llm-expert in the phase agents table
 - BP-300a-7: debug.md falls back to prose skill for older Claude Code runtimes
@@ -234,6 +236,7 @@ flowchart TD
 - BP-800d-4: How-to guide for legacy agent retirement
 - BP-800e-4: How-to guide for upgrading from legacy agent layout
 - BP-800f-4: Reference documentation for database paradigm support
+- BP-900g-8-iii: The written deploy-dependency rule names data and configuration files, not only imported modules
 - CR-100a-4: Reference doc: the code-smell finding anatomy and named catalogue
 - CR-100d-3: Reference doc: severity rubric and consolidated report format
 - CR-100e-2: How-to guide: running /code-smell-review on a file, folder, or snippet
@@ -259,6 +262,11 @@ flowchart TD
 - GE-122b-4: Which locations must carry a number, and which need not, is written down
 - GE-122c-3: A person blocked where nobody can be brought in has a procedure to follow
 - GE-122d-5: Which stage you can skip, and what still catches you, is written down
+- GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
+- GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
+- GE-123c-4: Someone writing their first suppression can find out how to write one instead of copying a neighbouring line
+- GE-123c-5: The document that lists the accepted suppression forms also says what is rejected and why
+- GE-123d-4-ii: The reference states where the exemption applies, in one place, as a closed list
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface
