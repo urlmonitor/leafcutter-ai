@@ -1248,3 +1248,152 @@ references, and a missed one silently points a reader at someone else's defect.
    turns a silent duplicate on `main` into a blocked merge, and it is a few lines. **Worth doing
    regardless of which of the above is chosen** — it is the only one of the three that would
    have caught 2026-08-25 before it landed.
+
+---
+
+### KI-BO-025 — `/build-feature` plans only the first ready wave, so an epic with any dependency depth cannot be driven to completion in one run
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/build-feature.js` — the `epic-planner` `agent()` call
+  (deployed `~:2101`), and the `for (const batch of batches)` loop that consumes its output
+
+**Symptom.** Driving the 37-ticket `EPIC-TrustThatAGreenCheckActuallyChecked`, the planner
+returned 8 batches containing **17** tickets. The other 20 were never scheduled.
+
+The dropped set is not arbitrary. Measured against the epic folder:
+
+```text
+total tickets: 37 | planned: 17 | MISSING: 20
+tickets with non-empty depends_on: 20
+missing set == depends_on set ?  True
+planned tickets that have deps:  []
+```
+
+Every ticket carrying **any** `depends_on` was dropped; every ticket planned had none.
+
+**Root cause — the planner is asked for one antichain and is never asked again.** Its prompt
+says:
+
+> `(2) Compute the maximal antichain of ready tickets (all depends_on met).`
+
+At plan time no ticket is `done`, so "all depends_on met" is true only for tickets whose
+`depends_on` is empty. That is a correct reading of the instruction — the planner is not
+misbehaving. The defect is that this single ready-set is treated as the whole schedule: the
+`agent()` call sits **outside** the batch loop, so there is no re-plan after a batch completes
+and no wave 2. One invocation can therefore build at most the dependency-free tickets.
+
+The eight "batches" are misleading here. They are the antichain split by `files_touched`
+overlap — a *parallelism* split, not a dependency sequence. Seven of the eight contain a
+single ticket, which reads like a dependency chain and is not one.
+
+**Consequence.** An epic whose dependency graph is N levels deep needs N separate manual
+`/build-feature` invocations, and nothing in the run says so or says how many remain. For
+GE-120 that leaves the entire `b`/`d`/`e` chain — including every consumer of the `GE-120c-1`
+harness — unbuilt after a run that did substantial correct work on the other 17.
+
+**Not a false-complete, at least.** The completion guard does catch the shortfall and withholds
+the "complete" verdict — but it misdescribes the cause; see KI-BO-026.
+
+**Fix direction.** Either loop the planner until it returns an empty batch set (re-reading
+frontmatter each round, which the code comment at `~:2400` already anticipates as the resume
+mechanism), or have it emit the full topological schedule as ordered waves rather than one
+antichain. If the single-wave behaviour is deliberate, the run must state it: report the count
+of unscheduled-but-ready-later tickets and instruct the caller to re-invoke, rather than
+leaving the arithmetic to whoever compares the plan against the folder.
+
+**Pattern:** a stage that does part of the job correctly and reports no signal that the rest
+exists.
+
+---
+
+### KI-BO-026 — Work the planner never selected is reported as work "added to the epic after the plan was fixed"
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/build-feature.js` — `compareEpicTicketSets()`
+  (deployed `~:1838`) and `epicRecheckReport()` (deployed `~:1952`)
+
+**Symptom.** `compareEpicTicketSets` computes
+
+```js
+additions: currentOpen.filter((p) => plannedPaths.indexOf(p) === -1)
+```
+
+— every ticket that is open at completion time and was not in the plan. That correctly caught
+the 20 tickets of KI-BO-025 and correctly set `epic_complete: false`, which is the right
+verdict and worth keeping.
+
+But `epicRecheckReport` then files them under the field `discovered_after_planning` with the
+action text:
+
+> "This work was added to the epic after the plan for this drive was fixed, so it was never
+> built."
+
+That is false. All 20 tickets were committed to the epic folder before the drive was launched;
+none was added during it. They were never *added* — they were never *selected*.
+
+**Why the distinction matters.** The two causes have opposite remedies. Work genuinely added
+mid-drive is a scope question — someone changed the epic under a running build, and the
+sensible response is to find out who and decide whether it belongs. Work the planner skipped is
+a tooling question with no one to ask. A reader following the message as written goes looking
+for a change that never happened, and the real defect (KI-BO-025) stays invisible behind an
+explanation that sounds complete.
+
+The remedy sentence happens to be right — "re-run /build-feature to plan and build it" is
+exactly what KI-BO-025 requires — but it is right by accident, for a stated reason that does
+not hold.
+
+**Fix direction.** The comparison already has both inputs needed to tell these apart: a ticket
+present in the epic folder at *plan* time but absent from `plannedPaths` was skipped, while one
+absent at plan time and present at completion was added. Capture the plan-time folder listing
+and split `additions` into `never_planned` and `added_during_drive`, with the right remedy on
+each. Until then the field name asserts a cause the code cannot actually determine.
+
+**Pattern:** a correct verdict delivered with a fabricated cause.
+
+---
+
+### KI-BO-027 — `/build-feature`'s target resolution returns the epic folder as the worktree path
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/build-feature.js` — the `resolve-target` phase, dispatched
+  to `status-checker` against `RESOLVE_SCHEMA`
+
+**Symptom.** On the first phase of an epic drive, the resolver returned:
+
+```json
+{"target_type":"epic",
+ "epic_path":".../leafcutter-ai/tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked",
+ "worktree_path":".../leafcutter-ai/tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked"}
+```
+
+`worktree_path` is the epic's ticket folder **inside the main checkout** — it is not a worktree,
+and it is not even a repository root. The value satisfies `RESOLVE_SCHEMA` because the schema
+constrains the field to a string, and a path-shaped string is what it got.
+
+**No damage on this run.** A subsequent setup step created a real worktree at
+`worktrees/EPIC-TrustThatAGreenCheckActuallyChecked` and returned `status: "created"`, and the
+drive used that. Both `.leafcutter` and `.pre-commit-config.yaml` symlinks were present in it,
+so the silently-skipped-hooks condition did not arise either.
+
+**Why record it anyway.** The value that came back was wrong, nothing rejected it, and it was
+survivable only because a later step happened to overwrite it. Had the second step reused the
+first step's answer instead of computing its own, every phase agent would have been pointed at
+the user's main checkout on `main` — which is the shape of KI-ACD-007, where `/plan-feature`
+wrote its artifacts into the primary checkout for exactly this reason. The resolver failing open
+onto a plausible-looking path is the hazard; the recovery was luck, not design.
+
+**Fix direction.** Validate the resolved `worktree_path` before any consumer reads it: it must
+be a directory that `git -C <path> rev-parse --show-toplevel` resolves to, and it must not be
+the main checkout when the target is an epic. A schema that accepts any string cannot catch
+this — the check has to be behavioural.
+
+**Pattern:** a fail-open resolution rescued by a downstream step that did the work again.

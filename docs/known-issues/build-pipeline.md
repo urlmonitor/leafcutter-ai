@@ -1086,3 +1086,144 @@ repair this instance without preventing the next one.
 `Check Product-Truth Derived-Data Drift (generator --check)` job, which already does exactly this
 for a different generated surface). Alternatively stop committing them and generate on demand —
 but they are read by agents from the deployed tree, so the ratchet is the smaller change.
+
+---
+
+### KI-BP-016 — `build.py` honours `docs_root` when writing the doc index but ignores it when reading, and overwrites the real index with "No docs found."
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build.py` — the doc-index build phase (`~:1026-1051`);
+  `scripts/generate_doc_index.py` (`generate_index`, and the `No docs found.` emitter at
+  `:259`, `:284`, `:294`)
+
+**Symptom.** Running the documented self-hosting build
+
+```
+python3 scripts/build.py --target-dir /home/henzeh/projects/leafcutter --force-breaking
+```
+
+rewrote `leafcutter-ai/docs/INDEX.md` from a populated 221-line index to a 57-line stub whose
+every section reads `No docs found.` — **172 table rows deleted**, all nine categories emptied.
+The build printed `wrote leafcutter-ai/docs/INDEX.md` and exited 0.
+
+**Root cause — the read root and the write root are computed differently.** In the build phase:
+
+```python
+docs_dir = config.get("docs_root", "docs/").rstrip("/")   # "leafcutter-ai/docs"
+output_path = target_root / docs_dir / "INDEX.md"          # <ws>/leafcutter-ai/docs/INDEX.md
+content = generate_index(target_root)                      # scans <ws>/docs/
+```
+
+The **write** path applies `docs_root` from `skills_config.json`, which in this workspace is
+`"leafcutter-ai/docs/"` — so it correctly targets the repo's index. The **read** path passes
+`target_root` straight to `generate_index`, which hardcodes `<root>/docs` and never consults
+`docs_root`. In the self-hosting layout `<workspace>/docs/` is a five-entry deployed stub
+(`INDEX.md`, `how-to/`, `product-truth/`, `reference/`, `ui-context.md`), not the repo's docs
+tree. So the generator scans the stub, finds nothing in nine of its categories, and the result
+is written over the index of a tree it never looked at.
+
+**Reproduced directly**, which isolates it from the rest of the build:
+
+```text
+$ generate_doc_index.py --repo-root .../leafcutter-ai       --output /tmp/idx_repo.md
+$ generate_doc_index.py --repo-root .../leafcutter          --output /tmp/idx_workspace.md
+$ grep -c "No docs found" /tmp/idx_repo.md /tmp/idx_workspace.md
+/tmp/idx_repo.md:0
+/tmp/idx_workspace.md:9
+$ wc -l /tmp/idx_repo.md /tmp/idx_workspace.md
+221 /tmp/idx_repo.md
+ 57 /tmp/idx_workspace.md
+```
+
+The 9-section stub is exactly what landed in the repo.
+
+**Why this is worse than a stale artifact.** `No docs found.` is not an error state the
+generator reports — it is the ordinary rendering of an empty category, so an empty scan and a
+genuinely empty docs tree are indistinguishable in the output and in the exit code. The
+destination file is tracked, so the damage is a committable 172-row deletion of the index that
+CLAUDE.md points agents at for doc discovery. It was noticed here only because `git status`
+was checked immediately after the build; a build run as part of a larger flow would have
+carried it into the next commit.
+
+Correcting an earlier misattribution: a dirty `docs/INDEX.md` observed in this workspace on
+2026-08-25 was initially blamed on a concurrent agent. It was this build phase.
+
+**Fix direction.** Pass the resolved docs root into the generator rather than the target root —
+`generate_index` should take the same `target_root / docs_dir` the writer uses, or accept
+`docs_root` and apply it. Independently, the generator should refuse to overwrite a non-empty
+index with an all-empty scan: a run that resolves zero documents in every category has almost
+certainly resolved the wrong directory, and should exit non-zero saying which directory it
+scanned rather than rendering the emptiness as content.
+
+**Pattern:** a resolver that reads one tree and writes another, with the failure rendering as
+ordinary output.
+
+---
+
+### KI-BP-017 — `scripts/feedback/` is never provisioned into a worktree, so the documented signoff feedback call crashes and every affected phase records `(submit-failed)`
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/setup_ticket_worktree.py` (no `feedback` reference anywhere);
+  `scripts/build_phases.py:1642-1676` (deploys `scripts/feedback/` to the target root only);
+  `templates/skills/signoff/SKILL.md:180` and the agent templates that repeat its literal
+
+**Symptom.** Caught live during the GE-120 epic drive — the running agents left their own
+stderr on disk:
+
+```text
+python3: can't open file '/home/henzeh/projects/leafcutter/worktrees/
+  EPIC-TrustThatAGreenCheckActuallyChecked/scripts/feedback/submit_feedback.py':
+  [Errno 2] No such file or directory
+```
+
+Python exits 2 before the script runs — no config read, no id minted, empty stdout — so the
+signoff skill's fallback writes `feedback-id: (submit-failed)` into the ticket. Reproduced
+independently with the same command shape: byte-identical message, exit code 2.
+
+**Root cause — this is the deployed-dependency-closure rule violated for an executable.**
+`scripts/feedback/` is a build output: `build_phases.py:1642-1676` writes it to
+`<target_root>/scripts/feedback/`, and `install_shims` realizes it in the **project root
+only** (`/home/henzeh/projects/leafcutter/scripts/feedback -> ../.leafcutter/scripts/feedback`).
+It is gitignored (`.gitignore:14`; `git ls-files scripts/feedback` is empty), so it cannot
+arrive with the checkout either. `setup_ticket_worktree.py` provisions `.leafcutter` and
+`.pre-commit-config.yaml` symlinks and contains **zero** references to `feedback`. The
+worktree's `scripts/` therefore exists and is fully populated — 74 entries — with no
+`feedback/` subdirectory.
+
+Meanwhile `signoff/SKILL.md:180` prescribes the **CWD-relative** literal
+`python3 scripts/feedback/submit_feedback.py ...`, repeated verbatim in
+`_signoff_block.md:21`, `python-coder.md:643`, `documentation-verifier.md:465`,
+`user-surface-smoker.md:300`, `live-surface-tester.md:358` and
+`build-single-ticket/SKILL.md:293`.
+
+**Same family as the entries above.** This register already documents the deployed-dependency
+closure failing for `.leafcutter/config/` contents (lines 171-194, 937, citing `BP-900g-8-ii`:
+"the deployed-dependency closure covers the data and configuration files a script reads, not
+only the modules it imports"). This is the identical rule broken for an executable rather than
+a config file, and the register's own "Masking trap" note explains why it stayed invisible:
+the workspace root **has** the shim, so the relative call works everywhere except a worktree
+— and worktrees are where epics are driven.
+
+**Why high rather than medium.** It is silent by design — `SKILL.md:706` instructs agents not
+to abort signoff on feedback failure — so it mints an unfalsifiable `(submit-failed)` that
+reads as an environment hiccup. Every phase agent on an affected ticket loses its feedback for
+the whole drive. In this run, all three `(submit-failed)` entries were on the one ticket whose
+agents followed the documented literal each time; agents on other tickets improvised a working
+path. That is the same shape as the 23-lost-events incident CLAUDE.md's pre-drive checklist
+was written for, and the pre-drive check does not detect it.
+
+**Fix direction — two independent changes, both needed.** (a) Provision it: have
+`setup_ticket_worktree.py` create the `scripts/feedback` symlink alongside the `.leafcutter`
+one it already makes. (b) Stop prescribing a relative path: change `SKILL.md:180` and the six
+agent templates to invoke `.leafcutter/scripts/feedback/submit_feedback.py`, which resolves in
+both layouts. (b) alone stops the crash but routes the write to the install-tree sink, which
+is `KI-FC-001` — so it must land together with that fix, not before it.
+
+**Pattern:** a build output that reaches the project root and not the worktrees, called
+through a path that only resolves at the project root.
