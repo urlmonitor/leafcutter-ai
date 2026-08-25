@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 work_status: todo
