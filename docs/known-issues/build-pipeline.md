@@ -461,7 +461,7 @@ absence as a pass.
 - **Severity:** high
 - **Status:** open — no AC
 - **Occurrences:** 1
-- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
 - **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720
 
 **Symptom.** The phase probes `claude --version` and compares against

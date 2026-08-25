@@ -402,7 +402,7 @@ fails the run. The lane also has no documentation phase (it dispatches `test-wri
 the ticket-generation path, but the entire done-proof chain the fast lane depends on is
 blind to it.
 
-Reproduction, re-measured 2026-08-19 after the aiming fix (BO-2600b-1) landed in this
+Reproduction, re-measured 2026-08-24 after the aiming fix (BO-2600b-1) landed in this
 same branch — the originally-recorded repro (`--ac BO-2600b-1` resolving five ids) no
 longer reproduces, because that command now carries `--exclude-structural-parent` and
 because b-1/-1-i/-1-ii are now `done`; it returns `[]`. The current standing repro is:
@@ -447,7 +447,7 @@ front door.
 - **Severity:** high
 - **Status:** open — no AC
 - **Occurrences:** 1
-- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
 - **Where:** `scripts/ac_store/scan_ac_store.py` — `traverse_ac_tree`, against
   `scripts/build_orchestration/fast_lane.py` — `resolve_connected_build_set`
 
