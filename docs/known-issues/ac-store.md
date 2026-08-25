@@ -555,46 +555,71 @@ them — an unstaged fix will appear not to work.
 
 ---
 
-### KI-ACS-010 — The `test_spec` vocabulary is Python-only, so no web-app AC can state its test contract validly
+### KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `config/ac_store_schema.json` — `properties.test_spec.oneOf[0].items.properties.framework.enum` and `...type.enum`; **and the identical pair** in `config/test_requirements.schema.json` — `$defs.test_entry.properties.framework.enum` (`:74`) and `...type.enum`
+- **Where:** `config/ac_store_schema.json` → `test_spec[].framework` and
+  `test_spec[].type`, against the ACs under `docs/acceptance-criteria/ux-prototyping/`
+  and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/`; **and the
+  identical pair** in `config/test_requirements.schema.json` →
+  `$defs.test_entry.properties.framework.enum` (`:74`) and `...type.enum`
 
-**Symptom.** `test_spec` entries are validated against two closed enums under
-`additionalProperties: false`:
+**Symptom.** `test_spec[].framework` permits exactly `unittest` and `pytest`; `test_spec[].type`
+permits exactly `unit`, `integration`, `e2e`, `behavioral`. The repo now contains a Next.js
+app under `leafcutter-web/`, and the ACs written for it declare the tests that app actually
+uses — `framework: vitest` (40 entries), `framework: playwright` (2), and `type: component`
+(12). None of those three values is in either enum, so **every one of those records fails
+the store schema right now**, on `main`, unmodified.
 
-| Field | Permitted values | Values the store actually uses |
-|---|---|---|
-| `framework` | `unittest`, `pytest` | `vitest` (40 entries), `playwright` (2) |
-| `type` | `unit`, `integration`, `e2e`, `behavioral` | `component` (12 entries) |
+**Why nothing has caught fire.** The required `AC store valid` job is diff-scoped by
+design — `ci.yml:210` explains the choice, and it is a defensible one. The consequence is
+that a record can be invalid indefinitely and cost nobody anything until the moment
+somebody edits it for an unrelated reason, at which point they inherit a failure they did
+not cause and cannot fix without either widening the schema or falsifying their own test
+contract. `ci.yml:212` states the intended bargain plainly — *"Touch a broken record and
+you own it"* — which is a fair rule for 57 orphaned children and an unfair one here,
+because these 29 records are not malformed. They are correct descriptions of real tests
+that the schema has no vocabulary for.
 
-There is no correct value available. A Vitest component test is not `pytest`, and a React
-component test is not `unit`, `integration`, `e2e` or `behavioral`. The records are right
-and the vocabulary is incomplete — this is not a set of malformed ACs.
+This is the exact shape BO-2900g-3's MIGRATE-DO-NOT-DEFER constraint was written against:
+*"'The hook validates staged files only, so existing records are not invalidated in bulk'
+is not a mitigation — it converts an immediate, visible breakage into a landmine that
+fires on whoever next edits an untouched record for an unrelated reason."* Here the
+narrowing was never a decision at all; the schema simply predates the web app.
 
-**Evidence.** A whole-store sweep on 2026-08-25 (`validate_ac_schema.py
-docs/acceptance-criteria`, the recursive form available since KI-ACS-001 was fixed)
-refused **28 records** on this rule, every one of them a `leafcutter-web/` AC:
+**Evidence.** 2026-08-25, at `d37687ff`, whole-store run:
 
-- `build_pipeline` (2): `BP-1400c-1`, `BP-1400c-1-i` — the Playwright route-smoke CI gate.
-- `ux-prototyping` (26): `UXP-597`…`UXP-601` (decision diamonds), `UXP-602`…`UXP-605a`
-  (Atlas flow explorer), `UXP-607`…`UXP-610-2` (Atlas mock mode).
+```
+$ python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria
+AC schema validation FAILED:
+  ... 28 files: schema violation at test_spec ...
+```
 
-Adding `vitest` and `playwright` to `framework`, and `component` to `type`, makes all 28
-validate with **no other change** — verified by re-running each record's `test_spec`
-against the amended item schema. So the missing vocabulary is exactly three values.
+Single-record reproduction, showing it is the enum and not a malformed record:
 
-**The same three values are missing in a second schema, and the two are coupled.**
-`config/test_requirements.schema.json` `$defs.test_entry` carries a byte-identical
-`framework` enum (`["unittest", "pytest"]`, `:74`) and `type` enum
+```
+$ python scripts/ac_store/validate_ac_schema.py \
+    docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-601.yaml
+AC schema validation FAILED: ... 'framework': 'vitest', 'type': 'component' ...
+exit: 1
+```
+
+28 files fail the schema validator; a 29th carries the same vocabulary and is caught only
+by the stricter hook (KI-ACS-009). The whole-store run was only possible at all because
+KI-ACS-001 was fixed on 2026-08-19 — before that the bare-directory form exited 0 without
+reading anything, which is why a population this size went unnoticed.
+
+**Second occurrence, 2026-08-25 — the same gap exists in a second schema, and the two are
+coupled.** `config/test_requirements.schema.json` `$defs.test_entry` carries a
+byte-identical `framework` enum (`["unittest", "pytest"]`, `:74`) and `type` enum
 (`["unit", "integration", "e2e", "behavioral"]`), also under `additionalProperties: false`.
-That schema governs the `## Test Requirements` block in a ticket body.
+That schema governs the `## Test Requirements` block in a **ticket** body.
 
 The coupling is `generate_ticket_from_ac.py::_test_descriptors_from_spec` (`:1451-1454`),
-which copies the AC's `test_spec[].framework` and `[].type` **straight through** onto the
+which copies the AC's `test_spec[].framework` and `[].type` straight through onto the
 emitted ticket descriptor:
 
 ```python
@@ -604,50 +629,53 @@ if item.get("type"):
     entry["type"] = item["type"]
 ```
 
-So widening only the AC schema does not finish the job: a web-app AC would validate, and
-`/build-ac` would then generate a ticket whose descriptors carry `framework: vitest` and
-`type: component` — values the ticket schema forbids. **Both files must move in the same
-change.**
+So widening only the AC schema does not finish the job. A web-app AC would validate,
+`/build-ac` would generate a ticket carrying `framework: vitest` / `type: component`, and
+those are values the ticket schema forbids — the defect would move one step downstream
+rather than being fixed.
 
-That second failure would be *silent*, which in this repo's terms is the worse half.
-`test_requirements.schema.json` is not enforced by any hook or CI gate; it is a declared
+That downstream failure would be **silent**, which is the worse half.
+`test_requirements.schema.json` is enforced by no hook and no CI gate; it is a declared
 contract cited in `templates/agents/test-writer.md` and pinned by two unit tests
 (`test_bo_2900g_3`, `test_bo_2900g_4`). Nothing would refuse the malformed ticket — the
-generator would simply emit a descriptor that violates the contract test-writer is
+generator would simply emit a descriptor violating the contract `test-writer` is
 instructed to conform to.
 
-**One precision about the 28 records.** They are web-app ACs but not exclusively web-app
-*tests*: `BP-1400c-1` pairs a Playwright e2e entry with a `pytest` entry targeting
-`unit_tests/build_pipeline/` (it asserts the CI workflow wires the route-smoke job and
-does not set `continue-on-error`). Across all 28 records the entries are 40 `vitest`,
-2 `playwright`, 1 `pytest`. A record is refused if *any* of its entries uses an
-unlisted value, so mixed-stack ACs are refused on their JS half alone.
+**One precision about the affected records.** They are web-app ACs but not exclusively
+web-app *tests*: `BP-1400c-1` pairs a Playwright e2e entry with a `pytest` entry targeting
+`unit_tests/build_pipeline/` (it asserts the CI workflow wires the route-smoke job and does
+not set `continue-on-error`). Across the 28 validator-visible records the entries are 40
+`vitest`, 2 `playwright`, 1 `pytest`. A record is refused if *any* single entry uses an
+unlisted value, so a mixed-stack AC is refused on its JS half alone.
 
-**Consequence.** `AC store valid` is diff-scoped, so this is not currently red on `main`.
-It bites whoever next edits one of those 28 files, who then owns a refusal they did not
-cause. That is precisely the shape of KI-ACS-005, which absorbed two deferred
-`[HOOK-SKIP]`s before being fixed properly. It also means every Atlas AC now on disk is
-carrying a test contract the store cannot accept, so none of them can be marked done
-through the normal path.
+**Fix direction.** Widen both enums rather than rewriting 29 records to say something
+untrue about themselves: add `vitest` and `playwright` to `framework`, and decide
+deliberately whether `component` joins the level axis or those 12 entries move to an
+existing level. Note the axis question is genuine and should not be settled by reflex —
+`component` is a test **level** (heavier than a unit test, lighter than e2e, renders a
+component in a DOM), so it belongs on `type` and not on `angle`; adding it to `angle`
+would repeat the level/kind muddle BO-2900g-3 exists to have removed. Whichever way it
+goes, per BO-2900g-3 the change must move the affected records in the same commit, not
+leave them for whoever touches them next.
 
-**Fix direction.** Widen the enums in **both** schemas in one change, and add a test that
-asserts the two vocabularies are equal — they are duplicated by hand today, with nothing
-holding them in step, which is how they can drift apart again the moment one is edited
-alone. Because `config/ac_store_schema.json` is a package surface, this needs an AC
-declaring `package_surface: true` before it can be committed — the
-`check-package-surface-declaration` hook will refuse it otherwise.
+**Do both schemas in the one change, and add a test asserting the two vocabularies are
+equal.** They are hand-duplicated today with nothing holding them in step, which is how
+they drift apart again the moment one is edited alone. Because
+`config/ac_store_schema.json` is a package surface, the change needs an AC declaring
+`package_surface: true` or `check-package-surface-declaration` will refuse the commit.
 
-Prefer building it under **AR-100** ("Every part of your codebase has a specialist who
-genuinely owns it") rather than as a standalone `ac_store` patch. AR-100's stated concern
-is that there are "no unclaimed technologies where the system quietly falls back on
-whoever happens to be nearby", and this is its first concrete instance: the store gained a
-TypeScript web app and its test vocabulary never followed. Patched as three enum values,
-the next JS tool reproduces it; built as "every vocabulary admits the technologies this
-repo ships", it does not.
+**Where to build it.** Prefer **AR-100** ("Every part of your codebase has a specialist who
+genuinely owns it") over a standalone `ac_store` patch. AR-100's criteria require that
+there be "no unclaimed technologies where the system quietly falls back on whoever happens
+to be nearby", and this is its first concrete instance — the repo gained a TypeScript web
+app and the store's test vocabulary never followed. Patched as three enum values, the next
+JS tool reproduces it; built as "every vocabulary admits the technologies this repo ships",
+it does not.
 
-**Related.** KI-ACS-007 (`components` required and hand-authored while the package ships
-its deriver) is the same family — a store field whose permitted values are maintained by
-hand and drift behind reality.
+**Related.** KI-ACS-009 (the pre-flight is weaker than the gate — the reason a
+locally-clean folder run does not clear these). BO-2900g-3 (the MIGRATE-DO-NOT-DEFER
+constraint this violates). `ACS-200h`, named at `ci.yml:215` as the unbuilt whole-store
+backstop, is the check that would have surfaced this on day one.
 
 ---
 
@@ -674,11 +702,12 @@ documentation obligation — and the rule's own purpose (BO-2200a-5: obligations
 declared at feature level) is untouched by an empty list. The check keys on presence, not
 on whether an obligation is actually being asserted.
 
-**Evidence.** The same 2026-08-25 sweep refused **8 records**, all in
-`testing-quality/TQ-300-tooling-coverage-recovery`: `TQ-300a-1`, `-a-2`, `-a-3`, `-b-1`,
-`-b-2`, `-b-3`, `-c-1`, `-c-2`. Every one is `level: L2` with `documentation_triggers: []`
-**and** a `documentation_rationale` — e.g. *"Internal test coverage for existing tooling;
-no user-facing behavior is added, so no how-to or diagram adds value."*
+**Evidence.** The same 2026-08-25 whole-store sweep that surfaced KI-ACS-010 refused
+**8 records**, all in `testing-quality/TQ-300-tooling-coverage-recovery`: `TQ-300a-1`,
+`-a-2`, `-a-3`, `-b-1`, `-b-2`, `-b-3`, `-c-1`, `-c-2`. Every one is `level: L2` with
+`documentation_triggers: []` **and** a `documentation_rationale` — e.g. *"Internal test
+coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram
+adds value."*
 
 Note the asymmetry that makes this look unintended rather than strict: the author's prose
 justification for adding no documentation is accepted on an L2, while the machine-readable
@@ -695,3 +724,7 @@ enrichment fields rather than an obvious bug fix:
 (1) is the smaller change and preserves an explicit "considered, none needed" signal that
 (2) discards. Either way the eight records and the rule must be settled together; fixing
 one without the other leaves the store inconsistent with its own validator.
+
+**Related.** Same sweep, same cause of invisibility as KI-ACS-010: the whole-store run only
+became possible when KI-ACS-001 was fixed on 2026-08-19, and `AC store valid` is
+diff-scoped, so these eight sit dormant until someone edits one for an unrelated reason.
