@@ -693,9 +693,49 @@ absence as a pass.
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
-- **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720
+- **Occurrences:** 2
+- **First seen:** 2026-08-24 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720;
+  and (second occurrence) the breaking-change gate in `scripts/build.py`
+
+**Second occurrence, 2026-08-25 — same outcome, a completely different cause, and the cause is
+arguably worse.** Before driving a ticket I checked the deployed driver against source:
+
+```text
+.leafcutter/workflows/build-feature.js   919 lines
+templates/workflows-js/build-feature.js  2416 lines   (origin/main)
+```
+
+1497 lines behind — predating essentially a month of hardening. Had the drive run, it would
+have executed that driver.
+
+The version gate was not involved. `build.py` had been **halting on an unacknowledged
+breaking-change gate since 2026-08-18** — the `GE-113c-3` security-allowlist entry — and
+refusing to proceed without `--force-breaking`:
+
+```text
+  BREAKING CHANGES DETECTED — BUILD HALTED
+  [2026-08-18] fix(security-scanner): allowlist basename matching over-suppressed ...
+  To proceed after reviewing the steps above, re-run with:
+    python build.py --force-breaking
+```
+
+That gate did its job: it stopped, loudly, and printed migration steps. The defect is that
+**nothing connects "the build halted" to "the deployed tree is therefore now stale."** The halt
+is a single event, noticed once by whoever ran it; the staleness is a standing condition that
+then persists silently for a week while every workflow run uses the old code. A halted build
+leaves exactly the same deployed state as a skipped phase, and neither is reported at *use*
+time.
+
+This widens the issue: the register's original framing is about one `return 0` in one phase.
+The general statement is that **the deployed tree has no freshness signal of any kind** — not
+after a skipped phase, not after a refused build, not after no build at all. Any fix scoped only
+to the version gate leaves the breaking-gate route live, and vice versa.
+
+Reproduced end to end: `--force-breaking` brought the deployed driver to 2416 lines, byte-equal
+to source, and the subsequent drive ran the current code.
+
+**First occurrence (version gate) follows.**
 
 **Symptom.** The phase probes `claude --version` and compares against
 `_MINIMUM_VERSION = "2.1.154"`. When a version is detected and is below the minimum, the
@@ -965,10 +1005,38 @@ claims to and reports success.
 
 - **Severity:** high
 - **Status:** open — AC: BP-1500d
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build_helpers.py:185` (manifest write target); `:83`, `:95-96`
   (`output_mappings` keying); `:193-195` (manifest key relativization)
+
+**Second occurrence, 2026-08-25 — reached from a git worktree, and it blocked a commit.** A
+phase agent ran `build.py --target-dir <worktree>` inside a worktree whose `.leafcutter` was a
+symlink to the workspace parent's, per the bootstrap `CLAUDE.md` recommends. Two things
+followed. The deploy went *through* the symlink into the parent's `.leafcutter`, and the
+manifest written carried **no `output_mappings` at all** — the target sits under
+`.../worktrees/`, which is not a subpath of the package, so the same `UserWarning` this entry
+already documents fired and the mapping was silently dropped.
+
+The consequence was not theoretical. On the next commit, `check-build-drift` read that manifest
+and reported **every template in the repository** as unregistered:
+
+```text
+UNCOMPARABLE: GAP templates/agents/README.md action=run build.py to register it
+UNCOMPARABLE: GAP templates/agents/ac-validator.md action=run build.py to register it
+... (one line per template)
+```
+
+The commit contained no template change whatsoever — only a changelog entry and two AC YAML
+files. Recovery was to re-run the canonical `build.py --target-dir .` from the workspace parent,
+which regenerates a manifest that does have `output_mappings`.
+
+**What this adds to the entry.** The original framing is about portability to a *consumer*
+install. This shows the same defect reached from the package's own recommended worktree
+workflow, where it is not merely unportable but actively corrupting: a worktree-targeted build
+overwrites the shared parent manifest with one that no gate can use. Any fix should treat
+"target is a worktree of this repo" as a first-class case, not an exotic one — `/feature`,
+`worktree-agent` and `building-epics` all create worktrees by design.
 
 **Symptom.** The build's own record of what it wrote is not written to the install it
 describes. `scripts/build_helpers.py:185` computes
