@@ -92,52 +92,76 @@ parent alongside the child".
 
 ---
 
-### KI-CG-002 — The diagram-type enum silently narrows from 11 values to 8 when its declaring file is unreachable
+### KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable
 
-- **Severity:** high
+- **Severity:** medium
 - **Status:** open
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/scripts/commit_guardian/diagram_type_validators.py:35-55` (`_find_diagram_types_json`) and `_load_diagram_types()`
 
+**Corrected 2026-08-25 — the original wording overstated the trigger.** This was recorded
+as "the diagram-type enum silently narrows from 11 values to 8", severity `high`. That is
+wrong. A single resolution failure narrows nothing. The count drops only on a **second,
+independent** failure. What is real is the silent substitution, and it is `medium`. The
+correction is made in place because the overstated version was merged and read.
+
 **Symptom.** `_find_diagram_types_json()` walks ancestors of its own `__file__` looking for
 `leafcutter/config/diagram_types.json` or `config/diagram_types.json`. When neither
 resolves it returns `None`, and `_load_diagram_types()` falls back **without any warning**
-to the `DOC_FM_DIAGRAM_TYPE_VALUES` constant in `config.py:190`. The hook then validates
-against a different, narrower enum than the one it is configured with, and says nothing.
+to `DOC_FM_DIAGRAM_TYPE_VALUES`. The guard changes which file it draws its authority from
+and says nothing — which is exactly the fact an operator needs in order to judge whether
+to trust the verdict.
 
-**Evidence.** The declaring file `config/diagram_types.json` defines **11** types:
-`agent_flow`, `component`, `container`, `context`, `data_flow`, `dataflow`, `erd`, `none`,
-`sequence`, `state`, `user_flow`. The fallback constant defines **8**: `context`,
-`container`, `component`, `sequence`, `erd`, `state`, `dataflow`, `none`. So on the
-fallback path a doc declaring `diagram_type: agent_flow`, `data_flow` or `user_flow` — all
-canonical — is rejected as an unknown value.
+**Evidence — the fallback is not narrower.** `DOC_FM_DIAGRAM_TYPE_VALUES` is not a
+hardcoded constant. `config.py:190` reads it from `commit_guardian.json` →
+`doc_frontmatter.diagram_type_values`, and that key lists **all 11** values. The 8-value
+list written inline at `config.py:190-192` is only the `_get()` default, reached when the
+key is absent. Measured by importing the module and forcing `_find_diagram_types_json()` to
+return `None`: the enum stays at 11 and is the **identical set** to
+`config/diagram_types.json`'s — `agent_flow, component, container, context, data_flow,
+dataflow, erd, none, sequence, state, user_flow`. Nothing that would otherwise pass is
+rejected.
 
-The resolution gap is not hypothetical: it is the same one that made
-`check-doc-frontmatter` crash on 2026-08-18 (see
-`docs/known-issues/build-pipeline.md` → KI-BP-003). Both resolvers hardcode the package
-directory as `leafcutter/`, while this package installs as `leafcutter-ai/`, and the
-self-hosted workspace target has no `config/` tree at all. `doc_types` fails loudly there;
-`diagram_types` fails quietly.
+Narrowing needs a second, independent failure: `commit_guardian.json` present but *missing*
+the `doc_frontmatter.diagram_type_values` key. Removing that one key from a copy of the hook
+directory, with resolution also forced to fail, does drop the enum to 8 and does lose
+`agent_flow`, `data_flow`, `user_flow`. Deleting `commit_guardian.json` outright narrows
+nothing either — `config.py` raises `FileNotFoundError` at import, so the hook dies loudly.
 
-**This is the exact failure GE-118c fixed in the sibling module on the same day.**
-(That requirement was tracked as `GE-120` until 2026-08-18, when the id was found to
-collide with an unrelated goal-level tree and the record was renumbered to `GE-118c`
-under `GE-118`.) That work
-removed the silent `except (json.JSONDecodeError, OSError): pass` and the `.exists()`
-fallthrough from `doc_type_validators.py`, on the stated grounds that "a guard that quietly
-answers a different question than the one it was configured with is enforcing a rule nobody
-wrote." `diagram_type_validators.py` is the file GE-118c copied its ancestor-walk pattern
-*from*, and it still has the behaviour that was removed.
+**And the first failure does not currently occur here.** The ancestor walk resolves
+`config/diagram_types.json` from both the source layout (`templates/scripts/commit_guardian/`)
+and the deployed layout (`.leafcutter/scripts/commit_guardian/`), returning 11 values from
+each. The 2026-07-14 rewrite that replaced the broken `parents[2]` path with the walk is what
+fixed that. A resolution failure is still reachable in a consumer layout where neither
+candidate exists — `KI-BP-003`'s second occurrence is that shape for the sibling `doc_types`
+resolver — but even there the result is substitution, not narrowing.
 
-**Fix direction.** Mirror GE-118c the rest of the way: raise a `FileNotFoundError` naming
-the resolved path instead of substituting the constant, and fix the path resolution for
-both modules together. If a fallback must be retained for consumer installs, log it at
-WARNING so it is at least observable — a narrowed enum reached in silence is
-indistinguishable from a passing check.
+**`GE-105` is genuinely satisfied, not phantom.** That AC (`work_status: done`,
+`readiness: approved`) requires the canonical values to be accepted, and names the effective
+enum source explicitly: *"commit_guardian.json -> doc_frontmatter.diagram_type_values, used
+as the runtime fallback when diagram_types.json is not deployed"*. Its covering test
+(`test_commit_guardian_imports.py::TestGE105CanonicalEnumValuesAccepted`) asserts acceptance
+against the module, and the config carries the values. The original entry implied a live
+rejection of canonical values that GE-105 had left unfixed; there is none.
 
-**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a check that runs against
-less than it claims to, and reports success).
+**Fix direction.** Two things, neither of them the value count. First, make the substitution
+observable: log at WARNING, naming the candidates searched, when the walk fails and the
+config fallback is taken, so a fallback verdict is never indistinguishable from a normal one.
+`GE-118c` removed exactly this silence from the sibling `doc_type_validators.py` on
+2026-08-18, on the stated grounds that "a guard that quietly answers a different question
+than the one it was configured with is enforcing a rule nobody wrote." (That requirement was
+tracked as `GE-120` until 2026-08-18, when the id was found to collide with an unrelated
+goal-level tree and the record was renumbered to `GE-118c` under `GE-118`.)
+`diagram_type_validators.py` is the file GE-118c copied its ancestor-walk pattern *from*, and
+it still carries the silence that was removed. Second, the two lists live in two files, agree
+today, and nothing checks that they still will — derive the config key from
+`diagram_types.json` at build time, or assert parity between them. A divergence would be
+invisible for precisely the reason this entry exists.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (a guardrail that cannot reach a
+file it depends on), in its benign-today form — the substitution is unobservable, so on the
+day the two sources disagree, nothing will say so.
 
 ---
 
@@ -265,9 +289,10 @@ running `/plan-feature` without the PT phase throughout, exactly as designed —
 blocked from committing by these two hooks the first time an AC YAML was staged.
 
 **Relationship to KI-CG-002.** Same root shape as KI-CG-002 above: a guard behaving badly
-when a file or store it depends on is not present. KI-CG-002 narrows its enum silently on
-that absence; this pair fails loudly and totally on it — but in both cases the guard never
-asked "is my dependency supposed to be here?" before acting on its absence.
+when a file or store it depends on is not present. KI-CG-002 silently swaps its enum source
+for a second one on that absence; this pair fails loudly and totally on it — but in both
+cases the guard never asked "is my dependency supposed to be here?" before acting on its
+absence.
 
 **Fix direction.** The fix is not "add a guard to the hook" in isolation — the workflow
 already encodes the decision that product-truth is optional. Make the hooks agree with it:
@@ -533,7 +558,7 @@ available response is to turn it off, taking every sibling hook with it.
 
 ---
 
-### KI-CG-010 — `check-roadmap-schema` never validates the roadmap, and the roadmap would fail it if it did
+### KI-CG-010 — `check-roadmap-schema` never validates the roadmap, and two other guardrails require content the schema forbids
 
 - **Severity:** high
 - **Status:** open
@@ -541,38 +566,80 @@ available response is to turn it off, taking every sibling hook with it.
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/scripts/commit_guardian/check_roadmap_schema.py:27` — `SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"`
 
-**Symptom.** The hook resolves its schema at `<git-root>/leafcutter/config/roadmap.schema.json`.
-In this repository the git root **is** the package, so the real path is
-`config/roadmap.schema.json` with no `leafcutter/` segment. The file it looks for does not
-exist, so the hook takes its fail-open branch and reports an advisory skip. Every commit
-touching `docs/roadmap.json` has passed a check that never ran.
+**Symptom, part one — the hook never runs.** It resolves its schema at
+`<git-root>/leafcutter/config/roadmap.schema.json`. In this repository the git root **is**
+the package, so the real path is `config/roadmap.schema.json` with no `leafcutter/` segment.
+The file it looks for does not exist, so the hook takes its fail-open branch and reports an
+advisory skip. Every commit touching `docs/roadmap.json` has passed a check that never ran.
 
-The second half is worse than the first: **if the hook ever found its schema, the roadmap
-would fail it.** Every phase in `docs/roadmap.json` carries a `components` key, and the
-schema's phase item declares `additionalProperties: false` over exactly six permitted
-properties — `description`, `exit_criteria`, `id`, `status`, `tickets_advancing_outcome`,
-`title`. `components` is not among them. So fixing the path alone converts a silent no-op
-into a blocked commit on an unrelated change.
+**Symptom, part two — this is a guardrail-versus-guardrail contradiction.** Two live rules
+govern the same file and disagree about its contents, and the disagreement has survived only
+because one of them never executes:
 
-**Evidence.** Verified 2026-08-25 while rewording a phase_1 exit criterion.
-`ls <repo>/leafcutter/config/roadmap.schema.json` → no such file. The schema's own
-`properties.phases.items` was read directly: six properties, `additionalProperties: false`.
-The hook reported no failure on the commit that changed `docs/roadmap.json`.
+| Rule | Says about `docs/roadmap.json` |
+|------|--------------------------------|
+| `check-surface-components-e3` (enabled, `files: ^(config/agent_registry\.json\|config/skill_registry\.json\|docs/roadmap\.json)$`) | every phase entry **must** carry a non-empty `components` list, or the commit is blocked by name |
+| `config/roadmap.schema.json` (via `check-roadmap-schema`) | a phase item declares `additionalProperties: false` over six properties — `description`, `exit_criteria`, `id`, `status`, `tickets_advancing_outcome`, `title` — so `components` is **forbidden** |
 
-This is the same shape as `KI-BP-003` and `KI-CG-002` — a guardrail that cannot reach its
+The roadmap satisfies the rule that runs and violates the rule that does not. Repair the path
+in isolation and the two rules meet for the first time: the enabled hook demands the key, the
+newly-live schema rejects it, and `docs/roadmap.json` becomes uncommittable in both
+directions at once. That is the substance of this entry — the dormant no-op is what has been
+hiding it.
+
+**Evidence.** Verified 2026-08-25. `ls <repo>/leafcutter/config/roadmap.schema.json` → no
+such file; `config/roadmap.schema.json` exists. Validating the live roadmap against that
+schema with `jsonschema` (installed — `requirements-dev.txt` pins `jsonschema>=4.0`, so the
+hook takes its `jsonschema.validate` branch, not the laxer manual fallback) returns **8**
+errors: one `components` rejection for each of the 7 phases, plus a top-level
+`Additional properties are not allowed ('last_updated' was unexpected)` — the root object
+also declares `additionalProperties: false`. So the schema is behind the file on two counts,
+not one.
+
+On the other side, `check-surface-components-e3` is registered with `"enabled": true` and its
+`_comment` records the backfill that made it enforceable: *"ENABLED 2026-07-14 after all
+registry entries were backfilled (agents 53/53, skills 36/36, roadmap 3/3)"*. All 7 phases
+carry `components` today.
+
+**Dropping `components` is not an available repair.** `KM-KGS-100e-3` — *"Registry-declared
+items (agents, skills, roadmap) must declare a component too"* — is `work_status: done`,
+`readiness: approved`, and its criteria name the roadmap explicitly as a
+membership-declaring surface whose entries must be flagged and blocked when the membership is
+absent. Its `implemented_by` is the enabled hook above. Removing the key would break a done,
+approved AC and disconnect every phase from the knowledge graph's
+`component_membership` edges, which is the whole point of that record.
+
+**The third route, named and rejected on substance rather than on cost.** "Break a done AC"
+is not by itself a reason — a done AC can be amended, and several were in the change that
+recorded this entry. The reason is what the key *does*: `components` is what joins a phase to
+the knowledge graph, so dropping it plus amending `KM-KGS-100e-3` to permit the absence would
+leave the schema and the hook agreeing about a roadmap that no longer participates in the
+graph. That trades a contradiction between two guardrails for the silent loss of the thing
+both were protecting. The schema is behind the file; the file is not wrong.
+
+This is also the same shape as `KI-BP-003` and `KI-CG-002` — a guardrail that cannot reach its
 own declaring file in the self-hosted layout — and the third instance found. Unlike
-`KI-CG-002`, which narrows an enum, this one skips the check entirely.
+`KI-CG-002`, which silently swaps its enum source for an equivalent one, this one skips the
+check entirely.
 
-**Fix direction.** Resolve the schema the way `KI-CG-009`'s repair does, from the running
-artifact's own location rather than a hardcoded `leafcutter/` segment that assumes a
-consumer layout. Land the `components`-vs-schema disagreement in the **same** change —
-either add `components` to the phase schema or drop it from the roadmap — because repairing
-the path first turns a dormant no-op into an immediate merge blocker. Note the regression
-test must run with the CWD somewhere other than the layout under test, or it will be green
-against both the broken and the fixed resolver.
+**Fix direction.** **The schema must gain the key — that direction is forced.** Add
+`components` (array of strings, non-empty) to the phase item's `properties`, and add
+`last_updated` to the root object's, in the **same** change that repairs the path resolution.
+Resolve the schema the way `KI-CG-009`'s repair does, from the running artifact's own
+location rather than a hardcoded `leafcutter/` segment that assumes a consumer layout.
+Sequencing matters: repairing the path first turns a dormant no-op into an immediate merge
+blocker on the next unrelated roadmap edit.
+
+Beyond the point fix, the two rules should not be able to drift apart again. Whatever declares
+which registry surfaces must carry `components` (`config/paths.json` `edge_fields`, which the
+enabled hook already reads) is the natural source for the schema's own answer. Note the
+regression test must run with the CWD somewhere other than the layout under test, or it will
+be green against both the broken and the fixed resolver.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that reports
-success having checked nothing) and M2 (a guardrail that cannot reach a file it depends on).
+success having checked nothing) and M2 (a guardrail that cannot reach a file it depends on) —
+with the aggravating twist that the dead validator is the only reason a live contradiction
+between two guardrails has never been observed.
 
 ---
 
@@ -610,10 +677,21 @@ existing `created` value when the mirror already exists rather than stamping the
 regeneration date. Both are small, and both are worth doing together with a test that
 regenerates twice and asserts the only field that moves is `last_updated`.
 
-**Related.** This is `KI-BP-002`'s shape in another file — a tracked generated artifact that
-drifts every time it is rebuilt — and `BP-1500a` is the acceptance criterion written against
-that class. The roadmap mirror is not currently in `BP-1500a`'s scope; worth checking
-whether it should be when that AC is built.
+**Related — and note why `BP-1500a` cannot reach this.** This is `KI-BP-002`'s shape in
+another file: a tracked generated artifact that drifts every time it is rebuilt, and
+`BP-1500a` is the acceptance criterion written against that class. It cannot catch either
+defect here, and the reason is structural rather than a matter of scope. `BP-1500a` promises
+that *"a rebuild that would change [a tracked generated file] fails a check that names the
+file"* — a comparison of committed content against regenerated content. But
+`regenerate-roadmap-mirror` is a **transform-tier** hook: when `docs/roadmap.json` is staged
+it rewrites `docs/roadmap.md` and then `git add`s it (`run()` →
+`_git_add(mirror_path, root)`), so the mirror that lands in the commit *is* the generator's
+own output, by construction. Committed and generated can never disagree about content, so a
+drift check finds nothing to name. The only thing a later rebuild can move is the wall-clock
+date stamp — which is noise, not either defect. `BP-1500a`'s guarantee therefore holds
+**vacuously** over this file while both defects survive underneath it. Adding the roadmap
+mirror to `BP-1500a`'s scope would not change that; these two want a test that asserts what
+the generator *emits*, not one that compares it to what was committed.
 
 ---
 
@@ -772,10 +850,10 @@ verification step becomes theatre.
 
 **Relationship to existing entries.** Same family as **KI-CG-009**
 (`check-components-integrity` resolving the root to the main checkout rather than the
-worktree) and **KI-CG-002** (a silent fallback to a narrower rule when a declaring file is
-unreachable). It shares **KI-CG-001**'s index-scoping premise but is a distinct failure:
-there the hook checks the wrong *set*; here it checks the *empty* set and says nothing.
-Four entries now describe the same root-resolution surface, which argues for one piece of
-work across the hook family rather than one hook at a time.
+worktree) and **KI-CG-002** (a silent fallback to a second enum authority when a declaring
+file is unreachable). It shares **KI-CG-001**'s index-scoping premise but is a distinct
+failure: there the hook checks the wrong *set*; here it checks the *empty* set and says
+nothing. Four entries now describe the same root-resolution surface, which argues for one
+piece of work across the hook family rather than one hook at a time.
 
 **Pattern:** a gate whose silence is structurally indistinguishable from a pass.
