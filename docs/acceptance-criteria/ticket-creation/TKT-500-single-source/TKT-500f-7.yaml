@@ -32,19 +32,76 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
+  - path: docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500g-1-i.yaml
+    relationship: constrains
+    status: exists
+    relevance: "The AC that narrows this one. It rules that an explicitly authored proof demand outranks any inference drawn from the shape of files_touched, so this criterion governs only the no-authored-demand case. Read it before implementing the omit branch."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The component both generators belong to. Read for the boundary between the two work-item-producing routes before wiring the shared classification helper into either."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "When the shared classification helper finds zero qualifying implementation .py entries in files_touched, the generators must not emit the '## Test Requirements' heading."
   - "A docs/config/tickets-only ticket is a legitimate skip: do not log a warning, do not raise, and do not block generation when the section is omitted on this path."
   - "Use the same shared helper introduced by TKT-500f-6 (one helper across goal_to_epic.py AND generate_ticket_from_ac.py); the omit path must be the negative branch of that helper, not a separate divergent code path."
+  - "SCOPE NARROWED 2026-08-25 — this is a precedence rule, not an ordering instruction. Where an authored proof demand and this path-shape inference disagree, the authored demand decides (TKT-500g-1-i), so the omit branch governs only records that authored no demand. An implementation in which the path-shape rule can suppress a demand that was read is non-conforming however its internal checks happen to be arranged. Silent discard is the one excluded outcome: it is indistinguishable from the defect this narrowing exists to prevent."
+  - "Both generators must reach the same verdict on the same record. goal_to_epic.py emits no proof section on any path today, so it satisfies this AC's omit branch vacuously while having no emit branch at all — a helper wired only into the generator that already has both branches leaves the second work-item route losing every demand it is handed."
+test_spec:
+  - name: test_a_docs_and_config_only_ac_generates_no_test_requirements_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A record whose changed paths are all under docs/, .yaml, .json or tickets/, with no authored demand, generates a work item with no proof section."
+  - name: test_one_implementation_path_among_docs_paths_still_emits_the_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The control that stops the omit branch swallowing everything: a single qualifying implementation path among otherwise docs-and-config paths still produces a proof section."
+  - name: test_docs_and_config_only_generation_records_no_warning
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The second Then clause: generation over such a record completes clean — no warning about the absent section, no non-zero exit, no block."
+  - name: test_both_generators_agree_on_the_omit_decision_for_the_same_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The shared-helper seam: the two work-item-producing routes are run over the same record and must reach the same verdict. Today one of them has no emit branch at all, so this is where that asymmetry becomes visible."
+  - name: test_docs_only_paths_do_not_suppress_an_authored_demand
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    covers: [TKT-500g-1-i, TKT-500f-7]
+    description: "The narrowing, asserted rather than assumed: a docs-and-config-only record that authors a demand keeps its proof section. Shared with TKT-500g-1-i so the two records cannot drift into describing different behaviour."
+test_rationale: |
+  This AC's Gherkin names an omission, and an omission is the one outcome a broken
+  implementation produces for free — a generator that never emits a proof section passes
+  both Then clauses. So the contract is anchored by two controls rather than by the happy
+  path: descriptor 2 (one implementation path among the docs paths still emits) and
+  descriptor 5 (an authored demand still emits, the TKT-500g-1-i narrowing). Without
+  those two, this AC is satisfiable by the defect it is adjacent to.
+
+  Descriptor 4 exists because the AC's own it_requirements bind two generators to one
+  shared helper while only one of them has an emit branch today; a proof run against that
+  generator alone would report parity that does not exist. Descriptor 5 is deliberately
+  the same test function named in TKT-500g-1-i's contract, with covers listing both ACs:
+  one test, two records, no divergence.
 delivers_to: null
 expects_from:
   ac_id: TKT-500f-6
   contract: "The shared files_touched classification helper that decides whether a Test Requirements section is required"
 origin_agent: business-analyst
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - reason: "SCOPE NARROWED 2026-08-25 (business-analyst, on BrainCandy's instruction) — this AC now governs only the NO-AUTHORED-DEMAND case. It was authored 2026-06-22, before an authored proof demand (test_spec) was a first-class field on a requirement, so the shape of files_touched was its only available input. Since f3ac950c / PR #536 a requirement may author a proof demand explicitly, and 14 of the 85 affected records are docs/config-only AND author one (12 documentation-expert, 2 architecture-diagram-author); generation now emits a proof section for them. Read literally, that shipped behaviour violates this approved AC. Precedence is resolved in favour of the author: an explicitly authored demand outranks an inference drawn from path shape. The Gherkin for the ruling is TKT-500g-1-i. This AC's own criteria are left UNCHANGED and remain correct for their intended input; the narrowing is carried as a new it_requirement so the unbuilt implementation orders the two checks correctly."
+  - reason: "TEST CONTRACT AUTHORED 2026-08-25 (it-po). This approved code AC carried no test contract at all — a pre-existing gap that was invisible until the business-analyst's amendment staged the file, because the commit-time AC hooks read the staged index rather than the store. Five descriptors are added, derived from this AC's own Gherkin. It is genuinely code (change_target: code, python-coder, two real generator surfaces), so test_required: false was rejected as a way to clear the gate. The business-analyst's fourth it_requirement is KEPT but restated from an ordering instruction ('check for an authored test_spec BEFORE consulting files_touched') to the precedence policy it is really about, leaving the implementer free to choose the mechanism while forbidding the outcome; their disclosure of the boundary crossing was correct and the substance was right. A fifth it_requirement is added recording that goal_to_epic.py has no emit branch at all, so it satisfies this AC vacuously while losing every demand it is handed."
 superseded_by: null
 covered_by: []
 implemented_by: []
