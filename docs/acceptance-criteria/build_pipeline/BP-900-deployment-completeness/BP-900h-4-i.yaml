@@ -112,7 +112,7 @@ doc_links:
     relevance: "Angle vocabulary: criterion, deployed, failure, reachability with must_block — at the four-angle cap."
 assigned_agent: python-coder
 estimated_complexity: L
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   reference_file_path: ".github/workflows/ci.yml"
   n_location_rule: "one per layout in the set — at least four, and the count must come from the layout set the harness enumerates rather than from four hand-written steps"

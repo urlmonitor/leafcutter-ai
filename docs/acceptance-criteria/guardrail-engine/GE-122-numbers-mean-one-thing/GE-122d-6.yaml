@@ -156,7 +156,7 @@ superseded_by: null
 covered_by:
   - GE-122d-6-i
 implemented_by: []
-declares_side_effect: true
+declares_side_effect: false
 change_target:
   - code
   - pipeline
