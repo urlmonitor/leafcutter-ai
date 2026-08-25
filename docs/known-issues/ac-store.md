@@ -561,7 +561,7 @@ them — an unstaged fix will appear not to work.
 - **Status:** open — no AC
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `config/ac_store_schema.json` — `properties.test_spec.oneOf[0].items.properties.framework.enum` and `...type.enum`
+- **Where:** `config/ac_store_schema.json` — `properties.test_spec.oneOf[0].items.properties.framework.enum` and `...type.enum`; **and the identical pair** in `config/test_requirements.schema.json` — `$defs.test_entry.properties.framework.enum` (`:74`) and `...type.enum`
 
 **Symptom.** `test_spec` entries are validated against two closed enums under
 `additionalProperties: false`:
@@ -585,7 +585,43 @@ refused **28 records** on this rule, every one of them a `leafcutter-web/` AC:
 
 Adding `vitest` and `playwright` to `framework`, and `component` to `type`, makes all 28
 validate with **no other change** — verified by re-running each record's `test_spec`
-against the amended item schema. So the whole defect is three missing enum values.
+against the amended item schema. So the missing vocabulary is exactly three values.
+
+**The same three values are missing in a second schema, and the two are coupled.**
+`config/test_requirements.schema.json` `$defs.test_entry` carries a byte-identical
+`framework` enum (`["unittest", "pytest"]`, `:74`) and `type` enum
+(`["unit", "integration", "e2e", "behavioral"]`), also under `additionalProperties: false`.
+That schema governs the `## Test Requirements` block in a ticket body.
+
+The coupling is `generate_ticket_from_ac.py::_test_descriptors_from_spec` (`:1451-1454`),
+which copies the AC's `test_spec[].framework` and `[].type` **straight through** onto the
+emitted ticket descriptor:
+
+```python
+if item.get("framework"):
+    entry["framework"] = item["framework"]
+if item.get("type"):
+    entry["type"] = item["type"]
+```
+
+So widening only the AC schema does not finish the job: a web-app AC would validate, and
+`/build-ac` would then generate a ticket whose descriptors carry `framework: vitest` and
+`type: component` — values the ticket schema forbids. **Both files must move in the same
+change.**
+
+That second failure would be *silent*, which in this repo's terms is the worse half.
+`test_requirements.schema.json` is not enforced by any hook or CI gate; it is a declared
+contract cited in `templates/agents/test-writer.md` and pinned by two unit tests
+(`test_bo_2900g_3`, `test_bo_2900g_4`). Nothing would refuse the malformed ticket — the
+generator would simply emit a descriptor that violates the contract test-writer is
+instructed to conform to.
+
+**One precision about the 28 records.** They are web-app ACs but not exclusively web-app
+*tests*: `BP-1400c-1` pairs a Playwright e2e entry with a `pytest` entry targeting
+`unit_tests/build_pipeline/` (it asserts the CI workflow wires the route-smoke job and
+does not set `continue-on-error`). Across all 28 records the entries are 40 `vitest`,
+2 `playwright`, 1 `pytest`. A record is refused if *any* of its entries uses an
+unlisted value, so mixed-stack ACs are refused on their JS half alone.
 
 **Consequence.** `AC store valid` is diff-scoped, so this is not currently red on `main`.
 It bites whoever next edits one of those 28 files, who then owns a refusal they did not
@@ -594,9 +630,12 @@ cause. That is precisely the shape of KI-ACS-005, which absorbed two deferred
 carrying a test contract the store cannot accept, so none of them can be marked done
 through the normal path.
 
-**Fix direction.** Widen both enums. Because `config/ac_store_schema.json` is a package
-surface, this needs an AC declaring `package_surface: true` before it can be committed —
-the `check-package-surface-declaration` hook will refuse it otherwise.
+**Fix direction.** Widen the enums in **both** schemas in one change, and add a test that
+asserts the two vocabularies are equal — they are duplicated by hand today, with nothing
+holding them in step, which is how they can drift apart again the moment one is edited
+alone. Because `config/ac_store_schema.json` is a package surface, this needs an AC
+declaring `package_surface: true` before it can be committed — the
+`check-package-surface-declaration` hook will refuse it otherwise.
 
 Prefer building it under **AR-100** ("Every part of your codebase has a specialist who
 genuinely owns it") rather than as a standalone `ac_store` patch. AR-100's stated concern
