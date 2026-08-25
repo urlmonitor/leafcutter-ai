@@ -115,7 +115,8 @@ amended_by:
   date: '2026-08-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-1100g-1.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: |
