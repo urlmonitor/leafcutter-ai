@@ -163,6 +163,18 @@
       ]
     },
     {
+      "id": "agent-telemetry",
+      "name": "Agent Telemetry",
+      "portable": true,
+      "domain": null,
+      "template_path": "leafcutter/templates/skills/agent-telemetry/",
+      "description": "Append one agent-drive telemetry event to the JSONL sink via scripts/emit_event.py. Records supervisor dispatch, epic halt/complete, retries and phase transitions during a drive. Emission is best-effort: a write failure warns on stderr and exits 0 so an unreachable sink never halts a build.",
+      "dependencies": [],
+      "components": [
+        "build_pipeline"
+      ]
+    },
+    {
       "id": "knowledge-query",
       "name": "Knowledge Query",
       "portable": true,
