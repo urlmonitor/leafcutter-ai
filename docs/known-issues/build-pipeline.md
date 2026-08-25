@@ -653,3 +653,78 @@ is to run it destructively cannot be verified by the people most at risk from it
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2, in its ownership form: the
 deployed tree and the adopter's tree are the same directory, so the package cannot tell its
 own output from someone else's source.
+
+---
+
+### KI-BP-010 — `.build_manifest.json` is written to the package that ran the build, not the target install it describes, so it is not portable to any consumer install
+
+- **Severity:** high
+- **Status:** open — AC: BP-1500d
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_helpers.py:185` (manifest write target); `:83`, `:95-96`
+  (`output_mappings` keying); `:193-195` (manifest key relativization)
+
+**Symptom.** The build's own record of what it wrote is not written to the install it
+describes. `scripts/build_helpers.py:185` computes
+`manifest_path = package_root / ".build_manifest.json"` — always the package's own
+directory, never `--target-dir`. Running `python3 scripts/build.py --target-dir
+/tmp/lc_probe2` printed `build manifest (61 template + 0 output_mappings entries) ->
+/home/henzeh/projects/leafcutter/worktrees/bp900-deploy/.build_manifest.json`, and
+`/tmp/lc_probe2` — the actual target — contained no manifest at all. Consequence:
+`check_output_drift.py` and `check_build_drift.py`, which both read this file to detect
+drift, have nothing to read in a consumer install. Both guardrails are **absent**, not
+degraded, in that install.
+
+**Evidence — a consumer build overwrites the package's own baseline, violating
+BP-1500a.** Because the write target is always the package, building into another
+project rewrites the package's own manifest with data about that OTHER build. Verified
+immediately after the run above: the package's own `.build_manifest.json` then reported
+`output_mappings: 0, templates: 0`. It is gitignored, so the corruption is invisible —
+nothing shows in `git status`. BP-1500a is the existing acceptance criterion that "a
+build leaves the repository it is run from exactly as it found it"; this is a live
+violation of that guarantee, not a newly discovered one.
+
+**Evidence — `output_mappings` cannot be computed for a foreign target, and the build
+fails open.** `scripts/build_helpers.py` lines 83 and 95-96 key entries via
+`output_path.relative_to(package_root.parent)`, which raises `ValueError` whenever the
+target sits outside that parent — true of essentially any real consumer install.
+Observed:
+
+```text
+[WARNING] could not compute output_mappings: '/tmp/lc_probe2/agents/README.md' is not
+in the subpath of '/home/henzeh/projects/leafcutter/worktrees'. Direction B detection
+will be unavailable until next build.
+```
+
+The build then reports success and exits 0 — it fails open, exactly the shape this file
+already documents in KI-BP-008.
+
+**Evidence — manifest keys carry a non-portable prefix.** Lines 193-195 key by the same
+`relative_to(package_root.parent)`, so keys read `leafcutter-ai/templates/agents/x.md`
+from the canonical checkout but `bp900-deploy/templates/agents/x.md` from a worktree
+named `bp900-deploy`. Observed directly in this worktree's own manifest: every top-level
+key is prefixed `bp900-deploy/templates/agents/...`, and the `templates` count reads 0
+because the reader looks for a `templates` key in a shape the writer never produced in
+this layout.
+
+**Root cause.** All four symptoms above trace to one assumption: every path is resolved
+relative to `package_root.parent`. That holds only inside this repo's own self-hosted
+workspace layout (a `leafcutter/` workspace parent containing `leafcutter-ai/`) — it
+breaks for any real consumer install, where the target sits outside that parent
+entirely, and for any worktree not laid out identically to the canonical checkout.
+
+**Why this matters — BP-1500c has no record to check.** BP-1500c ("report drift against
+the record of what a build wrote") has this defect as a hard prerequisite: you cannot
+report drift against a manifest that was never written to the install being checked.
+Same failure family, one layer deeper, as BP-016 / BP-017.
+
+**Fix direction.** Anchor the manifest write target, and every path computed relative to
+it, to something that holds for an arbitrary consumer install — e.g. write
+`.build_manifest.json` into the actual `--target-dir`, and key/relativize entries
+against that target root (or the package root itself) rather than
+`package_root.parent`.
+
+**AC.** BP-1500d
+(`docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml`) is
+authored against this defect.

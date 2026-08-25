@@ -55,6 +55,7 @@ covered_by:
   - BP-1500a
   - BP-1500b
   - BP-1500c
+  - BP-1500d
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
@@ -97,6 +98,10 @@ notes: |
   KI-BP-008 records exactly that for a consumer on an older toolchain. Naming
   this goal after self-hosting would narrow three general guarantees to the
   layout where they happened to be caught. Do not re-narrow them at L2.
+  BP-1500d, added 2026-08-25, is the sharpest case of the same point: the
+  drift-detection record the other branches rely on is written into the package
+  rather than into the project it describes, so outside this workspace the
+  checks are not weaker -- they are absent.
 
   WHAT ALREADY COVERS PART OF THIS, AND MUST NOT BE RE-DERIVED.
 
@@ -138,6 +143,11 @@ notes: |
   rebuild producing a different result FAILS A CHECK. An implementation that
   gitignores them, or stops generating them, does not satisfy this goal.
 
+  ORDERING CONSTRAINT ADDED WITH BP-1500d. BP-1500d is a prerequisite of
+  BP-1500c: drift cannot be reported against a record that was never written in
+  the project being checked. Land BP-1500d first, and do not accept BP-1500c on
+  evidence gathered only inside this workspace.
+
   TWO REVIEWED L2 DRAFTS EXIST -- do not re-derive them.
 
   A BA drafted and verified two leaves before the BP-900 caps were discovered.
@@ -148,10 +158,11 @@ notes: |
   first two L1s here:
     - /tmp/selfhost_leaf_build_clean.yaml  -> first L2 of BP-1500a
     - /tmp/selfhost_leaf_orphans.yaml      -> first L2 of BP-1500b
-  Re-id them under their new parents rather than re-deriving. BP-1500c has no
-  draft yet.
+  Re-id them under their new parents rather than re-deriving. BP-1500c and
+  BP-1500d have no drafts yet.
 
   ID EVIDENCE. BP-1500 and BP-1600 were both confirmed free by a store-wide
   grep of every "^id: BP-" line in docs/acceptance-criteria/ and by a full-text
   grep across docs/, unit_tests/, tests/ and tickets/ -- zero hits for either.
-  BP-1500 taken here; BP-1600 remains free.
+  BP-1500 taken here; BP-1600 remains free. BP-1500d was confirmed free the same
+  way on 2026-08-25 -- zero hits repo-wide.

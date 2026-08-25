@@ -1,0 +1,139 @@
+id: BP-1500d
+components:
+  - build_pipeline
+title: "Your project keeps its own record of what the build put there"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  The record of what you installed lives with it, or the build refuses to finish.
+
+  Every install carries its own account of what the build put there, written into
+  the project it describes and still readable after that project is moved, copied
+  or opened somewhere else. The checks that exist to tell you whether anything has
+  drifted or been altered all read that account, so wherever it is missing or
+  unreadable they protect nobody -- and say nothing about it. A build that cannot
+  produce that account stops and tells you, instead of printing one warning line
+  and reporting success.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "NO entry covers this defect yet -- the evidence in the notes below was reproduced fresh on 2026-08-25 and a KI entry should be opened for it. Read KI-BP-004 and KI-BP-005: those are the two checks that read the record, so they are the ones that cannot run at all in a project where it was never written."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build that writes the record, and the step that gives up on producing it with a single warning line before exiting successfully."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "Two patterns at once: M2 (the deployed layout differs from the source you are reading) and a fail-open variant -- a check that is absent rather than failing, which is indistinguishable from a check that passed."
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHAT IS ACTUALLY WRONG. The build keeps a record of what it wrote, and later
+  checks read that record to detect tampering and drift. The record is not
+  portable and it does not belong to the install it describes: it is filed with
+  the package that produced the build rather than with the project that received
+  it, and it is written in a form that only makes sense from the place it was
+  written. So in any project other than the package's own workspace, the record
+  the drift checks depend on is simply not there.
+
+  VERIFIED EVIDENCE -- all four reproduced 2026-08-25. Stated without paths or
+  identifiers on purpose; the BA should re-observe each one rather than trust a
+  name.
+
+  1. The record is written into the package that produced the build, never into
+     the project the build was aimed at. Build into a consumer project and that
+     project ends up with no record at all, so the two checks that read it have
+     nothing to read. They are ABSENT, not degraded -- and an absent check looks
+     exactly like a passing one.
+  2. Because the record is written into the producing package, building into
+     someone else's project overwrites the package's own record with facts about
+     that other build. See the overlap note below -- this consequence is NOT the
+     headline of this L1.
+  3. The record's entries are keyed by where the producing package happened to
+     sit on disk. A record written in one location cannot be read in another, so
+     the same install checked out or moved somewhere else is unreadable even when
+     the record file itself travels with it.
+  4. When the record cannot be built for a project outside the producing
+     package's own parent folder, the build prints one warning line and exits
+     zero, reporting success. This is the fail-open half and it is why nobody has
+     noticed: the build's own report is the last place this shows up.
+
+  THE GUARANTEE, in the terms the BA must decompose. (a) The record belongs to
+  the project the build wrote into. (b) It travels with that project. (c) It
+  stays readable wherever that project is later opened, moved or copied. (d) If
+  the build cannot produce it, the build FAILS and says so. Do not let (d) be
+  dropped -- (a) through (c) implemented over a build that still exits zero when
+  it gives up leaves the whole family unenforceable, silently, exactly as today.
+
+  RELATIONSHIP TO BP-1500c -- read this before decomposing either one. BP-1500c
+  ("an installed copy that has fallen behind is reported") is NOT restated here
+  and must not be re-derived here. This L1 is its PREREQUISITE: you cannot report
+  drift against a record that was never written in the project you are checking.
+  BP-1500c is achievable in the package's own workspace today and structurally
+  impossible in anyone else's until this ships. Sequence them accordingly -- a
+  BP-1500c implementation accepted on evidence gathered only inside the package's
+  own workspace proves nothing about a consumer install.
+
+  OVERLAP WITH BP-1500a -- flagged, not owned. Evidence point 2 (a build into
+  another project clobbers the producing package's own record) is a build leaving
+  an edit you did not make in a tree you did not aim at, which is precisely
+  BP-1500a's promise. Cite BP-1500a for that consequence; do not author a child
+  here whose headline is the clobbering. This L1 owns where the record LIVES and
+  whether it can be READ, not the collateral damage of it living in the wrong
+  place.
+
+  SAME FAILURE FAMILY AS BP-016 / BP-017, one layer deeper. Both of those were
+  build output that only worked on the machine that produced it -- links baked
+  with one developer's absolute directory layout, and the same layout published
+  to every clone. This is the identical defect in the drift-detection record
+  itself: output keyed to our own layout, useless anywhere else. The difference,
+  and the reason it has survived longer, is that BP-016/BP-017 broke loudly at
+  the point of use, whereas this one fails OPEN -- the checks that would have
+  complained are the very things that go missing. Cite both; neither covers this.
+
+  MANDATORY PROOF SHAPE -- binding on every child of this L1, for the BA and the
+  IT PO.
+
+  - Every child must be provable by running a REAL build into a project directory
+    located OUTSIDE the producing package's own parent folder, and then inspecting
+    the resulting tree. Reading build source for the presence of a string, a
+    setting or a function call does NOT satisfy any child here. This repo's
+    standing rule "Gate / Workflow ACs -- Verify Behaviorally, Not by Grep"
+    applies in full, and applies with extra force because the defect being fixed
+    is itself invisible to every source-level check that exists.
+  - Every child needs a NEGATIVE CONTROL: a deliberately non-portable record --
+    written to the wrong project, or keyed to a location it is not being read
+    from -- that the new check is demonstrated to FAIL on, before the check may be
+    accepted as passing on the good case. A check that has never been seen to fail
+    has not been shown to run.
+  - The out-of-package build target is the whole test. A child verified only in
+    the package's own workspace is verified in the one layout where the defect
+    does not appear, which is how this survived to now.
+
+  FIELD DEVIATIONS from the authoring request, recorded for the reviewer:
+  work_status is `todo` (the store's enum is todo/in_progress/done; `not_started`
+  is not a valid value), and `component` is the hyphenated `build-pipeline`
+  matching BP-1500, a, b and c and the namespace convention in this component's
+  PROJECT_CONTEXT.md. The graph vocabulary id `build_pipeline` is carried in
+  `components`, which is the field that axis belongs to.
