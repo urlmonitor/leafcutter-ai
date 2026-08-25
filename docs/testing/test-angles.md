@@ -59,9 +59,18 @@ population is the one that matters here.)
 > **Known weakness of the floor at that scale.** For the 80% with no `test_spec`, the
 > appended reachability descriptor cannot name an entry point — it says so in its own
 > text ("the entry point is not declared: resolve it before writing this test"). It hands
-> the hardest judgement, *what IS the production entry point*, to `test-writer`, which
-> contains the word "angle" zero times. Until that seam is closed, a reachability mandate
-> can quietly be satisfied by a renamed `criterion` test.
+> the hardest judgement, *what IS the production entry point*, to `test-writer` — which,
+> as of BP-1100g-1 (2026-08-25), now carries a machine-extractable taught set of all
+> seven angle names and their distinguishing rules (`templates/agents/test-writer.md`
+> `<!-- TAUGHT-TEST-ANGLES:START/END -->` anchor), kept in cross-source lockstep with
+> `config/ac_store_schema.json`'s `test_spec[].angle` enum by
+> `unit_tests/prompt_assembly/test_bp_1100g_1.py`. That closes the *vocabulary* gap —
+> `test-writer` can no longer be ignorant of the word "angle" or of what separates each
+> kind from a proof of the behaviour alone. It does not by itself close the *judgement*
+> gap this paragraph is about: knowing the seven names and their rules is not the same
+> as knowing which concrete function, script, or command is *this* AC's production entry
+> point. Until that seam is closed, a reachability mandate can still quietly be satisfied
+> by a renamed `criterion` test if the writer picks the wrong entry point.
 
 ## The taxonomy
 
