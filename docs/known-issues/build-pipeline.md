@@ -124,7 +124,7 @@ is also easy to mistake for another author's work. Restore with
 
 - **Severity:** blocker
 - **Status:** open
-- **Occurrences:** 3
+- **Occurrences:** 4
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** deploy layout vs `templates/scripts/commit_guardian/doc_type_validators.py:49` (`_find_doc_types_json`)
 
@@ -163,6 +163,31 @@ self-hosting: leafcutter ships a `/feature` skill and a `worktree-agent` whose w
 to create worktrees, and `building-epics` drives epics inside them. The hook is broken by
 the package's own recommended workflow, for every adopter, and their standing workaround is
 `SKIP=check-doc-frontmatter`.
+
+**Fourth occurrence, 2026-08-25 — and it widens the defect from one file to the whole
+`config/` directory.** Reproduced from a worktree freshly created from `origin/main` at
+commit `73500600` and built via `python3 scripts/build.py --target-dir <that worktree>`.
+`ls <worktree>/.leafcutter/config/` returns exactly two entries: `commit_guardian` and
+`feedback_categories.yaml`. Absent from that deployed output, though all three exist in the
+package source at `config/`: `agent_registry.json`, `doc_types.json`, and
+`diagram_types.json`. `find <worktree> -name agent_registry.json` locates it only at
+`<worktree>/config/agent_registry.json` — the package source copy, never deployed — and in a
+web fixtures directory; never under the deployed `.leafcutter/`.
+
+By contrast, the long-lived workspace parent `/home/henzeh/projects/leafcutter/.leafcutter/config/`
+DOES contain all five files — `agent_registry.json`, `commit_guardian`, `diagram_types.json`,
+`doc_types.json`, `feedback_categories.yaml`. That is the Masking trap above, restated for the
+wider scope: two of those five (`doc_types.json`, `diagram_types.json`) were hand-copied in on
+2026-08-18 specifically to work around this crash; the build never put them there. So the one
+workspace where this package is developed is the one place the gap is invisible, which is why
+it keeps being rediscovered from consumer installs rather than from self-hosted development.
+
+`BP-900g-8-ii` ("the deployed-dependency closure covers the data and configuration files a
+script reads, not only the modules it imports"), approved and merged 2026-08-19, already states
+the general rule this violates. `doc_types.json`, `diagram_types.json`, and now
+`agent_registry.json` (see KI-BP-011, which covers `agent_registry.json`'s non-deployment and
+its knock-on validation gap in full) are three unfixed instances of that one rule, not three
+separate defects.
 
 **A concrete fix the reporter proposes, and it is the right one.** Emit the config into the
 deployed tree at build time. `.leafcutter/config/` already exists and is git-tracked in a
@@ -728,3 +753,77 @@ against that target root (or the package root itself) rather than
 **AC.** BP-1500d
 (`docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml`) is
 authored against this defect.
+
+---
+
+### KI-BP-011 — The self-hosted build validates `agent_registry.json` against a path nothing ever writes to, and the deployed workflow reads a different path entirely
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_phases.py:1928` (`registry_path` used by the self-description
+  validator), `:1863` (docstring naming the same path), `:62` (`REGISTRY_PATH`, the
+  source-side constant the build reads from) · `.leafcutter/workflows/plan-feature.js:1749`
+  (the deployed workflow's own registry read)
+
+**Symptom.** A consumer install has `agent_registry.json` at neither path the codebase
+actually uses — and the build's own validation cannot detect that, because the only layout
+it has ever run in is the one where the check is structurally incapable of failing.
+
+**Mechanism.** `build_phases.py:1928` computes `registry_path = target_root / "config" /
+"agent_registry.json"` and validates the registry there; the docstring at `:1863` describes
+the same path as holding the required registry fields. Nothing in the build ever *copies*
+`config/agent_registry.json` to `target_root / "config" /`. A grep of `build_phases.py` for
+the filename returns only the source-side constant, the validation read, doc comments, and
+error-hint strings — no write:
+
+```text
+$ grep -n "agent_registry.json" scripts/build_phases.py
+10:    agent_registry.json and passes it + the skills_root to
+62:REGISTRY_PATH = PACKAGE_ROOT / "config" / "agent_registry.json"
+465:    Registry injection (ticket 29): loads ``agent_registry.json`` once and passes
+1863:    in ``target_root / "config" / "agent_registry.json"`` for required registry
+1928:    registry_path = target_root / "config" / "agent_registry.json"
+2005:                        f"  Fix hint: Add '{field}' to the agent's entry in config/agent_registry.json."
+2072:            "Set self_description_enforcement='error' in config/agent_registry.json "
+2124:    registry entry from ``config/agent_registry.json``, calls
+2907:#   agent_registry.json once per phase call and passes agents, registry_path,
+```
+
+In the self-hosted layout this validation passes trivially, because `target_root/config/` IS
+the package's own source `config/` directory — the same file `REGISTRY_PATH` reads from. The
+check has therefore never been meaningful in the one place it has ever run: it validates the
+source against itself.
+
+Meanwhile the deployed `/plan-feature` workflow reads the registry from a *different*
+location. `.leafcutter/workflows/plan-feature.js:1749` runs
+`"cat .leafcutter/config/agent_registry.json\n"`. So `build_phases.py` expects
+`<target>/config/agent_registry.json` and the deployed workflow expects
+`<target>/.leafcutter/config/agent_registry.json` — and nothing in the build populates
+either path in a real consumer install (see KI-BP-003's fourth occurrence: `.leafcutter/config/`
+deploys only `commit_guardian` and `feedback_categories.yaml`).
+
+**Consequence.** A consumer install has the registry at neither path. The build's own
+validation cannot catch this, because in the only layout where it runs — self-hosted — it is
+reading the package's source copy, not a deployed one, so it reports success regardless of
+whether either deployed path is populated.
+
+**Relationship to other entries.** Same root-cause shape as KI-BP-003 (see that entry's
+fourth occurrence): `config/` is not deployed. Both are unfixed instances of the rule
+`BP-900g-8-ii` already states — "the deployed-dependency closure covers the data and
+configuration files a script reads, not only the modules it imports." `KI-BO-016` (in
+`docs/known-issues/build-orchestration.md`) is a related but distinct failure one layer up:
+`/plan-feature`'s registry read there succeeds only *incidentally*, because the process
+working directory happened to be the workspace parent that holds a populated `.leafcutter/`
+— the same non-portable assumption, caught in the one case where it happens to resolve.
+
+**Fix direction.** Anchor the validator's `registry_path` and the deployed workflow's read to
+the same, actually-deployed location, and make the build copy `config/agent_registry.json`
+there. Until then, do not trust a passing self-hosted validation run as evidence that a
+consumer install's registry is reachable by anything that runs against deployed output.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in a validates-against-itself sub-form: the only layout
+the check has ever run in is the one where target and source are the same directory, so it
+has never been able to fail.
