@@ -42,43 +42,6 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 ---
 
-### KI-ACS-001 — `validate_ac_schema.py` exits 0 when it validates nothing
-
-- **Severity:** high
-- **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `scripts/ac_store/validate_ac_schema.py:333`
-
-**Symptom.** The script takes **file paths** and does no globbing of its own. Handed a
-directory — the intuitive way to validate a component — it matches zero files, prints
-`No YAML files to validate.` and **exits 0**. The caller sees a success-shaped result
-from a run that checked nothing. A validator that cannot distinguish "clean" from "I was
-given nothing" is worse than no validator, because it is consulted for reassurance.
-
-**Evidence.** Verified 2026-08-18 against `docs/acceptance-criteria/testing-quality/`:
-the bare-directory form prints the no-op message and exits 0, while
-`find <dir> -name "*.yaml" -exec python scripts/ac_store/validate_ac_schema.py {} +`
-over the same tree reports eight real violations (`documentation_triggers` present on L2
-records, permitted only on L1). Across the whole store the correct invocation reports
-**288** violations, most of them legacy list-form `it_requirements` predating the
-object-form rule — real, but not a fire.
-
-This mattered because `CLAUDE.md`'s own "AC-store hygiene — bulk pre-flight" section
-prescribed the bare-directory form from 2026-08-10 until 2026-08-18, so the documented
-defence against store rot was itself a no-op for eight days. That instruction is now
-fixed; the script is not.
-
-**Fix direction.** Exit non-zero, or at minimum warn loudly, when the resolved file count
-is zero. Better: accept a directory and walk it, since that is plainly what every caller
-means. Note a plain `*/*.yaml` glob is **not** an adequate workaround — AC YAML sits at
-more than one depth, so a fixed-depth pattern silently skips directories, which is the
-same defect wearing a different hat.
-
-**Pattern:** `docs/reference/false-green-mechanisms.md` → M5.
-
----
-
 ### KI-ACS-002 — `--verify` passes `files_touched` on a path count, not on correctness
 
 - **Severity:** high
