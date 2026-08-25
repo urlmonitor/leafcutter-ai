@@ -559,11 +559,13 @@ them — an unstaged fix will appear not to work.
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `config/ac_store_schema.json` → `test_spec[].framework` and
   `test_spec[].type`, against the ACs under `docs/acceptance-criteria/ux-prototyping/`
-  and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/`
+  and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/`; **and the
+  identical pair** in `config/test_requirements.schema.json` →
+  `$defs.test_entry.properties.framework.enum` (`:74`) and `...type.enum`
 
 **Symptom.** `test_spec[].framework` permits exactly `unittest` and `pytest`; `test_spec[].type`
 permits exactly `unit`, `integration`, `e2e`, `behavioral`. The repo now contains a Next.js
@@ -610,6 +612,42 @@ by the stricter hook (KI-ACS-009). The whole-store run was only possible at all 
 KI-ACS-001 was fixed on 2026-08-19 — before that the bare-directory form exited 0 without
 reading anything, which is why a population this size went unnoticed.
 
+**Second occurrence, 2026-08-25 — the same gap exists in a second schema, and the two are
+coupled.** `config/test_requirements.schema.json` `$defs.test_entry` carries a
+byte-identical `framework` enum (`["unittest", "pytest"]`, `:74`) and `type` enum
+(`["unit", "integration", "e2e", "behavioral"]`), also under `additionalProperties: false`.
+That schema governs the `## Test Requirements` block in a **ticket** body.
+
+The coupling is `generate_ticket_from_ac.py::_test_descriptors_from_spec` (`:1451-1454`),
+which copies the AC's `test_spec[].framework` and `[].type` straight through onto the
+emitted ticket descriptor:
+
+```python
+if item.get("framework"):
+    entry["framework"] = item["framework"]
+if item.get("type"):
+    entry["type"] = item["type"]
+```
+
+So widening only the AC schema does not finish the job. A web-app AC would validate,
+`/build-ac` would generate a ticket carrying `framework: vitest` / `type: component`, and
+those are values the ticket schema forbids — the defect would move one step downstream
+rather than being fixed.
+
+That downstream failure would be **silent**, which is the worse half.
+`test_requirements.schema.json` is enforced by no hook and no CI gate; it is a declared
+contract cited in `templates/agents/test-writer.md` and pinned by two unit tests
+(`test_bo_2900g_3`, `test_bo_2900g_4`). Nothing would refuse the malformed ticket — the
+generator would simply emit a descriptor violating the contract `test-writer` is
+instructed to conform to.
+
+**One precision about the affected records.** They are web-app ACs but not exclusively
+web-app *tests*: `BP-1400c-1` pairs a Playwright e2e entry with a `pytest` entry targeting
+`unit_tests/build_pipeline/` (it asserts the CI workflow wires the route-smoke job and does
+not set `continue-on-error`). Across the 28 validator-visible records the entries are 40
+`vitest`, 2 `playwright`, 1 `pytest`. A record is refused if *any* single entry uses an
+unlisted value, so a mixed-stack AC is refused on its JS half alone.
+
 **Fix direction.** Widen both enums rather than rewriting 29 records to say something
 untrue about themselves: add `vitest` and `playwright` to `framework`, and decide
 deliberately whether `component` joins the level axis or those 12 entries move to an
@@ -620,7 +658,73 @@ would repeat the level/kind muddle BO-2900g-3 exists to have removed. Whichever 
 goes, per BO-2900g-3 the change must move the affected records in the same commit, not
 leave them for whoever touches them next.
 
+**Do both schemas in the one change, and add a test asserting the two vocabularies are
+equal.** They are hand-duplicated today with nothing holding them in step, which is how
+they drift apart again the moment one is edited alone. Because
+`config/ac_store_schema.json` is a package surface, the change needs an AC declaring
+`package_surface: true` or `check-package-surface-declaration` will refuse the commit.
+
+**Where to build it.** Prefer **AR-100** ("Every part of your codebase has a specialist who
+genuinely owns it") over a standalone `ac_store` patch. AR-100's criteria require that
+there be "no unclaimed technologies where the system quietly falls back on whoever happens
+to be nearby", and this is its first concrete instance — the repo gained a TypeScript web
+app and the store's test vocabulary never followed. Patched as three enum values, the next
+JS tool reproduces it; built as "every vocabulary admits the technologies this repo ships",
+it does not.
+
 **Related.** KI-ACS-009 (the pre-flight is weaker than the gate — the reason a
 locally-clean folder run does not clear these). BO-2900g-3 (the MIGRATE-DO-NOT-DEFER
 constraint this violates). `ACS-200h`, named at `ci.yml:215` as the unbuilt whole-store
 backstop, is the check that would have surfaced this on day one.
+
+---
+
+### KI-ACS-011 — `documentation_triggers: []` is refused on an L2 while `null` is accepted, so declaring "no documentation needed" is uncommittable
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/ac_store/validate_ac_schema.py:238-260` — the BO-2200a-5 L1-only constraint and its `is not None` guard
+
+**Symptom.** The L1-only rule is entered only when the field is present **and not null**:
+
+```python
+if "documentation_triggers" in data and data["documentation_triggers"] is not None:
+    ...
+    if ac_level != "L1":
+        errors.append("... permitted only on L1 ACs ...")
+```
+
+So an L2 that omits the field passes, an L2 that sets it to `null` passes, and an L2 that
+sets it to `[]` is refused. All three mean the same thing — this record carries no
+documentation obligation — and the rule's own purpose (BO-2200a-5: obligations are
+declared at feature level) is untouched by an empty list. The check keys on presence, not
+on whether an obligation is actually being asserted.
+
+**Evidence.** The same 2026-08-25 whole-store sweep that surfaced KI-ACS-010 refused
+**8 records**, all in `testing-quality/TQ-300-tooling-coverage-recovery`: `TQ-300a-1`,
+`-a-2`, `-a-3`, `-b-1`, `-b-2`, `-b-3`, `-c-1`, `-c-2`. Every one is `level: L2` with
+`documentation_triggers: []` **and** a `documentation_rationale` — e.g. *"Internal test
+coverage for existing tooling; no user-facing behavior is added, so no how-to or diagram
+adds value."*
+
+Note the asymmetry that makes this look unintended rather than strict: the author's prose
+justification for adding no documentation is accepted on an L2, while the machine-readable
+form of the same statement is rejected.
+
+**Fix direction.** Two defensible answers, and it is a convention call for whoever owns the
+enrichment fields rather than an obvious bug fix:
+
+1. **Treat `[]` as `null`** — change the guard to skip when the list is empty, so the rule
+   fires only on a record actually asserting a trigger. Keeps the eight records as written.
+2. **Strip the field from the eight** and keep the rationale — if the rule is meant to
+   prohibit the field's presence at L2 outright, regardless of value.
+
+(1) is the smaller change and preserves an explicit "considered, none needed" signal that
+(2) discards. Either way the eight records and the rule must be settled together; fixing
+one without the other leaves the store inconsistent with its own validator.
+
+**Related.** Same sweep, same cause of invisibility as KI-ACS-010: the whole-store run only
+became possible when KI-ACS-001 was fixed on 2026-08-19, and `AC store valid` is
+diff-scoped, so these eight sit dormant until someone edits one for an unrelated reason.
