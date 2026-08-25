@@ -1,0 +1,114 @@
+id: BP-1500c
+components:
+  - build_pipeline
+title: "The checks running on your machine are the current ones, not last week's"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  An installed copy that has fallen behind is reported, never silently obeyed.
+
+  What you installed can drift behind what the package now says, and until you
+  are told, every verdict you get is judged by the old rules -- a fixed rule
+  still fails, and a new rule does not run at all, which looks exactly like
+  passing. You find out that your installed copy is out of date at the moment it
+  matters, instead of trusting a result that was never current.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-004 (high) is the observed defect; KI-BP-008 (high) is the same guarantee failing through a different cause, and shows it is not self-host-only."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The deploy step that writes the installed copy, and the build manifest that records what was written."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "Pattern M2 in its staleness form -- the deployed layout differs from the source you are reading."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  NO DRAFT L2 EXISTS FOR THIS L1. Unlike BP-1500a and BP-1500b, this one needs
+  decomposition from scratch.
+
+  THE OBSERVED DEFECT (KI-BP-004, high). The build copies hook code into the
+  installed location. Nothing re-runs it and nothing compares it against the
+  source, so the installed copy is a snapshot of whenever it was last built.
+  Merge origin/main into a long-lived branch and the source advances while the
+  running gates do not. Both directions are wrong, and the second is the
+  dangerous one: a rule fixed on main still fails here, and a rule ADDED on main
+  does not run at all -- its absence is indistinguishable from a pass.
+
+  The recorded evidence: a worktree built 2026-08-17 19:38, merged with
+  origin/main on 2026-08-18. check-doc-frontmatter rejected seven generated cards
+  against a seven-value list while the configuration file at that same commit
+  held ten values including the one it rejected. The installed hook simply
+  predated the rule -- it did not contain the resolver function at all.
+  Rebuilding fixed it outright.
+
+  A SECOND INSTANCE, DIFFERENT CAUSE, SAME GUARANTEE. KI-BP-008 (high): a version
+  gate skips the entire workflow-install phase, returns the same count a genuine
+  no-op returns, and the build reports success. A deployed workflow sat 427 lines
+  behind its source and a run against it executed a superseded lane. Decompose
+  the guarantee -- "an installed copy behind its source is reported" -- not the
+  two causes; a fix aimed only at merge-induced staleness leaves the skipped-phase
+  cause live. KI-BP-008 also proves the guarantee is NOT self-host-only: a
+  consumer on an older toolchain gets this permanently and invisibly, with no
+  warning at use time.
+
+  THE BOUNDARY THAT MATTERS MOST -- BP-1300b is adjacent and is NOT this.
+
+  BP-1300b is titled "Checks judge the canonical source, not stale deployed
+  copies", which reads like it already owns this. It does not. Read its three
+  L2s: BP-1300b-1, -2 and -3 all govern where a guardrail resolves the SUBJECT it
+  validates -- the artifact under inspection -- so that a clean deployed copy
+  cannot mask a defect present in the canonical source, and deployment noise
+  cannot manufacture a false failure. Its it_requirements say "what they
+  validate". This L1 governs something BP-1300b never addresses: whether the
+  guardrail's OWN deployed code is current. A guardrail can satisfy BP-1300b
+  completely and still be an old build that never learned the rule it is now
+  supposed to enforce -- which is exactly what happened on 2026-08-18.
+
+  Cite BP-1300b when decomposing. Do NOT restate its canonical-source resolution
+  rule, and do NOT close this by moving guardrails to run from source; that is
+  BP-1300b's mechanism and it does not make staleness detectable, which is the
+  outcome asked for here.
+
+  WHY IT LIVES UNDER BP-1500 RATHER THAN AS A FOURTH BP-1300 L1. This was a close
+  judgment call and BP-1300 had room (3 of 7). It sits here because the mechanism
+  belongs to the build, not to the guardrails: the fix compares the build manifest
+  against the source it was written from, which is the same manifest-versus-reality
+  comparison that BP-1500b's orphan check performs, in its out-of-date form rather
+  than its abandoned form. In BP-1300 the guardrail is the actor; here it is the
+  passive victim of a build that did not keep its own output honest. If a later
+  reviewer disagrees, the re-home candidate is BP-1300d.
+
+  ALSO DISTINCT FROM BP-1000. BP-1000 compares a source script against its shipped
+  template copy, both inside the repository. This compares the INSTALLED copy
+  against the source it came from. Different pair, different tree.
+
+  FIX DIRECTION ON RECORD, for the BA to decompose rather than adopt verbatim:
+  have the commit path compare the build manifest against the source templates'
+  hashes and refuse, or warn loudly, when they diverge. check_build_drift already
+  reasons about deploy parity and is the natural home. Until this ships the
+  documented workaround is to rebuild immediately after every merge and to
+  distrust any hook verdict -- pass or fail -- taken from a copy built before it.
