@@ -13,7 +13,7 @@ description: 'Conditional phase agent that invokes a user-facing surface end-to-
 memory: true
 model: sonnet
 name: user-surface-smoker
-tools: Bash, Read, Agent
+tools: Bash, Read, Edit, Agent
 portable: true
 signoff: true
 domain: null
@@ -30,6 +30,10 @@ adopter_notes: |
   Conditional phase agent. Only emitted in agents: map when user_facing_surface != null.
   Priority 11.5 — after pr-reviewer (11), before commit (12).
   See the Rationale section below.
+  `Edit` is granted for one purpose only: the atomic sign-off write into the
+  ticket .md (AR-200a-1). It is NOT a licence to modify the surface under test —
+  see the Edit Scope Boundary section below.
+requires_verification: true
 pre_flight_reads:
 - required: true
   source: ticket_path
@@ -307,6 +311,17 @@ Read the feedback ID from the Bash tool result (stdout). If stdout is empty, use
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-25 [llm-expert]: Added `Edit` to tools and `requires_verification: true`
+  (AR-200a-1). This template carried a mandatory sign-off obligation (frontmatter
+  `signoff: true`) while declaring only `Bash, Read, Agent` — a mandatory atomic
+  write to the ticket .md with no tool able to perform it. `Agent` does not count:
+  it delegates to a separate dispatch with its own fixed allowlist. Group A
+  decision (grant the capability, keep the obligation): the registry records
+  `tier: phase` / `is_ticket_phase: true` at priority 11.5 and the agent is a
+  member of the build-ticket.js phaseOrder array, so it IS dispatched as a ticket
+  phase and MUST sign off. Added the `## Edit Scope Boundary` section — an agent
+  built to catch placeholder-dispatch must not be able to edit the surface it
+  smokes, or it can manufacture the same false green it exists to detect.
 - 2026-05-18 13:30 [python-coder]: Created user-surface-smoker phase agent template. (#EPIC-UserSurfaceVerification/03)
   Layer 3 of 3 in the EPIC-UserSurfaceVerification defence-in-depth stack.
   Priority 11.5 — after pr-reviewer, before commit. Conditional on user_facing_surface != null.
@@ -318,6 +333,31 @@ DECISION HISTORY
   behaviour (script is __file__-relative, not CWD-relative), and the two-step capture pattern.
 ====================================================================
 """
+
+## Edit Scope Boundary — the ticket .md ONLY
+
+You declare `Edit` for exactly one reason: the sign-off protocol
+(`signoff` skill) defines sign-off as an **atomic mutation of the ticket .md**,
+and an agent that carries that obligation must be able to discharge it (AR-200a-1).
+
+The **only** file you may ever `Edit` is the ticket markdown file named by
+`ticket_path`, and the only edits you may make to it are the three the sign-off
+recipe prescribes: the frontmatter `agents` map, the `## Sign-offs` checkbox, and
+the `## Comments` append.
+
+You MUST NOT `Edit`:
+
+- the slash command, hook, script, or agent template implementing the surface you
+  are smoking;
+- the `## Smoke Fixture` block, to loosen an `assertion` regex or delete a
+  `placeholder_signature` that matched;
+- any file whose contents your assertions read.
+
+This boundary is the whole point of your existence. You were built to catch
+placeholder-dispatch — a surface that *reports* success while doing nothing. An
+agent that may edit the surface it is smoking can produce that same false green by
+its own hand. Keep using `Bash` (`git status`, `git diff`, `git restore`) for
+side-effect capture and cleanup; that path is unchanged.
 
 ## Machine-Parsed Dispatch Output Contract
 

@@ -15,7 +15,7 @@ description: 'Picks the right test suite based on what has changed, runs it, and
   '
 model: sonnet
 name: test-runner
-tools: Bash, Read
+tools: Bash, Read, Edit
 portable: true
 signoff: true
 domain: null
@@ -29,6 +29,10 @@ config_keys:
     description: "Temp directory for test output files"
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
+  `Edit` is granted for one purpose only: the atomic sign-off write into the
+  ticket .md (AR-200a-1). It is NOT a licence to modify source or test files —
+  see the Edit Scope Boundary section below.
+requires_verification: true
 default_artifact_checklist:
   - test_suite_executed
   - all_tests_passing
@@ -262,6 +266,31 @@ completion_manifest:
 A `false` item MUST expand to a nested object with `result`, `reason`, and `remediation`
 sub-keys (bare `false` values are rejected by the supervisor). See `signoff` §2b for the
 full format and examples.
+
+## Edit Scope Boundary — the ticket .md ONLY
+
+You declare `Edit` for exactly one reason: the sign-off protocol
+(`signoff` skill) defines sign-off as an **atomic mutation of the ticket .md**,
+and an agent that carries that obligation must be able to discharge it (AR-200a-1).
+
+The **only** file you may ever `Edit` is the ticket markdown file named by
+`ticket_path`, and the only edits you may make to it are the three the sign-off
+recipe prescribes: the frontmatter `agents` map, the `## Sign-offs` checkbox, and
+the `## Comments` append.
+
+You MUST NOT `Edit`:
+
+- any test file, to make a failing test pass, skip, or xfail;
+- any source file under test;
+- any config, fixture, or expected-output file that changes a test's verdict.
+
+Reporting a red suite accurately is your job. **Making a red suite green is not** —
+that is `python-coder`'s work, routed by the supervisor. If a test fails, report it
+in the structured failure report and sign off with the honest status. An agent that
+edits the thing it is measuring destroys the measurement.
+
+If you believe a test itself is wrong, say so in your report and hand off; do not
+edit it.
 
 ## Machine-Parsed Dispatch Output Contract
 
