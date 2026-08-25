@@ -13,9 +13,18 @@ criteria: |
   When the workflow runs the green-phase verification,
   Then it runs not only the new quick-fix test but also existing tests
     that import or reference "scripts/build_helpers.py",
+  And those related tests are run under the same strict AC enforcement as the
+    new test, so a genuine breakage cannot be masked,
   And if any previously-passing related test now fails, the workflow
     halts with a warning listing the broken tests,
-  And it does not proceed to the commit phase.
+  And it does not proceed to the commit phase,
+  And the check runs after the new test is green and before the commit phase,
+    so that a fix which repairs its own test while breaking a neighbour is
+    stopped rather than committed,
+  And when no related tests can be found, that empty result is reported plainly
+    as "none found" rather than being presented as a clean pass,
+  And when the related-test check cannot produce a usable result, the run is
+    reported as unverified rather than counted as evidence of no regression.
 depends_on:
   - BP-600c-3
 doc_links:
@@ -25,6 +34,16 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      The related-tests dispatch sits between green verification and the
+      mutation proof, ahead of the commit phase, and halts with
+      related_tests_broken. Its prompt also instructs the runner to judge only
+      against what the related tests did BEFORE the fix, so a test already
+      broken on the branch for unrelated reasons is not misread as collateral
+      damage.
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
@@ -33,15 +52,78 @@ it_requirements:
   - "Must handle errors gracefully per the project error handling policy"
   - "Related-test discovery must use import/reference analysis, not directory-based heuristics"
   - "Must complete related-test scan within 10 seconds for typical repository sizes"
+  - >-
+    Must run the related tests under the same strict enforcement as the new
+    test. A related test covering a not-yet-done AC would otherwise have its
+    failure downgraded, which is the same masking BP-600c-2 guards against,
+    reappearing on a wider population.
+  - >-
+    An empty discovery result and a clean run are different outcomes and must
+    be reported differently. "No related tests found" is an absence of
+    evidence; presenting it as a pass turns a discovery failure into a
+    green light.
+  - >-
+    Must exclude the new test file from the related set — it was just verified,
+    and re-running it here would let its green stand in for the neighbours'.
 delivers_to: null
 expects_from:
   ac_id: BP-600c-3
   contract: "Green-phase verification scope expanded to include related tests for the modified file"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: implementation-reconciliation
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      This criterion had no implementation and no covering test from its
+      authoring on 2026-06-05 until 2026-08-24. The gap was found during the
+      BP-600 amendment sweep and closed on this branch. covered_by and
+      implemented_by are populated here for the first time. criteria was
+      extended, not rewritten: all four original clauses are kept verbatim, and
+      four facts learned from building it are added — that the related tests
+      run under the same strict enforcement as the new test, that the check
+      sits after green and before commit, that an empty discovery result must
+      be reported as "none found" rather than as a pass, and that an
+      unusable result is reported as unverified rather than as no-regression.
+      The last two exist because a related-test check that cannot find
+      anything looks identical to one that found everything healthy, and only
+      one of those is evidence. work_status is left at todo exactly as found;
+      see the note below.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/workflows/test_quick_fix_workflow.py::TestBP600WorkflowRelatedTests::test_ac_bp600c3i_broken_related_tests_halt_before_commit"
+  - "unit_tests/workflows/test_quick_fix_workflow.py::TestBP600WorkflowRelatedTests::test_ac_bp600c3i_related_check_runs_after_green_before_commit"
+implemented_by:
+  - templates/workflows-js/quick-fix.js
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  THIS RECORD WAS NEVER FALSELY DONE — THE STORE WAS HONEST HERE. It carried
+  work_status: todo for its whole life, correctly, because nothing implemented
+  it. What went wrong was the reverse of phantom-done: its parent BP-600c-3 was
+  marked done, so a reader who stopped at the parent would not have seen that
+  this constraint on it was unbuilt. The defect was real — a fix that repaired
+  its own test while breaking a neighbour reached the commit phase unchallenged,
+  and the mutation proof does not catch it, because coupling-to-the-fix and
+  collateral-damage are different questions.
+
+  work_status is left at todo per the instruction not to change it, but that
+  value is now stale in the safe direction: the behaviour is implemented in
+  templates/workflows-js/quick-fix.js and covered by the two tests named in
+  covered_by, each mutation-proved. Promoting it to done is a decision for the
+  owner.
+
+  OPEN TENSION IN THIS RECORD'S OWN it_requirements. The fourth entry says
+  discovery "must use import/reference analysis, not directory-based
+  heuristics", but the shipped discovery instruction also accepts tests that
+  "live in the test directory that mirrors its package" — which is exactly a
+  directory-based heuristic. It is kept in the requirement rather than quietly
+  relaxed, because the requirement's reason is sound: a mirrored-directory
+  match finds tests that never exercise the changed code and misses tests that
+  do. Either the instruction should drop that clause or the requirement should
+  be amended to permit it as a fallback. The fifth entry, a 10-second scan
+  budget, is likewise unenforced and unmeasured by anything in the workflow.

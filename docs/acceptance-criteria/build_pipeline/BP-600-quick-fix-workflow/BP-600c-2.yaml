@@ -1,7 +1,7 @@
 id: BP-600c-2
 components:
   - build_pipeline
-title: "Quick-fix workflow runs the new test and confirms it fails (red phase)"
+title: "Quick-fix confirms the test fails (red phase) under strict AC enforcement"
 component: build-pipeline
 level: L2
 status: active
@@ -12,10 +12,22 @@ criteria: |
   Given the test-writer has produced a test file for the diagnosed bug,
   When the workflow reaches the red-phase verification step,
   Then it dispatches the test-runner agent targeting the new test file,
+  And the run is required to be made under strict AC enforcement, so that a
+    failing test is reported as a failure rather than being downgraded,
+  And the workflow rejects the verdict outright — halting, and naming the
+    command that was actually run — whenever the runner cannot evidence that
+    the strict setting was in force, rather than accepting an unqualified
+    "the test failed",
   And the test-runner reports at least one FAILED result for the new test,
-  And if the test unexpectedly passes the workflow halts with a warning:
-    "The test passes before the fix was applied -- the diagnosis may be
-    incorrect or the bug is already fixed."
+  And if the test unexpectedly passes the workflow halts before applying any
+    fix, reporting that the test passes against unmodified code and that the
+    bug may already be fixed or the test may not cover it.
+
+  The strict requirement is not a preference. The AC created moments earlier is
+  by definition not yet done, and the test-enforcement plugin downgrades a
+  failing test covering a not-yet-done AC to an expected failure — so a default
+  run reports green on exactly the run this phase exists to catch red. A verdict
+  that cannot demonstrate the strict setting is therefore no evidence at all.
 depends_on:
   - BP-600c
   - BP-600c-1
@@ -26,23 +38,67 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: scripts/ac_store/pytest_ac_enforcement.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The xfail downgrade this criterion defends against. It applies to any
+      failing test whose covers-tag names an AC that is not work_status: done —
+      which a brand-new quick-fix AC never is.
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      Phase 2. The strict_command_run field is required by the runner's result
+      schema and the workflow blocks with halt_reason "strict_flag_missing"
+      when it does not contain the strict prefix — that guard is the
+      load-bearing part of this criterion, not the prose instruction.
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "Must parse test-runner output to distinguish PASSED, FAILED, and ERROR outcomes"
-  - "Must halt the workflow (not just warn) if the test passes before the fix is applied"
+  - >-
+    Must require the runner to report the exact command it ran, and must
+    verify that report carries the strict enforcement prefix before reading
+    the pass/fail verdict. Instructing the agent to use the prefix is not
+    sufficient on its own — the check on the returned command is what makes
+    the requirement enforceable rather than advisory.
+  - >-
+    Must halt the workflow (not just warn) if the test passes before the fix is
+    applied, and must halt separately, with a distinct reason, when the strict
+    prefix is unverifiable. The two halts have different remedies and must not
+    be collapsed.
 delivers_to:
   agent: workflow-architect
-  contract: "Red-phase result: { test_file: string, outcome: 'FAILED'|'PASSED'|'ERROR', failure_message: string|null, assertion_location: string|null }"
+  contract: "Red-phase result: { passed: boolean, strict_command_run: string, output_summary: string|null, failure_message: string|null }. passed must be false to continue. strict_command_run must evidence the strict enforcement prefix or the result is rejected. The failure text is also consumed by the root-cause divergence check."
 expects_from:
   ac_id: BP-600c-1
   contract: "Test file absolute path (string) written by the test-writer agent"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Two original clauses are kept: the workflow still dispatches test-runner
+      against the new test file, and it still halts when the test unexpectedly
+      passes. What was false by omission is now stated — "the test-runner
+      reports at least one FAILED result" was accepted unqualified, and an
+      unqualified failure verdict is exactly what pytest_ac_enforcement's xfail
+      downgrade makes unreliable for a brand-new AC. The workflow now requires
+      the runner to report the command it ran and rejects the verdict when that
+      command does not carry the strict enforcement prefix. The verbatim halt
+      string was replaced with a description of what the halt must convey: the
+      quoted text never matched the string the workflow actually emits, so as
+      written the criterion was unsatisfiable by the implementation it governs
+      while appearing precise. The delivers_to contract was corrected — it
+      declared an outcome enum of FAILED/PASSED/ERROR and an assertion_location
+      field, neither of which exists in the shipped result shape, and omitted
+      strict_command_run, which is the field the gate actually turns on.
+      Title amended. work_status left done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
@@ -50,3 +106,19 @@ covered_by:
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  UNRESOLVED CONTRADICTION WITH THIS RECORD'S OWN CHILD — DO NOT READ THIS AS
+  CLOSED. BP-600c-2-i (work_status: done) requires the red phase to distinguish
+  a test-runner ERROR (import failure, syntax error, missing fixture) from a
+  FAILED assertion, and to halt rather than treat the error as the expected red
+  phase. The shipped result shape has no ERROR channel: the runner reports a
+  boolean pass/fail only. An import error therefore returns "did not pass",
+  which this phase reads as a good red phase and proceeds to apply the fix —
+  the precise outcome BP-600c-2-i says must not happen. That is a live defect,
+  not merely a stale criterion, so it is deliberately NOT written out of this
+  record's contract here. Adding an error channel to the runner result is the
+  fix; amending BP-600c-2-i to match the current behaviour would be recording
+  a bug as a requirement.
