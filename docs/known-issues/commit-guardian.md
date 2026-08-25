@@ -348,6 +348,40 @@ repo that is not a clone with a `main` branch is blocked. Found while building a
 fresh consumer install to test **KI-CG-9**; worth its own ticket independent of
 this epic.
 
+## KI-CG-13 — the diagrams root is hardcoded while its sibling roots are configurable
+
+**Severity: medium. Open.**
+
+`config/paths.json` declares the other architecture roots:
+
+```json
+"architecture":            "docs/architecture/",
+"architecture_adrs":       "docs/architecture/adrs/",
+"architecture_components": "docs/architecture/components/",
+```
+
+There is **no `architecture_diagrams` key**. `check_identifier_uniqueness.py`
+hardcodes `docs/architecture/diagrams/` instead. So of the four namespaces the
+gate polices, one has a root that a consumer cannot relocate, while its two
+immediate siblings can.
+
+This matters more once the gate is registered (**KI-CG-9**): a consumer that
+keeps diagrams anywhere else gets a permanently unresolvable namespace, which
+under the **KI-CG-7** fail-closed contract blocks every commit with no
+configuration escape.
+
+**Suggested fix.** Add `architecture_diagrams` to `paths.json` and read the root
+from it, matching how `architecture_adrs` is already consumed. Fold this into the
+scaffolding work (**KI-BO-4**) — the same change decides where the directory
+lives and how the gate finds it, and splitting them invites the two answers to
+diverge.
+
+**Context for whoever picks this up.** `docs/architecture/diagrams/` currently
+holds 24 files: 13 match the `c{level}-{seq}` pattern the gate's numbering
+namespace polices, and 11 do not. Those 11 are a **binding, permanent exemption**
+recorded in `GE-122e.yaml` / `GE-122b.yaml` by a PO gate decision of 2026-08-17 —
+do not renumber them. See `docs/reference/architecture-docs-layout.md`.
+
 ## Fixed, recorded for context
 
 Two defects in this area were found and fixed during the same drive; they are

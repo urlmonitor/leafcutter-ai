@@ -38,6 +38,10 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000d-1.yaml"
     relationship: describes
     status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-6.yaml"
+    relationship: context
+    status: exists
+    relevance: "The mirror axis. This AC's out-of-scope clause is scoped to the deployment-completeness question only; the deployed-but-unregistered case is owned by GE-120c-6 and is NOT an accepted gap. The two exclusion rules are deliberately stated differently and must both hold: this AC excludes a script because neither the registry nor a deployable template promises it, while GE-120c-6 excludes it because it does not live in the guard directory. scripts/build.py is out of scope under BOTH statements, and neither sweep may flag it — that carve-out is load-bearing, since flagging it would fail the merge gate on a false positive."
   - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
     relationship: describes
     status: exists
@@ -64,3 +68,5 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-RegistryCompletenessGate/04_TICKET-20260622-BP-900e-3.md
 change_target: pipeline
 risk_surface: internal
+notes: |
+  IT-PO (2026-08-25): cross-reference added to GE-120c-6 — the deployed-but-unregistered case is owned there and is NOT an accepted gap; this AC's out-of-scope clause remains correct and unchanged, and is what keeps scripts/build.py from failing the merge gate as a false positive.

@@ -37,6 +37,7 @@ covered_by:
   - GE-120c-3
   - GE-120c-4
   - GE-120c-5
+  - GE-120c-6
 implemented_by: []
 change_target: code
 risk_surface: internal

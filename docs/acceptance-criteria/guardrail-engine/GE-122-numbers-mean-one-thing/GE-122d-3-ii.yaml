@@ -1,0 +1,229 @@
+id: GE-122d-3-ii
+title: "A new project's first commit works because the roots are there, not because absence is excused"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a brand-new project — an empty directory holding only a minimal skills_config.json —
+    into which the package has been installed and the install run once, with no opt-in
+    documentation-seeding step performed,
+  And that project therefore holds none of the artifacts any of the numbered namespaces
+    collect,
+  When the adopter makes their first commit through the ordinary commit path,
+  Then the commit completes,
+  And every namespace root the uniqueness pass holds itself responsible for exists in that
+    project as a real directory,
+  And the pass reports an inspected count of zero for each of those namespaces, so the first
+    commit carries a positive statement that nothing was claimed twice rather than a silence
+    that could equally mean nothing was examined,
+
+  And given that same project, with one of those namespace roots then renamed, moved or removed
+    while the pass still holds that namespace responsible,
+  When a commit is attempted,
+  Then the commit does not complete,
+  And the output names the root that was not found and the place the pass expected to find it,
+  And it states that uniqueness for that namespace was not established — the same
+    could-not-establish disposition GE-122d-3 requires for a collection the pass could not see,
+  And an absent root is never reported as an inspected count of zero, and never contributes to
+    a clean verdict,
+
+  And given a project whose collection legitimately lives somewhere other than the default
+    location, and which declares that location in its own path configuration,
+  When a commit is attempted,
+  Then the pass resolves that namespace at the declared location rather than at an assumed one,
+  And every namespace root the pass is responsible for is resolved through that same declared
+    configuration, with no namespace resolved by a location written into the pass itself.
+
+  Coverage note: the first block and the second block must be exercised in the SAME test module,
+  against a real installed project on disk, because this criterion is a boundary and a boundary
+  demonstrated from one side is not demonstrated. Creating the project by copying this
+  repository does not cover it — a copy already contains every root, which is the condition
+  under which the defect cannot reproduce. A test that asserts the pass returns zero for a
+  missing directory covers the opposite of this criterion.
+depends_on:
+  - GE-122d-3
+doc_links:
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: describes
+    status: exists
+    relevance: "The design answer this criterion encodes. It records that an existing-but-empty root passes cleanly with an inspected count of zero while a MISSING root is a fail-closed blocking misconfiguration, and that both adrs/ and diagrams/ need a placeholder file the moment the install runs — NOT behind the opt-in seeding flag, because the gate must be safe to register for every consumer. It also carries the drafted diagrams README verbatim (38 lines, inside the check-doc-length budget) and the exact config/paths.json key to add."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: context
+    status: exists
+    relevance: "KI-BO-4 — the install does not scaffold two of the four namespace roots. This criterion is the behaviour that known issue is waiting on, expressed so that scaffolding is the only way to satisfy it."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-13 — the diagrams root is hardcoded while its sibling roots are configurable. That asymmetry is what the third block of this criterion removes: a root nobody can declare is a root nobody can relocate, and a project whose store lives elsewhere has no way to say so."
+  - path: config/paths.json
+    relationship: modifies
+    status: exists
+    relevance: "Holds architecture_adrs and architecture_components but, verified 2026-08-25, no architecture_diagrams key. The third block requires every responsible namespace to resolve through this declaration."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "The install this criterion requires to leave every namespace root present. The base install path, not the opt-in documentation-seeding path."
+  - path: templates/scripts/commit_guardian/check_identifier_uniqueness.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO 2026-08-25 — added as an edit surface the BA's doc_links omitted. This is where the diagrams root is hardcoded today (`root / \"docs\" / \"architecture\" / \"diagrams\"`, per KI-CG-13); the third block of the criteria cannot be satisfied without changing it."
+  - path: templates/scripts/commit_guardian/_uniqueness_scanners.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO 2026-08-25 — holds the per-namespace scan and _DIAGRAM_FILENAME_RE. The resolved-empty / unresolved-root / unreadable-artifact trichotomy is expressed here, and this is where an absent root must be prevented from degrading into a count of zero."
+  - path: templates/docs/architecture/diagrams/README.md
+    relationship: creates
+    status: planned
+    relevance: "IT-PO 2026-08-25 — the placeholder the diagrams root needs so the base install can create a directory git will actually carry. Does not exist today (templates/docs/architecture/ holds only FRONTMATTER.md, README.md, adrs/ and c1-001-system-context.md.template); the verbatim draft is in docs/reference/architecture-docs-layout.md."
+  - path: docs/architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md
+    relationship: context
+    status: exists
+    relevance: "Defines the namespaces the pass is responsible for — the set the phrase 'every namespace root' resolves against."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE BINDING DESIGN DECISION, and the one an implementer will be tempted to undo: an absent root is NOT an empty collection. Satisfy the first block by having the install CREATE the roots, never by teaching the pass to treat absence as zero. The two mechanisms are indistinguishable on a green first commit and opposite on every other day — a consumer whose store lives elsewhere, a renamed directory, or a hook invoked from an unexpected working directory all present as an absent root, and under the absence-is-empty reading every one of them passes silently. That is the fail-closed contract of GE-122d-3 reopened. The second block of the criteria exists specifically so this shortcut fails the AC."
+  - "Because git cannot commit an empty directory, each scaffolded root needs a real placeholder file. docs/reference/architecture-docs-layout.md carries a drafted README for the diagrams root and records that the adrs root already has a seed source. Scaffolding belongs on the BASE install path, not behind the opt-in documentation-seeding flag — a gate that is only safe for consumers who happened to run an optional flag is not safe to register."
+  - "DO NOT RENUMBER, RENAME OR MOVE THE ELEVEN GRANDFATHERED UNNUMBERED DIAGRAM FILES. That exemption is a binding, permanent scope decision taken by the user at the PO gate on 2026-08-17 and recorded in GE-122e and GE-122b. They do not match the filename pattern and are therefore invisible to the uniqueness scan by construction; scaffolding a root must not disturb them, and the inspected count for that namespace counts what the pass examined, which is not the same as the number of files in the directory."
+  - "The third block is a real change of mechanism, not a restatement: KI-CG-13 records that the diagrams root is hardcoded in the check while adrs and components resolve through config/paths.json, which today has no architecture_diagrams key. Add it as a non-optional entry mirroring architecture_adrs — the gate hard-requires the root, so an optional declaration would be a third way for the root to go missing quietly."
+  - "THE CONFIG CHANGE, STATED CONCRETELY SO IT CANNOT BE READ AS OPTIONAL (IT-PO 2026-08-25). Add `architecture_diagrams: \"docs/architecture/diagrams/\"` to the `paths.docs` object in config/paths.json, sitting alongside the existing `architecture`, `architecture_adrs` and `architecture_components` keys. Do NOT add a companion `architecture_diagrams_optional` flag: `architecture_components_optional: true` exists because nothing fails when that root is absent, and the whole premise of this criterion is that the diagrams root is not in that class."
+  - "DELETE THE HARDCODED ROOT, DO NOT LEAVE IT AS A FALLBACK. Once the key exists, the literal `root / \"docs\" / \"architecture\" / \"diagrams\"` in check_identifier_uniqueness.py must be REMOVED, and all four namespace roots must resolve through the one declared-path resolver. A hardcoded default retained 'just in case the key is missing' is a duplicated source of truth: it makes a project that relocated its diagrams store silently scan the wrong directory and report a clean count of zero — the exact silent-pass this criterion forbids — and it makes a missing key unobservable instead of could-not-establish. One resolver, one source, no fallback."
+  - "THE FOUR ROOTS RESOLVE BY ONE MECHANISM, INCLUDING tickets/. ADR-034's fourth namespace resolves via tickets/ticket_lifecycle.json rather than a paths.json key. 'Every namespace root is resolved through that same declared configuration' means no root is resolved from a location written into the pass — it does not mean all four must be declared in the same FILE. State which declaration each root reads and make the resolver read it; if the tickets root is judged to need a paths.json key too, that is a decision to record, not to assume silently."
+  - "Distinguish the three conditions in the pass's outcome vocabulary rather than in prose: a resolved root with nothing in it is clean with a count of zero; a declared root that does not resolve is could-not-establish and blocks; an artifact inside a resolved root that cannot be read or parsed is GE-122d-3's condition and also blocks. Do not collapse the first into the second or the second into the first."
+  - "Build the fixture project from an EMPTY directory, never from a copy of this repository. A copy already contains every root, so it cannot reproduce the condition — the same source-tree bias BP-900h-1's constraints call out and the reason the seven consumer-install defects of 2026-08-13..17 all shipped."
+  - "SCAFFOLDING MUST BE IDEMPOTENT AND MUST NOT OVERWRITE. Running the install a second time over a project whose diagrams or adrs README the adopter has since edited must leave that file byte-identical — create-if-absent, never rewrite. BP-900h-2 already asserts install idempotency for the tree as a whole; a scaffold step that re-seeds a placeholder on every run turns every subsequent install into a silent content revert."
+  - "FILE SCOPE: config/paths.json, scripts/build.py (base install path — NOT scripts/seed_project_docs.py, which is the opt-in seeding path this criterion deliberately excludes), the two commit_guardian modules under templates/scripts/, the new templates/docs/architecture/diagrams/README.md, and one new test module. Deployed copies under scripts/commit_guardian/ are build outputs regenerated by build.py per ADR-001 and are never hand-edited."
+  - "Error handling per CLAUDE.md Rules 1-4: the root-resolution branch catches the specific filesystem exception, logs at WARNING or above, and converts to the could-not-establish outcome rather than raising an unhandled traceback. A traceback at an adopter's first commit is not the same as a stated could-not-establish result."
+test_spec:
+  - name: test_ge122d3ii_from_empty_install_first_commit_completes
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "A project created as an EMPTY directory holding only a minimal skills_config.json, installed into and built once with no opt-in documentation-seeding step, accepts an adopter's first ordinary commit. Built from empty on disk — never by copying this repository, which already contains every root and cannot reproduce the condition."
+  - name: test_ge122d3ii_install_leaves_every_namespace_root_present_as_a_real_directory
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the base install in that from-empty project, every namespace root the pass is responsible for — including docs/architecture/adrs/ and docs/architecture/diagrams/, the two KI-BO-4 names — exists as a real directory carrying a real placeholder file, so git can track it."
+  - name: test_ge122d3ii_first_commit_reports_inspected_count_zero_per_namespace
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The first commit's output carries a positive inspected count of zero for each namespace, rather than a silence that could equally mean nothing was examined."
+  - name: test_ge122d3ii_removed_namespace_root_blocks_and_names_root_and_expected_location
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "In the SAME test module and the SAME on-disk project, one namespace root is then renamed or removed while the pass still holds it responsible: the commit does not complete, and the output names the root that was not found, the place the pass expected it, and states that uniqueness for that namespace was not established. This is the must-block half of the boundary — without it the first three descriptors are satisfied by teaching the pass that absence means zero."
+  - name: test_ge122d3ii_absent_root_never_reads_as_inspected_count_zero
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The absent-root run and the resolved-but-empty run are compared directly: the absent root produces a could-not-establish outcome and never a count of zero, and never contributes to a clean verdict. Distinguishes the two conditions that the shortcut implementation collapses into one."
+  - name: test_ge122d3ii_relocated_namespace_is_resolved_at_its_declared_location
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "A project that declares a non-default location for a namespace in its own config/paths.json is scanned at the declared location, and a declared location that does not resolve still blocks. Exercised on the diagrams namespace specifically, because that is the root that is hardcoded today."
+  - name: test_ge122d3ii_no_namespace_root_resolves_from_a_location_written_into_the_pass
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Every responsible namespace root is read from the project's declared path configuration: changing the declaration changes where the pass looks, for every root, with no code change. Goes red if any root retains a hardcoded default as a fallback."
+  - name: test_ge122d3ii_scaffolding_does_not_disturb_grandfathered_unnumbered_diagrams
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Scaffolding a diagrams root into a project that already holds unnumbered diagram files leaves those files byte-identical — not renamed, not renumbered, not moved. Pins the binding permanent exemption recorded at the 2026-08-17 PO gate; the fixture supplies the exempt files rather than the assertion naming a count."
+  - name: test_ge122d3ii_second_install_leaves_an_edited_placeholder_untouched
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The install is run a second time over a project whose scaffolded README the adopter has edited; the file is byte-identical afterwards. Create-if-absent, never rewrite."
+test_rationale: "This criterion is a boundary, and the reason it must be tested from both sides in one module is that each side alone certifies the wrong implementation: teaching the pass that an absent root means zero satisfies every first-block assertion perfectly and is the precise defect the AC exists to forbid, while the block-on-missing-root assertions alone say nothing about whether a new adopter can commit. Only the pair forbids anything. Every descriptor therefore runs against a real installed project built from an EMPTY directory — a fixture copied from this repository already contains all four roots, so it reproduces the source-tree bias behind the seven consumer-install defects of 2026-08-13..17 and cannot fail on the defect under test. The relocation and no-hardcoded-root descriptors are separate because the third block is a change of MECHANISM, not a restatement: a pass that scaffolds correctly and still resolves the diagrams root from a literal path passes the first two blocks and silently scans the wrong directory for any consumer who moved their store. The grandfathered-files and second-install descriptors pin the two ways a scaffold step can do collateral damage to content it did not create."
+delivers_to:
+  agent: python-coder
+  contract: "An install that leaves every namespace root present, and a pass that resolves each root through the project's declared path configuration and blocks when a declared root is absent."
+expects_from:
+  ac_id: GE-122d-3
+  contract: "The could-not-establish outcome value and its commit-time blocking disposition, which this criterion extends from an unreadable artifact to an unresolved namespace root."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: it-po-technical-enrichment
+    agent: it-po
+    date: '2026-08-25'
+    changed: "readiness draft->reviewed; doc_links gained check_identifier_uniqueness.py and _uniqueness_scanners.py as modifies edges and templates/docs/architecture/diagrams/README.md as a planned creates edge; five it_requirements added (the exact config/paths.json key, delete-the-hardcoded-root, the four-roots-one-mechanism boundary including tickets/, scaffold idempotency, file scope); test_spec and test_rationale authored as nine behavioural descriptors, all in one module against a from-empty install. criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE OPEN DECISION THIS AC CLOSES, and why it is closed the way it is. Two mechanisms could
+  make a new adopter's first commit work: (a) the install scaffolds the namespace roots so
+  "absent" never occurs, or (b) the pass treats an absent root as an empty namespace. This
+  criterion is written so that only (a) satisfies it, and the second block is the reason: under
+  (b) a declared root that does not resolve passes silently, and a wrong path is
+  indistinguishable from a legitimately absent one at the moment of the check. That
+  indistinguishability IS the defect the fail-closed contract exists to prevent. The distinction
+  between "knowably empty" and "a blind spot" is a real one, but it is only available to a pass
+  that can see the difference — and it can only see the difference if the root is there.
+
+  THE REFINEMENT WORTH HAVING, added rather than substituted. Making the roots exist is
+  necessary but leaves one honest gap: a project whose collection legitimately lives elsewhere
+  has no way to say so, and today, per KI-CG-13, one of the four roots cannot be declared at all
+  because it is written into the check. The third block closes that gap without reopening the
+  hole: a project DECLARES where its namespaces live, and a declared root that does not resolve
+  still blocks. The opt-out becomes a reviewable line in a configuration file rather than an
+  accident of a wrong working directory — the same "declared, data-driven, never hardcoded"
+  shape GE-120c-3 already requires of check exemptions. An implementer who reads only the first
+  block will hardcode the scaffold; an implementer who reads only the third will make the roots
+  optional. Both blocks are required and the second is what holds them together.
+
+  WHY BOTH DISPOSITIONS LIVE IN ONE CRITERION rather than two. Split into a scaffold AC and a
+  fail-closed AC, the scaffold AC becomes satisfiable by mechanism (b) plus a scaffold, and the
+  pair no longer forbids anything. This is one behaviour — what the pass does about a namespace
+  root — observed under the two conditions that distinguish the acceptable implementation from
+  the unacceptable one. GE-122d-3-i is written the same way and for the same reason.
+
+  WHAT THIS AC DOES NOT COVER: whether the CI consumer simulation actually exercises an
+  adopter's first commit. That is BP-900h-4, and it is the proof that this behaviour holds for
+  a real install rather than only in a fixture.
+
+  IT-PO (2026-08-25) — THE DUPLICATED SOURCE IS THE PART THE CRITERIA IMPLY BUT NEVER NAME.
+  "Every namespace root is resolved through that same declared configuration, with no namespace
+  resolved by a location written into the pass itself" reads as an instruction to ADD a
+  config/paths.json key. It is also an instruction to REMOVE the literal the key replaces. An
+  implementer who adds architecture_diagrams and keeps the hardcoded path as a fallback has
+  satisfied the sentence and preserved the defect: two sources of truth for one root, with the
+  quieter one winning whenever the key is missing. That is now an explicit it_requirement, and
+  the no-hardcoded-root descriptor in test_spec is what makes it fail rather than pass.
+
+  IT-PO — THIS AC IS THE FIRST LEG OF THE EPIC'S ORDERING. GE-122d-6 now declares this AC in
+  depends_on. Registering the commit-time uniqueness hook before this scaffold lands blocks
+  every commit in every fresh install, measured on both documented install paths including
+  --seed-docs. Nothing in this AC may be deferred out of the registration's critical path.

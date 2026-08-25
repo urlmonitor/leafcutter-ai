@@ -46,6 +46,7 @@ covered_by:
   - GE-122d-3
   - GE-122d-4
   - GE-122d-5
+  - GE-122d-6
 implemented_by: []
 change_target:
   - code
@@ -225,3 +226,23 @@ notes: |
   that the build gate fail but that its name be in the shared branch's required-
   check set — an optional gate leaves the guarantee exactly as voluntary as the
   commit-time stage.
+
+  BA ADDENDUM (2026-08-25) — the sixth child, and why the matrix above needed one.
+  The matrix documented the unregistered-guard trap while describing
+  check_adr_collision.py, and the commit-time numbering check built under this L1
+  then fell into the same trap: written, tested to a green suite, adversarially
+  reviewed six times, and registered nowhere. Verified 2026-08-25 —
+  check_identifier_uniqueness.py appears in neither commit_guardian.json nor the
+  deployed pre-commit registry. GE-122d-6 closes it for this guard by requiring a
+  real commit in a real built install, and its L3 requires the passing path to
+  state what was inspected so a pass is distinguishable from a hook that never
+  ran. The family-wide interlock is deliberately NOT filed here — it belongs to
+  GE-120c-6, because filed under this L1 it would protect this guard alone, which
+  is exactly the mistake that produced four instances of one defect.
+  A NOTE ON THE TWO MANIFESTS, since this matrix is where the ambiguity is
+  recorded: both statements above are correct once the direction is stated.
+  templates/scripts/commit_guardian/commit_guardian.json (55 entries) is the
+  SOURCE a registration is authored in and the file the install deploys the
+  registry from; the deployed .pre-commit-config.yaml is where the registration
+  must be OBSERVABLE. templates/commit-guardian/commit_guardian.json (3 entries)
+  is neither.
