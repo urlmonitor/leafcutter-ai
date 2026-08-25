@@ -1027,6 +1027,59 @@ Whichever is chosen, the operator-facing message must stop saying "was not obtai
 `obtained` was true. Distinguish *not obtained* from *obtained but unusable, because X* —
 the current text sent a reader looking for an assembly failure that had not happened.
 
+**Update, 2026-08-25 — the fix direction above is superseded, and the layer's premise is
+false.** A Product Owner pass on the transport question found that the thing the transport
+exists to protect does not exist. Three findings, each verified independently:
+
+- `grep -rn "cache_control" templates/ scripts/ config/` returns **zero hits**. No provider
+  cache breakpoint is set anywhere in the product. `<!-- CACHE_BREAKPOINT -->` is a literal
+  HTML comment inside a prompt string, and nothing consumes it but this gate.
+- The two consumers **cannot share a cached prefix even under automatic provider caching**.
+  Line 561 dispatches `agentType: "test-writer"`; line 635 dispatches `agentType:
+  "python-coder"`. Different agents, different system prompts. A prompt cache matches an
+  exact prefix from the *start of the request*, system prompt first, so the two requests
+  diverge long before the bundle appears in the user message. The bundle's "stable prefix"
+  is not a prefix of anything the cache sees.
+- The stable layer is **not stable across runs**. The bundle prompt names
+  `docs/architecture/README.md`, which does not exist, and tells the agent to substitute
+  "the nearest architecture index" — so that layer is composed by agent judgement and two
+  runs at one target need not produce the same bytes. `BO-2400c-1-iv` only asserts
+  byte-identity *within* one run, which is a triviality of interpolating one JS variable
+  twice.
+
+`BO-2400c-2.yaml:113` and `BO-2400c.yaml:33` already conceded the first point in writing on
+2026-08-18/19. Work continued against the old claim regardless, which is the part worth
+remembering.
+
+**The payload is 87% duplicate — measured.** `conventions.md` is 38,291 B and
+**byte-identical** to the worktree `CLAUDE.md` (`diff -q` exits 0), which the harness already
+injects into every agent dispatched into that worktree. `acs.yaml` is 90,887 B of AC records
+that the test-writer prompt (line 548) *already instructs the agent to read from
+`${acStoreRoot}`*. Together 129,178 of 148,891 bytes are a second copy of something the agent
+already has. Genuinely additive: architecture + high_level + prior_tests ≈ **20 KB**.
+
+So the transport failure is a symptom and the payload is the disease. **Chosen direction:**
+split on the *duplicate-vs-additive* line rather than stable-vs-volatile — pass only the
+~20 KB the agent does not otherwise have, drop the conventions and acs layers entirely, and
+keep the reference-rejection and a stated size expectation as a cheap belt on a payload
+already small by construction rather than as the mechanism. Specified in the
+`BO-2400c-1-iii` amendment and the new `BO-2400c-1-vi`; `BO-2400c-1-iii` is reset from
+`done` to `in_progress` because its gate half works and its transport half never did.
+
+Two consequences recorded rather than left implicit. **The CLI signature changes:**
+`injection_builders.py` marks `--architecture`, `--conventions`, `--high-level`, `--acs` and
+`--prior-tests` all `required=True` (lines 654-670), so dropping two layers changes what
+`assemble-bundle` accepts, not just what the lane passes — a call-site audit in the removal
+direction. **And the L1 is overclaiming:** `BO-2400c`'s "spend less time and money on every
+build" is not what this layer delivers. Until `BO-2400c-2` exists and reports, no cost claim
+belongs in a doc, a PR body, or a release note; if it reports no shared cache, the L1 should
+be re-framed from *cost* to *consistency* — the layer's real remaining benefit is that every
+agent starts from the same complete, named context instead of whatever it decides to read.
+
+**Keep the fail-closed gate exactly as it is.** It is the one part of this family with a
+demonstrated win: on its first live run against a real target it caught a genuine transport
+defect and refused to proceed.
+
 ---
 
 ### KI-BO-020 — The fast lane's release-on-failure path is dead: it dispatches `status-checker`, which refuses the role, so aborted runs strand their claims
@@ -1084,6 +1137,57 @@ rather than asking an agent to run it. Whatever the shape, **read the reply**: a
 result is discarded cannot distinguish "released" from "refused", which is precisely how this
 stayed invisible. A release that did not release should surface in the halt payload next to
 the failure that triggered it.
+
+**Update, 2026-08-25 — this is nine dead paths, not one.** A `grep -n "agentType"` across the
+lane shows **every** release dispatch passes `agentType: "status-checker"`, and every one opens
+its prompt "You are the release-phase agent.":
+
+| line | label |
+|---|---|
+| 506 | `release-on-context-bundle-fail` |
+| 574 | `release-on-test-writer-fail` |
+| 596 | `release-on-red-baseline-fail` |
+| 648 | `release-on-coder-fail` |
+| 668 | `release-on-coverage-fail` |
+| 751 | `release-on-review-fail` |
+| 773 | `release-on-review-fail` |
+| 871 | `release-on-changelog-fail` |
+| 943 | `release-on-commit-fail` |
+
+So it is not that one failure path strands its claims — **every failure path in the lane
+does**, from the first phase to the last. The observed run happened to fail at the earliest of
+the nine. Any covering test must drive all nine, not the one that was seen.
+
+**A latent sibling with the same shape and a worse failure mode.** The CLAIM dispatch at line
+393 opens "You are the claim-phase agent for a fast-lane build." with `agentType:
+"status-checker"` (line 402) — identical persona mismatch. It **complied** on the observed
+run, which is exactly why nobody has noticed it. Its failure mode is the inverse of the
+release's and more dangerous: a silent non-claim would let two runs build the same acceptance
+criterion concurrently, with `BO-2400f-8`'s exclusivity guard never firing because nothing was
+ever claimed. That belongs with `BO-2400f-7`, not here, and it is deliberately NOT folded into
+this fix — but a change to the release dispatches must leave it demonstrably alone rather than
+half-converting it. Recorded in `BO-2400f-10-i`'s notes.
+
+**Placement.** Specified as `BO-2400f-10-i` (the release actually releases, on every halting
+path) and `BO-2400f-10-ii` (the result is read; a failed release is named in the halt *beside*
+the failure that caused it, not instead of it). `BO-2400f-10` is reset from `done` to
+`in_progress`: marking done a criterion whose only invocation path has never once executed is
+the phantom-done shape this family exists to end.
+
+**One question carried, not resolved.** `BO-2400f-10` says the release "is landed on
+mainline", but a fast-lane run claims in its own workspace's copy of the store, which is
+discarded with the workspace — the only reason the observed failure was harmless. Whether the
+release is meant to reach mainline at all is a product question; the new criteria are worded
+against "the store the run claimed in" so they hold either way.
+
+**Related, and it compounds — see `KI-BO-023`.** That entry records a *second*, independent way
+a claim gets stranded: `_update_ac_work_status` raises `ValueError`, all three call sites catch
+only `OSError`, and the escape leaves acceptance criteria `in_progress` permanently. So there
+are now two distinct mechanisms stranding claims — a release that is never *reached* (this
+entry) and a release that is reached and *throws past its own error handling* (KI-BO-023).
+Fixing either alone still leaves claims stranded. `BO-2400f-10-ii`'s requirement that the
+release's result be **read** is the common defence: both mechanisms are silent today precisely
+because nothing inspects the outcome.
 
 ---
 

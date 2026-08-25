@@ -1,0 +1,301 @@
+id: BO-2400c-1-vi
+components:
+  - build_orchestration
+  - injection_builder
+title: "The bundle carries only what the receiving agent does not already have"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given every agent the lane dispatches into the run's workspace is already handed that
+    workspace's project conventions by the harness that dispatches it,
+  And the run's acceptance-criteria store sits inside that same workspace, where any
+    agent working there can open it,
+  When the lane assembles its context bundle for the run,
+  Then the bundle carries only content the receiving agent does not otherwise have —
+    the architecture overview, the high-level parent acceptance criteria for the target,
+    and the prior tests for the area,
+  And the project conventions are not one of the bundle's layers: the bundle would be
+    carrying a second copy of text the receiving agent is handed anyway, and that copy is
+    the single largest duplicate in the payload,
+  And the full text of the build set's own acceptance criteria is not one of the bundle's
+    layers either, because each context-carrying dispatch instead tells its agent to open
+    each id's record in the run's own store — the instruction the test-writer dispatch
+    already carries and the coder dispatch does not,
+  And every context-carrying dispatch carries that instruction, so no agent is left
+    expected to reason about records it was neither given nor told to go and read.
+
+  Given the same run,
+  When the assembled bundle is measured,
+  Then it is small enough to cross an agent boundary intact as text in a return value,
+    on the order of twenty kilobytes rather than the order of a hundred and fifty,
+  And that smallness is a property of what the bundle contains rather than of a limit
+    imposed afterwards, so the transport contract in BO-2400c-1-iii is a check on an
+    already-small payload and not the thing making it small.
+
+  Given the architecture layer is being obtained,
+  When the lane names where that layer comes from,
+  Then it names one path that exists in the workspace, exactly, with no instruction to
+    fall back to the nearest equivalent when the named path is absent,
+  And a named source that cannot be opened ends the assembly with that source named,
+    rather than being replaced by whatever the assembling step judges closest — a layer
+    chosen by judgement differs between two runs aimed at the same target, so the same
+    target stops producing the same bundle and no comparison across runs means anything.
+depends_on: [BO-2400c-1, BO-2400c-1-ii, BO-2400c-1-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Holds the bundle-assembling dispatch whose Step 1 layer list is what this criterion changes, and the two context-carrying dispatches. The read-your-YAML-from-the-store instruction exists in the test-writer prompt and is absent from the coder prompt — that asymmetry is part of the work, not an observation about it."
+  - path: scripts/injection_builders.py
+    relationship: modifies
+    status: exists
+    relevance: "assemble_context_bundle and its assemble-bundle subcommand currently require the conventions and acs layers as mandatory arguments. Dropping them from the bundle is a change to what the command accepts, not only to what the lane passes it."
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: describes
+    status: exists
+    relevance: "Documents which content belongs in which layer. It is the surface that will disagree with the code once two layers leave the bundle, so it is part of the change rather than background reading."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 records the 149 KB bundle that could not cross the agent boundary. This criterion is the half of the fix that removes the size rather than policing it."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Why the payload has to be small enough to return in-band: the workflow body has no filesystem access, so an agent's return value is the only channel into the lane."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Supplies the recorded dispatches whose prompts carry (or fail to carry) the read-your-YAML instruction, and the recorded bundle dispatch whose composed prompt names the layers being asked for."
+  - path: unit_tests/workflows/test_bo2400c_context_bundle.py
+    relationship: specifies
+    status: exists
+    relevance: "Added by the IT PO 2026-08-25 as a CALL-SITE, not as background. Roughly fourteen direct calls to assemble_context_bundle(), every one passing conventions= and acs=. Dropping those parameters breaks this whole file, and it must be updated in the same change (CLAUDE.md, 'Function Signature Extension — Call-Site Audit Required', applied in its removal direction)."
+  - path: unit_tests/workflows/test_bo2400c_prompt_cache_wiring.py
+    relationship: specifies
+    status: exists
+    relevance: "Added by the IT PO 2026-08-25 as a CALL-SITE. Builds the assemble-bundle argv at lines 174-178 with --conventions and --acs, and calls assemble_context_bundle() at line 245 and again at module scope for _KNOWN_BUNDLE at line 404. A module-scope call means this file fails at COLLECTION, not at assertion, if the signature changes without it."
+  - path: templates/workflows-js/fast-lane-build.js
+    relationship: related
+    status: exists
+    relevance: "Added by the IT PO 2026-08-25. The orphaned runner. Line 121 invokes `injection_builders.py assemble_context_bundle` — an underscored name that is not, and never was, a subcommand, so the call could not parse even before this change. It is dead and its removal belongs to BO-2400c-1-v, not here. Do not repair it and do not delete it in this change: the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserts that string is present in this file, so deleting it here turns that test red for a reason unrelated to this criterion."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    fast_lane_context_bundle_layers:
+      type: object
+      description: >-
+        The layer set the bundle carries after this change, and the set the
+        assemble-bundle CLI accepts. Required layers: architecture (one pinned,
+        verified-existing workspace path), high_level (the L0/L1 parent ACs for the
+        target), prior_tests. Optional, unchanged: prior_outputs, working_diff,
+        breakpoint_marker. REMOVED: conventions and acs — not made optional, not
+        defaulted to null, removed, so no caller can reintroduce the duplicate. The
+        stable prefix becomes architecture + high_level + marker; the volatile suffix
+        becomes prior_tests (+ any optional layers). Expected size for a realistic
+        target is on the order of 20 KB, as a consequence of this layer set and not of
+        any cap. The content dropped from the bundle is replaced by an INSTRUCTION,
+        carried by every context-carrying dispatch, to open each build-set id's record
+        in the run's own acStoreRoot.
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SOURCE VS GENERATED, VERIFIED 2026-08-25 — BOTH FILES ARE SOURCE. scripts/injection_builders.py is git-tracked source in this repo and is deployed VERBATIM into a consumer's <output_root>/scripts/ by build_agent_support_scripts (it is listed in AGENT_SUPPORT_SCRIPT_FILES, scripts/build_phases.py:2377). There is NO templates/scripts/injection_builders.py, so the usual trap — a scripts/ file that is actually a build output regenerated from templates/ and silently overwritten by build.py — does NOT apply to it. templates/workflows-js/fast-lane-ship.js is likewise the source, copied to <output_root>/workflows/ by build_workflow_scripts (scripts/build_phases.py:723-734). Edit both under their source paths only. Do NOT assert byte-parity between a template and its deployed copy: unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py deliberately asserts that some content differs, so parity is not the invariant."
+    - "n_location_rule 'all' means every occurrence in scripts/injection_builders.py of the two dropped layers, not the first one found. As of 2026-08-25 they are: the assemble_context_bundle signature (lines 561-571); its docstring layer listing (579-612); the stable_prefix join (614) and the volatile_layers list (617); the --conventions and --acs argparse arguments (657-660, 665-668); the layer_paths tuple in _cmd_assemble_bundle (728-736); and the kwargs of the assemble_context_bundle call at 745-754. A change that drops the CLI flags but leaves the function parameters (or the reverse) is a partial registration and fails this criterion."
+    - "REMOVE THE PARAMETERS, DO NOT DEFAULT THEM. Making conventions and acs optional keyword arguments defaulting to None, with the layer omitted when None, would be backwards-compatible and wrong: it leaves a live path by which the largest duplicate in the payload can be reintroduced by a caller who does not know better. When a structure duplicates a source the receiver already has, the fix is to delete the duplicate, not to make it opt-in."
+    - "CALL-SITE AUDIT — MANDATORY, AND THE REASON THIS AC IS AN L. This is CLAUDE.md's 'Function Signature Extension — Call-Site Audit Required' rule applied in its REMOVAL direction: the change alters what assemble_context_bundle ACCEPTS and what the assemble-bundle subcommand ACCEPTS, so every caller must be handled in the same commit. The complete inventory as of 2026-08-25: (a) scripts/injection_builders.py itself, _cmd_assemble_bundle:745; (b) templates/workflows-js/fast-lane-ship.js:468-469, the live lane's Step 2 invocation, which passes --conventions and --acs; (c) unit_tests/workflows/test_bo2400c_context_bundle.py, roughly fourteen direct calls all passing conventions= and acs=; (d) unit_tests/workflows/test_bo2400c_prompt_cache_wiring.py — the argv builder at 174-178, the call at 245, and a MODULE-SCOPE call at 404 (_KNOWN_BUNDLE) which fails at collection rather than at assertion; (e) docs/reference/fast-lane-prompt-caching.md — the parameter table and three worked examples, all of which will state a signature the code no longer has; (f) templates/workflows-js/fast-lane-build.js:121, the orphaned runner, which is ALREADY dead and is explicitly out of scope (see the doc_link)."
+    - "THE JAVASCRIPT HALF — FOUR LOCATIONS in templates/workflows-js/fast-lane-ship.js, all inside or immediately around the bundle dispatch at 450-480 and the coder dispatch at 618-640: (1) the Step 1 layer list at 457-466 loses its conventions and acs bullets; (2) the Step 2 command at 467-469 loses --conventions and --acs; (3) the architecture bullet at 458-460 is pinned to one verified-existing path and its 'or the nearest architecture index if that exact path does not exist' clause is deleted; (4) the coder prompt at 618-633 gains the read-each-id's-YAML-from-${acStoreRoot} instruction that the test-writer prompt already carries at line 548. Item 4 is the one most likely to be dropped, because nothing fails loudly when it is missing — the coder simply reasons about records it was never given."
+    - "THE ARCHITECTURE PATH MUST BE ONE THAT EXISTS, VERIFIED AT IMPLEMENTATION TIME. The current prompt names ${worktreePath}/docs/architecture/README.md, which does not exist — verified 2026-08-25: docs/architecture/ holds adrs/, components/, diagrams/ and four loose documents, and no README. Pick a path, confirm it resolves in the worktree, and hard-code that one. Do NOT add a fallback, a glob, a nearest-match, or an 'if absent use' clause anywhere: the whole point is that two runs aimed at the same target compose the same bundle. The failure behaviour is already correct in Python and needs no new code — _read_optional_layer (injection_builders.py:688-709) returns a diagnostic naming the layer and its path, and _cmd_assemble_bundle exits 1 without printing a partial bundle. Do not add a second, softer failure path beside it."
+    - "SMALLNESS IS COMPOSITIONAL. Do not add a byte cap, a truncation step, a summarisation step, or chunking to reach ~20 KB. The number is a consequence of the layer set: measured on the run that failed (wf_bd4984e8-438), architecture 7,617 + high_level 7,105 + prior_tests 4,955 bytes, against conventions 38,291 + acs 90,887 removed. The transport check in BO-2400c-1-iii is a belt over this; this record is the mechanism, and a cap here would invert the two."
+    - "BO-2400c-1-iv STILL APPLIES AFTER THE CUT. The stable prefix loses a layer but keeps its property: architecture + high_level + marker must be byte-identical across the successive dispatches of one run. Re-run whatever covers -iv after this change rather than assuming a smaller prefix is trivially stable."
+    - "THE DUPLICATION CLAIM IS VERIFIED, NOT ASSUMED, AND THE VERIFICATION IS REPEATABLE. /tmp/bo2400f13-bundle/conventions.md is byte-identical to the worktree CLAUDE.md (diff exit 0, 38,291 bytes) — the harness injects that file into every agent dispatched into the worktree, so the bundle was carrying a second copy. acs.yaml was 90,887 bytes for five records that sit in the run's own workspace store. Together 129,178 of 148,891 bytes, 87%. If a future change reintroduces either layer, re-run that diff before accepting the justification."
+    - "NO GREP TESTS. Every claim in this record sits on code paths that have never executed correctly. A test asserting a smaller argument list appears in the lane's source, or that a layer name is absent from fast-lane-ship.js, passes unchanged while the lane keeps passing the dropped layers — and a grep over an orphaned file is exactly how the dead reference at test_bo2400a_runner_wiring.py:401 stayed green for a month. The composition claim is proved by running assemble-bundle as a REAL SUBPROCESS and asserting on actual stdout; the instruction claim by EXECUTING the lane under unit_tests/_workflow_engine_harness.py and asserting on both recorded context-carrying prompts; the named-source claim by pointing the assembly at a path that does not exist and asserting the run ends naming it."
+    - "DOCUMENTATION SURFACE — FLAGGED, NOT SILENTLY ABSORBED. docs/reference/fast-lane-prompt-caching.md documents the eight-parameter signature, the layer table and three worked examples, and will contradict the code the moment this lands. A .md reference page is documentation-expert's surface, not python-coder's (config/agent_registry.json gives python-coder .py and .js only), so this record is intentionally NOT split for it and the doc is NOT in this AC's declared surface. The implementer must report the divergence in the sign-off so a companion documentation AC can be raised; leaving a reference doc describing a signature that no longer exists is how the next reader reintroduces the layers."
+delivers_to:
+  - agent: python-coder
+    contract: "A bundle of roughly 20 KB — architecture, high_level, exactly one breakpoint marker, prior_tests — small enough to cross the agent boundary as text in a return value, which is the precondition BO-2400c-1-iii's transport contract checks rather than creates."
+  - agent: test-writer
+    contract: "The same bundle, plus the standing instruction (now carried by BOTH context-carrying dispatches, not only this one) to open each build-set id's record directly in the run's own acStoreRoot instead of receiving the YAML text inline."
+expects_from:
+  ac_id: BO-2400c-1-ii
+  contract: "The assemble-bundle subcommand, whose required-argument set this record changes: --architecture, --high-level and --prior-tests remain required; --conventions and --acs are removed rather than made optional. Its existing behaviour on an unreadable layer — exit 1, the layer and path named on stderr, nothing printed to stdout — is relied on unchanged for the named-source scenario."
+test_required: true
+test_spec:
+  - name: test_assemble_bundle_cli_rejects_the_conventions_flag
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "Run as a real subprocess, --conventions is no longer an accepted argument and the command exits non-zero on it. Proves the layer was removed from what the command ACCEPTS, not merely from what the lane passes."
+  - name: test_assemble_bundle_cli_rejects_the_acs_flag
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "Same for --acs. Both flags must go; a change that drops one is a partial registration."
+  - name: test_assemble_bundle_cli_succeeds_with_only_architecture_high_level_and_prior_tests
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "Real subprocess over real on-disk layer files: exit 0, stdout carries the architecture, high-level and prior-tests content and exactly one breakpoint marker."
+  - name: test_bundle_stdout_omits_the_project_conventions_text
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "With the workspace CLAUDE.md present on disk, a distinctive line from it is absent from the actual stdout. Asserted on output, never on the argument list."
+  - name: test_bundle_stdout_omits_the_build_sets_own_ac_yaml_text
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "A distinctive line from a build-set AC record is absent from the actual stdout — the agent is told to read the store instead."
+  - name: test_realistic_inputs_produce_a_bundle_on_the_order_of_twenty_kilobytes
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Over realistic layer files the stdout length is on the order of 20 KB and nowhere near 150 KB. Asserted as an order of magnitude, not an exact byte count, and NOT enforced by any cap in the code."
+  - name: test_coder_dispatch_prompt_tells_the_agent_to_read_each_record_from_the_store
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executed under the E2 harness, the recorded coder-connected prompt instructs the agent to open each build-set id's YAML in the run's acStoreRoot. This is the assertion that is red today: the instruction exists only in the test-writer prompt."
+  - name: test_test_writer_dispatch_prompt_still_carries_the_read_from_store_instruction
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The instruction the test-writer prompt already carries survives the change. Asserting only the coder side lets a refactor move the instruction rather than add it."
+  - name: test_bundle_dispatch_prompt_asks_for_no_conventions_and_no_acs_layer
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The RECORDED bundle-assembling dispatch prompt asks for three layers and passes three flags. Asserted on the executed dispatch, not on the file — and worth little without the subprocess tests above, which prove the command would reject the flags anyway."
+  - name: test_named_architecture_path_resolves_in_the_workspace
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Extract the architecture path from the recorded bundle dispatch prompt and stat it: it must exist. Guards against the current state, where the prompt names docs/architecture/README.md, which does not exist."
+  - name: test_bundle_dispatch_prompt_offers_no_fallback_for_a_missing_architecture_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The recorded prompt contains no nearest-equivalent, if-absent or substitute instruction for any layer source — a layer chosen by judgement makes two runs at the same target incomparable."
+  - name: test_unreadable_architecture_layer_ends_the_assembly_naming_that_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "Point --architecture at a path that does not exist: non-zero exit, the layer and the path named on stderr, and nothing on stdout — no partial bundle and no substituted content."
+  - name: test_same_inputs_produce_a_byte_identical_stable_prefix_across_two_runs
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Two real subprocess invocations over the same layer files yield a byte-identical prefix up to and including the breakpoint marker, preserving BO-2400c-1-iv's property after the stable prefix loses the conventions layer."
+test_rationale: |
+  Two distinct claims here, each with its own executable shape, and neither provable by
+  reading the lane's source.
+
+  The composition claim — which layers the bundle contains and which it does not — is
+  proved by running scripts/injection_builders.py's assemble-bundle subcommand as a REAL
+  SUBPROCESS and asserting on its actual stdout: the architecture, high-level and
+  prior-tests content is present, the conventions content and the build set's AC YAML text
+  are absent, and the output is on the order of twenty kilobytes for realistic inputs. A
+  test that asserts a smaller argument list, or that greps the workflow for a layer name,
+  proves nothing: both pass unchanged while the lane keeps passing the dropped layers.
+
+  The instruction claim — that every context-carrying dispatch tells its agent to read
+  each record from the run's store — is proved by EXECUTING the lane under
+  unit_tests/_workflow_engine_harness.py with run_workflow_under_e2 and label_responses,
+  and asserting on the RECORDED dispatches' prompt text for BOTH the test-writer and the
+  coder. Asserting it for the test-writer alone passes today, which is exactly the gap:
+  the coder prompt has never carried it.
+
+  The named-source claim is proved by pointing the assembly at a path that does not exist
+  and asserting the run ends naming that path — not by asserting a string appears in the
+  prompt, since the current prompt already names a path that does not exist and instructs
+  the agent to substitute something else.
+
+  Grep-shaped evidence is rejected at review for every part of this criterion. A grep over
+  fast-lane-ship.js for a layer name, a label, or an argument passes on dead code, and
+  dead-but-green is the documented history of this entire feature.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - agent: it-po
+    date: "2026-08-25"
+    reason: "TECHNICAL ENRICHMENT ONLY — no criteria, title, depends_on, covered_by, declares_side_effect, work_status or test_rationale text was touched. Set assigned_agent python-coder, estimated_complexity L, it_requirements, delivers_to, expects_from and test_spec; added three call-site doc_links and this note. WHY L RATHER THAN M: the visible change is small, but it alters what a shared function and a shared CLI subcommand ACCEPT, which makes it a call-site audit. The audit found six caller sites, two of which are non-obvious — a MODULE-SCOPE call at unit_tests/workflows/test_bo2400c_prompt_cache_wiring.py:404 that will fail at pytest COLLECTION rather than at assertion, and roughly fourteen calls in unit_tests/workflows/test_bo2400c_context_bundle.py, every one passing conventions= and acs=. A seventh reference, templates/workflows-js/fast-lane-build.js:121, is already dead (it names `assemble_context_bundle` with underscores, which was never a subcommand) and is deliberately left alone: the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserts that string is present in that file, so removing it here would turn a test red for a reason unrelated to this criterion, and its removal is BO-2400c-1-v's. reference_file_path is scripts/injection_builders.py rather than the workflow because the Python signature is what makes the removal ENFORCEABLE — an agent cannot pass a layer the CLI rejects — and n_location_rule is 'all' because seven separate regions of that file mention the two dropped layers. SOURCE-VS-GENERATED, CHECKED BECAUSE scripts/ IS SOMETIMES A BUILD OUTPUT HERE: it is not for this file. scripts/injection_builders.py is git-tracked source, deployed verbatim by build_agent_support_scripts (AGENT_SUPPORT_SCRIPT_FILES, build_phases.py:2377), and has no templates/scripts/ counterpart. NOT DECIDED HERE, AND FLAGGED: docs/reference/fast-lane-prompt-caching.md will contradict the code once two parameters disappear. A .md reference page is documentation-expert's surface — python-coder owns .py and .js per config/agent_registry.json — so the record is not split for it and the doc is not in the declared surface; the implementer must report the divergence so a companion documentation AC can be raised."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  PRODUCT DECISION, BrainCandy, 2026-08-25 — the split line is DUPLICATE vs ADDITIVE, not
+  stable vs volatile. The bundle passes in-band only what the consuming agent does not
+  otherwise have. Measured on the run that failed (wf_bd4984e8-438, target BO-2400f-13):
+  conventions 38,291 bytes, byte-identical to the workspace CLAUDE.md the harness already
+  injects; acs 90,887 bytes, the five AC records the agent can open in its own workspace.
+  129,178 of 148,891 bytes were a second copy of something the receiving agent already had.
+  What remains — architecture 7,617, high_level 7,105, prior_tests 4,955 — is about 20 KB.
+
+  The stable/volatile line is the right line for a cache, and there is no cache. Verified
+  2026-08-25: `cache_control` appears nowhere in templates/, scripts/ or config/;
+  `<!-- CACHE_BREAKPOINT -->` is a literal HTML comment inside a prompt string. And the two
+  consumers run under different agent types — test-writer and python-coder — so their system
+  prompts differ, and a provider prompt cache matching an exact prefix from the start of the
+  request could never anchor across them regardless. BO-2400c-2 and BO-2400c.yaml already
+  concede this in writing (amended 2026-08-18/19).
+
+  TRADE ACCEPTED DELIBERATELY. The bundle stops being one self-contained artifact, and the
+  agents work from the acceptance-criteria store at read time rather than from a frozen
+  snapshot. That is safe here specifically because the store lives in the run's own isolated
+  workspace, so nothing can change it mid-run — and a frozen copy that has drifted from what
+  is on disk is a worse failure than no copy at all.
+
+  REJECTED, and worth keeping rejected: having each agent read the whole bundle from a path.
+  It destroys the only observable that distinguishes a lane which assembled its context from
+  one which did not, and the engine cannot even confirm the path exists. That is the
+  looks-wired-does-nothing failure this whole AC family exists to end. Chunking was also
+  rejected: it buys nothing at 20 KB and introduces a lost-or-misordered-chunk failure class
+  that did not previously exist.
+
+  THE ARCHITECTURE LAYER IS CURRENTLY COMPOSED BY JUDGEMENT. The bundle prompt names
+  docs/architecture/README.md and instructs the agent to substitute "the nearest architecture
+  index if that exact path does not exist". That file does not exist — verified 2026-08-25,
+  docs/architecture/ holds adrs/, components/, diagrams/ and four loose documents, no README.
+  So the layer's content depends on which document an agent picked on the day, and two runs
+  aimed at the same target need not produce the same bundle. Pinning it to a path that exists
+  is a small change with the largest effect on reproducibility in this record.
+
+  ENRICHMENT NOTE, it-po, 2026-08-25 — THE ORDER THE TWO HALVES LAND IN MATTERS. This record
+  and BO-2400c-1-iii are two halves of one fix and are both assigned to python-coder, but
+  they touch different languages: -iii is the JavaScript gate and halt wording, this record
+  is the Python layer set plus four locations in the same JavaScript file. If -iii lands
+  first and alone, its reference-rejection belt will refuse the 149 KB pointer and every real
+  run halts — correctly, and uselessly. If this record lands first and alone, the bundle is
+  small enough to cross in-band but nothing yet distinguishes a returned locator from
+  returned content. Build them together, and keep the two sign-offs separate so a later
+  regression is attributable.
