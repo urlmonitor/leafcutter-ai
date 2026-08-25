@@ -1,0 +1,123 @@
+id: GE-124a-4
+readiness: approved
+priority: high
+title: "A how-to shows where the declaration goes in each front-end file shape"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given an author is adding a new screen component and has no house convention
+    to copy, because the existing declaration guidance is Python-only
+  When the author opens the front-end declaration how-to
+  Then the how-to shows a complete, copyable declaration block for each of the
+    five supported file shapes — `.tsx`, `.jsx`, `.vue`, `.svelte` and `.html`
+  And it states where the block must sit in each shape — above the first import
+    for `.tsx` and `.jsx`, above the first `<template>`, `<script>` or `<style>`
+    block for `.vue` and `.svelte`, above the first element for `.html`
+  And it shows the multi-criterion form alongside the single-criterion form
+  And it states which files are asked to declare and which are not, in the terms
+    the check uses — an in-scope extension plus rendered markup, minus the named
+    story, test and generated-file exclusions
+  And it names the two things a reader must NOT conclude: that declaring a
+    criterion tests it, and that an element attribute can be used instead of the
+    component-level block
+depends_on:
+  - GE-124a
+  - GE-124a-1
+  - GE-124a-2
+  - GE-124a-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/how-to/declaring-frontend-acs.md"
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/how-to/ with frontmatter that satisfies check_doc_frontmatter for docs/** (title, type: how-to, status, created, last_updated, components, description) and stay within the check_doc_length budget. Register it in docs/INDEX.md if that index enumerates how-tos."
+  - "THE FIVE EXAMPLES MUST BE EXECUTABLE, NOT ILLUSTRATIVE. Each copyable block is a complete leading-comment region for its file shape, written so that the test contract can extract it verbatim and feed it to the real reader. Prose-only examples with elisions ('...') cannot be checked, and an example the check would reject is worse than no example — it teaches the author a form that blocks them."
+  - "THE SCOPE SECTION MUST USE THE CHECK'S OWN REASON VOCABULARY from GE-124a-3 (in-scope extension plus rendered markup; the story-file, test-file and generated-file exclusions), so an author reading a reason code in a block report can find it here by name."
+  - "DO NOT RE-DOCUMENT THE BLOCK EXPERIENCE. GE-124c-4 is the how-to for someone who has just been stopped; this one is for someone writing a new component. Link to it rather than restating the verdict codes — two pages describing one remediation drift apart."
+  - "The two must-not-conclude clauses are required content carrying GE-124g's rule onto the authoring surface, and must use its wording — presence, not proof; a signpost, not a result. This is the first place most authors meet the feature and therefore the first place the rule can be lost."
+  - "change_target stays `code` under the L0's tree-wide instruction (see this AC's notes); it does not imply the deliverable is source. The deliverable is the how-to document."
+delivers_to:
+  agent: frontend-coder
+  contract: "The authoring reference a front-end author follows to write a declaration the commit-tier check accepts, in whichever of the five file shapes they are working in. Its five example blocks are the executable contract: each one, extracted verbatim, must be accepted by the shared reader module."
+expects_from:
+  ac_id: GE-124a-2
+  contract: "The per-file-shape comment syntax and leading-region placement rule the how-to documents, and the five-value framework enum whose members the how-to must cover exhaustively"
+test_spec:
+  - name: test_ge_124a_4_every_example_block_in_the_howto_is_accepted_by_the_real_reader
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Extract each fenced example from docs/how-to/declaring-frontend-acs.md, write it to a temp file of the matching extension, and run the SHARED READER over it, asserting verdict 'declared' and the expected declares list. This is the test that makes the doc honest: it fails the day the reader's grammar or leading-region rule changes and the how-to does not. A grep for '@ac' in the doc would pass on an example the check rejects."
+  - name: test_ge_124a_4_howto_covers_every_framework_the_reader_supports
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The set of file shapes documented equals the key set of GE-124a-2's extension-to-framework map, derived from the map at test time rather than hard-coded to five. Adding a sixth supported extension then fails this test until the how-to is updated."
+  - name: test_ge_124a_4_howto_carries_the_two_must_not_conclude_clauses_and_the_scope_vocabulary
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The document contains a section stating that declaring is not testing and that an element attribute never substitutes for the component-level block, and its scope section names each GE-124a-3 exclusion reason code. Assert the reason codes against the enum the reader exposes, not against a literal list in the test."
+test_rationale: |
+  A documentation AC is where a grep-shaped test is most tempting and most useless: asserting
+  the string '@ac' appears in a markdown file proves nothing about whether the example works.
+  The contract instead treats the how-to's five example blocks as an executable interface —
+  extracted from the real document and fed to the real reader — so the test goes red the day
+  the parser and the guidance disagree. That is the only failure mode of this AC that actually
+  hurts an author. The coverage and vocabulary tests are likewise derived from the reader's own
+  map and reason enum rather than from literals, so they cannot silently pass after the check
+  gains a sixth file shape or renames an exclusion. test_required is not set false here: the
+  L0 keeps change_target `code` tree-wide, and the document genuinely has checkable behaviour.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the five example blocks to be complete and executable so the test contract can feed them to the real reader — the only test shape that keeps a how-to honest — and derived the coverage assertion from GE-124a-2's framework map rather than the literal five. Named the doc path and the frontmatter/length gates. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for GE-124a's `documentation_triggers: [how-to]`. The PO's reason is
+  explicit: there is no equivalent house convention to copy, because GE-117's
+  docstring guidance is Python-only.
+
+  `change_target: code` is carried here under the L0's standing instruction to
+  keep `code` on EVERY record in this tree. `docs` would arguably describe a
+  documentation AC more accurately; the instruction is followed as written
+  rather than reinterpreted, and this note is where to change it if the user
+  decides the documentation ACs are the exception. The instruction's own stated
+  reason — never `ui`, so the tree cannot enrol itself in the reverse-direction
+  gate it defines — holds either way. The same applies to GE-124b-4, GE-124b-5,
+  GE-124c-4, GE-124c-5, GE-124d-4, GE-124e-5, GE-124f-4 and GE-124g-5.
+
+  The last criteria clause is not padding — it is GE-124g reaching into the
+  authoring surface. The how-to is the first place most authors meet this
+  feature, so it is the first place the signpost-not-proof rule can be lost.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). change_target `code` has a mechanical
+  consequence the L0 note does not mention: check_ac_schema.validate_test_contract
+  treats any record with change_target `code` as a code AC and REJECTS
+  test_required: false on it outright. So every documentation AC in this tree
+  needs a real test_spec, not a skip. That is satisfiable and worth having —
+  the example blocks are executed against the real reader — but if the user ever
+  reclassifies these nine records to `docs`, the test contracts can be
+  reconsidered at the same time.

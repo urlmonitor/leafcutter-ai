@@ -1,0 +1,87 @@
+id: GE-124f-1-ii
+readiness: approved
+priority: high
+title: "A page with no design modelled for it is outside the chain, not a finding"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+criteria: |
+  Given a staged page root that carries a component-level declaration and no
+    design name
+  And no design for that page is modelled in the product-truth store
+  When the chain reader evaluates the file
+  Then no finding of any kind is reported for the absent design name
+  And the page is recorded as outside the chain, distinct from a page whose
+    design name resolves to nothing
+depends_on:
+  - GE-124f-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "OUTSIDE-THE-CHAIN IS A RECORDED STATE, NOT SILENCE. Emit an explicit state on the page's chain record — outside-the-chain — distinct from resolves-to-nothing (GE-124f-1) and from linked. The two look identical in a report that only counts findings and they mean opposite things: outside-the-chain is fine, resolves-to-nothing is a defect. GE-124g-3 needs them apart or a chain-completeness figure would count pages with no design as failures, which is a number mixing two things."
+  - "data-screen IS OPTIONAL AND MUST STAY OPTIONAL. There must be no code path and no configuration key that requires a page root to carry a design name. Nothing in GE-124f makes the pin or the design name compulsory — a page with no design modelled in the product-truth store is simply not part of the chain."
+  - "DO NOT INFER A DESIGN NAME from the route path, the file name or the component name in order to 'complete' the chain. An inferred link is an unverified claim presented as a resolved one, which is the manufactured traceability GE-124g exists to prevent."
+  - "The state must be reachable by GE-124g-3's reporting without re-deriving it, since that AC counts declarations on their own axis and must not fold chain-completeness into a coverage figure."
+delivers_to: null
+expects_from:
+  ac_id: GE-124f-1
+  contract: "The first-hop record whose absent-by-design case this edge case declares a normal state — recorded as outside-the-chain, distinct from resolves-to-nothing and from linked"
+test_spec:
+  - name: test_ge_124f_1_ii_page_with_no_design_name_produces_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A declared page root with no data-screen and no modelled design produces zero findings of any kind for the absent name — including advisory-level entries. Assert the finding list is empty for that subject, not merely that nothing blocked."
+  - name: test_ge_124f_1_ii_outside_the_chain_is_distinguishable_from_resolves_to_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Compare two pages — one with no design name, one with a design name that resolves to nothing — and assert a downstream consumer can tell them apart from the records alone. Feed both to the real consumer; a state field that no consumer reads is the same defect one layer along."
+  - name: test_ge_124f_1_ii_no_design_name_is_inferred_from_the_route_or_file_name
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A page at a route whose path happens to match a registered design name, but which carries no data-screen attribute, is recorded as outside the chain — NOT linked to that design. Inference would manufacture an unverified link and present it as resolved."
+test_rationale: |
+  Two normal-looking outcomes have to stay apart here, and neither is a finding, so a
+  findings-only assertion cannot see the difference — the second test therefore checks
+  distinguishability through a real consumer rather than by inspecting a field, since a state
+  nobody reads is not a state. The third test is not in the criteria and is the one that matters
+  most in a Next.js app: route paths and design names will frequently coincide by convention,
+  and inferring the link is both easy and wrong. It presents an unverified claim as a resolved
+  one, which is the manufactured traceability the whole GE-124g branch exists to prevent.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made outside-the-chain an explicit recorded state reachable by GE-124g-3 rather than silence, and forbade inferring a design name from the route or file name — likely in a Next.js app where route paths and design names coincide by convention, and a manufactured link is exactly what GE-124g exists to prevent. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The PO's words: nothing here makes the pin compulsory — a page with no design
+  modelled in the product-truth store is simply not part of the chain, and that
+  is a normal state, not a finding.
+
+  Recorded as a distinct state rather than as silence because the two look
+  identical in a report that only counts findings, and they mean opposite
+  things: outside-the-chain is fine, resolves-to-nothing is a defect. GE-124g-3
+  needs them apart for the same reason — a chain-completeness figure that counts
+  pages with no design as failures would be a number that mixes two things.

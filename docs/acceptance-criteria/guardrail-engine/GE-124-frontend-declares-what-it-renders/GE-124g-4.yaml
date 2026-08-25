@@ -1,0 +1,138 @@
+id: GE-124g-4
+readiness: approved
+priority: high
+title: "A test that only finds the element does not cover the criterion"
+component: guardrail-engine
+components:
+  - testing_quality
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+criteria: |
+  Given a front-end test that declares it covers UXP-100d-2
+  And its body locates the element by the selector derived from UXP-100d-2 and
+    asserts only that the element is present
+  When the test is assessed as evidence for that criterion
+  Then it is not accepted as covering UXP-100d-2
+  And the reason given names the missing part — the test locates the element but
+    asserts nothing about the criterion
+
+  Given a front-end test that declares it covers UXP-100d-2
+  And its body locates the element by the same selector and asserts that an
+    out-of-stock plant shows the sold-out state
+  When the test is assessed as evidence for that criterion
+  Then it is accepted as covering UXP-100d-2
+
+  Given a front-end test whose only assertion is that an element carries the
+    expected criterion marker
+  When the test is assessed as evidence for that criterion
+  Then it is not accepted as covering it
+
+  Given any attempt to configure an existence-only test to count as covering a
+    criterion
+  When the configuration is loaded
+  Then no such setting exists
+depends_on:
+  - GE-124g
+  - GE-124f-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/testing/test-angles.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "EXTEND THE EXISTING COVERAGE-ACCEPTANCE SURFACE, DO NOT BUILD A SECOND ONE. Whether a test counts as evidence for a criterion is already decided in scripts/ac_store/done_proof.py / test_enforcement.py via the shared covers-tag scan. This AC adds a front-end-specific rejection rule to that surface; a parallel acceptance oracle would let the two disagree about the same test, which is the drift GE-124c-2-i exists to prevent one namespace along."
+  - "THE REJECTION RULE MUST BE STATED AS AN ENUMERATED SET OF ASSERTION SHAPES, NOT AS A JUDGEMENT OF TEST QUALITY. Reject when the test's only assertions are: element-exists / not-null / toBeInTheDocument on the derived selector; a count of matched elements; or an assertion that the element carries the data-ac marker itself. Accept anything asserting observable state or behaviour beyond presence. Draw the line explicitly — a vaguer rule is either unimplementable or starts rejecting legitimate tests."
+  - "THIS IS A STATIC ANALYSIS OF FRONT-END TEST SOURCE, and its subject is TypeScript/JavaScript while the implementer is python-coder. Keep it to a bounded textual/AST-free inspection of assertion calls in the test body — the same class of scan the rest of this tree performs on .tsx source. If the rule cannot be drawn without a real JS AST, say so and raise it rather than shipping a regex that quietly mis-classifies; a mis-classification here either accepts an empty test or rejects a real one, and both are worse than the status quo."
+  - "THE THIRD SCENARIO IS THE CIRCULAR ONE AND IS THE REASON THIS IS NOT A SINGLE ASSERTION. A test asserting the marker is present is asserting that the DECLARATION exists — it tests the guardrail, not the product. It passes every structural check, agrees with GE-124f-3's selector rule, and covers nothing. This repo has shipped that exact shape before, in tests that grepped for a string rather than executing behaviour."
+  - "THE SECOND SCENARIO IS A REQUIRED ACCEPTANCE CASE, not a courtesy. The rule must not be dischargeable by rejecting every front-end test. An assertion about the criterion's observable behaviour is accepted, and the worked case is the mock-data record decl-stock-badge with its covering test."
+  - "THE REASON NAMES THE MISSING PART — the test locates the element but asserts nothing about the criterion — so the author's next move is obvious. A bare 'not accepted' invites the author to delete the covers tag instead of writing the assertion."
+  - "NO CONFIGURATION KEY MAY MAKE AN EXISTENCE-ONLY TEST COUNT, and such a key must be refused by name if supplied (GE-124g-1-i)."
+delivers_to:
+  agent: test-writer
+  contract: "The acceptance rule for whether a front-end test counts as evidence for the criterion it claims — presence of the element is not enough — added to the EXISTING coverage-acceptance surface (done_proof / test_enforcement) rather than to a second oracle. Rejection is defined as an enumerated set of assertion shapes (existence, count, marker-presence), with any assertion of observable behaviour accepted, and the reason names the missing part."
+expects_from:
+  ac_id: GE-124f-3
+  contract: "The derived selector and the test-to-criterion agreement check that this AC declares insufficient on its own — an existence-only test agrees perfectly and still covers nothing"
+test_spec:
+  - name: test_ge_124g_4_existence_only_test_is_not_accepted_and_the_reason_names_the_missing_part
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A front-end test whose only assertion is that the derived selector matches an element is rejected as evidence for its claimed criterion, with a reason naming that it locates the element but asserts nothing about the criterion. Assert the reason text, not just the rejection — a bare rejection invites the author to delete the covers tag."
+  - name: test_ge_124g_4_behavioural_assertion_is_accepted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The decl-stock-badge worked case — locating the element and asserting an out-of-stock plant shows the sold-out state — IS accepted. Required so the rule cannot be discharged by rejecting every front-end test, which would satisfy scenarios 1 and 3 completely."
+  - name: test_ge_124g_4_a_test_asserting_only_the_marker_itself_is_rejected
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The circular case: a test whose only assertion is that the element carries the expected data-ac value is rejected. It tests the guardrail rather than the product, agrees with GE-124f-3's selector rule, and passes every structural check — this repo has shipped that exact shape before."
+  - name: test_ge_124g_4_rule_runs_on_the_existing_coverage_surface_over_real_test_files
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Drive the real coverage-acceptance path (done_proof / test_enforcement) over real on-disk front-end test files carrying real covers tags, and assert the existence-only one is not counted while the behavioural one is. A second acceptance oracle would pass a standalone unit test of the new rule while the gate that actually decides coverage keeps counting the empty test."
+test_rationale: |
+  The acceptance case is as important as the rejection cases: a rule that rejects every
+  front-end test satisfies scenarios 1 and 3 perfectly and destroys front-end coverage
+  accounting, and nothing in a rejection-only test suite would notice. The circular case gets
+  its own test because it is the shape this repo has actually shipped — a test that asserts the
+  marker is present is asserting the guardrail works, not the product — and it passes both the
+  selector-agreement check and any structural review. The fourth test drives the REAL coverage
+  surface rather than the new rule in isolation, because the most likely way to ship this
+  broken is to add a correct rule to a new module while the gate that actually decides coverage
+  never calls it.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the rule to extend the EXISTING coverage-acceptance surface (done_proof / test_enforcement) rather than a second oracle, enumerated the rejected assertion shapes so the rule is implementable rather than a judgement of test quality, and flagged the cross-stack limit — the subject is JS/TS test source inspected by a Python implementer, so if the line cannot be drawn without a real JS AST that must be raised rather than papered over with a regex that mis-classifies in either direction. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLACE 4 OF FOUR, and the one that guards GE-124f outcome 3 specifically. The
+  PO's words: a test locating an element by its declaration still has to ASSERT
+  something; "the element exists and carries the right marker" is not a test of
+  the criterion.
+
+  THE THIRD SCENARIO IS THE CIRCULAR ONE and is the reason this is not a single
+  assertion. A test that asserts the marker is present is asserting that the
+  declaration exists — it tests the guardrail, not the product. It would pass
+  every structural check, agree with GE-124f-3's selector rule, and cover
+  nothing. This repo has shipped that exact shape before, in tests that grepped
+  for a string rather than executing behaviour.
+
+  The second scenario is here so the rule cannot be discharged by rejecting
+  every front-end test. An assertion about the criterion's observable behaviour
+  is accepted, and the worked case is the mock-data record `decl-stock-badge`
+  with its covering test.
+
+  IT-PO NOTE (2026-08-25). This is the AC in the tree with the widest gap
+  between what it promises and what a text scan can decide. The enumerated
+  rejection shapes in it_requirements are an attempt to make it implementable;
+  if the implementer finds the line cannot be drawn reliably without parsing
+  JS, that is a genuine blocker to raise, not something to approximate — a
+  mis-classification accepts an empty test or rejects a real one, and either is
+  worse than the status quo.

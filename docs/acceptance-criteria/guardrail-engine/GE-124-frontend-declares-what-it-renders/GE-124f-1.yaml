@@ -1,0 +1,125 @@
+id: GE-124f-1
+readiness: approved
+priority: high
+title: "A page root names the design it realises and that name resolves"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - ux_prototyping
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+criteria: |
+  Given the staged file `storefront-vue/src/pages/PlantListingPage.vue` whose
+    page root element is
+    `<main class="listing" data-screen="plant-listing" data-ac="UXP-100d-2">`
+  And a design registered under the name `plant-listing` exists in the
+    product-truth store
+  When the chain reader evaluates the file
+  Then the file is recorded as realising the design `plant-listing`
+  And the recorded chain runs from the built file through that design to the
+    flow step that uses it and on to the criteria the step implements
+
+  Given a staged page whose page root carries `data-screen="plant-lsting"`
+  And no design is registered under that name
+  When the chain reader evaluates the file
+  Then a finding is reported naming the unresolvable design name
+  And the finding is of the same kind as an unresolvable criterion id — a stated
+    name that resolves to nothing — and is not a silent pass
+depends_on:
+  - GE-124f
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/ux-prototyping.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE DESIGN NAME IS A SEPARATE NAMESPACE WITH A SEPARATE RESOLVER. `data-screen` values resolve against the PRODUCT-TRUTH store (mockup screen ids, reachable via docs/product-truth/index.json), not against the acceptance-criteria store. Do NOT route them through GE-124c-2-i's AC-id resolver — that resolver answers one question and must keep answering only that one. Two namespaces, two resolvers, and the finding codes must differ too."
+  - "THE ATTRIBUTE IS READ BY THE SHARED READER IN THE SAME PASS as data-ac (GE-124b-1), and recorded on the pin/element record as screen_attr. The mock-data invariant binds them: AcDeclaration.screen_attr != null iff is_page_root, and it then equals its FrontendComponent.screen. One pass, two attributes, one record."
+  - "PAGE-ROOT IDENTIFICATION MUST BE STATED, NOT INFERRED FROM DEPTH. The reader has no DOM and no JS AST; 'the page root' must be a rule an implementer can apply to text — the recommended rule is the outermost element of the file's rendered markup in a file whose in-scope role is page-root, with the role itself derived from the application's routing convention (for Next.js, a file under app/ or pages/ that default-exports a route component). Whatever rule is chosen, record it, because GE-124f-1-i enforces its negative."
+  - "ONLY THE FIRST HOP IS THIS AC'S WORK. The product-truth store already resolves a design to its flow step and on to the criteria the step implements (mockup.screen, step.screen, step.implements). Consume that existing resolution; do not re-implement the later hops. The chain record this AC emits is built-file -> design plus a reference into the existing chain."
+  - "AN UNRESOLVABLE DESIGN NAME IS ITS OWN FINDING CODE, distinct from unresolved-ac-id and from missing-component-declaration. Same shape of defect (a stated name that resolves to nothing), different namespace and different remedy (register the design, or fix the typo). The scenario's typo `plant-lsting` is what the defect looks like in practice."
+  - "SEQUENCING: GE-124b must land first. This AC must NOT re-specify the attribute mechanism — GE-124b owns data-ac and the reader; this AC adds one more attribute to an existing pass."
+  - "Must handle errors gracefully per the project error handling policy, and must announce rather than pass silently if the product-truth store cannot be read (GE-120's rule applies to this resolver too)."
+delivers_to:
+  agent: python-coder
+  contract: "The first hop of the chain — built file to registered design — recorded as {file, screen_attr, resolves: bool, design_ref} on the shared reader's output, plus a reference into the product-truth store's existing design -> flow-step -> criteria resolution. Design names resolve against the product-truth store, NOT against the AC-id resolver; an unresolvable design name is its own finding code."
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The page-root element and its attribute set, read in the same shared-reader pass as data-ac, from which the design name is taken as screen_attr"
+test_spec:
+  - name: test_ge_124f_1_page_root_with_a_registered_design_name_records_the_first_hop
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The PlantListingPage worked case: data-screen='plant-listing' with that design registered yields a chain record naming the design, and the record references the flow step and the criteria the step implements rather than recomputing them."
+  - name: test_ge_124f_1_unresolvable_design_name_is_its_own_finding_not_a_silent_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The 'plant-lsting' typo yields a finding naming the unresolvable value, with a code distinct from unresolved-ac-id. Assert the code differs — routing a design name through the AC resolver would produce the right-shaped failure with the wrong remedy."
+  - name: test_ge_124f_1_design_names_resolve_against_the_real_product_truth_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Build a temp product-truth store from real artifact files, resolve a registered name and an unregistered one, then REGISTER the second and assert it now resolves with no other change. Catches a resolver holding its own snapshot, and confirms the design namespace is read from where designs actually live."
+  - name: test_ge_124f_1_screen_attr_is_read_in_the_same_pass_as_data_ac
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "A page root carrying both data-screen and data-ac yields one element record with both screen_attr and ac_ids populated — one pass, one record. Two independent scans would let the two attributes disagree about which element they came from, which is what the mock-data iff-invariant forbids."
+test_rationale: |
+  The risk this AC carries is a namespace collision, not a parse failure: the natural move is to
+  send data-screen values through the AC-id resolver that this tree has just finished insisting
+  everything share. That would produce a correctly-shaped failure with the wrong remedy and
+  would give the shared resolver a second question to answer. So the second test asserts the
+  finding CODE differs, and the third resolves against a real product-truth store and mutates it
+  mid-test to confirm both the namespace and the absence of a private snapshot. The
+  same-pass test protects the mock-data iff-invariant binding screen_attr to the page-root
+  element; two independent scans satisfy every field assertion while allowing the two attributes
+  to be attributed to different elements.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Kept design names OUT of the AC-id resolver — a separate namespace with a separate resolver against the product-truth store and its own finding code — required screen_attr to be read in the same shared-reader pass as data-ac, and demanded the page-root identification rule be stated explicitly since no DOM or JS AST is available and GE-124f-1-i enforces its negative. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124f-1-i
+  - GE-124f-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  OUTCOME 1 of the three the PO wants kept as distinct L2s. The product-truth
+  store already resolves a design to its criteria; what is missing is the FIRST
+  HOP, from the built page to the design it realises. This AC supplies exactly
+  that hop and nothing else.
+
+  The second scenario applies GE-124c's missing-versus-unresolvable distinction
+  to the new namespace: a design name that resolves to nothing is a defect of
+  the same kind as an unresolvable criterion id. The typo in the scenario is
+  deliberate, because that is what the defect looks like in real life.
+
+  This L1 must NOT re-specify the attribute itself — GE-124b owns it, and
+  GE-124b should land first.
+
+  IT-PO NOTE (2026-08-25). "Same kind of defect" must not become "same
+  resolver". The whole tree pushes towards one shared resolver for AC ids;
+  design names are a different namespace living in the product-truth store, and
+  folding them in would give that resolver two questions to answer — the exact
+  ambiguity GE-124c-2-i removes. Two resolvers, two codes, two remedies.

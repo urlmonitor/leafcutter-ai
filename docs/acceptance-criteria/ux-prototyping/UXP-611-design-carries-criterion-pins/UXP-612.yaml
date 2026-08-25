@@ -1,0 +1,71 @@
+id: UXP-612
+components:
+  - ux_prototyping
+readiness: draft
+priority: medium
+title: "A rendered mockup pins a criterion to the element that shows it, in the same attribute and grammar as the built page"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given mockup-author is rendering a screen whose design shows the criteria
+    UXP-100d-2 and UXP-100d-3
+  When the rendered HTML file is written
+  Then the element that shows each criterion carries a `data-ac` attribute
+    naming that criterion
+  And the attribute name is exactly `data-ac` — the same attribute the built
+    page uses, never a CSS class, never a variant spelling, never a comment
+
+  Given a single element in the design that shows two criteria
+  When the rendered HTML file is written
+  Then both ids appear in ONE `data-ac` attribute on that element, separated by
+    whitespace, in the authored order, as `data-ac="UXP-100d-2 UXP-100d-3"`
+  And the value contains no comma and no separator other than whitespace
+
+  Given a rendered mockup with elements that show no criterion of their own
+  When the file is written
+  Then those elements carry no `data-ac` attribute
+  And their bareness produces no finding of any kind
+depends_on:
+  - UXP-611
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-611-design-carries-criterion-pins/UXP-611.yaml
+    relationship: parent
+    status: exists
+  - path: templates/agents/mockup-author.md
+    relationship: implemented-by
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b-1.yaml
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  THE COMMA IS THE WHOLE RISK. `[data-ac~="id"]`, the selector the built side
+  derives, splits on whitespace only. One comma in a mockup's attribute value
+  produces a selector that matches nothing — on a screen that looks correctly
+  annotated to a human reader. This is why the second scenario asserts the
+  absence of a comma explicitly rather than only asserting the ids are present.
+  Note the deliberate asymmetry with the `@ac` comment-line grammar, which IS
+  comma-tolerant; two grammars coexist and only one of them belongs here.
+
+  ONE PIN PER ELEMENT, EVEN WHEN MULTI-VALUED — mirrors GE-124b-1's cardinality
+  rule. An author (or a generator) that emits two adjacent single-valued
+  wrapper elements instead of one multi-valued attribute satisfies every
+  membership assertion while changing the counts the comparison reports.
+
+  THE THIRD SCENARIO IS A POSITIVE BEHAVIOUR, NOT AN ABSENCE. Pinning is not
+  exhaustive — a mockup is not required to pin every element, and an
+  implementation that nudges toward blanket annotation turns a review aid into
+  paperwork and floods the design side with pins nobody chose.

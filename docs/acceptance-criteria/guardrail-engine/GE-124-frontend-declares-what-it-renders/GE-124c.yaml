@@ -1,0 +1,128 @@
+id: GE-124c
+title: "Get stopped before shipping a screen that hides what it is for"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Screen work that says nothing about what it serves does not get committed.
+
+  When you change a screen component, you are stopped before the change lands if
+  it carries no statement of the requirement it serves, or if the requirement it
+  names does not exist. You are told which of those two things went wrong, on
+  which file, and what to do about it — and you are told it once, not once per
+  place it could have been noticed.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124c-1
+  - GE-124c-2
+  - GE-124c-3
+  - GE-124c-4
+  - GE-124c-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA / IT PO).
+
+  THIS IS THE COMMIT TIER — the forward direction (code → requirement), on the
+  STAGED SET ONLY. It is the frontend counterpart of GE-117d and follows the
+  same house shape; do not invent a new enforcement idiom.
+
+  FOUR VERDICTS THE CHECK MUST KEEP APART. Collapsing any two of them is the
+  defect this AC exists to prevent:
+    1. MISSING — a changed screen component carries no component-level
+       declaration. Block.
+    2. UNRESOLVED — a declared or pinned id is well-formed but resolves to no
+       criterion in the store. Block, and report it as its OWN verdict. This is
+       the same distinction GE-117 draws: "you did not say" and "what you said
+       is not true" are different mistakes with different fixes, and a reviewer
+       who is told the wrong one wastes the whole remediation.
+    3. NOT REPORTED — the file was not changed. An untouched screen component
+       that happens to lack a declaration must produce nothing at all.
+    4. PASS — declared, and every id resolves.
+  The escape verdicts (warn, opt-out-with-reason) belong to GE-124d.
+
+  ONE FINDING PER SUBJECT PER CODE — load-bearing. A file that lacks its
+  component-level declaration WHILE also carrying element pins yields one
+  finding, not two. Double-reporting is how a guardrail becomes noise, and noise
+  is how it gets turned off.
+
+  BLOCK IS THE DEFAULT. Every path blocks unless it has been deliberately opted
+  into the warn tier (GE-124d). Do not specify a global advisory-first rollout;
+  the per-path opt-in already covers a staged adoption.
+
+  SHARED RESOLVER — IT PO constraint, do not let this be implemented privately.
+  The "does this id resolve?" question must be answered by the one resolver that
+  GE-111 and GE-117 also use (`scripts/ac_store/ac_coverage_resolver.py`). Three
+  private copies drift, and the user-visible symptom is one check accepting an
+  id another rejects.
+
+  INHERITED, NOT REPEALED — two standing rules from this component apply
+  unchanged and must be honoured at L2:
+    - GE-120's "a check that cannot run says so": a check that cannot reach the
+      AC store must not exit quietly as though everything passed.
+    - The deliberate fail-open convention (GE-116a-1-iii): one unparseable file
+      must not block an unrelated commit — but the run must still be visible.
+
+  documentation_triggers [how-to, sequence-diagram] — how-to for the author who
+  has just been blocked; sequence-diagram because the check sits between the
+  staged set, the shared resolver and the commit, and the ordering is what makes
+  the four verdicts distinguishable. Mirrors GE-117d's triggers.
+
+  BA decomposition note (2026-08-25). Five L2s: three behavioural plus the two
+  documents the triggers require. The four verdicts map to three L2s, not four —
+  GE-124c-1 (missing, and the block-by-default guarantee), GE-124c-2
+  (unresolved, as its own verdict), GE-124c-3 (the two QUIET outcomes, not
+  reported and pass, which share the single guarantee "the check is silent
+  unless something is wrong with something you changed"). Merging verdicts 3 and
+  4 is the only merge the child cap forced, and it is the safe one: neither
+  produces a finding, so no distinction a reviewer acts on is lost. The two
+  inherited standing rules and the one-finding rule are L3s (GE-124c-1-i,
+  GE-124c-2-i, GE-124c-2-ii, GE-124c-3-i) so that each has its own test rather
+  than living as a clause. GE-124c-2-ii deliberately does NOT decide whether an
+  unreachable store should also BLOCK — flagged for the IT PO and the user.
+
+  STAGED-SET SCOPING IS STATED EXPLICITLY, NOT LEFT IMPLIED (2026-08-25).
+  GE-124c-3 owns it: scenario 1 (an unstaged file is not examined, and not
+  examined is not passed) and scenario 3 (the same file IS examined once it is
+  staged, which is how a legacy screen joins the guardrail). It was tempting to
+  leave this as an obvious property of a pre-commit hook, and that is exactly
+  the kind of unwritten convention that a later refactor turns into a whole-tree
+  scan failing on the entire existing frontend.
+
+  ONE DIFF-SCOPING PRINCIPLE ACROSS BOTH TIERS. GE-124c-3 and GE-124e-4 are the
+  same rule — only what the change touched is evaluated — applied to two subject
+  types. Here the subject is a file path and the diff selects it directly; at
+  the CI tier the subject is a criterion id, so GE-124e-4 defines two routes
+  into the diff (the criterion's own record changed, or a changed front-end file
+  declares or pins it). This replaced an earlier dated-cutoff proposal on
+  GE-124e-4 (user decision, 2026-08-25) and matches the established house
+  pattern: `check_done_proof --mode ci-changed --base origin/main`, the
+  diff-scoped component-vocabulary CI job, GE-111c-1, and the
+  presence-only-assertion staged-hunks ratchet. Neither tier has a cutoff, an
+  exempt list, or a backfill counter, because neither needs one.

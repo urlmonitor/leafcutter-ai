@@ -1,0 +1,104 @@
+id: GE-124a-2-i
+readiness: approved
+priority: high
+title: "A declaration written below the leading comment region does not satisfy the floor"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given a staged `.tsx` file whose first tokens are its import statements
+  And a `/** @ac UXP-607 */` comment appears further down, immediately above the
+    exported component
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the empty list
+  And the file's declaration verdict is "missing"
+  And the reported message names where the declaration must go — the leading
+    comment region, above the first import — and quotes the comment that was
+    found in the wrong place
+
+  Given a staged `.vue` file whose `<!-- @ac UXP-100d-2 -->` comment is written
+    inside its `<template>` block
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the empty list
+  And the file's declaration verdict is "missing"
+  And the reported message names the required location — above the first
+    `<template>`, `<script>` or `<style>` block
+depends_on:
+  - GE-124a-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-4.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE OUT-OF-REGION COMMENT IS DETECTED, NOT MERELY IGNORED. The reader must run a second, whole-file scan for a misplaced @ac comment ONLY to build the remediation message, and must keep its result strictly out of declares[]. Ignoring the misplaced text is cheaper and produces a bare 'missing declaration' — being blocked for putting the right text in the wrong place with no hint where it belongs is the most annoying possible false stop."
+  - "THE MESSAGE CARRIES THE REMEDIATION, per the GE-117 house shape: it must name the required location in the terms of THIS file's dialect (above the first import for .tsx/.jsx; above the first <template>/<script>/<style> for .vue/.svelte; above the first element for .html) and quote the misplaced comment verbatim with its line number."
+  - "The whole-file rescan must not leak into the pin surface: an id found in a misplaced comment is neither a declaration (GE-124a-1) nor a pin (GE-124b-1), and must appear in no collection — only in the message text."
+  - "The finding raised is still code 'missing-component-declaration' with a richer message, not a new verdict code. A distinct code here would multiply the how-to's section list (GE-124c-4) for a case whose remedy is identical: move the comment."
+delivers_to: null
+expects_from:
+  ac_id: GE-124a-2
+  contract: "The leading-comment-region boundary this edge case exercises from outside, plus the per-dialect location wording the remediation message quotes"
+test_spec:
+  - name: test_ge_124a_2_i_tsx_declaration_below_the_imports_is_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A .tsx file whose @ac comment sits above the exported component rather than above the first import yields declares == [] and verdict 'missing'. Assert declares is empty AND the id appears in no pin collection — the id must exist only inside the message string."
+  - name: test_ge_124a_2_i_vue_declaration_inside_the_template_is_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A .vue file whose @ac comment is inside <template> yields verdict 'missing'. Covers the second dialect's region boundary from outside."
+  - name: test_ge_124a_2_i_message_names_the_required_location_and_quotes_the_misplaced_comment
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "For each dialect, the emitted message contains the dialect-specific required location and the verbatim misplaced comment with its line number. Assert against the message the real reader produces for a real misplaced file — not against a template string constant, which would pass on a message that is never rendered."
+test_rationale: |
+  The behaviour that matters here is not the rejection — a reader that simply bounds its scan
+  rejects these files for free — it is the MESSAGE, which is the only thing distinguishing a
+  useful stop from an infuriating one. So two of the three tests assert the rendered message
+  produced by the real reader for a real misplaced file, rather than asserting that a format
+  string exists in the source. A grep for the remediation wording would pass on a constant that
+  is defined and never rendered, which is precisely the dead-code false green this repo has
+  shipped before. The out-of-collection assertion in the first test is the guard against the
+  obvious over-correction: rescanning the whole file and then letting the id into declares[].
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the misplaced comment to be DETECTED (for the message) while staying out of both id collections, pinned the per-dialect remediation wording, and kept the verdict code unchanged so GE-124c-4's how-to does not grow a section for a case whose remedy is 'move the comment'. Tests assert the rendered message, not a format-string constant. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  A bounded region is what makes the declaration cheap to find by eye and by
+  grep; a reader that scans the whole file for "@ac" would also pick up the
+  element pins and every code comment mentioning an id, collapsing the two
+  surfaces GE-124a-1-ii keeps apart.
+
+  The message requirement is the mitigation: being blocked for putting the
+  right text in the wrong place is the most annoying possible false stop, so
+  the check must say where the text belongs rather than reporting a bare
+  "missing declaration". This mirrors the GE-117 house shape where the verdict
+  carries the remediation.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). This AC needs a whole-file rescan that
+  GE-124a-1-ii forbids feeding into declares[]. The two are compatible only if
+  the rescan's output is confined to message text — stated in it_requirements
+  and asserted in the first test.

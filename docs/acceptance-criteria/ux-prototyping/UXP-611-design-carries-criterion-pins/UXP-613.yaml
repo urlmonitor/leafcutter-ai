@@ -1,0 +1,70 @@
+id: UXP-613
+components:
+  - ux_prototyping
+readiness: draft
+priority: medium
+title: "A rendered mockup names the screen it is, using the screen id the store already registers"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the screen registered in the product-truth store as `cart`
+  When its rendered HTML file is written
+  Then the page root element carries `data-screen="cart"`
+  And that value is character-for-character the `screen` id in the screen's
+    own *.mockup.json record — not a re-derivation from the file name, the
+    title, or the artifact id
+
+  Given a rendered mockup file
+  When the file is inspected
+  Then exactly one element in it carries `data-screen`
+  And no element below the page root carries `data-screen`, so a rendered file
+    can never claim to be two screens
+
+  Given a rendered mockup whose `data-screen` value names a screen that no
+    mockup record registers
+  When the mockup is checked
+  Then the mismatch is reported as a named defect identifying the file and the
+    unresolvable value
+  And it is never treated as a screen that merely has no design
+depends_on:
+  - UXP-611
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-611-design-carries-criterion-pins/UXP-611.yaml
+    relationship: parent
+    status: exists
+  - path: docs/product-truth/schemas/mockup.schema.json
+    relationship: specified-by
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f-1.yaml
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  NOT A NEW IDENTIFIER. `screen` already exists, is already pattern-constrained
+  in mockup.schema.json, and is already what every flow step and branch resolves
+  against via `step.screen`. All that is new is putting the same value where a
+  reader of the rendered file can see it, which is what lets a comparison begin
+  from markup on either side.
+
+  ONLY THE PAGE ROOT — the mock-data artifact states this as an "if and only
+  if" for the built side, and the design side must not diverge from it. The
+  second scenario is the testable form; without it the rule reads as advice.
+
+  THE THIRD SCENARIO KEEPS TWO STATES APART. "This file names a screen that
+  does not exist" is a defect. "This screen has no design" is an ordinary,
+  blameless state (GE-124f-1-ii's outside-the-chain case). Collapsing the first
+  into the second makes typos invisible; collapsing the second into the first
+  reports every unmodelled page as broken.
