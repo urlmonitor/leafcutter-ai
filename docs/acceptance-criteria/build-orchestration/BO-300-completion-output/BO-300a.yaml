@@ -8,7 +8,7 @@ component: build-orchestration
 level: L1
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   After an epic drive completes successfully, the output tells the user
   what the epic accomplished (title and ticket count), where the worktree
@@ -71,6 +71,7 @@ expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by:
+- "2026-08-25 BrainCandy: work_status done -> todo. This record claimed done while four of its leaf children (BO-300a-1, BO-300a-2-1, BO-300a-3, BO-300a-4) have no covering test, which the required Proof-of-done gate surfaced the first time this file entered a PR diff. The claim was already known to be false in this record's own notes below: the four completion-output sections are satisfied by the legacy build-epic.js driver and NOT by build-feature.js, the driver /build-feature actually invokes, and that note names closing the gap as the remaining work under this L1. Nothing was implemented or reverted here — a flag that asserted work nobody had done is corrected to match the record's own account of itself. Only work_status changed; criteria, level, readiness, req_status, status and the children are untouched, and the new child BO-300a-5 (added to covered_by in this same PR) is genuinely done and stays done."
 - "2026-08-18 BrainCandy: backfilled it_requirements as the structured package-surface object required by the assigned_agent=python-coder + component=build-orchestration conditional in config/ac_store_schema.json (lines 709-744). This record had NO it_requirements at all and failed schema validation identically at git HEAD and in the working copy -- pre-existing debt, not a regression. Backfilled now because adding the covered_by back-link for the new child BO-300a-5 puts this file into the commit diff, and the required CI 'AC store valid' check is diff-scoped: touch a broken record and you own it. criteria, work_status, readiness, status and req_status are unchanged."
 superseded_by: null
 covered_by: [BO-300a-1, BO-300a-2, BO-300a-3, BO-300a-4, BO-300a-5]
