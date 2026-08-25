@@ -61,8 +61,8 @@ it_requirements:
   - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The file to change is `templates/scripts/commit_guardian/check_secrets.py` and the members that carry the exemption there: `_PROSE_FILE_PREFIXES`, `_is_prose_exempt` and `_filter_prose_findings`. `scripts/commit_guardian/check_secrets.py` and `.leafcutter/scripts/commit_guardian/check_secrets.py` are build outputs per ADR-001, and `templates/commit-guardian/` holds the legacy manifest; `check_hook_parity` enforces all four locations. After editing the template run `python scripts/build.py --target-dir .` and re-run the commit_guardian suite; do not claim the change until the parity check passes over the rebuilt tree."
   - "THE GATE MUST BE A PROPERTY OF THE FILE, NOT OF THE DIRECTORY. The decision is taken from the staged file's own name at whichever listed location it sits, so that two files in one directory differing only in extension reach different verdicts in a single run. An implementation that special-cases the skill-prompt area satisfies every arm here and leaves GE-125b-1-i red — that is the shape this requirement exists to forbid, and removing the gate must turn a test red rather than merely change a comment."
   - "NAME EVERY ENFORCEMENT POINT BEFORE CHANGING ONE. `_filter_prose_findings` is the caller of `_is_prose_exempt` on the commit path and `_PROSE_FILE_PREFIXES` is the list it consults. If any other surface — the scanner script at `templates/skills/security-scanner/scripts/scan_secrets.py` among them, via `scan_files` / `scan_file` — consults a path list to drop shapeless-value findings, gate that one too. A constraint added only to an inert copy is a no-op, and the audit path and the commit path must not disagree about whether a file is exempt."
-  - "READ THE ADMITTED-KIND LIST, DO NOT CARRY A SECOND COPY OF IT. GE-125b-3 fixes the list as a single closed constant. This gate reads that constant; a duplicated literal list in the gate is a defect even while both copies agree, because the two drift the first time one is edited."
-  - "COORDINATION WITH GE-123d-4-i, WHICH IS A COORDINATION POINT AND NOT A MERGE. GE-123d-4-i governs the file-kind gate on the PROPOSED `GENERIC_SECRET` exemption; this AC governs it on the EXISTING `ENTROPY_HIGH` one. Its own contract already requires that if the location data is ever shared between the two exemptions, the kind gate must be applied on BOTH sides or the sharing must not happen — so if this implementation introduces a shared location list or a shared kind predicate, that requirement binds here too and every call site must go through the gate. Neither record closes the other and neither may be recorded as a duplicate. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree: six GE-123 records cite this defect deliberately as an out-of-scope fence, and the sequencing preference recorded in KI-SEC-001 (close this hole before GE-123d's widening is built on top of it) lives in prose only."
+  - "READ THE ADMITTED-KIND LIST, DO NOT CARRY A SECOND COPY OF IT. GE-125b-3 fixes the list as a single closed constant — `.md` and `.txt` since the product owner's decision of 2026-08-25 that the acceptance-criteria store shall be scanned. This gate reads that constant; a duplicated literal list in the gate is a defect even while both copies agree, because the two drift the first time one is edited, and because the list has now moved once already."
+  - "COORDINATION WITH GE-123d-4-i, WHICH IS A COORDINATION POINT AND NOT A MERGE. GE-123d-4-i governs the file-kind gate on the PROPOSED `GENERIC_SECRET` exemption; this AC governs it on the EXISTING `ENTROPY_HIGH` one. Its own contract already requires that if the location data is ever shared between the two exemptions, the kind gate must be applied on BOTH sides or the sharing must not happen — so if this implementation introduces a shared location list or a shared kind predicate, that requirement binds here too and every call site must go through the gate. Since 2026-08-25 the two admitted-kind lists also DIFFER (`.md`/`.txt` here, `.md`/`.yaml`/`.yml`/`.txt` in GE-123d-2), so sharing additionally requires reconciling the two lists first; the divergence is recorded in GE-125b-3's notes. Neither record closes the other and neither may be recorded as a duplicate. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree: six GE-123 records cite this defect deliberately as an out-of-scope fence, and the sequencing preference recorded in KI-SEC-001 (close this hole before GE-123d's widening is built on top of it) lives in prose only."
   - "COORDINATE WITH THE SIBLING L1s RATHER THAN REVERTING THEM. GE-125a narrows the same path predicate to a root-anchored segment match and GE-125c makes the decision per finding rather than per file, both against these same members, concurrently. Reconcile with whatever is in the file at implementation time; do not restore a substring match and do not restore the file as the unit of the decision as a side effect of adding a kind gate."
   - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file created inside a `tempfile`-backed throwaway git repository, with the four listed locations constructed INSIDE that root and the check pointed at that root. No fixture may be written under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. If the check cannot be pointed at a throwaway root, RAISE THAT INABILITY AS A DEFECT AGAINST THIS GOAL AND STOP — it is not a licence to place a fixture in a real prose tree, and it is not a licence to fall back to calling the exemption logic directly."
   - "ASSERT THE THROWAWAY ROOT IS NOT ITSELF EXEMPT BEFORE ASSERTING ANY VERDICT. KI-SEC-001 measured the location match as a substring test against the whole path, so a temporary root whose own path happens to contain `tickets`, `retrospectives`, `acceptance-criteria` or `skills` as a segment re-arms the exemption above the constructed fixture and every arm passes for the wrong reason — including the `scripts/build_probe.py` control, which would fall silent and look like a broken fixture rather than a re-armed exemption. Assert as a precondition that the root path ABOVE the deliberately constructed directories contains none of the four names."
@@ -83,7 +83,7 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "The mandatory negative control: a ticket Markdown file and a retrospective Markdown file at listed locations in the throwaway root, each carrying the same token, yield ZERO findings and a clean exit with no allowlist entry in force. Fails against an implementation that removed the exemption instead of gating it — the failure mode the first descriptor cannot distinguish on its own."
+    description: "The mandatory negative control: a ticket Markdown file and a retrospective Markdown file at listed locations in the throwaway root, each carrying the same token, yield ZERO findings and a clean exit with no allowlist entry in force. Fails against an implementation that removed the exemption instead of gating it — the failure mode the first descriptor cannot distinguish on its own. Both fixtures are Markdown, which is still an admitted kind after the 2026-08-25 narrowing; do not substitute a .yaml fixture here, which would now report."
   - name: test_same_token_is_reported_outside_every_listed_location_in_the_same_run
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -123,6 +123,12 @@ test_rationale: |
   path strings — was rejected. It cannot show that a commit was blocked, it cannot
   express the exact-count-across-a-staged-set assertion the first arm turns on, and it
   passes identically on wired code and on dead code.
+
+  Every silent fixture in this record is Markdown, and after the 2026-08-25 product
+  decision that matters: .md survived the narrowing of the admitted list and .yaml did
+  not. None of the five descriptors moved as a result, but a future author who
+  "strengthens" the second descriptor by adding a store .yaml fixture would invert it —
+  that assertion belongs to GE-125b-1-i, where it is now a reported arm.
 doc_links:
   - path: docs/known-issues/security-scanner.md
     relationship: context
@@ -143,10 +149,10 @@ doc_links:
     status: exists
 delivers_to:
   agent: python-coder
-  contract: "A file-kind gate on the ENTROPY_HIGH prose exemption in templates/scripts/commit_guardian/check_secrets.py: reduced scrutiny is granted only when a listed-location match AND an admitted-kind match both hold, decided per staged file from the file's own name. Consumed by GE-125b-1-i (which pins that it applies at every listed location), by GE-125b-1-ii (which pins that it moves no other rule's verdict), by GE-125b-2 (which pins the scanner's own source path by name) and by GE-125b-4, whose reference passage must describe the gate as landed rather than as proposed."
+  contract: "A file-kind gate on the ENTROPY_HIGH prose exemption in templates/scripts/commit_guardian/check_secrets.py: reduced scrutiny is granted only when a listed-location match AND an admitted-kind match both hold, decided per staged file from the file's own name. Consumed by GE-125b-1-i (which pins that it applies at every listed location, and whose acceptance-criteria arm reports since the 2026-08-25 decision), by GE-125b-1-ii (which pins that it moves no other rule's verdict), by GE-125b-2 (which pins the scanner's own source path by name) and by GE-125b-4, whose reference passage must describe the gate as landed rather than as proposed."
 expects_from:
   ac_id: GE-125b-3
-  contract: "The closed admitted-kind list — exactly .md, .yaml, .yml and .txt — as a single named constant matched against the staged file's final extension with letter case folded. This gate reads that constant and carries no second copy of the list."
+  contract: "The closed admitted-kind list — exactly .md and .txt — as a single named constant matched against the staged file's final extension with letter case folded. This gate reads that constant and carries no second copy of the list. The list was .md, .yaml, .yml and .txt until 2026-08-25, when the product owner decided the acceptance-criteria store shall be scanned and .yaml/.yml were removed; a consumer may not restore them."
 origin_agent: business-analyst
 created: 2026-08-19
 amended_by:
@@ -166,6 +172,24 @@ amended_by:
       sibling-L1 coordination against GE-125a and GE-125c; and make the throwaway root a hard
       requirement whose absence is a defect to raise, with a precondition that the root is not
       itself substring-exempt. criteria, title, level, work_status and priority unchanged.'
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'CONTRACT-ONLY UPDATE FOR THE ADMITTED-KIND DECISION. The product owner decided on
+      2026-08-25 that the acceptance-criteria store SHALL be scanned for opaque credentials;
+      the admitted kinds shrank from .md/.yaml/.yml/.txt to .md and .txt. This record CRITERIA
+      DID NOT CHANGE and no arm inverted — every fixture here is .py or .md, and both of those
+      verdicts are unaffected by removing .yaml. Four fields changed. The expects_from contract
+      on GE-125b-3 now names the two-kind list and records that .yaml/.yml were removed and may
+      not be restored by a consumer. it_requirement 4 names the current list and the reason it
+      moved. it_requirement 5 records the GE-123d-2 kind-list divergence and the extra
+      reconciliation obligation it places on any future sharing of the location data. The
+      delivers_to contract notes that GE-125b-1-i acceptance-criteria arm now reports.
+      test_spec descriptor 2 gained a warning against substituting a .yaml fixture for one of
+      its Markdown ones, and test_rationale gained a closing paragraph saying the same. No
+      GE-123 file was edited. title, level, component, components, depends_on, readiness,
+      work_status, priority and notes unchanged apart from the coordination paragraph noted
+      below.'
 superseded_by: null
 covered_by:
   - GE-125b-1-i
@@ -208,6 +232,13 @@ notes: |
       check over a staged set — never by calling the exemption logic with a path
       string the test chose. A green predicate-level test does not discharge any
       arm of this criterion.
+    - EVERY SILENT FIXTURE HERE IS MARKDOWN, AND SINCE 2026-08-25 THAT IS LOAD-
+      BEARING RATHER THAN INCIDENTAL. The admitted-kind list narrowed to .md and
+      .txt when the product owner decided the acceptance-criteria store shall be
+      scanned. No arm of this record moved, because .md survived the narrowing —
+      but a store .yaml fixture added here to "strengthen" the negative control
+      would now invert. That assertion belongs to GE-125b-1-i, where it is a
+      reported arm.
 
   RELATIONSHIP TO GE-125a. Every path here is a listed location at the repository
   root, so all three arms hold both before and after the reach of the entitlement
@@ -224,12 +255,19 @@ notes: |
   edit any GE-123 record from this tree — six of them cite this defect by its
   original identifier as a deliberate out-of-scope fence.
 
-  THE COORDINATION POINT, NOT A MERGE. GE-123d-4-i already anticipates that the
-  two rules may share the location data, and requires that if they do, the kind
-  gate is applied on both sides or the sharing does not happen. The admitted-kind
-  list chosen in GE-125b-3 is deliberately the same four kinds GE-123d-2 chose,
-  so that sharing later is a decision someone can take safely rather than a trap.
-  Adopting the same list is not the same as merging the two records.
+  THE COORDINATION POINT, NOT A MERGE — AND THE TWO LISTS NO LONGER MATCH.
+  GE-123d-4-i already anticipates that the two rules may share the location data,
+  and requires that if they do, the kind gate is applied on both sides or the
+  sharing does not happen. The admitted-kind list chosen in GE-125b-3 was
+  deliberately the same four kinds GE-123d-2 chose, so that sharing later would be
+  a decision someone could take safely. That is no longer true: on 2026-08-25 the
+  product owner narrowed this side to .md and .txt so the acceptance-criteria
+  store would be scanned, while GE-123d-2 — a different, still-proposed exemption
+  in a fenced tree — keeps all four. Sharing the location data therefore now
+  requires reconciling the two kind lists FIRST, as an explicit decision by
+  whoever proposes it. The divergence is recorded in full in GE-125b-3's notes.
+  Adopting a list, diverging from it, and merging the two records remain three
+  different things, and only the first two have happened.
 
   SEQUENCING, recorded in prose deliberately and nowhere else: KI-SEC-001 asks
   that this hole be closed before GE-123d's widening is built on top of it. That

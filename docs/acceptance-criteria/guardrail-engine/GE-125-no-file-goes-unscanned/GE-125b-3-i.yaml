@@ -47,8 +47,8 @@ it_requirements:
   - "CANONICAL SOURCE. The extraction rule lands in `templates/scripts/commit_guardian/check_secrets.py` beside the admitted-kind constant; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and a deployed-copy-only fix is reverted by the next `python scripts/build.py --target-dir .`. `check_hook_parity` enforces all four locations."
   - "THE EXTRACTION RULE IS THE FINAL EXTENSION ONLY, CASE-FOLDED, WITH ABSENCE MEANING EXCLUSION — THREE PROPERTIES, ALL FAILING UNSAFE IF LEFT UNSTATED. A containment test (does the name contain an admitted extension) exempts `notes.md.bak`, which is exactly how an editor backup or a credential-bearing file renamed out of the way slips through. A case-sensitive compare reports `NOTES.MD`, which is the safe direction but is a false positive on genuinely prose material and is the kind of surprise that gets an exemption widened carelessly later to make it stop. Treating no-extension as nothing-disqualifying admits every extensionless executable in the tree. There is no third state between admitted and excluded."
   - "NORMALISE THE PATH BEFORE DECIDING, AND DECIDE ONCE. The second arm is an observable, not an instruction — the BA left the mechanism to this record. The requirement is that one file receives one verdict regardless of how the path that reached the check was spelled: the pre-commit check receives paths from the staged set while the scanner beneath it (`templates/skills/security-scanner/scripts/scan_secrets.py`, `scan_files` / `scan_file`) can be handed paths in other forms, and the same file must not be admitted by one route and checked by the other. Case folding applies to the extension comparison; it must NOT be extended to the location match, where folding would silently widen which directories are entitled."
-  - "OPEN PRODUCT DECISION — INHERITED FROM GE-125b-3 AND NOT REOPENABLE HERE. This record refines HOW the admitted list is matched; it does not change WHICH kinds are on it. The list is `.md`, `.yaml`, `.yml`, `.txt`, and admitting `.yaml` keeps this repository's own acceptance-criteria store exempt from opaque-token scanning — recorded as an OPEN product decision in GE-125's notes. Adding or removing a kind while implementing the extraction rule, including to make one of these arms pass, is forbidden: STOP and raise it as a product question."
-  - "COORDINATION WITH GE-123d-4-i, NOT A MERGE. GE-123d-2 records the same normalisation concern for its own gate. If the extraction rule or the kind constant is ever shared between the existing `ENTROPY_HIGH` exemption and the proposed `GENERIC_SECRET` one, GE-123d-4-i's requirement binds — the gate is applied on both sides or the sharing does not happen. Neither record closes the other. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
+  - "PRODUCT DECISION MADE 2026-08-25 — INHERITED FROM GE-125b-3 AND NOT REOPENABLE HERE. This record refines HOW the admitted list is matched; it does not change WHICH kinds are on it. The list is `.md` and `.txt`. It was `.md`, `.yaml`, `.yml`, `.txt` until 2026-08-25, when the product owner decided that THIS REPOSITORY'S OWN ACCEPTANCE-CRITERIA STORE SHALL BE SCANNED for opaque credentials, so `.yaml` and `.yml` were removed and a store YAML file no longer inherits the location exemption. That decision was taken on measurement (58 findings across 48 files, 1.4% of 3,260 store records, from 7 distinct strings that are all file paths, with zero real credential markers in the same sweep) and it is recorded in GE-125's notes and in GE-125b-3's second it_requirement. It is CLOSED, not open — but it is closed on the product owner's authority, so it is no more reopenable here than it was settleable here before. Adding or removing a kind while implementing the extraction rule, including to make one of these arms pass, is forbidden: STOP and raise it as a product question. Note the four fixtures in this record are unaffected either way — NOTES.MD, notes.md.bak, Makefile and notes.md turn on the extraction rule, not on which kinds are admitted."
+  - "COORDINATION WITH GE-123d-4-i, NOT A MERGE — AND THE TWO KIND LISTS NOW DIVERGE. GE-123d-2 records the same normalisation concern for its own gate. If the extraction rule or the kind constant is ever shared between the existing `ENTROPY_HIGH` exemption and the proposed `GENERIC_SECRET` one, GE-123d-4-i's requirement binds — the gate is applied on both sides or the sharing does not happen. After the 2026-08-25 decision the two admitted-kind lists differ (`.md`/`.txt` here, `.md`/`.yaml`/`.yml`/`.txt` in GE-123d-2), so sharing now additionally requires reconciling the two lists first; the divergence is recorded in GE-125b-3's notes. Sharing the EXTRACTION RULE alone is unaffected by the divergence — it is the kind CONSTANT that differs. Neither record closes the other. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
   - "HALF OF THE FIRST ARM IS GREEN ON ARRIVAL AND MUST BE LABELLED AS SUCH IN THE TEST ITSELF. Today every one of these four files is exempt, so `NOTES.MD is silent` and `notes.md is silent` both pass before any change. Only the two REPORTED findings — `notes.md.bak` and `Makefile` — are red today. The test name, its docstring and any red-baseline report must say which halves are which. A passing run of the silent halves must not be counted toward a red baseline and must not be cited as evidence the extraction rule exists."
   - "THE FOUR-FILE SINGLE-RUN SHAPE IS LOAD-BEARING AND MAY NOT BE SPLIT INTO FOUR TESTS. Location, directory and content are identical across the four fixtures so the only variable is the spelling of the name, and an exact count of two across four files staged together is what shows the decision is made per file from its own name. Four separate single-file runs cannot express that count and would let a per-run decision pass."
   - "THROWAWAY ROOT, AND ASSERT IT IS NOT ITSELF EXEMPT. All fixtures are real files inside a `tempfile`-backed throwaway git repository with the skill-prompt area constructed INSIDE that root; none may be written under this repository's own `templates/skills/` tree. Because the location match is a substring test (KI-SEC-001), assert as a precondition that the root path above the constructed directory contains none of the four segment names. Pair with GE-125b-3's `scripts/build_probe.py` control so the two silent files are evidence rather than an absence."
@@ -109,6 +109,12 @@ test_rationale: |
   points. The fifth is the standing live-path control without which the silences prove
   nothing. A predicate-level test over four strings was rejected for all five: it
   cannot show a commit was blocked and cannot express the count.
+
+  None of the five moved when the admitted list narrowed to .md and .txt on 2026-08-25.
+  All four fixtures are .md-family or extensionless names chosen to exercise the
+  extraction rule, so their verdicts turn on HOW the match is made rather than on WHICH
+  kinds are on the list — which is exactly the separation of concerns between this
+  record and its parent.
 doc_links:
   - path: docs/known-issues/security-scanner.md
     relationship: context
@@ -126,7 +132,7 @@ doc_links:
 delivers_to: null
 expects_from:
   ac_id: GE-125b-3
-  contract: "The admitted-kind list as a single closed constant of exactly .md, .yaml, .yml and .txt, with membership meaning admitted and absence meaning fully checked. This AC supplies the extraction rule that constant is matched against — final extension only, letter case folded, no extension meaning excluded — and may refine HOW the match is made but never WHICH kinds are on the list."
+  contract: "The admitted-kind list as a single closed constant of exactly .md and .txt, with membership meaning admitted and absence meaning fully checked. This AC supplies the extraction rule that constant is matched against — final extension only, letter case folded, no extension meaning excluded — and may refine HOW the match is made but never WHICH kinds are on the list."
 origin_agent: business-analyst
 created: 2026-08-19
 amended_by:
@@ -145,6 +151,28 @@ amended_by:
       single-run shape; and inherit the OPEN .yaml product decision from GE-125b-3 as
       non-reopenable here. Do-not-touch fence on the GE-123 tree restated. criteria, title,
       level, work_status and priority unchanged.'
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'THE INHERITED DECISION IS NO LONGER OPEN — it was MADE on 2026-08-25 by the
+      product owner: the acceptance-criteria store SHALL be scanned for opaque credentials,
+      and the admitted kinds shrink from .md/.yaml/.yml/.txt to .md and .txt. This record
+      refines HOW the list is matched, not WHICH kinds are on it, so its criteria and all
+      five test_spec descriptors are UNCHANGED — every fixture here (NOTES.MD, notes.md.bak,
+      Makefile, notes.md) is a .md-family or extensionless name whose verdict turns on the
+      extraction rule rather than on the admitted set. Three fields changed. it_requirement 4
+      reworded from "OPEN PRODUCT DECISION — INHERITED ... AND NOT REOPENABLE HERE" to
+      "PRODUCT DECISION MADE 2026-08-25 — INHERITED ... AND NOT REOPENABLE HERE": it now
+      names the two-kind list, records the decision, its date, its authority and the measured
+      evidence, keeps the prohibition on adding or removing a kind while implementing the
+      extraction rule (closed on the product owner authority is no more settleable here than
+      open was), and notes that this record fixtures are unaffected either way.
+      it_requirement 5 records the GE-123d-2 kind-list divergence and observes that sharing
+      the EXTRACTION RULE is unaffected by it — the divergence is in the kind CONSTANT. The
+      expects_from contract on GE-125b-3 now names the two-kind list. A closing paragraph was
+      added to test_rationale stating that no descriptor moved and why. No GE-123 file was
+      edited. title, level, component, components, depends_on, readiness, work_status,
+      priority and notes unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -186,3 +214,12 @@ notes: |
   "NOTES.MD is silent" and "notes.md is silent" both pass before any change. Only
   the two reported findings are red today. Do not read a passing run of the
   silent halves as evidence the gate exists.
+
+  THE 2026-08-25 PRODUCT DECISION DID NOT MOVE ANY ARM HERE, AND THAT IS THE
+  SEPARATION OF CONCERNS WORKING. The parent's admitted list narrowed from four
+  kinds to two — .yaml and .yml were removed when the product owner decided the
+  acceptance-criteria store shall be scanned — but every fixture in this record is
+  a .md-family or extensionless name, chosen so that its verdict turns on HOW the
+  match is made rather than on WHICH kinds are admitted. This record refines the
+  extraction rule and inherits the list; it does not hold an opinion about the
+  list, and it may not acquire one.

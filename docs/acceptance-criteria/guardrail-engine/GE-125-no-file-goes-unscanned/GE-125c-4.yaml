@@ -51,7 +51,7 @@ criteria: |
     confidence this goal exists to remove.
 depends_on:
   - GE-125c
-assigned_agent: documentation-expert
+assigned_agent: llm-expert
 estimated_complexity: M
 it_requirements:
   - "THE REFERENCE IS MISSING BY OMISSION, NOT WRONG — SO THE FIRST OF THE FOUR SIBLINGS TO BE BUILT CREATES THE PASSAGE AND THE OTHER THREE AMEND WHAT IT CREATED. `templates/skills/security-scanner/SKILL.md` carries NO description of the reduced scrutiny at all (measured during decomposition and recorded in the L0's adjudication and in GE-125a-3's notes). There is no passage to amend. Before writing, check whether GE-125a-3, GE-125b-4 or GE-125d-5 has already created it; if so, ADD only the part this L1 changes and do not open a second home. This is a sequencing constraint, deliberately NOT expressed as depends_on edges between the four L1s, because the coupling disappears the moment the passage exists."
@@ -129,7 +129,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
+change_target: prompt
 risk_surface: contract_boundary
 notes: |
   THIS DISCHARGES GE-125c's documentation_triggers OF [reference-doc]. The other

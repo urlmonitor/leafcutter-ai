@@ -38,7 +38,22 @@ documentation_triggers:
   - reference-doc
 origin_agent: product-owner
 created: 2026-08-19
-amended_by: []
+amended_by:
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'The admitted-kind list this L1 asked its children to decide has been narrowed by a
+      product decision: on 2026-08-25 the product owner decided that the acceptance-criteria
+      store SHALL be scanned for opaque credentials, so the admitted kinds shrink from
+      .md/.yaml/.yml/.txt to .md and .txt and docs/acceptance-criteria/**.yaml no longer
+      inherits the location exemption. Only notes changed on this record: the GE-125b-3 bullet
+      of the BA decomposition summary now states the two-kind list and the reason it moved, and
+      the closed-list guidance paragraph records that the "say so if there is a reason not to
+      follow GE-123d-2" clause has now been exercised — the two kind lists diverge, and the
+      divergence is documented in GE-125b-3 notes. The LOCATION list is unchanged and the
+      not-path-gated TICKET-/EPIC- residual-entropy filter survives. No GE-123 file was edited.
+      criteria, title, level, component, components, depends_on, covered_by, readiness,
+      work_status, priority and documentation_triggers unchanged.'
 superseded_by: null
 covered_by:
   - GE-125b-1
@@ -89,6 +104,16 @@ notes: |
   adjacent problem; follow it unless there is a reason not to, and say so if
   there is. An open list means the next file kind someone invents silently
   arrives already exempt.
+    - THE "SAY SO IF THERE IS" CLAUSE HAS NOW BEEN EXERCISED, 2026-08-25. The
+      SHAPE was followed — a closed admit list defaulting to reported — but the
+      CONTENTS no longer match. GE-125b-3 originally adopted GE-123d-2's four
+      kinds verbatim; the product owner then decided that this repository's own
+      acceptance-criteria store shall be scanned for opaque credentials, so
+      .yaml and .yml came off this side's list and it now reads .md and .txt.
+      GE-123d-2 governs a different, still-proposed exemption in a fenced tree
+      and keeps all four. The divergence, the reason for it, and the obligation
+      it places on any future sharing of the location data are recorded in
+      GE-125b-3's notes. No GE-123 file was edited to record it.
 
   BA DECOMPOSITION, 2026-08-19 — covered_by populated with four L2 children and
   nothing else on this record altered.
@@ -101,12 +126,20 @@ notes: |
     - GE-125b-2 — the sharpest instance covered BY NAME, as this record requires:
       a credential in the secrets scanner's own script is reported, and the
       skill prompt beside it is not.
-    - GE-125b-3 — the closed-list decision, made and stated: the admitted kinds
-      are .md, .yaml, .yml and .txt, the same four GE-123d-2 chose, and anything
-      else at a listed location is fully checked. The LOCATION list is not
-      touched; adopting a kind list is not adopting GE-123d-2's five locations.
-      Child GE-125b-3-i covers the three ways a closed list leaks — letter case,
-      compound suffix, no extension.
+    - GE-125b-3 — the closed-list decision, made and stated. As authored on
+      2026-08-19 the admitted kinds were .md, .yaml, .yml and .txt, the same four
+      GE-123d-2 chose. NARROWED BY PRODUCT DECISION ON 2026-08-25 to .md and .txt,
+      because the product owner decided the acceptance-criteria store shall be
+      scanned for opaque credentials; a .yaml or .yml file no longer inherits the
+      location exemption. Anything other than those two kinds at a listed location
+      is fully checked. The LOCATION list is not touched — docs/acceptance-criteria/
+      remains one of the four, and its .md and .txt files are still admitted there;
+      adopting a kind list is not adopting GE-123d-2's five locations, and removing
+      a location was not part of the decision either. Child GE-125b-3-i covers the
+      three ways a closed list leaks — letter case, compound suffix, no extension —
+      and was unaffected by the narrowing.
     - GE-125b-4 — the reference-doc trigger, written to be discharged ONCE for
       the whole goal per GE-125's instruction, with a reconciliation note for the
-      concurrently-authored sibling trees.
+      concurrently-authored sibling trees. Its documentation constraint inverted
+      with the 2026-08-25 decision: the passage must now state that the store IS
+      scanned, where it was previously forbidden from implying so.

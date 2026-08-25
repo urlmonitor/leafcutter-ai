@@ -18,10 +18,14 @@ criteria: |
   When the file-kind gate has landed,
   Then that same reference material states, in one place, that reduced scrutiny
     for the shapeless-value rule is granted only by both conditions together —
-    one of the four named locations AND one of the four admitted kinds, .md,
-    .yaml, .yml and .txt,
+    one of the four named locations AND one of the two admitted kinds, .md and
+    .txt,
   And it states that any other kind at those locations is fully checked,
     including a file with no extension,
+  And it states plainly that the acceptance-criteria store IS scanned for
+    shapeless values: the store is still one of the four named locations, but its
+    YAML records are not an admitted kind, so a credential pasted into one is
+    reported,
   And it names an executable script inside the skill-prompt area as the worked
     example, and says that the secrets scanner's own script is checked like any
     other script,
@@ -41,15 +45,15 @@ criteria: |
     reader who finds nothing.
 depends_on:
   - GE-125b
-assigned_agent: documentation-expert
+assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "THE SURFACE IS `templates/skills/security-scanner/SKILL.md`, AS ONE NEW SECTION BESIDE ITS EXISTING `Allowlist`, `How path matching decides suppression`, `Secrets Detection Rules` and `False Positive Guidance` sections. The criteria promise a reader can answer the question from one place, so the material belongs in one section rather than scattered across those four. `docs/architecture/components/security-scanner.md` describes the same mechanism at component level; if it repeats any part of the rule, point it at the SKILL.md section rather than restating the rule there — a second statement is a second thing to drift."
   - "THE PREMISE IN THE FIRST GIVEN IS WRONG IN THE SAFE DIRECTION AND MUST BE HANDLED, NOT INHERITED. The criterion says the reference presents reduced scrutiny as applying to whole files at four named locations. It does not: `templates/skills/security-scanner/SKILL.md` contains NO description of the prose exemption at all — verified 2026-08-25, its section list runs Overview, Scripts, CLI Usage, Allowlist, How path matching decides suppression, Secrets Detection Rules, Integration with Pre-Commit, False Positive Guidance, Event Schema. The reference is wrong by OMISSION. There is no passage to amend. Whoever builds this first CREATES the section; there is no failure to report and no missing file to raise."
   - "SEQUENCING ACROSS THE FOUR DOCUMENTATION RECORDS, AND IT IS DELIBERATELY NOT A DEPENDS_ON EDGE. GE-125a-3, GE-125b-4, GE-125c-4 and GE-125d-5 are four content requirements on ONE passage, all kept by the adjudication recorded in GE-125's notes; none supersedes another. Because the passage does not exist yet, the FIRST of the four to be built creates it and the other three amend what it created. Before writing, check whether the section already exists: if it does, AMEND it; if it does not, CREATE it. No depends_on edges may be added between the four — the ordering constraint disappears the moment the passage exists, and an edge would couple four L1s to each other's delivery order permanently. Do not resolve an apparent collision by deleting a sibling's record."
-  - "THIS RECORD'S SPECIFIC CONTENT OBLIGATION, WHICH IS THE ONE THING NO SIBLING SUPPLIES: reduced scrutiny is granted only by BOTH conditions together — a named location AND an admitted file kind. The section must state the both-conditions rule, enumerate the four admitted kinds `.md`, `.yaml`, `.yml`, `.txt`, state that any other kind at those locations is fully checked INCLUDING a file with no extension, and carry an executable script in the skill-prompt area as the worked example with the secrets scanner's own script named explicitly. Do not delete or weaken a sibling's contribution while adding this one."
-  - "IT MUST DESCRIBE ONLY THE `ENTROPY_HIGH` EXEMPTION AS REPAIRED, AND SAY SO. GE-123d-4-ii separately requires the PROPOSED `GENERIC_SECRET` exemption to be written down. If both land, two descriptions of two different exemptions sit side by side and must be distinguishable by rule and by state of the world. Neither documentation obligation discharges the other. Do NOT describe a planned narrowing as though it had landed, and do NOT edit anything in the GE-123 tree from here."
-  - "OPEN PRODUCT DECISION — DOCUMENT THE LIST AS BUILT AND FLAG THAT IT IS A DECISION, NOT A DERIVATION. Enumerating `.yaml` as admitted means this repository's own acceptance-criteria store keeps its exemption and its YAML is never scanned for opaque tokens. GE-125's notes record that as an OPEN product decision. Write the list exactly as GE-125b-3 implements it and state plainly which locations that admission covers, so a reader can see the consequence. A documentation author must NOT resolve the decision by omitting or adding a kind, and must NOT write prose that implies the store is scanned when it is not."
+  - "THIS RECORD'S SPECIFIC CONTENT OBLIGATION, WHICH IS THE ONE THING NO SIBLING SUPPLIES: reduced scrutiny is granted only by BOTH conditions together — a named location AND an admitted file kind. The section must state the both-conditions rule, enumerate the two admitted kinds `.md` and `.txt`, state that any other kind at those locations is fully checked INCLUDING a file with no extension, state explicitly that the acceptance-criteria store is scanned because its YAML records are not an admitted kind, and carry an executable script in the skill-prompt area as the worked example with the secrets scanner's own script named explicitly. Do not delete or weaken a sibling's contribution while adding this one."
+  - "IT MUST DESCRIBE ONLY THE `ENTROPY_HIGH` EXEMPTION AS REPAIRED, AND SAY SO. GE-123d-4-ii separately requires the PROPOSED `GENERIC_SECRET` exemption to be written down. If both land, two descriptions of two different exemptions sit side by side and must be distinguishable by rule and by state of the world — and after the 2026-08-25 decision they also differ in their admitted kinds (`.md`/`.txt` here, `.md`/`.yaml`/`.yml`/`.txt` in GE-123d-2), so the passage must not present one list as covering both. Neither documentation obligation discharges the other. Do NOT describe a planned narrowing as though it had landed, and do NOT edit anything in the GE-123 tree from here."
+  - "PRODUCT DECISION MADE 2026-08-25 — THE PASSAGE MUST SAY THE STORE IS SCANNED, AND MAY NOT SAY OTHERWISE. This constraint has INVERTED. It previously required documenting `.yaml` as admitted, flagged that this kept the repository's own acceptance-criteria store exempt from opaque-token scanning, and forbade prose that implied the store was scanned when it was not. On 2026-08-25 the product owner decided that THE ACCEPTANCE-CRITERIA STORE SHALL BE SCANNED: the admitted list shrank to `.md` and `.txt`, and a store YAML record is now fully checked for shapeless values. The passage must therefore state plainly that the store IS scanned, name the reason (it is still a listed location, but `.yaml` is not an admitted kind), and must NOT be written in a way that implies a store record is exempt. Two things it must NOT say, because both are false: that `docs/acceptance-criteria/` has been removed from the location list — it has not, only the kind gate narrowed, and `.md` and `.txt` files in the store are still admitted; and that every high-entropy string in a store record now reports — the `TICKET-`/`EPIC-` residual-entropy filter is not path-gated and survives, so a store line carrying a ticket or epic identifier whose residual entropy is below the threshold stays exempt. A documentation author must NOT resolve the kind list by omitting or adding a kind: write it exactly as GE-125b-3 implements it. The decision is CLOSED and reopening it requires the product owner."
   - "PARITY WITH THE CODE IS THE ACCEPTANCE BAR, NOT PLAUSIBILITY. The enumerated kinds and locations must match the constants the check actually reads in `templates/scripts/commit_guardian/check_secrets.py`. A drift guard is required: if the code's admitted-kind set or location list changes and the section does not, a test must turn red. A reader who can decide a file's status from the document and get a different answer from the tool is the failure this record exists to prevent."
   - "ADR-001 PARITY. `templates/skills/security-scanner/SKILL.md` is the canonical copy. Edit it under `templates/`, then run `python scripts/build.py --target-dir .`; the copies under `.claude/` and `.leafcutter/` are build outputs and must never be hand-edited."
   - "THE SELF-REFERENTIAL HAZARD IS LIVE AND MUST BE HANDLED WITHOUT AN ALLOWLIST ENTRY. This section describes credential shapes inside a file that sits at a listed location, and the whole point of the change is that admitted prose there stays exempt — so a `.md` file in the skill-prompt area is the one place this text can safely live. Do not paste a real or realistic high-entropy token into it as an illustration; describe the shape. If the section as written would block its own commit, that is a signal to reword rather than to add a `.security-allowlist` entry."
@@ -61,12 +65,18 @@ test_spec:
     type: unit
     angle: criterion
     description: "templates/skills/security-scanner/SKILL.md contains exactly one section describing reduced scrutiny for the shapeless-value rule, and that section states the grant requires a named location AND an admitted file kind together. Fails today because the file contains no such section at all — the reference is wrong by omission."
-  - name: test_reference_enumerates_the_four_admitted_kinds_and_the_default
+  - name: test_reference_enumerates_the_two_admitted_kinds_and_the_default
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: unit
     angle: criterion
-    description: "That section enumerates .md, .yaml, .yml and .txt as admitted, and states that any other kind at a listed location is fully checked including a file with no extension. The default-to-reported statement is asserted separately from the enumeration: a list without it reads as an open list."
+    description: "That section enumerates .md and .txt as admitted, and states that any other kind at a listed location is fully checked including a file with no extension. The default-to-reported statement is asserted separately from the enumeration: a list without it reads as an open list."
+  - name: test_reference_states_the_acceptance_criteria_store_is_scanned
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The section states that the acceptance-criteria store IS scanned for shapeless values — it remains a listed location, but .yaml is not an admitted kind, so a credential in a store record is reported. Asserted as its own descriptor because it is the consequence of the 2026-08-25 product decision that a reader is most likely to get wrong, and the constraint that inverted: the passage must not imply a store record is exempt."
   - name: test_reference_names_the_scanners_own_script_as_the_worked_example
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -92,27 +102,35 @@ test_spec:
     angle: failure
     description: "The real SKILL.md, staged in a throwaway repository at its own repository-relative path, passes the pre-commit secrets check with no .security-allowlist entry in force. The self-referential hazard is live: this section describes credential shapes inside a file at a listed location, and the correct resolution of a block is to reword, never to allowlist."
 test_rationale: |
-  Six descriptors, and they are documentation checks against the real file on disk
+  Seven descriptors, and they are documentation checks against the real file on disk
   rather than prose review, because the criterion's promise is decidable: a reader must
   be able to determine whether a given file is exempt from what is written there. That
-  is testable, and the first three descriptors test it clause by clause — the
+  is testable, and the first four descriptors test it clause by clause — the
   both-conditions rule, the enumeration plus the default-to-reported statement asserted
-  separately (a list without the default reads as an open list), and the worked example
-  naming the scanner's own script.
+  separately (a list without the default reads as an open list), the acceptance-criteria
+  store's status stated in so many words, and the worked example naming the scanner's
+  own script.
 
-  The fourth is the one that stops this record decaying into a snapshot. A reference
+  The store descriptor is separate on purpose. The 2026-08-25 product decision closed
+  the store to opaque tokens, and that is the single consequence a reader is most likely
+  to get wrong — the store is still a listed LOCATION, so a document that only enumerates
+  locations reads as though the store were exempt. The constraint on this record inverted
+  with the decision: it used to forbid prose implying the store was scanned, and now it
+  requires prose saying that it is.
+
+  The fifth is the one that stops this record decaying into a snapshot. A reference
   that was accurate when written and silently diverges afterwards is worse than none,
   because a reader who decides a file's status from it and gets a different answer from
   the tool has been actively misled. Comparing the document's enumerations to the
   constants the canonical check reads makes divergence a red test rather than a
   discovery.
 
-  The fifth makes the second Gherkin arm mechanical. Four documentation records under
+  The sixth makes the second Gherkin arm mechanical. Four documentation records under
   this goal are four content requirements on ONE passage, and the failure they guard
   against — four descriptions that start to disagree — is only detectable by a check
   that counts passages across the repository rather than inspecting one file.
 
-  The sixth covers a hazard the BA could not see: the section describes credential
+  The seventh covers a hazard the BA could not see: the section describes credential
   shapes and lives at a listed location, so it can block its own commit. Staging the
   real file through the check with no allowlist in force pins that the resolution was
   rewording rather than a suppression entry on the scanner's own skill directory.
@@ -139,7 +157,7 @@ doc_links:
 delivers_to: null
 expects_from:
   ac_id: GE-125b-3
-  contract: "The admitted-kind list exactly as implemented — .md, .yaml, .yml, .txt as a single closed constant with absence meaning fully checked — and the both-conditions rule it forms with the four listed locations. The reference passage enumerates what the code reads, not what was proposed, and a drift guard compares the two."
+  contract: "The admitted-kind list exactly as implemented — .md and .txt as a single closed constant with absence meaning fully checked — and the both-conditions rule it forms with the four listed locations, including the consequence the product owner decided on 2026-08-25: the acceptance-criteria store remains a listed location but its YAML is no longer an admitted kind, so the store is scanned. The reference passage enumerates what the code reads, not what was proposed, and a drift guard compares the two."
 origin_agent: business-analyst
 created: 2026-08-19
 amended_by:
@@ -162,10 +180,36 @@ amended_by:
       guard, ADR-001 canonical-copy parity, and the self-referential hazard constraint that
       a section blocking its own commit is reworded rather than allowlisted. criteria,
       title, level, work_status and priority unchanged.'
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'THE DOCUMENTATION CONSTRAINT INVERTED. The product owner decided on 2026-08-25
+      that the acceptance-criteria store SHALL be scanned for opaque credentials; the
+      admitted kinds shrank from .md/.yaml/.yml/.txt to .md and .txt. criteria: the
+      enumeration now reads "one of the two admitted kinds, .md and .txt", and a NEW clause
+      requires the passage to state plainly that the acceptance-criteria store IS scanned —
+      still a listed location, but its YAML records are not an admitted kind, so a credential
+      pasted into one is reported. it_requirement 6 rewritten from "DOCUMENT THE LIST AS
+      BUILT ... must NOT write prose that implies the store is scanned when it is not" to
+      "THE PASSAGE MUST SAY THE STORE IS SCANNED, AND MAY NOT SAY OTHERWISE", naming the
+      inversion explicitly and adding the two false statements it must avoid: that
+      docs/acceptance-criteria/ was removed from the LOCATION list (it was not — .md and .txt
+      in the store are still admitted), and that every high-entropy string in a store record
+      now reports (the not-path-gated TICKET-/EPIC- residual-entropy filter survives).
+      it_requirement 4 now enumerates two kinds and adds the store-is-scanned obligation;
+      it_requirement 5 notes that the two exemptions now also differ in their admitted kinds
+      so one list may not be presented as covering both. test_spec descriptor 2 renamed from
+      test_reference_enumerates_the_four_admitted_kinds_and_the_default to
+      ..._the_two_admitted_kinds_... and rewritten; a NEW descriptor
+      test_reference_states_the_acceptance_criteria_store_is_scanned was added as the third
+      of seven, because the store consequence is the one a reader is most likely to get wrong
+      from a location-only enumeration. expects_from contract, test_rationale and notes
+      updated. No GE-123 file was edited. title, level, component, components, depends_on,
+      readiness, work_status and priority unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
+change_target: prompt
 risk_surface: contract_boundary
 notes: |
   THIS DISCHARGES THE reference-doc TRIGGER ON GE-125b, AND IT IS WRITTEN TO BE
@@ -181,8 +225,7 @@ notes: |
   these must be reconciled to ONE record before build rather than built twice —
   the correct outcome is one documentation criterion for the goal, whichever L1
   it ends up hanging from, with the other three L1s' triggers noted as discharged
-  by it. Do not resolve that by silently deleting a sibling's record; say which
-  one survives and why.
+  by it. Do not resolve that by silently deleting a sibling's record.
 
   WHICH MATERIAL. The description in question is the one that tells a reader when
   the secrets check gives something less scrutiny than usual — today that is the
@@ -201,8 +244,9 @@ notes: |
   repaired by GE-125b. GE-123d-4-ii separately requires the PROPOSED
   keyword-rule exemption to be written down. If both land, the two descriptions
   sit side by side and must be distinguishable — two rules, two exemptions, two
-  states of the world. Neither documentation obligation discharges the other, and
-  nothing in the GE-123 tree may be edited from here.
+  states of the world, and since 2026-08-25 two different admitted-kind lists.
+  Neither documentation obligation discharges the other, and nothing in the
+  GE-123 tree may be edited from here.
 
   NO assigned_agent OR doc_links ARE SET HERE by instruction — this record is
   behavioural only and the IT PO enriches it. The natural implementer is the
@@ -214,9 +258,33 @@ notes: |
   KEPT, none is superseded, because they are four different CONTENT requirements
   on ONE passage rather than four claims on one artifact. This record's specific
   contribution is the both-conditions rule — a named location AND an admitted
-  file kind — together with the enumeration of the four admitted kinds and the
+  file kind — together with the enumeration of the admitted kinds and the
   worked example naming the scanner's own script. What was actually missing was
   build ORDER, and it is now expressed as an it_requirement (check whether the
   section exists; create it if not, amend it if so) rather than as depends_on
   edges between the four, because the ordering constraint disappears the moment
   the passage exists.
+
+  THE STORE CLAUSE, ADDED 2026-08-25 WHEN THE PRODUCT DECISION INVERTED THIS
+  RECORD'S CONSTRAINT. This record used to be fenced the other way round: it was
+  told to document `.yaml` as admitted and forbidden from writing prose that
+  implied the acceptance-criteria store was scanned when it was not. The product
+  owner has now decided that the store SHALL be scanned, so the passage must say
+  so. It is called out as its own criteria clause and its own test descriptor
+  rather than left to follow from the kind enumeration, for one reason: the store
+  is still a listed LOCATION. A reader who sees `docs/acceptance-criteria/` in the
+  list of places that get reduced scrutiny, and is not told that its YAML is not
+  an admitted kind, will conclude the store is exempt — which is precisely the
+  wrong-description-of-a-security-control failure the first criterion names.
+
+  TWO THINGS THE PASSAGE MUST NOT SAY, BECAUSE BOTH ARE FALSE.
+    - That docs/acceptance-criteria/ was removed from the location list. It was
+      not. Only the kind gate narrowed; a .md or .txt file in the store is still
+      admitted there.
+    - That every high-entropy string in a store record now reports. The
+      TICKET-/EPIC- residual-entropy filter is not path-gated and survives this
+      change untouched: a store line carrying a ticket or epic identifier whose
+      residual entropy is below the threshold stays exempt. That filter is why the
+      measured cost of the decision was 58 findings across 48 files rather than
+      625, and a passage that overstates the change will send readers hunting for
+      suppressions they do not need.

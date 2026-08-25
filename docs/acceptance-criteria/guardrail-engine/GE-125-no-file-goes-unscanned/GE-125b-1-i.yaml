@@ -22,18 +22,23 @@ criteria: |
     "docs/retrospectives/retro.md" — a retrospective write-up,
   And each of the three carries one identical line holding the same
     twenty-four-character opaque token used by the parent criterion, whose
-    entropy is above the shapeless-value rule's threshold,
+    entropy is above the shapeless-value rule's threshold, and none of the three
+    lines carries a ticket or epic identifier,
   And no suppression entries are in force,
   When the staged set is checked by the pre-commit secrets check,
-  Then exactly one shapeless-value finding is reported across the three files,
-    and it names "tickets/00_inbox/attachments/repro.py",
-  And neither the acceptance-criteria record nor the retrospective is reported,
+  Then exactly two shapeless-value findings are reported across the three files,
+    and they name "tickets/00_inbox/attachments/repro.py" and
+    "docs/acceptance-criteria/example-component/EXMPL-001.yaml",
+  And the retrospective is not reported,
   And the check exits reporting findings present, so the commit is blocked,
   Because the gate is decided from the kind of the file in front of it at
     whichever listed location that file sits, and not from a judgement about
     which locations are known to contain code. The skill-prompt area is where the
     executable content was measured; it is not the only listed location a script
-    can be committed into.
+    can be committed into. The acceptance-criteria record is reported for the same
+    reason the script is: YAML is not an admitted kind, because the product owner
+    decided on 2026-08-25 that the acceptance-criteria store shall be scanned.
+    Only the Markdown write-up is prose the gate still admits.
 depends_on:
   - GE-125b-1
 assigned_agent: python-coder
@@ -41,11 +46,12 @@ estimated_complexity: S
 it_requirements:
   - "CANONICAL SOURCE. The change lands in `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and a deployed-copy-only fix is reverted by the next `python scripts/build.py --target-dir .`. `check_hook_parity` enforces all four locations. Rebuild and re-run the commit_guardian suite before claiming this."
   - "THE GATE MUST BE LOCATION-AGNOSTIC BY CONSTRUCTION, NOT BY COVERAGE. There must be exactly one kind decision, applied to whatever file is in front of it, with no branch keyed to which of the four listed locations the file sits in. The cheap implementation that satisfies the parent — special-casing the skill-prompt area because that is where KI-SEC-001 measured executable content — is exactly what this AC exists to forbid, and it must be structurally impossible rather than merely untaken: a per-location branch is a defect even when all four branches currently agree."
-  - "OPEN PRODUCT DECISION — THIS AC'S SECOND SILENT FILE IS THE ARM THAT INVERTS, AND A CODER MUST NOT SETTLE IT. The acceptance-criteria record arm is silent only because `.yaml` is on the admitted-kind list fixed by GE-125b-3, which means this repository's own AC store keeps the exemption it has today and its YAML is never scanned for opaque tokens. That choice is recorded as OPEN in GE-125's notes: it preserves current behaviour rather than changing it, and removing `.yaml` would strip an entire intended location's exemption as a side effect. If the product owner later closes the store, the admitted list shrinks to `.md` and `.txt`, THIS ARM INVERTS — the acceptance-criteria record becomes reported and the expected count here rises from one to two — and GE-125b-3's first arm gains a finding. Build the list exactly as GE-125b-3 specifies. A coder, reviewer or test-writer must NOT resolve this either way on their own initiative: if implementation surfaces a reason to change the list, STOP and raise it as a product question rather than shipping a different list or 'fixing' this arm to match."
-  - "COORDINATION WITH GE-123d-4-i, NOT A MERGE. GE-123d-4-i governs the kind gate on the PROPOSED `GENERIC_SECRET` exemption; this governs it on the EXISTING `ENTROPY_HIGH` one, and its contract already requires that if the location data is ever shared between the two, the kind gate is applied on both sides or the sharing does not happen. Neither record closes the other. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
+  - "PRODUCT DECISION MADE 2026-08-25 — THIS AC'S SECOND FILE IS THE ARM THAT INVERTED, AND A CODER MUST NOT REOPEN THE DECISION. The acceptance-criteria record is REPORTED here, and that is a change from how this record was originally written. It was previously silent, because `.yaml` was on the admitted-kind list fixed by GE-125b-3, which meant this repository's own AC store kept the exemption it had and its YAML was never scanned for opaque tokens. That choice was recorded as OPEN in GE-125's notes and this AC was named there, in advance, as the arm that would invert if the decision were closed. On 2026-08-25 the product owner closed it: THE ACCEPTANCE-CRITERIA STORE SHALL BE SCANNED, the admitted list shrank to `.md` and `.txt`, THIS ARM INVERTED — the acceptance-criteria record moved from silent to reported and the expected count here rose from one to two — and GE-125b-3's first arm gained a finding. The decision was measured, not argued: over all 3,260 store records with the location exemption disabled and the `TICKET-`/`EPIC-` residual-entropy filter still applying, the store yields 58 findings across 48 files (1.4%), from 7 distinct strings that are all file paths scoring 4.51-4.56, with zero real credential markers found in the same sweep. Build the list exactly as GE-125b-3 specifies. A coder, reviewer or test-writer must NOT re-admit `.yaml` and must NOT 'fix' this arm back to one finding: the decision is CLOSED and reopening it requires the product owner, not an implementation judgement. If implementation surfaces a reason to change the list, STOP and raise it as a product question."
+  - "THE LOCATION LIST AND THE TICKET-IDENTIFIER FILTER BOTH SURVIVE THIS, AND THIS AC MUST NOT BE READ AS EVIDENCE OTHERWISE. `docs/acceptance-criteria/` is still one of the four reduced-scrutiny locations — only the KIND gate narrowed, so a `.md` or `.txt` file in the store is still admitted there, which is why the third fixture is silent. Separately, the `TICKET-`/`EPIC-` residual-entropy filter is not path-gated and is untouched: a store line carrying a ticket or epic identifier whose residual entropy is below the threshold remains exempt everywhere, regardless of location and kind. That filter is why the measured store-wide number is 58 and not 625. The fixture line in this AC deliberately carries NO ticket identifier, so it exercises the kind gate rather than that filter; do not add one, and do not let this arm be cited as showing that store lines with ticket identifiers now report."
+  - "COORDINATION WITH GE-123d-4-i, NOT A MERGE — AND THE TWO KIND LISTS NOW DIVERGE. GE-123d-4-i governs the kind gate on the PROPOSED `GENERIC_SECRET` exemption; this governs it on the EXISTING `ENTROPY_HIGH` one, and its contract already requires that if the location data is ever shared between the two, the kind gate is applied on both sides or the sharing does not happen. After the 2026-08-25 decision the two admitted-kind lists differ — `.md`/`.txt` here, `.md`/`.yaml`/`.yml`/`.txt` in GE-123d-2 — so sharing the location data now also requires reconciling the lists first. The divergence is recorded in GE-125b-3's notes. Neither record closes the other. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
   - "THROWAWAY ROOT, AND ASSERT IT IS NOT ITSELF EXEMPT. All three fixtures are real files inside a `tempfile`-backed throwaway git repository with the listed locations constructed INSIDE that root; none may be written under this repository's own `tickets/`, `docs/acceptance-criteria/` or `docs/retrospectives/` trees. Because the location match is a substring test (KI-SEC-001), assert as a precondition that the root path ABOVE the constructed directories contains none of the four segment names. If the check cannot be pointed at a throwaway root, raise that as a defect against this goal and stop — it is not a licence to place a fixture in a real prose tree."
-  - "THE LIVE-PATH CONTROL IS MANDATORY IN THIS INVOCATION. Every one of the three paths here contains a listed name, so the two silent files are evidence only alongside a file the exemption cannot reach that is reported in the same run. Carry the parent's `scripts/build_probe.py` control into this test — as a fourth staged file or by running in the same invocation — and assert it IS reported. Without it a fixture whose token never reached the entropy threshold produces an identical green result."
-  - "VERIFY BY EXECUTION AND BY EXACT COUNT. Stage the files in the throwaway repository, run the pre-commit secrets check as a process, and assert the exit status together with the parsed findings and their 1-based line numbers. The assertion is an equality — exactly one across the three — because an at-least-one assertion is satisfied by an implementation that reports all three, which is the deleted-exemption failure. Calling `_is_prose_exempt` with three path strings discharges nothing: it cannot show the commit was blocked and cannot express the count."
+  - "THE LIVE-PATH CONTROL IS MANDATORY IN THIS INVOCATION. Every one of the three paths here contains a listed name, so the one silent file is evidence only alongside a file the exemption cannot reach that is reported in the same run. Carry the parent's `scripts/build_probe.py` control into this test — as a fourth staged file or by running in the same invocation — and assert it IS reported. Without it a fixture whose token never reached the entropy threshold produces an identical green result."
+  - "VERIFY BY EXECUTION AND BY EXACT COUNT. Stage the files in the throwaway repository, run the pre-commit secrets check as a process, and assert the exit status together with the parsed findings and their 1-based line numbers. The assertion is an equality — exactly two across the three — because an at-least-one assertion is satisfied by an implementation that reports all three, which is the deleted-exemption failure. Calling `_is_prose_exempt` with three path strings discharges nothing: it cannot show the commit was blocked and cannot express the count."
   - "FIXTURE TOKENS ASSEMBLED AT RUNTIME from concatenated fragments, per `unit_tests/commit_guardian/test_scan_secrets_suppression.py`. No `.security-allowlist` entry may be added for this tree; needing one is the signal the fragments were collapsed into literals."
   - "ERROR HANDLING PER CLAUDE.md. The kind decision is pure over a path string and must not be wrapped in try/except (Rule 4); any file or subprocess access added by the tests is wrapped in a typed `except` that logs at WARNING or re-raises (Rules 1-3)."
 test_spec:
@@ -54,19 +60,19 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "Three files staged in one commit across three different listed locations of a throwaway root — a .py under tickets/00_inbox/attachments/, a .yaml in the acceptance-criteria store, a .md in the retrospectives area — carrying the identical runtime-assembled token yield EXACTLY ONE finding, naming the .py path and its 1-based line number, with a non-zero exit. Red against any implementation that keys the gate to the skill-prompt area."
-  - name: test_acceptance_criteria_store_yaml_remains_exempt_under_the_kind_gate
+    description: "Three files staged in one commit across three different listed locations of a throwaway root — a .py under tickets/00_inbox/attachments/, a .yaml in the acceptance-criteria store, a .md in the retrospectives area — carrying the identical runtime-assembled token yield EXACTLY TWO findings, naming the .py and .yaml paths and their 1-based line numbers, with a non-zero exit. Red against any implementation that keys the gate to the skill-prompt area, and red against any that still admits .yaml."
+  - name: test_acceptance_criteria_store_yaml_is_reported_under_the_kind_gate
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
     angle: boundary
-    description: "Pins that .yaml at a listed location stays silent, which is TODAY's behaviour preserved rather than new behaviour granted. This arm is the observable consequence of the OPEN product decision recorded in GE-125's notes: if .yaml is ever removed from the admitted list, this descriptor turns red BY DESIGN and must be re-baselined by a product decision, never quietly edited to match a changed list."
+    description: "Pins that .yaml at a listed location is REPORTED — the arm that inverted when the product owner decided on 2026-08-25 that the acceptance-criteria store shall be scanned. This is NEW behaviour, not today's behaviour preserved: it is red today and is the evidence the narrowed kind list actually landed. If it is ever re-baselined to silent, the admitted list has been widened back and that requires a product decision, never a quiet test edit."
   - name: test_live_path_control_reported_in_the_same_invocation
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
     angle: reachability
-    description: "The parent's scripts/build_probe.py control carried into THIS run: a path containing none of the four listed names, holding the identical token, IS reported. Every path in this criterion contains a listed name, so without this the two silent files are an absence rather than evidence."
+    description: "The parent's scripts/build_probe.py control carried into THIS run: a path containing none of the four listed names, holding the identical token, IS reported. Every path in this criterion contains a listed name, so without this the one silent file is an absence rather than evidence."
   - name: test_no_per_location_branch_in_the_kind_decision
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -84,19 +90,21 @@ test_rationale: |
   branch cannot substitute for it and so that a branch which currently agrees still
   fails once it drifts.
 
-  The second descriptor is deliberately a fence rather than a behaviour. The .yaml arm
-  is silent today and will be silent after the gate lands, so it proves nothing about
-  the fix — its job is to make the OPEN product decision on the admitted-kind list
-  visible at test level, so that closing this repository's AC store to opaque-token
-  scanning cannot happen as an unremarked side effect of an implementation choice. It
-  is expected to turn red if that decision is ever taken, and that redness is the
-  signal, not a failure.
+  The second descriptor inverted on 2026-08-25 and its job changed with it. It was
+  written as a fence: the .yaml arm was silent today and would still be silent after
+  the gate landed, so it proved nothing about the fix and existed only to make the OPEN
+  product decision on the admitted-kind list visible at test level. The product owner
+  then took that decision — the acceptance-criteria store SHALL be scanned — so the
+  descriptor is now a genuine red-today assertion and part of the evidence that the
+  narrowed list landed. Its fence role survives in the other direction: if it is ever
+  re-baselined back to silent, the list has been widened again and that must be a
+  product decision, not a test edit.
 
   The third descriptor exists because all three paths in the criterion contain one of
   the four listed names, so the run measures the exemption as much as the scanner. A
   weaker shape — asserting the exemption predicate's return value for three path
   strings — was rejected for all four: it cannot show the commit was blocked, it cannot
-  express the exactly-one-across-three count, and it passes identically on dead code.
+  express the exactly-two-across-three count, and it passes identically on dead code.
 doc_links:
   - path: docs/known-issues/security-scanner.md
     relationship: context
@@ -132,6 +140,30 @@ amended_by:
       prohibition on editing GE-123 files or adding a depends_on edge into that tree; and
       make the throwaway root plus the build_probe live-path control mandatory in this
       invocation. criteria, title, level, work_status and priority unchanged.'
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'THE ARM THIS RECORD NAMED AS THE ONE THAT WOULD INVERT HAS INVERTED. The product
+      owner decided on 2026-08-25 that the acceptance-criteria store SHALL be scanned for
+      opaque credentials; the admitted kinds shrank from .md/.yaml/.yml/.txt to .md and .txt.
+      criteria: the acceptance-criteria .yaml fixture moves from silent to REPORTED, the
+      expected count rises from exactly one to exactly two, the two reported files are named,
+      the Because clause records the decision, and the Given now states that none of the three
+      fixture lines carries a ticket or epic identifier so the arm exercises the kind gate
+      rather than the surviving TICKET-/EPIC- residual-entropy filter. it_requirement 3
+      rewritten from OPEN to MADE, carrying the measured evidence (58 findings across 48
+      files, 1.4% of 3,260 records, 7 distinct strings all file paths at 4.51-4.56, zero real
+      credential markers) and keeping the prohibition on a coder re-admitting .yaml or
+      reverting this arm to one finding. A new it_requirement 4 states the two things the
+      decision did NOT change — docs/acceptance-criteria/ stays on the location list, and the
+      not-path-gated TICKET-/EPIC- filter survives everywhere — and forbids citing this arm as
+      showing that store lines with ticket identifiers now report. it_requirement 5 records
+      the GE-123d-2 kind-list divergence. test_spec descriptor 1 count updated; descriptor 2
+      renamed from test_acceptance_criteria_store_yaml_remains_exempt_under_the_kind_gate to
+      test_acceptance_criteria_store_yaml_is_reported_under_the_kind_gate and rewritten from a
+      green-on-arrival fence to a red-today assertion. test_rationale and notes updated. No
+      GE-123 file was edited. title, level, component, components, depends_on, readiness,
+      work_status and priority unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -147,19 +179,38 @@ notes: |
   that shape, and it is why the parent's fix has to be a property of the file
   rather than a property of the directory.
 
-  THE THIRD FILE IS THE CONTROL AND THE SECOND IS THE INTERESTING ONE. The
-  acceptance-criteria record is admitted (.yaml is one of the four admitted kinds
-  chosen in GE-125b-3), so this criterion also pins that the store keeps the
-  reduced scrutiny it has today. If .yaml were ever dropped from the admitted
-  list, this arm turns red — which is the correct outcome, because that would be
-  a separate decision and it should not be reachable as a side effect.
+  THE THIRD FILE IS THE CONTROL AND THE SECOND IS THE ONE THAT MOVED. The
+  acceptance-criteria record used to be admitted, because .yaml was one of the
+  four kinds chosen in GE-125b-3, and this criterion used to pin that the store
+  kept the reduced scrutiny it had. Both GE-125's notes and this record said in
+  advance that if .yaml were ever dropped, THIS arm would turn red and that would
+  be the correct outcome rather than a defect. On 2026-08-25 the product owner
+  dropped it: the acceptance-criteria store SHALL be scanned. The arm has
+  inverted, the expected count is two rather than one, and the .yaml fixture is
+  now part of the evidence that the narrowed kind list landed rather than a fence
+  around an undecided question.
+
+  WHAT THE DECISION DID NOT DO, AND WHY THE RETROSPECTIVE IS STILL SILENT.
+    - The LOCATION list is untouched. docs/acceptance-criteria/ is still one of
+      the four reduced-scrutiny locations; a .md or .txt file in the store is
+      still admitted there. Only the kind gate narrowed. The third fixture — a
+      Markdown retrospective — is silent for exactly that reason, and it is what
+      distinguishes this change from deleting a location.
+    - The TICKET-/EPIC- residual-entropy filter survives everywhere. It is not
+      path-gated: a line carrying a ticket or epic identifier whose residual
+      entropy is below the threshold stays exempt regardless of location and
+      kind. That filter is why the measured store-wide cost of this decision is 58
+      findings across 48 files rather than 625. The fixture line here deliberately
+      carries no ticket identifier, so this arm measures the kind gate and nothing
+      else — do not read it as saying store lines with ticket identifiers now
+      report.
 
   FIXTURE PLACEMENT, STATED AND JUSTIFIED. All three paths deliberately contain
   one of the four listed names, because being at a listed location is a
   precondition of the scenario rather than an accident. That is exactly the
   fixture trap, so this criterion must be run in the SAME invocation as the
-  parent's "scripts/build_probe.py" control, or carry its own copy of it: the two
-  silent files here are only evidence alongside a file that is reported. Real
+  parent's "scripts/build_probe.py" control, or carry its own copy of it: the one
+  silent file here is only evidence alongside a file that is reported. Real
   files in a throwaway repository; token assembled at runtime from fragments;
   driven through the pre-commit secrets check over a staged set, never through
   the exemption logic directly.

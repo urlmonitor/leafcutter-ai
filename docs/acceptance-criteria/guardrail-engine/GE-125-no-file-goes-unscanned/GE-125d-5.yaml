@@ -127,7 +127,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
+change_target: prompt
 risk_surface: contract_boundary
 notes: |
   THIS RECORD DISCHARGES THE reference-doc TRIGGER FOR THE WHOLE GOAL, NOT JUST

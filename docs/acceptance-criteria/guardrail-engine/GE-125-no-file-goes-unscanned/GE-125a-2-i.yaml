@@ -27,8 +27,8 @@ criteria: |
   commit exercises the check — the files are staged in <root> and the check runs
   over that staged set as part of a commit made from <root>.
 
-  Given <root> contains docs/acceptance-criteria/guardrail-engine/GE-999.yaml and
-    tickets/00_inbox/note.md, both written files,
+  Given <root> contains docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md
+    and tickets/00_inbox/note.md, both written files of an admitted prose kind,
   When they are staged and the check runs over the staged set,
   Then the token is not reported for either,
   Because both sit at locations this project chose, measured from the top of the
@@ -108,7 +108,7 @@ test_spec:
     framework: unittest
     type: integration
     angle: real_artifact
-    description: "In a real secondary working copy at <ws>/worktrees/copy created the way this project creates them, docs/acceptance-criteria/guardrail-engine/GE-999.yaml and tickets/00_inbox/note.md holding a runtime-assembled 5.17-entropy token are both unreported. Fails if the root resolves to the enclosing workspace, under which both sit below a worktrees segment and neither is a chosen location. Tagged real_artifact because a hand-built lookalike worktree may resolve by a different route and pass while the real case fails."
+    description: "In a real secondary working copy at <ws>/worktrees/copy created the way this project creates them, docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md and tickets/00_inbox/note.md holding a runtime-assembled 5.17-entropy token are both unreported. Fails if the root resolves to the enclosing workspace, under which both sit below a worktrees segment and neither is a chosen location. Tagged real_artifact because a hand-built lookalike worktree may resolve by a different route and pass while the real case fails. FIXTURE KIND IS DELIBERATE (amended 2026-08-25): this arm is about WHICH ROOT is measured from, so the fixture kind is incidental to it — but after the product decision that the acceptance-criteria store is scanned, a store .yaml is no longer an admitted kind and would be reported for that reason, contradicting GE-125b-1-i. A .md at the same location keeps the arm testing root resolution and nothing else."
   - name: test_reused_name_inside_a_secondary_working_copy_is_still_reported
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -164,6 +164,7 @@ origin_agent: business-analyst
 created: 2026-08-19
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-24): assigned python-coder, complexity M (real root resolution, a genuine secondary-working-copy fixture, and a fail-closed path). RESOLVED THE BA'S FLAGGED INFERENCE BY KEEPING IT LABELLED AS AN INFERENCE, with the reason recorded: the workspace-root resolution is measured for the .security-allowlist path only, and it cannot be measured for the prose-exemption path today because that path is a substring test resolving no root at all (KI-SEC-001), so there is no behaviour there to observe. Reframed it as a design constraint on the fix — do not reuse the allowlist's root-resolution helper — and placed the first measurement obligation on the implementer immediately after anchoring lands. Authored it_requirements adding: no root from os.getcwd(), no root from the check's own __file__ (the mechanism behind the measured allowlist defect), fail-closed on an undetermined root with a WARNING log per the CLAUDE.md policy, the real-worktree-not-a-lookalike constraint from the BA, the compounded fixture trap, the ADR-001 build step as load-bearing here specifically, and the two scope fences with GE-125d (announcement) and GE-120b (a check that did not run). Added four doc_links. Authored a 4-entry test_spec plus test_rationale recording that the first arm passes by accident today and must not be admitted to a red-baseline check. criteria, depends_on, expects_from, priority, work_status and notes unchanged."
+  - reason: "product-decision follow-up (2026-08-25, product owner): the acceptance-criteria store SHALL be scanned for opaque credentials, so the admitted prose kinds shrank to .md and .txt and a store .yaml is no longer exempt by kind. This record's first arm staged docs/acceptance-criteria/guardrail-engine/GE-999.yaml and asserted it UNREPORTED, which after the decision contradicts GE-125b-1-i, whose second arm now asserts a store .yaml IS reported. The arm's subject is WHICH ROOT the location gate measures from, so the fixture's kind is incidental to what it tests: swapped to docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md — same chosen location, an admitted kind, and a real shape of store file (it is one of the seven strings in the decision's measured evidence). The arm still fails if the root resolves to the enclosing workspace, which is the whole point of it. Reason recorded in the test_spec description so the fixture is not 'corrected' back to a .yaml. criteria and its matching descriptor changed; title, depends_on, req_status, level, readiness, work_status, priority, components, it_requirements and notes unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

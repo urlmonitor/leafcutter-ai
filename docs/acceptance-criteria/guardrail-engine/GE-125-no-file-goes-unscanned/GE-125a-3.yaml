@@ -83,7 +83,7 @@ doc_links:
     relationship: context
     status: exists
     relevance: "The BA's cited precedent for how a review-verified documentation record is expressed in this component: test_required false, with the documentation check itself recorded in it_requirements rather than left as an empty test slot."
-assigned_agent: documentation-expert
+assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
@@ -136,7 +136,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
+change_target: prompt
 risk_surface: contract_boundary
 notes: |
   THIS DISCHARGES GE-125a's documentation_triggers OF [reference-doc]. The L1's

@@ -47,7 +47,23 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-08-19
-amended_by: []
+amended_by:
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'THE ADMITTED-KIND LIST DECISION IS MADE: the acceptance-criteria store SHALL be
+      scanned for opaque credentials. The admitted prose kinds shrink from .md/.yaml/.yml/.txt
+      to .md and .txt, so docs/acceptance-criteria/**.yaml no longer inherits the location
+      exemption. Rewrote the "ALSO UNRESOLVED, AND A PRODUCT DECISION" paragraph in notes as a
+      closed-decision record: how it was left open, the decision and its date and authority,
+      the measured evidence (58 findings across 48 files, 1.4% of 3,260 records; 7 distinct
+      strings all of them file paths, scoring 4.51-4.56; zero real credential markers in the
+      same sweep; existing .security-allowlist precedent for the path-slug false-positive
+      class), what did NOT change (the location list, and Rule 2 the TICKET-/EPIC-
+      residual-entropy filter), what moved as a result, and the GE-123d-2 kind-list divergence
+      the change creates. History preserved rather than deleted. No other field on this record
+      altered — criteria, title, level, work_status, priority, component, components,
+      depends_on and covered_by unchanged.'
 superseded_by: null
 covered_by:
   - GE-125a
@@ -207,14 +223,86 @@ notes: |
     because that would couple four L1s to each other's delivery order for a reason
     that disappears the moment the passage exists.
 
-    ALSO UNRESOLVED, AND A PRODUCT DECISION RATHER THAN A DRAFTING ONE: GE-125b-3
-    fixes the admitted kinds as .md, .yaml, .yml, .txt — matching GE-123d-2 so the
-    two sides stay compatible. Admitting .yaml means this repository's own AC store
-    keeps its exemption and its YAML is never scanned for opaque tokens. That
-    preserves today's behaviour rather than changing it, and removing .yaml would
-    strip an entire intended location's exemption as a side effect. If closing the
-    store was intended, the list shrinks to .md/.txt and GE-125b-1-i's second
-    fixture arm inverts. Do not decide this silently in implementation.
+  THE ADMITTED-KIND LIST WAS ALSO A PRODUCT DECISION, AND IT WAS TAKEN ON
+    2026-08-25: THE ACCEPTANCE-CRITERIA STORE SHALL BE SCANNED. It is written out
+    here in full, including the state it was left in, because a decision with its
+    history deleted reads afterwards as an assumption nobody made.
+
+    HOW IT WAS LEFT OPEN, AND BY WHOM. GE-125b-3 originally fixed the admitted
+      kinds as .md, .yaml, .yml and .txt — deliberately the same four GE-123d-2
+      chose for its own proposed exemption, so the two sides would stay
+      compatible. Admitting .yaml meant this repository's own acceptance-criteria
+      store kept its exemption and its YAML was never scanned for opaque tokens.
+      That preserved the behaviour of the day rather than changing it, and the
+      argument for leaving .yaml in was that removing it would strip an entire
+      intended location's exemption as a side effect of a decision about
+      executable code. The choice was recorded as OPEN in this paragraph and
+      fenced by an it_requirement on GE-125b-3 forbidding a coder, reviewer or
+      test-writer from settling it either way. That record also named, in advance,
+      exactly what would move if it were closed — the list shrinks to .md/.txt,
+      GE-125b-3's first arm gains a finding, and GE-125b-1-i's second fixture arm
+      inverts — and all three predictions held.
+
+    THE DECISION, TAKEN 2026-08-25 BY THE PRODUCT OWNER. The store SHALL be
+      scanned. The admitted prose kinds are .md and .txt. A .yaml or .yml file no
+      longer inherits the location exemption, so docs/acceptance-criteria/**.yaml
+      is scanned by the shapeless-value rule from now on.
+
+    THE EVIDENCE IT WAS TAKEN ON — MEASURED AGAINST THE REAL SCANNER, NOT
+      ESTIMATED. The scanner was run over all 3,260 store records with the
+      location exemption disabled and the TICKET-/EPIC- residual-entropy filter
+      still applying.
+        - 58 findings across 48 files: 1.4% of the store.
+        - 7 distinct strings, and every one of them is a file path. The top three
+          are a created_by value naming an acceptance-criteria YAML record (20
+          occurrences), a doc_links path naming a component PROJECT_CONTEXT.md
+          (14), and a doc_links path naming an agent PROJECT_CONTEXT.md (10).
+        - They clear the 4.5 threshold at 4.51-4.56, and only because a long
+          slash-separated path has high character diversity.
+        - A sweep of the same 3,260 files for real credential markers — AWS, PEM,
+          GitHub, Stripe, Slack, Google, JWT, connection strings, Anthropic,
+          OpenAI — returned zero hits.
+        - Precedent for suppressing the residue already exists: .security-allowlist
+          carries an ENTROPY_HIGH:docs/build-dataflow.json:* glob for this exact
+          path-slug false-positive class.
+      So the cost of closing the store is one small, bounded, well-understood
+      false-positive shape with an established suppression precedent, and the
+      benefit is that the store stops being a place a real opaque token can be
+      committed unexamined.
+
+    WHAT DID NOT CHANGE, AND MUST NOT BE CHANGED IN PASSING.
+        - THE LOCATION LIST IS UNTOUCHED. The four locations still receive reduced
+          scrutiny; only the kind gate narrows. docs/acceptance-criteria/ stays on
+          the location list, and removing it is a different decision nobody has
+          taken.
+        - RULE 2 SURVIVES EVERYWHERE. A line carrying a TICKET- or EPIC- token
+          whose residual entropy is below the threshold remains exempt regardless
+          of location and regardless of kind. That filter is not path-gated, and it
+          is why the measured number is 58 rather than 625. No criteria anywhere in
+          this tree may imply that store lines carrying ticket identifiers now
+          report.
+
+    WHAT MOVED AS A RESULT, exactly as GE-125b-3 predicted: GE-125b-3's kind list,
+      its first arm and its drift-guard descriptor; GE-125b-1-i's
+      acceptance-criteria fixture arm, which inverted from silent to reported;
+      GE-125b-3-i's inherited fence and expects_from contract; GE-125b-4's
+      documentation obligation, whose constraint inverted from "must not imply the
+      store is scanned" to "must state that it is"; GE-125b-1's expects_from
+      contract; GE-125b's decomposition note; and GE-125a-2's acceptance-criteria
+      fixture, which was a .yaml asserting silence and is now a .md so the control
+      stays true after GE-125b lands. The fence on GE-125b-3 was NOT removed — it
+      now records the decision as MADE and forbids reopening it without the same
+      authority.
+
+    A DIVERGENCE THIS CREATES, RECORDED RATHER THAN TIDIED. GE-123d-2 chose the
+      same four kinds for a different and still-PROPOSED exemption
+      (GENERIC_SECRET), and GE-125b-3 matched it on purpose so the two would stay
+      compatible. After this change the two lists differ: .md/.txt on this side,
+      .md/.yaml/.yml/.txt on that one. GE-123d-4-i requires that if the location
+      data is ever shared between the two exemptions, the kind gate is applied on
+      both sides — sharing now additionally requires reconciling the two kind lists
+      first. The divergence is recorded in GE-125b-3's notes. No GE-123 file was
+      edited: the fence holds, and this is a note on our side only.
 
   Authored at the PO stage; L0/L1 only. The BA decomposes to L2/L3 and the
   IT PO adds the technical constraints. No L2, no test_spec and no
