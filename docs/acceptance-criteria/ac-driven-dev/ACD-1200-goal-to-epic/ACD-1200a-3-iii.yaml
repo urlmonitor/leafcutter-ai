@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-3.yaml"
 criteria: |
@@ -96,3 +96,31 @@ test_spec:
     description: "Invoke the derivation via --dry-run and via a real run for the same title; assert the reported/created folder name is byte-for-byte identical."
 change_target: pipeline
 risk_surface: internal
+notes: |
+  REOPENED 2026-08-25 (was work_status: done, readiness stays approved). Filed as KI-ACD-010
+  and KI-ACD-019. The criterion says the derived folder name "contains only ASCII alphanumeric
+  characters". ASCII punctuation is not stripped, so a comma survives into the folder name, the
+  AC store and Master_Plan.
+
+  Reproduced inside this criterion's own Given (a title containing an em-dash):
+
+      _to_pascal_case('Ship parts tree - the fast path, quickly')
+        -> 'ShipPartsTreeTheFastPath,Quickly'      [em-dash in the real input]
+
+  Root cause, scripts/goal_to_epic.py:245 -- `if ord(ch) < 128: result.append(ch)` passes every
+  ASCII character through untouched, so the em-dash handling the criterion describes works
+  while ordinary punctuation does not. :306 then splits only on whitespace, hyphen and
+  underscore, so the comma is never a word boundary either.
+
+  Why the tests missed it: all three in unit_tests/ac_driven_dev/test_acd_1200a_3_iii.py assert
+  result.isascii(), which is True for a comma. The one assertion that would have caught it,
+  result[-1].islower() or result[-1].isdigit(), sits in the truncation test and is only ever
+  fed em-dash titles. "ASCII" was tested; "alphanumeric" was not.
+
+  Note the scope of the criterion is wider than the em-dash case its Given names -- the second
+  clause says "and any surrounding stray punctuation". Closing this means stripping or
+  boundary-normalising non-alphanumeric ASCII generally, not adding a comma to a deny-list.
+
+  Related but NOT the same defect: KI-ACD-011 (truncation ending on a dangling preposition) is
+  a genuine gap with no AC, and the code cites ACD-1200a-6 for it -- an id that does not exist
+  in the store. See KI-ACD-019.
