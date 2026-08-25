@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given a component is purely internal (it exposes no contracts
     consumed by other components),
@@ -30,6 +30,35 @@ it_requirements:
   - "Must treat empty array [] as a valid explicit declaration"
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_acs_300i_2_every_registry_entry_declares_exposed_interfaces
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Load the REAL docs/components.json and assert every entry declares exposed_interfaces, with [] accepted as an explicit declaration. Measured 2026-08-25: 45 entries, 9 declaring — this must be RED on HEAD. The criteria say the validator rejects ANY entry where the field is absent or null; a validator accepting 36 such entries does not."
+  - name: test_acs_300i_2_empty_array_is_accepted_and_null_is_not
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The distinction the criteria turn on: [] means 'considered, none found' and passes; null and absence each fail by name. Collapsing the three cases is the likely wrong fix, because it makes the whole registry pass without anyone considering anything."
+  - name: test_acs_300i_2_validator_reports_the_registry_total_not_just_its_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Same scope-honesty assertion as its sibling ACS-300h-1: a run over a change containing one compliant entry must state both what it examined and the registry total, so a narrow verdict can never be read as a registry-wide all-clear."
+test_rationale: |
+  Identical failure shape to ACS-300h-1 and it must not be closed the same way twice.
+  The existing covering test exercises validator logic on synthetic entries; it passes
+  regardless of the real registry's state, which is why 36 violations sat under a done
+  record.
+
+  The real-artifact descriptor is expected RED on HEAD. The boundary descriptor exists
+  because the cheapest way to turn the first one green is to stop distinguishing [] from
+  absent — which would satisfy the letter of the count while destroying the property the
+  AC is about.
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
@@ -40,3 +69,15 @@ implemented_by:
   - templates/scripts/commit_guardian/check_components_integrity.py
 change_target: code
 risk_surface: internal
+notes: |
+  REOPENED 2026-08-25 (was work_status: done, readiness stays approved — the requirement is
+  right, the implementation does not meet it). The criteria say the validator rejects ANY
+  entry where exposed_interfaces is absent or null. docs/components.json has 45 entries and
+  9 declare the field, so 36 absent entries are currently accepted. Counts verified directly
+  against the file, not inferred.
+
+  Same root cause as its sibling ACS-300h-1 and same instance of KI-CG-001: the rejection
+  logic exists in check_components_integrity.py but runs only over components present in the
+  diff, and the script states that pre-existing drift is accepted. A validator that accepts
+  36 violations is not rejecting "any" entry. Close it by backfilling or by narrowing the
+  criteria to state the weaker guarantee honestly — not by observing that the hook is quiet.

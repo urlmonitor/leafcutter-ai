@@ -8,7 +8,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 created_by: "tickets/00_inbox/TICKET-20260602-wire_workflows_infra_and_parity_test.md"
 criteria: |
   Given the workflows output directory contains a file named "obsolete-script.js"
@@ -37,3 +37,19 @@ implemented_by:
   - scripts/build_phases.py
 change_target: pipeline
 risk_surface: internal
+notes: |
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-BP-010. The stale-artifact removal
+  phase never reaches the workflows directory, so the criteria have never once been exercised
+  against it.
+
+  scripts/build_phases.py sets _MANAGED_ARTIFACT_DIRS with the workflows value ".claude/workflows",
+  then joins each value onto a base already resolved to <target>/.claude. The workflows branch
+  therefore probes <target>/.claude/.claude/workflows, which does not exist, hits the
+  `if not managed_dir.exists(): continue` guard, and returns silently. The other three entries
+  ("agents", "skills", "hooks") are bare names and resolve correctly, which is why the defect
+  is invisible: the phase reports success and is right about three of its four directories.
+
+  The function's own docstring still describes three managed subdirectories, so the workflows
+  entry was added without the docstring or the covering test following it. tests/test_build_clean.py
+  passes without ever entering the workflows branch — a test can cover this AC's id and still
+  never execute the path the AC is about. Re-fix must assert the resolved path, not the outcome.

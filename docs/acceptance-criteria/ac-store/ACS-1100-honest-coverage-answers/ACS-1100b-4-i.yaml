@@ -1,0 +1,82 @@
+id: ACS-1100b-4-i
+components:
+  - ac_store
+title: "A backfill in progress is a declared, dated, shrinking exclusion — never an open-ended one"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b-4.yaml
+criteria: |
+  Given 36 of the 45 registry entries do not yet declare a field a rule requires,
+  And that backfill is under way across several changes while the validator keeps
+    running,
+  When the validator reports its result during the backfill,
+  Then the outstanding entries are declared under a ground that names the backfill,
+    states the count outstanding, and states the date that count was measured —
+    "36 outstanding, measured 2026-08-25, backfill in progress",
+  And the declaration names the record that owns the backfill, so the exclusion is
+    traceable to work someone is accountable for rather than standing on its own,
+  And the declared count may fall between runs and may not rise: a run reporting 37
+    outstanding against a previously recorded 36 reports a failure naming both
+    figures and the date of each,
+  And a declaration carrying a count with no measurement date, or a date with no
+    count, or no owning record, is treated as no ground at all under ACS-1100b-4 and
+    the entries it covers are reported as an unexplained shortfall,
+  And this ground does not make the verdict an unqualified all-clear: a verdict over
+    an answer carrying 36 outstanding is stated as clear for 9 of 45, per ACS-1100d-2,
+  And a backfill declaration that has reached 0 outstanding is removed rather than
+    left in place reading zero, so a finished backfill cannot be mistaken for a
+    standing exemption by the next reader.
+depends_on:
+  - ACS-1100b-4
+doc_links:
+  - path: docs/components.json
+    relationship: related
+    status: exists
+    relevance: "The population this exclusion would be declared over: 45 entries, 9 compliant, 36 outstanding as counted on 2026-08-25."
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: related
+    status: exists
+    relevance: "The shipped precedent for the shape: a declared count with a measurement date, backed by a ratchet that fails the build when the count rises. Copy the shape rather than inventing a second one."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: related
+    status: exists
+    relevance: "The ratchet behind that precedent (a recorded high-water mark). It demonstrates the may-fall-never-rise rule already working in this repository."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: internal
+notes: |
+  WHY THIS EXISTS. ACS-1100b-4 removes the ground that a validator is relying on
+  today. Removing it with nothing in its place would leave a project that has
+  decided to backfill 36 entries with two options, both bad: halt on every run until
+  the backfill finishes, or go back to saying nothing. This L3 is the third option,
+  and it is the one the repository has already shipped once elsewhere — a declared
+  count, a measurement date, and a ratchet that only lets the number fall.
+
+  THE LOAD-BEARING DIFFERENCE from the ground ACS-1100b-4 forbids is that this one
+  is finite and observable. Age is permanent and invisible: nothing about it ever
+  changes, so nobody ever looks again. A dated, owned, monotonically shrinking count
+  is a piece of work with a end, and a reader can tell from the answer alone whether
+  it is moving.
+
+  NOT A GENERAL EXEMPTION MECHANISM. This ground is available while a named record
+  is backfilling a named population. It is not available for "we have decided this
+  rule only applies going forward" — that is the narrowing decision, and per
+  ACS-1100d-5 it is made by rewording the requirement, in the open, not by declaring
+  an exclusion on the answer.

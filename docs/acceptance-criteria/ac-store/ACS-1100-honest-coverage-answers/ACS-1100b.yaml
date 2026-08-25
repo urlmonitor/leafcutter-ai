@@ -37,6 +37,7 @@ superseded_by: null
 covered_by:
   - ACS-1100b-1
   - ACS-1100b-2
+  - ACS-1100b-4
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: >-
@@ -71,6 +72,16 @@ notes: |
   legitimate when the scope is DECLARED and the store total is reported alongside
   the scope total — otherwise it becomes the laundering channel it was added to
   prevent.
+
+  AGE IS NOT A GROUND (added 2026-08-25, BA, via ACS-1100b-4). The NEGATIVE half of
+  the list above had one entry missing, and it is the one a validator in this
+  repository is relying on today: check_components_integrity.py checks only the
+  components appearing in the diff and records that existing components with no
+  diff are not checked, legacy state accepted. That is an exclusion of 36 of 45
+  registry entries whose only ground is that the records pre-date the rule.
+  ACS-1100b-4 rules it out before ACS-1100e-1 writes the published list, and
+  ACS-1100b-4-i supplies the honest alternative for a backfill actually in progress
+  — a declared, dated, owned count that may fall and may not rise.
 
   ALREADY SATISFIED, FOR ONE SURFACE ONLY (2026-08-18, PO). KM-ADM-005's shipped
   edge note is a method record in all but name, and it is the SAME exclusion ground
