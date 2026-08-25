@@ -1,0 +1,154 @@
+id: ACS-100i-11
+components:
+  - ac_store
+title: "The 40 records the new rule would refuse are corrected in the same change that introduces the rule, and before it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the 40 records the producer-name rule would refuse — 24 that name
+    something that is not an agent at all (23 reading `finalize-feature-workflow`,
+    which is a workflow script, and 1 reading `create-ticket`, a slash command
+    retired by ADR-012) and 16 whose value is a registered agent's name wrapped
+    in literal quote characters,
+  When the correction is applied,
+  Then each of those 40 records is written to disk carrying a producer that the
+    agent registry lists, chosen to match the surface that record changes,
+  And no other record's producer value is written at all.
+
+  And given the corrected store,
+  When every record in it is validated in one pass,
+  Then no record is refused for naming a producer the registry does not list,
+    and the pass states how many records it examined, so the result cannot be
+    an empty run reported as a clean one.
+
+  And given the correction and the rule are part of one change,
+  When the rule is applied to the store as it stood before the correction,
+  Then it refuses 40 records — which is why the correction is applied first
+    within that change, and why the rule is never introduced against a store it
+    would immediately reject.
+
+  And given the store-wide sweep that the project's own instructions prescribe
+    before a finalization drive,
+  When it is run after this change lands,
+  Then it reports clean on this rule, and it did so without any record being
+    exempted from the rule.
+depends_on:
+  - ACS-100i
+  - ACS-100i-9
+  - ACS-100i-9-i
+doc_links:
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+    relevance: "The 60 registered ids the 40 corrected values must be drawn from."
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Retired /create-ticket. The single record naming `create-ticket` as its producer is a fossil of that retirement."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "Decision 3, prerequisite 1 — no producer joins the fast lane's roster until assigned_agent is validated against the registry. ADR-035 section 1 already counts these same 23 + 1 records."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-9
+  contract: "The rule whose refusal set defines exactly which records this correction must touch. The correction is scoped by the rule's own verdict, not by a hand-copied list."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  This is a data correction, so the temptation is to verify it by reading the
+  diff. That is not evidence — a diff shows what was edited, not whether the
+  store now satisfies the rule, and it cannot show that nothing else moved.
+
+  The covering test must EXECUTE the validator over the real
+  `docs/acceptance-criteria/` tree at the implementing commit and assert a zero
+  exit with a stated non-zero count of records examined. Asserting the exit code
+  alone is insufficient and specifically dangerous here: until 2026-08-19 this
+  validator printed success and exited 0 when its arguments resolved to zero
+  files, which is exactly the shape a "the store is clean now" test would take
+  (KI-ACS-001). The test must fail if the reported examined-count is zero.
+
+  Prove the rule still bites after the correction, or a correction that worked
+  by weakening the rule passes: in the same test run, add one record carrying an
+  unregistered producer to a COPY of the corrected store and assert the pass
+  refuses exactly that one record, by file path. A store-wide green with no
+  negative control cannot distinguish a repaired store from a disabled rule.
+
+  Prove the blast radius. Capture every record's producer value before and after
+  the correction and assert the set of changed records is exactly the 40, with
+  no other field on any record altered. Re-measure the 40 at the implementing
+  commit rather than pinning this number: it drifts as other work lands, and a
+  test that hard-codes 40 without re-measuring fails for the wrong reason.
+
+  Prove the ordering claim rather than asserting it in prose: run the rule
+  against the pre-correction store (from git, not a reconstruction) and assert
+  it refuses 40 records. Without that, the "correction first" instruction is a
+  comment, not a tested property.
+declares_side_effect: true
+notes: |
+  WHY THIS IS THE SAME CHANGE AS THE RULE, NOT A SEPARATE ONE.
+
+  The naive argument — "the rule cannot land green while invalid records exist"
+  — is not quite true here, and the real argument is better. The required CI
+  check "AC store valid" is DIFF-SCOPED to the pull request (ci.yml, job
+  `ac-store-valid`, which runs `pre-commit run check-ac-schema` and five
+  siblings after a `reset --soft` to the base ref). It is a forward ratchet. So
+  a rule added to the commit-guardian path would in fact land green with all 40
+  bad records still in the store; they would only bite whoever next touched one
+  of them.
+
+  The store-wide entry point is where it matters. `validate_ac_schema.py` over
+  `docs/acceptance-criteria/` is the sweep CLAUDE.md prescribes before a
+  finalization drive, and it is not diff-scoped. Introduce the rule without the
+  correction and that sweep is red from the first run on 40 records the runner
+  did not author and cannot be expected to fix. A permanently-red hygiene tool
+  gets skipped, then removed, then documented as "known noise" — which is the
+  exact history of KI-ACS-001, and of the ACS-200h whole-store CI gate that is
+  deliberately still unimplemented because 57 pre-existing orphans would make it
+  red on day one.
+
+  So: one change, correction applied first within it. Splitting them gives you
+  either a correction with no regression guard (it rots immediately) or a rule
+  with a red sweep (it gets switched off). Neither half is worth landing alone.
+
+  WHAT THE CORRECTED VALUES SHOULD BE is left to enrichment, but the rule for
+  choosing them is not: each of the 40 takes a registered agent id matching the
+  surface that record changes. No record is corrected by deleting the field or
+  setting it null — that would move it from "wrong producer" into the 743-record
+  "no producer declared" population and launder a known-bad value into an
+  unremarkable silence. `finalize-feature-workflow` is a workflow script, not an
+  agent; the 23 records naming it describe work on that script and want the
+  agent that actually writes it.
+
+  MEASURED ON THIS BRANCH at 2026-08-25 (the brief's figures, re-verified):
+  `finalize-feature-workflow` 23 records (14 quoted, 9 unquoted); `create-ticket`
+  1 record (quoted); quote-wrapped duplicates of registered names
+  `"python-coder"` x10, `"test-failure-triage"` x5, `"documentation-expert"` x1.
+  24 fail on registry membership; 16 more fail only on quoting; 40 in total.
+  `test-failure-triage` IS a registered agent — only its quoted spelling is
+  wrong.
+
+  ORDERING BEYOND THIS CHANGE: nothing here should be read as clearing the way
+  for the fast lane to dispatch on the field. ADR-035 Decision 3 names this
+  criterion's parent rule as prerequisite 1 of three, the other two being
+  BO-2400f-12's up-front refusal and a lane that can finish one run end to end.
+  Deciding which registered agents may legally be a build phase is likewise a
+  separate change, and ADR-035 Decision 1 has already settled that it will be a
+  hand-written closed roster rather than the registry's 60 or its 24
+  `is_ticket_phase` agents.

@@ -1,0 +1,119 @@
+id: ACS-100i-9-i
+components:
+  - ac_store
+  - commit_guardian
+  - agent_registry
+title: "A producer name wrapped in literal quote characters is refused as the distinct value it is, not quietly unwrapped"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given 16 records in the store whose declared producer carries literal
+    double-quote characters inside the value itself — 10 reading
+    `"python-coder"`, 5 reading `"test-failure-triage"` and 1 reading
+    `"documentation-expert"` — none of which string-match their unquoted twins,
+  When any one of them is checked at either entry point,
+  Then it is refused, and the refusal shows the value exactly as it stands and
+    names the unquoted form as the value to use instead.
+
+  And given that same record,
+  When the check finishes,
+  Then the record still carries the value it had — the check reports the
+    problem and leaves the correction to an author, so what a reader sees in
+    the file is always what a dispatcher would act on.
+
+  And given a record whose declared producer reads `python-coder` with no quote
+    characters in the value,
+  When it is checked,
+  Then it is accepted, and it and one of the 16 are not treated as two
+    different producers by anything that groups records by producer.
+depends_on:
+  - ACS-100i-9
+doc_links:
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Also documents the generated agent cards, which group ACs by assigned_agent — the surface a quoted duplicate silently splits."
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-9
+  contract: "The registry-membership rule and its two entry points. This criterion fixes the input normalisation that decides whether that rule ever sees a matchable name."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  Grepping the validator for a quote-stripping expression is not evidence: it
+  cannot tell a rule that runs from one that is defined and never reached, and
+  it says nothing about which of the two possible behaviours (refuse vs.
+  normalise) actually happens.
+
+  Execute the validator against a real on-disk fixture store containing all
+  three quoted spellings that exist in the live store, byte-for-byte as PyYAML
+  emits them, and assert a non-zero exit that names each offending record by
+  file path. Do NOT hand-type the fixture as an indented literal: the repo has
+  already shipped a parser that was a complete no-op on every real record
+  because the synthetic fixtures reproduced an indentation bias the real
+  serializer does not have (EPIC-PhantomDoneFilesTouched). Round-trip the
+  fixture through the same writer the store uses.
+
+  The no-mutation scenario needs its own assertion, because it is the one a
+  normalising implementation would silently violate while still passing the
+  refusal test: read the fixture file back after the run and assert its bytes
+  are unchanged.
+
+  Assert the negative too — an unquoted `python-coder` record in the same
+  fixture store must pass in the same run. Without that, an implementation that
+  refuses everything passes the positive test.
+
+  Guard the empty run: assert on the count of records the run reports examining,
+  not only on the exit code (KI-ACS-001 — the store-wide validator printed
+  success on a run that resolved to zero files for eight days while the
+  instruction to use it was already in CLAUDE.md).
+declares_side_effect: false
+notes: |
+  DECISION: refuse, do not normalise. Three reasons, in order of weight.
+
+  1. Every downstream reader does an exact string match, and they are spread
+     across two languages. `generate_ticket_from_ac.py` uses the value as a dict
+     KEY in the phase map; `build-feature.js` dispatches `agentType: phaseName`
+     from that map; the agent cards group records by the raw value; the fast lane
+     is about to join them. A normaliser would have to be replicated at every
+     read site, and the one site that gets missed fails open — silently, in the
+     dispatcher. A rule that refuses at authoring time has exactly one site.
+
+  2. Normalising makes the text on disk differ from the value the system acts
+     on. That gap is the entire class of defect this AC set exists to close;
+     reintroducing it as the fix would be self-defeating.
+
+  3. The correction is a two-character edit, and there are 16 of them. The cost
+     of refusing is trivial; the cost of a silently-normalised store is a value
+     nobody can grep for.
+
+  COUNTS ARE FROM THE LIVE STORE at 2026-08-25 on branch
+  acs-assigned-agent-validation: `"python-coder"` x10, `"test-failure-triage"`
+  x5, `"documentation-expert"` x1. All three unquoted names ARE registered
+  agents, which is why these 16 are separated from the 24 in ACS-100i-11 that
+  name something that is not an agent at all — different defect, same field.
+  Re-measure at implementation time; the numbers drift as other work lands, and
+  a test that pins 16 without re-measuring will fail for the wrong reason.
+
+  WHY THIS IS AN EDGE CASE AND NOT A SECOND RULE: quoting does not make the name
+  wrong, it makes it unmatchable. Left unhandled, a registry-membership rule
+  would refuse `"python-coder"` with the message "no agent named
+  \"python-coder\" is registered", which is true, useless, and sends the author
+  looking for a missing agent instead of a stray quote. The value this criterion
+  adds is the message, not the refusal.

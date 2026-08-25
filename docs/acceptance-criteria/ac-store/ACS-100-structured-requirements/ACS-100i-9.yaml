@@ -1,0 +1,163 @@
+id: ACS-100i-9
+components:
+  - ac_store
+  - commit_guardian
+  - agent_registry
+title: "A record naming a producer that is not a registered agent is refused, and both the commit-time gate and the store-wide pass reach the same rule"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the agent registry, which lists 60 agents by id,
+    And a record whose declared producer reads `finalize-feature-workflow` — a
+    name the registry does not list,
+  When that record is changed and the commit-time acceptance-criteria check runs,
+  Then the check refuses it, and the refusal names the record's file path, the
+    offending value, and the fact that no agent by that name is registered.
+
+  And given that same record,
+  When every record in the store is validated in one pass,
+  Then it is refused there too, with the same message — one rule, reached from
+    both entry points, rather than each entry point carrying its own copy that
+    can drift from the other.
+
+  And given a record whose declared producer reads `python-coder`, and another
+    whose declared producer reads `test-failure-triage`,
+  When either is checked at either entry point,
+  Then it is accepted.
+
+  And given one further agent is added to the registry and nothing else is
+    edited anywhere,
+  When a record naming that newly registered agent is checked,
+  Then it is accepted — the acceptable vocabulary is read from the registry at
+    check time, and no second, hand-maintained list of agent names decides the
+    verdict.
+depends_on:
+  - ACS-100i
+doc_links:
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+    relevance: "The vocabulary this rule validates against. 60 agents at authoring time; the rule must read the file rather than pin the number."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Line 51 currently documents assigned_agent as an unconstrained 'string or null'. Shipping this rule without amending that row leaves the written schema contradicting the enforced one."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "Decision 3 names this criterion as prerequisite 1: no producer joins the fast lane's roster until assigned_agent gets the same referential-integrity treatment components already receives."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100i-9-i
+  - ACS-100i-9-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A test that greps a validator source file for a rule name, a constant, or an
+  error string is not evidence. It passes on dead code, on a rule that is
+  defined and never called, and on a rule wired into an entry point nobody runs
+  — which is the precise failure this criterion exists to prevent one level
+  down.
+
+  The covering tests must EXECUTE the validator. Build a real on-disk fixture
+  store: one record carrying `assigned_agent: finalize-feature-workflow`, one
+  carrying `assigned_agent: python-coder`, one carrying
+  `assigned_agent: test-failure-triage`. Run the validator against it as a
+  process and assert (a) a non-zero exit, (b) the offending record's file path
+  and the offending value both appear in the output, and (c) the two valid
+  records are not named. Then run it against a store containing only the valid
+  records and assert a zero exit.
+
+  Both entry points must be exercised independently — the commit-time check and
+  the store-wide pass — against the SAME fixture, asserting the same verdict and
+  the same message. A test that exercises only one of them cannot detect the
+  drift this criterion's second scenario is about, and the two surfaces have
+  drifted before (ACS-200e).
+
+  Registry-read must be proven, not assumed: add an agent id to a fixture
+  registry, re-run, and assert a record naming it is now accepted. A test that
+  only checks the currently-registered names passes equally on a hard-coded
+  allow-list.
+
+  Guard the empty run. Until 2026-08-19 the store-wide validator printed success
+  and exited 0 when its arguments resolved to zero files, so a sweep that
+  checked nothing was indistinguishable from a clean one (KI-ACS-001). Every
+  test here must assert on a stated count of records examined, not merely on the
+  exit code, or a regression that makes the rule unreachable will read as green.
+declares_side_effect: false
+notes: |
+  WHERE THE RULE HAS TO LIVE, and why the obvious answer is wrong.
+  `scripts/ac_store/validate_ac_schema.py` is NOT what the required CI check
+  "AC store valid" runs. That job (.github/workflows/ci.yml, job `ac-store-valid`)
+  runs `pre-commit run check-ac-schema` and five sibling hooks, diff-scoped to the
+  PR; `validate_ac_schema.py` appears in no CI job at all. It is the manual
+  store-wide sweep CLAUDE.md prescribes, plus a step in quick-fix.js. So a rule
+  added only to `validate_ac_schema.py` does NOT become a merge gate, and a rule
+  added only to the hook is invisible to the sweep.
+
+  The `components` precedent already solved this shape and is the one to copy:
+  the rule itself lives in a shared helper (`scripts/ac_store/_ac_components.py`,
+  functions `load_registry_ids` + `components_field_errors`) which callers import.
+  The equivalent here is a single shared agent-name helper imported by BOTH the
+  commit-guardian path (`templates/scripts/commit_guardian/_ac_schema_validators.py`,
+  which `check_ac_schema.py` imports and which the required CI check therefore
+  runs) and `validate_ac_schema.py`. One rule, two entry points, no drift. Note
+  the deploy-manifest trap: a new module imported by a guardian hook must be added
+  to the build deploy map or the deployed hook raises ModuleNotFoundError and
+  blocks every merge (CLAUDE.md, "New Hook / Gate Dependencies").
+
+  THE FIELD ALREADY REACHES LIVE DISPATCH, so this is not preventative hygiene.
+  `generate_ticket_from_ac.py` writes the value verbatim into the generated
+  ticket's phase map (`agents_legacy[assigned_agent] = "needed"` at ~line 1116,
+  and `all_needed.add(assigned_agent)` at ~line 964 on the computed path), and
+  `templates/workflows-js/build-feature.js:1498` dispatches `agentType: phaseName`
+  from that map. A fourth consumer exists that is easy to miss: the generated
+  agent cards group ACs by `assigned_agent` (docs/reference/ac-schema.md,
+  agent-cards section), so an unrecognised or differently-spelled value silently
+  splits an agent's backlog.
+
+  A THIRD AGENT VOCABULARY EXISTS AND IS OUT OF SCOPE HERE, but should be named
+  so it is not mistaken for settled: `_ac_schema_validators.py` hard-codes
+  `_CODER_AGENTS = {"python-coder", "sql-coder", "frontend-coder"}` (~line 56)
+  and never consults the registry, and `generate_ticket_from_ac.py` keeps its own
+  `_KNOWN_CODERS`. Deriving those from the registry's `produces` field is a
+  separate change; this criterion only makes the NAME valid, not the ROLE.
+
+  WHAT THIS UNBLOCKS (deliberately not specified here):
+  - Letting the fast lane dispatch the producer a criterion names, instead of
+    hard-coding one coder. ADR-035 Decision 3 makes this criterion prerequisite 1
+    of three; the other two are BO-2400f-12's up-front refusal, and KI-BO-019 /
+    KI-BO-020 being fixed so the lane can complete one end-to-end run.
+  - Deciding WHICH registered agents may legally be a build phase. The registry
+    cannot express this today: exactly 24 of the 60 agents carry
+    `is_ticket_phase: true` and that set is identical to `phaseOrder` in
+    build-feature.js (lines 284-308, verified — 24 entries), but ADR-035 measured
+    17 agent templates self-declaring "internal — invoked by X only" in
+    contradiction with their registry `spawned_by` (the brief said 19; ADR-035
+    reports 17 measured and notes 19 as reported-but-unverified), and 2 registry
+    entries have no deployed template at all (`architect-review-deep`,
+    `conflict-resolver-deep`). ADR-035 Decision 1 has already settled that the
+    dispatchable set will be a hand-written closed roster, NOT the 60 and not the
+    24. So this rule validates membership of the 60 only — it is deliberately not
+    a dispatchability check, and must not be implemented as one.
+  - Any change to the proof chain for non-code deliverables (ADR-035 Decision 2,
+    which is itself blocked on `doc_links.relationship` gaining an enum).

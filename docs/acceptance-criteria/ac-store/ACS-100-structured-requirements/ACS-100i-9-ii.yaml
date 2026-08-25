@@ -1,0 +1,104 @@
+id: ACS-100i-9-ii
+components:
+  - ac_store
+  - commit_guardian
+  - agent_registry
+title: "When the agent registry cannot be read, the check says it did not run instead of passing quietly"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the agent registry cannot be read — the file is absent, empty, or not
+    parseable,
+  When a record whose declared producer reads `finalize-feature-workflow` is
+    checked at the commit-time entry point,
+  Then it is not refused on that ground, so a single broken registry cannot
+    block every commit in the repository,
+  And the same run states that the producer-name check did not run, and why.
+
+  And given the same unreadable registry,
+  When every record in the store is validated in one pass,
+  Then the run's summary states that the producer-name check did not run over
+    any record, and a reader can tell that outcome apart from a run in which
+    every record was checked and passed.
+
+  And given the registry is readable again and nothing else has changed,
+  When the same record is checked,
+  Then it is refused.
+depends_on:
+  - ACS-100i-9
+doc_links:
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The catalogue this criterion is a guard against: a check whose silence is indistinguishable from a pass."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-9
+  contract: "The registry-membership rule whose fail-open path this criterion makes audible."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+test_required: true
+test_rationale: |
+  This criterion is entirely about the difference between two outcomes that a
+  grep-based or exit-code-only test cannot tell apart: "checked everything,
+  found nothing wrong" and "could not check anything". Any test that asserts
+  only `exit == 0` passes on both, and therefore proves nothing here.
+
+  Execute the validator three times against the same real on-disk fixture store,
+  varying only the registry: (1) registry file deleted, (2) registry present but
+  containing `{}`, (3) registry present and valid. In cases 1 and 2 assert a
+  zero exit AND assert the captured output contains a statement that the
+  producer-name check was skipped, naming the reason. In case 3 assert a
+  non-zero exit naming the offending record. The three-way comparison is the
+  test; no single run demonstrates the property.
+
+  Assert on the reported count of records examined in every case (KI-ACS-001):
+  a run that examined zero records must not be reportable as a pass, and the
+  skip message must not be produced by a run that simply had no input.
+
+  Do the same for both entry points. The commit-time hook family is documented
+  fail-open and several of its members ignore argv entirely, reading the git
+  index or HOOK_TEST_FILES instead — so a test that passes a path on the command
+  line may be asserting against a run that never saw the file. Verify the hook
+  actually saw the fixture (assert the file path appears in its output on the
+  refusal case) before trusting any exit code from it.
+declares_side_effect: false
+notes: |
+  This is the guard on the guard, and it is not hypothetical in this repository.
+
+  The `components` precedent this rule copies skips its registry check when the
+  registry is empty — `components_field_errors` does exactly that, deliberately,
+  so an unreadable `docs/components.json` never blocks all commits. That is the
+  right call. What the precedent does NOT do is say so. Copying it verbatim
+  would produce a rule that is correct and inaudible.
+
+  Two documented incidents make the cost concrete. GE-120 named the case: a hook
+  that could not RUN AT ALL took the fail-open path and reported SUCCESS, making
+  "green" indistinguishable from "did not run". KI-ACS-001 is the same shape in
+  the other direction: the store-wide validator exited 0 on a bare directory,
+  and the CLAUDE.md instruction that prescribed exactly that invocation was
+  therefore a no-op for eight days while reporting clean.
+
+  The distinction to preserve, from the ac-store PROJECT_CONTEXT: fail-open on
+  an INTERNAL ERROR (registry unreadable, parse failure) stays; the
+  always-block-on-a-REAL-violation posture of ACS-100i-9 must NOT be relaxed to
+  a warning. These are orthogonal and must not be collapsed into each other
+  during implementation.

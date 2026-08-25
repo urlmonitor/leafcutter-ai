@@ -1,0 +1,134 @@
+id: ACS-100i-10
+components:
+  - ac_store
+  - ac_driven_dev
+title: "A record that declares no producer is a state you can ask the store about, not a silence you discover one ticket at a time"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store as it stands, in which 743 records declare no producer — 506
+    of them by leaving the field out and 237 by setting it to null,
+  When the store is asked which of its records declare no producer,
+  Then it answers with all 743, and it treats the two spellings as one state:
+    leaving the field out and setting it null both mean "no producer declared",
+    and neither is reported as a different condition from the other.
+
+  And given that answer,
+  When the number it reports is compared with the number of records it looked
+    at,
+  Then the two are stated together, so a run that looked at nothing reports
+    that rather than reporting no records without a producer.
+
+  And given the same answer narrowed to the records that are actually
+    buildable — the 93 of those 743 that sit at leaf level,
+  When it is broken down by the kind of change each record declares,
+  Then it separates the 4 that declare a prompt change and the 8 that declare a
+    documentation change from the rest, because those 12 are the ones a
+    code-producing default is certainly wrong for.
+
+  And given any one of the 743 records,
+  When a ticket is generated from it,
+  Then the producer used is `python-coder`, exactly as it was before this
+    change, and the generated ticket reports that the producer was defaulted
+    rather than declared, so the default is visible on the artifact that acts
+    on it.
+depends_on:
+  - ACS-100i
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Line 51 describes assigned_agent as 'string or null' with no statement of what null or absence MEANS. That sentence is what this criterion has to write."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/ac-driven-development.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100i-10-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The claim under test is a count over the REAL store, so a fixture-only test
+  cannot establish it — the property is a property of the corpus. Follow the
+  ACS-100i-7 precedent: run the query over `docs/acceptance-criteria/` as it
+  exists at the implementing commit and assert the reported totals, having
+  re-measured them at that commit. Pinning 743 / 506 / 237 / 93 / 4 / 8 without
+  re-measuring will fail for the wrong reason as other work lands, and a test
+  that fails for the wrong reason gets deleted.
+
+  Pair that with a fixture-store test that CAN be pinned, so the two together
+  distinguish "the query is right" from "the store happens to contain these
+  numbers": a small on-disk store with a known mix of absent, null and declared
+  producers, asserted exactly.
+
+  Assert the absent/null equivalence directly, with two fixture records that
+  differ ONLY in whether the key is present-and-null or missing, and assert the
+  query classifies them identically. An implementation that reports only one of
+  the two spellings passes every aggregate count test if the other spelling
+  happens to be rare.
+
+  Assert the examined-count is reported alongside the answer and that a run over
+  an empty directory reports zero-examined rather than "no records without a
+  producer" (KI-ACS-001 — the store-wide validator reported success from a run
+  that checked nothing for eight days, while CLAUDE.md prescribed exactly that
+  invocation).
+
+  For the last scenario, execute the ticket generator against a record with no
+  declared producer and assert `python-coder` appears in the generated ticket's
+  phase list AND that the generated ticket states the producer was defaulted.
+  Asserting only the first half would pass on the current, silent behaviour;
+  asserting only the second would pass on an implementation that broke the
+  fallback. Both halves, one run.
+declares_side_effect: false
+notes: |
+  THE FALLBACK STAYS. 743 records rely on it and removing it would refuse them
+  all. This criterion does not touch it — it makes the state the fallback
+  papers over askable, which is the prerequisite for ever retiring it.
+
+  FUTURE CRITERION, deliberately not specified here: once the population of
+  records with no declared producer is visible and shrinking, the
+  `python-coder` default in `generate_ticket_from_ac.py` should be replaced by a
+  refusal, so a record that declares no producer cannot become a code ticket by
+  omission. That change is only safe after the population has been driven down;
+  authoring it now would specify a change that immediately refuses 743 records.
+
+  CORRECTION TO THE BRIEF'S NUMBERS, measured on this branch at 2026-08-25.
+  The brief states "~64 leaves with change_target: prompt and ~22 with
+  change_target: docs" among the unannotated records. The `docs` figure of 22 is
+  right but the "leaves" qualifier is not, and the difference matters:
+    - Across ALL 743 unannotated records at every level: 71 declare a prompt
+      change, 22 declare a documentation change.
+    - Restricted to L2/L3 leaves — the only records the generator ever turns
+      into a ticket — there are 93 unannotated records in total, of which just 4
+      declare a prompt change and 8 declare a documentation change.
+  So the silent `python-coder` default mis-routes 12 buildable records, not 86.
+  The remaining 59 prompt-change and 14 docs-change records are L0/L1
+  composites, which are never generated into a ticket and for which "no
+  producer" is the correct and expected state. That is a far smaller and more
+  tractable repair than the brief assumed, and it is the reason this criterion
+  reports the leaf breakdown separately rather than reporting one flat total
+  that would overstate the problem by seven times.
+
+  Store total is 3,379 records on this branch (the brief said 3,345 — it has
+  grown by 34).
+
+  WHAT THIS UNBLOCKS: the fast lane dispatching the producer a criterion names.
+  It cannot do that safely while "no producer declared" is a state nobody can
+  count, because the size of the population that would silently fall back is
+  unknown at the moment the switch is flipped.

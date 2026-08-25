@@ -1,0 +1,110 @@
+id: ACS-100i-10-i
+components:
+  - ac_store
+  - ac_driven_dev
+title: "Setting the producer to null lands on the same default as leaving it out, instead of putting a nameless phase into a ticket"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two records identical in every respect except that one sets its
+    producer to null and the other leaves the field out entirely,
+  When a ticket is generated from each,
+  Then both tickets name `python-coder` as the producer, and their phase lists
+    are the same.
+
+  And given a record that sets its producer to null and declares neither a
+    change target nor a risk surface,
+  When a ticket is generated from it and the ticket's phase list is inspected,
+  Then no entry in that list is nameless — today the default applies only when
+    the field is missing, so a field that is present and null reaches the phase
+    list as an entry with no agent name, which nothing can be dispatched
+    against.
+
+  And given the 18 records that currently set their producer to null while
+    declaring no change target, none of which sits at leaf level,
+  When the store is scanned for buildable work,
+  Then none of them is offered as buildable, and that is true both before and
+    after this change.
+depends_on:
+  - ACS-100i-10
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-10
+  contract: "The single meaning of 'no producer declared'. This criterion makes the code agree with that meaning; without it the two spellings still behave differently."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+test_required: true
+test_rationale: |
+  A test that asserts `python-coder` appears in the generated ticket for a
+  record with an ABSENT producer proves nothing about the null case — that is
+  exactly the pair the current code treats differently, and testing only the
+  common spelling is how the divergence survived. The covering test must
+  generate from BOTH fixture records in one run and assert the two phase lists
+  are equal, not merely that each contains `python-coder`.
+
+  The nameless-phase scenario must be asserted on the generated artifact, not on
+  the function's return value in isolation. Generate the ticket to disk from a
+  null-producer, no-change-target record and assert that every entry in the
+  written phase list has a non-empty agent name. Asserting on an in-memory dict
+  can miss it: the key survives serialization as an empty or null-named phase,
+  and it is the serialized ticket that `build-feature.js` reads and dispatches
+  `agentType: phaseName` from.
+
+  Write the fixture the way the store writes records — through the same YAML
+  writer, with `assigned_agent:` and no value — rather than as a hand-typed
+  indented literal. The repo has shipped a parser that was a total no-op on
+  every real record because synthetic fixtures reproduced a formatting bias the
+  real serializer does not have (EPIC-PhantomDoneFilesTouched).
+
+  For the third scenario, run the real scanner over the real store at the
+  implementing commit and assert none of the 18 is returned as buildable,
+  re-measuring the 18 at that commit. Assert on the count of records the scan
+  examined as well, so a scan that returned nothing because it read nothing
+  cannot pass as a scan that returned nothing because there was nothing to
+  return (KI-ACS-001).
+declares_side_effect: false
+notes: |
+  THE DEFECT, verified by reading the code on this branch rather than inferred.
+  `generate_ticket_from_ac.py` reads the field as
+  `ac.get("assigned_agent", "python-coder")` at three call sites (~lines 2456,
+  3195, 3235). `dict.get` returns the default only when the KEY IS ABSENT. When
+  the key is present with a null value it returns `None`, so the fallback never
+  applies. That `None` then reaches the phase map on both code paths:
+  `all_needed.add(assigned_agent)` on the computed path (~line 964) and
+  `agents_legacy[assigned_agent] = "needed"` on the legacy path (~line 1116).
+
+  SEVERITY, measured rather than assumed. On the computed path the map is built
+  by iterating `phase_order`, so a `None` in `all_needed` is dropped — the
+  record simply gets no producer phase at all, which is quiet but not corrupt.
+  The legacy path has no such filter and would emit a literally nameless phase.
+  Of the 237 records that set the field to null, 18 declare no change target
+  (and so would take the legacy path), and NONE of those 18 sits at leaf level —
+  so nothing in the store reaches the nameless-phase branch today. This is a
+  LATENT defect, not a live one, and it is recorded as such deliberately: the
+  first null-producer leaf authored with no change target makes it live, and by
+  then the cause is three files away from the symptom.
+
+  WHY THIS IS AN EDGE CASE OF ACS-100i-10 AND NOT ITS OWN L2: the parent decides
+  that absent and null mean one thing. This criterion is what "mean one thing"
+  costs in code. Split apart, the parent could ship as a reporting change while
+  the two spellings continued to behave differently, which is the version of the
+  fix that looks done and is not.
