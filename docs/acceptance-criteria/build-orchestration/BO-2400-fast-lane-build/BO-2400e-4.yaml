@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -243,3 +243,29 @@ notes: |
   way rather than naming one, because both satisfy the criteria. Assigned python-coder
   (single surface, no mixed-surface caveat); object-form it_requirements is mandated by
   the schema's root if/then for python-coder + build-orchestration.
+
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-BO-022 and KI-BO-025. The criterion
+  says "every other part of the record keeps its original text and its original position", and
+  the it_requirements say "no other line in the file may differ, including whitespace". Line
+  endings are not preserved.
+
+  scripts/build_orchestration/fast_lane.py: the read at :266 is
+  yaml_path.open(encoding="utf-8") and the durable write at :186 is
+  os.fdopen(tmp_fd, "w", encoding="utf-8"). Neither passes newline="", so Python's universal
+  newline handling reads CRLF as LF and writes LF back. A single work_status flip on a CRLF
+  record therefore rewrites all 154 lines. Line numbers re-checked after PR #541 landed
+  BO-2400e-3's durable write in this same file; the defect is unchanged, only the addresses
+  moved.
+
+  STATED PLAINLY BECAUSE IT AFFECTS PRIORITY: current exposure is ZERO. No record in the store
+  has CRLF endings today, and this record's own notes already recorded the hole in writing. It
+  is a phantom by the letter of the criterion, not a concealed one, and it is the least urgent
+  of the six found in this triage. It is reopened rather than left alone because the criterion
+  as written is false, and because the population is one contributor's git config away from
+  being non-empty.
+
+  Related: KI-BO-021 records that this AC was closed on two of its four specified tests, and
+  the two missing ones are the pair that would survive a writer swap. Its amended_by says so
+  explicitly ("closed on partial coverage by explicit decision, not because the spec was met in
+  full"), which is why that was classified as an honest partial rather than a second phantom.
+  Closing this properly means both the newline fix and those two tests.

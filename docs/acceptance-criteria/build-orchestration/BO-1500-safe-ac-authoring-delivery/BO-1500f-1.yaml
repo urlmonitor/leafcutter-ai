@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
 criteria: |
   Given an AC-authoring run reaches the step that sets up its isolated authoring workspace,
@@ -97,3 +97,30 @@ notes: |
   Re-homed 2026-08-14 from BO-1500a-4 to BO-1500f-1 by the Pattern C intermediate split
   of BO-1500a. Criteria text is unchanged. BO-1500a-5 and BO-1500a-8 remain under
   BO-1500a and now depend on this AC across the f/a boundary.
+
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-ACD-009 and KI-ACD-019. The
+  criterion requires that the workflow "dispatches it to an agent whose registered charter
+  permits running repository and shell commands". Given worktree-agent, which
+  config/agent_registry.json:1364-1368 gives "permits_shell": true, it does not dispatch at
+  all -- it halts first and blames the charter.
+
+  templates/workflows-js/plan-feature.js:1747-1773 reads the registry by dispatching an agent
+  to `cat {{config.output_root}}/config/agent_registry.json`. config/skills_config.default.json
+  sets output_root to ".leafcutter", and that path is resolved relative to the session cwd, so
+  inside a worktree it does not exist. The result is collapsed at :1770 into permitsShell =
+  false and the run returns status: "error" naming an agent "whose registered charter does not
+  permit" shell -- a claim about the charter derived from a failed file read. A read failure, a
+  parse failure and an API error are indistinguishable from a genuine denial.
+
+  Why the test missed it: unit_tests/workflows/test_bo_1500f_1.py:176-196 stubs the registry
+  read via label_responses, supplying the real registry JSON for free. The one operation that
+  fails in production -- resolving and reading that path -- is the one the harness never
+  performs. The AC's own test_rationale claims every test observes a real dispatch under the
+  harness; that is true of the setup dispatch and false of the registry read the verdict
+  depends on.
+
+  This sits downstream of BO-1500e-2 (work_status: in_progress), whose it_requirements already
+  name the fix for the shared cause: resolve the repo root from the git toplevel of the
+  invocation cwd. KI-ACD-004 is the same bug reaching a different file. Fixing e-2 properly
+  should close this; verify rather than assume, and replace the stub with a test that lets the
+  real path resolution run.

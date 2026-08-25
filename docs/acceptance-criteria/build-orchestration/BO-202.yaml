@@ -32,8 +32,34 @@ criteria: |
   Then the sign-off comment lists each auto-fix action performed
     (AC ID, fields updated, values added) for auditability
 level: L2
-work_status: done
+work_status: todo
 origin_agent: BrainCandy
+notes: |
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-ACD-003 and KI-ACD-019.
+
+  The criterion says the gate "populates covered_by with test file paths from the diff that
+  contain a '# covers: <AC-ID>' tag matching this AC's ID". It carries no L2-only qualifier
+  and no directory qualifier, and it says FROM THE DIFF. Two independent reasons the
+  implementation cannot honour it, both in templates/agents/ac-fulfillment-gate.md:
+
+    :227-229  "### 3c. Auto-fix covered_by (L2 ACs only)"
+    :201      "L3 ACs: skip this check (empty covered_by is permitted)"
+    :232      the tag search is  grep -r "# covers: <AC-ID>" tests/
+
+  So an L3 AC is skipped outright, and for anything else only tests/ is searched. Observed on
+  ACD-1900b-5-i, which is L3: the gate returned ok, left covered_by: [], and all six of its
+  "# covers:" tags were in unit_tests/ac_driven_dev/ -- a directory the grep never visits.
+  done_proof.verify_done_eligible independently returned eligible: True with all five test
+  node-ids listed, so the proof existed and was discoverable; the gate simply did not write it.
+
+  Why it survived: BO-202's only covered_by entry, tests/test_ac_fulfillment_gate.py, holds 18
+  tests and every one of them is a frontmatter or registry assertion -- test_model_is_sonnet,
+  test_priority_is_11_7, and so on. Not one exercises the auto-fix this criterion is about.
+
+  BO-201 is NOT falsified by the same defect and should not be reopened alongside it: its
+  equivalent clause explicitly exempts L3 ACs, so it is honestly satisfied. Closing BO-202
+  means either extending the gate to L3 and to unit_tests/, or narrowing this criterion to
+  match BO-201's wording -- and stating which was chosen.
 superseded_by: null
 amended_by: []
 implemented_by:

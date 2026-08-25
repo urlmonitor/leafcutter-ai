@@ -1,0 +1,135 @@
+id: GE-122a-4
+title: "A component minting a new identifier enumerates every identifier already taken, and returns one that is not"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+  - ac_driven_dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a namespace whose already-claimed identifiers are held in two different shapes at the
+    same time:
+    - "GE-120" is declared by a record that a FEATURE FOLDER owns, and no record at the
+      namespace root declares it,
+    - "GE-114-1", "GE-114-2", "GE-114-3", "GE-114-4" and "GE-115" are declared by LOOSE records
+      that sit at the namespace root and belong to no feature folder,
+  And "ACS-1100b-3" is an identifier that NO record declares and that five live records still
+    cite by name,
+  When a component mints a new identifier for that namespace,
+  Then the set of taken identifiers it computes contains every identifier declared by a record
+    at ANY depth beneath the namespace root — the folder-owned one and the loose ones alike,
+  And that set also contains "ACS-1100b-3", which is taken by citation although no record
+    declares it,
+  And the identifier it returns belongs to neither set,
+  And it states how many records it enumerated and how many identifiers it found taken, so an
+    identifier minted against a partial enumeration is distinguishable from one minted against
+    a complete one.
+
+  And Given the same namespace with EVERY claimed identifier owned by a feature folder and no
+    loose record at the namespace root at all,
+  When a component mints a new identifier for that namespace,
+  Then the identifier it returns is one that none of those folders already holds — so a
+    component that enumerates only the records sitting directly at the namespace root cannot
+    satisfy this criterion.
+
+  And Given an identifier whose every claimant has been retired, so no record declares it, while
+    live records still cite it,
+  When a component mints a new identifier for that namespace,
+  Then the returned identifier is not that one — so a component that decides an identifier is
+    free because no record currently declares it cannot satisfy this criterion either.
+
+  Coverage note: covered only by a test that executes the minting step against a real on-disk
+  namespace holding all three shapes at once — a folder-owned identifier, loose identifiers at
+  the namespace root, and an identifier that is cited but declared by nothing — and asserts on
+  the identifier actually returned. A namespace whose identifiers are all one shape cannot
+  distinguish a complete enumeration from either of the two incomplete ones this criterion
+  excludes, and a test asserting that an enumeration helper exists does not cover it at all.
+depends_on:
+  - GE-122a
+  - GE-122a-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries BOTH halves of this criterion in writing, and they contradict each other. Its ID Format section states that identifiers are never reused and that a retired identifier stays reserved so historical references remain resolvable — the rule this AC makes executable. Its '/quick-fix workflow — ID assignment' section then prescribes the opposite in Step 2: scan the component directory 'non-recursively — only root-level L0 and L1 files; subdirectories are skipped'. That instruction IS the defect in KI-ACD-008, written down as specification. Correcting it belongs to the numbering reference GE-122a-3 writes, which re-points this document; this AC is the executable counterpart and must not be satisfied by a documentation edit alone."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: context
+    status: exists
+    relevance: "KI-ACD-008 records the folder-blind enumeration and the live duplicate it minted on main on 2026-08-25. It also records that a manually-run authoring agent avoided the same trap only because it was told to scan both surfaces — the behaviour this AC requires by construction rather than by prompt luck."
+  - path: docs/acceptance-criteria/guardrail-engine/PROJECT_CONTEXT.md
+    relationship: context
+    status: exists
+    relevance: "Its 'SECOND id collision, on GE-120 this time' section records the second incident in two days from the same cause, and the three reusable rules the repair established — including that an identifier free by ADR-029's both-tests rule can still be the wrong identifier to mint."
+  - path: docs/conventions/adr-numbering.md
+    relationship: context
+    status: exists
+    relevance: "Carries the operative free-number rule this criterion's second exclusion encodes: an identifier is free only when it has NEITHER a record NOR a citation. 'No record declares it' is the wrong test, and it is the one that converts a dangling reference into a confidently wrong one."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-122a-1
+  contract: "The definition of a claimed identifier and the enumeration of the whole collection that produces it, so the component that MINTS an identifier and the pass that REPORTS a collision cannot disagree about which identifiers are taken. Two definitions of taken is the second-definition failure GE-122d-1 forbids."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-122a-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE GAP THIS CLOSES. Every other child of GE-122 is a DETECTOR. GE-122a-1 runs a
+  whole-collection pass and reports numbers claimed twice; GE-122a-2 reports one work item held
+  in two lifecycle folders; GE-122c reports them well; GE-122d runs them at three stages;
+  GE-122e repairs what already drifted. Not one of them places an obligation on the component
+  that CHOOSES a new identifier. Detection after the fact is not allocation, and the L1's own
+  criteria are written in the allocation voice — "the number you give it is yours alone".
+
+  WHY THIS IS PARENTED UNDER GE-122a AND NOT GE-122b. GE-122b's promise is enrolment: that new
+  work joins the numbering rather than sitting outside it. A component that mints an identifier
+  someone else already holds SATISFIES that promise — the artifact took a number. What it
+  breaks is GE-122a's promise, that the number identifies exactly one thing. This AC is the
+  prospective face of GE-122a-1's retrospective one: the pass says a collision exists, this says
+  one is not created. GE-122b's own doc_link on the diagram allocator records that allocator as
+  already correct and frames GE-122b's contribution as telling an author to USE it — a different
+  concern from whether an allocator's answer is right.
+
+  NOT A DUPLICATE OF GE-122a-1, AND IT CANNOT BE SATISFIED BY IT. GE-122a-1's verdict answers
+  "is some number claimed twice". It never answers "which number is free", which is the only
+  question a minting component asks. The two must nonetheless share ONE definition of a claimed
+  identifier, which is what the expects_from contract pins — if the pass counts a cited-but-
+  undeclared identifier as taken and the allocator does not, the allocator will mint identifiers
+  the pass then blocks.
+
+  THE TWO EXCLUSIONS ARE BOTH MEASURED, NOT HYPOTHETICAL, and both are live in ONE namespace.
+  Verified 2026-08-25 in guardrail-engine: GE-120 is owned by a feature folder with no loose
+  record at the namespace root, so a root-only scan does not see it — that is exactly the
+  enumeration that reissued GE-120 sixteen hours after a 43-file tree took it. In the same
+  namespace GE-114-1 through GE-114-4 and GE-115 sit loose at the root, owned by no folder, so
+  the mirror error — a folder-only scan — under-reports too. Any enumeration that is not
+  depth-agnostic is wrong in one direction or the other here.
+
+  THE SECOND EXCLUSION IS THE ONE THAT LOOKS LIKE PEDANTRY AND IS NOT. Verified 2026-08-25:
+  ACS-1100a-4, ACS-1100b-3, ACS-1100c-3 and ACS-1100d-3 are declared by no record in the store
+  and are cited by name in five live records that describe them as former siblings. A component
+  that tests freedom by asking whether a record declares the identifier will report all four as
+  free. Reissuing one does not create a dangling reference — it creates a reference that
+  resolves confidently to the wrong record, which is strictly worse and strictly harder to
+  notice.
+
+  WHAT IS DELIBERATELY NOT HERE. Concurrency is not in this criterion. The two observed
+  incidents were sixteen and twenty-four hours apart, not concurrent, and an atomicity rule for
+  minting is already specified elsewhere in the store for the quick-fix path. Adding a second
+  statement of it here would be the second definition GE-122d-1 forbids. If a concurrent mint is
+  later observed, that is new work under its own record.
