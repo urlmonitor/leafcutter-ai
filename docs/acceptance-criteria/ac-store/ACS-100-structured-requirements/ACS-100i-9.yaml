@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -73,7 +73,7 @@ doc_links:
   - path: scripts/build_phases.py
     relationship: modifies
     status: exists
-    relevance: "build_ac_store's deploy_map (~line 878). Any module a guardian hook imports must be listed there or the deployed hook raises ModuleNotFoundError. _ac_components.py is itself ABSENT from that list today while the deployed validate_ac_schema.py imports it at module scope — verified 2026-08-25; close both gaps in this change."
+    relevance: "build_ac_store's deploy_map (~line 878). Any module a guardian hook imports must be listed there or the deployed hook raises ModuleNotFoundError. _ac_components.py is itself ABSENT from that list today while the deployed validate_ac_schema.py imports it at module scope — verified 2026-08-25 and filed as KI-BP-016; close both gaps in this change."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
@@ -95,15 +95,16 @@ it_requirements:
     - "ONE RULE, ONE MODULE. The rule body lives in a NEW shared module scripts/ac_store/_ac_agents.py, mirroring scripts/ac_store/_ac_components.py: load_agent_ids(registry_path=None) -> set[str] and assigned_agent_field_errors(data, agent_ids, raw_text=None) -> list[str]. Neither entry point may hold its own copy of the membership test or its own message string. scripts/ac_store/validate_ac_schema.py imports it exactly as it already imports _ac_components (sys.path[0] is the script dir); templates/scripts/commit_guardian/check_ac_schema.py imports it by inserting <root>/scripts/ac_store on sys.path alongside its existing _ac_schema_validators import. A single format string, defined in the helper, is what makes the two messages identical rather than merely similar."
     - "THE COMMIT-TIME CALL MUST SIT IN THE UNCONDITIONAL BLOCK, NOT IN validate_manually(). Verified in check_ac_schema.py::_validate_file: when jsonschema and PyYAML are both importable the jsonschema verdict is authoritative and the schema_validated flag suppresses validate_manually() entirely (lines 605-614, GE-112). A rule added to validate_manually() is therefore INERT on every real commit in this repo. Put the call in the unconditional block at lines 616-625, which runs whichever parse path was taken — the seam validate_test_contract() and validate_declares_side_effect() already use."
     - "NO SECOND LIST IN THE JSON SCHEMA. Do NOT add an enum of agent names to the assigned_agent declaration in config/ac_store_schema.json (line 254). The final scenario of this criterion — one agent added to the registry, nothing else edited anywhere, a record naming it accepted — is precisely what a schema enum breaks. Its oneOf must stay string|null; only the description may be amended to name the registry and the rule. Amend docs/reference/ac-schema.md line 51 in the same change so the written contract stops describing the field as unconstrained."
-    - "DEPLOY MANIFEST, SAME CHANGE, OR THE REQUIRED CHECK CRASHES. _ac_agents.py MUST be added to build_ac_store's deploy_map in scripts/build_phases.py (~line 878) in this change. The guardian hook runs from the DEPLOYED layout, so a module present only in the source tree raises ModuleNotFoundError at hook runtime — and because 'AC store valid' is a REQUIRED status check, that crash blocks every merge. This is the done_proof.py failure verbatim (CLAUDE.md, 'New Hook / Gate Dependencies'). While there, close the pre-existing gap: _ac_components.py is not in that deploy_map although the deployed validate_ac_schema.py imports it at module scope. Verify by running scripts/build.py and then executing the DEPLOYED hook; the unit tests import from source and cannot see this."
+    - "DEPLOY MANIFEST, SAME CHANGE, OR THE DEPLOYED SWEEP CRASHES. _ac_agents.py MUST be added to build_ac_store's deploy_map in scripts/build_phases.py (~line 878) in this change. The guardian hook runs from the DEPLOYED layout, so a module present only in the source tree raises ModuleNotFoundError at hook runtime — the done_proof.py failure verbatim (CLAUDE.md, 'New Hook / Gate Dependencies'). While there, close the pre-existing gap filed as KI-BP-016: _ac_components.py is not in that deploy_map although the deployed validate_ac_schema.py imports it at module scope, so in a consumer install the store-wide sweep CLAUDE.md prescribes dies at import and the documented store-rot defence never starts. Verify by running scripts/build.py and then executing the DEPLOYED script; the unit tests import from source and cannot see this."
     - "REGISTRY PATH RESOLUTION MUST COVER BOTH LAYOUTS. load_agent_ids() resolves config/agent_registry.json the way _ac_components.default_registry_path() resolves docs/components.json (three parents up from the module file), and must additionally fall back to <root>/.leafcutter/config/agent_registry.json, which is where a deployed install puts it (verified present at that path in the local deployed workspace). A resolution that only works inside the package repo makes the deployed hook skip the check permanently — the silent failure ACS-100i-9-ii exists to make audible."
     - "MEMBERSHIP ONLY, NEVER DISPATCHABILITY. The accepted vocabulary is every `id` in the registry's `agents` array — verified 60 entries, of which exactly 24 carry is_ticket_phase: true. The rule must NOT filter on is_ticket_phase, deprecated, portable, tier or produces; ADR-035 Decision 1 has already settled that the dispatchable roster is a separate, hand-written set. Likewise do not derive _CODER_AGENTS (_ac_schema_validators.py line 56) or _KNOWN_CODERS (generate_ticket_from_ac.py line 146) from the registry here — a ROLE check is a different change and would silently alter which records the test-contract gate applies to."
     - "The refusal must name three things the helper already holds: the record's file path, the offending value exactly as read, and the fact that no registered agent carries that name. A message reading only 'invalid assigned_agent' sends the author to the schema instead of to the registry."
     - "Reading the registry is external I/O: wrap it in try/except (OSError, ValueError) and log at WARNING — never a bare except, never a silent pass (repo error-handling policy; Ruff E722/BLE001/TRY). The pure in-memory comparison of a parsed value against a set must NOT be wrapped (policy Rule 4)."
-    - "ORDERING IS PART OF THIS CRITERION'S SAFETY, NOT A COURTESY. This rule must not be enabled ahead of ACS-100i-11's correction of the records it would refuse. Within the single change, the correction hunks land FIRST and the rule second. Enabling the rule first leaves the store-wide sweep CLAUDE.md prescribes red on records the runner did not author — which is how a hygiene tool becomes 'known noise' and is then removed (KI-ACS-001; the ACS-200h whole-store gate is still unimplemented for exactly this reason)."
+    - "ORDERING IS PART OF THIS CRITERION'S SAFETY, NOT A COURTESY. This rule must not be enabled ahead of ACS-100i-11's correction of the 24 records it would refuse. Within the single change, the correction hunks land FIRST and the rule second. Enabling the rule first leaves the store-wide sweep CLAUDE.md prescribes red on records the runner did not author — which is how a hygiene tool becomes 'known noise' and is then removed (KI-ACS-001; the ACS-200h whole-store gate is still unimplemented for exactly this reason)."
+    - "A QUOTED-BUT-VALID NAME IS NOT A VIOLATION OF THIS RULE. `assigned_agent: \"python-coder\"` is ordinary YAML double-quoting and parses to `python-coder`, so the membership test accepts it and must keep accepting it. The 16 records written that way in the store are semantically correct. What they expose — that the PyYAML reader and the no-PyYAML fallback reader hand this helper two different strings for the same record — is ACS-100i-9-i's subject, and it is fixed at the reader, not by refusing the record here."
 delivers_to:
   agent: python-coder
-  contract: "A shared module scripts/ac_store/_ac_agents.py exposing load_agent_ids(registry_path=None) -> set[str] and assigned_agent_field_errors(data, agent_ids, raw_text=None) -> list[str], plus an explicit run-state signal distinguishing 'checked' from 'not checked, because <reason>'. Imported unmodified by both entry points: scripts/ac_store/validate_ac_schema.py::_validate_file and templates/scripts/commit_guardian/check_ac_schema.py::_validate_file (unconditional block, lines 616-625). ACS-100i-9-i extends the same function with the raw-source quote rule; ACS-100i-9-ii consumes its not-checked signal; ACS-100i-11 scopes its correction set from its verdict."
+  contract: "A shared module scripts/ac_store/_ac_agents.py exposing load_agent_ids(registry_path=None) -> set[str] and assigned_agent_field_errors(data, agent_ids, raw_text=None) -> list[str], plus an explicit run-state signal distinguishing 'checked' from 'not checked, because <reason>'. Imported unmodified by both entry points: scripts/ac_store/validate_ac_schema.py::_validate_file and templates/scripts/commit_guardian/check_ac_schema.py::_validate_file (unconditional block, lines 616-625). ACS-100i-9-i guarantees the value handed to this helper is the same under both readers; ACS-100i-9-ii consumes its not-checked signal; ACS-100i-11 scopes its correction set from its verdict."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-25
@@ -154,13 +155,19 @@ test_spec:
     type: integration
     angle: boundary
     description: "An id absent from the shipped registry is added to a fixture registry only; a record naming it is then accepted. Proves the vocabulary is read at check time and fails on any hard-coded or schema-enum allow-list."
+  - name: test_quoted_spelling_of_a_registered_agent_is_accepted
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A record written as assigned_agent with a double-quoted registered name is ACCEPTED by the membership rule, since it parses to that registered name. Guards the over-strict implementation that would refuse the 16 such records already in the store."
   - name: test_deployed_hook_imports_the_shared_module_without_modulenotfound
     target_dir: unit_tests/build_pipeline/
     framework: pytest
     type: integration
     angle: deployed
     surface_invoked: "scripts/build.py --target-dir <tmp>"
-    description: "build.py is run into a temporary target and the DEPLOYED check_ac_schema.py is then executed there; it must import the shared agent module and reach a verdict rather than raising ModuleNotFoundError. Source-tree unit tests cannot see this gap."
+    description: "build.py is run into a temporary target and the DEPLOYED check_ac_schema.py and validate_ac_schema.py are then executed there; both must import their shared modules and reach a verdict rather than raising ModuleNotFoundError (KI-BP-016). Source-tree unit tests cannot see this gap."
 test_rationale: |
   A test that greps a validator source file for a rule name, a constant, or an
   error string is not evidence. It passes on dead code, on a rule that is
@@ -289,7 +296,12 @@ notes: |
      rglob), whereas a new file under `scripts/ac_store/` deploys ONLY if it is
      listed in `deploy_map`.
 
-  4. `_ac_components.py` IS MISSING FROM `deploy_map` TODAY. The deployed
-     `validate_ac_schema.py` imports it at module scope (line 45), so the deployed
-     copy of the sweep cannot run. This is the same defect class the new module
-     must avoid, sitting one import away from it — fix both together.
+  4. `_ac_components.py` IS MISSING FROM `deploy_map` TODAY — filed as KI-BP-016
+     and confirmed live: the deployed copy raises
+     `ModuleNotFoundError: No module named '_ac_components'`. Nothing in
+     `.github/workflows/` invokes that script, and in this repo `scripts/` is
+     source, so the package's own CI is unaffected. In a CONSUMER install
+     `scripts/` IS the deployed copy, and CLAUDE.md's AC-store hygiene section
+     prescribes exactly that command — so the documented store-rot defence cannot
+     start at all for any consumer. Same defect class as the new module, one
+     import away; fix both together.

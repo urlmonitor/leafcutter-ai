@@ -3,13 +3,13 @@ components:
   - ac_store
   - commit_guardian
   - agent_registry
-title: "A producer name wrapped in literal quote characters is refused as the distinct value it is, not quietly unwrapped"
+title: "Both readers of the store yield the same producer name, whatever quoting the record was written with"
 component: ac-store
 level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -43,43 +43,44 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
-    relevance: "Also documents the generated agent cards, which group ACs by assigned_agent — the surface a quoted duplicate silently splits."
+    relevance: "Also documents the generated agent cards, which group ACs by assigned_agent — a surface that would split an agent's backlog in two if the two readers ever disagreed about the value."
   - path: templates/scripts/commit_guardian/_ac_schema_validators.py
     relationship: modifies
     status: exists
-    relevance: "Holds the two quote-preserving parsers: load_yaml_manual (lines 87-109) and the ImportError fallback inside load_yaml_from_string (lines 137-145). Both do value.strip() on the raw text and never unquote, so on the no-PyYAML path the value literally carries the quote characters. On the PyYAML path it does not. That split is why the rule needs raw source text."
+    relevance: "Where the defect is and where the fix goes. Both fallback parsers keep the quote characters because they only strip whitespace: load_yaml_manual line 105 (`result[key.strip()] = value.strip()`) and the ImportError branch of load_yaml_from_string line 144. yaml.safe_load on the same line returns the bare name, so the two readers hand the producer rule two different strings for one record."
   - path: scripts/ac_store/validate_ac_schema.py
-    relationship: modifies
+    relationship: related
     status: exists
-    relevance: "_validate_file must pass the file's raw text to the shared helper alongside the parsed dict; today it passes only the parsed dict."
+    relevance: "The store-wide entry point holds a Path and can therefore supply raw source text to the shared helper for the reconciliation diagnostic; it is not where the reader defect lives."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   config_schema_fragment:
-    assigned_agent_quote_rule:
+    fallback_reader_scalar_normalisation:
       type: object
-      description: "Extension of the shared helper's signature: assigned_agent_field_errors(data, agent_ids, raw_text=None). When raw_text is supplied the helper additionally inspects the record's own `assigned_agent:` source line and refuses a scalar wrapped in a matched pair of literal quote characters, reporting {offending_value: str (verbatim, quotes included), suggested_value: str (the unwrapped form), file_path: str}. When raw_text is None the quote rule does not run and the helper says so rather than reporting a pass."
-  reference_file_path: "scripts/ac_store/validate_ac_schema.py"
-  n_location_rule: "1"
+      description: "The behaviour the two fallback parsers must gain so their output agrees with yaml.safe_load: a scalar wrapped in a MATCHED pair of literal quote characters (both double or both single) yields the value without them; every other spelling is returned exactly as today. Applied generically in the reader, not per-field. The shared helper keeps its optional raw_text parameter, repurposed from refusal to RECONCILIATION: {handed_value: str, parsed_value: str, readers_agree: bool} — when they disagree the helper reports a reader-disagreement diagnostic naming both, and never refuses the record for being quoted."
+  reference_file_path: "templates/scripts/commit_guardian/_ac_schema_validators.py"
+  n_location_rule: "2"
   required_skills:
     - python-coder
   post_write_commands:
     - "python scripts/build.py --target-dir ."
     - "python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria"
   constraints:
-    - "THE PARSED VALUE HAS NO QUOTES — THIS RULE MUST READ RAW SOURCE. Measured on this branch 2026-08-25: all 16 records spell the field with ordinary YAML double-quoting in the SOURCE line, and yaml.safe_load returns the bare name. A store-wide scan of PARSED values therefore finds exactly 24 refusable values (23 finalize-feature-workflow + 1 create-ticket), not 40 — the 16 are INVISIBLE to any parsed-value rule. Implement the quote check against the record's own assigned_agent source line and pass that raw text into the shared helper. An implementation that inspects only the parsed dict satisfies its unit tests and does nothing whatsoever to the real store."
-    - "THE SAME RECORD YIELDS TWO DIFFERENT VALUES DEPENDING ON THE PARSER, AND BOTH MUST REFUSE. _ac_schema_validators.load_yaml_manual and the ImportError branch of load_yaml_from_string do value.strip() only — no unquoting — so with PyYAML absent the value carries the quote characters literally. With PyYAML present it does not. The helper must reach the identical refusal on both paths: refuse when the raw source scalar is quote-wrapped, AND refuse when the parsed value itself still carries leading or trailing quote characters. Covering only one path leaves exactly the drift this criterion's parent exists to close."
-    - "REFUSE, NEVER NORMALISE — AND NEVER WRITE. The check reports; it does not edit. Do not add a strip-quotes call to any reader (generate_ticket_from_ac.py, the agent-card grouping, the fast lane), because the read site that gets missed fails open in the dispatcher. Repairing the 16 records is ACS-100i-11's job, applied by an author, not by the validator."
-    - "The refusal message must show the offending value verbatim WITH its quote characters and name the unquoted form as the replacement. The parent's generic membership message is true, useless, and sends the author hunting for a missing agent — the value this criterion adds is the message, not the refusal."
-    - "Handle the single-quote and mixed spellings too. The rule is 'the scalar is wrapped in a matched pair of literal quote characters', not 'the scalar starts with a double quote'. A rule keyed to the double-quote character alone would pass a single-quoted spelling on the manual-parse path."
-    - "Do not couple this to the registry lookup. A quote-wrapped name that is ALSO unregistered — measured: 14 of the 23 finalize-feature-workflow records are quoted — must produce the quote message, not two messages and not the membership message alone. Order the checks so the quote verdict is reported first and is self-explanatory."
-    - "Re-measure the 16 at the implementing commit. The counts drift as other work lands, and a test pinning 16 without re-measuring fails for the wrong reason — a test that fails for the wrong reason gets deleted."
+    - "THE FIX IS IN THE FALLBACK READER; NO RECORD IS REFUSED FOR BEING QUOTED. `assigned_agent: \"python-coder\"` is ordinary YAML double-quoting and yaml.safe_load returns exactly `python-coder`, so all 16 such records are semantically correct and a rule that refused them would refuse valid records. The real defect is that load_yaml_manual (line 105) and the ImportError branch of load_yaml_from_string (line 144) do value.strip() only — never unquoting — so they yield the 14-character string WITH the quotes and the same record gets opposite verdicts depending on which reader ran. Make both readers unwrap a matched surrounding quote pair so the name they yield equals the name the real parser yields."
+    - "THE PARSED VALUE IS THE AUTHORITY WHEN THE TWO COULD DIFFER. A dispatcher acts on the parsed value: generate_ticket_from_ac.py uses it as a phase-map key and build-feature.js dispatches agentType: phaseName from that map. Never resolve a disagreement in favour of the fallback's literal text, and never make the parsed reader keep quotes for symmetry — converge the fallback UP to the parser, not the parser DOWN to the fallback."
+    - "FIX IT IN THE READER, GENERICALLY — NOT AS AN assigned_agent SPECIAL CASE. Both fallback parsers are generic `key: value` readers used for every field on the record. A normalisation applied only to assigned_agent leaves every other field still disagreeing between the two readers, which is the same latent divergence one field over."
+    - "UNWRAP ONLY MATCHED PAIRS, AND ONLY AT THE ENDS. Strip when the first and last characters are the same quote character and the value is at least two characters long. Leave a single leading quote, a single trailing quote, and any internal quote exactly as they are — a value that legitimately contains a quote must survive unchanged."
+    - "DO NOT DISTURB THE OTHER SCALAR COMPENSATIONS ON THIS PATH. The fallback readers also fail to resolve null, booleans, integers and lists — `assigned_agent: null` becomes the STRING \"null\" there, and validate_manually already compensates by treating (None, \"\", \"null\") as missing (line 183). Keep this change to quote-unwrapping only, and re-run the manual-path tests to confirm that guard, the empty-string spelling ACS-100i-10-i depends on, and the components non-empty-list check all still behave."
+    - "NO MUTATION OF ANY RECORD. The check reports and never writes. The 16 quoted lines stay exactly as they are on disk — ACS-100i-11 explicitly does NOT rewrite them, because their parsed value is already a registered agent name and changing them would be a cosmetic edit dressed as a correction."
+    - "KEEP THE HELPER SEAM, REPURPOSED. assigned_agent_field_errors(data, agent_ids, raw_text=None) retains its optional raw_text parameter, but it now RECONCILES rather than refuses: when raw_text is supplied the helper compares the value it was handed against what a real parse of that source line yields and reports a reader-disagreement diagnostic if they differ. That makes a future regression in either reader audible instead of silent. It must never itself refuse a record for carrying quotes."
+    - "Re-measure the 16 at the implementing commit — they are the fixture source for the agreement test, not a refusal count. The numbers drift as other work lands, and a test pinning 16 without re-measuring fails for the wrong reason."
 delivers_to:
   agent: python-coder
-  contract: "The raw-source seam on the shared helper: assigned_agent_field_errors gains a raw_text parameter and both entry points supply it from the file they already hold a Path to. ACS-100i-11's repair reads the same verdict to decide which source lines to unquote."
+  contract: "Quote-unwrapping in both fallback scalar readers (_ac_schema_validators.load_yaml_manual and the ImportError branch of load_yaml_from_string), so the value handed to the producer rule is identical under both readers and equals what yaml.safe_load returns. Plus the reconciliation use of the helper's raw_text parameter, which turns any future reader disagreement into an explicit diagnostic. ACS-100i-9's membership rule consumes the normalised value; ACS-100i-11 relies on this to justify NOT rewriting the 16 quoted records."
 expects_from:
   ac_id: ACS-100i-9
-  contract: "The registry-membership rule and its two entry points. This criterion fixes the input normalisation that decides whether that rule ever sees a matchable name."
+  contract: "The registry-membership rule and its two entry points. This criterion guarantees that rule is handed the same producer name whichever reader parsed the record."
 origin_agent: BrainCandy
 created: 2026-08-25
 amended_by:
@@ -91,36 +92,48 @@ change_target: code
 risk_surface: contract_boundary
 test_required: true
 test_spec:
-  - name: test_quoted_producer_is_refused_on_the_pyyaml_path
-    target_dir: unit_tests/ac_store/
-    framework: pytest
-    type: integration
-    angle: real_artifact
-    description: "With PyYAML available — the real environment, where safe_load strips the quotes — the validator run as a subprocess against a fixture store containing all three quoted spellings exits non-zero and names each offending record by file path. The load-bearing test: a parsed-value-only implementation passes everything else here and fails only this."
-  - name: test_refusal_shows_the_verbatim_value_and_names_the_unquoted_replacement
-    target_dir: unit_tests/ac_store/
+  - name: test_both_readers_yield_the_same_producer_name_for_a_quoted_record
+    target_dir: unit_tests/commit_guardian/
     framework: pytest
     type: unit
     angle: criterion
-    description: "The refusal text contains the value with its quote characters intact and states the unquoted form as the value to use — not the generic 'no agent by that name is registered' message."
+    description: "One fixture record written with a double-quoted registered name is read twice — once via yaml.safe_load and once via load_yaml_manual — and the two producer values are asserted EQUAL. This is the load-bearing test: it fails today and is the whole point of the criterion."
+  - name: test_quoted_record_is_accepted_under_both_readers
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The validator is executed against a fixture store containing all three quoted spellings, once with PyYAML available and once with it made unimportable; both runs ACCEPT all three records. An implementation that refuses a quoted-but-registered name fails here, as it must — those 16 records are valid."
+  - name: test_ImportError_branch_of_load_yaml_from_string_also_unwraps
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The second fallback parser (line 144, used by the Phase 2 HEAD-vs-staged comparison) is exercised directly with a quoted value and yields the bare name. Fixing only load_yaml_manual leaves this path divergent and passes every other test here."
+  - name: test_unmatched_and_internal_quotes_are_left_alone
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Values with a single leading quote, a single trailing quote, mismatched quote characters, and an internal quote are returned unchanged. Guards an over-eager strip that would corrupt a legitimate value."
+  - name: test_null_and_empty_scalars_still_behave_on_the_fallback_path
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "After the change, `assigned_agent: null` still reaches validate_manually as the string 'null' and is still treated as missing by its (None, '', 'null') guard, and a valueless key still yields the empty string ACS-100i-10-i depends on. Regression guard: quote-unwrapping must not disturb the other scalar compensations on this path."
   - name: test_fixture_bytes_are_unchanged_after_the_run
     target_dir: unit_tests/ac_store/
     framework: pytest
     type: integration
     angle: criterion
-    description: "The fixture files are read back byte-for-byte after the validator exits and are identical to before. A normalising implementation passes the refusal test and fails only here."
-  - name: test_unquoted_twin_passes_in_the_same_run
+    description: "Every fixture file is read back byte-for-byte after the validator exits and is identical to before — the check reports and never writes."
+  - name: test_reader_disagreement_is_reported_rather_than_silent
     target_dir: unit_tests/ac_store/
-    framework: pytest
-    type: integration
-    angle: boundary
-    description: "An unquoted python-coder record in the SAME fixture store is accepted in the same run. Without this, an implementation that refuses every record passes the positive test."
-  - name: test_manual_parse_fallback_reaches_the_identical_verdict
-    target_dir: unit_tests/commit_guardian/
     framework: pytest
     type: unit
     angle: seam
-    description: "With PyYAML made unimportable so load_yaml_manual is used — where the value literally carries the quote characters — the same fixture produces the same refusal and the same message as the PyYAML path."
+    description: "With the helper handed a value that differs from what a real parse of the same source line yields, it emits a reader-disagreement diagnostic naming both values instead of silently proceeding. Makes a future regression in either reader audible."
   - name: test_examined_count_is_reported_and_nonzero
     target_dir: unit_tests/ac_store/
     framework: pytest
@@ -128,28 +141,43 @@ test_spec:
     angle: reachability
     description: "The run states how many records it examined and the assertion fails if that count is zero, so a run that resolved to no files cannot read as a clean one (KI-ACS-001)."
 test_rationale: |
-  Grepping the validator for a quote-stripping expression is not evidence: it
-  cannot tell a rule that runs from one that is defined and never reached, and
-  it says nothing about which of the two possible behaviours (refuse vs.
-  normalise) actually happens.
+  Grepping either reader for a quote-stripping expression is not evidence: it
+  cannot tell a normalisation that runs from one that is defined and never
+  reached, and it cannot show the two readers agreeing, which is the whole
+  subject of this criterion.
 
-  Execute the validator against a real on-disk fixture store containing all
-  three quoted spellings that exist in the live store, byte-for-byte as PyYAML
-  emits them, and assert a non-zero exit that names each offending record by
-  file path. Do NOT hand-type the fixture as an indented literal: the repo has
-  already shipped a parser that was a complete no-op on every real record
-  because the synthetic fixtures reproduced an indentation bias the real
-  serializer does not have (EPIC-PhantomDoneFilesTouched). Round-trip the
-  fixture through the same writer the store uses.
+  The load-bearing test runs BOTH readers over the same record and compares what
+  they yield. Anything that exercises only one of them proves nothing here — the
+  defect is a disagreement, and you cannot observe a disagreement from one side.
+  Take a record whose producer is written with surrounding quotes, read it once
+  through the real parse and once through the fallback, and assert the two names
+  are equal and equal to the unquoted form.
 
-  The no-mutation scenario needs its own assertion, because it is the one a
-  normalising implementation would silently violate while still passing the
-  refusal test: read the fixture file back after the run and assert its bytes
-  are unchanged.
+  Build the fixture byte-for-byte as the store's own writer emits it, not as a
+  hand-typed indented literal. The repo has already shipped a parser that was a
+  complete no-op on every real record because synthetic fixtures reproduced an
+  indentation bias the real serializer does not have
+  (EPIC-PhantomDoneFilesTouched).
 
-  Assert the negative too — an unquoted `python-coder` record in the same
-  fixture store must pass in the same run. Without that, an implementation that
-  refuses everything passes the positive test.
+  Cover the second reader explicitly. There are two fallback paths, not one —
+  `load_yaml_manual` and the `ImportError` branch of `load_yaml_from_string` —
+  and fixing only the first leaves the second disagreeing while every test that
+  goes through the first passes.
+
+  Assert the acceptance, not a refusal. A quoted spelling of a registered agent
+  must be ACCEPTED under both readers. An implementation that refuses quoted
+  records would satisfy a naively-written test here and would refuse 16 valid
+  records in the live store; this criterion was amended precisely because an
+  earlier revision asked for that refusal.
+
+  Pin the neighbours. The fallback readers also fail to resolve null, booleans
+  and integers, and `validate_manually` compensates by treating the STRING
+  "null" as missing, while ACS-100i-10-i depends on a valueless key arriving as
+  the empty string. Assert both still behave after the unwrap, or this fix
+  silently breaks the criterion next door.
+
+  Assert the no-mutation scenario separately: read the fixture back after the
+  run and assert its bytes are unchanged. The check reports; it never writes.
 
   Guard the empty run: assert on the count of records the run reports examining,
   not only on the exit code (KI-ACS-001 — the store-wide validator printed
@@ -221,3 +249,62 @@ notes: |
   Fourteen of the 23 finalize-feature-workflow records are ALSO quoted, so a
   single record can fail both this rule and the parent's membership rule at once.
   The message-ordering constraint above exists for those 14.
+
+  ---
+  IT-PO SECOND PASS, 2026-08-25, AFTER THE CRITERIA WERE AMENDED. Everything in
+  this notes field ABOVE this line predates the amendment recorded in amended_by
+  and is retained only as history. Where it conflicts with what follows, this
+  section governs; where it conflicts with the criteria, the criteria govern.
+
+  WHAT IS NOW STALE ABOVE, explicitly:
+  - The "DECISION: refuse, do not normalise" block and its three arguments. The
+    premise it rests on — that a quoted record is a distinct, unmatchable value —
+    is false on the parsed path. No record is refused for being quoted.
+  - "WHY THIS IS AN EDGE CASE AND NOT A SECOND RULE", which describes a refusal
+    message that will never be emitted.
+  - My own first-pass paragraph directly above concluding "the refusal must be
+    driven by the record's RAW SOURCE LINE". The finding was right; the
+    conclusion I drew from it was not. Detecting the quoting was never the goal —
+    making the two readers agree is.
+
+  WHAT THE IMPLEMENTATION IS NOW: converge the fallback readers up to the real
+  parser. `load_yaml_manual` (line 105) and the ImportError branch of
+  `load_yaml_from_string` (line 144) each build their result with
+  `value.strip()`, which removes whitespace and nothing else. Teach both to
+  unwrap a matched surrounding quote pair. That is the entire behavioural change,
+  it is generic across every field rather than special-cased to assigned_agent,
+  and it makes the second criterion scenario true by construction.
+
+  THE raw_text SEAM SURVIVES WITH A DIFFERENT JOB. It is no longer how the rule
+  detects quoting; it is how the rule can NOTICE that the two readers disagreed.
+  Supplied with the source line, the helper can compare the value it was handed
+  against what a real parse of that line yields and report the divergence. Cheap,
+  and it converts precisely the class of silent drift that produced this
+  criterion into an explicit diagnostic.
+
+  RESOLVED 2026-08-25, after the IT PO flagged them. The IT PO was not permitted
+  to edit `title` or `test_rationale` in its pass and correctly recorded that both
+  still asserted the pre-amendment reading rather than silently leaving the
+  contradiction standing. Both have since been corrected by the same hand that
+  made the criteria amendment:
+  - `title` read "...is refused as the distinct value it is, not quietly
+    unwrapped" — which asserted the exact opposite of the criterion beneath it,
+    since nothing is refused now and the fix IS an unwrap. It now states the
+    reader-agreement guarantee.
+  - `test_rationale` instructed the test author to "assert a non-zero exit that
+    names each offending record" and framed the choice as "refuse vs. normalise".
+    It is rewritten around the load-bearing comparison — run BOTH readers over
+    one record and assert they agree — and now says explicitly that a quoted
+    spelling of a registered agent must be ACCEPTED, because an implementation
+    that refused it would satisfy a naively-written test and refuse 16 valid
+    records in the live store.
+  No field now disagrees with the criteria; the earlier "test_spec is
+  authoritative" instruction is retired rather than left standing.
+
+  ONE THING THE AMENDMENT DOES NOT CHANGE: the fallback readers are wrong about
+  more than quotes. They do not resolve `null`, booleans, integers or lists
+  either — `assigned_agent: null` arrives as the STRING "null", which
+  `validate_manually` compensates for at line 183 by treating (None, "", "null")
+  as missing, and a valueless key arrives as "" which ACS-100i-10-i's
+  empty-string constraint depends on. Both compensations must still hold after
+  the unwrap lands, which is why there is a regression test for them.
