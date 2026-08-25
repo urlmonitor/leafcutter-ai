@@ -147,7 +147,9 @@ def write_ticket_record(
 
     overrides = agent_statuses or {}
     agent_map = {agent: overrides.get(agent, "needed") for agent in phases}
-    frontmatter = {
+    # Annotated: the agents map and any extra_frontmatter values are dicts, so
+    # inference from these two str values alone would reject them.
+    frontmatter: dict = {
         "title": title or name,
         "status": status,
     }

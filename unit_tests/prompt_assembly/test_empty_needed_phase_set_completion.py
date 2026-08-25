@@ -84,7 +84,7 @@ def _not_completed_entries(result) -> list:
     in ``halted_tickets`` instead. The contract asserted here is identical in
     both cases, so neither branch may be used to sidestep it.
     """
-    entries = []
+    entries: list = []
     for key in ("incomplete_tickets", "halted_tickets"):
         entries.extend((result or {}).get(key) or [])
     return entries
