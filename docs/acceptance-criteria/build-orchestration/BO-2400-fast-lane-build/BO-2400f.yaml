@@ -15,9 +15,10 @@ criteria: |
 
   An operator names any single acceptance criterion and the fast lane does the rest:
   it opens a fresh isolated worktree from the latest mainline, works out everything
-  that AC is connected to (the whole subtree beneath it plus any prerequisites it
-  depends on that are not yet done), builds that set in dependency order through the
-  lean two-agent loop, and opens a pull request. The operator does not create a
+  that AC is connected to (the whole subtree beneath it plus the genuine prerequisites
+  it is waiting on that are not yet done — belonging to the same parent is not itself
+  a reason to be included, see BO-2600b), builds that set in dependency order through
+  the lean two-agent loop, and opens a pull request. The operator does not create a
   worktree, list a batch, or open the PR by hand. Pointing at the AC is the go-ahead,
   so a not-yet-approved AC is still built.
 depends_on: [BO-2400a, BO-2400e]
@@ -25,9 +26,12 @@ child_limit_override: 12
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-07-23
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Wording clarification only — no change of scope and no new child. The phrase 'any prerequisites it depends on' read as though every depends_on edge is a prerequisite, which is how the lane behaves today and is the defect: an AC lists its structural parent in depends_on, so aiming at a leaf expands through the parent to every not-done leaf under it (measured 2026-08-18 — BO-2400c-1-v resolved to the whole 5-id BO-2400c subtree). The scope-tightness behaviour itself is owned by BO-2600b, not here; this text is amended only so it stops describing the buggy resolution as the intended one. Deliberately NOT added to depends_on: a dependency edge from this L1 to the BO-2600 family would itself widen every connected set resolved from this tree, which is the very failure being fixed."
 superseded_by: null
-covered_by: [BO-2400f-1, BO-2400f-2, BO-2400f-3, BO-2400f-4, BO-2400f-5, BO-2400f-6, BO-2400f-7, BO-2400f-8, BO-2400f-9, BO-2400f-10]
+covered_by: [BO-2400f-1, BO-2400f-2, BO-2400f-3, BO-2400f-4, BO-2400f-5, BO-2400f-6, BO-2400f-7, BO-2400f-8, BO-2400f-9, BO-2400f-10, BO-2400f-11]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

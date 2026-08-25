@@ -7,6 +7,9 @@ status: active
 component: knowledge-management
 level: L2
 title: "AC-to-AC dependency is drawn as a traversable edge, not hidden in a badge"
+parent: KM-ADM-100c
+depends_on:
+  - KM-ADM-100c
 origin_agent: BrainCandy
 criteria: |
   Given the artifact graph's layout lifts every edge whose source equals its target out
@@ -43,5 +46,11 @@ notes: |
   parent, pattern and dependency references (Gap 8), and target-existence is not checked.
   Promoting it to a visible edge must not promote it to a trusted one; it keeps its
   amber "reconcile first" verdict and its warn glyph.
+
+  PARENT ADDED 2026-08-18 (product-owner). Home is KM-ADM-100c ("the connections that
+  tell you what a change will break are ones you can actually follow"), under the L0
+  KM-ADM-100. Worth knowing while reading the caveat above: the PARENT_OF hierarchy is
+  described here as "derivable by stripping an ID segment", and that is exactly what
+  fails for this AC's own id — see KM-ADM-100 notes on compound-prefix ids.
 change_target: ui
 risk_surface: internal

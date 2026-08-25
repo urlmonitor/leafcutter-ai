@@ -1,0 +1,167 @@
+id: TQ-100b-4
+components:
+  - testing_quality
+  - ac_store
+title: "Only captures shaped like an acceptance-criterion id count as coverage tags"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given the repository's own unit-test tree exactly as committed — including the
+    test files that exist to test the tagging mechanism, which contain the
+    literal text "# covers:" inside fixture strings, docstrings and unrendered
+    f-string placeholders — and the AC store exactly as committed,
+  When the canonical coverage-tag reader scans that tree and the captured values
+    that resolve to no acceptance criterion in the store are listed,
+  Then every value in that list has the shape of an acceptance-criterion id (a
+    2-6 letter uppercase prefix, an optional second uppercase group, a number,
+    and optional hierarchy suffixes) — so ACD-1200a-1, ACD-1200a-6, ACS-100i-4,
+    AC-1 through AC-6, FIN-001 and ADR-015 remain listed
+  And none of the values that are not id-shaped are listed: the bare characters
+    " and ', the unrendered placeholders {ac_id}, {self.child_a_id} and
+    {nonexistent_id}, the documentation placeholders <AC-ID>, <id> and
+    <deprecated-id>, and the English words the, tag, tags, config, a, fail-open
+    and Finding
+  And the list is a subset of the 80 values today's reader produces over the same
+    tree — no value that today's reader does not produce is newly introduced
+  And the list contains at most 16 values, down from today's 80
+  And the captured ids that DO resolve to an acceptance criterion (600 of today's
+    680 distinct ids, across 2,328 tag records) are unchanged in number and
+    content — the narrowing removes non-tags from the unresolved list only and
+    removes nothing from the resolved list
+  And the same result is produced by invoking the reader as a process over the
+    on-disk tree, so a check that only inspects the reader's pattern text cannot
+    satisfy this criterion.
+depends_on:
+  - TQ-100b
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-1-ii.yaml
+    relationship: relates-to
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "READER 1 of 2 — the canonical definition. COVERS_TAG_RE = re.compile(r\"(?:#|//)\\s*covers:\\s*(\\S+)\") at :57. (\\S+) captures any non-whitespace token: no id-shape test, no exclusion for string literals or docstrings. This is the single place the narrowing must land."
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "The application site: :370 applies COVERS_TAG_RE with .search() to every line of every file, and _scan_test_root_for_covers_tags() is the function that produces the measured 2,328 records / 680 ids / 80 unresolved. Run THIS to reproduce the baseline; do not re-implement a scan."
+  - path: scripts/commit_guardian/check_test_ac_tags.py
+    relationship: relates-to
+    status: exists
+    relevance: "READER 2 of 2 — must be read before changing reader 1. It already carries a DIFFERENT and stricter shape rule (COVERS_REGEX = covers:\\s*[A-Z]{2,6}-[0-9]{3}) and is already AST-position-aware (comment line above the def, docstring, first body line). Reuse its position logic rather than reinventing it, and see TQ-100b-5 before narrowing only one side. Source of truth is templates/scripts/commit_guardian/check_test_ac_tags.py — build.py overwrites the scripts/ copy."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Why a pattern-source-string assertion is not evidence here, and the definition of the real_artifact / reachability / deployed angles this AC's test_spec charges."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The gate family the done-proof scanner feeds; establishes that this reader's output is consumed by a required CI gate, which is why a deployed-copy test is mandatory."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The narrowing must be applied at the single canonical definition of the coverage-tag pattern in scripts/ac_store/test_enforcement.py, so every consumer inherits it. Do not add a second filtering layer at one call site in done_proof.py — a per-call-site filter creates a third vocabulary and is exactly the drift TQ-100b-5 exists to catch."
+  - "The resolved-tag set is a protected invariant. Measured baseline at HEAD 339b0981c: 2,328 tag records over 680 distinct ids, of which 600 resolve. A change that reduces the resolved count or alters its content is a regression, not a narrowing; the resolved side must be asserted directly, never inferred from the unresolved count falling."
+  - "The id-shape rule must be expressed once and shared rather than duplicated per reader. scripts/commit_guardian/check_test_ac_tags.py already applies a stricter, incompatible shape rule (exactly three digits after the prefix, so AC-1 does not match there but must remain listed here). Choose one rule, put it where both readers can use it, and land it on both — TQ-100b-5 is the parity axis for this."
+  - "Evidence must come from running the reader over the committed unit_tests/ tree. A check that inspects the pattern's source string, or that merely asserts a shape-validating helper exists, does not satisfy any criterion in this AC."
+  - "scripts/ac_store/ ships through build.py's build_ac_store deploy_map. If the narrowing introduces a new module or a new import, add it to that deploy map in the same change — a deployed hook importing an undeployed module raises ModuleNotFoundError, and the done-proof gate is a required check, so that blocks every merge."
+  - "Scanning cost must not regress: today's reader makes one regex search per line in a single pass per file, and the scan runs inside the commit-time done-proof path. Any shape or position test must stay inside that single pass over each file."
+  - "The scan result must be deterministic and independent of filesystem walk order: the same tree yields the same record set and the same unresolved list on every run, and under pytest-randomly."
+  - "Re-tagging the 16 surviving genuine dangling ids is explicitly OUT of scope. This change must not edit any test file's tags; if a run of the narrowed reader would require a tag edit to pass, that is a signal the shape rule is wrong, not that the tag is."
+test_spec:
+  - name: test_unresolved_covers_captures_over_committed_tree_are_all_id_shaped
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the project's own scanner over the committed unit_tests/ tree — not a hand-typed fixture — and assert every unresolved capture is AC-id-shaped. The input that produces today's 64 artifacts is the repo's own tag-mechanism test files; the test must walk the real tree containing at least ac_store/test_done_proof_js.py, ac_store/test_done_proof_composite.py, ac_store/test_bo2500a_done_proof.py, ac_store/test_pytest_ac_enforcement.py, commit_guardian/test_bo2500b_done_proof_hook.py, commit_guardian/test_check_test_ac_tags.py, commit_guardian/test_done_proof_excludes_fixtures.py and build_orchestration/test_bo2400a_fast_lane.py, and assert the named artifacts are absent: the bare \" and ' characters, {ac_id}, {self.child_a_id}, {nonexistent_id}, <AC-ID>, <id>, <deprecated-id>, the, tag, tags, config, a, fail-open, Finding."
+  - name: test_resolved_tag_set_is_unchanged_by_the_narrowing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Over the same committed tree, assert the resolved ids and their record count match the pre-change baseline (2,328 records / 680 distinct / 600 resolving) exactly, and that the surviving unresolved list is a proper subset of today's 80 with at most 16 members. Falsifies the failure mode where the narrowing also silently drops resolved tags."
+  - name: test_done_proof_verdict_lists_only_id_shaped_dangling_tags_via_its_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Invoke the done-proof scan through its production entry point as a subprocess over the real tree and assert the dangling list in the emitted verdict contains only id-shaped values. Proves the narrowing is reached by the path the gate actually runs, not only by a directly-imported helper; deleting the single line that wires the shape test into the scan must turn this red."
+  - name: test_deployed_done_proof_copy_applies_the_narrowing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run build.py into a temp target, then exercise the DEPLOYED scanner over a real tree and assert the same narrowed result. Catches a narrowing that lands in the source tree but not in what build.py deploys, and a new import missing from the build_ac_store deploy map — the failure that would block every merge once the done-proof gate is required."
+delivers_to:
+  agent: python-coder
+  contract: "A dangling-tag set containing only id-shaped captures read from real tag positions. This is the input TQ-100b-1-ii treats as enforced-and-flagged, and the input TQ-100c-2's pre-pytest linkage-integrity check reports. BUILD ORDER: this AC must be delivered BEFORE TQ-100b-1-ii is built; TQ-100b-1-ii built on today's reader would fire on all 80 of today's unresolved captures, 64 of which are not tags."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: TQ-100b-4 it-po technical enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Criteria untouched. Added assigned_agent (python-coder), estimated_complexity
+    (M), it_requirements, a four-angle test_spec (real_artifact / criterion / reachability
+    / deployed) and reader doc_links; readiness draft -> reviewed. The real_artifact
+    entry names the repo's own tag-mechanism test files as the input rather than a
+    hand-typed fixture, per the PhantomDoneFilesTouched precedent. Recorded the second
+    reader's incompatible shape rule (check_test_ac_tags.py COVERS_REGEX requires
+    exactly three digits, so AC-1 does not match there) as a shared-rule constraint
+    feeding TQ-100b-5.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - TQ-100b-4-i
+  - TQ-100b-4-ii
+implemented_by: []
+notes: |
+  PRECONDITION FOR TQ-100b-1-ii — NOT A DUPLICATE OF IT. TQ-100b-1-ii specifies
+  what HAPPENS to a tag that resolves to no AC (it is enforced, and flagged to
+  the TQ-100c linkage-integrity check). This AC specifies what COUNTS AS A TAG in
+  the first place. A future author must not fold the two together, and must not
+  build TQ-100b-1-ii first: on today's reader its first run reports 80 items of
+  which 64 are artifacts, and a gate that is wrong four times out of five on day
+  one gets switched off — after which the 16 genuine dangling tags stay invisible
+  permanently. Build order: TQ-100b-4 -> TQ-100b-4-i -> TQ-100b-4-ii ->
+  TQ-100b-1-ii. TQ-100b-1-ii's depends_on should gain TQ-100b-4 (that file is
+  readiness: approved and was not edited here — flagged to the coordinator).
+
+  MEASURED BASELINE (real store, HEAD 339b0981c, 2026-08-17, produced by running
+  the project's own covers-tag scan over the committed unit-test tree, not a
+  hand-written fixture): 2,328 tag records / 680 distinct ids / 80 unresolvable /
+  64 of those 80 not id-shaped / 16 id-shaped. The 64 arise because the single
+  canonical reader captures any non-whitespace token after "covers:" with no
+  id-shape test and no exclusion for occurrences inside string literals or
+  docstrings; most come from the very test files that exist to test the tag
+  mechanism.
+
+  SCOPE: re-tagging the 16 genuine dangling ids is remediation, not this
+  criterion. The test-angle vocabulary is settled elsewhere and is not reopened.
+
+  TEST ANGLE (load-bearing): a test that asserts the reader's pattern source
+  string looks a certain way proves nothing — grep-only structural tests are the
+  dominant false-green mechanism in this repo. The only satisfying evidence is
+  running the real reader over the real on-disk tree, including the repo's own
+  tag-mechanism test files, which are the exact input that produces the 64
+  artifacts. A hand-typed fixture reproduces the bias that hides the bug (the
+  PhantomDoneFilesTouched precedent).
+change_target: code
+risk_surface: contract_boundary

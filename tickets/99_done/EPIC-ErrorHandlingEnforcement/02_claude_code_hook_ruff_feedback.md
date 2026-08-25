@@ -1,6 +1,8 @@
 ---
 title: "PostToolUse Claude Code hook: run ruff on Edit/Write for immediate exception feedback"
-status: todo
+status: done
+change_target: pipeline
+risk_surface: internal
 components:
   - build_pipeline
   - config_loader
@@ -17,20 +19,20 @@ files_touched:
   - leafcutter-ai/.claude/settings.json
 agents:
   architect-review: not_needed
-  test-writer: needed
-  python-coder: needed
+  test-writer: signed_off
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
+  test-runner: signed_off
   documentation-expert: not_needed
   adr-author: not_needed
   architecture-diagram-author: not_needed
   how-to-author: not_needed
   reference-author: not_needed
   explanation-author: not_needed
-  user-surface-smoker: needed
-  pr-reviewer: needed
-  commit: needed
-  pull-request: needed
+  user-surface-smoker: signed_off
+  pr-reviewer: signed_off
+  commit: signed_off
+  pull-request: signed_off
 ---
 
 # 02: PostToolUse Claude Code hook: run ruff on Edit/Write for immediate exception feedback
@@ -88,15 +90,125 @@ Then the hook catches the CalledProcessError and injects a warning message
 
 ## Sign-offs
 
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] user-surface-smoker
-- [ ] pr-reviewer
-- [ ] commit
-- [ ] pull-request
+- [x] test-writer — 2026-06-01 10:00
+- [x] python-coder — 2026-06-01 10:15
+- [x] test-runner — 2026-06-01 10:30
+- [x] user-surface-smoker — 2026-06-01 11:00
+- [x] pr-reviewer — 2026-06-01 10:45
+- [x] commit — 2026-06-01 11:15
+- [x] pull-request — 2026-06-01 11:30
 
 ## Comments
+
+### 2026-08-18 — record restored from `99_rejected` (content, not status)
+
+This file's sign-off history below was **missing from `99_done` for eleven
+weeks**. The archive commit `18a0749cb` (2026-06-01) wrote a pre-work stub here
+instead of the completed ticket — `status: todo`, every agent `needed`, empty
+comments — while the real record sat at
+`tickets/00_inbox/epics/EPIC-ErrorHandlingEnforcement/done/`, untouched. PR #275
+then swept that folder into `tickets/99_rejected/` as a "subset remnant", which
+inverted the truth: the rejected copy was the only one with the evidence.
+
+Restored here byte-for-byte from that copy. Nothing below is new; the stub it
+replaced contained nothing this file lacks. `change_target` and `risk_surface`
+were added to the frontmatter because both became required after this ticket was
+written and the frontmatter guard blocks any edit without them.
+
+Restored by branch `chore/epic-duplicate-repair`.
+
+### 2026-06-01 11:30 — pull-request (status: ok)
+feedback-id: fb_2026-06-01_2cf09741
+completion_manifest:
+  pushed_to_remote: true
+  pr_updated: true
+
+Pushed branch to origin. Existing PR #27 updated: https://github.com/urlmonitor/leafcutter-ai/pull/27 — new commits (9c9e928, e23c781) are now on the remote.
+
+### 2026-06-01 11:15 — commit (status: ok)
+feedback-id: fb_2026-06-01_fb179a57
+completion_manifest:
+  commit_clean: true
+  pre_commit_passed: true
+  all_files_committed: true
+
+Two commits created: `9c9e928` (hook script, test file, ticket sign-off) and `e23c781` (config/settings.json). All pre-commit hooks passed on both commits. Git log confirms both commits on `worktree-EPIC-ErrorHandlingEnforcement` branch.
+
+### 2026-06-01 11:00 — user-surface-smoker (status: ok)
+feedback-id: fb_2026-06-01_9528f183
+completion_manifest:
+  fixture_executed: true
+  assertion_e722_present: true
+  exit_code_2_confirmed: true
+  no_placeholders: true
+
+Smoke fixture executed end-to-end: hook received the fixture Python file, ruff detected E722 (`Do not use bare except`), hook exited 2 with the violation message. No TODO/FIXME/{{config.*}} placeholders found in the hook script. Production wiring confirmed.
+
+### 2026-06-01 10:45 — pr-reviewer (status: ok)
+feedback-id: fb_2026-06-01_754981e1
+completion_manifest:
+  acceptance_criteria_met: true
+  hook_self_contained: true
+  settings_json_correct: true
+  no_false_positives_in_tests: true
+  tests_pass: true
+
+Hook implementation meets all acceptance criteria. Self-contained (no leafcutter imports), reads path from payload, skips non-.py, runs ruff E722+BLE001+TRY, exits 2 on violations, exits 0 on clean, handles ruff-not-found gracefully. settings.json correctly wired. BLE001/TRY noise concern validated: ruff found zero violations in test suite. All 4 tests pass (45/45 suite-wide).
+
+### 2026-06-01 10:30 — test-runner (status: ok)
+feedback-id: fb_2026-06-01_a4614c69
+completion_manifest:
+  all_tests_green: true
+  no_regressions: true
+
+All 4 new tests in `unit_tests/commit_guardian/test_exception_hook.py` pass. Full commit_guardian suite: 45/45 passed in 8.68s. No regressions introduced.
+
+### 2026-06-01 10:15 — python-coder (status: ok)
+feedback-id: fb_2026-06-01_4467dd7d
+completion_manifest:
+  hook_script_created: true
+  settings_json_registered: true
+  build_py_copies_hook: true
+  skills_config_updated: true
+
+Created `templates/hooks/check_exception_handling_hook.py` — self-contained PostToolUse hook that reads the file path from the hook payload, skips non-.py files, runs `ruff check --select E722,BLE001,TRY --output-format concise`, exits 2 with a blocking message on violations, and handles ruff-not-found with an install instruction. Registered the hook in `templates/settings.json` under `PostToolUse > Edit|Write`. Added `hooks.exception_handling_hook` key to `config/skills_config.default.json`. `build.py` already auto-copies all files from `templates/hooks/` so no additional code change is needed. All 4 TDD tests now pass (4 passed in 1.30s).
+
+### 2026-06-01 10:00 — test-writer (status: ok)
+feedback-id: fb_2026-06-01_eb2c582b
+completion_manifest:
+  test_stubs_created: true
+  all_tests_red: true
+  red_baseline_captured: true
+
+## Test Writer — Completion Report
+
+### Tests Written
+| File | Directory | Framework | Status |
+|---|---|---|---|
+| test_exception_hook.py | unit_tests/commit_guardian/ | unittest | written |
+
+### Verification Run
+- Command: `python -m pytest unit_tests/commit_guardian/test_exception_hook.py -v`
+- Result: red (4 failures — expected; hook implementation not yet written)
+
+### Notes
+All 4 tests run as subprocesses against the hook script; the hook does not yet
+exist so all tests fail. Tests use actual temp files so ruff is exercised for
+real once the hook is implemented.
+
+red_baseline:
+  - test_name: test_bare_except_triggers_block
+    file: unit_tests/commit_guardian/test_exception_hook.py
+    error: "AssertionError: 'E722' not found in '' : Expected 'E722' in stdout. Got: ''"
+  - test_name: test_clean_file_passes
+    file: unit_tests/commit_guardian/test_exception_hook.py
+    error: "AssertionError: 2 != 0 : Expected exit 0 for a clean file, got 2."
+  - test_name: test_non_python_file_skipped
+    file: unit_tests/commit_guardian/test_exception_hook.py
+    error: "AssertionError: 2 != 0 : Expected exit 0 for a .md file, got 2."
+  - test_name: test_ruff_not_found_produces_install_message
+    file: unit_tests/commit_guardian/test_exception_hook.py
+    error: "AssertionError: 'ruff' not found in '' : Expected 'ruff' in install instruction. Got: ''"
 
 ## Smoke Fixture
 
@@ -116,7 +228,7 @@ placeholder_signature: "TODO|FIXME|{{config\\..*}}"
 ## Implementation Tasks
 
 ### python-coder
-- [ ] Create `leafcutter-ai/templates/hooks/check_exception_handling_hook.py`:
+- [x] Create `leafcutter-ai/templates/hooks/check_exception_handling_hook.py`:
   - Reads the file path from the PostToolUse hook payload (stdin JSON under
     `tool_response.path` or equivalent Claude Code hook contract).
   - Skips immediately if the file path does not end in `.py`.
@@ -135,7 +247,7 @@ placeholder_signature: "TODO|FIXME|{{config\\..*}}"
   get it on a fresh install without extra configuration.
 
 ### test-writer
-- [ ] Add `unit_tests/commit_guardian/test_exception_hook.py`:
+- [x] Add `unit_tests/commit_guardian/test_exception_hook.py`:
   - `test_bare_except_triggers_block` — hook exits 2 and prints E722
     for a file with `except:`.
   - `test_clean_file_passes` — hook exits 0 for a file with no violations.

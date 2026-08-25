@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -80,10 +80,17 @@ test_rationale: |
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Assigned llm-expert (surfaces are templates/agents/test-writer.md Rule 3 and templates/skills/signoff/SKILL.md §2b). Added it_requirements pinning the record to the existing completion manifest under one fixed key token, the delivers_to contract naming the two conforming and three non-conforming shapes, and test_required: false with rationale (proof is composite via BP-1100g-5-i). criteria untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned llm-expert (surfaces are templates/agents/test-writer.md Rule 3
+    and templates/skills/signoff/SKILL.md §2b). Added it_requirements pinning the
+    record to the existing completion manifest under one fixed key token, the delivers_to
+    contract naming the two conforming and three non-conforming shapes, and test_required:
+    false with rationale (proof is composite via BP-1100g-5-i). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by:
   - BP-1100g-5-i

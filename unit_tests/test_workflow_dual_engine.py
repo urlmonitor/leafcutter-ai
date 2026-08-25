@@ -533,27 +533,34 @@ def test_dispatch_order_plan_feature() -> None:
     With default stub args (userInput='stub user input', no run_id):
 
       Pre-Stage-0:
-        1. status-checker  label='detect-current-branch'
-        2. status-checker  label='worktree-setup'
+        1. status-checker   label='detect-current-branch'
+        2. status-checker   label='resolve-workspace-setup-permission' (BO-1500f-1:
+           registry-driven permission gate for the isolated-workspace setup step;
+           the harness's built-in default label_responses resolves this against
+           the REAL config/agent_registry.json, which grants the default target
+           agent, 'worktree-agent', permits_shell=true)
+        3. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
+           permission-gate's resolved target agent, no longer hardcoded to
+           'status-checker')
 
       Orphan scan (scanOrphanedAcDrafts):
-        3. status-checker  label='scan-orphans-git-status'
+        4. status-checker  label='scan-orphans-git-status'
 
       Stage detection (scanCommittedStages):
-        4. status-checker  label='scan-committed-stages'
+        5. status-checker  label='scan-committed-stages'
 
       Stage 0:
-        5. ac-triage       label='stage-0-triage'
+        6. ac-triage       label='stage-0-triage'
 
       Product-Truth phase (always-on classifier; stub returns no 'outcome' so the
       PT phase self-skips straight to the AC pipeline):
-        6. pt-classifier   label='pt-classify'
+        7. pt-classifier   label='pt-classify'
 
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
-        7. it-po           label='stage-itpo-author'
+        8. it-po           label='stage-itpo-author'
 
       Final gate (stub returns action=defer):
-        8. status-checker  label='final-gate'
+        9. status-checker  label='final-gate'
 
     A dropped, reordered, or mis-typed agent type FAILS this test (AC-2 / M-1).
     """
@@ -569,7 +576,11 @@ def test_dispatch_order_plan_feature() -> None:
 
     expected_sequence = [
         ("status-checker", "detect-current-branch"),
-        ("status-checker", "worktree-setup"),
+        # BO-1500f-1: registry-driven permission gate ahead of worktree-setup.
+        ("status-checker", "resolve-workspace-setup-permission"),
+        # BO-1500f-1: dispatched to the resolved target agent (default
+        # 'worktree-agent'), not the retired hardcoded 'status-checker'.
+        ("worktree-agent", "worktree-setup"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),

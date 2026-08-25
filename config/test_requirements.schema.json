@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://leafcutter/config/test_requirements.schema.json",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "title": "test_requirements",
-  "description": "Schema for the test_requirements block produced by the test-planner agent and embedded in ticket bodies. Used by test-writer to author tests and by check_test_requirements_refs.py to verify schema version consistency across all consumers. Version 1.1.0 adds live_dispatch type and surface_invoked field.",
+  "description": "Schema for the test_requirements block produced by the test-planner agent and embedded in ticket bodies, AND for the ## Test Requirements descriptor list generate_ticket_from_ac.py emits. Version 2.0.0 (BO-2900g-3) reconciles this schema's former 'type' enum (unit/integration/manual/live_dispatch), which muddled test LEVEL with one kind-of-proof value, with config/ac_store_schema.json's test_spec[].angle enum — the kind-of-proof axis — into ONE permitted-kind vocabulary, carried here as 'angle' — see docs/reference/required-proof-vocabulary.md. 'live_dispatch' is RETIRED; the reached-the-real-way kind is now named 'reachability' (the test-angle taxonomy's name), with no synonym accepted. The entry-point fact survives under the field name the retiring definition already used ('asserts' on the generator's emitted descriptor carries the same fact — see the description below). 'type' is NOT part of the reconciled kind-of-proof vocabulary: generate_ticket_from_ac.py's _test_descriptors_from_spec copies the AC's test_spec[].type straight through as a separate key, so an emitted descriptor's 'type' carries the test-LEVEL value (unit/integration/e2e/behavioral) from config/ac_store_schema.json's test_spec[].type — the orthogonal, out-of-scope axis — never a kind-of-proof value.",
   "type": "object",
   "required": ["test_requirements"],
   "properties": {
@@ -30,45 +30,69 @@
   "$defs": {
     "test_entry": {
       "type": "object",
-      "required": ["name", "description", "type", "target_dir", "covers"],
+      "required": ["name", "file", "covers"],
       "additionalProperties": false,
+      "description": "One descriptor in a ticket's ## Test Requirements 'tests:' list, on EITHER planning route (criteria-derived fallback or authored test_spec) — see scripts/ac_store/generate_ticket_from_ac.py. Only name/file/covers are guaranteed present on every route; angle/type/asserts/framework/requires_db are present when the producing route supplies them.",
       "properties": {
         "name": {
           "type": "string",
           "pattern": "^test_",
           "description": "Test file or function name. Must start with 'test_' per naming_pattern convention."
         },
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repo-relative path to the test file this descriptor's test lives (or should live) in."
+        },
+        "covers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "AC IDs this test covers."
+        },
+        "angle": {
+          "type": "string",
+          "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
+          "description": "BO-2900g-3 RECONCILED KIND ENUM: which proof-of-done question this test answers, from the test-angle taxonomy in docs/testing/test-angles.md. The single vocabulary shared with 'type' below and with config/ac_store_schema.json's test_spec[].type/.angle enums (docs/reference/required-proof-vocabulary.md). The retired ticket-facing kind 'live_dispatch' is gone with no synonym; its meaning is now 'reachability'."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["unit", "integration", "e2e", "behavioral"],
+          "description": "Test level. Guides where the test runs and how heavy its fixtures are. Orthogonal to 'angle' (the kind-of-proof axis) and NOT part of the BO-2900g-3 reconciliation — mirrors config/ac_store_schema.json's test_spec[].type enum, which generate_ticket_from_ac.py copies through verbatim onto this key."
+        },
         "description": {
           "type": "string",
           "minLength": 1,
           "description": "One sentence describing the observable behavior this test verifies."
         },
-        "type": {
+        "asserts": {
           "type": "string",
-          "enum": ["unit", "integration", "manual", "live_dispatch"],
-          "description": "Test type: unit (in-memory, no DB), integration (requires DB), manual (slow/external), or live_dispatch (exercises production entrypoint without dispatch_fn override)."
+          "minLength": 1,
+          "description": "What this test asserts. On a reachability-kind entry (angle == 'reachability') this is the entry-point fact: either the author's own named production entry point (CLI, hook, slash command, agent) carried through verbatim, or the single stable 'entry point is not declared' sentinel — a CONFORMING value, not a violation (BO-2900g-1-i, BO-2900g-4)."
+        },
+        "framework": {
+          "type": "string",
+          "enum": ["unittest", "pytest"]
+        },
+        "requires_db": {
+          "type": "boolean"
+        },
+        "target_dir": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repo-relative directory the test file lives in — the authoring-facing counterpart of 'file' (config/ac_store_schema.json's test_spec[].target_dir)."
         },
         "surface_invoked": {
           "type": "string",
           "minLength": 1,
-          "description": "Required when type == live_dispatch. Names the slash command, hook script, or agent entrypoint being invoked in production wiring (e.g. 'glossary_bootstrap.py' or '/glossary-bootstrap')."
-        },
-        "target_dir": {
-          "type": "string",
-          "description": "Relative path to the test directory where the test file should live (e.g. unit_tests/live_trader/). Use 'new directory needed' if no matching directory exists in testing_context.directories."
-        },
-        "covers": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The specific function, class, or behavior under test."
+          "description": "Alternate name for the reachability entry-point fact carried in 'asserts' (kept for authoring surfaces that name the field this way; see config/ac_store_schema.json's test_spec[].surface_invoked)."
         }
       },
       "if": {
-        "properties": { "type": { "const": "live_dispatch" } },
-        "required": ["type"]
+        "properties": { "angle": { "const": "reachability" } },
+        "required": ["angle"]
       },
       "then": {
-        "required": ["surface_invoked"]
+        "required": ["asserts"]
       }
     }
   }

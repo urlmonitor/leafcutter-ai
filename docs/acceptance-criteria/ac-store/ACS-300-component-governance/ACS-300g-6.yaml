@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: high
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given check_components_integrity.py is invoked through the `.leafcutter`
     symlink install path (so that
@@ -41,13 +41,103 @@ it_requirements:
   - "Must handle errors gracefully per the project error handling policy (wrap the git subprocess call, no bare except)"
   - "Must not regress detail_ref validation for components whose detail_ref is null"
   - "Must complete the root-resolution call in <100ms"
+  - "Root discovery must be correct under the environment git itself establishes for a hook — i.e. with GIT_DIR set and GIT_WORK_TREE unset — and must not degrade to `Path(os.getcwd())` in that environment"
+  - "Must return a path that is inside a git repository even when the process CWD is not (e.g. CWD=/tmp); a root outside any repository is a failure, not a fallback"
+  - "The `__file__`-anchored fallback must not silently yield `<project>/.leafcutter` in a deployed layout; if no repository root can be discovered, fail loudly rather than validating against a wrong root"
 delivers_to:
   agent: python-coder
   contract: "REPO_ROOT in check_components_integrity.py derived from the stripped stdout of `git rev-parse --show-toplevel`, used as the base path for resolving every component detail_ref existence check"
 expects_from: null
 origin_agent: it-po-v3
 created: 2026-06-22
-amended_by: []
+notes: |
+  REOPENED 2026-08-18. The fix that closed this AC on 2026-07-08 (commit
+  4216ddcf) is vacuous: it replaced a `__file__`-anchored root bug with a
+  CWD-anchored one and performs no actual root discovery. All of the
+  following was re-verified on 2026-08-18 against the worktree.
+
+  1. `_repo_root()` in
+     templates/scripts/commit_guardian/check_components_integrity.py calls
+     `subprocess.run(["git", "rev-parse", "--show-toplevel"],
+     capture_output=True, text=True)` with NO `cwd=` argument and no
+     scrubbing of the inherited environment. It therefore runs in whatever
+     working directory the parent process happens to have.
+
+  2. Git's documented behaviour: when GIT_DIR is set and neither
+     GIT_WORK_TREE nor core.worktree is set, the current directory is
+     treated as the top of the working tree. Git ALWAYS sets GIT_DIR when it
+     invokes a hook. So in the only environment this AC is about — hook
+     context — `git rev-parse --show-toplevel` returns the CWD verbatim and
+     `_repo_root()` is exactly `Path(os.getcwd())`. The docstring's claim
+     that this is "correct regardless of where the hook file lives" is true
+     only by accident, because pre-commit happens to chdir to the top level.
+
+  3. Demonstrated on 2026-08-18:
+       env --chdir=/tmp env GIT_DIR=<linked-worktree-gitdir> \
+         git rev-parse --show-toplevel
+     prints `/tmp` — a directory that is not inside any repository at all.
+     The helper will happily return it and every detail_ref will then be
+     resolved against `/tmp/docs/...`.
+
+  4. The fallback is `Path(__file__).resolve().parents[2]`, which in a
+     deployed layout (`<project>/.leafcutter/scripts/commit_guardian/`)
+     yields `<project>/.leafcutter` — i.e. precisely the wrong root this AC
+     was written to eliminate. The fallback is not a safety net; it is the
+     original defect.
+
+  WARNING — THE OBVIOUS TEST CANNOT FAIL. Setting GIT_DIR while the CWD is
+  already the worktree top-level returns the worktree root either way, on
+  broken and fixed code alike (verified: the same command with
+  --chdir=<worktree-top> returns the worktree top). Any regression test for
+  this AC MUST set GIT_DIR *and* place the CWD somewhere other than the
+  worktree top-level, or it will pass green against the current broken
+  implementation. That exact mistake was made on 2026-08-18 and led to the
+  wrong conclusion that the mechanism was sound; it is also the reason the
+  defect survived six weeks in `work_status: done`.
+
+  CORRECT PRIMITIVE (for whoever implements this). Derive the root from
+  GIT_DIR when it is present: for a linked worktree, read `$GIT_DIR/gitdir`,
+  whose content is `<worktree-root>/.git` and whose parent is the worktree
+  root (verified: the gitdir file for this worktree contains
+  `/home/henzeh/projects/leafcutter/worktrees/acs300g6/.git`). Otherwise take
+  the parent of `git rev-parse --git-common-dir`. Alternatively, strip all
+  `GIT_*` variables from the subprocess environment before calling
+  `--show-toplevel` — this is the `no_git_env` pattern pre-commit itself
+  uses. Passing an explicit `cwd=` is not sufficient on its own, because an
+  inherited GIT_DIR still overrides the discovery.
+
+  BLAST RADIUS — DO NOT FIX HERE, but do not let it be forgotten. The shared
+  helper templates/scripts/commit_guardian/_resolve_root.py carries the
+  identical defect and states the false premise verbatim in its docstring
+  ("always reports the root of the git repository containing the current
+  working directory"). Twenty scripts under
+  templates/scripts/commit_guardian/ reference `--show-toplevel`, including
+  check_doc_frontmatter.py, whose comments assert the same untrue thing.
+  This is a family-wide defect, not a one-file defect, and a fix confined to
+  check_components_integrity.py leaves the family broken. A separate AC
+  should own the shared-helper remediation.
+
+  The criteria below are unchanged and were always correct — the shipped
+  implementation simply never met them. `implemented_by` is left as-is: it
+  is an accurate record of which files the vacuous fix touched, not a claim
+  that they satisfy the criterion.
+amended_by:
+  - reason: reopened-defect-still-reproduces
+    by: it-po
+    at: 2026-08-18
+    note: >-
+      work_status flipped done -> todo. Reopened because the fix landed
+      2026-07-08 in commit 4216ddcf is CWD-anchored rather than
+      root-discovering: _repo_root() calls `git rev-parse --show-toplevel`
+      with no cwd= and no GIT_* scrubbing, and git always sets GIT_DIR when
+      it invokes a hook, so in hook context the helper degrades to
+      Path(os.getcwd()). The symptom was re-reported by a consumer with the
+      fix deployed. criteria is unchanged — the criterion was always right;
+      the implementation did not meet it. See notes for the reproduction,
+      the untestable-by-the-obvious-test warning, and the correct primitive.
+      test_spec and test_rationale added because the AC is now approved +
+      not-done + leaf code, which check_ac_schema's validate_test_contract
+      requires to carry a test contract.
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -55,3 +145,61 @@ implemented_by:
 - unit_tests/commit_guardian/test_check_components_integrity.py
 change_target: code
 risk_surface: contract_boundary
+test_spec:
+  - name: test_repo_root_discovers_worktree_root_when_cwd_is_outside_the_repo
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      With GIT_DIR set to a linked worktree's gitdir and the process CWD set to a
+      directory outside any repository (e.g. /tmp), _repo_root() returns the
+      worktree top-level, NOT the CWD. This test must fail against the current
+      CWD-anchored implementation; if it passes unchanged, the CWD was wrongly
+      left at the worktree top and the test is void.
+  - name: test_repo_root_is_never_the_cwd_under_hook_environment
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Asserts the negative directly at the seam git establishes for hooks (GIT_DIR
+      set, GIT_WORK_TREE unset): the returned root must not equal Path(os.getcwd())
+      when the CWD is not the repository top-level.
+  - name: test_detail_ref_resolves_against_repo_docs_not_leafcutter_docs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: >-
+      Using a real components.json entry whose detail_ref points at an existing
+      <repo>/docs/... file, and with the hook invoked through a .leafcutter
+      install layout, validate_new_component passes instead of false-failing with
+      "detail_ref file does not exist".
+  - name: test_root_resolution_fallback_never_yields_the_leafcutter_directory
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      When root discovery fails (git unavailable or non-zero exit), the helper must
+      not silently return <project>/.leafcutter from the __file__-anchored fallback
+      — the original defect must not be reachable as a fallback path.
+  - name: test_components_integrity_hook_uses_discovered_root_end_to_end
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Runs the hook as git invokes it (GIT_DIR set, CWD not the top-level) and
+      asserts the discovered root is actually threaded into the detail_ref checks,
+      so the fix is wired into control flow rather than defined and ignored.
+test_rationale: >-
+  The obvious regression test for this AC cannot fail. Setting GIT_DIR while the
+  CWD is already the worktree top-level returns the worktree root on the broken
+  and the fixed implementation alike, so a test written that way is green against
+  a defect — that is how this AC stayed done for six weeks. Every descriptor above
+  therefore pins the CWD somewhere other than the repository top-level, and the
+  seam test asserts the negative (root != cwd) explicitly rather than only the
+  positive. A direct-import unit test that merely calls _repo_root() from the
+  project root would be exactly the void test this AC's history warns about.

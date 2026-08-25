@@ -2,7 +2,7 @@ id: BO-2400c-2-i
 components:
   - build_orchestration
   - injection_builder
-title: "Cache TTL expiry mid-drive re-primes the prefix instead of dropping it"
+title: "A prefix that changes mid-drive shows in the record as a break, never as a clean anchor"
 component: build-orchestration
 level: L3
 status: active
@@ -12,52 +12,113 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given the cache TTL elapses between two invocations during a drive,
-  When the next invocation runs,
-  Then the stable prefix is re-sent to re-prime the cache (a cache-write occurs)
-    rather than being omitted
-  And the resulting cache miss is observable in the recorded telemetry.
+  Given a fast-lane drive in which the stable prefix presented to a later
+    context-carrying invocation differs by at least one byte from the prefix presented
+    to the first one — whatever the cause: a stable source re-read and re-rendered
+    mid-drive, volatile content leaking in front of the breakpoint marker, a retry that
+    recomposed the prompt, or a dispatch composed without the obtained bundle at all,
+  When that drive's terminal record is read after the drive,
+  Then the context-reuse statement reports that the anchor did not hold for the drive,
+  And it reports how many distinct prefixes the drive presented and identifies the first
+    invocation whose prefix differed from the drive's first one,
+  And the count of invocations sharing the drive's first prefix is reported as smaller
+    than the count of context-carrying invocations — on a drive whose prefixes differed,
+    the record never reports the total as the shared count,
+  And the statement is still present with its counts rather than being omitted or
+    emptied, so a drive whose anchor broke is distinguishable from a drive that never
+    measured at all.
 depends_on: [BO-2400c-2]
 doc_links:
-  - path: docs/architecture/components/injection-builder.md
-    relationship: describes
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
     status: exists
-  - path: docs/architecture/components/agent-telemetry.md
+    relevance: "The drive whose record must show the break. The measurement site added by BO-2400c-2 is the same site that must produce an honest not-held statement here."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The only way to produce a drive whose later dispatch carries a different prefix and then read the resulting terminal payload: run_workflow_under_e2, then read agent_calls and HarnessResult.result."
+  - path: scripts/injection_builders.py
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: S
 it_requirements:
   config_schema_fragment:
-    ttl_expiry_reprime:
+    context_reuse_break_statement:
       type: object
-      description: "On TTL expiry mid-drive, the next invocation re-sends the stable prefix (cache-write) rather than omitting it; the cache miss is recorded in telemetry."
-  reference_file_path: "scripts/injection_builders.py"
+      description: "The not-held form of the per-drive context-reuse statement: anchor_held false, a distinct-prefix count, the identity of the first invocation whose prefix differed, and a shared count strictly below the context-carrying invocation count."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
   n_location_rule: "1"
   required_skills:
     - python-coder
-  post_write_commands: []
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
   constraints:
-    - "On TTL expiry between invocations, the next invocation must re-send the full stable prefix so the cache is re-primed (a cache-write) — it must never omit the prefix on the assumption it is still cached."
-    - "The resulting cache miss must be observable in the recorded telemetry (BO-2400d), so cache behavior can be verified from the run record."
+    - "The break statement must come from the same single construction site as the held statement (BO-2400c-2). A separate not-held path is how the two forms drift until one of them stops being emitted."
+    - "The cause of the difference is out of scope and must not be inferred or reported. The record states that the prefixes differed, where, and how many distinct ones there were — nothing about why. A guessed cause in a run record is worse than no cause."
+    - "Omitting the statement, emitting it empty, or defaulting anchor_held to true when the comparison cannot be completed are all failures of this criterion. An unmeasurable drive reports that it could not measure; it never reports a held anchor."
+    - "This criterion has nothing to do with a cache lifetime. There is no TTL to elapse — leafcutter issues no model API call and configures no provider cache — so the only observable break is a change in the bytes the drive itself presented."
 delivers_to: null
 expects_from:
   ac_id: BO-2400c-2
-  contract: "The one-hour cache TTL configuration whose expiry this behavior handles."
+  contract: "The per-drive context-reuse statement and its single construction site, whose not-held form this criterion specifies."
+test_required: true
 test_spec:
-  - name: test_ttl_expiry_reprimes_stable_prefix
-    target_dir: unit_tests/prompt_assembly/
-    framework: unittest
-    type: unit
-    description: "When the TTL has elapsed, the next invocation re-sends the stable prefix (cache-write) rather than omitting it."
-  - name: test_ttl_expiry_cache_miss_in_telemetry
-    target_dir: unit_tests/prompt_assembly/
-    framework: unittest
-    type: unit
-    description: "The cache miss caused by TTL expiry is observable in the recorded telemetry."
+  - name: test_mid_drive_prefix_change_is_recorded_as_not_held
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "In an executed harness drive whose later context-carrying dispatch is presented a prefix differing by one byte, the terminal payload reports the anchor did not hold."
+  - name: test_break_statement_names_first_differing_invocation
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The not-held statement identifies the first invocation whose prefix differed from the drive's first prefix, and reports the number of distinct prefixes presented."
+  - name: test_shared_count_is_below_total_when_prefixes_differ
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "On a drive with differing prefixes the reported shared count is strictly less than the context-carrying invocation count — the total is never reported as the shared count."
+  - name: test_statement_present_and_populated_on_a_broken_drive
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "A drive whose anchor broke still carries the statement with its counts, so it is distinguishable from a drive that produced no measurement."
+test_rationale: |
+  The break case can only be produced by driving the lane: the harness
+  (run_workflow_under_e2 with label_responses) is used to make a later
+  context-carrying dispatch carry a different prefix, and the assertion is read from
+  HarnessResult.result. A test that calls a comparison helper with two hand-written
+  strings proves the helper compares strings; it proves nothing about whether the drive
+  records the break, which is the whole criterion. The fourth test exists because the
+  cheapest way to make the first three pass is to emit the statement only when the anchor
+  holds — which would leave a broken drive silently indistinguishable from an unmeasured
+  one, the exact failure this criterion is here to prevent.
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-19"
+    reason: "Re-specified as the edge case of the MEASUREMENT rather than of a TTL. The prior version described a cache TTL elapsing mid-drive and the prefix being re-sent to re-prime the provider cache. There is no TTL: no cache_control anywhere in scripts/, templates/ or config/, and leafcutter issues no model API call, so nothing in the product can observe or cause a TTL expiry. Its honest-reporting instinct is preserved verbatim in the new subject — when the stable prefix changes mid-drive, for any reason, the record shows the break rather than reporting a clean anchor. Stripped from it_requirements: the ttl_expiry_reprime fragment and both constraints referencing cache_control / the provider default short TTL / cache-miss telemetry."
 superseded_by: null
 covered_by: []
 implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Boundary with BO-2400c-1-iv (done). BO-2400c-1-iv already requires that drift between
+  dispatches be surfaced at the moment it occurs, and its
+  test_prefix_drift_between_dispatches_is_surfaced covers that. This criterion is about
+  what the drive's persisted record says afterwards: not-held, where it broke, and how
+  many distinct prefixes there were. Surfacing is a live signal to whoever is watching;
+  the record is what remains when nobody was. They are covered separately because the
+  cheap implementation of BO-2400c-1-iv — log a warning and carry on — satisfies that
+  criterion completely while leaving the terminal payload reporting a clean anchor, which
+  is precisely the dishonest outcome the parent L1's amendment exists to close.

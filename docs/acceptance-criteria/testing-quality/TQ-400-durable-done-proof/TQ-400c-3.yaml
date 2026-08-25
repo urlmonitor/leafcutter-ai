@@ -1,0 +1,136 @@
+id: TQ-400c-3
+components:
+  - testing_quality
+title: "Each report states the direction of travel against the previous run"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a completed sweep report and at least one earlier completed report to
+    compare it against,
+  When the newer report is produced,
+  Then it states the change since the previous run — how many records became
+    proven and how many lapsed,
+  And the stated change equals the difference between the two runs' recorded
+    populations,
+  And a run in which nothing changed says so explicitly rather than omitting the
+    comparison,
+  And the comparison is computed from the earlier run's stored inventory rather
+    than from a figure carried forward by hand.
+depends_on:
+  - TQ-400c
+  - TQ-400c-1
+  - TQ-400a-4
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle: pipe the REAL producer's output (TQ-400a-4's stored inventory) into the REAL consumer (the trend computation) and assert the consumer's observable behaviour. Reading a carried-forward number instead is the drift this angle exists to catch."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The sweep that produces each run's population. The trend is arithmetic over two of its outputs and must never re-evaluate records itself."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "verify_done_eligible — named here only so it is clear the trend must NOT call it. A trend that re-derives verdicts is a third independent reader of the store after the oracle and the sweep."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE TREND IS ARITHMETIC OVER TWO STORED INVENTORIES, NEVER A THIRD READ OF THE STORE. Compute the delta by loading the previous run's inventory (TQ-400a-4) and the current run's inventory and differencing them. An implementation that re-evaluates any record while computing the trend has created a third reader after the oracle and the sweep, and it will disagree with the report it sits inside."
+  - "NO CARRIED-FORWARD FIGURES. The previous population must come from the previous run's durable inventory, not from a counter, a 'last seen' value, or the previous report's rendered headline. A carried-forward number cannot be re-derived, so a wrong one is undetectable and permanent."
+  - "A ZERO DELTA MUST BE STATED, NOT OMITTED. An absent comparison is indistinguishable from a comparison that failed to compute — the same silence-equals-pass problem TQ-400a-4-i addresses on the sweep side. 'No change since the previous run' is a positive statement the report must make."
+  - "THE DELTA MUST BE SIGNED AND TWO-SIDED: how many became proven AND how many lapsed, reported separately. A single net figure hides the case where equal numbers moved in both directions, which is the most alarming possible state and would render as 'no change'."
+  - "The empty-history case is TQ-400c-3-i's subject and must be handled as a genuine special case, not by differencing against an assumed-empty previous population."
+  - "Must handle errors gracefully per the project error handling policy: an unreadable or malformed previous inventory must be reported as such, never silently treated as an empty predecessor — that failure mode reports the entire finished population as newly proven or newly lapsed."
+delivers_to:
+  - agent: python-coder
+    contract: "A two-sided signed delta for the run — {became_proven: int, lapsed: int, previous_occurrence: <dated id> | none} — attached to the run's report and derived exclusively by differencing two stored inventories. Consumed by TQ-400c-2's published surface."
+expects_from:
+  - ac_id: TQ-400a-4
+    contract: >-
+      The durable per-run inventory. The trend is computed by reading the previous
+      run's inventory, so the comparison cannot drift from what the sweep actually
+      found. Required shape: a per-record entry carrying the record id and its
+      outcome for that run, addressable by occurrence.
+  - ac_id: TQ-400c-1
+    contract: >-
+      Separately dated, never-overwritten reports, so occurrence N-1 is still
+      readable when occurrence N is produced. A report that overwrites its
+      predecessor makes this AC uncomputable.
+test_spec:
+  - name: test_tq_400c_3_stated_delta_equals_the_arithmetic_between_two_real_runs
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Construct two real runs whose populations genuinely differ — add a passing covering test for one unproven record between the runs — and assert the stated became_proven and lapsed figures equal the arithmetic difference. Assert both sides separately: a test on the net figure alone passes on an implementation that reports a single number."
+  - name: test_tq_400c_3_trend_is_computed_from_the_stored_inventory_not_a_carried_figure
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Mutate the previous run's stored inventory on disk between the runs and assert the reported delta changes to match the mutated inventory. An implementation reading a carried-forward counter, or re-deriving verdicts from the store, is unaffected by the mutation and fails."
+  - name: test_tq_400c_3_a_run_with_no_change_states_no_change_explicitly
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two consecutive runs over an unchanged store: the second report states zero-became-proven and zero-lapsed as a present, positive statement. Assert the comparison FIELDS ARE PRESENT — an omitted comparison must fail, because absence is indistinguishable from a comparison that failed to compute."
+  - name: test_tq_400c_3_trend_appears_in_the_report_produced_by_the_scheduled_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Fire the scheduled entry point twice and assert the second occurrence's report — the artifact actually written, read back from disk — carries the trend. A trend function that is correct but never called from the report path is the phantom-done shape this repo keeps hitting."
+test_rationale: |
+  The cheap green is asserting a 'change' field exists in the report, which passes on a
+  hard-coded zero. Two of the four clauses are only falsifiable by mutation: the delta must
+  respond to a genuine population difference (criterion), and it must respond to a change in
+  the STORED INVENTORY specifically (seam) — the latter is the only test that can tell a
+  correct implementation from one carrying a figure forward by hand, because both produce
+  identical output on the happy path. The zero-change case gets its own entry because
+  'omitted' and 'zero' are the same thing to any test that only checks the value when present.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder; complexity M. it_requirements forbid a third read of
+    the store and any carried-forward figure, and require a two-sided signed delta.
+    expects_from widened to a list naming both TQ-400a-4 (inventory shape) and TQ-400c-1
+    (never-overwritten predecessor). test_spec covers criterion / seam (inventory
+    mutation) / boundary (zero delta stated) / reachability. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by:
+  - TQ-400c-3-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Prove by constructing two real runs whose populations genuinely differ — add a
+  passing covering test for one unproven record between the runs — and check the
+  stated delta against the arithmetic. A test that asserts a "change" field exists
+  in the report passes on a hard-coded zero.
+
+  The explicit no-change statement matters: an omitted comparison is
+  indistinguishable from a comparison that failed to compute, which is the same
+  silence-equals-pass problem TQ-400a-4-i addresses on the sweep side.
+
+  The final clause is a seam requirement against TQ-400a-4's inventory: reading
+  the stored inventory is what stops the trend surface becoming a third
+  independent reader of the store, after the oracle and the sweep.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The two-sided delta is called out explicitly
+  in it_requirements because the criteria say "how many became proven and how many
+  lapsed" while a net figure would satisfy a careless reading — and a net figure
+  renders the worst possible state (equal numbers moving both ways) as "no change".

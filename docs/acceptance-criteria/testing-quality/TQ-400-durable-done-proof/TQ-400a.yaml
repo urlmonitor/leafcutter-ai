@@ -1,0 +1,51 @@
+id: TQ-400a
+components:
+  - testing_quality
+  - ac_store
+title: "Every finished item is re-examined, not just the ones somebody happens to touch"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The whole backlog is re-checked, not only the records in front of you today.
+
+  Today the honesty check only ever looks at the handful of records caught up in
+  the change you are making right now, so work finished months ago is never
+  looked at again. This widens the check to every finished item in the backlog,
+  so nothing stays unexamined purely because nobody touched it.
+depends_on:
+  - TQ-400
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-17
+amended_by:
+  - reason: "child_limit_override raised 5 -> 6 to admit TQ-400a-5 and TQ-400a-6, the two documentation ACs this L1's documentation_triggers ([how-to, component-diagram]) require. Two it-po passes withheld promotion because the triggers were unsatisfied, and the four existing behavioural L2s already sit at the default cap of 5 once the first doc AC is added. A split was rejected: both doc ACs describe the same single behaviour (the store-wide sweep) as the behavioural children, so a sibling L1 would separate the documentation from the thing it documents. REMOVE THIS OVERRIDE when a PO-owned split rebalances the TQ-400 tree, or when any behavioural child is superseded and frees a slot back to 5."
+    by: business-analyst
+    at: 2026-08-17
+superseded_by: null
+covered_by:
+  - TQ-400a-1
+  - TQ-400a-2
+  - TQ-400a-3
+  - TQ-400a-4
+  - TQ-400a-5
+  - TQ-400a-6
+implemented_by: []
+child_limit_override: 6
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - how-to
+  - component-diagram

@@ -2,14 +2,17 @@
 agent_id: ac-fulfillment-gate
 title: 'Agent Card: ac-fulfillment-gate'
 description: 'AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 11.5,
-  before commit at 12). Verifies AC YAML store fields (work_status, implemented_by,
+  before commit at 12). Resolves AC coverage via the shared ac_coverage_resolver module
+  (accepts both the two-key ac_traceability form the generator emits and the legacy
+  l2/l3/ac_path list form), then verifies AC YAML store fields (work_status, implemented_by,
   covered_by) are accurate and up-to-date before any commit is made. When verification
   fails but diff evidence exists, auto-fixes the YAML store fields (append-only, idempotent).
-  Returns status: ok if all ACs pass or ac_traceability is absent; status: blocker
-  with per-AC details if any AC fails after auto-fix attempt. Use when: ticket-supervisor
-  dispatches at priority 11.7 for any ticket that has ac_traceability frontmatter
-  referencing L2/L3 AC YAML files. Skips silently for L0/L1 ACs (composite — fulfillment
-  derived from children).'
+  Returns status: ok only when at least one AC was resolved and every resolved AC
+  passes, or when ac_traceability is absent entirely; status: blocker with per-AC
+  details if any AC fails after auto-fix attempt, or if a present ac_traceability
+  block resolves to zero ACs. Use when: ticket-supervisor dispatches at priority 11.7
+  for any ticket that has ac_traceability frontmatter referencing L2/L3 AC YAML files.
+  Skips silently for L0/L1 ACs (composite — fulfillment derived from children).'
 type: card
 status: active
 created: 2026-08-13
@@ -18,7 +21,7 @@ last_updated: '2026-08-13'
 ---
 # ac-fulfillment-gate
 
-**AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 11.5, before commit at 12). Verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate and up-to-date before any commit is made. When verification fails but diff evidence exists, auto-fixes the YAML store fields (append-only, idempotent). Returns status: ok if all ACs pass or ac_traceability is absent; status: blocker with per-AC details if any AC fails after auto-fix attempt. Use when: ticket-supervisor dispatches at priority 11.7 for any ticket that has ac_traceability frontmatter referencing L2/L3 AC YAML files. Skips silently for L0/L1 ACs (composite — fulfillment derived from children).**
+**AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 11.5, before commit at 12). Resolves AC coverage via the shared ac_coverage_resolver module (accepts both the two-key ac_traceability form the generator emits and the legacy l2/l3/ac_path list form), then verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate and up-to-date before any commit is made. When verification fails but diff evidence exists, auto-fixes the YAML store fields (append-only, idempotent). Returns status: ok only when at least one AC was resolved and every resolved AC passes, or when ac_traceability is absent entirely; status: blocker with per-AC details if any AC fails after auto-fix attempt, or if a present ac_traceability block resolves to zero ACs. Use when: ticket-supervisor dispatches at priority 11.7 for any ticket that has ac_traceability frontmatter referencing L2/L3 AC YAML files. Skips silently for L0/L1 ACs (composite — fulfillment derived from children).**
 
 | Field | Value |
 |-------|-------|

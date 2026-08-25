@@ -1,0 +1,178 @@
+id: BP-900h-4
+components:
+  - build_pipeline
+title: "The install under test is a vendoring consumer, so a guardrail's data file cannot pass by borrowing the package's own tree"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+criteria: |
+  Given the consumer-simulation install of BP-900h-1, which builds into a scratch
+    project holding only a minimal skills_config.json,
+  And a guardrail the package deploys that reads a declaring file it does not itself
+    contain — a schema that defines its rule, a vocabulary of permitted values, a
+    registry of records it looks up, or a helper module it loads,
+  When the install is inspected after the build,
+  Then every declaring file that a deployed guardrail reads is present under that
+    scratch project's deployed output root,
+  And each declaring file is resolved ONLY from the scratch project's deployed output
+    root — never from the package checkout beneath it, never from a parent directory,
+    and never from the invoking process's working directory — so a file that would
+    resolve only because the target happens to be the package's own workspace is
+    reported as missing,
+  And the inspection names each missing declaring file together with the guardrail
+    that reads it and the deployed location it was expected at,
+  And a file the guardrail obtains from outside the install — an operating-system
+    path, or data owned by an external tool the package does not ship — is not
+    reported as missing, so the check does not manufacture failures for things the
+    install was never responsible for,
+  And the inspection is demonstrated to FAIL when one declaring file is deleted from
+    the deployed output root after a successful build, because an inspection that
+    stays green on a deliberately incomplete install proves nothing.
+
+  Because on 2026-08-18 five declaring files were confirmed absent from a deployed
+  output root while every build test passed: two type vocabularies read by the
+  document-frontmatter guardrail, the schema read by the AC-schema guardrail, the
+  agent registry read by the planning workflow, and a component-migration helper
+  module. None of these was detectable, because every build test to date installs
+  into leafcutter's own self-hosted workspace, where the package source tree sits
+  beside the deployed output root and each of those files resolves anyway. The layout
+  under test, not the check, is what made the gap invisible.
+depends_on:
+  - BP-900h
+  - BP-900h-1
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the empty-project consumer-simulation install this AC inspects. h-1 already forbids building from a copy of the repository; this AC adds the resolution rule that stops an ancestor directory from satisfying a lookup, and extends the inspected set from script references to declaring files."
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "Produces the deployed output root the inspection reads. Not modified by this AC."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The self-hosting boundary is exactly what makes the package's own workspace an unrepresentative install target — the reason this AC exists."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary: deployed + real_artifact + failure, with the deliberately-incomplete-install negative control as the load-bearing entry."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A consumer-layout install fixture whose declaring-file resolution is anchored to the deployed output root alone, plus the per-guardrail declaring-file inventory it inspects. BP-900h-5 invokes the guardrails inside this same fixture rather than standing up a second one."
+expects_from:
+  ac_id: BP-900h-1
+  contract: "The empty-project consumer-simulation install and its build invocation, which this AC constrains further rather than replacing."
+test_spec:
+  - name: test_bp_900h_4_every_declaring_file_of_every_deployed_guardrail_is_present_under_the_scratch_deployed_root
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Build the real scripts/build.py --target-dir into a tmp scratch project that holds only a minimal skills_config.json and that is NOT a descendant of the package checkout, then assert that for every guardrail the package deploys, every declaring file it reads exists and its os.path.realpath is under that scratch deployed output root. TWO NON-VACUITY ASSERTIONS ARE MANDATORY, because a for-each over an empty inventory is green on a broken install: assert the per-guardrail declaring-file inventory is non-empty, and assert it contains the five files confirmed absent on 2026-08-18 - the two type vocabularies read by the document-frontmatter guardrail, config/ac_store_schema.json read by the AC-schema guardrail, config/agent_registry.json read by the planning workflow, and the component-migration helper module. This entry is expected to be RED at authoring time; if it is green before any implementation exists, the inventory is empty or the fixture is resolving against the package tree."
+  - name: test_bp_900h_4_ci_inspection_runs_through_its_real_entry_point_and_its_nonzero_verdict_is_not_swallowed
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Invoke the declaring-file inspection as a SUBPROCESS through the same command line the CI job runs - never by importing the inspection function - against the scratch install, and assert exit 0 on a complete install. Then assert the consumption half by parsing .github/workflows/ci.yml as YAML: the step that runs this inspection invokes that identical command and does NOT carry continue-on-error true, so a non-zero verdict actually fails the job. Parse the workflow into a data structure and assert on the step's fields; a grep for the script name in the file text is green on a step that is continue-on-error, which is the TQ-100 L-4 defect."
+  - name: test_bp_900h_4_inspection_goes_red_when_one_declaring_file_is_deleted_from_the_deployed_root_after_a_green_build
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE NEGATIVE CONTROL THE CRITERION DEMANDS, and the load-bearing entry of this contract. Three runs of the SAME subprocess entry point against the SAME scratch install: (1) after a successful build, exit 0; (2) delete exactly one declaring file from the deployed output root and re-run - assert non-zero AND that the output names all three of the deleted file, the guardrail that reads it, and the deployed location it was expected at; (3) restore the file and re-run - exit 0 again. Run 3 is what makes the red in run 2 attributable to the deletion rather than to a fixture that had already broken. An inspection that stays green on a deliberately incomplete install proves nothing, so a contract without this triple would be worse than none."
+  - name: test_bp_900h_4_a_declaring_file_present_only_outside_the_deployed_root_is_still_reported_missing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE RESOLUTION RULE, which is the clause the whole AC turns on. With one declaring file ABSENT from the scratch deployed output root, plant a readable decoy copy of it in each of the three places that made the original defect invisible - the parent directory of the scratch install, the package checkout, and the working directory the subprocess is launched from - and assert the inspection STILL reports the file missing and names the expected location under the deployed output root, never any decoy path. Assert on the reported expected location, not merely on the exit code: an inspection that fails for the right reason and one that fails while pointing at the package checkout are indistinguishable by exit code. A plain does-this-path-exist check passes this test only if the scratch install is genuinely outside the package tree - hence the fixture constraint in entry 1."
+  - name: test_bp_900h_4_a_file_owned_by_the_operating_system_or_an_external_tool_is_not_reported_as_missing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The does-not-manufacture-failures half. Give the inventory a guardrail whose reads include an absolute operating-system path and a path owned by an external tool the package does not ship, neither of which is present under the deployed output root, and assert the inspection reports neither as missing and still exits 0 for an otherwise complete install. Pair it with the control that a package-owned declaring file at a comparable location IS reported missing - otherwise the exclusion can be satisfied by an inspection that excludes everything."
+test_rationale: |
+  The layout under test is the whole subject of this AC, so the fixture is load-bearing
+  in a way the assertions are not. Every build test to date installs into leafcutter's
+  own self-hosted workspace, where the package source tree sits beside the deployed
+  output root and each of the five missing files resolves anyway. Any of these five
+  entries, run against that layout, is green on the exact install that shipped broken.
+  The scratch project must therefore be created outside the package checkout, and the
+  subprocess must be launched with a working directory that is not the package tree —
+  those two properties, not the assertion text, are what make the tests falsifiable.
+
+  Entry 4 is the one that cannot be replaced by a cheaper test. A presence check
+  (does this path exist) satisfies entries 1, 2 and 3 and is precisely the
+  implementation the criterion rules out, because in the self-hosted workspace it
+  passes for the wrong reason. Only planting a decoy at each of the three resolution
+  sources — ancestor directory, package checkout, process working directory — and
+  asserting the file is still reported missing distinguishes an anchored resolution
+  from an accidental one.
+
+  Entry 3 carries the criterion's own demand that the inspection be demonstrated to
+  fail, and it is written as a three-run sequence rather than a single red assertion.
+  A two-run delete-and-fail pair cannot separate a working guard from a fixture that
+  had already broken; the restore-and-pass third run is what attributes the red to the
+  deletion. This is the same discipline BP-900g-8 applies to its build subprocess entry
+  and BP-900h-1 applies to its unresolved-reference case.
+
+  The non-vacuity assertions in entry 1 are not defensive padding. The failure shape
+  this AC exists against is a check that has no opinion about data files at all, and a
+  derived inventory that comes back empty produces a passing for-each loop over nothing
+  — a success-shaped result from a run that checked nothing, the same shape as the
+  bare-directory validator no-op recorded in CLAUDE.md. Asserting the inventory is
+  non-empty and contains the five named regression files is what closes it.
+
+  Angles: criterion, reachability, deployed, failure — at the cap of four. seam and
+  real_artifact are not charged: this AC has no producer-consumer signature boundary,
+  and its input is a directory tree rather than a serialized artifact another tool
+  writes. boundary is not charged because the criterion names no range, count or limit.
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A FIFTH deployment-gap axis, and the first that is not about scripts at all.
+  Keep it distinct from the four already in this component (see
+  memory/feedback_ba_bp1000_source_template_parity.md and
+  memory/feedback_itpo_bp900f_tracked_source_axis.md):
+    - BP-1000 (a-d): byte-equality of scripts present in BOTH scripts/ and templates/.
+    - BP-900b: build preflight, template SCRIPT references vs the deployable manifest.
+    - BP-900e: a registered or referenced SCRIPT has a deploy-source copy at all.
+    - BP-900f: a deployable SCRIPT's source is tracked in git.
+    - THIS (h-4 + g-8-ii): the DATA and CONFIGURATION files a deployed guardrail
+      reads. Every one of the four above is expressed in terms of scripts, so a
+      configuration JSON is not a dependency as far as any of them can tell.
+
+  The division of labour with BP-900g-8-ii is deliberate and should not be collapsed:
+  g-8-ii makes the BUILD refuse to ship an install whose declaring files are not in
+  the deploy manifest; this AC proves EMPIRICALLY, in a real install, that they
+  arrived. They fail independently — a derived closure can miss a read it cannot see
+  statically, and an empirical inspection cannot tell you which manifest entry was
+  forgotten.
+
+  The load-bearing clause is the resolution rule, not the presence assertion. An
+  inspection that simply checks "does this path exist" will pass in the self-hosted
+  workspace for exactly the same reason the original defect was invisible there.

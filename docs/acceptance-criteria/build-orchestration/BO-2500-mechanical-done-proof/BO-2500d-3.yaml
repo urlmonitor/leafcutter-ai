@@ -2,22 +2,23 @@ id: BO-2500d-3
 components:
   - build_orchestration
   - review_system
-title: "The mechanical proof-of-done gates stand in for the removed review agents in the fast lane"
+title: "The mechanical proof-of-done gates are the fast lane's completion arbiters"
 component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given the fast-lane phase order after the opinion-only agents are removed,
+  Given the fast-lane phase order,
   When its phases are enumerated,
   Then the deterministic proof-of-done gates (red-baseline verification, green plus
     coverage verification, and the covers-tag linkage check) are present as the
-    completion arbiters
-  So the fast lane still has an enforced proof-of-done in place of the removed review.
+    completion arbiters,
+  And an acceptance criterion is recorded done only when all three have passed for it,
+  So the fast lane's done-ness is established by these three gates and by nothing else.
 depends_on: [BO-2500d]
 doc_links:
   - path: docs/architecture/components/build-orchestration.md
@@ -29,33 +30,73 @@ doc_links:
   - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
     relationship: describes
     status: exists
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: implements
+    status: exists
+    relevance: "The lane that actually runs and whose mark-done step must be reachable only through all three gate results. The previous proof pointed at templates/workflows-js/fast-lane-build.js, an orphan nothing invokes."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Supplies run_workflow_under_e2, under which the lane is executed with each gate stubbed failing in turn and the recorded mark-done dispatches compared."
 assigned_agent: llm-expert
 estimated_complexity: M
 it_requirements:
   - "The fast-lane phase order must list the deterministic proof-of-done gates as its completion arbiters: red-baseline verification and green+coverage verification (from BO-2400) plus the covers-tag linkage / done-proof check (from BO-2500a)."
   - "The gates must be positioned so completion cannot be signed off before all of them pass (they are the terminal arbiters of the fast lane)."
-  - "The presence of these gates is the precondition that makes the opinion-only removal (BO-2500d-1) and the removal-safety validation (BO-2500d-1-i) satisfiable."
+  - "These three gates are the whole of what establishes done-ness in the fast lane, and that is what makes BO-2500d-1's directional guarantee satisfiable: with nothing left for an LLM verdict to confer, the single reviewing agent's verdict can only withhold delivery. BO-2500d-1-i is the guard that rejects any later change removing one of these gates or letting a verdict substitute for one."
+  - "Covering tests must EXECUTE the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2) and assert on the recorded mark-done dispatches with each gate stubbed failing in turn. A test that greps the workflow source for a gate name is not acceptable evidence — it passes on dead code, which is how this criterion has been green since 2026-07-21 against an orphaned runner (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+  - "The replacement tests must carry the SAME '# covers:' ids as the assertions they replace, so scripts/ac_store/done_proof.py sees no change in linkage."
 delivers_to:
   agent: llm-expert
-  contract: "The set of mechanical proof-of-done gates present in the fast-lane phase order, which BO-2500d-1 and BO-2500d-1-i require as the replacement for the removed opinion-only agents."
+  contract: "The set of mechanical proof-of-done gates present in the fast-lane phase order, which is the whole of what establishes done-ness there — the premise BO-2500d-1's veto-only guarantee and BO-2500d-1-i's substitution guard both rest on."
 expects_from:
   ac_id: BO-2500a-3
   contract: "The covers-tag linkage / done-proof eligibility check (BO-2500a) that, together with the BO-2400 red-baseline and green+coverage gates, forms the fast-lane completion arbiters."
+test_required: true
 test_spec:
-  - name: test_fast_lane_lists_mechanical_proof_of_done_gates
-    target_dir: unit_tests/build/
-    framework: unittest
-    type: unit
-    description: "The fast-lane phase order contains the red-baseline, green+coverage, and covers-tag linkage gates as completion arbiters."
-  - name: test_fast_lane_signoff_requires_all_mechanical_gates_pass
-    target_dir: unit_tests/build/
-    framework: unittest
-    type: unit
-    description: "Fast-lane completion cannot be signed off until every mechanical proof-of-done gate passes."
+  - name: test_each_mechanical_gate_alone_can_prevent_mark_done
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "For each of the three gates in turn, an executed harness run with that gate stubbed failing and the other two passing records no mark-done dispatch for the ACs it covers."
+  - name: test_all_three_gates_passing_permits_mark_done
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "An executed harness run with all three gates stubbed passing records a mark-done dispatch for every AC in the resolved set."
+  - name: test_mark_done_is_unreachable_without_reading_every_gate_result
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "On every executed path, the mark-done dispatch occurs only after all three gate results have been read, so a gate that is dispatched but whose result is never consumed cannot let a run through."
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Wording correction; the body of the criterion was already right. The title ('...stand in for the removed review agents') and the trailing clause ('...in place of the removed review') both framed the mechanical gates as a substitute for something that was taken away. That framing is now wrong twice over: after BO-2400f-11 the fast lane has a reviewer again, and the gates were never a stand-in for review in the first place — they ARE the completion arbiters, and always were. Retitled and the trailing clause replaced with the positive statement: done-ness is established by these three gates and by nothing else. it_requirements bullet 3, which described these gates as the precondition for 'the opinion-only removal (BO-2500d-1)', was rewritten for the same reason: they are the premise that makes BO-2500d-1's veto-only guarantee satisfiable, not the enabler of a removal. delivers_to reworded off 'replacement for the removed opinion-only agents'. doc_links and test_spec re-pointed from the orphaned runner to the live lane and to executed-behaviour coverage. Amended in place rather than superseded so the id stays active and the '# covers:' tags in the gate-retirement suite do not dangle under scripts/ac_store/done_proof.py."
+  - agent: BrainCandy
+    date: "2026-08-19"
+    reason: "work_status correction (not a change of intent), acting on this criterion's own STATUS CAVEAT: done -> in_progress. Same reasoning as BO-2500d-1, which see. The corrected title and criteria are right; the done flag was not earned, because the only covering tests are string-presence assertions against the orphaned templates/workflows-js/fast-lane-build.js and the executed-behaviour tests named in test_spec do not exist. Caught by adversarial review of PR #510 before merge. Flip back to done when those tests are green against the live lane."
 superseded_by: null
 covered_by: []
 implemented_by:
-  - "templates/workflows-js/fast-lane-build.js"
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The distinction the retitle makes is small on the page and large in consequence. If the
+  mechanical gates are a "stand-in" for review, then review is the real arbiter and the
+  gates are a cheaper proxy for it — which invites, later and reasonably, putting the real
+  arbiter back in charge. If the gates ARE the arbiters, a reviewer is an additional way to
+  stop a change, and nothing about it bears on whether an acceptance criterion is done.
+  BO-2500d-1 and BO-2500d-1-i are only coherent on the second reading.
+
+  STATUS CAVEAT, recorded 2026-08-18. work_status remains done, but the proof is
+  string-presence greps in unit_tests/workflows/test_bo2500d_gate_retirement.py against
+  templates/workflows-js/fast-lane-build.js — a runner nothing invokes. The criterion may
+  well be satisfied by the live lane; nothing has ever observed it there. Re-examine
+  work_status when the executed-behaviour tests above are green.

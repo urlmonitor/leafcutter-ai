@@ -23,10 +23,10 @@ criteria: |
     and none of its requirements is left recorded as being worked on,
   And the person is told which finding stopped the run, naming the requirement and the
     file it relates to.
-depends_on: [BO-2400g, BO-2400g-2]
+depends_on: [BO-2400g, BO-2400g-2, TQ-200c-2]
 doc_links:
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "The halt path already exists and must be reused rather than reinvented: every phase has a release-on-failure pattern (see release-on-coder-fail at line 424), and Commit (line 471) / Pull Request (line 539) are the two steps that must not be reached on a stop."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10.yaml

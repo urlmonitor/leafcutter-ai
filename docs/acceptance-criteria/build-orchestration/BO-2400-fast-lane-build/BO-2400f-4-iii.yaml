@@ -1,0 +1,94 @@
+id: BO-2400f-4-iii
+components:
+  - build_orchestration
+  - changelog
+title: "The run writes the required changelog entry itself, from what it already knows"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run that has decided it owes a changelog entry, having resolved a
+    connected set from the acceptance criterion the operator named, taken it to green, and
+    recorded the files its coder modified,
+  When the run delivers its work,
+  Then a changelog entry describing this run is created by the run itself, with the
+    operator writing nothing,
+  And the entry is part of the change the pull request is opened from — an added entry in
+    the pull request's own diff, not an uncommitted file left in the worktree,
+  And the entry is produced through the repository's standard changelog emitter, so its
+    filename and frontmatter carry the same shape as every other entry in the collection,
+  And the entry's content is derived from facts the run already holds: the acceptance
+    criterion the operator named, every criterion actually built, the files the coder
+    modified, and the branch the work is on,
+  And the changelog-presence merge check passes on the pull request the run opens.
+depends_on: [BO-2400f-4, BO-2400f-4-i]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/changelog.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_changelog_payload:
+      type: object
+      description: "Emitter payload assembled from run state: title (from the target AC's title), date, time, type 'manual', components (union of the built ACs' components lists), summary, description (built AC ids + files modified), breaking (per BO-2400f-4-iv). Emitted via the repository's changelog emitter, never by hand-writing a markdown file."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Write the entry through scripts/changelog/emit_entry.py (--changelog-dir + --payload JSON). Do not hand-compose a markdown file in changelogs/ — filename and frontmatter convention live in the emitter and must not be forked."
+    - "The entry must be staged and committed on the run's branch. The merge check looks for an ADDED changelogs/*.md in the three-dot diff, so an entry written but not committed satisfies nothing."
+    - "Ordering: the entry must exist in the branch before the pull request is opened. Emitting after the PR call leaves the first CI run failing and re-introduces the observed defect for anyone reading the PR."
+    - "summary is required by the emitter and must read as plain business language; description carries the built AC ids and the modified files."
+    - "The covering test must exercise the real emitter against a temporary changelog dir and assert an added, convention-shaped file — a test that asserts the workflow source contains the string 'emit_entry' passes on dead code (CLAUDE.md, gate/workflow ACs)."
+delivers_to:
+  agent: python-coder
+  contract: "A committed changelog entry on the run's branch; the mergeability claim in BO-2400f-4-vi is asserted over its presence."
+expects_from:
+  ac_id: BO-2400f-4-i
+  contract: "The per-run 'changelog entry required' decision; this criterion governs the true branch."
+test_required: true
+test_spec:
+  - name: test_run_emits_changelog_entry_for_releasable_change
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    description: "A run with a releasable change produces a changelog entry through the repository emitter, with no operator input."
+  - name: test_changelog_entry_is_committed_before_pr_is_opened
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The entry is committed on the run's branch before the pull-request step runs, so it appears as an added file in the PR diff."
+  - name: test_entry_content_derived_from_run_state
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "The emitted entry names the target AC, the built AC ids, and the files the coder modified."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed live on PR #465, the first acceptance criterion built end-to-end by the lane:
+  five of six required checks green, the changelog-presence check failed, mergeable_state
+  blocked. The entry had to be hand-written in b3124ff25 to land it. Recorded as KI-BO-001.

@@ -355,6 +355,46 @@ the same commit. Skipping this produces a failure that is invisible on the branc
 surfaces once `origin/main`'s stricter parity test merges in.
 (Source: EPIC-DocumentationCoverageGuarantee FP-3, 2026-08-10.)
 
+### AC-store commits — stage the parent alongside the child
+
+When a commit changes an AC's place in the tree — adding a child, changing `covered_by`,
+flipping a child's `work_status` — **stage the parent AC file in the same commit**, even
+when the parent's own content is unchanged.
+
+The commit-guardian AC hooks validate only the files present in **that commit's index**.
+They do not read the store. So any fact that is true of the store but not of the staged set
+is structurally unreachable: you edit children, never stage the parent, and the hooks that
+exist to check parents never look at one. Their silence is not a pass — it means they were
+never given the file.
+
+Two consequences follow, and both are phantom-done vectors:
+
+- **Stale `covered_by`.** A parent keeps listing the children it had when it was last
+  staged. `check_ac_parent_covered_by` cannot notice, because it compares only what is in
+  the index.
+- **A falsely `done` composite.** A parent claims `work_status: done` while its children
+  are still `todo`. `check_done_proof` cannot notice for the same reason.
+
+**Why this matters:** `ACD-400a` carried both defects simultaneously. Its `covered_by` read
+`[a-1, a-2]` while `a-3` and `a-4` had existed on disk since 2026-08-12 — stale by two for
+five days — and it claimed `work_status: done` with `a-1` and `a-2` both still `todo`.
+Every commit in that window passed every AC hook. Both surfaced in one shot on 2026-08-18,
+the first time the parent happened to be staged.
+
+`ACD-400a` is not special. A store-wide sweep of all 3,146 records at `439b9076f` found
+**20** composites marked `done` with at least one unfinished child — `ACD-300a`, `ACD-400b`
+and `ACD-600a` each with 3-4 `todo` children. Sixteen of the twenty are L2; in thirteen of
+those, *every* unfinished child is a Roman-suffixed technical-constraint sibling
+(`-i`/`-ii`/`-iii`). So the dominant shape is marking an L2 done once its behaviour works
+while its `-i` constraints stay `todo` — check those before flipping any L2.
+
+Related trap: several of these hooks ignore `argv` entirely and read the index or
+`HOOK_TEST_FILES`, so passing a path on the command line does **not** make them check that
+path. If you are testing a hook, verify it actually saw your file before trusting the exit
+code. For the out-of-band store-wide sweep, see "AC-store hygiene" below — and note the
+bare-directory no-op documented there.
+(Source: ACD-400a drift, found 2026-08-18.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -645,6 +685,19 @@ serial per-commit hook cascade — child-limit caps, missing parent `covered_by`
 and schema-invalid fields (e.g. a list-valued `test_rationale` that must be a string):
 
 ```bash
-python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>/
+find docs/acceptance-criteria/<component> -name "*.yaml" -exec python scripts/ac_store/validate_ac_schema.py {} +
 ```
-(Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10.)
+
+**Do NOT pass a bare directory.** `validate_ac_schema.py` takes file paths and does no
+globbing of its own. Given a directory it prints `No YAML files to validate.` and **exits
+0** — a success-shaped result from a run that checked nothing. This instruction previously
+prescribed the bare-directory form, so the documented defence against store rot was itself
+a no-op from 2026-08-10 until 2026-08-18.
+
+Use `find -exec` rather than a shell glob: AC YAML sits at more than one depth (some files
+are directly under `docs/acceptance-criteria/`), so a fixed-depth pattern like `*/*.yaml`
+silently skips whole directories — the same failure in a smaller costume. Before believing
+a pass, confirm the command actually named some files.
+
+(Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10; bare-directory no-op found
+2026-08-18.)

@@ -1,0 +1,147 @@
+id: TQ-400d-4
+components:
+  - testing_quality
+  - ac_store
+title: "The triage list is derived from the sweep's inventory, not maintained beside it"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the sweep's durable inventory for a completed run,
+  When the triage list for that run is produced,
+  Then every record in the triage list is present in that inventory with an
+    unproven verdict,
+  And a record that a later sweep adds to the unproven population appears in the
+    triage list without anyone adding it by hand,
+  And a record that a later sweep finds proven leaves the awaiting-decision pile
+    without anyone removing it by hand,
+  And there is no record in the triage list that the inventory does not account
+    for.
+depends_on:
+  - TQ-400d
+  - TQ-400a-4
+  - TQ-400d-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle and the real_artifact angle together. The derivation obligation is a seam (real inventory into real list producer) and the anti-staleness clause is authenticity (a stale copy that was correct once passes any test built on a hand-made inventory)."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "check_all_done_acs is the producer of the population the inventory records. Read it to see that the unproven verdict is already computed per record — the list must be a projection of that computation, never a second one."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "verify_done_eligible — named here so it is clear the list producer must NOT call it. A list that re-derives verdicts is a fourth reader of the store after the oracle, the sweep, and the trend."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The record identity the inventory and the list must agree on. Both sides must key on the same AC id form, or set-equality becomes vacuously false or vacuously true depending on the direction."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE LIST IS A VIEW, AND THE DERIVATION MUST BE STRUCTURAL, NOT CONVENTIONAL. The triage list must be computed from the run's durable inventory every time it is produced. It must not be a file that is written once and updated, not a list seeded from the inventory and thereafter maintained, and not a cache with an invalidation rule. If a hand edit to the list can survive the next run, the derivation obligation has not been met."
+  - "NO INDEPENDENT VERDICT COMPUTATION IN THE LIST PRODUCER. The list producer must not call the per-record oracle and must not re-read the AC store to decide proven-versus-unproven. Its only input for that decision is the inventory. This is the anti-drift constraint: a hand-maintained or independently-derived triage list is a fourth reader after the oracle, the sweep, and the trend, and it will drift, at which point the pile and the sweep disagree about what is unproven and neither can be trusted."
+  - "DERIVATION MUST BE TWO-DIRECTIONAL AND THAT IS THE LOAD-BEARING CLAUSE. Records must enter the list when the inventory adds them AND leave when the inventory drops them, both unaided. An add-only implementation is the common cheap green and it turns the pile into a ratchet that can never go down, defeating TQ-400d-2's progress measure entirely."
+  - "THE DECISION STATE IS THE ONE THING THAT PERSISTS ACROSS DERIVATIONS. Re-deriving the list must not discard recorded decisions; the decision is durable per-record state joined onto a freshly derived membership. This is the same two-lifetimes constraint TQ-400d-2 depends on, stated from the derivation side."
+  - "THE INVENTORY IS THE ONLY ACCOUNTING SOURCE. Every list entry must be attributable to an inventory entry for that run. A list entry the inventory does not account for is a defect regardless of whether the record is genuinely unproven — it means a second source got in."
+  - "Must handle errors gracefully per the project error handling policy: a missing or unreadable inventory must produce a reported failure, never a list derived from a previous run's inventory or from the store directly. Falling back to a stale inventory silently reintroduces exactly the drift this AC forbids."
+delivers_to:
+  - agent: python-coder
+    contract: "The derivation contract for the triage list: list membership for run N is a pure projection of run N's inventory (entries with an unproven verdict), joined with durable per-record decision state. Consumed by TQ-400d-1 (which owns the entry shape) and TQ-400d-2 (whose arithmetic is only sound if membership is derived rather than maintained)."
+expects_from:
+  - ac_id: TQ-400a-4
+    contract: >-
+      The durable per-run inventory of every evaluated record and its verdict. The
+      triage list is a view over it, never a parallel copy. Required shape: one
+      entry per evaluated record carrying the record id and its outcome for that
+      run, addressable by occurrence and re-readable after the run has finished.
+  - ac_id: TQ-400d-1
+    contract: >-
+      The triage entry shape and the closed decision set. This AC constrains how
+      membership of that list is computed; TQ-400d-1 owns what each entry contains.
+test_spec:
+  - name: test_tq_400d_4_records_enter_and_leave_the_list_when_the_inventory_changes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "MUTATION IN BOTH DIRECTIONS, THE LOAD-BEARING TEST. Produce a list from inventory N. Then produce inventory N+1 in which one record has newly become unproven and a different record has newly become proven. Assert the first record ENTERS the list and the second LEAVES it, with no hand edit in between. An add-only implementation passes the enter half and fails the leave half — assert them as separate failures, not as one combined count."
+  - name: test_tq_400d_4_list_membership_is_accounted_for_by_the_inventory_both_ways
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Set-equality between (list membership) and (inventory entries with an unproven verdict), asserted in both directions over a real run. Include in the inventory at least one proven and one exempt record and assert neither appears; include a list entry check that no id is present which the inventory does not account for."
+  - name: test_tq_400d_4_list_is_derived_from_the_on_disk_inventory_the_sweep_actually_wrote
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The inventory under test is the artifact a real sweep run wrote to disk, read back as bytes — never a hand-built dict. Then hand-edit the DERIVED LIST on disk, re-derive, and assert the hand edit is gone: a list that is seeded once and thereafter maintained passes every other test here, because a stale copy that was correct once is indistinguishable from a live derivation on the happy path."
+  - name: test_tq_400d_4_triage_list_is_produced_by_the_real_sweep_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Fire the sweep entry point as a subprocess twice with a changed inventory in between, and assert the list artifact on disk changed accordingly. A correct derivation function that the production path does not call is the phantom-done shape; asserting the list was generated from a file with the right name proves nothing about which run wrote it."
+test_rationale: |
+  Every cheap green here passes on a stale copy. Asserting the list is non-empty, that it
+  matches the inventory once, or that it was generated from a correctly-named file all hold
+  for a list that was derived correctly one time and hand-maintained ever since — which is the
+  exact failure this repo keeps hitting and the reason this AC exists. Only mutation can tell
+  the two apart, and it must be mutation in both directions, because add-only is the common
+  implementation and it converts the pile into a ratchet that defeats TQ-400d-2. The hand-edit
+  -survives test is the sharpest single check: if an edit to the derived list survives the next
+  derivation, the list is being maintained, whatever the code looks like.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements make the derivation
+    obligation structural and untestable-by-inspection — a hand edit to the list must
+    not survive the next run — forbid any independent verdict computation in the list
+    producer, forbid a stale-inventory fallback, and state the two-directional requirement
+    as load-bearing. expects_from widened to a list naming TQ-400a-4 (inventory shape)
+    and TQ-400d-1 (entry shape). test_spec: seam (two-directional mutation) / criterion
+    (both-ways accounting) / real_artifact (hand edit must not survive) / reachability.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Anti-drift, and the same failure class as TQ-400a-3 one layer out. A
+  hand-maintained triage list is a fourth reader of the store — after the oracle,
+  the sweep, and the trend report — and it will drift, at which point the pile and
+  the sweep disagree about what is unproven and neither can be trusted.
+
+  Prove by mutation, in both directions: change the inventory between runs and
+  observe records enter and leave the list unaided. Asserting that the list is
+  non-empty, or that it was generated from a file with the right name, passes on a
+  stale copy that was correct once.
+
+  The two-directional requirement matters — an implementation that only ever adds
+  is a common cheap green, and it turns the pile into a ratchet that can never go
+  down, defeating TQ-400d-2's progress measure.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The derivation obligation is stated in a
+  form that cannot be satisfied by inspection: a hand edit to the derived list must
+  not survive the next run. That single check separates a live projection from a
+  list that was seeded correctly once and maintained thereafter, and it is the only
+  clause here that a code reviewer cannot fake agreement with. Also flagged: the
+  error path must NOT fall back to a previous run's inventory, because a silent
+  stale-inventory fallback reintroduces precisely the drift this AC forbids while
+  looking like defensive coding.

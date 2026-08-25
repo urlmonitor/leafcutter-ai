@@ -1,0 +1,90 @@
+id: BO-2400f-4-vi
+components:
+  - build_orchestration
+title: "A reported success means a landable pull request — never one with a known-failing required check"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run that has opened a pull request,
+  When the run reports its outcome,
+  Then an outcome of success asserts both that the pull request exists and that no merge
+    check the repository requires is, to the run's own knowledge, unsatisfied for it,
+  And given a run that knows a required merge check is unsatisfied — for example a
+    required changelog entry it did not produce — the reported outcome is a blocker naming
+    that check and the pull request, not a success carrying a warning,
+  And the reported outcome distinguishes "pull request opened and landable" from "pull
+    request opened but blocked", so an operator who reads only the outcome is never told a
+    blocked pull request was delivered.
+depends_on: [BO-2400f-4, BO-2400f-4-v]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_delivery_outcome:
+      type: object
+      description: "Terminal payload: {status: 'ok'|'blocked', pr_url: str|null, unsatisfied_required_checks: [str]}. status 'ok' is reachable only when unsatisfied_required_checks is empty; a non-empty list forces 'blocked' and the list is echoed in the message."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Scope of 'to the run's own knowledge': the required checks whose satisfaction the run itself determines before returning — today, the changelog-presence check. This is not a poll of the pull request's live check runs; do not gate the terminal payload on remote CI, which has not started when the run returns."
+    - "The invariant must be enforced at the single point that builds the terminal payload, so a future step that discovers another unsatisfied check cannot bypass it by returning its own success. One construction site, not a convention."
+    - "'blocked' must be distinguishable from 'halt': the work is committed and a pull request exists, so the operator's next action is to satisfy the named check, not to rebuild."
+    - "The covering test must construct a run state with a known-unsatisfied required check and assert the terminal payload's status, not merely that a warning string appears. A payload whose status stays ok while a warning is appended is the failure mode."
+delivers_to:
+  agent: python-coder
+  contract: "The run's terminal outcome payload, whose 'ok' status is the lane's delivery claim."
+expects_from:
+  ac_id: BO-2400f-4-v
+  contract: "Whether the required changelog entry is present in the delivered change, and the halt reason when it is not."
+test_required: true
+test_spec:
+  - name: test_success_payload_requires_no_unsatisfied_required_check
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "The terminal payload reports ok only when the list of known-unsatisfied required checks is empty."
+  - name: test_known_failing_required_check_reports_blocked_not_ok
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "A run that knows a required check is unsatisfied reports blocked and names the check, rather than ok with a warning."
+  - name: test_blocked_outcome_names_the_pull_request
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    description: "The blocked outcome carries the pull request it opened, so the operator can act on it rather than rebuild."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  This is the product guarantee; BO-2400f-4-i through -iv are only the mechanism for the
+  one required check we know about today. The deeper defect in KI-BO-001 was not the
+  missing changelog entry but the run reporting "PR opened" for a pull request it had
+  itself made unmergeable — the operator learned the truth from GitHub, not from the lane.
+  Any future required check the lane can evaluate falls under the same claim without
+  amending this criterion.

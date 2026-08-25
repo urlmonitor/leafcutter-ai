@@ -1,0 +1,134 @@
+id: GE-123a-2
+components:
+  - commit_guardian
+  - security_scanner
+title: "Suppressing the filename finding leaves every content finding in that file reported"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given five files whose names mark them as environment configuration, each
+    containing the same four content-rule lines — a cloud access key in the
+    AWS_KEY form, a private-key header line, a quoted twelve-character value
+    assigned to a field named password, and a high-entropy token,
+  And the allowlist contains exactly one entry, suppressing the filename rule
+    across the repository,
+  When all five files are scanned through the scanner's multi-file entry point,
+  Then twenty findings are reported — the four content findings for each of the
+    five files,
+  And no filename finding is reported for any of them,
+  And the run's exit status reports findings present,
+  Because the one entry the author wrote was an instruction about the filename
+    rule and nothing else.
+
+  Given the identical five files and the identical single allowlist entry,
+  When the run completes,
+  Then the filename finding IS suppressed for every one of the five files,
+  Because a well-scoped suppression must still do exactly what it says — a fix
+    that satisfies this criterion by ceasing to honour the entry is a
+    regression, not a fix.
+
+  Given the same five files but with all four secret-shaped lines replaced by
+    ordinary configuration text that no content rule recognises,
+  And the same single allowlist entry suppressing the filename rule,
+  When the files are scanned,
+  Then no findings are reported and the run exits clean,
+  Because suppressing the only finding a file genuinely produces is the
+    legitimate use of the allowlist and must keep working.
+depends_on:
+  - GE-123a
+  - GE-123a-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Establishes that repository-wide suppression is available only through the literal wildcard file path, which is the form this criterion's single allowlist entry uses. Its scenarios are not restated here."
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "Supplies the angle vocabulary used in this record's test_spec, and the must_block modifier that explains why the exit-status arm is separate from the finding-count arm: a gate that cannot block is inert, and a count assertion alone cannot tell the difference."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-123a-1
+  contract: "A per-file scan that produces both the filename finding and the content findings for an env-named file, so that suppressing one leaves the others to observe."
+it_requirements:
+  - "The repository-wide suppression must be written with the LITERAL WILDCARD file path — the only form that suppresses across the repository per GE-113c-3-v. A zero-segment path field is rejected at parse time with a warning and suppresses nothing, which would make the whole first arm vacuous while looking correct."
+  - "The allowlist fixture must contain EXACTLY one entry. A second entry, even a harmless one, stops the arm distinguishing a correctly-scoped suppression from a broad one, which is the reason the criterion says exactly one."
+  - "Findings must be observed BY RULE ID, not by count alone. An implementation that suppresses the wrong rule and happens to report twenty other findings must fail, and a count-only assertion cannot make it fail."
+  - "The third arm's innocuous configuration text must contain no token of twenty or more characters and no keyword-followed-by-quoted-value line, or the clean-exit assertion is measuring the fixture rather than the scanner."
+  - "All arms must run through the multi-file entry point scan_files over real files in a tempfile-backed directory, with the allowlist written into that same directory and passed as the project root. Coverage of the suppression matcher in isolation does not discharge any arm — a sibling audit in this family found two criteria verified that way which described situations the real entry point can never produce."
+  - "Exit-status arms must run the scanner's CLI entry point in a fresh subprocess with the fixture directory as the working directory, and must assert the process exit code. A returned list of findings is not an exit status."
+  - "Test fixtures must assemble every credential-shaped string at runtime from concatenated fragments rather than writing it as a source literal, so this repository continues to need no PRIVATE_KEY or AWS_KEY suppression anywhere. The existing suppression test module does this deliberately; do not collapse the fragments back into literals."
+  - "Each of the four content-rule lines must produce exactly one finding, so that twenty is an exact expectation rather than a floor. Verify the chosen values do not cross-trigger a second rule."
+  - "The module under test must be loaded from the canonical templates/ path via importlib.util.spec_from_file_location, never from a deployed copy, which can be stale."
+  - "No test may write a .security-allowlist to any real project root. Every allowlist in this criterion's arms lives only inside a tempfile-backed directory."
+  - "Fixture files must not be placed under tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/. The pre-commit consumer post-filters entropy findings for those path prefixes, which would silently change the expected counts."
+test_spec:
+  - name: test_filename_rule_suppression_leaves_all_twenty_content_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Five env-named fixtures each carrying the four recognised lines, scanned in one scan_files call with a single repository-wide entry suppressing the filename rule, return exactly twenty findings — the four content rules present once for each of the five files, identified by rule id."
+  - name: test_filename_finding_is_absent_for_every_one_of_the_five_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In the same run, no finding carrying the filename rule id is returned for any of the five files — the paired positive proving the entry is still honoured, so the criterion cannot be satisfied by an implementation that stops honouring suppressions."
+  - name: test_innocuous_env_files_with_the_same_entry_report_nothing_and_exit_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: boundary
+    description: "The same five filenames holding only ordinary configuration text, with the same single entry in force, return zero findings and the CLI exits clean — suppressing the only finding a file genuinely produces stays the legitimate use of the allowlist."
+  - name: test_cli_exit_status_is_nonzero_with_the_filename_rule_suppressed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    description: "The scanner CLI, run in a fresh subprocess with the fixture directory as its working directory over the five content-bearing fixtures with the single filename-rule entry in force, exits non-zero — the measured collapse was a clean exit, so the exit code is the observable that changed."
+test_rationale: "This criterion IS the measured defect stated as post-fix behaviour, so the contract is shaped around the exact setup that was measured: five files, four content shapes each, one suppression line, and the observation that it produced zero findings and a clean exit. The three arms are one behaviour and must hold in the same implementation, which is why the paired positive is a separate descriptor — without it the criterion is satisfiable by an implementation that stops honouring the entry at all. RED-VS-GREEN HONESTY, so a later TDD-order check does not misread the baseline. Two descriptors are RED today: test_filename_rule_suppression_leaves_all_twenty_content_findings (today's run reports zero findings, not twenty) and test_cli_exit_status_is_nonzero_with_the_filename_rule_suppressed (today's run exits clean, which is precisely the measured collapse). Two are GREEN on arrival and must be flagged as regression guards rather than evidence of the fix: test_filename_finding_is_absent_for_every_one_of_the_five_files passes today VACUOUSLY — the filename finding is the only finding these files can currently produce and it is duly suppressed, so nothing is reported and the assertion holds for the wrong reason; it only becomes meaningful once content findings exist beside it. test_innocuous_env_files_with_the_same_entry_report_nothing_and_exit_clean also passes today and must stay passing, because the danger it guards is the opposite error of over-reporting after the fix. The by-rule-id observation is load-bearing across all four: counts alone cannot distinguish twenty right findings from twenty wrong ones."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity S (no new code surface beyond GE-123a-1; the cost is the five-file plus allowlist fixture); authored it_requirements pinning the literal-wildcard suppression form as the only repository-wide one that parses, the exactly-one-entry constraint, by-rule-id rather than by-count observation, the innocuous-text constraints for the third arm, and the shared scan_files/CLI-subprocess/fixture/loader/allowlist rules; added a test-angles doc_link; authored a 4-entry test_spec plus test_rationale flagging the paired-positive and legitimate-use arms as green on arrival, the former vacuously so. Criteria, depends_on, expects_from and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  This criterion IS the measured defect, stated as the behaviour that must hold
+  after the fix. DIRECTLY MEASURED baseline (GE-123a notes): this exact setup —
+  five env-named files, four secret shapes each, one suppression line — produced
+  ZERO findings and a clean exit. The target is twenty findings and a
+  findings-present exit.
+
+  THE THREE ARMS ARE ONE BEHAVIOUR, NOT THREE. The first arm is the guarantee.
+  The second and third are its mandatory paired positives: without them the
+  criterion is satisfiable by an implementation that stops honouring the entry
+  at all, or that reports the filename finding regardless. All three must hold
+  in the same implementation.
+
+  WHY FIVE FILES RATHER THAN ONE: the measured baseline used five, and a
+  repository-wide entry is the form that makes the collapse total. One file
+  would not distinguish "the entry is scoped correctly" from "the entry happened
+  to miss".
+
+  Env filenames are the subject of this criterion, as in GE-123a-1 — not a
+  casual example. Depends on GE-123a-1 because there is nothing to observe until
+  the content scan actually runs on these files.

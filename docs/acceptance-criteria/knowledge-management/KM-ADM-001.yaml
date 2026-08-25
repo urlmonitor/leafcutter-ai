@@ -7,6 +7,9 @@ status: active
 component: knowledge-management
 level: L2
 title: "Artifact data-map enforcement ratings match the commit-guardian hook registry"
+parent: KM-ADM-100a
+depends_on:
+  - KM-ADM-100a
 origin_agent: BrainCandy
 criteria: |
   Given docs/reference/artifact-knowledge-graph.graph.json rates every edge with an
@@ -36,5 +39,10 @@ notes: |
   every ticket commit. The regression class is "trust rating asserted from file
   presence" — the covering test closes it by cross-checking each edge's claim against
   the registry rather than re-asserting the two literal values.
+
+  PARENT ADDED 2026-08-18 (product-owner). This AC shipped with no parent. Its home is
+  KM-ADM-100a ("a connection's trust rating reflects what actually runs, and says how
+  much it covered"), under the L0 KM-ADM-100. The `parent` field is explicit because
+  compound-prefix ids are not resolvable by derive_parent_id() — see KM-ADM-100 notes.
 change_target: docs
 risk_surface: internal

@@ -124,8 +124,8 @@
       "implements": [
         "ACD-400a"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-08-18"
     },
     {
       "id": "generate",
@@ -290,11 +290,11 @@
     }
   ],
   "impl_summary": {
-    "done": 3,
-    "in_progress": 3,
+    "done": 2,
+    "in_progress": 4,
     "not_started": 4,
     "total": 10,
-    "asof": "2026-07-20"
+    "asof": "2026-08-18"
   },
   "acceptance_scenarios": [
     {

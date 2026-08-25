@@ -26,14 +26,14 @@ criteria: |
     performed here from those two inputs, or is named in the run's result as an
     examination that was not performed and why — an examination that is quietly
     skipped is not permitted.
-depends_on: [BO-2400g]
+depends_on: [BO-2400g, TQ-200c-2]
 doc_links:
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "The gap this AC closes. Verified 2026-08-17: Coder (line 395) is followed immediately by Commit (line 471) — nothing runs between them. The two inputs this AC names are both already in hand at that point: the resolved id set (batchIds) and the working diff."
   - path: templates/agents/pr-reviewer.md
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "Why the fourth Then clause exists. Line 562 makes the sign-off conditional so the agent CAN run ticketless; but Contract-Aware Mode (line 102) keys off a '## Agent Contracts' section, line 193 skips the contract trace when it is absent, the delivers_to/expects_from cross-file trace (line 136) keys off ticket ACs, and the completion_manifest / scope_verified check (line 517) compares the change set against the ticket's files_touched. Dropped in unchanged, all of those degrade to nothing and say nothing about having done so."
   - path: templates/agents/change-scope-reviewer.md

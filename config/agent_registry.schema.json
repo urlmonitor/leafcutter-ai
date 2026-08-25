@@ -120,6 +120,10 @@
           "type": "boolean",
           "description": "When true, this agent is deprecated and should not be assigned to new tickets. Existing references are retained for audit trail purposes. The agent will not be selected by business-analyst for new tickets."
         },
+        "permits_shell": {
+          "type": "boolean",
+          "description": "True if this agent's registered charter permits running repository-mutating shell commands (git fetch/branch/worktree-add, file writes outside its own scratch area, etc.). False or absent means the agent must be treated as read-only for dispatch-permission gates such as the isolated-workspace setup step. Distinct from tool possession (an agent can have Bash in its tools list purely for read-only diagnostics, e.g. status-checker, without permits_shell being true)."
+        },
         "owns_file_extensions": {
           "type": "array",
           "items": {

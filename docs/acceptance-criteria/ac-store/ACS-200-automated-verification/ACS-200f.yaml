@@ -6,8 +6,8 @@ component: ac-store
 level: L2
 status: active
 req_status: active
-work_status: todo
-readiness: draft
+work_status: done
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -50,7 +50,9 @@ amended_by: []
 superseded_by: null
 covered_by:
   - ACS-200f-1
-implemented_by: []
+  - "unit_tests/ac_store/test_acs200f_done_gate_strict_verification.py"
+implemented_by:
+  - scripts/ac_store/done_proof.py
 change_target: code
 risk_surface: contract_boundary
 notes: "Verified defect, reproduced twice on 2026-08-13 while marking GE-118a-1 and GE-118b done. Chicken-and-egg: the coverage gate runs pytest without AC_ENFORCE_STRICT=1, the pytest_ac_enforcement plugin xfail-masks any test whose covered AC is not yet work_status: done, the AC under consideration is by definition still todo, so its genuinely-passing '# covers:' tests are reported as xfail and the gate refuses with exit 3. Adjacent but distinct existing ACs: BO-2500a-3 (positive eligibility when covers-tests pass) states the intended outcome but not this interaction; BO-2500a-2-i (xfail/skip is not passing) is the constraint the fix must not violate. Neither describes the masking loop, and both sit in build-orchestration rather than the ac-store tool surface."

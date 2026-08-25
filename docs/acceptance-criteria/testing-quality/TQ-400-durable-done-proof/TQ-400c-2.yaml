@@ -1,0 +1,305 @@
+id: TQ-400c-2
+components:
+  - testing_quality
+title: "The verdict appears where the team already looks, not behind a command"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a scheduled whole-store sweep has completed,
+  When anyone opens any pull request and reads its check list — the same list of
+    checks that already carries the proof-of-done coverage entry — without running
+    anything themselves and without opening a job log,
+  Then that check list carries an entry for the honesty sweep, and the summary the
+    reader sees in the list itself states the sweep's headline verdict: how many
+    finished records are proven, how many are not, and how many are exempt, as
+    three separate counts,
+  And that same summary names the dated occurrence the figures came from and how
+    old they are, so a reader can judge the age of what they are reading without
+    opening anything,
+  And the entry never blocks the pull request: whatever the figures say, it does
+    not turn the pull request red and does not gate the merge, so records the pull
+    request never touched cannot stop it merging,
+  And the figures are the ones the most recent completed occurrence already
+    computed rather than a sweep run for this pull request: opening a pull request
+    causes no sweep, and two pull requests opened between the same pair of
+    occurrences show identical figures,
+  And when the most recent occurrence did not complete, the entry shows that
+    occurrence's failed state as TQ-400c-4 defines it — never a clean verdict, and
+    never the preceding occurrence's figures presented as current,
+  And when the most recent completed occurrence is older than the cadence the
+    schedule sets, the entry says so in that same summary as a state of its own,
+    distinguishable at a glance from a fresh clean verdict,
+  And when a further occurrence completes with different figures, the entry read
+    on any later pull request shows the new figures attributed to the new
+    occurrence, with nobody republishing them by hand.
+depends_on:
+  - TQ-400c
+  - TQ-400c-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The reachability angle definition: start at the production entry point and assert the result is CONSUMED, not merely produced. A published surface nobody's run writes to is the Lost Test smell in report form."
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: "THE SETTLED SURFACE LIVES HERE. The verdict is published as a NON-BLOCKING entry on every pull request's check list, named so it reads alongside the existing 'Proof-of-done coverage check (BO-2500b)' job. Read the comment block on the ac-store-valid job (around lines 199-207) before implementing: it records, in this repository's own words, why the whole-store variant (ACS-200h) was deliberately NOT implemented — it would be red from its first run over pre-existing debt and be switched off. The same reasoning is why this entry must not block."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The sweep whose outcome is being surfaced. Note the existing gate publishes only a pass/fail verdict on staged files — the three-way population figures this AC surfaces have no publication path today."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Component context for where done-proof machinery lives and what already reports on it, so the new surface is added alongside rather than as a parallel reporting stack."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE SURFACE IS SETTLED (user decision, 2026-08-18): THE PULL-REQUEST CHECK LIST, AS A NON-BLOCKING CHECK. The criterion's load-bearing word is 'already'. A new dashboard, a new command, or a file that must be opened deliberately does not satisfy it — the current state (the per-record verdict has been computable all along and the 259-record backlog stayed invisible anyway) is exactly what a pull-only surface produces. The entry must be named so it reads alongside 'Proof-of-done coverage check (BO-2500b)'. It must NOT gate the merge and must NOT be a required check: 259 of 641 done leaf records are unproven today, so a blocking whole-store verdict would be red on every pull request from its first run — including pull requests that touch none of the affected records — and would be switched off within days. .github/workflows/ci.yml already records exactly this reasoning as the reason the whole-store variant ACS-200h was deliberately omitted; stay consistent with it. PRIOR STATUS: two enrichment passes recorded this as a BLOCKING AMBIGUITY; that blocker is now discharged, not merely deferred."
+  - "PUSH, NOT PULL. The figures must change when a run completes, with no human republish step in between. Any implementation in which a person copies numbers, regenerates a page, or triggers a publish is a violation, and is testable: complete a second run with different figures and read the surface again."
+  - "THE THREE-WAY SPLIT MUST STAY THREE-WAY ALL THE WAY TO THE SURFACE. proven / unproven / exempt must be three separate published counts. Collapsing exempt into proven lets the 37 records that today carry a test-free declaration inflate the good news, which is the specific dishonesty the parent L0 exists to remove. TQ-400e-2's abstention count is a fourth outcome and must not be folded into any of the three either."
+  - "The published figures must be attributed to a specific dated occurrence, so a reader can tell WHICH run they are reading. An unattributed number cannot be distinguished from a stale one."
+  - "Must read the completed run's structured report from TQ-400c-1 rather than re-running the sweep. A surface that re-derives becomes a second reader of the store and will drift from the report it claims to be showing. This is now also a criteria-level obligation: re-running per pull request puts a whole-store cost on every pull request and makes the figure differ between two pull requests for reasons unrelated to either."
+  - "LEGIBILITY IS PART OF THE DELIVERABLE. The counts and the age of the figures must appear in the summary a reader sees in the check list itself, not only inside the job log. A check whose content is reachable only by clicking through has reproduced 'behind a command' with extra steps, which is the exact failure the parent L0 exists to remove."
+  - "THE CADENCE THRESHOLD HAS EXACTLY ONE SOURCE: THE SCHEDULE DEFINITION ITSELF. 'Older than the cadence the schedule sets' must be computed by comparing the last completed occurrence's own timestamp against the interval declared by TQ-400c-1's `on: schedule` cron in .github/workflows/ — read from, or derived from, that one definition. Do NOT introduce a second literal for it: no STALE_AFTER_HOURS constant, no hardcoded day count, no threshold copied into the check's own config block. A duplicated threshold drifts the moment the cron changes, and it drifts in the direction that renders a schedule which has silently stopped firing as fresh. If a tolerance is wanted — lapsed only after N missed occurrences rather than one — it must be expressed as a multiple OF the declared cadence and defined in that same place, so there is still exactly one source."
+  - "THE LAPSED STATE IS A THIRD STATE, AND IT IS STILL NON-BLOCKING. Lapsed must be machine-checkably distinct from BOTH completed-clean and TQ-400c-4's did_not_complete: three states, three distinguishable renderings, no pair rendering alike and none inferred from the absence of another. It must NOT be implemented by failing the check — the non-blocking obligation holds in every state, and a lapsed-means-red implementation reintroduces exactly the blocking behaviour the criteria forbid, on the path nobody watches until it fires on an unrelated pull request. Like the counts, the lapsed wording and the age of the figures must be legible in the check-list summary itself, not only in the job log."
+  - "Must handle errors gracefully per the project error handling policy; the specific failure representation is TQ-400c-4's subject and must not be independently invented here."
+delivers_to:
+  - agent: documentation-expert
+    contract: "The published routine-status surface — a non-blocking entry on every pull request's check list — carrying the four outcome counts (proven / unproven / exempt / evidence-not-trustworthy) attributed to a dated occurrence, with the figures and their age legible in the check list summary itself. This is the surface the TQ-400c how-to documentation trigger must describe: where to look and how to read it."
+expects_from:
+  ac_id: TQ-400c-1
+  contract: >-
+    The dated per-occurrence report. This AC surfaces its headline figures on the
+    routine status surface the team already reads — the pull-request check list.
+    Consumed as the structured artifact TQ-400c-1 emits — the four outcome counts
+    plus the occurrence date — never by re-running the sweep.
+test_spec:
+  - name: test_tq_400c_2_completed_run_publishes_figures_to_the_routine_surface
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT, MANDATORY. Complete a sweep through the real scheduled entry point (subprocess, real argv/env), then read the published surface the way a reader reads it — the actual on-disk/emitted artifact, not the renderer's return value — and assert the headline figures are present there with no intervening manual step. Asserting that a template contains a placeholder for the figures passes on a surface wired to nothing."
+  - name: test_tq_400c_2_a_second_run_changes_the_published_figures_unaided
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "REAL PRODUCER INTO REAL CONSUMER. Complete a second run whose population deliberately differs from the first, invoke nothing else, and assert the published figures now match the second run and are attributed to its date. This is the clause that separates a live surface from a snapshot someone pasted once."
+  - name: test_tq_400c_2_proven_unproven_and_exempt_are_three_separate_published_counts
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Given a run containing all three outcomes, the surface shows three distinct counts. Assert specifically that the exempt count is NOT added into the proven count — construct a store where folding them would produce the same total-proven figure a correct implementation must not show."
+  - name: test_tq_400c_2_lapsed_cadence_is_its_own_summary_state_at_the_threshold_and_still_non_blocking
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      THRESHOLD PAIR, RELATIVE AGE ONLY. Publish from a completed clean occurrence
+      whose timestamp is computed RELATIVE TO NOW against the cadence the schedule
+      declares — once just INSIDE the cadence, once just OUTSIDE it — and read the
+      check-list summary both times: just-inside must render the fresh clean verdict,
+      just-outside must render the lapsed state. Never pin the occurrence to a fixed
+      date (a hardcoded timestamp rots and then fails for the wrong reason), and never
+      test only a wildly-stale case (that passes on an off-by-one and on a threshold
+      effectively set to infinity). THREE FURTHER SUBSTANTIVE DEMANDS RIDE IN THIS
+      ENTRY because the four-angle cap is reached here — see test_rationale; they are
+      hard conditions, not optional extras. (1) THREE-WAY DISTINGUISHABILITY - produce
+      lapsed, fresh-clean, and TQ-400c-4's did_not_complete, and assert all three
+      pairs differ on a machine-checkable field of the summary; finding the word
+      "stale" somewhere in the output does not establish that a reader can tell them
+      apart at a glance. (2) STILL NON-BLOCKING WHILE LAPSED - assert the check's own
+      conclusion in the lapsed case is the same non-blocking outcome as the clean case
+      and does not turn the pull request red or gate the merge; the tempting-but-wrong
+      implementation makes lapsed fail the check. (3) LEGIBLE WITHOUT CLICKING THROUGH
+      - assert the lapsed wording and the age both appear in the check-list summary
+      the reader sees in the list, not only in the job log.
+test_rationale: |
+  The cheap green here is a template test: assert the surface template contains a
+  placeholder for each figure. That passes on a surface no run ever writes to, which is
+  precisely the state this AC exists to leave. The load-bearing assertions are therefore
+  both dynamic — the figures appear after a real run, and they CHANGE after a second real
+  run — and both must read the surface as a reader does rather than inspecting the
+  renderer's return value. The three-way-split test is separated out because the
+  collapse-exempt-into-proven defect is arithmetically invisible in any test that only
+  checks the total.
+
+  The false green the lapsed-cadence entry closes is the one where no age comparison
+  exists at all: with the schedule silently stopped, the last completed occurrence's clean
+  figures go on rendering as the current verdict indefinitely, so the check is green,
+  nothing anywhere is red, and the surface actively reports health it has no evidence for
+  — the worse of the two failure modes, because TQ-400c-4's failed occurrence at least
+  makes something visible. That entry is charged `boundary` because the criteria name a
+  threshold and the just-inside/just-outside pair is the only assertion that separates a
+  real cadence comparison from an off-by-one or from a threshold set to infinity; it takes
+  the fourth and last angle slot (reachability, seam, criterion, boundary). The three-way
+  distinguishability, the still-non-blocking check conclusion, and the summary-legibility
+  assertions therefore ride inside that entry as hard conditions rather than each taking a
+  slot of their own — they are not dropped, they simply carry no label, and they are
+  restated in it_requirements so an implementer counting angle labels cannot lose them.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity M. it_requirements make the push-not-pull
+    obligation and the three-way split explicit, and record a BLOCKING ambiguity:
+    the criteria never name the routine-status surface. test_spec carries the mandatory
+    reachability entry (figures land where the criterion says people look, after a
+    real run) plus a seam entry for the second-run update and a criterion entry for
+    the exempt/proven collapse. criteria untouched.'
+- reason: surface-decision-recorded
+  by: business-analyst
+  at: 2026-08-18
+  note: 'CRITERIA AMENDED — THE ROUTINE-STATUS SURFACE IS NOW NAMED. The user settled
+    it: the pull-request check list, as a NON-BLOCKING status check appearing on every
+    pull request, named so it reads alongside the existing "Proof-of-done coverage
+    check (BO-2500b)" entry. The BLOCKING AMBIGUITY recorded by two prior it-po passes
+    is CONVERTED, not deleted — the first it_requirement and the notes now carry the
+    settled decision plus the evidence it rested on (zero GitHub issues ever opened,
+    verified via `gh issue list --state all`; reports/ is a passive archive of six
+    ad-hoc dumps, last written 2026-08-11; the check list is the only surface in this
+    repository read unasked, by everyone, on a fixed rhythm, and a sibling done-proof
+    verdict already appears there). Four constraints were added to criteria alongside
+    the surface name: (1) NON-BLOCKING — 259 of 641 done leaf records are unproven,
+    so a blocking whole-store check would be red on every pull request from its first
+    run and be switched off within days, which is the reasoning .github/workflows/ci.yml
+    already records (around lines 199-207) for deliberately omitting the whole-store
+    variant ACS-200h; (2) IT PUBLISHES THE LAST COMPLETED SCHEDULED OCCURRENCE and
+    does not re-run the sweep per pull request; (3) a failed occurrence renders as
+    TQ-400c-4''s failed state and a lapsed cadence as a state of its own, never as
+    a clean verdict, and the age of the figures is stated; (4) the figures and their
+    age must be legible in the check list summary itself, since a verdict visible
+    only in a job log has reproduced "behind a command" with extra steps. PRESERVED
+    UNCHANGED: the three separate published counts (proven / unproven / exempt) and
+    the property that a second run changes the published figures unaided. The surface
+    decision came from the user, not from this agent; this amendment records it rather
+    than making it.'
+- reason: test-contract-gap-closed
+  by: it-po
+  at: 2026-08-18
+  note: 'LAPSED-CADENCE CLAUSE WAS SPECIFIED AND UNPROVEN — now contracted. The business-analyst''s
+    2026-08-18 amendment added the lapsed-cadence state to criteria ("when the most
+    recent completed occurrence is older than the cadence the schedule sets, the entry
+    says so in that same summary as a state of its own") and no test_spec entry exercised
+    it. TQ-400c-4 does NOT cover it: that AC owns "the scheduled run did not complete",
+    which is a different condition from "the last completed run is old" — a check
+    that handles only failure renders a schedule that silently stopped firing as clean,
+    and nothing anywhere goes red. ADDED one test_spec entry (angle `boundary`, type
+    integration) asserting the threshold PAIR — just-inside-cadence renders fresh,
+    just-outside renders lapsed — with the occurrence age computed RELATIVE TO NOW
+    rather than pinned to a fixed date. Because the four-angle cap is reached (reachability,
+    seam, criterion, boundary), three further demands ride inside that entry as hard
+    conditions and are named as such in both the entry and test_rationale: pairwise
+    machine-checkable distinguishability of lapsed vs fresh-clean vs TQ-400c-4''s
+    did_not_complete; the check staying NON-BLOCKING while lapsed (the tempting-but-wrong
+    implementation makes lapsed fail the check, reintroducing the blocking behaviour
+    the criteria forbid); and legibility in the check-list summary rather than only
+    the job log. ADDED two it_requirements: the cadence threshold has exactly one
+    source — the schedule''s own `on: schedule` cron from TQ-400c-1, never a second
+    duplicated literal that drifts toward rendering a stopped schedule as fresh —
+    and the lapsed state is a third state that is still non-blocking. EXTENDED test_rationale
+    with the false green this closes. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - docs
+risk_surface: internal
+notes: |
+  The product owner's phrasing is "a rhythm you actually see". A report that exists
+  but must be asked for is the state we are already in: the per-record verdict has
+  been computable all along, and the 259-record backlog stayed invisible anyway
+  because nothing put it in front of anybody.
+
+  Test-angle constraint: the last clause is what makes this more than a static
+  check. Complete a second run with deliberately different figures and observe the
+  surfaced numbers follow. Asserting that a template contains a placeholder for
+  the figures passes on a surface wired to nothing.
+
+  The three-way split (proven / not proven / exempt) is deliberate: collapsing
+  exempt into proven would let the 37 records currently carrying a test-free
+  declaration inflate the good news.
+
+  SURFACE SETTLED BY THE USER (2026-08-18) — THE PULL-REQUEST CHECK LIST, AS A
+  NON-BLOCKING CHECK. This supersedes the IT-PO caveat that stood here through two
+  enrichment passes, which recorded the surface as an unresolved blocking ambiguity.
+  The decision and its evidence are recorded here so the question is not re-litigated.
+
+  The evidence it was decided on:
+  - The repository has ZERO GitHub issues, open or closed (verified via
+    `gh issue list --state all`). An issue-based surface would be a new habit
+    nobody has.
+  - reports/ holds six ad-hoc audit dumps, the most recent from 2026-08-11. It is a
+    passive archive, not a surface anyone reads unasked.
+  - The pull-request check list is the only surface in this repository read unasked,
+    by everyone, on a fixed rhythm — and a sibling done-proof verdict ("Proof-of-done
+    coverage check (BO-2500b)") already appears there, so the reader needs no new
+    habit and no new tool.
+
+  WHY NON-BLOCKING IS NOT A DETAIL. 259 of 641 done leaf records are unproven today.
+  A blocking whole-store check would be red on every pull request from its first run,
+  including pull requests that touch none of the affected records, and would be
+  switched off within days. .github/workflows/ci.yml records that reasoning verbatim
+  (around lines 199-207) as the reason the whole-store variant ACS-200h was
+  deliberately NOT implemented; this AC is written to be consistent with that comment
+  rather than to contradict it.
+
+  WHY IT REPORTS RATHER THAN RE-RUNS. Re-running the sweep per pull request puts a
+  whole-store cost on every pull request and makes the figure differ between two pull
+  requests for reasons unrelated to either. The check publishes what the schedule
+  already computed — TQ-400c-1's dated report.
+
+  WHY A STALE OR FAILED SWEEP NEEDS ITS OWN STATE. A non-blocking check that renders a
+  failed or lapsed sweep as a clean pass is worse than no check: it actively reports
+  health. The failed representation itself is TQ-400c-4's subject and is referenced,
+  not restated, here; what this AC adds is that the check must also say how old the
+  figures are, so a reader can tell a fresh verdict from an ageing one without opening
+  anything.
+
+  WHY THE SUMMARY LINE IS LOAD-BEARING. Non-blocking decays into unread unless the
+  figures are legible in the check list itself. A check whose content is reachable only
+  by clicking into the job log has reproduced "behind a command" with extra steps —
+  the exact failure the parent L0 exists to remove.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — LAPSED CADENCE.
+
+  WHY LAPSED IS NOT TQ-400c-4's JOB. TQ-400c-4 owns "the scheduled run did not
+  complete". Lapsed is "the last run that DID complete is now old" — the schedule
+  stopped firing at all, so there is no failed occurrence to render. A check that
+  handles only the failure case reports a silently-dead schedule as clean, and that is
+  the worse of the two modes precisely because nothing anywhere turns red.
+
+  ONE SOURCE FOR THE THRESHOLD. The cadence comparison must be derived from the
+  schedule's own cron (TQ-400c-1's `on: schedule`), not a second constant. A duplicated
+  threshold drifts when the cron changes, and it drifts toward calling a stopped
+  schedule fresh — the failure direction that hides itself.
+
+  THE TWO TRAPS IN TESTING IT. A fixed timestamp in the fixture rots and then fails for
+  a reason unrelated to the behaviour; and a single wildly-stale case passes on an
+  off-by-one and on a threshold effectively set to infinity. The contract is therefore a
+  relative-age PAIR straddling the declared cadence.
+
+  ANGLE CAP RESOLUTION. Four angles are now charged — reachability, seam, criterion,
+  boundary — which is the cap. `failure` is triggered in the neighbourhood (the
+  three-state distinguishability includes TQ-400c-4's failed occurrence) but is not
+  given a label here, because the failure state itself is TQ-400c-4's subject and is
+  referenced rather than owned. Its one demand on this AC — that lapsed and failed are
+  distinguishable from each other and from clean — rides inside the boundary entry as a
+  hard condition and is restated in it_requirements, so it cannot be lost by an
+  implementer counting labels. This follows the precedent recorded in BP-900g-10.

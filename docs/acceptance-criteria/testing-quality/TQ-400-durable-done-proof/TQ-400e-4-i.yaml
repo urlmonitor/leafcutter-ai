@@ -1,0 +1,120 @@
+id: TQ-400e-4-i
+components:
+  - testing_quality
+  - ac_store
+title: "Honouring and refusing declarations happens per record within one run"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given one store containing a test-free declaration with a written reason and a
+    test-free declaration with no reason,
+  When a single whole-store honesty sweep runs over that store,
+  Then the reasoned declaration is reported exempt and the reasonless declaration
+    is reported unproven, both from that one run,
+  And neither outcome depends on how the run was configured or invoked,
+  And swapping which record carries the reason swaps which outcome each record
+    receives on the next run.
+depends_on:
+  - TQ-400e-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The record fields the outcome must be a pure function of — test_required and test_rationale. Anything else the implementation keys on (filename, position, ordering) is what the swap clause is designed to expose."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The two fields' declared types, which are the entire legitimate input to this decision."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Its main() and mode flags — the run-level configuration surface. This AC forbids any of it from changing a per-record exemption outcome, so read what the modes currently control before adding anything to that surface."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The real_artifact angle: the swap must be a genuine mutation of files on disk, re-read by a fresh run, not two in-memory dicts — otherwise an implementation keyed on scan order passes."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE OUTCOME MUST BE A PURE FUNCTION OF THE RECORD'S OWN CONTENT — its test_required and test_rationale values and nothing else. Not its filename, not its position in the scan, not its component, not an allowlist, not the order records were loaded in. The swap clause is the mutation check that makes this falsifiable."
+  - "NO RUN-LEVEL MODE MAY CHANGE A PER-RECORD EXEMPTION OUTCOME. A 'strict' and a 'lenient' mode would let TQ-400e-3 and TQ-400e-4 each pass under a different invocation while the system never discriminates between two records sitting side by side. If any flag is added to the sweep, it must not be able to alter this decision."
+  - "BOTH OUTCOMES MUST COME FROM ONE INVOCATION over one store. Demonstrating them in two runs, even two identically-configured runs, does not satisfy the AC — the point is per-record discrimination within a single pass."
+  - "Must handle errors gracefully per the project error handling policy: an error evaluating one record's declaration must not change any other record's outcome in the same run. Per-record isolation is part of what 'per record' means here."
+delivers_to: null
+expects_from:
+  ac_id: TQ-400e-4
+  contract: >-
+    The refusal predicate (positively-confirmed non-empty reason) and the honouring
+    path it shares with TQ-400e-3. This AC constrains where that predicate may read
+    its inputs from: the record's own content, and nothing else.
+test_spec:
+  - name: test_tq_400e_4_i_reasoned_and_reasonless_declarations_diverge_in_a_single_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "One store, one invocation: the record with a written reason is reported exempt and the record with no reason is reported unproven. Assert both outcomes come from the SAME run's report — two runs, however configured, do not satisfy this."
+  - name: test_tq_400e_4_i_swapping_which_record_carries_the_reason_swaps_the_outcomes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "MUTATION CHECK. Move the reason from record A to record B by rewriting both files on disk with the project's real serializer, then run again in a fresh process. Assert the outcomes swap. An implementation keyed on filename, scan order, position, or an allowlist produces the same outcomes as before and fails — and none of those defects is visible to any test that does not mutate."
+  - name: test_tq_400e_4_i_both_outcomes_arise_under_identical_invocation_with_no_distinguishing_flag
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Run the sweep as a subprocess with one fixed argv and environment and assert both outcomes appear in that single run's report. Then assert no available mode or flag changes either record's outcome — this is the anti-global-toggle control: two separately-configured runs could otherwise satisfy TQ-400e-3 and TQ-400e-4 independently while the discrimination does not exist."
+test_rationale: |
+  Both defects this record guards against are invisible to the obvious test. A global toggle
+  passes TQ-400e-3 under one configuration and TQ-400e-4 under another, and each parent AC's
+  own tests would be green; only requiring both outcomes from ONE invocation exposes it. A
+  grep-shaped or allowlist-shaped implementation reproduces the correct outcomes for the
+  fixtures it was written against, and only swapping the reason between two real files on disk
+  and re-running in a fresh process proves the outcome is a function of the record's content
+  rather than of its identity or position.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity S. it_requirements state the purity constraint
+    (outcome is a function of test_required and test_rationale and nothing else —
+    not filename, position, scan order, or an allowlist), forbid any run-level mode
+    from altering a per-record exemption outcome, and require per-record error isolation.
+    test_spec: criterion (both outcomes, one run) / real_artifact (the swap, mutated
+    on disk and re-run in a fresh process) / reachability (identical invocation, no
+    distinguishing flag). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Guards against a global-toggle implementation: two separately-configured runs
+  (one "strict", one "lenient") could each pass TQ-400e-3 and TQ-400e-4
+  independently while the system never actually discriminates between two records
+  sitting side by side in the same store.
+
+  The swap clause is a mutation check — it makes the outcome provably a function
+  of the record's own content rather than of its position, filename, or ordering
+  in the scan. A grep-shaped or allowlist-shaped implementation fails it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). The swap must be a genuine on-disk mutation
+  re-read by a FRESH process. Swapping two in-memory dicts and re-invoking the
+  function in the same interpreter leaves any module-level cache, memoised scan,
+  or already-populated namespace in place — the same masking that let a
+  forward-reference NameError survive importlib.reload() in GenReviewFixes H-2.
+  Added the per-record error-isolation requirement too: 'per record' has to mean
+  that one record's unreadable declaration cannot change another's outcome.

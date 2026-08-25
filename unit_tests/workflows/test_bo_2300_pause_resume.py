@@ -96,6 +96,62 @@ _FINALIZE_PREFLIGHT_RESPONSES = {
 
 
 # ---------------------------------------------------------------------------
+# BO-1500f-1 regression fix (test-runner blocker, 2026-08-18 09:46):
+# plan-feature.js now dispatches a "resolve-workspace-setup-permission"
+# agent() call unconditionally, before Stage 0, to gate the isolated-
+# workspace ("worktree-setup") dispatch on the target agent's registered
+# `permits_shell` charter field (see TICKET-20260817-BO-1500f-1 and
+# unit_tests/workflows/test_bo_1500f_1.py). Every
+# run_workflow_under_e2(_PLAN_FEATURE_JS, ...) call in this file must mock
+# that label — an unmocked call gets the harness's default stub response,
+# JSON.parse fails, permitsShell fails closed to False, and the workflow
+# halts before pause-persist/read-pause-record/apply-approval ever run.
+# finalize-feature.js and build-feature.js have no such gate, so calls
+# targeting _FINALIZE_FEATURE_JS or _BUILD_FEATURE_JS do NOT need this mock.
+# ---------------------------------------------------------------------------
+
+_PERMISSION_LOOKUP_LABEL = "resolve-workspace-setup-permission"
+_REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
+
+
+def _load_real_registry() -> dict:
+    """Read the REAL config/agent_registry.json from disk (not a fixture).
+
+    Mirrors the identically-named helper in test_bo_1500f_1.py so the
+    workspace-setup permission mock reflects the real registry's
+    `worktree-agent: permits_shell: true` entry rather than a hand-authored
+    fixture value.
+    """
+    text = _REAL_REGISTRY_PATH.read_text(encoding="utf-8")
+    return json.loads(text)
+
+
+def _registry_label_response(registry: dict) -> dict:
+    """Build the label_responses entry mocking the registry-read dispatch.
+
+    Mirrors the `{output, exit_code}` shape used by every status-checker
+    "run this command, return JSON" dispatch in plan-feature.js.
+    """
+    return {"output": json.dumps(registry), "exit_code": 0}
+
+
+_WORKSPACE_PERMISSION_MOCK = {
+    _PERMISSION_LOOKUP_LABEL: _registry_label_response(_load_real_registry()),
+}
+
+
+def _with_workspace_permission(label_responses: dict) -> dict:
+    """Merge the workspace-setup-permission mock into a test's label_responses.
+
+    The permission gate runs before Stage 0 on every plan-feature.js
+    invocation regardless of args, so every call in this file that drives
+    _PLAN_FEATURE_JS must include this mock or the run halts immediately
+    (the BO-1500f-1 regression this helper fixes).
+    """
+    return {**_WORKSPACE_PERMISSION_MOCK, **label_responses}
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -184,7 +240,7 @@ def test_gate_pauses_instead_of_cancelling():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},  # no gate label responses = headless / no answer available
+        label_responses=_with_workspace_permission({}),  # no gate label responses = headless / no answer available
     )
     assert result.error == "", f"Harness error: {result.error}"
 
@@ -229,7 +285,7 @@ def test_pause_is_idempotent_on_same_gate():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
     )
     assert result.error == "", f"Harness error: {result.error}"
 
@@ -251,7 +307,7 @@ def test_paused_state_distinct_from_cancelled():
     paused_result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
     )
     assert paused_result.error == "", f"Harness error on paused run: {paused_result.error}"
 
@@ -265,7 +321,7 @@ def test_paused_state_distinct_from_cancelled():
     cancelled_result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses=_EXPLICIT_CANCEL_RESPONSES,
+        label_responses=_with_workspace_permission(_EXPLICIT_CANCEL_RESPONSES),
     )
     assert cancelled_result.error == "", f"Harness error on cancelled run: {cancelled_result.error}"
 
@@ -312,7 +368,7 @@ def test_pending_question_declares_type_and_shape():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
     )
     assert result.error == "", f"Harness error: {result.error}"
 
@@ -355,7 +411,9 @@ def test_wrong_shape_answer_rejected_and_reprompted():
     pause-persist dispatched.
     """
     # Run 1: headless — discover which gate pauses.
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -372,7 +430,7 @@ def test_wrong_shape_answer_rejected_and_reprompted():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
         args={"run_id": run_id, "resume_answer": wrong_answer},
     )
     assert result2.error == "", f"Wrong-shape answer must not crash the workflow: {result2.error}"
@@ -405,7 +463,9 @@ def test_unparseable_answer_reprompts_never_crashes():
     Empty answer {gate_id: g} → validateAnswerShape detects no action/choice/
     priority/text → invalid → early return without crash.
     """
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -422,7 +482,7 @@ def test_unparseable_answer_reprompts_never_crashes():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
         args={"run_id": run_id, "resume_answer": malformed_answer},
     )
 
@@ -454,7 +514,9 @@ def test_enum_invalid_action_rejected_before_record_check():
     final-gate options: ["approve", "edit", "defer", "cancel"].
     action "banana" is not in that set → validateAnswerShape returns invalid.
     """
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -475,7 +537,7 @@ def test_enum_invalid_action_rejected_before_record_check():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
         args={"run_id": run_id, "resume_answer": invalid_enum_answer},
     )
     assert result2.error == "", f"Enum-invalid answer must not crash: {result2.error}"
@@ -517,7 +579,7 @@ def test_context_snapshot_captured_at_pause_and_surfaced():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
     )
     assert result.error == "", f"Harness error: {result.error}"
 
@@ -553,7 +615,9 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     pause_store.py read instruction (anti-phantom assertion).
     """
     # Run 1: headless — discover gate and run_id.
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -571,7 +635,9 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {"exists": True, "stale": False}},
+        label_responses=_with_workspace_permission(
+            {"read-pause-record": {"exists": True, "stale": False}}
+        ),
         args={"run_id": run_id, "resume_answer": approve_answer},
     )
     assert result2.error == "", f"Harness error on run 2: {result2.error}"
@@ -612,7 +678,9 @@ def test_resume_preserves_committed_earlier_stages():
     Requires fail-closed label_responses for read-pause-record.
     """
     # Run 1: headless.
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -639,7 +707,9 @@ def test_resume_preserves_committed_earlier_stages():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {"exists": True, "stale": False}},
+        label_responses=_with_workspace_permission(
+            {"read-pause-record": {"exists": True, "stale": False}}
+        ),
         args={"run_id": run_id, "resume_answer": approve_answer},
     )
     assert result2.error == "", f"Harness error on run 2: {result2.error}"
@@ -679,7 +749,9 @@ def test_cancel_answer_graceful_keeps_stages_no_pr():
     ["approve", "edit", "defer", "cancel"] — so it passes enum validation.
     """
     # Run 1: headless.
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -696,7 +768,9 @@ def test_cancel_answer_graceful_keeps_stages_no_pr():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {"exists": True, "stale": False}},
+        label_responses=_with_workspace_permission(
+            {"read-pause-record": {"exists": True, "stale": False}}
+        ),
         args={"run_id": run_id, "resume_answer": cancel_answer},
     )
     # No crash.
@@ -756,7 +830,7 @@ def test_paused_state_durable_across_process_exit():
     result1 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
         args={"run_id": "test-bo2300-durable-e1"},
     )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
@@ -774,7 +848,9 @@ def test_paused_state_durable_across_process_exit():
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {"exists": True, "stale": False}},
+        label_responses=_with_workspace_permission(
+            {"read-pause-record": {"exists": True, "stale": False}}
+        ),
         args={"run_id": "test-bo2300-durable-e1", "resume_answer": approve_answer},
     )
     assert result2.error == "", f"Harness error on run 2 (resume): {result2.error}"
@@ -802,7 +878,9 @@ def test_reanswer_is_idempotent():
     Both run 2 and run 3 use the same answer + read-pause-record mock.
     """
     # Run 1: headless.
-    result1 = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses={})
+    result1 = run_workflow_under_e2(
+        _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=_with_workspace_permission({})
+    )
     assert result1.error == "", f"Harness error on run 1: {result1.error}"
     pauses1 = _pause_calls(result1)
     assert len(pauses1) > 0, (
@@ -814,7 +892,7 @@ def test_reanswer_is_idempotent():
     run_id = rec1.get("run_id", "default-run")
 
     approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
-    read_mock = {"read-pause-record": {"exists": True, "stale": False}}
+    read_mock = _with_workspace_permission({"read-pause-record": {"exists": True, "stale": False}})
 
     # Run 2: first apply.
     result2 = run_workflow_under_e2(
@@ -869,7 +947,7 @@ def test_resume_with_no_pending_pause_is_noop():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {"exists": False}},
+        label_responses=_with_workspace_permission({"read-pause-record": {"exists": False}}),
         args={"run_id": "test-bo2300-noop-e1ii", "resume_answer": resume_answer},
     )
 
@@ -910,11 +988,11 @@ def test_stale_pause_fails_gracefully():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"read-pause-record": {
+        label_responses=_with_workspace_permission({"read-pause-record": {
             "exists": True,
             "stale": True,
             "stale_reason": "branch diverged after pause",
-        }},
+        }}),
         args={"run_id": "test-bo2300-stale-e1iii", "resume_answer": resume_answer},
     )
 
@@ -1130,7 +1208,7 @@ def test_pause_persist_is_verified_by_readback():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={},
+        label_responses=_with_workspace_permission({}),
     )
     assert result.error == "", f"Harness error: {result.error}"
 
@@ -1171,7 +1249,7 @@ def test_edit_answer_preserves_feedback_through_resume():
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={
+        label_responses=_with_workspace_permission({
             "read-pause-record": {"exists": True, "stale": False},
             # Force the behavioral route so the BA stage — and therefore gate-ba —
             # is actually reached. Without this the harness routes to `technical`,
@@ -1182,7 +1260,7 @@ def test_edit_answer_preserves_feedback_through_resume():
                 "parent_l1_id": "BO-1500a",
                 "rationale": "test fixture — force the BA stage",
             },
-        },
+        }),
         args={
             "run_id": "test-bo2300-edit-feedback",
             "resume_answer": {
