@@ -96,7 +96,8 @@ created: 2026-08-17
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/37_TICKET-20260825-GE-120e-5.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -118,3 +119,4 @@ notes: |
   down after the second time a merge is blocked, and a rule sitting beside a recipe for
   ignoring it is worse than either alone. If the documentation-expert finds nothing to
   correct, that clause is satisfied by confirming so, not by inventing a target.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

@@ -70,7 +70,8 @@ created: 2026-08-17
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/36_TICKET-20260825-GE-120e-4-i.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -84,3 +85,4 @@ notes: |
   that merge, which makes it the very next thing the author does after hitting the defect
   this L1 removes. A fix that works on the merge and breaks on the revision hands the author
   back the override reflex one step later.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

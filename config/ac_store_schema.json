@@ -523,6 +523,11 @@
             "description": "Roadmap phase this AC belongs to (e.g. 'phase_1'). Matches a phase key in docs/roadmap.json.",
             "minLength": 1
         },
+        "target_epic": {
+            "type": "string",
+            "description": "Name of the epic folder this AC's generated ticket was assembled into (e.g. 'EPIC-TrustThatAGreenCheckActuallyChecked'). Written by scripts/goal_to_epic.py, which reads it back on a re-run to decide whether the AC already belongs to an epic. Absent until an epic has been generated from the AC.",
+            "minLength": 1
+        },
         "notes": {
             "type": "string",
             "description": "Free-form contextual notes about this AC — authorship context, post-implementation findings, or rationale that does not belong in criteria.",

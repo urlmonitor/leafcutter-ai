@@ -101,7 +101,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-120d-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/23_TICKET-20260825-GE-120d-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -126,3 +127,4 @@ notes: |
   GE-120d-3 (adopt the shared resolver) is the paired fix and why this AC alone would leave
   the underlying cause in place. The block disposition must be recorded where GE-120a-2
   records dispositions, not only in this note.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

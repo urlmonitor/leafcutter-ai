@@ -86,7 +86,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/26_TICKET-20260825-GE-120d-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -109,3 +110,4 @@ notes: |
   set-up returns, re-check before the sweep. A rule that depends on the operator not touching
   the copy is the same trust this tree exists to remove. The b-5 ordering constraint is now
   also recorded on GE-120b-5 itself.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

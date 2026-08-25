@@ -86,7 +86,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/19_TICKET-20260825-GE-120c-3.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -108,3 +109,4 @@ notes: |
   handling — the 6 transform-tier entries and precommit-canary's direct invocation. Any
   exemption must derive from an entry property, never an id. Expose the comparison as a
   callable so GE-120b-4 consumes it rather than reimplementing it.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

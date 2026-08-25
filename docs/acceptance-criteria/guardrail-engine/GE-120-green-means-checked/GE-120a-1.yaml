@@ -99,7 +99,8 @@ superseded_by: null
 covered_by:
   - GE-120a-1-i
   - GE-120a-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/01_TICKET-20260825-GE-120a-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -126,3 +127,4 @@ notes: |
   parents[] walk, while 27 files in the same directory already import the shared
   _resolve_root.py. The shared outcome vocabulary this AC introduces belongs beside that
   existing shared helper, not in a new parallel location.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

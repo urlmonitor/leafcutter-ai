@@ -92,7 +92,8 @@ created: 2026-08-17
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/34_TICKET-20260825-GE-120e-3-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -116,3 +117,4 @@ notes: |
   not after. If it is judged too wide, the fix belongs in GE-120e-1's definition of what
   counts as authored — not in an exemption clause here, which would put the constraint back
   inside the thing it constrains.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

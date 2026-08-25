@@ -84,7 +84,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/03_TICKET-20260825-GE-120a-1-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -101,3 +102,4 @@ notes: |
   IT-PO (2026-08-14): the third state maps onto the EXISTING schema_validated flag that
   GE-112 introduced in check_ac_schema.py — see it_requirements. Reuse it; do not add a
   parallel indicator.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

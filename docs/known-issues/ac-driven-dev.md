@@ -615,7 +615,7 @@ keep the cap — the defect is where the cut lands, not that a cut happens.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/goal_to_epic.py:1626` — the frontmatter block in
   `_render_master_plan()`; against `templates/hooks/ticket_frontmatter_guard.py`
@@ -646,11 +646,258 @@ frontmatter fields, so even completing it as written would not close this. There
 criterion anywhere stating that generated artifacts must satisfy the gates that guard
 hand-written ones.
 
+**Second occurrence, 2026-08-25.** Reproduced verbatim by
+`goal_to_epic.py --ac GE-120`: the generated `EPIC-TrustThatAGreenCheckActuallyChecked/Master_Plan.md`
+was rejected for exactly the six fields named above. Fixed by hand in that epic — `title`,
+`type: epic`, `depends_on: []`, `requires_diagram`, `requires_adr`, `change_target`,
+`risk_surface` added, and `status` corrected from `in_progress` to `todo`, since no ticket
+in the epic has been started. The generator is unchanged, so the next epic reproduces it.
+
 **Fix direction.** Render the full required frontmatter set. Then add a test that runs
 `ticket_frontmatter_guard` against a freshly generated Master_Plan, so the generator and
 the gate cannot drift apart again — the two are maintained independently and each is
 individually correct, which is exactly the condition under which a divergence goes
 unnoticed. The test must run the real guard rather than assert a field list, or it
 becomes a second copy of the requirement that can itself fall behind.
+
+---
+
+### KI-ACD-013 — `goal_to_epic.py` writes a `target_epic` field the AC schema rejects, so every epic it generates fails the required store gate
+
+- **Severity:** high
+- **Status:** fixed (schema extended 2026-08-25; no regression test yet)
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py` (`_write_target_epic_field`,
+  `_read_target_epic_from_file`, call sites `:1111-1129`) against
+  `config/ac_store_schema.json`
+
+**Symptom.** Generating an epic from `GE-120` wrote `target_epic: EPIC-...` into all 37
+leaf AC records. `config/ac_store_schema.json` sets `additionalProperties: false` and has
+no `target_epic` property, so `validate_ac_schema.py` reported a violation on **every one
+of the 37 records**:
+
+```text
+GE-120a-1.yaml: schema violation at <root> — Additional properties are not allowed
+  ('target_epic' was unexpected)
+```
+
+`AC store valid` is one of the six required status checks on `main`. So the tool's normal,
+successful output cannot be merged.
+
+**This is not a corrupt write — the field is deliberate.** `_write_target_epic_field()`
+records which epic an AC's ticket was assembled into, and `_read_target_epic_from_file()`
+reads it back on a re-run to decide whether the AC already belongs to one. It is the
+idempotency mechanism. Stripping it would make every re-run re-append it.
+
+**Why it went unnoticed until now.** A store-wide grep found `target_epic` on exactly
+**37 records — the 37 this run just created**. No previously-generated epic carries it.
+So `goal_to_epic.py --ac` has never produced a committed epic in this repository, and the
+incompatibility had no opportunity to surface. The tool and the gate were each correct in
+isolation and had simply never met.
+
+**Fix applied.** `target_epic` added to `config/ac_store_schema.json` as an optional
+string. The data was right and the schema had not learned about it.
+
+**Residual — no test binds the two.** Nothing runs `validate_ac_schema` over the output of
+`goal_to_epic`. The same class of drift can recur with the next field either side adds.
+The regression test must generate a small epic and validate the touched records with the
+real validator, not assert a property list — a property list is a second copy of the
+schema that can itself fall behind (same reasoning as KI-ACD-012).
+
+**Pattern:** a first-party producer and a required gate that were never run against each
+other.
+
+---
+
+### KI-ACD-014 — `goal_to_epic.py` writes absolute filesystem paths into `implemented_by`
+
+- **Severity:** medium
+- **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py` — the `implemented_by` back-reference write
+
+**Symptom.** After generating the GE-120 epic, all 37 AC records carried a
+machine-specific absolute path:
+
+```yaml
+implemented_by:
+- /home/henzeh/projects/leafcutter/leafcutter-ai/tickets/00_inbox/epics/EPIC-.../15_TICKET-20260825-GE-120b-4.md
+```
+
+Every other path field in the store is repo-relative (`docs/…`, `tickets/…`,
+`templates/…`). An absolute path baked into a tracked YAML file resolves only on the
+machine that generated it, so the AC→ticket link is dead in CI, in any other clone, and in
+any consumer install.
+
+**Note what the tool got right, because it narrows the bug.** The tickets are first written
+loose into `tickets/00_inbox/`, then moved into the numbered epic folder. The generator
+correctly **re-pointed** every back-reference to the post-move location — the link targets
+are accurate. Only their form is wrong. So the defect is a missing
+`relative_to(project_root)` at the write, not a path-tracking error.
+
+**Fix applied to the data.** All 37 rewritten to repo-relative; verified that each one
+resolves to a file that exists.
+
+**Fix direction for the tool.** Make the back-reference relative to the project root at
+the point of write, and assert repo-relativity in the same test that covers KI-ACD-013 —
+both are "the generator writes store data the store's own conventions reject."
+
+---
+
+### KI-ACD-015 — Epic ordering reads `depends_on` only, so `expects_from` contract edges are invisible to the build sequencer
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py` (`_build_depends_on_index`,
+  `_translate_ticket_depends_on`) — zero occurrences of `expects_from` in the file
+
+**Symptom.** `goal_to_epic.py` builds its topological order purely from `depends_on`. The
+AC schema also carries `expects_from: {ac_id, contract}`, which states that an AC consumes
+a named contract from another AC — a build-order fact by any reading. The generator never
+looks at it.
+
+In the GE-120 tree three records declared a contract edge that existed **only** in
+`expects_from`:
+
+```text
+GE-120b-1     expects_from GE-120c-1    depends_on: [GE-120b, ACS-1200a]
+GE-120b-4     expects_from GE-120c-1    depends_on: [GE-120b, GE-120b-2]
+GE-120b-1-i   expects_from GE-120a-2    depends_on: [GE-120b-1]
+```
+
+`GE-120c-1` is the out-of-process harness that `b-1` and `b-4` are *verified through*.
+Without the edge the sequencer is free to schedule both before the harness exists. The
+edges were added to `depends_on` by hand before generating, and the resulting order put
+`c-1` at position 12 ahead of `b-1` (13) and `b-4` (15) — so the mechanism works, it is
+simply fed from one field when the store records the dependency in two.
+
+**The open question is which field is authoritative,** and the answer is not obvious.
+`expects_from` may be intended purely as contract documentation with `depends_on` as the
+scheduling field. If so the defect is in the ACs (an IT-PO that writes `expects_from`
+should mirror it into `depends_on`) and the fix is a validator rule, not a generator
+change. If instead `expects_from` is meant to be load-bearing, the generator must read it.
+Deciding this is a prerequisite to fixing it — implementing either half without the
+decision produces two sources of truth for build order.
+
+**Detection cost today.** Nothing surfaces the discrepancy. It was found by diffing
+`expects_from.ac_id` against `depends_on` across the tree by hand. Whichever direction is
+chosen, a store rule should assert the invariant.
+
+---
+
+### KI-ACD-016 — Generated tickets carry AC checklist items truncated mid-clause
+
+- **Severity:** low
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `- [ ] AC-N:` checklist
+  rendering
+
+**Symptom.** Below the full ` ```gherkin ` block, each generated ticket repeats the
+criteria as a checklist built by splitting the Gherkin on `And` and taking the first
+physical line of each clause. Because the criteria are wrapped block scalars, every item
+ends mid-sentence:
+
+```markdown
+- [ ] AC-1: it creates a real second working copy of the repository, stages real files in it, and
+- [ ] AC-3: the source tree is not on the import path of the process under test, so a check that can
+```
+
+**Impact is bounded but real.** No information is lost — the complete criteria sit in the
+Gherkin block directly above, and that is what `ac-validator` reads. The risk is an agent
+or reviewer working from the checklist, which reads as a list of half-requirements. AC-3
+above inverts especially badly: truncated, it stops immediately before the condition that
+gives it meaning.
+
+**Fix direction.** Join the wrapped continuation lines before splitting, or drop the
+checklist entirely and let the Gherkin block stand alone. The checklist duplicates content
+it cannot represent faithfully, so removing it is the cheaper correct answer.
+
+---
+
+### KI-ACD-017 — Epic generation re-scans the whole AC store per ticket: ~30 minutes for 37 tickets
+
+- **Severity:** low
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py` → per-ticket `generate_ticket_from_ac.py`, plus
+  `_translate_ticket_depends_on` and the Master_Plan dependency map
+
+**Symptom.** `goal_to_epic.py --ac GE-120` took **~30 minutes of wall clock at 30-55% CPU**
+to produce 37 tickets — roughly 50 seconds per ticket, against a `--dry-run` that resolves
+the same 37-leaf set in about a second. Time is spent re-loading and re-walking the AC
+store (3,000+ records) once per ticket, then again during dependency translation and
+Master_Plan assembly.
+
+**Why it is worth recording despite being only slow.** The run produces no incremental
+output — `tail` buffers everything to the end — so for half an hour there is no way to
+distinguish progress from a hang. During this run the loose tickets sat in
+`tickets/00_inbox/` for ~20 minutes before being moved into the epic folder, and that
+intermediate state was misread as a duplicate-ticket defect. A long silent run invites
+wrong conclusions about its own correctness, and invites a user to kill it partway, which
+would leave exactly the half-assembled state that was feared.
+
+**Fix direction.** Load the store once and pass it down rather than re-reading per ticket,
+and emit a per-ticket progress line so the run is legible while it is happening.
+
+---
+
+### KI-ACD-018 — Every generated `depends_on` reference is the pre-move filename, so all 27 inter-ticket edges dangle
+
+- **Severity:** high
+- **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py` (`_translate_ticket_depends_on`, the epic-folder move,
+  `_render_master_plan`) against `templates/hooks/ticket_frontmatter_guard.py`
+
+**Symptom.** `goal_to_epic.py` writes tickets loose into `tickets/00_inbox/`, then moves
+them into the epic folder under an ordinal prefix — `TICKET-20260825-GE-120b-2.md` becomes
+`09_TICKET-20260825-GE-120b-2.md`. `depends_on` is translated **before** the move and never
+re-pointed after it, so every reference names a file that no longer exists:
+
+```text
+❌ FRONTMATTER VIOLATION: '.../15_TICKET-20260825-GE-120b-4.md'
+   depends_on 'TICKET-20260825-GE-120c-1.md' not found. Looked in:
+     .../EPIC-TrustThatAGreenCheckActuallyChecked/TICKET-20260825-GE-120c-1.md
+     .../EPIC-TrustThatAGreenCheckActuallyChecked/done/TICKET-20260825-GE-120c-1.md
+```
+
+**27 references across 20 of the 37 tickets — every inter-ticket edge in the epic.** The
+Master_Plan's "Depends On" column carries the same stale names.
+
+**The topological order is not affected, which is what makes this easy to miss.** The
+ordinal prefixes encode the correct sequence: `c-1` really is at 12, ahead of `b-1` at 13
+and `b-4` at 15. So the epic *looks* correctly wired in the Master_Plan table and reads
+correctly to a human. What is broken is the machine-readable edge — the field
+`ticket-prioritizer` and the supervisors use to compute a ready set. Left uncorrected, a
+dependency-aware drive would treat all 37 tickets as unblocked.
+
+**Contrast with KI-ACD-014, because together they localise the bug.** In the same run the
+generator **did** correctly re-point `implemented_by` in the AC store to the post-move
+`NN_`-prefixed path. So `goal_to_epic.py` knows the final filenames — it simply applies
+that knowledge to the AC-store back-reference and not to the ticket-to-ticket references or
+the Master_Plan table. This is one missing re-point pass over two surfaces, not a
+path-tracking failure.
+
+**It is caught, at least.** `ticket_frontmatter_guard` rejects the whole set at commit
+time, which is why this is recorded as loud rather than silent. But it means
+`goal_to_epic.py`'s output is uncommittable out of the box — the second such defect after
+KI-ACD-012, whose Master_Plan frontmatter gap was confirmed again in this same run.
+
+**Fix direction.** Move the tickets first, then translate `depends_on` and render the
+Master_Plan against the final filenames — or re-point both surfaces after the move, reusing
+whatever already re-points `implemented_by`. The regression test should generate a
+two-ticket epic with one edge between them and run the real `ticket_frontmatter_guard`
+over the result, for the same reason KI-ACD-012 gives: asserting a filename format is a
+second copy of the rule that can itself fall behind.
+
+**Pattern:** a producer that renames its artifacts after writing the references to them.
 
 ---
