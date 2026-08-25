@@ -1,0 +1,148 @@
+id: ACD-2100b-3
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: reviewed
+priority: medium
+title: "An agent missing from the registry and an agent denied permission produce different reports"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given two runs that differ only in their agent registry -- the first registry is
+    readable and interpretable and does not list the agent the route would use to
+    create the authoring worktree; the second lists that same agent and withholds
+    permission to run repository commands from it,
+  When the startup check runs in each,
+  Then the first run stops with a report that names the agent and states it was not
+    found in the registry,
+  And the second run stops with a report that states the agent is listed and is not
+    permitted to run repository commands,
+  And the two reports differ from each other,
+  And only the second report directs the reader at the permission setting to
+    change.
+depends_on: [ACD-2100b]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state the difference between these two reports -- it is the distinction the current message destroys."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 -- 'permitsShell is false for four different reasons ... and only the last is a permissions problem'."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. Lines 1745-1791; the entries.find lookup is where absence and denial become indistinguishable."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M8 inverted -- the only one of the four outcomes that may assert a permissions cause is the one that established it."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the registry and the permits_shell field the second report may name."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "Fail closed in both cases: both runs stop. This L1 refines the reporting of the gate introduced by BO-1500f-1 (work_status: done) and must not supersede it -- a child that relaxes either halt to a warning is the wrong fix."
+  - "Only the denial outcome may name a permission setting. Naming it on the absence outcome sends the operator to audit an agent entry that does not exist and is the defect this record removes."
+  - "Both reports must name the agent the check was looking for, taken from the value the check actually resolved rather than a literal in the message, so a change to which agent creates the worktree cannot make the report lie."
+  - "The distinction must be established from the registry contents -- 'entry present' versus 'entry present and permission withheld' -- and not from a default applied when the lookup returns nothing."
+  - "Must satisfy the repository error-handling policy."
+  - "The denial case does not exist in the real registry (the worktree-creation agent carries permission today), so it must be constructible from a registry supplied to the run rather than requiring the project's own file to be edited."
+test_spec:
+  - name: test_absent_agent_and_denied_agent_produce_different_reports
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Two runs differing only in their registry -- one omitting the worktree-creation
+      agent, one listing it with repository-command permission withheld -- produce
+      reports that differ from each other.
+  - name: test_absent_agent_report_names_the_agent_and_says_it_was_not_found
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The first run's report contains the agent id the check resolved and states the
+      agent was not found in the registry, and it does not name a permission setting.
+  - name: test_only_the_denied_report_names_the_permission_setting
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The second run's report states the agent is listed and not permitted and names
+      the permission setting; the first run's report names no permission setting --
+      asserted as a pair, because either half alone passes with one shared message.
+  - name: test_both_outcomes_are_reached_through_the_workflow_entry_point
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner to its startup charter check, once per registry"
+    description: >-
+      Both reports are produced by driving the real workflow with the two registries
+      and observing the recorded outcome, not by calling the lookup directly.
+test_rationale: >-
+  Split across two records, each half is satisfiable by one shared message and the
+  defect survives; held together, the third Then clause is unsatisfiable without
+  actually telling the two apart. That is why the pair assertion, not either message on
+  its own, is the test that matters. The denial case has to be constructed -- the real
+  registry gives the worktree-creation agent permission at agent_registry.json:1368 --
+  and it is worth constructing because it is the one verdict the current code states
+  correctly, so a change that makes the other three honest must be shown not to lose it.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100b-3-i
+    contract: "A lookup over the registry's agent entries whose result distinguishes three states -- entry present and permitted, entry present and denied, entry absent -- so that a fourth state (the entries collection is not there at all) is representable rather than silently folded into 'absent'."
+  - agent: python-coder
+    ac_id: ACD-2100b-4
+    contract: "The absence outcome and the denial outcome as two distinct recorded halts, both of which the fail-closed guard must observe stopping the run."
+  - agent: documentation-expert
+    ac_id: ACD-2100d-4
+    contract: "The final wording distinction between the absence report and the denial report, which the reference page states so a reader can map a message they received to a remedy."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100b-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  OUTCOMES 3 AND 4 OF 4, deliberately in ONE record. They are the same lookup
+  producing two verdicts, and the behaviour being specified is the discrimination
+  between them -- not either message on its own. Split across two records, each
+  half passes with a single shared message and the defect survives; together, the
+  third Then clause is unsatisfiable without actually telling them apart. Only the
+  fourth outcome is a permissions problem, and it is the only one whose report may
+  name the permission setting.
+
+  THE SECOND CASE IS THE PRESERVED BEHAVIOUR. `worktree-agent` has
+  `permits_shell: true` in the real registry (agent_registry.json:1368), so the
+  denial case has to be constructed for the test. It is worth constructing: it is
+  the one verdict the current code states correctly, and a change that makes the
+  other three honest must not lose it.
+
+  THE GATE IS NOT BEING WEAKENED. This L1 refines the reporting of the gate
+  introduced by BO-1500f-1 (`work_status: done`); it does not supersede it. Any
+  child that relaxes the halt to a warning is the wrong fix.
+
+  2026-08-25 (it-po): the delivers_to contract to ACD-2100b-3-i is stated as a
+  three-state lookup result on purpose. If the lookup's contract is boolean
+  ("permitted or not"), the empty-collection case has nowhere to land and b-3-i is
+  unimplementable without re-opening this record -- the same shape as the
+  a-2 / a-2-i candidate-set contract. The constructible-registry requirement exists
+  because a test that edits the project's own config/agent_registry.json to build the
+  denial case mutates a real package surface and will not survive review.

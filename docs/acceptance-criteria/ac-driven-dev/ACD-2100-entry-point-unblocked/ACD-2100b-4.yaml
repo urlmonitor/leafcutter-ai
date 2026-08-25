@@ -1,0 +1,148 @@
+id: ACD-2100b-4
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: reviewed
+priority: medium
+title: "Every unresolved outcome of the startup check still stops the run before any authoring work begins"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given four runs set up so that the startup check meets a different condition in
+    each -- a registry it cannot read; a registry it cannot interpret; a readable
+    registry that does not list the agent the route would use; and a readable
+    registry that lists the agent with repository commands withheld,
+  When each run reaches the startup check,
+  Then each of the four runs stops at the check,
+  And in none of them is an authoring agent dispatched,
+  And in none of them does an authoring worktree or branch exist on disk
+    afterwards,
+  And each run reports an outcome that says the run did not proceed rather than an
+    outcome that says the run succeeded.
+depends_on: [ACD-2100b, ACD-2100b-1, ACD-2100b-2, ACD-2100b-3]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state that every unresolved outcome halts -- a reader deciding whether to retry needs to know the halt is not selective."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 -- 'Failing closed is right; asserting a specific false cause is not.'"
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The false-success shapes this guard is written against."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The charter gate at 1745-1791 is the halt this guard keeps in place across all four outcomes."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose startup halt this guard protects."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow carries no charter gate at all today, so this guard is also what stops a future build shipping a gate that halts selectively (see ACD-2100d-3)."
+  - "The halt must hold for every outcome in which the check did not establish a permitted verdict -- including outcomes not enumerated by ACD-2100b-1 through -3. A guard written as a list of four conditions is satisfied by an implementation that fails open on the fifth."
+  - "Absence of dispatch must be established from the run's own record of what it dispatched, and absence of a worktree from the filesystem after the process exits. Reading the source to confirm a return follows the check proves nothing about whether the check is reached."
+  - "The recorded outcome must not be a success outcome. This constrains only the success/non-success distinction -- it does not specify the status vocabulary and does not touch the cancellation return path, which is out of scope for this tree (KI-ACD-006)."
+  - "Must not weaken the halt to a warning for any outcome. Three of the four causes are not permission problems, and the tempting conclusion that three of the four should therefore not block is the specific regression this record exists to prevent."
+  - "Must satisfy the repository error-handling policy on every one of the four paths."
+test_spec:
+  - name: test_all_four_startup_check_conditions_stop_the_run_at_the_check
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Four runs, one per condition -- unreadable, uninterpretable, agent absent, agent
+      denied -- each stops at the startup check and no step after the check runs.
+  - name: test_no_authoring_agent_is_dispatched_in_any_halted_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner, with the run's own dispatch record read back after each of the four runs"
+    description: >-
+      For each of the four runs, the run's record of what it dispatched contains no
+      authoring-agent dispatch -- observed from the record the run itself produced, not
+      from the workflow source.
+  - name: test_no_authoring_worktree_or_branch_exists_after_any_halted_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      After each of the four processes exits, the project holds no authoring worktree
+      directory and no authoring branch that was absent before the run.
+  - name: test_no_halted_run_reports_itself_as_having_succeeded
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Each of the four runs records an outcome that says the run did not proceed; none
+      records a success outcome.
+test_rationale: >-
+  The realistic way this L1 goes wrong is not a bad message -- it is somebody deciding
+  that since three of the four causes are not really permission problems, three of the
+  four should be warnings, which reintroduces the exact hazard the BO-1500f-1 gate was
+  built for. So the guard has to be asserted behaviourally across all four conditions in
+  one place, not inferred from each sibling record passing its own reporting test. The
+  absence of dispatch and the absence of a worktree are asserted from the run's own
+  record and from the filesystem because a source reading confirming a return statement
+  follows the check says nothing about whether the check is reached. The last assertion
+  closes the false-success gap: without it the guard is satisfied by a run that stops
+  and still reports success.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100b-1
+    contract: "The unreadable-registry outcome as a recorded halt distinguishable from the other three."
+  - ac_id: ACD-2100b-2
+    contract: "The uninterpretable-registry outcome as a recorded halt distinguishable from the other three."
+  - ac_id: ACD-2100b-3
+    contract: "The agent-absent and agent-denied outcomes as two recorded halts distinguishable from each other and from the other two."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FAIL-CLOSED REGRESSION GUARD. It is a separate behaviour from the three
+  reporting records because the realistic way this L1 goes wrong is not a bad
+  message -- it is somebody deciding that since three of the four causes are not
+  really permission problems, three of the four should be warnings. That would
+  reintroduce the exact hazard the BO-1500f-1 gate was built for. That AC is
+  `work_status: done`; this L1 refines its reporting and must not supersede it.
+
+  THE LAST CLAUSE IS DELIBERATE AND IS NOT KI-ACD-006. It asserts only that a run
+  halted at this check does not report itself as having succeeded. It does not
+  specify the vocabulary of the return status, and it does not touch the
+  cancellation return path -- KI-ACD-006 is explicitly out of scope for this tree.
+  Without it the guard is satisfiable by a run that stops and still reports
+  success, which is the same false-success family the halt exists to prevent.
+
+  ASSERT IT BEHAVIOURALLY. Observe the absence of the dispatch in the run's own
+  record of what it dispatched, and the absence of the worktree on disk. Reading
+  the source to confirm a `return` follows the check proves nothing about whether
+  the check is reached. Per CLAUDE.md, an AC about a gate is covered by a test that
+  executes it.
+
+  DEPENDS_ON CARRIES ORDERING, NOT PARENTAGE. Its three siblings are listed because
+  the four conditions are only distinguishable once they are implemented; structural
+  parentage is derived from the id.
+
+  2026-08-25 (it-po): the it_requirement about outcomes beyond the enumerated four is
+  the one that stops this guard being written as a four-branch table. ACD-2100b-3-i
+  already demonstrates a fifth outcome the enumeration misses; a guard keyed to the
+  list of four is fail-open on it. All three expects_from edges have depends_on mirrors
+  already in place, so the sequencer will honour them.

@@ -1,0 +1,153 @@
+id: ACD-2100c-1
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Every decision the route records as the user's is put to the user and to no agent"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run driven far enough to reach each of the five points at which the route
+    asks for a decision -- approving a drafted product-truth artifact; approving
+    the mid-pipeline authoring stage; giving final approval; choosing how to
+    proceed when the request looks already covered; and deciding what to do with
+    stranded drafts from an earlier run,
+  When each of those points is reached,
+  Then the question is put on the channel that reaches the person running the
+    route,
+  And the run's own record of every dispatch it made contains no dispatch whose
+    purpose was to obtain an answer to any of the five,
+  And the run does not move past any of the five until an answer has arrived on
+    that channel.
+depends_on: [ACD-2100c]
+doc_links:
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "The sequence diagram authored by ACD-2100e-1 -- the five decision points and the channel each is put on are what it depicts."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 -- the observed run in which a status-checker agent answered a user gate and the pipeline discarded the work."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The five decision points are at lines 2067 (product-truth gate), 2361 (mid-pipeline gate), 2458 (final gate), 1913 (covered-route gate) and 841 (orphan resolution); all five dispatch to status-checker today."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause and resume contract that gives a gate somewhere to go when no person is reachable."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the substrate a gate falls back to when the channel reaches nobody."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route these five decision points belong to."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "The class must be closed by one mechanism covering every decision whose answer is a human choice -- not by five per-site edits. Two of the five sites appear in no known issue, and one of those can delete drafts; per-site patching is how those two get missed."
+  - "A new decision point added later must inherit the rule by virtue of being a human-decision gate, not by someone remembering to route it. A mechanism that must be opted into at each site is the same defect deferred."
+  - "The property must be observable from outside the run: the run's own record of what it dispatched is the evidence. A test that asserts a particular agent name is absent from the source passes as soon as the dispatch target is built from a variable."
+  - "The route must not proceed past a decision point on a timeout or a default. What happens when the channel reaches nobody is ACD-2100c-2's subject and must be reached, not bypassed."
+  - "Must satisfy the repository error-handling policy on the channel interaction, which is external I/O."
+  - "Must not change what any of the five decisions offers or means -- only who is asked. The covered-route and orphan-resolution decisions keep their existing choices."
+test_spec:
+  - name: test_each_of_the_five_decision_points_is_put_on_the_user_channel
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The run is driven to each of the five decision points in turn and each question
+      appears on the channel that reaches the person running the route.
+  - name: test_no_dispatch_is_made_to_obtain_an_answer_to_any_of_the_five
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner to each decision point, with the run's own dispatch record read back afterwards"
+    description: >-
+      Across all five, the run's record of every dispatch it made contains no dispatch
+      whose purpose was to obtain a gate answer -- read from the record the run
+      produced, not from the workflow source.
+  - name: test_run_does_not_advance_past_a_decision_point_before_an_answer_arrives
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      With the channel open but no answer supplied, no step after the decision point
+      executes for the duration of the run.
+  - name: test_a_newly_added_human_decision_point_inherits_the_rule
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A sixth human-decision point introduced into the run is put on the user channel
+      and produces no dispatch, without any per-site registration -- the guard is on
+      the class, not on a list of five.
+test_rationale: >-
+  The property is only observable from outside: run the route, then read what it
+  dispatched. A test that asserts a particular agent name is absent from the source
+  passes the moment the dispatch target is built from a variable, and per CLAUDE.md an
+  AC about a gate is covered by a test that executes the gate path. Naming all five
+  sites in the criteria rather than three is deliberate -- the two the known issue omits
+  include the orphan-resolution decision, which can delete drafts. The sixth-point test
+  is the one that distinguishes a class-wide mechanism from five per-site patches;
+  without it, five passing per-site assertions look identical to a solved problem.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100c-4
+    contract: "A decision-point mechanism in which an answer carries the channel it arrived on, so that provenance is a property of the answer the acceptance test can read -- rather than something to be inferred from the answer's content."
+  - agent: architecture-diagram-author
+    ac_id: ACD-2100e-1
+    contract: "The final set of decision points and the channel each is put on, which the sequence diagram depicts rather than re-derives from the source."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THE OUTGOING HALF of the provenance rule: the question must not be asked of an
+  agent. ACD-2100c-4 is the incoming half -- an answer that arrives from somewhere
+  other than the person is not accepted. Both are needed. A gate can be routed to a
+  person and still swallow whatever turns up on the channel.
+
+  ALL FIVE SITES ARE NAMED IN THE CRITERIA ON PURPOSE. The known issue lists three;
+  the PO verified five on 2026-08-25 (lines 2067, 2361, 2458, 1913 and 841), and the
+  last two appear in no known issue. The orphan-resolution decision at 841 is
+  destructive in its own right -- it can delete drafts -- so leaving it out of the
+  class is the worst of the five omissions. Fix the class with one mechanism; five
+  per-site patches is how the two unlisted ones get missed. Sites are described by
+  what they decide rather than by line number so the criterion survives the file
+  moving.
+
+  WHY THE DISPATCH-RECORD CLAUSE RATHER THAN "no agent answers". The property is
+  only observable from outside: run the route, then read what it dispatched. A test
+  that asserts a particular agent name is absent from the source passes as soon as
+  the dispatch is built from a variable. Per CLAUDE.md, an AC about a gate is
+  covered by a test that executes the gate path.
+
+  NOT IN SCOPE HERE: what happens when the channel reaches nobody. That is
+  ACD-2100c-2 -- pause, do not proceed and do not discard.
+
+  2026-08-25 (it-po): sized L. This is the only record in the tree that changes a
+  mechanism rather than a site: five call sites, a new answer-provenance shape that
+  ACD-2100c-4 consumes, and a class-wide guard that a sixth site inherits. The
+  delivers_to contract to c-4 states the shape without prescribing it -- what matters
+  is that the channel an answer arrived on survives to the point of evaluation,
+  because c-4's proof is a pair of answers identical in content and differing only in
+  origin, and that pair is unrepresentable if provenance is discarded at parse time.

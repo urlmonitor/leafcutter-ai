@@ -1,0 +1,141 @@
+id: ACD-2100a-3
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: reviewed
+priority: medium
+title: "The startup charter check finds the agent registry when the run starts inside a worktree"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run started with the process working directory set to a git worktree of
+    the project,
+  And that worktree holds no installed copy of the route's own support files -- a
+    directory listing under it shows no registry to read,
+  And the project itself holds a registry that lists the agent the route uses to
+    create the authoring worktree and permits it to run repository commands,
+  When the route performs its startup check on that agent,
+  Then the check reads the project's registry and returns a verdict derived from
+    its contents,
+  And the run continues past the check to the next step,
+  And the check does not report the registry as missing or unreadable.
+depends_on: [ACD-2100a]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state which registry a run reads when started from a worktree."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 cause 1 -- the ls evidence showing the registry exists at the workspace root and not inside a worktree."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The registry read is at line 1749 and resolves {{config.output_root}}/config/agent_registry.json against the caller's working directory."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why a worktree has no .leafcutter/ of its own -- install_shims populates the project root only."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for config/agent_registry.json, the file this read must reach."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose startup path this read sits on."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change must land under templates/. The deployed workflow under .leafcutter/workflows/ is build output."
+  - "Must use the same resolution ACD-2100a-1 establishes rather than a second, independent one. Two resolvers on the same startup path is how the five sites came to disagree in the first place."
+  - "The registry must be read from the local filesystem only. Adding a network or agent round-trip to satisfy this read reintroduces the failure class ACD-2100b-5 removes."
+  - "A worktree that happens to hold its own installed support directory must still resolve to a registry -- the behaviour must not depend on the worktree being empty of one, only on the run reaching a real registry."
+  - "Must satisfy the repository error-handling policy: the read is external I/O; a failure must be reported through the outcomes ACD-2100b-1 and ACD-2100b-2 specify, never swallowed into a false verdict."
+  - "The read must add no measurable startup cost beyond a single file open -- no directory tree walk over the project on every run."
+test_spec:
+  - name: test_registry_read_succeeds_from_a_worktree_with_no_installed_support_files
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A real git worktree of a project, asserted first to contain no installed support
+      directory, is the process working directory; the startup check returns a verdict
+      derived from the project's registry and the run advances to the next step.
+  - name: test_startup_check_registry_read_is_reached_from_the_workflow_entry_point
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow's startup charter-check step, driven through the workflow runner from a worktree working directory"
+    description: >-
+      Driving the real workflow from the worktree reaches the step after the check --
+      the verdict is consumed in control flow, not merely computed.
+  - name: test_registry_read_uses_the_real_on_disk_registry_file
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The registry fed to the check is the project's own config/agent_registry.json read
+      verbatim from disk rather than a hand-built fixture, and the verdict matches the
+      permits_shell value that file actually carries for the worktree-creation agent.
+test_rationale: >-
+  The second Given is the whole test. If the fixture worktree happens to contain an
+  installed support directory, the cwd-relative path resolves and the test passes
+  against unfixed code -- the same construction hazard as ACD-2100a-1's two-copies
+  Given. The absence has to be asserted before the run, not assumed. The real_artifact
+  angle is charged because the observed defect was partly about which file was read:
+  a hand-built registry fixture placed wherever the test wants proves the parser works,
+  not that the resolution reaches the project's actual registry.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100a-5
+    contract: "A startup charter check that completes from a worktree working directory, reading the project's registry through the shared repository-anchored resolution rather than a cwd-relative path."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SITE 2 OF 5, and the first of the two causes of KI-ACD-009. Verified by the PO on
+  2026-08-25: templates/workflows-js/plan-feature.js line 1749 reads
+  `{{config.output_root}}/config/agent_registry.json`, which expands to a
+  cwd-relative `.leafcutter/config/agent_registry.json`. Confirmed by `ls` in the
+  known issue: that file exists at the workspace root and does NOT exist inside a
+  worktree. So the read fails deterministically for any run whose working directory
+  is a worktree -- which is where every authoring run starts.
+
+  THE SECOND GIVEN IS THE WHOLE TEST. If the fixture worktree happens to contain a
+  `.leafcutter/config/` directory, the buggy relative path resolves and the test
+  passes against unfixed code. Assert the absence first, then run. This is the same
+  construction hazard as ACD-2100a-1's two-copies Given.
+
+  BOUNDARY WITH ACD-2100b. This record is about the read SUCCEEDING from a worktree.
+  What the check reports when it genuinely cannot read, cannot parse, or cannot find
+  the agent is ACD-2100b's subject, and the two must not be merged: fixing only the
+  path would make the misleading message stop appearing in the one case anybody
+  reproduced while leaving the false verdict in place for the rest.
+
+  RELATED: ACD-2100b-5 removes the live agent round-trip this check currently uses
+  to read a static local file. If that lands first, this behaviour is exercised
+  through the runtime's own read instead of through a dispatched agent; the
+  observable outcome stated here is unchanged either way.
+
+  2026-08-25 (it-po): no expects_from edge to ACD-2100a-1 even though both consume the
+  same resolution, because depends_on does not carry that ordering and the build
+  sequencer reads depends_on only (KI-ACD-015, open) -- an expects_from edge without a
+  depends_on mirror is invisible to scheduling and would be a contract nobody enforces.
+  The shared-resolution requirement is therefore stated as an it_requirement, which the
+  coder does see. Same reasoning applies to the a-3/b-1..b-3 relationship: those are
+  refinements of this read's failure reporting, not prerequisites of it.

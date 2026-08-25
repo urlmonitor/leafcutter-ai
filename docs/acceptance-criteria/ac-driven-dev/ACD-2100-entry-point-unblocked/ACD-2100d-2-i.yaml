@@ -1,0 +1,129 @@
+id: ACD-2100d-2-i
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: reviewed
+priority: medium
+title: "An install that replaces a locally changed generated file says so rather than replacing it silently"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an installed route file that has been changed since it was installed so
+    that its contents differ from what the installer would produce,
+  When the installer runs,
+  Then it states in its output for that run that a local change is being replaced
+    and names the file,
+  And the file's contents after the install are what the installer produces,
+  And a file that has not been changed since it was installed produces no such
+    statement.
+depends_on: [ACD-2100d-2]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must tell a reader that a local edit to a generated file is announced and then lost."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004's dead workaround -- the evaporation was silent, which is why it was mistaken for a fix."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The installer whose output carries the statement."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why build output is regenerated and why the loss is correct even though it must be announced."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The install still wins. This does not make the installer refuse, preserve the local change, or prompt -- build output is generated and must be regenerated. The requirement is that the loss is announced, not prevented."
+  - "The statement must fire only for files that actually diverged. Every generated file is replaced on every install; a message for each one is noise that gets filtered and then ignored, which is the same as no message."
+  - "Divergence must be determined by the same computation ACD-2100d-2's delivery check uses. Two independent determinations will disagree, and a disagreement here means the check reports clean while the installer silently discards a repair -- the 2026-08-18 incident exactly."
+  - "The statement must name the file. A count of replaced files does not let the operator recover the change they are about to lose."
+  - "The statement must appear in the installer's own output for that run, on a stream an operator running the installer normally sees -- not only in a log file that has to be sought out."
+  - "Must satisfy the repository error-handling policy: reading the pre-install contents is external I/O and a failure to read must not silently suppress the statement."
+  - "Must not measurably slow a clean install -- the common case is that nothing diverged."
+test_spec:
+  - name: test_install_announces_a_locally_changed_generated_file_by_name
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The installer is run into a temporary target, one generated file is changed, and
+      the installer is run again; its output for the second run states that a local
+      change is being replaced and names exactly that file.
+  - name: test_unchanged_generated_files_produce_no_announcement
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Across the same two runs, the statement appears exactly once and names only the
+      changed file -- no statement is produced for any file that was not changed.
+  - name: test_installed_contents_after_the_announced_replacement_are_the_installers_own
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      After the second run the file's bytes equal what the installer produces for a
+      clean install of that file -- the announcement does not come with a preservation
+      or a merge.
+  - name: test_announcement_is_produced_by_running_the_real_installer
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the installer invoked as a subprocess against a temporary target directory, the way a consumer installs"
+    description: >-
+      The statement is observed in the real installer's captured output in a fresh
+      process, not from a helper called directly.
+test_rationale: >-
+  The 2026-08-18 workaround did not fail loudly; it disappeared. The person who applied
+  it had every reason to believe the defect was fixed, and the next build silently
+  restored the broken behaviour with no trace in any output. One line naming the file at
+  install time closes that gap. The exactly-once assertion is what keeps the behaviour
+  usable -- run the installer twice, change one file in between, and assert the statement
+  appears once and names that file -- because a message on every generated file is
+  filtered and then ignored, which is indistinguishable from no message at all. The
+  byte-equality assertion is there because the tempting over-implementation is to
+  preserve or merge the local change, which this record explicitly does not ask for.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100d-2
+    contract: "An installer-derived source-to-installed mapping plus a per-file divergence determination -- the same computation, so the delivery check and the install-time announcement cannot disagree about which files diverged."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS WORTH PINNING SEPARATELY. The 2026-08-18 workaround did not fail
+  loudly; it disappeared. The person who applied it had every reason to believe the
+  defect was fixed, and the next build silently restored the broken behaviour with
+  no trace in any output. One line naming the file at install time would have closed
+  that gap, and it costs nothing.
+
+  THE THIRD CLAUSE KEEPS IT USABLE. Every generated file is replaced on every
+  install; a message for each one is noise that gets filtered and then ignored. The
+  statement is for files that actually diverged, which is also what makes the
+  behaviour testable -- run the installer twice, change one file in between, and
+  assert the statement appears exactly once and names exactly that file.
+
+  THE INSTALL STILL WINS. This does not make the installer refuse or preserve the
+  local change; build output is generated and must be regenerated. The requirement
+  is that the loss is announced, not prevented.
+
+  2026-08-25 (it-po): the shared-determination requirement is the load-bearing one and
+  it is the reason this record has an expects_from edge at all rather than standing
+  alone. Its depends_on already carries ACD-2100d-2, so the edge is visible to the
+  build sequencer.

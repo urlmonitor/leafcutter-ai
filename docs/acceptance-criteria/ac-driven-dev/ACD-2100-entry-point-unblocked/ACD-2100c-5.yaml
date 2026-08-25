@@ -1,0 +1,143 @@
+id: ACD-2100c-5
+components:
+  - ac_driven_dev
+readiness: reviewed
+priority: medium
+title: "Work is thrown away only when the person chooses to throw it away"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run holding drafted work at a decision point,
+  When the run ends for any reason other than the person choosing to stop -- no
+    answer arrives, the answering channel is unavailable, or an answer arrives that
+    cannot be attributed to the person,
+  Then the drafted work is still present on disk after the process has exited,
+  And the run does not record the outcome as the person having chosen to stop,
+  And when the person does choose to stop the drafted work is discarded and the
+    run records the person as the source of that choice.
+depends_on: [ACD-2100c, ACD-2100c-2, ACD-2100c-4]
+doc_links:
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "The sequence diagram authored by ACD-2100e-1 -- the discard path and the three non-discard exits are what it separates visually."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 -- 'the failure mode resolves to cancel, which is the one answer that throws work away'."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. Line 2086 is the residual destructive default: `const ptGate = _ptGateResult || { action: \"cancel\" }`."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "Attributing a stop to a person who never chose it is a recorded claim the run did not establish."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose exit paths this invariant constrains."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "State this as an invariant over every exit path, not as a repair to the one known destructive default at line 2086. That path is unreachable today, which is exactly why a test written against the line would be deleted with it at the next refactor and the invariant would silently lapse."
+  - "Discarding must remain reachable from an explicit person's choice -- the feature is not being removed, only its use as a fallback."
+  - "The run's record must attribute a discard to the person who chose it. Attribution is what makes a legitimate discard distinguishable from a fallback discard afterwards, and without it this invariant is unverifiable in production."
+  - "The survival of the drafted work must be observed on disk after the process has exited. A run that returns a non-destructive result and then removes the worktree or resets the branch on the way out satisfies every in-process check and still loses the work."
+  - "This record does not specify the status vocabulary of a cancelled run and must not change the cancellation return path (KI-ACD-006 is out of scope for this tree). It constrains only the attribution and the on-disk outcome."
+  - "Must satisfy the repository error-handling policy: a failure on the way out must not become an unattributed discard."
+test_spec:
+  - name: test_drafted_work_survives_every_non_person_exit
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Three runs -- no answer arrives, the channel is unavailable, an unattributable
+      answer arrives -- and in each the drafted work is present on disk and
+      byte-identical after the process has exited.
+  - name: test_no_non_person_exit_records_the_person_as_having_chosen_to_stop
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      In each of those three runs the recorded outcome carries no attribution of a stop
+      to the person.
+  - name: test_person_chosen_stop_discards_and_records_the_person_as_the_source
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A stop chosen by the person on the person's channel discards the drafted work and
+      the run's record attributes that choice to the person -- the feature is preserved,
+      only the fallback is removed.
+  - name: test_work_survives_a_missing_gate_result_on_the_real_exit_path
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With the gate resolution made to yield no result at all, the run exits without
+      discarding and without attributing a stop -- the invariant holds on the path the
+      residual destructive default sits on, driven through the real workflow rather
+      than by calling the fallback expression.
+test_rationale: >-
+  The destructive default at line 2086 is stated here as a property rather than as a
+  line edit on purpose: the present code path is unreachable, the next refactor makes it
+  reachable again, and a test written against the line would have been deleted along
+  with it. So the assertion has to be over exit paths, and the fourth test drives the
+  unreachable one through the real workflow by making the gate resolution yield nothing.
+  Observing the files rather than the return value is the other half -- a run that
+  returns a non-destructive result and then removes the worktree or resets the branch on
+  the way out satisfies every in-process check and still loses the work. The third
+  assertion keeps the feature: discarding is a legitimate outcome a person may want, and
+  attribution is what makes the two cases distinguishable afterwards.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100c-2
+    contract: "An unreachable-channel outcome that is a pause: the drafted work remains on disk and the recorded outcome is 'waiting', never a stop attributed to a person."
+  - ac_id: ACD-2100c-4
+    contract: "An unattributable answer resolves to a refusal that leaves the run waiting with its drafted work intact, never to a stop the run records as the person's choice."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THE DESTRUCTIVE DEFAULT, stated as a property rather than as a line edit. Line
+  2086 substitutes a stop decision when no result is present, so the answer to "no
+  answer" is to discard. resolveGate should not return a bare null today, which is
+  precisely why this must be specified as an invariant instead of as a patch: the
+  present code path is unreachable, the next refactor makes it reachable again, and
+  a test written against the line would have been deleted with it.
+
+  THE THIRD CLAUSE KEEPS THE FEATURE. Discarding is a legitimate outcome that a
+  person may want. What is being removed is discarding as a fallback, not discarding
+  as a choice -- and the attribution requirement is what makes the two
+  distinguishable afterwards in the run's own record.
+
+  THE SECOND CLAUSE IS NOT KI-ACD-006. It says only that the run must not attribute
+  a stop to a person who never chose it. It says nothing about the status vocabulary
+  of a cancelled run, which is out of scope for this tree even though the return
+  path at 2091-2094 is the same code an implementer will be reading. Leave the
+  return status alone.
+
+  OBSERVE THE FILES, NOT THE RETURN VALUE. "Still present on disk after the process
+  has exited" is the assertion. A run that returns a non-destructive result and then
+  removes the worktree or resets the branch on the way out satisfies every in-process
+  check and still loses the work.
+
+  2026-08-25 (it-po): both expects_from edges have depends_on mirrors already in place.
+  The fourth test is the one that gives this record teeth -- without it the invariant is
+  only asserted over paths that are reachable today, and the whole point of writing it
+  as an invariant is that the destructive default lives on a path that is not.
