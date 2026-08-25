@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -14,7 +14,8 @@ criteria: |
   Given a project directory that is neither the producing package nor anywhere inside
     the producing package's own parent folder,
   When a real build is run against that project and the resulting tree is inspected,
-  Then that project holds its own record of what the build put there,
+  Then a record file is written into that project's own tree, so that project holds its
+    own record of what the build put there,
   And the record's entries name the artifacts that are actually present in that project,
     so the record is an account of THAT install and of no other,
   And the record is reachable from inside that project alone -- a copy of the project
@@ -41,11 +42,23 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "No entry covers this defect yet. KI-BP-004 and KI-BP-005 are the two checks that read the record and therefore have nothing to read in any project that never received one."
+    relevance: "IT-PO CORRECTION 2026-08-25: the BA recorded 'no entry covers this defect yet', which is no longer true. KI-BP-011 now covers it in full and names BP-1500d as its AC -- read it first, because it carries the reproduced evidence and the exact line numbers. KI-BP-004 and KI-BP-005 remain relevant as the two checks that read the record and therefore have nothing to read in any project that never received one."
   - path: scripts/build.py
     relationship: describes
     status: exists
     relevance: "The build under test. Read for context only -- this AC is not provable from its source."
+  - path: scripts/build_helpers.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The defect's actual location, per KI-BP-011. Line ~185 computes manifest_path = package_root / '.build_manifest.json' -- always the package, never --target-dir. Lines ~83 and ~95-96 key output_mappings via relative_to(package_root.parent); lines ~193-195 relativize the template keys the same way. Lines ~201-213 swallow the resulting ValueError into a warning and let the build continue. All four symptoms trace to the single package_root.parent anchor. Named as the surface to change, not as a substitute for the behavioural proof."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. One of the two existing readers of the record. Its _resolve_manifest_path searches a list of plausible roots derived from the PACKAGE, so moving the write target without updating this reader relocates the fail-open into this repo rather than removing it. Its absent-manifest branch warns and returns 0 -- that branch is BP-1500d-4's subject, not this AC's, but this AC must not break it."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The second existing reader, with the same package-anchored resolution and the same warn-and-return-0 absent branch. Both readers are in this AC's mandatory call-site audit set."
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -57,19 +70,173 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
     relationship: related
     status: exists
-    relevance: "Prior art for the out-of-package consumer-simulation install this AC needs. Reuse that fixture shape rather than standing up a third one."
+    relevance: "IT-PO CORRECTION 2026-08-25 -- THIS IS A SPEC, NOT PRIOR ART. BP-900h-1 is work_status not_started, covered_by [] and implemented_by []; a grep for 'BP-900h' across unit_tests/ and tests/ returns zero hits, neither function named in its own test_spec exists anywhere in the workspace, and ci.yml has no consumer-simulation job. The fixture it describes has never been built, so it cannot be reused. THIS AC CONSTRUCTS IT and delivers it to the rest of the family; see it_requirements. Read h-1 as the specification the harness must satisfy, and keep the harness compatible with it so h-1 can later adopt rather than duplicate."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    relationship: related
+    status: exists
+    relevance: "IT-PO ADDITION. Supplies the three-run delete/restore attribution discipline this AC's two negative controls extend, the cold-subprocess rule, and the principle that the scratch install's defining property is an ABSENCE. h-4 also depends on the same unbuilt h-1 fixture, so the harness this AC constructs is the one h-4 will need -- build it parameterisable rather than inlining constants."
+  - path: unit_tests/portability/test_build_deployment.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. TestConsumerIntegration at lines 451-467 is the nearest existing real thing: genuinely out-of-package via tempfile.TemporaryDirectory(). It is a STARTING POINT FOR THE HARNESS AND NOT EVIDENCE OF COVERAGE -- it invokes a single deploy phase and never reaches write_build_manifest or _compute_output_mappings, so it never executes a relativization and cannot have caught this defect. Reuse the construction; do not reuse its import-from-scripts/ pattern for any assertion about the record."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500a.yaml"
+    relationship: related
+    status: exists
+    relevance: "IT-PO ADDITION. The boundary citation for the clobbering consequence, which this AC constrains its implementation against but does not assert. Cited so the coder does not fix the write target in a way that leaves the producing package's own record corrupted."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
-    relevance: "Angle vocabulary for the proof: deployed + real_artifact + failure, with the two deliberate breakages as the load-bearing entries."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+    relevance: "Angle vocabulary for the proof: criterion + reachability floor, plus real_artifact and deployed at the cap of four, with failure carrying the two deliberate breakages."
+assigned_agent: python-coder
+estimated_complexity: XL
+declares_side_effect: true
+it_requirements:
+  - "THE OUT-OF-PACKAGE HARNESS DOES NOT EXIST AND THIS AC BUILDS IT. BP-900h-1 is an unstarted spec (work_status not_started, zero test hits across the workspace, no consumer-simulation job in ci.yml). Nothing may be reused from it. The harness is in this AC's scope and is the reason its complexity is XL; treating it as pre-existing is how this AC gets estimated at a one-line change and then stalls. Build it to satisfy BP-900h-1's specification so that AC can later adopt it rather than stand up a second one, and parameterise the package-directory name and the deployed output root as inputs rather than constants, because BP-900h-4 and BP-900h-4-i both need to vary them."
+  - "THE HARNESS TARGET MUST BE UNDER A SYSTEM TEMP ROOT, AND A SIBLING PATH IS A FALSE GREEN. Measured 2026-08-25: package_root is <workspace>/leafcutter-ai and the code anchors on package_root.parent, so a scratch target placed at a SIBLING path under <workspace>/ relativizes SUCCESSFULLY and produces 154 mappings -- it exercises the passing path and is green on the exact install that shipped broken. A target under the system temp root raises ValueError instead. Use tempfile / tmp_path (verified safe: pytest.ini declares no --basetemp and no conftest overrides tmp_path_factory) and assert as a fixture precondition that the target's realpath is NOT under package_root.parent. That assertion is load-bearing, not defensive."
+  - "The harness layout is a COPY of the package at <scratch>/leafcutter-ai/ with the TARGET itself empty apart from a minimal skills_config.json. Note that BP-900h-1's own constraint text ('built from an empty directory, NOT from a copy of this repository') reads ambiguously -- it constrains the TARGET, not the package, which must be present as a copy for the build to run at all. Do not silently pick a reading; record which one the harness implements."
+  - "The record must be written into the project the build was aimed at -- the build's declared target root. A record written anywhere else does not satisfy this AC, whatever else it contains."
+  - "The record must account for the receiving install: for an out-of-package target it must be non-empty. Measured 2026-08-25: the same build that yields 154 mappings for an in-parent target yields output_mappings {} for a temp-root target, and still exits 0. An install whose record names zero artifacts is portable, readable and useless while satisfying every other clause here, so this is the constraint most likely to be closed accidentally."
+  - "Every path derivation on the record-writing path must be anchored to a root that exists for an arbitrary consumer install. Anchoring to the producing package's parent directory is the defect itself; keeping that anchor and adding a fallback for the case that currently raises is not a fix, because the fallback inherits the same unrepresentative assumption."
+  - "The build must not write, modify or delete the producing package's own record when it is aimed at a different project. This is BP-1500a's guarantee and is a hard constraint on this AC's implementation, not a behaviour this AC asserts. The record is gitignored, so a regression here shows in no git status and must be asserted directly."
+  - "CALL-SITE AUDIT IS MANDATORY, AND BOTH READERS ARE IN IT. check_build_drift.py and check_output_drift.py each resolve the record from a list of plausible roots derived from the PACKAGE. Relocating the write target without updating both moves the fail-open from consumer installs into this repo. Name every reader in sign-off and state, for each, where it now looks."
+  - "Must be idempotent: two consecutive builds into the same unchanged project produce a byte-identical record. Verify by running the build twice and diffing, not by reasoning about the writer."
+  - "Must not regress the build's existing time budget. The record is written on every build, so any added cost must scale with the number of deployed artifacts and with nothing else."
+  - "Must handle a missing or unwritable target directory per the project error handling policy. Note that the current handler at build_helpers.py ~201-213 catches broadly and downgrades a real failure to a warning; this AC must not add a second instance of that shape. What the build's exit status must become is BP-1500d-3's subject and must not be re-specified here."
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-1500d-2
+    contract: "TWO things, because the second does not yet exist. (1) The out-of-package consumer-simulation harness: a scratch project under a system temp root whose realpath is asserted NOT to be under package_root.parent, holding only a minimal skills_config.json, with a copy of the package at <scratch>/leafcutter-ai/, built via the real build command line. (2) A record file written into that project's own root carrying a non-empty set of entries naming artifacts present under it. BP-1500d-2 relocates that record and reads it at the new location; it neither produces the record nor builds a second harness."
+  - agent: python-coder
+    ac_id: BP-1500d-3
+    contract: "The same harness, plus the ability to place it in a state where the record CAN be produced. BP-1500d-3's paired success run needs exactly that state to prove its failure verdict is attributable to the unproducible record rather than to a build that refuses every out-of-package target."
+  - agent: python-coder
+    ac_id: BP-1500d-4
+    contract: "The same harness and record artifact, serving as BP-1500d-4's all-clear baseline. BP-1500d-4 deletes and substitutes the record against this fixture to drive its three-run attribution control."
+  - agent: documentation-expert
+    ac_id: BP-1500d-5
+    contract: "The concrete on-disk location of the receiving project's record, expressed relative to that project's own root, and the shape of its entries -- plus the harness itself, which is the real out-of-package install BP-1500d-5's reference must be followed against."
+expects_from:
+  - ac_id: BP-900h-1
+    contract: "NOT SATISFIED, AND DELIBERATELY NOT A depends_on. BP-900h-1 specifies the empty-project consumer-simulation install but is work_status not_started with zero implementation anywhere in the workspace, so there is nothing to receive. This AC therefore CONSTRUCTS that harness rather than consuming it (see it_requirements) and delivers it onward to -2, -3, -4 and -5. The edge is recorded here as an unmet specification to conform to, not as a satisfied dependency; adding it to depends_on would block the whole BP-1500d family behind an unrelated epic for a fixture this AC has to write anyway."
+  - ac_id: BP-1500d-3
+    contract: "A build whose process exit status is unsuccessful whenever the record cannot be produced. Without it, 'the receiving project holds no record' and 'the build succeeded' remain simultaneously observable, and this AC's positive fixture cannot treat a green build as evidence the record exists. Recorded as a contract rather than a depends_on so the two can be built in either order; if -1 lands first its fixture must assert the record's presence directly rather than inferring it from exit 0."
+test_spec:
+  - name: test_bp_1500d_1_out_of_package_harness_target_is_not_under_the_package_parent
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE FIXTURE PRECONDITION, asserted as a test because the harness is new and an incorrectly placed one is silently green. Stand up the harness and assert three properties of the layout itself: the scratch target's realpath is NOT under package_root.parent, a copy of the package exists at <scratch>/leafcutter-ai/, and the target contains nothing but a minimal skills_config.json. Measured 2026-08-25: a target at a sibling path under the workspace parent relativizes successfully and yields 154 mappings, so a harness placed there exercises the passing path. Pair the assertion with its control -- run the same relativization against a deliberately sibling-placed target and assert it succeeds -- so the test proves the placement rule discriminates rather than merely holding."
+  - name: test_bp_1500d_1_real_build_writes_the_record_into_the_out_of_package_receiving_project
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Build into the harness target and assert a record file exists at that project's own root. Assert the negative half in the same test: the producing package's own record is byte-unchanged by this build (hash it before and after), because today's write target makes a consumer build clobber it. A test that only asserts presence in the target is green on an implementation that writes to both. Expected RED at authoring time -- build_helpers.py:185 writes to package_root unconditionally."
+  - name: test_bp_1500d_1_the_record_is_produced_through_the_real_build_command_line_not_an_imported_helper
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>"
+    description: "PRODUCTION ENTRY POINT, and the entry that cannot be replaced by a cheaper test. write_build_manifest ALREADY accepts a target_root parameter, so a direct-import unit test that passes it the scratch path passes today against the unfixed build -- the defect is that build.py never routes the target to the manifest path. Invoke the build as a SUBPROCESS through the command line a consumer runs, with a working directory that is not the package tree and an interpreter search path containing no path under the package checkout, and assert that property of the child process rather than assuming it. Then assert the record appears in the target."
+  - name: test_bp_1500d_1_record_entries_name_artifacts_actually_present_in_the_receiving_project
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Parse the record the real build serialized -- the actual bytes on disk, in a cold process, never a hand-authored fixture -- and assert TWO non-vacuity properties, because a for-each over an empty record is green on a broken install: the entry set is non-empty, and every entry resolves to a file that exists under the receiving project. Then assert the converse on a representative sample of the deployed tree, so a record naming one artifact out of hundreds cannot pass. Measured 2026-08-25: this build emits output_mappings {} for a temp-root target while exiting 0, so this entry is expected RED at authoring time; if it is green before any implementation lands, the harness target is not actually out-of-package."
+  - name: test_bp_1500d_1_a_copy_of_the_project_taken_without_the_producing_package_still_carries_the_record
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The (b)-travels-with-it half. Copy the built scratch project ALONE to a second location under the temp root, leaving the package copy behind entirely, and assert the record is present in the copy and byte-identical to the original. This asserts only that the record ARRIVES; whether its entries still RESOLVE at the new location is BP-1500d-2's subject and must not be re-asserted here."
+  - name: test_bp_1500d_1_inspection_goes_red_on_a_record_filed_with_the_package_and_on_a_record_that_accounts_for_nothing_then_green_again
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE NEGATIVE CONTROL THE CRITERION DEMANDS, and the load-bearing entry of this contract. Five runs of the SAME inspection against the SAME harness: (1) good install, clean; (2) move the record out of the receiving project into the package copy -- assert red, naming the project that has no record; (3) restore, clean again; (4) replace the receiving project's record with one that is well-formed and accounts for nothing -- assert red, naming the empty record rather than reporting a clean install; (5) restore, clean again. Runs 3 and 5 are what make each red attributable to its own breakage rather than to a fixture that was already broken. Without breakage 4 this AC can be closed by writing an empty record into the receiving project, which is worse than today because it also silences both readers while looking correct."
+test_rationale: |
+  The layout under test is the whole subject of this AC, and the harness that
+  establishes it does not exist -- BP-900h-1 specifies it and has never been built.
+  That makes the fixture the largest and riskiest part of this contract, which is why
+  entry 1 asserts the layout itself before any entry asserts behaviour.
+
+  The placement rule is not a detail. Measured on 2026-08-25: with package_root at
+  <workspace>/leafcutter-ai, a scratch target at a SIBLING path under <workspace>/
+  relativizes successfully and produces 154 mappings, while a target under the system
+  temp root raises ValueError. A "consumer simulation" placed at that sibling path is
+  therefore green on the exact install that shipped broken -- it is the false-green
+  trap this whole L1 exists against, reproduced inside the test meant to catch it.
+  tmp_path is safe to specify: pytest.ini declares no --basetemp and no conftest
+  overrides tmp_path_factory.
+
+  Entry 3 is the one that cannot be replaced by a cheaper test, and the reason is
+  specific rather than stylistic. write_build_manifest already takes a target_root
+  parameter, so a direct-import test that hands it the scratch path passes TODAY
+  against the unfixed build. The defect lives in what build.py routes to the manifest
+  path, not in what the writer is capable of. Only the real command line distinguishes
+  a writer that CAN write to a target from a build that DOES.
+
+  Entry 6 is written as a five-run sequence rather than two red assertions. A
+  break-and-fail pair cannot separate a working inspection from a fixture that had
+  already broken; the interleaved restore runs attribute each red to its own breakage.
+  Same discipline as BP-900h-4's delete/restore triple, extended to two breakages
+  because this criterion names two.
+
+  The empty-record breakage in entry 6 and the non-vacuity assertions in entry 4 are
+  one defence from two sides. The failure shape here is a record that is present and
+  says nothing -- a success-shaped result from a build that recorded nothing, the same
+  shape as the bare-directory validator no-op recorded in CLAUDE.md, and the shape the
+  build produces today (154 mappings to 0, exit 0).
+
+  Angles: criterion, reachability, real_artifact, deployed -- at the cap of four --
+  plus failure, which is conditional and consumes no slot. seam is not charged: the
+  producer/consumer boundary between the build and the two drift readers is real but
+  is BP-1500d-4's subject, and charging it here would re-derive that child. boundary
+  is not charged because the criterion names no range, count or limit.
 origin_agent: business-analyst
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added assigned_agent (python-coder), estimated_complexity (XL),
+      declares_side_effect (true -- the Then clause asserts a file present in a tree
+      outside the process, which is the schema's own test), it_requirements in LIST
+      form, the intra-family producer contracts the BA deferred, a six-entry test_spec
+      with test_rationale, and seven IT-PO doc_links. TWO CORRECTIONS OF FACT the BA
+      could not have known. (1) The known-issues relevance said no entry covered this
+      defect; KI-BP-011 now does and names BP-1500d. (2) BP-900h-1 was cited as prior
+      art to reuse; it is an unstarted spec with zero implementation anywhere in the
+      workspace, so this AC now CONSTRUCTS the out-of-package harness and delivers it
+      to the family -- that is what moved the estimate from L to XL. Baked in the
+      2026-08-25 measurements: sibling-path targets relativize successfully (154
+      mappings) and are a false green, temp-root targets raise, and an out-of-package
+      build emits output_mappings {} while exiting 0. it_requirements is a list, not
+      the five-field object: per ACS-100i-6 the structured form is demanded only by
+      package_surface: true, and this AC registers no registry entry the build reads.
+      criteria, title, depends_on, component, components and req_status untouched.
+  - reason: criteria-precision
+    by: business-analyst
+    at: 2026-08-25
+    note: >-
+      WORDING OF THE Then CLAUSE ONLY -- NO SCOPE CHANGE, NO NEW OR REMOVED CLAUSE.
+      "Then that project holds its own record of what the build put there" now reads
+      "Then a record file is written into that project's own tree, so that project
+      holds its own record of what the build put there". The guarantee is unchanged;
+      the artifact it always meant is now named concretely, so the mechanical
+      derivation of declares_side_effect (which reads from the first Then onward and
+      recognises a durable effect only when one is stated) can see the durable file
+      this criterion has always asserted. Authored true with a derived false is a
+      commit-blocking disagreement, and the honest resolution is to say plainly what
+      the build does rather than to change what is claimed. declares_side_effect stays
+      true; both negative controls, the travels-with-the-project clause and the
+      no-reading-the-source clause are untouched, as are every it-po field.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -109,3 +276,48 @@ notes: |
   the producing package's parent folder, because inside it the defect does not
   appear -- that layout is the one place the current behaviour looks correct, which
   is how this survived to now.
+
+  IT-PO RESPONSE, 2026-08-25. declares_side_effect is set TRUE. The schema's test is
+  "the Then clause asserts something observable outside the process"; this Then says
+  the receiving project HOLDS a record after the build, which is a file in a tree the
+  build process does not own. Force-routing user-surface-smoker is not incidental here
+  -- it is the only phase agent that runs the real surface end-to-end and inspects the
+  result, which is exactly the proof shape BP-1500d's notes make binding on this child.
+
+  package_surface is deliberately NOT set. Per ACS-100i-6 it means the AC registers an
+  entry in a registry the build reads to decide what a consumer receives
+  (agent_registry.json, skill_registry.json, paths.json, commit_guardian.json). This AC
+  registers nothing; it changes where an existing artifact is written. Absent is
+  therefore correct and the five-field structured it_requirements object is not owed.
+
+  THE HARNESS IS THIS AC'S WORK, AND THAT IS THE MAIN SIZING FACT. The BA's reuse
+  suggestion pointed at BP-900h-1, which turns out to be an unstarted spec: zero
+  implementation anywhere in the workspace, no consumer-simulation job in ci.yml, and
+  neither function from its own test_spec present. So the out-of-package install has to
+  be built here, and it is the bulk of the estimate. It was deliberately NOT added to
+  depends_on: doing so would park the entire BP-1500d family behind another epic for a
+  fixture this AC must write regardless. The unmet edge is recorded in expects_from
+  instead, and the harness is delivered onward to -2, -3, -4 and -5 so none of them
+  stands up a second one.
+
+  INTRA-FAMILY ORDERING IS WIRED AS CONTRACTS, NOT depends_on, as the BA asked. This
+  AC is the producer for -2, -3, -4 and -5. It also carries an expects_from on -3,
+  which looks inverted and is not: -3 is the enforcement floor, and without it a green
+  build is not evidence that this AC's record exists. Neither edge was added to
+  depends_on, so no ordering cycle is created between -1 and -3.
+
+  BA AMENDMENT, 2026-08-25 -- THE Then CLAUSE WAS MADE CONCRETE, THE SCOPE WAS NOT
+  CHANGED. The Then previously read "that project holds its own record of what the
+  build put there". It now names the artifact: "a record file is written into that
+  project's own tree, so that project holds its own record of what the build put
+  there". This is the same guarantee stated more precisely, and it was made for a
+  mechanical reason worth recording. declares_side_effect is DERIVED from this AC's
+  own Then clause rather than authored by opinion, because it non-overridably routes
+  the one phase agent that runs the real surface end-to-end and inspects the resulting
+  tree -- exactly the proof shape this criterion demands. The customer-language
+  phrasing named a durable file without using any word for one, so the derivation read
+  false while the record declared true, which the schema check refuses. Naming the file
+  is the honest fix; weakening the declaration would not be. A future reader must not
+  read this as widening the AC: no clause was added or removed, the two deliberate
+  breakages and the interleaved clean runs still stand, and every it-po field --
+  including declares_side_effect: true -- is as the it-po left it.

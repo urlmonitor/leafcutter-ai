@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -15,7 +15,8 @@ criteria: |
     real build and carries its own record of what the build put there,
   When the whole project is moved or copied to a different location, the producing
     package is left behind, and the record is read at the new location,
-  Then the record reads there without being rebuilt,
+  Then the record file written to disk inside that project by the build reads there
+    without being rebuilt,
   And each of its entries still resolves to the artifact it describes inside the
     project as it now sits, so what the record says is true of the copy in front of
     the reader rather than of the place the record happened to be written,
@@ -39,11 +40,23 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "No entry covers this defect yet. The reproduction to record is that a record written in one location cannot be read from another, so the same install opened elsewhere is unreadable even when the record travelled with it."
+    relevance: "IT-PO CORRECTION 2026-08-25: the BA recorded that no entry covers this defect. KI-BP-011 now does, and its 'manifest keys carry a non-portable prefix' evidence block is exactly this child's subject -- keys read 'leafcutter-ai/templates/agents/x.md' from the canonical checkout but 'bp900-deploy/templates/agents/x.md' from a worktree of that name, and the reader then finds no 'templates' key in the shape the writer produced. Read that block before implementing."
   - path: scripts/build.py
     relationship: describes
     status: exists
     relevance: "The build that writes the record whose form this AC constrains. Read for context only -- this AC is not provable from its source."
+  - path: scripts/build_helpers.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The keying surface this AC constrains. Lines ~83 and ~95-96 key output_mappings via relative_to(repo_root) where repo_root = package_root.parent, and lines ~193-195 relativize the template hash keys the same way. That anchor is what makes a key mean something only from the place it was written -- it is the same single root cause as BP-1500d-1's, seen from the reader's side."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The reader whose resolution this AC makes location-independent. Its manifest lookup walks a list of plausible roots derived from the package; after relocation the package is gone, so the roots list is the thing that must stop mattering. Its absent/unreadable branch currently warns and returns 0 -- that fail-open is BP-1500d-4's subject, but this AC's unreadable-reporting clause must not be satisfied by leaving it in place."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The second reader, with the same package-derived root list and the same warn-and-return-0 branch. Both are in this AC's call-site audit set."
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -55,19 +68,147 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
     relationship: related
     status: exists
-    relevance: "Prior art for the out-of-package consumer-simulation install this AC relocates."
+    relevance: "IT-PO CORRECTION 2026-08-25 -- A SPEC, NOT PRIOR ART. BP-900h-1 is work_status not_started with zero implementation anywhere in the workspace, so its consumer-simulation install cannot be reused. BP-1500d-1 constructs that harness and delivers it here; this AC relocates it and must not build a second one. Read h-1 as the specification the shared harness conforms to."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500c.yaml"
+    relationship: related
+    status: exists
+    relevance: "IT-PO ADDITION. The boundary citation. This AC asserts only that the record READS after relocation; whether the install has fallen behind what the package now holds is BP-1500c's and is not re-derived here. Cited so the coder does not add a version comparison while making the record readable."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
-    relevance: "Angle vocabulary: real_artifact + deployed + failure, with the location-keyed record as the load-bearing negative control."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+    relevance: "Angle vocabulary: criterion + reachability floor, plus real_artifact (the record is read back from the bytes the build serialized, in a cold process) and deployed, with the location-keyed record as the load-bearing failure entry."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "Record entries must be expressed relative to a root that is recoverable from inside the receiving project ALONE. Any entry that embeds an absolute path, or a path relative to the producing package's location, fails this AC even when the file it names is present in the relocated tree. Measured 2026-08-25: today's keys are relative to package_root.parent, so they carry the package directory's own name as a prefix and mean nothing once that directory is not an ancestor."
+  - "AN UNRESOLVABLE ENTRY MUST BE REPORTED AS UNREADABLE, NAMING THE RECORD AND THE PROJECT. It must not degrade to an empty record, a skipped entry, or a zero-length key set. That degradation is the precise fail-open this AC exists against, and it is already observable: the reader looks for a key shape the writer did not produce in a differently-named layout and reports a count of 0 rather than an error."
+  - "RELOCATION MUST CHANGE THE PATH'S DEPTH AND ITS PARENT, NOT JUST ITS NAME. A rename in place, or a move to a sibling at the same depth, passes a broken implementation whose keys happen to have the right number of segments. Move the project to a different depth under the temp root and assert from there."
+  - "The producing package must be ABSENT from the relocated tree and from every ancestor of it during verification, so no entry can resolve by reaching back into the package. Assert that absence as a fixture precondition rather than assuming the move left it behind."
+  - "Reading the record must not require the producing package to be importable, and must not require anything on sys.path that lives under the package checkout. A consumer has the deployed install, not the package's scripts/ -- a reader verified by importing from the source tree is verified in the one layout where the defect cannot appear."
+  - "Must not require a rebuild at the new location. A record that only becomes readable after the build is re-run has not travelled; it has been regenerated, which is exactly what a relocated consumer cannot do."
+  - "SCOPE BOUND -- this AC governs readability only. It must not introduce, replace or pre-empt any judgement about whether the install has fallen behind what the package now holds. That is BP-1500c's guarantee and this behaviour is its prerequisite, not a partial implementation of it."
+  - "Must not break the record's readability in the producing package's own workspace. The canonical checkout and a git worktree with a different directory name must both read, since the differently-named worktree is where the key-prefix defect is already visible in this repo."
+  - "Must handle a malformed or truncated record per the project error handling policy, and must distinguish it from a well-formed record whose entries do not resolve. Reporting both as the same condition loses the information the reader needs."
+delivers_to:
+  - agent: python-coder
+    ac_id: BP-1500d-4
+    contract: "A record whose entries resolve from inside the receiving project alone, and the relocated install that demonstrates it. This is BP-1500d-4's positive case: the state in which its check must give the all-clear, so its could-not-read verdict is attributable to the record being removed or substituted rather than to relocation having broken the install. Also supplies the location-keyed record artifact BP-1500d-4 substitutes as its second breakage."
+  - agent: documentation-expert
+    ac_id: BP-1500d-5
+    contract: "The observable form of a readable-after-relocation record and of the unreadable report -- what the reader sees in each case -- which BP-1500d-5's reference must describe in terms an adopter can match against their own output after moving a project."
+expects_from:
+  - ac_id: BP-1500d-1
+    contract: "The out-of-package consumer-simulation harness (scratch project under a system temp root, realpath asserted NOT under package_root.parent, package copy at <scratch>/leafcutter-ai/, target otherwise empty apart from a minimal skills_config.json) AND the record written into that project's own root with a non-empty entry set. This AC relocates that exact artifact; it neither produces the record nor builds a second harness. If -1 has not landed, this AC cannot be started -- the relocation has nothing to relocate."
+  - ac_id: BP-1500d-3
+    contract: "A build whose exit status is unsuccessful when the record cannot be produced, so the pre-relocation state of this AC's fixture is known-good rather than merely known-green."
+test_spec:
+  - name: test_bp_1500d_2_record_reads_at_the_new_location_after_the_project_is_moved_without_the_package
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Build into the shared out-of-package harness, then MOVE the whole project to a different depth under the temp root, leaving the package copy behind. Assert as fixture preconditions that the package is absent from the new tree and from every ancestor of it, and that the new path's depth and parent both differ from the original -- a same-depth sibling move passes a broken implementation. Then read the record at the new location without rebuilding and assert it reads. Expected RED at authoring time: today's keys are anchored to package_root.parent and carry the package directory's name as a prefix."
+  - name: test_bp_1500d_2_every_entry_still_resolves_to_the_artifact_it_describes_in_the_relocated_tree
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Parse the relocated record from the bytes the real build serialized, in a cold process, and assert TWO non-vacuity properties because a for-each over an empty record is green on a broken install: the entry set is non-empty and equal in size to the pre-move set, and every entry resolves to a file that exists under the relocated project root. Assert resolution against the NEW root specifically -- an entry that resolves because an absolute path still happens to point at the original location must fail, so delete or rename the original tree before resolving."
+  - name: test_bp_1500d_2_the_record_is_read_through_the_real_reader_entry_point_in_a_process_that_cannot_see_the_package
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the deployed drift readers (check_build_drift.py / check_output_drift.py) run from the relocated install"
+    description: "PRODUCTION ENTRY POINT. Read the relocated record by invoking the deployed reader as a SUBPROCESS from inside the relocated project, with a working directory that is not the package tree and an interpreter search path containing no path under the package checkout; assert those properties of the child process rather than assuming them. Importing the reader from scripts/ verifies it in the one layout where the package is always present, which is the layout the defect cannot appear in. Assert both that the read succeeds and that its result is consumed in the reader's control flow -- a reader that parses the record and then returns the same verdict regardless is inert."
+  - name: test_bp_1500d_2_a_location_keyed_record_is_reported_unreadable_at_the_new_location_and_still_reads_at_the_original
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE NEGATIVE CONTROL THE CRITERION DEMANDS, as a four-run matrix rather than a single red. Two records (good, and one deliberately keyed to the location it was written in) crossed with two locations (original, relocated): (1) good record at original -- reads; (2) good record at relocated -- reads; (3) location-keyed record at original -- STILL READS, which is what proves the fixture and the move are sound; (4) location-keyed record at relocated -- reported UNREADABLE, naming the record and the project. Assert the report names both, and assert specifically that run 4 is not silently accepted and not read as an empty record: an implementation that returns zero entries in run 4 satisfies a naive red-check while being the exact fail-open this AC exists against. Run 3 is the load-bearing entry -- without it a red in run 4 is indistinguishable from a move that broke the project for an unrelated reason."
+  - name: test_bp_1500d_2_readability_holds_in_the_producing_workspace_under_a_differently_named_package_directory
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "The no-regression half, and a second live instance of the same defect. Parameterise the harness by package-directory name and assert the record reads for at least two distinct names, because today the key prefix is the package directory's own name -- a record written from a checkout named 'leafcutter-ai' and one written from a worktree named something else produce different key shapes, and the reader finds no expected key in the second. Assert on the resolved entry set, not on exit code: a reader that returns 0 while reporting a count of 0 is the observed present-day behaviour and must not pass."
+test_rationale: |
+  This child's failure is distinct from BP-1500d-1's in a way that is easy to collapse
+  and expensive to collapse: a record can be filed correctly inside the receiving
+  project, travel with it, and still be meaningless the moment the project moves,
+  because its entries are keyed to where the producing package happened to sit. The
+  file arrives; the meaning does not. So every entry here asserts on RESOLUTION at the
+  new location, never on the record's presence -- presence is -1's and asserting it
+  again would let this AC pass on a record that arrived and says nothing.
+
+  Entry 4 is the load-bearing one and is written as a four-run matrix, not a
+  break-and-fail pair. The criterion itself demands the read-at-origin control, and the
+  reason is precise: a two-run move-and-fail cannot separate a working readability
+  check from a relocation that broke the project for some unrelated reason. Only
+  showing that the deliberately non-portable record STILL READS at its original
+  location attributes the red to the record's form.
+
+  The 'not silently read as an empty record' assertion inside entry 4 is the one most
+  likely to be dropped, and it is the one that matters most. The present-day reader
+  already exhibits exactly that degradation -- it looks for a key shape the writer did
+  not produce in a differently-named layout and reports a count of 0 rather than an
+  error. An implementation that returns an empty entry set for an unresolvable record
+  passes a naive red-check while preserving the fail-open verbatim.
+
+  Entry 5 is not padding either. The differently-named-package-directory case is not
+  hypothetical: it is already observable in this repo's own worktrees, where keys carry
+  the worktree's directory name. It doubles as the no-regression guard for the
+  producing workspace and as a second, independently-reachable instance of the same
+  root cause.
+
+  Entry 3 exists because a reader verified by import is verified in the only layout
+  where the package is guaranteed present. The relocated consumer has the deployed
+  install and nothing else, so the read must be proved in a process that cannot see
+  the package at all.
+
+  Angles: criterion, reachability, real_artifact, deployed -- at the cap of four --
+  plus failure, which is conditional and consumes no slot. seam is not charged
+  although the writer/reader boundary is real: it is charged once, on BP-1500d-4,
+  where the verdict contract between them is the subject rather than a means.
 origin_agent: business-analyst
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added assigned_agent (python-coder), estimated_complexity (M),
+      declares_side_effect (true -- the criterion turns on the persisted record's
+      on-disk form, observed by relocating a real tree outside the process),
+      it_requirements in LIST form, expects_from BP-1500d-1 for the harness and the
+      record, delivers_to BP-1500d-4 and -5, a five-entry test_spec with
+      test_rationale, and five IT-PO doc_links: build_helpers.py as the keying
+      surface, both drift readers as the call-site audit set, and BP-1500c as the
+      boundary citation. Corrected two relevance strings: the known-issues entry now
+      cites KI-BP-011's non-portable-prefix evidence block, and the BP-900h-1 link is
+      re-labelled a specification rather than reusable prior art, since h-1 is
+      unstarted with zero implementation -- the harness comes from BP-1500d-1.
+      it_requirements is a list, not the five-field object: per ACS-100i-6 the
+      structured form is demanded only by package_surface: true, and this AC registers
+      no registry entry the build reads. criteria, title, depends_on, component,
+      components and req_status untouched.
+  - reason: criteria-precision
+    by: business-analyst
+    at: 2026-08-25
+    note: >-
+      WORDING OF THE Then CLAUSE ONLY -- NO SCOPE CHANGE, NO NEW OR REMOVED CLAUSE.
+      "Then the record reads there without being rebuilt" now reads "Then the record
+      file written to disk inside that project by the build reads there without being
+      rebuilt". The subject is the same artifact the Given already establishes; it is
+      now named as what it is -- a file the build wrote to disk in the receiving
+      project -- so the mechanical derivation of declares_side_effect can see the
+      durable artifact this criterion has always been about. The AC still asserts
+      READABILITY after relocation and nothing else; presence remains BP-1500d-1's and
+      freshness remains BP-1500c's. declares_side_effect stays true, and every it-po
+      field is untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -100,3 +241,34 @@ notes: |
   ORDERING. Presupposes the record produced by BP-1500d-1. depends_on carries only
   the parent link, as the authoring request specified; the it-po should express the
   producer/consumer edge as expects_from BP-1500d-1.
+
+  IT-PO RESPONSE, 2026-08-25. The expects_from edge on BP-1500d-1 is wired as asked,
+  and it is a hard start-order constraint rather than a hint: this AC relocates an
+  artifact -1 produces, so it cannot begin before -1 lands. It was not added to
+  depends_on because the BA scoped that field to the parent link only; the contract
+  carries the same fact in the field the it-po owns.
+
+  THE HARNESS COMES FROM -1, NOT FROM BP-900h-1. The BA cited BP-900h-1 as prior art
+  for the consumer-simulation install. It is an unstarted spec -- zero implementation
+  anywhere in the workspace, no consumer-simulation job in ci.yml. BP-1500d-1 now
+  constructs the harness and delivers it here. This AC must relocate that shared
+  harness and must not stand up a second one.
+
+  package_surface is deliberately NOT set: per ACS-100i-6 it means the AC registers an
+  entry in a registry the build reads to decide what a consumer receives. This AC
+  changes the form of an existing artifact and registers nothing.
+
+  BA AMENDMENT, 2026-08-25 -- THE Then CLAUSE WAS MADE CONCRETE, THE SCOPE WAS NOT
+  CHANGED. "Then the record reads there without being rebuilt" now names the artifact
+  it was always about: "Then the record file written to disk inside that project by
+  the build reads there without being rebuilt". The reason is mechanical and worth
+  recording. declares_side_effect is DERIVED from this AC's own Then clause rather
+  than authored by opinion, because it non-overridably routes the one phase agent that
+  runs the real surface end-to-end and inspects the resulting tree -- which is exactly
+  how this criterion insists its verdicts be reached. The customer-language phrasing
+  described a durable file without naming one, so the derivation read false while the
+  record declared true, and the schema check refuses that disagreement. Naming the file
+  is the honest fix. Nothing about scope moved: this child still asserts READABILITY
+  after relocation only, presence stays with BP-1500d-1, freshness stays with
+  BP-1500c, the four-run read-at-origin control is intact, and every it-po field --
+  including declares_side_effect: true -- is as the it-po left it.

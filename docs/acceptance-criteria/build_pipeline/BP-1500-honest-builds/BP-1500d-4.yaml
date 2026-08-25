@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-readiness: draft
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -17,8 +17,8 @@ criteria: |
   And that project's record is absent, or is present but cannot be read where the
     project now sits,
   When the check runs in that project,
-  Then the check reports that it could not read the record, and names the project and
-    the record it looked for,
+  Then the check reports that it could not read the record file, and names the project
+    and the record file it looked for,
   And that report is distinguishable, to a reader and to an automated caller, from the
     all-clear the check gives when it did read the record and found nothing wrong -- so
     a check that is protecting nobody cannot be mistaken for one that has just cleared
@@ -28,11 +28,11 @@ criteria: |
     behaviour neither makes nor replaces,
   And the check is demonstrated to FAIL, before it may be accepted as passing, against
     a deliberately non-portable install: starting from an install where the check gives
-    the all-clear, removing the record must change the result to the could-not-read
-    report, replacing it with a record keyed to a location it is not being read from
-    must do the same, and restoring the good record must return the all-clear -- so
-    each change of verdict is attributable to the record and not to an install that was
-    already broken,
+    the all-clear, the record file being removed from disk must change the result to
+    the could-not-read report, a substitute record file written to disk in its place,
+    keyed to a location it is not being read from, must do the same, and restoring the
+    good record file must return the all-clear -- so each change of verdict is
+    attributable to the record and not to an install that was already broken,
   And every run is against a real install produced by a real build into a project
     outside the producing package's own parent folder, never against the check's source
     read for the presence of an error branch.
@@ -45,7 +45,15 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "KI-BP-004 and KI-BP-005 are the two checks that read the record. In any project that never received one they are ABSENT rather than degraded, and an absent check looks exactly like a passing one. No entry covers that consequence yet."
+    relevance: "IT-PO CORRECTION 2026-08-25: the BA recorded that no entry covers this consequence. KI-BP-011 now does -- it states directly that both guardrails are ABSENT, not degraded, in a consumer install. KI-BP-004 and KI-BP-005 remain the two checks in question. Read KI-BP-011 first for the reproduced evidence."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION -- THE PRIMARY SURFACE OF THIS AC, and the proof that the defect is real rather than theoretical. Its absent-manifest path prints 'check-output-drift: WARNING — .build_manifest.json not found' and RETURNS 0, and its absent-output_mappings path does the same. To an automated caller those returns are byte-identical to the all-clear it gives when it read the record and found no drift. That indistinguishability is exactly what this AC forbids."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION -- THE SECOND SURFACE, with the same shape: _resolve_manifest_path returns None, the code warns and returns 0. Both checks must change together; fixing one leaves the other fail-open and the family half-enforced."
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -61,19 +69,156 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
     relationship: related
     status: exists
-    relevance: "The same proof discipline one layer up -- a deployed guardrail's declaring files inspected in a real consumer-layout install, with a delete-and-restore negative control. Reuse its fixture and its three-run attribution pattern; it does not cover the record itself."
+    relevance: "The same proof discipline one layer up -- a deployed guardrail's declaring files inspected in a real consumer-layout install, with a delete-and-restore negative control. Reuse its three-run attribution pattern and its cold-subprocess rule; it does not cover the record itself. IT-PO NOTE 2026-08-25: h-4's own fixture is likewise unbuilt, since it too depends on the unstarted BP-900h-1. The pattern is reusable; the fixture is not, and comes from BP-1500d-1."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500c.yaml"
+    relationship: related
+    status: exists
+    relevance: "IT-PO ADDITION. The boundary this AC must not cross, cited so it is visible at implementation time rather than only in the notes. BP-1500c owns 'an installed copy that has fallen behind is reported'. This AC owns only whether a record could be READ, and is BP-1500c's prerequisite. A coder who adds a version or freshness comparison while making the could-not-read verdict distinguishable has crossed into BP-1500c and must stop."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
-    relevance: "Angle vocabulary: failure + deployed + reachability, the last because the verdict must be observed through the check's real invocation surface."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+    relevance: "Angle vocabulary: criterion + reachability floor, plus deployed (both checks ship through build.py and run from the deployed install, never from the source tree) and seam (the verdict contract between the build that writes the record and the checks that read it), with failure carrying the three-run control."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "THE COULD-NOT-READ VERDICT MUST BE DISTINGUISHABLE TO AN AUTOMATED CALLER, NOT ONLY IN PRINTED OUTPUT. This is the clause to guard, because the present-day behaviour already satisfies a naive reading of the reporting clause: both checks ALREADY print a WARNING naming the missing record, and then return 0 -- byte-identical to their all-clear from a caller's point of view. An implementation that improves the message and leaves the return value alone changes nothing that matters and closes the AC falsely."
+  - "BOTH READERS MUST CHANGE TOGETHER. check_output_drift.py and check_build_drift.py each have an absent-record path that warns and returns 0, and check_output_drift.py has a second one for a missing output_mappings section. Fixing one leaves the other fail-open and the guarantee half-enforced. Enumerate every no-record and unreadable-record branch across both scripts in sign-off."
+  - "NAME EVERY ENFORCEMENT POINT THAT CONSUMES EACH CHECK'S VERDICT, AND STATE WHICH ONE ACTUALLY GATES. A verdict changed inside the script but consumed by a pre-commit stanza or a CI step that ignores its exit status, or carries continue-on-error, is a no-op with a report attached. Both checks run as commit-guardian hooks; identify the hook registration and the CI step for each and state, for each, whether a non-zero return currently blocks."
+  - "THE NEW VERDICT MUST BE REACHABLE IN THE DEPLOYED LAYOUT, NOT ONLY IN THE SOURCE TREE. Both checks ship through build.py and execute from the deployed install. A change verified by importing from templates/ or scripts/ is verified in a layout where the package is always present, which is the layout the defect cannot appear in. This repo has shipped that exact gap repeatedly -- a deployed hook crashing on a dependency that was never in the deploy manifest -- so verify by running the DEPLOYED copy."
+  - "MUST NOT BE FAIL-OPEN. A check that cannot read its record protects nobody and must not return the status it returns when it has checked and found nothing wrong. If a transitional period requires the checks not to block, that must be expressed as a distinct third status that is still distinguishable from the all-clear -- never by reusing the all-clear."
+  - "THE VERDICT MUST BE DATA-DRIVEN. It must follow from the record being unreadable, never from a hard-coded list of projects, paths or layouts known to lack one. A name-based exemption means every new install silently inherits the fail-open."
+  - "SCOPE BOUND, AND IT IS LOAD-BEARING -- this AC governs ONLY whether a record could be read. It must not introduce, replace or pre-empt any judgement about whether the install has fallen behind what the package now holds. That is BP-1500c's guarantee; this behaviour is its prerequisite. Do not add a freshness or version comparison, and do not repurpose an existing drift comparison to produce the could-not-read verdict."
+  - "The report must name BOTH the project and the record it looked for, so a reader knows which install is unprotected. A message naming only the filename is not actionable when several installs are involved."
+  - "Must distinguish absent from present-but-unreadable in the report, since the criteria name both conditions. Collapsing them loses the information that tells a reader whether the build never wrote a record or wrote one that does not travel."
+  - "Must handle a malformed or truncated record per the project error handling policy, and must not let a parse failure fall through to the all-clear -- that is the same fail-open by another route."
+delivers_to:
+  - agent: documentation-expert
+    ac_id: BP-1500d-5
+    contract: "The two distinguishable verdicts and their observable form: what an adopter sees, and what an automated caller receives, for (a) the record was read and nothing is wrong and (b) the record could not be read. BP-1500d-5's reference must document both precisely enough that a reader can tell an inert check from a passing one in their own output, so this AC's exact exit statuses and message shapes are the contract."
+expects_from:
+  - ac_id: BP-1500d-1
+    contract: "The out-of-package consumer-simulation harness and the record written into the receiving project's own root. This AC's all-clear baseline is that install in its good state; without it there is no state in which the check can be shown to give the all-clear, and a check that has only ever been seen to report could-not-read has not been shown to discriminate."
+  - ac_id: BP-1500d-2
+    contract: "A record whose entries resolve from inside the receiving project alone, which is the positive half of this AC's control -- plus the location-keyed record artifact this AC substitutes as its second deliberate breakage. Without -2 the substituted record cannot be distinguished from the good one, because today neither reads portably."
+  - ac_id: BP-1500d-3
+    contract: "A build that fails when the record cannot be produced. This bounds this AC's scope: because an install that built green is known to carry a record, the could-not-read verdict covers removal, corruption and non-portability rather than also having to cover 'the build silently skipped it'."
+test_spec:
+  - name: test_bp_1500d_4_check_reports_could_not_read_and_names_the_project_and_the_record_when_none_is_present
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Run each of the two checks in an out-of-package install whose record is absent, and assert the report states it could not read the record and names BOTH the project and the record it looked for. Assert the absent and the present-but-unreadable conditions produce distinguishable reports, since the criteria name both. Note the partial trap: today's checks already print a WARNING naming the missing manifest, so a message-only assertion is ALREADY GREEN on the broken behaviour and proves nothing on its own -- this entry is only meaningful paired with the next one."
+  - name: test_bp_1500d_4_the_could_not_read_verdict_is_distinguishable_from_the_all_clear_to_an_automated_caller
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "THE CLAUSE THE WHOLE AC TURNS ON. Run each check twice against the same out-of-package install -- once with a good readable record present and nothing wrong, once with no readable record -- and assert the two runs differ in what an AUTOMATED CALLER receives, not merely in what they print. Compare the exit statuses directly and assert they are not equal. Expected RED today: both checks warn and return 0 in the no-record case, which is byte-identical to their all-clear. Assert on the caller-visible value specifically; an implementation that logs 'no record found' and returns the same status satisfies the wording of the reporting clause and changes nothing."
+  - name: test_bp_1500d_4_the_deployed_copy_of_each_check_produces_the_new_verdict_through_its_real_invocation_surface
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the deployed check_build_drift.py and check_output_drift.py, run as commit-guardian hooks from the out-of-package install"
+    description: "PRODUCTION ENTRY POINT AND CONSUMPTION. Invoke each check as a SUBPROCESS from the DEPLOYED copy inside the out-of-package install -- never by importing from templates/ or scripts/ -- with a working directory that is not the package tree and an interpreter search path containing no path under the package checkout; assert those properties of the child process rather than assuming them. Then assert the consumption half for each check: parse its hook registration and its CI step as data structures and assert a non-zero verdict actually blocks -- no continue-on-error, no piping that masks the status. A grep for the script name is green on a step that ignores the exit code."
+  - name: test_bp_1500d_4_three_run_control_remove_substitute_restore_changes_the_verdict_each_time
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE NEGATIVE CONTROL THE CRITERION DEMANDS, run against the SAME install throughout. Four runs of the same deployed entry point: (1) good install -- all-clear; (2) remove the record -- could-not-read; (3) restore the good record -- all-clear again; (4) replace it with a record keyed to a location it is not being read from -- could-not-read again; then restore and assert the all-clear a final time. The restore runs are what attribute each verdict change to the record rather than to an install that was already broken. Assert the VERDICT changes, not merely that output differs: a single red proves the check can fail, and only the interleaved all-clears prove the red was caused by the record."
+  - name: test_bp_1500d_4_the_could_not_read_verdict_makes_no_judgement_about_whether_the_install_has_fallen_behind
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE SCOPE BOUND, asserted so it cannot be crossed silently. In the deployed out-of-package install, drive two states that must be distinguished: (a) no readable record -- the check reports could-not-read and its output makes no claim about drift or freshness; (b) a readable record whose install genuinely HAS fallen behind -- the check does NOT report could-not-read, because a record it could read is a record it could read. Assert the could-not-read verdict is never produced by a stale-but-readable install, which is what would happen if a coder satisfied this AC by repurposing a drift comparison. BP-1500c owns the drift judgement itself and this entry must not assert what that judgement should be -- only that this behaviour does not make it."
+test_rationale: |
+  The distinguishability clause is the whole AC, and it is the one an implementation
+  will satisfy in letter while leaving the defect intact. That is not a hypothetical:
+  both checks ALREADY print a WARNING naming the missing manifest and then return 0.
+  So the message half of the criterion is green today, on the broken behaviour. Any
+  contract whose assertions are about output text is satisfied by the code this AC
+  exists to change. Entry 2 therefore compares the caller-visible exit status between
+  the all-clear run and the no-record run and asserts they are not equal, and it is
+  charged as seam because the real subject is the verdict contract between the build
+  that writes the record and the checks that read it.
+
+  Entry 1 is deliberately marked as insufficient on its own. It is retained because
+  the criteria demand the report name the project and the record, and because absent
+  and present-but-unreadable must be distinguishable from each other -- but its own
+  description records that it is already green on the broken behaviour, so that no
+  future reader mistakes it for the load-bearing entry.
+
+  Entry 3 exists because a correct verdict is worth nothing if the deployed copy never
+  produces it or no gate consumes it. Both checks ship through build.py and run from
+  the deployed install; verifying by importing from templates/ verifies them in the
+  one layout where the package is always present. This repo has shipped a deployed
+  hook that crashed on an undeployed dependency while its source-tree tests stayed
+  green, so the deployed copy is the only honest surface. The workflow and hook
+  registration are parsed as data structures rather than grepped, because a grep is
+  green on a step carrying continue-on-error.
+
+  Entry 4 is the criterion's own mandated control and is written as remove, restore,
+  substitute, restore. A single red proves the check can fail; it does not prove the
+  red was caused by the record. The interleaved all-clears are what attribute it. This
+  mirrors the discipline BP-900h-4 applies to its declaring-file triple.
+
+  Entry 5 guards the BP-1500c boundary at test time rather than only in prose. The
+  realistic way this AC gets over-implemented is by reaching for an existing drift
+  comparison to produce the could-not-read verdict, which silently makes this behaviour
+  a partial implementation of BP-1500c and couples two guarantees the L1 keeps apart.
+  Asserting that a stale-but-readable install does NOT produce the could-not-read
+  verdict pins the boundary from the inside, without asserting anything about what the
+  drift judgement itself should be.
+
+  Angles: criterion, reachability, seam, deployed -- at the cap of four -- plus
+  failure, which is conditional and consumes no slot. real_artifact is not charged
+  separately: the record's bytes are read back here too, but that read is charged on
+  BP-1500d-2 where the serialized form is the subject rather than the means. boundary
+  is not charged because the criterion names no range, count or limit.
 origin_agent: business-analyst
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added assigned_agent (python-coder), estimated_complexity (M),
+      declares_side_effect (true -- the Then clause asserts a verdict observable to an
+      automated caller from a deployed check running outside the process),
+      it_requirements in LIST form, expects_from -1, -2 and -3, delivers_to -5, a
+      five-entry test_spec with test_rationale, and four IT-PO doc_links: both drift
+      readers as the primary surfaces, with the specific evidence that each already
+      warns-and-returns-0 in its absent-record path, a corrected known-issues
+      relevance citing KI-BP-011, and BP-1500c as an explicit boundary link so the
+      scope line is visible at implementation time. The BA's in-criteria boundary
+      clause keeping this AC off BP-1500c's territory is preserved verbatim and has
+      been REINFORCED rather than weakened -- it now also has a dedicated
+      it_requirement and a dedicated test entry (entry 5) that asserts a
+      stale-but-readable install does not produce the could-not-read verdict.
+      it_requirements is a list, not the five-field object: per ACS-100i-6 the
+      structured form is demanded only by package_surface: true, and this AC registers
+      no registry entry the build reads. criteria, title, depends_on, component,
+      components and req_status untouched.
+  - reason: criteria-precision
+    by: business-analyst
+    at: 2026-08-25
+    note: >-
+      WORDING ONLY, IN TWO PLACES -- NO SCOPE CHANGE, NO NEW OR REMOVED CLAUSE. The
+      Then now names the artifact ("could not read the record file ... names the
+      project and the record file it looked for"), and the mandated negative control
+      now states the file operations it always performed: the record file "being
+      removed from disk", "a substitute record file written to disk in its place",
+      and restoring "the good record file". Those are exactly the three steps the
+      it-po's test entry 4 already runs against a real install. Naming them lets the
+      mechanical derivation of declares_side_effect see the durable effect the control
+      depends on. The BP-1500c boundary clause is untouched word for word, the
+      distinguishable-to-an-automated-caller clause is untouched, declares_side_effect
+      stays true, and no it-po field was modified.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -109,3 +254,47 @@ notes: |
   ORDERING. Presupposes the record produced by BP-1500d-1 and the readability
   guarantee of BP-1500d-2 for its positive case. depends_on carries only the parent
   link, as the authoring request specified.
+
+  IT-PO RESPONSE, 2026-08-25. The BA's warning about the distinguishability clause is
+  confirmed by the code and is worse than a risk -- it is the present behaviour.
+  check_output_drift.py and check_build_drift.py BOTH print a WARNING naming the
+  missing manifest and then return 0. So the reporting clause is already satisfied in
+  letter, today, by the exact code this AC exists to change. Every assertion about
+  output text is therefore green on the defect. Test entry 2 compares the
+  caller-visible exit status between the all-clear and the no-record run and asserts
+  inequality; that is the only entry that can distinguish the fix from the status quo.
+
+  THE BP-1500c BOUNDARY IS REINFORCED, NOT RELAXED. The BA's in-criteria clause is
+  untouched. It now also carries a dedicated it_requirement and test entry 5, which
+  asserts that a stale-but-readable install does NOT produce the could-not-read
+  verdict -- pinning the boundary from the inside without asserting anything about
+  what BP-1500c's drift judgement should be. The realistic over-reach here is a coder
+  reaching for an existing drift comparison to produce this verdict, which would
+  couple the two guarantees the L1 deliberately separates.
+
+  ORDERING WIRED AS CONTRACTS. expects_from carries -1 (harness and record), -2 (a
+  portably readable record plus the location-keyed artifact this AC substitutes) and
+  -3 (which bounds this AC's scope). None went into depends_on, per the BA's framing.
+
+  package_surface is deliberately NOT set: per ACS-100i-6 it means the AC registers an
+  entry in a registry the build reads to decide what a consumer receives. This AC
+  changes two checks' verdicts and registers nothing.
+
+  BA AMENDMENT, 2026-08-25 -- TWO CLAUSES MADE CONCRETE, THE SCOPE WAS NOT CHANGED.
+  The Then now says the check could not read "the record file" and names "the record
+  file it looked for"; the mandated negative control now names the file operations it
+  always performed -- the record file being removed from disk, a substitute record
+  file written to disk in its place, and the good record file restored. Nothing new is
+  demanded: those are the same three steps, and the it-po's test entry 4 already runs
+  them against a real install. The reason for the wording is mechanical and worth
+  recording. declares_side_effect is DERIVED from this AC's own Then clause rather
+  than authored by opinion, because it non-overridably routes the one phase agent that
+  runs the real surface end-to-end and inspects the resulting tree -- which is exactly
+  what this criterion's every-run-against-a-real-install clause demands. The customer
+  phrasing described durable file operations without naming one, so the derivation read
+  false while the record declared true, and the schema check refuses that disagreement.
+  WHAT WAS DELIBERATELY LEFT ALONE: the BP-1500c boundary clause ("this verdict
+  concerns only whether a record could be read ...") is untouched word for word, as is
+  the distinguishable-to-an-automated-caller clause, which is the clause this whole AC
+  turns on. Every it-po field -- including declares_side_effect: true -- is as the
+  it-po left it.

@@ -821,3 +821,94 @@ Four entries now describe the same root-resolution surface, which argues for one
 work across the hook family rather than one hook at a time.
 
 **Pattern:** a gate whose silence is structurally indistinguishable from a pass.
+
+---
+
+### KI-CG-014 — The `declares_side_effect` derivation is keyed to engineering vocabulary, so ACs written in the mandated customer language derive `False` and silently lose their smoke test
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py`
+  (`derive_declares_side_effect` ~line 581, `_DURABLE_EFFECT_RE` ~line 567),
+  consumed by `check-ac-schema` via `validate_declares_side_effect`
+
+**Symptom.** `declares_side_effect` is deliberately *derived* rather than authored
+(BO-2900g-2): setting it `true` non-overridably force-routes the `user-surface-smoker`
+phase agent, so the value must come from the record's own Then clause and not from
+opinion. The derivation is a narrow phrase regex keyed to **engineering** vocabulary —
+`is written`, `written to disk`, `persisted`, `saved to disk`, `writes a file`,
+`created on disk`. The PO/BA authoring style is **customer** language, and in at least
+one L1 it is explicitly mandated: BP-1500d instructs that its evidence be "stated
+without paths or identifiers on purpose."
+
+The two are in direct conflict. An AC that says a project *"holds its own record"* and
+that *"a copy of the project taken without the producing package still carries it"*
+describes a durable file about as plainly as prose can, and derives `False`.
+
+**Evidence.** BP-1500d-1 through BP-1500d-4, authored 2026-08-25. All four had
+`declares_side_effect: true` set by the it-po on the schema's own stated test ("the Then
+clause asserts something observable outside the process"); all four derived `False` and
+blocked the commit with:
+
+```
+declares_side_effect is authored as True but this AC's own Then clause derives False —
+the two disagree.
+```
+
+Verified behaviorally against the real `derive_declares_side_effect`, with a negative
+control isolating vocabulary as the only variable:
+
+| Then-clause phrasing | Derives |
+|---|---|
+| `Then a record file is written into that project` | `True` |
+| `Then that project holds its own record of what the build put there` | `False` |
+
+Identical claim, opposite verdict.
+
+**Blast radius.** Measured across the whole store (3,338 records with criteria, 2,722
+with a Then clause) by running the real derivation over every file:
+
+| | count |
+|---|---|
+| derive `True` | 130 |
+| authored `True` | 29 |
+| authored/derived **disagree** | 16 |
+
+Twelve of those sixteen predate BP-1500d. The gate is a forward ratchet (staged files
+only), so they are dormant — each blocks the next commit that happens to touch it. The
+~100 records that derive `True` while unset will block on the other branch the same way.
+
+**Consequence.** This is the damaging direction, not merely the annoying one. The
+cheapest way past the block is to set the flag `false` or leave it unset — and unset +
+derives-`False` passes **silently**. That switches off `user-surface-smoker`, which the
+repo describes as "the one automatic guard against 'the code was built but is not wired
+into anything'." So a gate built to stop `declares_side_effect` being set by opinion
+ends up pushing authors to unset it, on exactly the records whose subject is a durable
+artifact. For BP-1500d the loss is acute: the L1's mandatory proof shape *is* running a
+real build and inspecting the resulting tree, which is what the smoker does.
+
+**How it was handled this time.** The BA amended the four Then clauses to name the
+artifact concretely, so the derivation agrees with a criterion that is now strictly more
+precise. That is a correct outcome per record and does not scale — it asks every future
+author to write for the regex rather than for the reader.
+
+**Fix direction.** Widen the phrase list to recognise possession and portability
+phrasing (`holds a record`, `carries`, `reachable from inside`, `still has`) alongside
+the existing write/persist verbs. The hook's own source carries the warning that
+constrains this: *"a derivation that marks everything is indistinguishable from one that
+marks nothing one gate later"* — it was calibrated to ~3.6% of the store and now sits at
+4.8%, so any widening needs re-measuring against that budget, not just a passing test.
+Worth considering instead: derive from a structured field the BA sets deliberately, and
+keep the regex only as a cross-check that reports disagreement — which is what the gate
+already does well. Whichever route, the 12 dormant disagreements want reconciling
+deliberately rather than one blocked commit at a time.
+
+**Related.** `KI-CG-013` (two gates holding different definitions of one concept) and
+`KI-CG-006`. Same family: a guardrail whose two halves disagree about the record in
+front of them. Distinct from the root-resolution cluster — nothing here is misresolved;
+the gate reads the right file and reaches a defensible verdict on the wrong vocabulary.
+
+**Pattern:** a guard that enforces a derivation whose input it cannot actually read, and
+whose cheapest resolution removes the guarantee the guard exists to protect.
