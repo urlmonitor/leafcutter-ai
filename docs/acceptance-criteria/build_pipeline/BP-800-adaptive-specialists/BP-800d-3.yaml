@@ -10,11 +10,18 @@ work_status: todo
 readiness: approved
 priority: medium
 criteria: |
-  Given the legacy agent set includes: python-coder, sql-coder, frontend-coder
+  Given the legacy agent set is exactly these three agent templates and no others —
+    python-coder, sql-coder, frontend-coder — a closed set, not an open list
+  And no other language-shaped agent template is a member of that set, specifically
+    not sql-test-writer and not any of sql-function-creator, sql-index-creator,
+    sql-procedure-creator, sql-query, sql-table-creator or sql-view-creator, none of
+    which is in scope for migration, renaming or content absorption
   When the migration process completes
   Then a best-practice knowledge file exists for each: "python", "sql", "frontend-javascript"
   And each knowledge file passes the structure validation (metadata, style, testing, idioms, tooling sections)
   And no legacy agent's behavioral content is lost (each section from the legacy template maps to the corresponding knowledge layer section)
+  And exactly three legacy templates were read, one per member of the set, and no agent
+    template outside the set of three was read, renamed, emptied or otherwise modified
   And a migration report is produced listing: source template, destination knowledge file, sections transferred
 depends_on:
   - BP-800d
@@ -31,13 +38,87 @@ it_requirements:
   - "Must verify content coverage — every non-empty section from the legacy template must map to a knowledge file section"
   - "Must handle errors gracefully if one legacy agent fails migration (continue with remaining agents)"
   - "Must complete the full migration set within <30 seconds for the current 3-agent legacy set"
+test_spec:
+  - name: test_migration_produces_three_validated_knowledge_files
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Run the migration over the legacy set and assert a knowledge file exists for each of python, sql and frontend-javascript; each passes the BP-800c-2 structure validation (metadata, style, testing, idioms, tooling); and every non-empty section of each source template maps to a section in its destination file."
+  - name: test_build_entry_point_runs_migration_and_writes_report
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/build.py — the first build after package upgrade, which is the production migration trigger"
+    description: "Invoke the real build entry point in a subprocess against a temp target and assert the migration actually ran: the three knowledge files land and the migration report lists source template, destination knowledge file and sections transferred for each. Importing and calling the migration function directly does not satisfy this."
+  - name: test_templates_outside_the_legacy_set_are_untouched
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "NEGATIVE CONTROL for the closed set. Seed a temp templates/agents/ from the real on-disk templates so sql-test-writer and all six sql-*-creator templates are present, run the migration, then assert each of those seven files is still at its original name, byte-identical to its source, not renamed to .legacy and not emptied — and that the migration report names exactly three source templates. Renaming, emptying or absorbing any one of the seven must turn this test red."
+  - name: test_migration_set_is_manifest_driven_not_directory_scan
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Add an eighth language-shaped template (e.g. rust-coder.md) to the temp templates dir without adding it to the legacy manifest, run the migration, and assert exactly three templates were read and no knowledge file was produced for the eighth — set membership comes from the manifest, never from whatever happens to be on disk."
 delivers_to: null
 expects_from:
   ac_id: BP-800d-2
   contract: "Migration function that extracts content from a single legacy template and writes a knowledge file — this AC invokes it for each known legacy agent"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: clarification
+    by: business-analyst
+    at: 2026-08-19
+    note: >-
+      Criteria only; no change to scope, agent, complexity or contracts. AMBIGUOUS:
+      the Given read "the legacy agent set includes: python-coder, sql-coder,
+      frontend-coder" — "includes" states membership, not identity, so the set was
+      open. WRONG BINDING AVAILABLE: templates/agents/ today also holds
+      sql-test-writer plus six sql-*-creator templates, any of which a reader could
+      admit to the set as a fourth language-shaped legacy agent. DAMAGE: paired with
+      "no legacy agent's behavioral content is lost" and BP-800e-3's ".legacy"
+      renaming, an in-scope-by-mistake template gets renamed .legacy and its content
+      folded into a knowledge file it does not fit — git-recoverable but silent.
+      NOW PINNED: the set is stated as exactly three and no others, the seven
+      candidate templates are named as explicitly out of scope, and a Then clause
+      requires that exactly three templates were read and nothing outside the set
+      was read, renamed, emptied or modified. Latent, not live — the set happens to
+      be those three today. NOTE FOR THE L1: BP-800d still reads "(Python
+      specialist, SQL specialist, etc.)"; that "etc." is the same open-set shape one
+      level up and is left alone here as PO territory.
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-19
+    note: >-
+      Added test_spec only; criteria, agent, complexity, contracts and
+      it_requirements untouched. GAP: this AC was readiness: approved with
+      change_target: code and assigned_agent: python-coder, yet carried neither
+      test_spec nor test_required — an approved code AC with no test contract at
+      all, so test-writer had nothing to author from and the criteria were
+      unprovable. PRE-EXISTING, NOT INTRODUCED: the omission is present on
+      origin/main; it was invisible because check-ac-schema is a forward ratchet
+      that inspects only staged files, and the same-day clarification edit above is
+      what first pulled this record into the staged set and surfaced it.
+      test_required: false was rejected as a cheap exit — this is real code work
+      with a coder assigned — as was reclassifying change_target to dodge the gate.
+      WHAT THE CONTRACT NOW ASSERTS: (1) criterion — three knowledge files exist,
+      each structurally valid per BP-800c-2, with every non-empty source section
+      mapped; (2) reachability — the migration is driven through the real build
+      entry point in a subprocess and the report is written, not by importing the
+      migration function; (3) real_artifact — the NEGATIVE CONTROL for the closed
+      set added by the clarification: against a temp templates/agents/ seeded from
+      the real on-disk templates, sql-test-writer and the six sql-*-creator
+      templates must remain present, byte-identical, un-renamed and non-empty, and
+      the report must name exactly three sources, so renaming, emptying or
+      absorbing any of the seven turns the test red; (4) boundary — set membership
+      is manifest-driven, so an eighth language-shaped template appearing on disk
+      does not enlarge the migration set. Angles carried on the independent `angle`
+      axis, not in `type` (PR #505).
 superseded_by: null
 covered_by: []
 implemented_by: []
