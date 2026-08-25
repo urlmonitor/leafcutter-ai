@@ -27,7 +27,9 @@ criteria: |
     And every entry for every other gate is byte-for-byte unchanged,
     And when the same agent records a gate that has no entry yet, one entry is
       appended -- the rule is update-if-present, never write-nothing,
-    And an agent never alters an entry belonging to a gate it does not own.
+    And an agent never alters an entry belonging to a gate it does not own,
+    And the updated record is written to disk, so the deduplicated entry is what a
+      later reader of the work item finds.
   So the work item's record ends a drive with one entry per gate that reached an
     outcome, and the count of entries is a usable completeness signal rather than a
     count of dispatches.
@@ -137,7 +139,8 @@ test_rationale: |
   reason the write side was separated from the driver at all.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+- "2026-08-25 BrainCandy: added a closing Then clause naming the durable write ('the updated record is written to disk, so the deduplicated entry is what a later reader of the work item finds'). Main's BO-2900g-2 gate derives declares_side_effect from the Then clause and failed this record, because the clause described the entry count and the byte-stability of neighbouring entries without ever stating that the record is persisted. The effect was always real -- this AC updates an entry and appends one where none exists -- so the criteria text was incomplete rather than the declaration being wrong. declares_side_effect: true is unchanged and is now derived rather than asserted. No behavioural requirement was added, narrowed or removed."
 superseded_by: null
 covered_by: []
 implemented_by: []

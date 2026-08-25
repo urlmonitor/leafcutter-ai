@@ -51,7 +51,7 @@ doc_links:
     relevance: "Defines what a landed sign-off looks like in a work item's record -- the shape the read-back has to find before it may credit the gate."
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   config_schema_fragment: null
   reference_file_path: templates/workflows-js/build-feature.js
