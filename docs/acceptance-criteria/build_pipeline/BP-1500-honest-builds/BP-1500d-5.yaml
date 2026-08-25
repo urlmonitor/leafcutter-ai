@@ -1,0 +1,104 @@
+id: BP-1500d-5
+components:
+  - build_pipeline
+title: "The published reference tells an adopter where their record lives and how to tell an inert check from a passing one"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Given the published reference for a project's record of what the build put there --
+    where it lives, what it accounts for, and how to read it,
+  When a reader who does not have the producing package's own workspace in front of
+    them follows that reference against a project outside the producing package's own
+    parent folder that received a real build,
+  Then following the reference locates that project's record and reads it, and what the
+    reader observes matches what the reference said to expect,
+  And the reference states, in terms the reader can act on without reading any build
+    source, that the record belongs to the project the build wrote into, travels with
+    that project, and remains readable after the project is moved or copied,
+  And the reference states what the build does when it cannot produce the record, and
+    what a check does when it finds no readable record, so a reader can tell an inert
+    check from a passing one,
+  And the reference is demonstrated to be falsifiable, before it may be accepted: when
+    the same procedure is followed against a deliberately non-portable install -- one
+    whose record was filed with the producing package, and one whose record is keyed to
+    a location it is not being read from -- the reader reaches the failure signal the
+    reference documents, rather than silence or a passing-looking result,
+  And that same procedure, followed again against the good install, reaches the
+    documented success signal, so the failure reached above is attributable to the
+    broken install and not to a procedure that cannot succeed,
+  And the reference is checked by following it against real installs, never by
+    confirming that a document with the expected heading exists.
+depends_on:
+  - BP-1500d
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d.yaml"
+    relationship: parent
+    status: exists
+  - path: docs/reference/build-record-portability.md
+    relationship: implements
+    status: planned
+    relevance: "The reference this AC requires. Satisfies BP-1500d's documentation_triggers: [reference-doc]. Does not exist yet."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "Source material for the reference: KI-BP-004 and KI-BP-005 are the two checks that read the record, and the entry to be opened for this defect explains why they are absent rather than degraded in a consumer install."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: "The reference must let a reader recognise the absent-check variant in their own install; this is the catalogue that names it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The package/deploy-target split the reference has to explain before an adopter can tell which tree their record should be in."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "House shape for a reference document in this repository -- frontmatter, structure, and level of detail."
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  WHY THIS CHILD EXISTS. BP-1500d carries documentation_triggers: [reference-doc], so
+  a documentation AC is required alongside the behavioural ones. It is the fifth and
+  last child, which puts this L1 exactly at the five-child cap with no override.
+
+  HOW IT OBEYS THE MANDATORY PROOF SHAPE. BP-1500d's notes bind every child to proof
+  by running a real build into a project outside the producing package's own parent
+  folder, with a negative control, and forbid proof by reading source for a string. A
+  documentation AC accepted on "the document exists and mentions the record" would be
+  precisely the grep-shaped acceptance that rule exists to refuse -- and would be
+  especially hollow here, because the defect being documented is invisible from inside
+  the producing package's own workspace. So the subject of the criteria is not the
+  document's contents but what happens when a reader FOLLOWS it against a real
+  out-of-package install, and the negative control is the same pair of deliberately
+  non-portable installs the behavioural children use.
+
+  WHAT THE REFERENCE MUST NOT BECOME. Not a how-to for rebuilding, and not a
+  restatement of BP-1500c's drift guarantee. Its subject is where the record lives,
+  what makes it readable elsewhere, and what the two silent outcomes look like from an
+  adopter's side.
+
+  ASSIGNED AGENT. assigned_agent is set here and left null on the behavioural
+  children, because documentation-expert is definitional to what a documentation AC
+  is rather than technical enrichment. The it-po should still review it and owns every
+  other technical field on this record.
+
+  ORDERING. The reference can only be checked against installs produced by BP-1500d-1
+  through -4, so it is the last of the five to become verifiable. depends_on carries
+  only the parent link, as the authoring request specified.
