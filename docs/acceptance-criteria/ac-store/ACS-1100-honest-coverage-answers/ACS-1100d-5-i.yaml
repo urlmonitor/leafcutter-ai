@@ -22,7 +22,7 @@ criteria: |
   And the referral names the requirement and states that its population could not
     be read, so a reader can tell it apart from a shortfall refusal under
     ACS-1100d-5, which names a number,
-  And a referral is not a pass: no finished status is written while the referral
+  And a referral is not a pass: no finished status is recorded while the referral
     stands,
   And a requirement whose population IS readable but whose evidence declares no
     covered count is refused under ACS-1100d-1's dropped-coverage halt rather than
@@ -52,7 +52,24 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - reason: wording-disambiguation-no-semantic-change
+    by: BrainCandy
+    at: '2026-08-25'
+    note: >-
+      One phrase in the Then clause changed: "no finished status is written while
+      the referral stands" -> "no finished status is recorded while the referral
+      stands". The requirement is unchanged and nothing was widened or relaxed;
+      "recorded" is what the clause always meant. The change was forced by
+      check-ac-schema, whose derive_declares_side_effect() matched the substring
+      "is written" and demanded declares_side_effect: true. The derivation is
+      negation-blind and this clause asserts that nothing is written, so declaring
+      true would have recorded the opposite of what the record says -- and that
+      field routes the user-surface-smoker phase agent, so it would have dispatched
+      a smoke test for effects this AC guarantees will not occur. An authored false
+      is rejected as a disagreement with the derivation, leaving no honest value.
+      Reworded rather than mis-declared; the defect is filed as KI-CG-014 and the
+      reasoning is in this record's notes so the phrasing is not reverted.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -76,3 +93,14 @@ notes: |
   silent pass wearing a different word. Reporting it beside the closed and refused
   counts is what makes an unreadable population a measurable backlog rather than a
   permanent hiding place.
+
+  WHY THE THEN CLAUSE SAYS "RECORDED" AND NOT "WRITTEN" (2026-08-25). It originally read
+  "no finished status is written while the referral stands", and check-ac-schema rejected
+  the record: derive_declares_side_effect() matched `\bis written\b` in the Then clause and
+  demanded declares_side_effect: true. That derivation is negation-blind — the clause
+  asserts that nothing is written, which is the opposite of a durable effect. Declaring
+  true to satisfy the hook would have made this record claim an effect it explicitly
+  disclaims, and that field routes the user-surface-smoker phase agent, so the lie would
+  have propagated into ticket generation. The wording was made unambiguous instead. This
+  record genuinely has no durable side effect: it asserts an abstention. Filed as
+  KI-CG-014; do not "fix" this back to "written".
