@@ -69,8 +69,25 @@ _REAL_AC_ROOT = _REPO_ROOT / "docs" / "acceptance-criteria"
 _ANCHOR_AC = "BP-1100g-1"
 
 
+_CLI_CACHE: dict[tuple[str, str], str] = {}
+
+
 def _generate_ticket_via_cli(ac_id: str, ac_root: Path | None = None) -> str:
     """Run the generator's REAL entry point and return its stdout.
+
+    Memoised per (ac_id, ac_root). Three tests below assert different
+    properties of the SAME generated ticket, and each subprocess re-parses the
+    whole AC store, so running it three times costs ~2 minutes to produce three
+    byte-identical strings.
+
+    Caching is sound here specifically because ``--dry-run`` is deterministic
+    and side-effect-free: it writes no ticket and back-writes no
+    ``implemented_by`` (verified 2026-08-25 by running it and checking no file
+    appeared). The REAL entry point is still exercised once per distinct input,
+    which is the property these tests exist for — what is skipped is repetition,
+    not coverage. If a future change makes generation non-deterministic, this
+    cache would hide it; that would be a defect worth its own test rather than a
+    reason to pay the cost here.
 
     Args:
         ac_id: AC id to generate a ticket for.
@@ -79,6 +96,10 @@ def _generate_ticket_via_cli(ac_id: str, ac_root: Path | None = None) -> str:
     Returns:
         The generator's stdout (frontmatter + ticket body).
     """
+    root = str(ac_root or _REAL_AC_ROOT)
+    cache_key = (ac_id, root)
+    if cache_key in _CLI_CACHE:
+        return _CLI_CACHE[cache_key]
     proc = subprocess.run(
         [
             sys.executable,
@@ -86,7 +107,7 @@ def _generate_ticket_via_cli(ac_id: str, ac_root: Path | None = None) -> str:
             "--ac",
             ac_id,
             "--ac-root",
-            str(ac_root or _REAL_AC_ROOT),
+            root,
             "--dry-run",
         ],
         capture_output=True,
@@ -98,6 +119,7 @@ def _generate_ticket_via_cli(ac_id: str, ac_root: Path | None = None) -> str:
         f"generator CLI failed for {ac_id} (exit {proc.returncode})\n"
         f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
     )
+    _CLI_CACHE[cache_key] = proc.stdout
     return proc.stdout
 
 
@@ -148,8 +170,26 @@ def _load_ac(ac_id: str) -> dict:
     )
 
 
-def _iter_store_records():
-    """Yield every parsed AC record in the real store.
+def _iter_store_records(require_substrings: tuple[str, ...] = ()):
+    """Yield parsed AC records from the real store.
+
+    Every candidate file is READ, but only files whose raw text contains all of
+    ``require_substrings`` are PARSED. The filter is a cheap pre-pass over text,
+    never a substitute for the real check: the caller still asserts against the
+    parsed record, so a substring that appears in a comment or a prose field
+    costs one wasted parse and cannot produce a false pass.
+
+    Why it exists: the store holds 3,340 YAML files and a full
+    ``yaml.safe_load`` sweep takes ~36 s. The done-proof gate runs an AC's
+    linked tests under a 60 s budget, so an unfiltered sweep here does not
+    merely make the suite slow — it makes the gate report every linked test as
+    "not run", which reads as a coverage failure rather than a timeout. Measured
+    2026-08-25: full parse 35.8 s; raw-text pre-filter 0.12 s narrowing to 743
+    candidates; pre-filter plus parse of the survivors 7.3 s for 460 records.
+
+    Args:
+        require_substrings: Raw-text substrings a file must contain to be
+            parsed. Empty tuple parses everything (the original behaviour).
 
     Yields:
         Tuples of (path, parsed record dict).
@@ -158,8 +198,14 @@ def _iter_store_records():
         if path.name == "index.yaml":
             continue
         try:
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        except (OSError, yaml.YAMLError):
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if any(needle not in text for needle in require_substrings):
+            continue
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError:
             continue
         if isinstance(data, dict) and data.get("id"):
             yield path, data
@@ -193,7 +239,7 @@ def _has_authored_spec(record: dict) -> bool:
 
 class TestAuthoredSpecReachesTheTicket:
     def test_authored_test_spec_survives_a_non_coder_assigned_agent(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-1
         """Every descriptor the it-po authored on BP-1100g-1 reaches the ticket.
 
         BP-1100g-1 is assigned to llm-expert, which produces prompts rather than
@@ -223,7 +269,7 @@ class TestAuthoredSpecReachesTheTicket:
         )
 
     def test_authored_angles_survive_with_the_descriptors(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-1
         """The angle classification is carried through, not flattened.
 
         The whole point of authoring four descriptors is that they answer four
@@ -250,7 +296,7 @@ class TestAuthoredSpecReachesTheTicket:
             )
 
     def test_test_writer_is_dispatched_when_a_contract_is_emitted(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-1
         """A Test Requirements block with nobody assigned to write the tests is
         no better than no block at all.
 
@@ -271,19 +317,26 @@ class TestTheUnGatingIsBoundedToAuthoredContracts:
     silent fabrication — generated stubs on tickets nobody asked to be tested."""
 
     def test_no_authored_spec_and_a_non_coder_agent_still_emits_nothing(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-3
         """The derive-from-criteria fallback stays gated.
 
         Discovered from the real store rather than named, so it cannot be
         satisfied by a fixture chosen to agree with the author.
         """
-        candidates = [
+        # Lazy: this control needs ONE qualifying record, not all of them, and
+        # the qualifying condition is a disjunction over assigned_agent that the
+        # raw-text pre-filter cannot express. Stopping at the first match keeps
+        # the sweep off the full 3,340-file parse. Still a discovery, not a
+        # fixture — the store decides which record this runs against.
+        matches = (
             rec
             for _path, rec in _iter_store_records()
             if not _has_authored_spec(rec)
             and rec.get("assigned_agent") in {"documentation-expert", "llm-expert"}
             and rec.get("criteria")
-        ]
+        )
+        first = next(matches, None)
+        candidates = [first] if first is not None else []
         assert candidates, (
             "no doc/prompt AC without an authored test_spec found in the store. "
             "That is not a reason to skip — it means this negative control has "
@@ -300,7 +353,7 @@ class TestTheUnGatingIsBoundedToAuthoredContracts:
         )
 
     def test_test_required_false_still_suppresses_an_authored_spec(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-4
         """``test_required: false`` remains the explicit opt-out and outranks a
         stale authored spec."""
         store = _REPO_ROOT / "unit_tests" / "ac_store" / "_tmp_trf_store"
@@ -339,7 +392,7 @@ class TestTheUnGatingIsBoundedToAuthoredContracts:
 
 class TestNoRecordInTheStoreSilentlyLosesItsContract:
     def test_every_approved_authored_spec_reaches_its_ticket(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-1
         """STORE-WIDE GATE — the population, not the worked example.
 
         Scans the real store for approved records carrying an authored
@@ -358,7 +411,15 @@ class TestNoRecordInTheStoreSilentlyLosesItsContract:
 
         offenders: list[str] = []
         checked = 0
-        for _path, record in _iter_store_records():
+        # The pre-filter is a speed pass only; the real conditions are still
+        # asserted on the parsed record immediately below, so a substring
+        # appearing in prose costs a wasted parse and cannot let an offender
+        # through. Without it this sweep parses all 3,340 files (~36 s) and
+        # blows the done-proof gate's 60 s budget, which surfaces as "linked
+        # test not run" — a timeout wearing a coverage failure's clothes.
+        for _path, record in _iter_store_records(
+            require_substrings=("test_spec:", "readiness: approved")
+        ):
             if record.get("readiness") != "approved":
                 continue
             if not _has_authored_spec(record):
@@ -393,7 +454,7 @@ class TestNoRecordInTheStoreSilentlyLosesItsContract:
 
 class TestVerifyDoesNotReportTheDiscardAsAPass:
     def test_verify_does_not_call_an_authored_contract_unnecessary(self) -> None:
-        # covers: BP-1100g-1
+        # covers: TKT-500g-5
         """The report said ``[PASS] non-code AC — no test contract required`` on
         a record carrying four authored tests.
 

@@ -1,0 +1,146 @@
+id: TKT-500g-2
+components:
+  - ticket_creation_pipeline
+  - supervisor_system
+  - testing_quality
+readiness: draft
+priority: medium
+title: "Every route that can drive the work asks one question before skipping the proof phase"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a generated work item whose proof section lists at least one proof
+    statement,
+  And no worker on that work item is classified as producing production code,
+  When any route that can drive that work item reaches the proof-writing phase —
+    the per-phase driver, the supervisor the epic route dispatches, or the
+    runbook that supervisor follows,
+  Then every one of those routes runs the proof-writing phase,
+  And no route records that phase as complete without it having run,
+  And the reason each route records for its decision cites whether a proof was
+    demanded, never which kind of worker is needed,
+  And all three routes reach the decision by asking that one question, so
+    whether a proof gets written cannot depend on which route happened to build
+    the work item.
+depends_on: [TKT-500g, TKT-500g-1]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: constrains
+    status: exists
+    relevance: "Surface 1, and the live defect. Its 'test-writer skip rule — non-code tickets only' section decides by inspecting the phase list for a production-code worker; for every one of the 85 affected records that answer is no, so the proof section is emitted, the proof writer is marked owed, and the phase is skipped anyway."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: constrains
+    status: exists
+    relevance: "Surface 2, and the closest to correct. Its skip rule keys on the proof section: absent means skip, present with entries means dispatch. Its residual branch — section present but the statement list empty, with no code producer — still consults worker classification and is the disagreement to close."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Where the single normative statement of the skip question belongs. The supervisor prose cannot import the generator's code, so the routes are reconciled by spec parity against one written rule, exactly as TKT-500f-6-iii-a/-b established for the neighbouring path-shape rule."
+  - path: docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-6-iii-b.yaml
+    relationship: constrains
+    status: exists
+    relevance: "COLLISION WARNING — this approved, unbuilt AC rewrites the same skip rule from the other direction (proof section ABSENT while an implementation source file is in scope must halt, not skip). Whichever lands second must preserve the other's branch. The two are complementary, not duplicates: different input, different required outcome."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "Where the batch route's per-item supervisor dispatch is documented. This is the topology that makes surface 1 live rather than theoretical; read it before deciding what a proof of this AC has to exercise."
+  - path: docs/architecture/components/build-ticket-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "The per-phase driver route — surface 3, the one that already behaves correctly. It is the control, not the proof: a demonstration against this route alone says nothing about the route where the defect lives."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: describes
+    status: exists
+    relevance: "The parent topology both dispatch diagrams hang off. Use it to enumerate the routes exhaustively — a fourth route added later that is not held to the single question reopens this defect silently."
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "The skip rule must be stated once and referenced, not restated three times. Three independently maintained descriptions of one decision is the state that produced this defect: two were changed, one was not, and nothing reported it."
+  - "The decision may read exactly one input — whether the work item carries a proof demand. Worker classification, assignee identity, and file-path shape are all prohibited inputs for this decision, even where they would give the same answer on the case at hand."
+  - "The reason each route records must name the input it actually used, so a skipped phase and a run phase are distinguishable after the fact from the record alone. A route that records a correct outcome with a wrong reason is a defect, because the reason is what the next reader relies on."
+  - "The route enumeration must be exhaustive against the documented dispatch topology, not against the three routes known today. A fourth route added without being held to the single question reopens this defect in silence."
+  - "TKT-500f-6-iii-b rewrites the same rule from the opposite input (proof section absent while implementation source is in scope must halt, not skip). Whichever of the two lands second must preserve the other's branch; the combined rule has to answer both inputs, and a rewrite that answers only one is a regression on the other."
+test_spec:
+  - name: test_every_route_description_states_the_skip_question_as_the_proof_demand
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Reads the three real route sources from disk — the supervisor template, the epic runbook skill, and the per-phase driver — and asserts each conditions the proof-phase skip on the presence of a proof demand. A cross-source shared-vocabulary contract, not a copy of one source."
+  - name: test_the_per_phase_driver_runs_the_proof_phase_for_a_non_code_work_item
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-ticket.js phase planning, exercised through the existing driver harness"
+    description: "Drives a real generated work item that carries a proof demand and no production-code worker through the per-phase driver and asserts the proof-writing phase is dispatched rather than skipped. The one route of the three whose decision is executable code."
+  - name: test_no_route_records_the_proof_phase_complete_without_it_having_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Negative control with the must-block modifier: a route that skips the phase must not be able to record it as complete. Feeds a skip decision through each route's completion recording and asserts the phase is reported as not run, never as satisfied."
+test_rationale: |
+  Two of the three routes are prose an agent reads, so their decision cannot be executed
+  by a unit test; the only mechanism available for them is parity against a single written
+  statement, which is why descriptor 1 reads the REAL sources rather than a convenience
+  copy. That check alone would be a Neverfail test — it passes on prose nobody follows —
+  so it is paired with descriptor 2, which executes the one route whose decision is code,
+  and descriptor 3, the negative control that stops a skipped phase being recorded as
+  satisfied. The route where the defect is actually live is the batch route, and that
+  reachability obligation is carried separately by TKT-500g-2-i so it cannot be discharged
+  by the easier per-phase-driver proof; the drift detector for descriptor 1 is
+  TKT-500g-2-ii.
+delivers_to:
+  agent: test-writer
+  contract: "The proof-writing phase is actually reached on every route for a work item that carries a proof section, so an authored demand results in a written proof rather than a signed-off skip."
+expects_from:
+  ac_id: TKT-500g-1
+  contract: "A generated work item whose proof section is present whenever a demand was authored — the single input this decision is permitted to read."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500g-2-i, TKT-500g-2-ii, TKT-500g-2-iii]
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  NOT BUILT. This is the missing half of the f3ac950c / PR #536 fix, and it is
+  the half that decides whether anything actually happens. The work-item side
+  now hands every one of the 85 affected records a proof section and marks the
+  proof writer owed; the supervisor route then skips the phase anyway, because
+  it asks a different question.
+
+  THE THREE SURFACES AND WHAT EACH ANSWERS TODAY, VERIFIED BY READING THEM:
+    1. The supervisor template skips when no production-code worker is needed.
+       Wrong for all 85.
+    2. The epic runbook keys on the proof section: absent then skip; present
+       with entries then dispatch. Correct post-fix, with one residual branch
+       (present-but-empty list plus no code producer) that still consults worker
+       classification.
+    3. The flattened per-phase driver applies no production-code skip at all and
+       dispatched the proof writer correctly in a real run.
+  The requirement is not three independently patched skip rules. It is one
+  question, stated once, that all three ask.
+
+  REACHABILITY IS WHAT SETS THE SEVERITY. The epic route dispatches the
+  supervisor for every item in a batch; the single-feature route does not. So
+  surface 1 is live, and any requirement built inside an epic still loses its
+  proof phase. A fix demonstrated only against the per-phase driver proves
+  nothing about the route where the defect lives — see TKT-500g-2-i.
+
+  BOUNDARY. Nothing here judges whether the written proof is any good, or
+  whether it reaches the running product. That is BO-2900's observer, and it is
+  out of scope.
+
+  IT-PO NOTE 2026-08-25 — WHY THIS CARRIES A TEST CONTRACT DESPITE change_target: prompt.
+  Two of its three surfaces are prose, but the AC's observable is not "the prose was
+  edited" — it is "the phase runs". One route is executable JavaScript and one negative
+  control is mechanically checkable, so test_required: false would understate what can
+  be proven here. The residual judgement (does an agent reading the prose actually
+  behave this way) is carried by TKT-500g-2-i's live batch-route obligation, not waived.
