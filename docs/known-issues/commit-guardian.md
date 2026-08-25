@@ -440,6 +440,7 @@ checkout — deploying more files fixes nothing here.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the same family — a hook that
 cannot reach a file it depends on because it is wrong about where it is — though M2's
 mechanism is the deploy manifest and this one's is root resolution through a symlink.
+
 ---
 
 ### KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable
@@ -529,3 +530,87 @@ bypassed.
 
 **Pattern:** the inverse of the usual false-green — a gate so brittle that the only
 available response is to turn it off, taking every sibling hook with it.
+
+---
+
+### KI-CG-010 — `check-roadmap-schema` never validates the roadmap, and the roadmap would fail it if it did
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_roadmap_schema.py:27` — `SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"`
+
+**Symptom.** The hook resolves its schema at `<git-root>/leafcutter/config/roadmap.schema.json`.
+In this repository the git root **is** the package, so the real path is
+`config/roadmap.schema.json` with no `leafcutter/` segment. The file it looks for does not
+exist, so the hook takes its fail-open branch and reports an advisory skip. Every commit
+touching `docs/roadmap.json` has passed a check that never ran.
+
+The second half is worse than the first: **if the hook ever found its schema, the roadmap
+would fail it.** Every phase in `docs/roadmap.json` carries a `components` key, and the
+schema's phase item declares `additionalProperties: false` over exactly six permitted
+properties — `description`, `exit_criteria`, `id`, `status`, `tickets_advancing_outcome`,
+`title`. `components` is not among them. So fixing the path alone converts a silent no-op
+into a blocked commit on an unrelated change.
+
+**Evidence.** Verified 2026-08-25 while rewording a phase_1 exit criterion.
+`ls <repo>/leafcutter/config/roadmap.schema.json` → no such file. The schema's own
+`properties.phases.items` was read directly: six properties, `additionalProperties: false`.
+The hook reported no failure on the commit that changed `docs/roadmap.json`.
+
+This is the same shape as `KI-BP-003` and `KI-CG-002` — a guardrail that cannot reach its
+own declaring file in the self-hosted layout — and the third instance found. Unlike
+`KI-CG-002`, which narrows an enum, this one skips the check entirely.
+
+**Fix direction.** Resolve the schema the way `KI-CG-009`'s repair does, from the running
+artifact's own location rather than a hardcoded `leafcutter/` segment that assumes a
+consumer layout. Land the `components`-vs-schema disagreement in the **same** change —
+either add `components` to the phase schema or drop it from the roadmap — because repairing
+the path first turns a dormant no-op into an immediate merge blocker. Note the regression
+test must run with the CWD somewhere other than the layout under test, or it will be green
+against both the broken and the fixed resolver.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that reports
+success having checked nothing) and M2 (a guardrail that cannot reach a file it depends on).
+
+---
+
+### KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/regenerate_roadmap_mirror.py:155-163` — the frontmatter block
+
+**Symptom.** The generator emits a fixed six-line frontmatter: `title`, `type`, `status`,
+`created`, `last_updated`, `components`. Two defects follow.
+
+It never emits `description`, so any `description` present in `docs/roadmap.md` is **deleted
+on every regeneration**. The comment above the block says the frontmatter is "required by
+check_doc_frontmatter.py", which is exactly the convention the omission violates.
+
+And `created` is written from the regeneration timestamp
+(`date_only = generated_at[:10]`, line 154), so a file created on one date silently claims
+it was created today, every time the mirror is rebuilt. `created` is supposed to be
+immutable; only `last_updated` should move.
+
+**Evidence.** Verified 2026-08-25 in the commit that reworded a phase_1 exit criterion. A
+one-line change to `docs/roadmap.json` produced a 16-line diff in `docs/roadmap.md`: the
+criterion itself, the two generated timestamps, quoting and indentation churn, and the
+removal of `description: Overview of Project Roadmap.`. `created` moved `2026-08-17` →
+`2026-08-25` on a file that plainly was not created that day.
+
+Not currently merge-blocking — `check-description-field` is not among the six required CI
+checks — so this erodes quietly.
+
+**Fix direction.** Emit `description` in the generated frontmatter, and preserve the
+existing `created` value when the mirror already exists rather than stamping the
+regeneration date. Both are small, and both are worth doing together with a test that
+regenerates twice and asserts the only field that moves is `last_updated`.
+
+**Related.** This is `KI-BP-002`'s shape in another file — a tracked generated artifact that
+drifts every time it is rebuilt — and `BP-1500a` is the acceptance criterion written against
+that class. The roadmap mirror is not currently in `BP-1500a`'s scope; worth checking
+whether it should be when that AC is built.
