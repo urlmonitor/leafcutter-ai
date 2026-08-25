@@ -1,6 +1,7 @@
 id: GE-113c-3-i
 components:
   - commit_guardian
+  - security_scanner
 title: "A path-qualified allowlist entry does not suppress findings at a different directory with the same basename"
 component: guardrail-engine
 level: L3

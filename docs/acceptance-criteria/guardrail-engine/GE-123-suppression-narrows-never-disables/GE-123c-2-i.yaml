@@ -1,6 +1,7 @@
 id: GE-123c-2-i
 components:
   - commit_guardian
+  - security_scanner
 title: "A suppression naming a rule the scanner cannot report is told so, instead of waiting silently for a finding that will never arrive"
 component: guardrail-engine
 level: L3

@@ -1,6 +1,7 @@
 id: GE-123c-1
 components:
   - commit_guardian
+  - security_scanner
 title: "A suppression whose line-number field is not a line number is reported instead of being loaded as a rule that can never fire"
 component: guardrail-engine
 level: L2

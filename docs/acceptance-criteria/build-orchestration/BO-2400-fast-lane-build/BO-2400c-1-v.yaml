@@ -55,6 +55,7 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+declares_side_effect: true
 it_requirements:
   config_schema_fragment:
     orphan_runner_removal:
@@ -102,7 +103,8 @@ test_spec:
     description: "The prompt-caching module is still present and executable in the deployed layout after the orphan is gone, so removing its former caller did not remove its reason to ship."
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: "Scope correction (not a change of intent), 2026-08-18: the criteria are unchanged; the recorded size and the readiness of this criterion were both wrong. Found by resolving the connected build set for this id and auditing every covering test file, rather than by reading the two files the first note named. Two corrections, in the notes in full. (1) The migration is SMALLER than recorded in one place — only BO-2400a-1 and BO-2400a-5 have sole proof in the two named files, and test_bo2400a_runner_wiring.py holds no sole proof at all. (2) It is BLOCKED in another: a third file, test_bo2500d_gate_retirement.py, points exclusively at the orphan and carries the sole proof for four done criteria (BO-2500d-1, -1-i, -2, -3), one of which — BO-2500d-1, 'no LLM review agent in the fast-lane phase order' — is directly contradicted by BO-2400f-11, the review phase shipped in PR #485 on BrainCandy's instruction. The two only coexist because BO-2500d's proof points at a file nobody runs. This criterion cannot be built until the BO-2500d family is amended or superseded to match the lane that ships; that is a product decision, not a coder's."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -132,26 +134,97 @@ notes: |
   Two whole test files point at the orphan and nothing else:
   unit_tests/workflows/test_bo2400a_runner_wiring.py (513 lines) and
   unit_tests/workflows/test_bo2400a_runner_structure.py (574 lines). Between them they
-  carry the only `# covers:` proof for EIGHT criteria — BO-2400a-1, -2, -3, -4, -5,
-  BO-2400b-3, BO-2400c-1 and BO-2400d-1 — several of which are done. Deleting the orphan
-  and its tests in one move therefore strips the done-proof from all eight and fails
-  "Proof-of-done", a REQUIRED merge check. The deletion cannot land on its own.
+  carry `# covers:` proof for EIGHT criteria — BO-2400a-1, -2, -3, -4, -5,
+  BO-2400b-3, BO-2400c-1 and BO-2400d-1 — several of which are done.
 
-  The likely-cheap path, to be confirmed rather than assumed: the criteria those tests
-  cover describe the runner, and the runner is now fast-lane-ship.js, so re-pointing each
-  file's module-level path constant may preserve most proofs with no rewrite — the live
-  lane inlines the same gates the orphan only named. Two things that must NOT be swept
-  along with it: the assemble_context_bundle assertion must be DELETED rather than
-  re-pointed (BO-2400c-1's proof now comes from the behavioural suite in
+  SECOND CORRECTION, 2026-08-18 (same day, on re-examination). The paragraph above is
+  wrong in both directions, and the second error is a blocker. Both were found by
+  resolving the connected build set and auditing every covering file, rather than by
+  reading the two files named above.
+
+  Overstated. Those two files are not the *only* proof for eight criteria. Per-id audit
+  of every `# covers:` tag under unit_tests/: only BO-2400a-1 and BO-2400a-5 have their
+  sole proof there, and both are in test_bo2400a_runner_structure.py. The other six
+  (a-2, a-3, a-4, b-3, c-1, d-1) each have covering tests in other files —
+  test_bo2400a_fast_lane.py, test_fast_lane_cli.py, test_bo2400b_path_selection.py,
+  test_bo2400d_telemetry.py, test_agent_telemetry_failsafe.py,
+  test_bo2400c_context_bundle.py. test_bo2400a_runner_wiring.py holds NO criterion's
+  sole proof and can simply be deleted.
+
+  Understated, and this is why the criterion cannot proceed as written. A THIRD file
+  points exclusively at the orphan and was missed: unit_tests/workflows/
+  test_bo2500d_gate_retirement.py (~750 lines, module constant _FAST_LANE_PATH =
+  templates/workflows-js/fast-lane-build.js). It holds the sole proof for FOUR more
+  criteria, all `work_status: done` — BO-2500d-1, -1-i, -2 and -3. BO-2500d-1 also names
+  the orphan in its `implemented_by`, so the file being deleted is a done criterion's
+  recorded implementation.
+
+  BLOCKED ON A SPEC DECISION, not on code. BO-2500d-1 reads "Opinion-only gate agents are
+  absent from the fast-lane phase order ... it contains no LLM review agent", and its
+  tests assert the literal string `pr-reviewer` does not appear in the runner.
+  BO-2400f-11 — shipped in PR #485 on BrainCandy's explicit instruction that the lane
+  "must also use a review agent in the process to catch any silly things that should not
+  be shipped" — makes fast-lane-ship.js dispatch pr-reviewer at Phase 4.5, and that phase
+  sits before mark_done, so a blocking review does stop the AC being marked done. Both
+  criteria are `done`. They coexist only because BO-2500d's proof points at a file nobody
+  runs: the orphan is currently sheltering a superseded criterion. Re-point
+  test_bo2500d_gate_retirement.py at the live lane and it fails on the first assertion.
+  BO-2500d-1 (and -1-i's anti-regression guard, and -3's "stand in for the removed review
+  agents" wording) must be amended or superseded BEFORE this criterion can be built. The
+  intent worth preserving from BO-2500d is that no LLM opinion may CONFER done-ness; a
+  reviewer that can only veto delivery leaves that intact.
+
+  SECOND BLOCKER, found 2026-08-19 — the orphan shelters TWO capabilities, not one, and
+  only the first was fixed. KI-BO-006 originally warned that deleting this file would
+  silently retire prompt caching. That warning was right about the CATEGORY and
+  under-counted the instances. BO-2400c-1-iii wired caching into the live lane, which
+  closed the caching half. Telemetry is the other half and is still dark.
+
+  Verified: `grep -c telemetry templates/workflows-js/fast-lane-ship.js` returns 0. The
+  only fast-lane emission of `scripts/agent-health/agent_telemetry.py
+  emit_agent_telemetry` is in the orphan, at lines 128, 197 and 301 — the same
+  build-and-never-consume shape that BO-2400c-1's amendment documents for caching.
+  Consequences, all currently reading `work_status: done`:
+
+    * BO-2400d-1 "Each agent invocation records duration and token counts to the
+      telemetry sink" — the module and its tests are real; no fast-lane invocation
+      calls it. Its criteria opens "When its telemetry is recorded", which is
+      conditional, so a strict reading survives; the parent promise does not.
+    * BO-2400d-3 "A report compares fast-lane vs heavy-pipeline cost and time per unit
+      of work" — `build_lane_comparison_report` in generate_health_report.py groups by a
+      `lane` field and documents that "a lane with no records is absent from the
+      result". With zero fast-lane records the fast lane is absent from every
+      comparison the report can produce. This one does not survive any reading.
+    * BO-2400d-1-i "An unreachable telemetry sink is surfaced loudly, never silently" —
+      guards the wrong failure. It catches a sink that cannot be written; it cannot
+      catch a sink nobody calls, which is the failure actually present.
+
+  So this criterion now has two prerequisites, not one: the BO-2500d reconciliation
+  above, and a decision on the BO-2400d family. Deleting the orphan before that decision
+  retires telemetry from the fast lane silently — the exact mistake KI-BO-006 was written
+  to prevent, committed a second time because the warning was read as being about one
+  capability rather than about orphan-sheltering as a class. Do not let the BO-2500d fix
+  create the impression this is now unblocked.
+
+  The likely-cheap path for the rest, to be confirmed rather than assumed: the criteria
+  those tests cover describe the runner, and the runner is now fast-lane-ship.js, so
+  re-pointing each file's module-level path constant may preserve most proofs with no
+  rewrite — the live lane inlines the same gates the orphan only named. Two things that
+  must NOT be swept along with it: the assemble_context_bundle assertion must be DELETED
+  rather than re-pointed (BO-2400c-1's proof now comes from the behavioural suite in
   test_bo2400c_prompt_cache_wiring.py, and re-pointing a name-presence grep at the live
   file is exactly the prohibition above); and every re-pointed assertion that still only
-  greps source is inherited debt, not new coverage — see KI-BO-007.
+  greps source is inherited debt, not new coverage — see KI-BO-008.
 
   Also in the blast radius, all currently accurate and all describing a file that would
   no longer exist: three architecture diagrams
   (docs/architecture/diagrams/c2-fast-lane-build-path-components.md,
-  c2-fast-vs-heavy-lane-phases.md, c3-fast-lane-build-loop-sequence.md) and
-  docs/build-dataflow.json.
+  c2-fast-vs-heavy-lane-phases.md, c3-fast-lane-build-loop-sequence.md),
+  docs/build-dataflow.json, a comment in scripts/build_referential_integrity.py:356, and
+  the how-tos fast-lane-build.md / compare-build-lanes.md / choose-build-path.md /
+  done-proof-enforcement.md. The `/fast-lane-build` COMMAND and its template stay — it
+  routes to fast-lane-ship and is not affected; only same-named references to the .js
+  file are in scope.
 
   Explicitly NOT in scope, and it would be wrong to touch them: changelog entries,
   already-done acceptance criteria that mention the orphan as historical context, and the

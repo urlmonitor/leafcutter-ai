@@ -32,11 +32,53 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Must follow the existing build phase function pattern in build_phases.py (build_commit_guardian, build_doc_compliance, etc.)"
-  - "Deployed files must be byte-identical to sources — no transformation or interpolation"
-  - "Build must be idempotent — re-running with the same inputs produces the same output"
-  - "Must not break existing build phases or their outputs"
-  - "Must handle file I/O errors gracefully per the project error handling policy"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_phases.py
+  n_location_rule: "1 — the deploy_map literal inside build_ac_store()"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must follow the existing build phase function pattern in build_phases.py (build_commit_guardian, build_doc_compliance, etc.)"
+    - "Deployed files must be byte-identical to sources — no transformation or interpolation"
+    - "Build must be idempotent — re-running with the same inputs produces the same output"
+    - "Must not break existing build phases or their outputs"
+    - "Must handle file I/O errors gracefully per the project error handling policy"
+  notes: |
+    SOURCE-PATH CORRECTION (2026-08-17): this AC's criteria prose says deployed
+    files must be byte-identical to a source in templates/scripts/ac_store/.
+    That directory contains only .gitkeep — it holds no scripts. The real source
+    is scripts/ac_store/ (22 files), which is already what build_ac_store()
+    reads (PACKAGE_ROOT / "scripts" / "ac_store", build_phases.py:847). Implement
+    against scripts/ac_store/; do not create a templates/scripts/ac_store/ mirror.
+    The test-writer reached the same conclusion independently — see the
+    SOURCE-OF-TRUTH NOTE in unit_tests/test_bp_900a_1.py.
+
+    Scope is a deploy_map completeness gap, not a missing-source gap: all 13
+    named files exist in scripts/ac_store/ today; the deploy_map is missing
+    validate_ac_schema.py, ac_triage.py, create_ac_workflow.py,
+    cross_reference_audit.py, backfill_readiness.py, fix_ac_orphans.py and
+    __init__.py. Do NOT drop entries the deploy_map already carries
+    (done_proof.py, test_enforcement.py) — removing a deployed script
+    reintroduces the ModuleNotFoundError class of failure documented in
+    CLAUDE.md "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest".
+test_spec:
+  - name: test_ac1_all_13_ac_store_files_are_deployed
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "Runs the real build.py --target-dir into an empty tmp_path and asserts all 13 named ac_store scripts exist in the deployed tree."
+  - name: test_ac1_deployed_files_are_byte_identical_to_source
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "Compares raw bytes of each deployed ac_store script against its source in scripts/ac_store/ after a real build."
+  - name: test_ac1_deployed_ac_store_is_idempotent_on_rebuild
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "Runs build.py twice into the same target and asserts no deployed ac_store file is removed or changed by the second run."
 delivers_to:
   agent: python-coder
   contract: "13 files deployed to {target}/.leafcutter/scripts/ac_store/ including __init__.py, making the directory an importable Python package"

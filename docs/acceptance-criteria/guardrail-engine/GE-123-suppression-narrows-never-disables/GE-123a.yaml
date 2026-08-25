@@ -3,6 +3,7 @@ title: "Every file is judged on what is inside it, not on what it is called"
 component: guardrail-engine
 components:
   - commit_guardian
+  - security_scanner
 level: L1
 status: active
 req_status: draft
