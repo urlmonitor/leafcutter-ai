@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -201,9 +201,33 @@ amended_by:
     remove); the store-side contribution is now stated to be the kind-of-proof
     axis, which is the reading the parent L1's GAP C recommendation and
     docs/testing/test-angles.md already imply.
+- reason: store-reconciliation
+  by: testing-expert
+  at: 2026-08-25
+  note: >-
+    RECORD CORRECTED, NO CRITERIA CHANGE. The work shipped on 2026-08-19 in
+    ac564814 (PR #505) and the record went on saying work_status: todo with
+    empty covered_by and implemented_by for six days. The store was lying in
+    the direction that hides completed work, which is the mirror image of
+    phantom-done and just as corrosive: a prioritiser reading the store would
+    re-dispatch settled work, and BO-2900g-4, which depends on this AC, would
+    read its dependency as unmet. Flipped to done and linked to the commit and
+    the covering test. VERIFIED BEFORE FLIPPING, not inferred from the commit
+    subject - all five test_spec entries exist as real test functions, all six
+    tests in the file pass under AC_ENFORCE_STRICT=1 (which disables the
+    xfail-masking that would otherwise let a failing not-done AC report green),
+    and the two claims the criteria actually turn on were checked against the
+    files on disk rather than through the tests: config/test_requirements.schema.json
+    states the LEVEL enum and config/ac_store_schema.json's test_spec[].angle
+    states the seven kinds, so the two are not shadows of each other, and the
+    out-of-scope level axis survived intact. Cause of the drift: PR #505 landed
+    as a direct-commit drive rather than a per-ticket one, and the AC-store
+    reconciliation step CLAUDE.md prescribes for that case was skipped.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/ac_store/test_bo_2900g_3.py
+implemented_by:
+  - ac564814
 change_target: schema
 risk_surface: contract_boundary
 notes: |
