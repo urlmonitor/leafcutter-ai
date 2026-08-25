@@ -122,6 +122,56 @@ in the collection can trigger it.
 pass `--no-quote-path`. Fix both call sites together — leaving the precedent
 unfixed means the next author copies it again.
 
+## KI-CG-6 — FIXED — the uniqueness pass reported success over a collection it never found
+
+**Fixed 2026-08-25.** The most serious defect found in the GE-122 work, because
+it is this epic's own thesis failing in this epic's own implementation.
+
+```
+run_uniqueness_pass(Path('/does/not/exist'))
+  overall passed = True
+  all four namespaces: passed=True, inspected_count=0
+```
+
+Every namespace scanner fail-opened to `passed=True` when its root directory or
+config file was missing or unreadable, and `run_uniqueness_pass`'s
+`passed = all(...)` propagated that into a green overall verdict.
+
+GE-122a-1's own coverage note requires per-namespace inspected counts precisely
+*"so a passing result is distinguishable from a pass produced by inspecting
+nothing."* The gate built to make a pass-over-nothing detectable **was** a
+pass-over-nothing. Point it at a wrong path — a consumer install whose AC store
+lives elsewhere, a hook invoked from an unexpected cwd, a renamed directory —
+and it is silently, greenly inert.
+
+**The contract now.** A namespace may report `passed=True` only when its root or
+config was actually resolved, whether that yielded zero artifacts or many. The
+three-way distinction uses the existing fields rather than a new one, so the six
+downstream consumers need no change:
+
+| verdict | meaning |
+|---|---|
+| `passed=True` | resolved and clean |
+| `passed=False`, `findings == []` | could not resolve — misconfiguration |
+| `passed=False`, `findings != []` | genuine collision |
+
+**Scope boundary that must be preserved:** a *declared lifecycle folder* absent
+from disk while the config itself is present and readable remains legitimately
+fail-open. An empty-but-present namespace root still passes. Only an
+unresolvable root or config fails closed.
+
+**What this exposed downstream.** Fixing it flipped
+`test_ge_122a_1.py::test_repaired_collection_passes_with_per_namespace_counts`
+from green to red — its fixture never created a `tickets/` root or
+`ticket_lifecycle.json` at all. That test had been asserting *"a repaired
+collection passes"* over a collection that was never there, passing only because
+the fail-open masked the gap. The fixture was completed, not the assertion
+weakened.
+
+That is the sharpest instance of this register's recurring shape: **a test
+passing for the wrong reason, where the bug and the test's blind spot are the
+same bug.**
+
 ## Fixed, recorded for context
 
 Two defects in this area were found and fixed during the same drive; they are

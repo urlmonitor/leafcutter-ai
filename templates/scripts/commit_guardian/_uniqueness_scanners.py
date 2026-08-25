@@ -45,6 +45,24 @@ DECISION HISTORY:
     everything else, so correctness is unchanged: measured against the real
     collection post-fix at under 5s (see the sign-off comment for exact
     timings).
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix]: Fixed a fail-open defect
+    found by pr-reviewer (feedback-id fb_2026-08-24_94dc4ba4, finding
+    [H-3]): scan_acceptance_criteria and _scan_filename_numbered (backing
+    scan_decisions / scan_diagrams) returned
+    NamespaceVerdict(passed=True, inspected_count=0, findings=[]) whenever
+    their root directory did not exist -- so a wrong or renamed
+    collection_root reported a clean pass over a namespace that was never
+    actually inspected. Per the contract fixed in
+    unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py's module
+    docstring ("THE CONTRACT DECISION"), a namespace may report
+    passed=True ONLY when its root was actually resolved (walked),
+    regardless of whether that walk found zero or many artifacts. An
+    ENTIRELY MISSING root now reports passed=False with an empty findings
+    list (there is nothing to name; the root itself is the finding) --
+    distinguishable from a genuine collision, which always populates
+    findings. A root that EXISTS as a real, empty directory is unaffected
+    and still passes cleanly with inspected_count == 0: that is a
+    legitimately empty, resolved namespace, not a misconfiguration.
   - 2026-08-19 [python-coder/GE-122a-1]: Fixed a correctness bug in
     _fast_scan_top_level_id caught by
     unit_tests/commit_guardian/test_ge_122a_1_fast_path_equivalence.py: the
@@ -384,10 +402,16 @@ def scan_acceptance_criteria(ac_root: Path) -> NamespaceVerdict:
         ac_root: Path to the docs/acceptance-criteria/ directory.
 
     Returns:
-        The NamespaceVerdict for the acceptance-criteria namespace.
+        The NamespaceVerdict for the acceptance-criteria namespace. When
+        ac_root does not exist at all, reports passed=False with
+        inspected_count=0 and an empty findings list -- the root itself was
+        never resolved, so this is a misconfiguration, not evidence of a
+        genuinely empty namespace. An EXISTING but empty ac_root still
+        passes cleanly with inspected_count=0 (see GE-122e-3 "THE CONTRACT
+        DECISION" in unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py).
     """
     if not ac_root.is_dir():
-        return NamespaceVerdict(passed=True, inspected_count=0, findings=[])
+        return NamespaceVerdict(passed=False, inspected_count=0, findings=[])
 
     claims: dict[str, list[Path]] = {}
     inspected_count = 0
@@ -420,10 +444,16 @@ def _scan_filename_numbered(
             contested-number string for that filename.
 
     Returns:
-        The NamespaceVerdict for the namespace rooted at directory.
+        The NamespaceVerdict for the namespace rooted at directory. When
+        directory does not exist at all, reports passed=False with
+        inspected_count=0 and an empty findings list -- the root itself was
+        never resolved, so this is a misconfiguration, not evidence of a
+        genuinely empty namespace. An EXISTING but empty directory still
+        passes cleanly with inspected_count=0 (see GE-122e-3 "THE CONTRACT
+        DECISION" in unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py).
     """
     if not directory.is_dir():
-        return NamespaceVerdict(passed=True, inspected_count=0, findings=[])
+        return NamespaceVerdict(passed=False, inspected_count=0, findings=[])
 
     claims: dict[str, list[Path]] = {}
     inspected_count = 0

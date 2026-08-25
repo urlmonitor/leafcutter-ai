@@ -53,16 +53,43 @@ def _is_within_inline_code(line: str, start: int, end: int) -> bool:
     return False
 
 
-def _is_marker_line(line: str, marker: str) -> bool:
-    """Return True when `marker` is the entire (whitespace-stripped) line.
+def _is_marker_line(line: str, match: re.Match[str]) -> bool:
+    """Return True when the matched marker text is the entire (whitespace-
+    stripped) line.
 
     A bare marker word alone on its own line is the classic unfilled-
     scaffolding shape (e.g. a lone `PLACEHOLDER` line left after a template
-    was copied). Prose that mentions the same word is never the ENTIRE line
-    -- it sits inside a sentence with surrounding words -- so this check
-    discriminates the two without relying on letter case.
+    was copied, or a lone `TODO` left when a section was stubbed out).
+    Prose that mentions the same word is never the ENTIRE line -- it sits
+    inside a sentence with surrounding words -- so this check discriminates
+    the two. Comparing against `match.group(0)` (the exact text the regex
+    found) rather than a hardcoded literal means this stays correct for any
+    casing the now-IGNORECASE marker regexes match, with no separate
+    case-fold step needed.
     """
-    return line.strip() == marker
+    return line.strip() == match.group(0)
+
+
+# A marker preceded by nothing but whitespace and, optionally, a single
+# leading list-item bullet ("-", "*", "+") or ordinal ("1.", "2)") is
+# structurally the START of the line's real content -- the shape a genuine,
+# unresolved marker takes when someone leaves it at the top of a stubbed
+# section or a checklist item. Prose that NAMES or DISCUSSES the same marker
+# is never the first thing on its line -- there is always a lead-in clause
+# or surrounding words before it -- so this discriminates a real marker from
+# a mid-sentence mention without relying on letter case at all. This is the
+# positional half of the case-insensitivity fix below: "replace with the
+# real description" (a genuine marker) and "...replace with a value that
+# matches your conventions." (ordinary prose) are the identical phrase in
+# the identical case, differing ONLY in line position -- IGNORECASE alone
+# cannot tell them apart, so several validators below combine it with this
+# check instead of the colon anchor TODO:/FIXME: use.
+_LEADING_MARKER_PREFIX = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*")
+
+
+def _is_marker_at_line_start(line: str, start: int) -> bool:
+    """Return True when only whitespace/bullet syntax precedes `start`."""
+    return _LEADING_MARKER_PREFIX.fullmatch(line[:start]) is not None
 
 
 def _is_placeholder_marker(line: str, match: re.Match[str]) -> bool:
@@ -76,12 +103,21 @@ def _is_placeholder_marker(line: str, match: re.Match[str]) -> bool:
     so PLACEHOLDER additionally requires one of the structural shapes that
     make TODO:/FIXME:/QUESTION: unambiguous markers: alone on its line,
     wrapped in an HTML comment, or immediately followed by a colon.
+
+    The marker regex is now case-insensitive (re.IGNORECASE) so lowercase
+    and mixed-case scaffolding ("placeholder: fill this in", "Placeholder:
+    fill this in") is caught too. That widening does not need a positional
+    check the way "Replace with"/FIXME do: the alone-on-line and colon
+    checks below already compare against the literal text the regex
+    matched (not a hardcoded literal), so they are case-agnostic on their
+    own; the HTML-comment regex is matched case-insensitively for the same
+    reason.
     """
     if _is_within_inline_code(line, match.start(), match.end()):
         return False
-    if _is_marker_line(line, "PLACEHOLDER"):
+    if _is_marker_line(line, match):
         return True
-    if re.search(r"<!--\s*PLACEHOLDER\b", line):
+    if re.search(r"<!--\s*PLACEHOLDER\b", line, re.IGNORECASE):
         return True
     return line[match.end() : match.end() + 1] == ":"
 
@@ -98,21 +134,80 @@ def _default_validator(line: str, match: re.Match[str]) -> bool:
 def _is_replace_with_marker(line: str, match: re.Match[str]) -> bool:
     """Validator for the "Replace with" marker.
 
-    Dropping IGNORECASE handles ordinary lowercase prose, but prose that
-    NAMES the marker in a slash-delimited list alongside its siblings (e.g.
-    "contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD markers") also
-    capitalizes it -- that is how the marker's own proper name is written,
-    not a case difference. A real "Replace with" scaffolding instruction is
-    never slash-adjacent to neighbouring words (it reads "TODO: Replace with
-    the real value", bounded by spaces), so excluding matches immediately
-    preceded or followed by "/" discriminates the marker-name-listing shape
-    without touching the genuine instruction.
+    The marker regex is now case-insensitive (re.IGNORECASE) so a template
+    whose own "TODO: " prefix has already been stripped, leaving a bare
+    lowercase "replace with the real description", is still caught -- but
+    case-insensitivity ALONE cannot discriminate this marker: "replace with
+    the real description" (a genuine marker, line-initial) and "...replace
+    with a value that matches your conventions." (ordinary prose,
+    mid-sentence) are the exact same phrase in the exact same case; they
+    differ only in WHERE they sit on the line. Requiring the match to be the
+    first real content on the line (_is_marker_at_line_start) is the
+    positional discriminator that resolves this -- case-insensitivity
+    without it would flag both strings or neither.
+
+    The slash-adjacency check is kept as a second, narrower guard for a doc
+    that NAMES the marker in a slash-delimited list alongside its siblings
+    (e.g. "contains TODO/PLACEHOLDER/Replace with/FIXME/QUESTION/TBD
+    markers"). That shape already fails the line-start check too (the
+    phrase is never first on the line inside a slash list), but the two
+    checks target different failure shapes, so both are kept explicit
+    rather than relying on one to accidentally cover the other.
     """
     if _is_within_inline_code(line, match.start(), match.end()):
         return False
     before = line[match.start() - 1 : match.start()]
     after = line[match.end() : match.end() + 1]
-    return before != "/" and after != "/"
+    if before == "/" or after == "/":
+        return False
+    return _is_marker_at_line_start(line, match.start())
+
+
+def _is_bare_todo_marker(line: str, match: re.Match[str]) -> bool:
+    """Validator for a bare TODO with no trailing colon at all.
+
+    Covers three of the pr-reviewer's reproduced gaps with one validator: a
+    lone "TODO" alone on its line, "TODO fix this before shipping" (no
+    colon anywhere), and the GitHub-style owner-tag form "TODO(alice): fix
+    this before shipping" (the "(alice)" breaks the \\s* bridge the
+    colon-anchored \\bTODO\\s*: rule needs, but this bare-word match still
+    finds the leading "TODO" regardless of what follows it -- it does not
+    need its own owner-tag-specific regex).
+
+    All three are only genuine markers when TODO is the first real content
+    on the line: "Contributors write comments like TODO(owner): to tag the
+    assignee." is the identical "TODO(owner):" text at a different
+    position (mid-sentence, naming the convention), so this defers to the
+    same positional check _is_replace_with_marker uses rather than the
+    colon rule's simpler backtick-only guard.
+    """
+    if _is_within_inline_code(line, match.start(), match.end()):
+        return False
+    if _is_marker_line(line, match):
+        return True
+    return _is_marker_at_line_start(line, match.start())
+
+
+def _is_fixme_marker(line: str, match: re.Match[str]) -> bool:
+    """Validator for the FIXME: marker.
+
+    The marker regex is now case-insensitive (re.IGNORECASE) so lowercase
+    and mixed-case scaffolding ("fixme: this needs attention", "FixMe: this
+    is broken") is caught, not just the all-caps form. Case-insensitivity
+    alone would also re-flag a doc that discusses the convention in
+    lowercase prose inside a parenthetical aside (e.g. "This convention
+    (fixme: for known low-priority bugs) is sometimes written in lowercase
+    in commit messages.") -- that string has a real trailing colon too, so
+    the colon anchor by itself cannot rule it out. Requiring FIXME to be
+    the first real content on the line (_is_marker_at_line_start) is what
+    discriminates the two: a genuine "FIXME: ..." marker opens its line; a
+    parenthetical or mid-sentence mention of the convention never does.
+    """
+    if _is_within_inline_code(line, match.start(), match.end()):
+        return False
+    if _is_marker_line(line, match):
+        return True
+    return _is_marker_at_line_start(line, match.start())
 
 
 _MarkerValidator = Callable[[str, "re.Match[str]"], bool]
@@ -120,22 +215,29 @@ _MarkerRule = tuple[re.Pattern[str], _MarkerValidator]
 
 _MARKER_RULES: list[_MarkerRule] = [
     (re.compile(r"\bTODO\s*:", re.IGNORECASE), _default_validator),
-    (re.compile(r"\bPLACEHOLDER\b"), _is_placeholder_marker),
-    # Case-sensitive, no IGNORECASE: the scaffold text this gate exists to
-    # catch capitalizes "Replace with" because it follows a colon (e.g.
-    # "TODO: Replace with the real component description"). Ordinary prose
-    # explaining the same idea almost always uses the lowercase verb phrase
-    # mid-sentence ("...replace with a value that matches your
-    # conventions."), so dropping IGNORECASE discriminates this marker fully
-    # for every false-positive case observed.
-    (re.compile(r"\bReplace with\b"), _is_replace_with_marker),
+    # Bare TODO with no colon at all -- "TODO fix this before shipping", a
+    # lone "TODO" alone on a line, or the parenthesized owner-tag form
+    # "TODO(alice):" (the "(alice)" breaks the \s* bridge the colon rule
+    # above needs). Listed directly AFTER the colon rule so a real
+    # "TODO: ..." line still reports the more specific "TODO:" marker text;
+    # this rule only ever fires when the colon rule did not match at all,
+    # or matched but was excluded (e.g. inline code).
+    (re.compile(r"\bTODO\b", re.IGNORECASE), _is_bare_todo_marker),
+    (re.compile(r"\bPLACEHOLDER\b", re.IGNORECASE), _is_placeholder_marker),
+    # Matched case-insensitively; see _is_replace_with_marker for why case
+    # alone cannot discriminate this marker from mid-sentence prose using
+    # the identical phrase -- the validator's positional check is what does.
+    (re.compile(r"\bReplace with\b", re.IGNORECASE), _is_replace_with_marker),
     # Requiring a trailing colon (mirroring TODO:/FIXME:) separates a real
     # open question ("<!-- QUESTION: should this cover retries too? -->")
     # from prose that shows the comment CONVENTION as a worked example
     # ("<!-- QUESTION --> comment style is used to flag..."), which never
     # carries real question text -- hence no colon -- after the keyword.
     (re.compile(r"<!--\s*QUESTION\s*:", re.IGNORECASE), _default_validator),
-    (re.compile(r"\bFIXME\s*:"), _default_validator),
+    # Matched case-insensitively; see _is_fixme_marker for why the
+    # positional check, not case, is what discriminates a real FIXME:
+    # marker from a lowercase mid-sentence mention of the convention.
+    (re.compile(r"\bFIXME\s*:", re.IGNORECASE), _is_fixme_marker),
 ]
 
 _SKIP_EXTENSIONS = frozenset({".pyc", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2"})

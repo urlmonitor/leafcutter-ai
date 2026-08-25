@@ -82,14 +82,65 @@ whereas a marker being *discussed* almost always is. Whole-fence exclusion was
 deliberately **rejected**: a how-to can legitimately carry a real unfilled token
 inside a fence, and suppressing that would cost a real detection.
 
-Verified behaviourally in both directions: `documentation-verifier.md` 59 hits →
-0, and all six genuine scaffolding forms (`TODO: write this`, a bare
-`PLACEHOLDER` line, `<!-- PLACEHOLDER -->`, `TODO: Replace with…`,
-`<!-- QUESTION: … -->`, `FIXME: broken`) still caught.
+### CORRECTION — the "verified in both directions" claim above was false
 
-**If you touch this, keep the six MUST-DETECT tests in
-`unit_tests/test_build_placeholder_detection_context_discrimination.py`.** They
-are the only thing standing between a narrower gate and a blind one.
+An earlier revision of this entry said the fix was *"verified behaviourally in
+both directions"*. **It was not, and the narrowing did break recall.** The
+correction is kept visible rather than edited away, because the mistake is more
+instructive than the fix.
+
+All six MUST-DETECT cases cited as proof were **uppercase** — `TODO: write
+this`, `PLACEHOLDER`, `<!-- PLACEHOLDER -->`, `TODO: Replace with…`,
+`<!-- QUESTION: … -->`, `FIXME: broken`. They were drawn from the same mental
+template as the patterns themselves, so they could only ever confirm what those
+patterns already did. That is one direction tested twice, not two directions.
+
+This is exactly the defect recorded one file over as **KI-TQ-3** (an oracle
+sharing the bias of the code it verifies) — committed here, in the entry
+describing the fix for it.
+
+What the incomplete verification missed: dropping `re.IGNORECASE` can only ever
+*reduce* recall, and nobody asked what it cost. A later `pr-reviewer` pass found
+**six of eight** genuine scaffolding forms were no longer detected:
+
+```
+MISSED   placeholder: fill this in          MISSED   TODO fix this before shipping
+MISSED   fixme: this needs attention        MISSED   TODO           (bare, alone on a line)
+MISSED   replace with the real description  MISSED   TODO(alice): fix this before shipping
+```
+
+**Fixed 2026-08-25.** Markers are case-insensitive again, and recall is held by
+a *positional* discriminator instead: a marker counts only when it is the first
+real content on its line (whitespace and a single list bullet or ordinal may
+precede it).
+
+That layering is forced, not stylistic. These two strings —
+
+```
+replace with the real description                              MUST be detected
+…does not fit your project, replace with a value that matches  MUST NOT be
+```
+
+— are the same phrase in the same case, differing only in line position. No
+case-based rule can separate them. Adding `IGNORECASE` alone provably flags both
+or neither.
+
+**Two tripwires now exist, and a fix must satisfy both:**
+
+| File | Direction | Count |
+|---|---|---|
+| `test_build_placeholder_detection_context_discrimination.py` | precision — prose about the gate stays clean | 21 |
+| `test_build_placeholder_detection_recall_floor.py` | recall — real scaffolding is still caught | 17 |
+
+Do not remove either. Each was written after the gate failed in that direction.
+Every recall test names, in its docstring, the precision case it would break —
+that pairing is the specification.
+
+**Known limitation, deliberately unfixed.** A bare marker in a list item
+(`- PLACEHOLDER`) is not detected. An unfilled checklist entry and a bullet
+naming supported markers are byte-identical with opposite correct verdicts, and
+this scanner reads one line at a time with no cross-line context. Recorded for a
+human decision rather than closed with an unsatisfiable test.
 
 ## KI-BO-2 — Committed agent cards drift from the AC store
 

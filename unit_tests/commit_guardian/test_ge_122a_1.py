@@ -232,6 +232,43 @@ def _write_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def _write_lifecycle_config(path: Path, folders: list[dict]) -> None:
+    """Write a ticket_lifecycle.json fixture using the REAL serializer (json.dump).
+
+    Per docs/reference/fixture-policy.md's Fixture Authenticity Rule, a
+    hand-typed JSON literal is rejected as a fixture for a serialized
+    format for the same reason a hand-typed YAML literal is: it reproduces
+    the author's formatting bias rather than the real serializer's output.
+
+    Args:
+        path: Destination path for ticket_lifecycle.json (parents created
+            as needed).
+        folders: The "folders" list to install.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump({"folders": folders}, fh)
+
+
+def _write_ticket(path: Path, *, status: str, title: str = "Fixture ticket") -> None:
+    """Write a ticket fixture with REAL YAML-serialized frontmatter.
+
+    Uses yaml.safe_dump for the frontmatter block, matching this file's own
+    Fixture Authenticity Rule applied to AC records (_write_ac_yaml) rather
+    than a hand-typed frontmatter literal.
+
+    Args:
+        path: Destination ticket file path (parents created as needed).
+        status: The declared lifecycle status for this fixture ticket's
+            frontmatter.
+        title: Ticket title (frontmatter field, cosmetic for this fixture).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frontmatter = yaml.safe_dump({"status": status, "title": title}, sort_keys=False)
+    content = f"---\n{frontmatter}---\n\n# {title}\n\nFixture ticket body.\n"
+    path.write_text(content, encoding="utf-8")
+
+
 def _build_fixture_collection(root: Path, *, contested: bool) -> None:
     """Build a real on-disk collection fixture across three namespaces.
 
@@ -255,6 +292,20 @@ def _build_fixture_collection(root: Path, *, contested: bool) -> None:
     that "no artifact whose number is claimed once appears in the report"
     is a real assertion, not a vacuous one over an all-contested fixture.
 
+    Also builds a minimal, genuinely populated work-items namespace (one
+    declared lifecycle folder holding one uncontested ticket) via a REAL
+    ticket_lifecycle.json (json.dump) and a REAL ticket frontmatter block
+    (yaml.safe_dump) -- this AC's own fixture never claims collisions in
+    the work-items namespace (that is GE-122a-2's fixture), so a single
+    resolvable, uncontested folder is enough to make the whole-collection
+    ``verdict.passed`` meaningful. Before GE-122e-3's root-resolvability
+    fix, an entirely-absent tickets/ root fail-opened to
+    passed=True/inspected_count=0 and this gap was invisible; the
+    root-resolvability fix correctly turns that into passed=False, which is
+    why this fixture must actually create the namespace it always claimed
+    to build (see GE-122e-3's DECISION HISTORY entry in
+    _work_items_scanner.py for the full rationale).
+
     Args:
         root: Tempdir root to build the fixture collection under.
         contested: Whether to plant the three collisions or their repair.
@@ -262,6 +313,7 @@ def _build_fixture_collection(root: Path, *, contested: bool) -> None:
     ac_root = root / "docs" / "acceptance-criteria" / "fixture-component"
     adr_root = root / "docs" / "architecture" / "adrs"
     diagram_root = root / "docs" / "architecture" / "diagrams"
+    tickets_root = root / "tickets"
 
     # --- acceptance-criteria namespace ---
     _write_ac_yaml(
@@ -315,6 +367,15 @@ def _build_fixture_collection(root: Path, *, contested: bool) -> None:
             diagram_root / f"c2-{600 + i}-standalone.md",
             f"# c2-{600 + i}\n",
         )
+
+    # --- work-items namespace ---
+    # One declared lifecycle folder, one uncontested ticket -- enough to make
+    # this namespace genuinely resolvable and populated, matching what this
+    # fixture builder has always claimed to build ("a collection", not
+    # three-quarters of one). No collision is planted here: that is
+    # GE-122a-2's own fixture concern.
+    _write_lifecycle_config(tickets_root / "ticket_lifecycle.json", [{"path": "tickets/00_inbox"}])
+    _write_ticket(tickets_root / "00_inbox" / "TICKET-90010101-FixtureUncontested.md", status="todo")
 
 
 def _build_volume_fixture_collection(root: Path) -> dict:

@@ -80,6 +80,25 @@ DECISION HISTORY:
     the regression coverage (nested-folder false negative, shared-basename
     false positive, flat-layout regression anchor, missing-folder
     fail-open).
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix]: Fixed a fail-open defect
+    found by pr-reviewer (feedback-id fb_2026-08-24_94dc4ba4, finding
+    [H-3]): ``_resolve_lifecycle_folder_paths`` returned an empty list for
+    THREE different situations that ``scan_work_items`` then collapsed
+    onto one identical ``passed=True, inspected_count=0`` outcome: (1) a
+    missing/unreadable ``ticket_lifecycle.json`` (misconfiguration -- the
+    config was never resolved), (2) unparsable JSON (same), and (3) a
+    present, valid config that explicitly declares zero folders (a
+    legitimately empty, resolved configuration). Per the contract fixed in
+    unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py's module
+    docstring ("THE CONTRACT DECISION"), only case (3) may report
+    passed=True. ``_resolve_lifecycle_folder_paths`` now returns ``None``
+    (not ``[]``) for cases (1) and (2) -- config could not be resolved at
+    all -- while still returning ``[]`` for case (3), so ``scan_work_items``
+    can tell "nothing to walk because there is nothing declared" apart
+    from "nothing to walk because the config itself could not be read".
+    ``scan_work_items`` reports passed=False (empty findings -- the config
+    itself is the finding) only for the ``None`` case; the declared-empty
+    case is unchanged and still passes cleanly.
 """
 
 from __future__ import annotations
@@ -143,7 +162,7 @@ def _resolve_one_folder_path(raw_path: str, repo_root: Path, repo_root_resolved:
     return resolved
 
 
-def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path]:
+def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path] | None:
     """Resolve every declared lifecycle folder to its real, full on-disk path.
 
     Reads the folder list rather than hard-coding it, per this AC's own
@@ -172,9 +191,14 @@ def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path]:
     Returns:
         List of resolved absolute directory paths (not required to exist
         on disk -- a missing directory is the caller's fail-open-per-folder
-        concern, not this function's), or an empty list if the config is
-        missing, unreadable, unparsable, or declares no usable folder
-        entries (fail-open: nothing to walk rather than a crash).
+        concern, not this function's). An empty list means the config
+        itself WAS resolved (read and parsed successfully) but declares no
+        usable folder entries -- a legitimate, deliberately empty
+        configuration. ``None`` means the config could NOT be resolved at
+        all: the file is missing, unreadable, or not valid JSON -- a
+        misconfiguration distinct from a genuinely empty declaration (see
+        GE-122e-3 "THE CONTRACT DECISION" in
+        unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py).
     """
     try:
         content = lifecycle_config_path.read_text(encoding="utf-8")
@@ -183,7 +207,7 @@ def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path]:
             f"{_HOOK_PREFIX} WARNING: cannot read {lifecycle_config_path}: {exc}",
             file=sys.stderr,
         )
-        return []
+        return None
 
     try:
         data = json.loads(content)
@@ -192,7 +216,7 @@ def _resolve_lifecycle_folder_paths(lifecycle_config_path: Path) -> list[Path]:
             f"{_HOOK_PREFIX} WARNING: cannot parse {lifecycle_config_path}: {exc}",
             file=sys.stderr,
         )
-        return []
+        return None
 
     repo_root = lifecycle_config_path.resolve().parent.parent
     repo_root_resolved = repo_root.resolve()
@@ -334,10 +358,19 @@ def scan_work_items(tickets_root: Path, lifecycle_config_path: Path) -> Namespac
         The NamespaceVerdict for the "work-items" namespace: passing when no
         identifier is held by two or more lifecycle folders, with
         inspected_count equal to the number of "TICKET-*.md" files walked
-        across those folders.
+        across those folders. When ``lifecycle_config_path`` itself could
+        not be resolved at all (missing, unreadable, or unparsable),
+        reports passed=False with inspected_count=0 and an empty findings
+        list -- the config was never actually read, so this is a
+        misconfiguration, not evidence of a genuinely empty namespace. A
+        config that IS resolved but declares zero folders still passes
+        cleanly with inspected_count=0 (see GE-122e-3 "THE CONTRACT
+        DECISION" in unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py).
     """
     del tickets_root  # See Args note: retained for signature stability only.
     folder_paths = _resolve_lifecycle_folder_paths(lifecycle_config_path)
+    if folder_paths is None:
+        return NamespaceVerdict(passed=False, inspected_count=0, findings=[])
     if not folder_paths:
         return NamespaceVerdict(passed=True, inspected_count=0, findings=[])
 
