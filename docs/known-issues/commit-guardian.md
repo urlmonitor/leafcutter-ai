@@ -1181,12 +1181,40 @@ frozen at build time) and KI-BP-008 (a skipped workflow-install phase leaving a 
 workflow 1497 lines stale) both propose extending `check_build_drift` as the natural home for
 the fix. Both proposals are unreachable while the hook never fires in the package repo.
 
+**A DETECTOR ALREADY EXISTS, AND IT IS RED — found while committing this entry.**
+`check-hook-trigger-reachability` (BP-100k-4) does exactly this analysis and fires on it. It
+ran on the commit that added this section and failed, naming **five** unreachable hooks, not
+one:
+
+```text
+UNREACHABLE: check-build-drift            files pattern '^leafcutter/templates/'
+UNREACHABLE: check-infra-docs             files pattern '(docker-compose.*\.ya?ml|...)'
+UNREACHABLE: check-paths-integrity        files pattern '^leafcutter/config/paths\.json$'
+UNREACHABLE: check-architecture-scaffolds files pattern '^leafcutter/templates/docs/architecture/'
+UNREACHABLE: check-output-drift           files pattern '^(\.claude/agents/|\.claude/skills/|...)'
+check-hook-trigger-reachability: RESULT total=50 unreachable=5 exempt=0
+```
+
+So the correction to this entry's original framing: the gap is **not** that nothing detects the
+condition. It is that the condition is unresolved across five hooks, and the gate that reports
+it blocks commits touching unrelated files, which makes it likely to be skipped rather than
+acted on. Three of the five (`check-build-drift`, `check-paths-integrity`,
+`check-architecture-scaffolds`) are the `^leafcutter/`-anchored consumer-path class this entry
+describes. `check-output-drift` is the same class pointing at `.claude/`, which is gitignored
+here. `check-infra-docs` is different in kind — this repo genuinely has no docker-compose or
+`.env.example`, so that one may be legitimately inapplicable rather than misconfigured, and an
+`exempt` mechanism exists (`exempt=0`) that nobody has used.
+
+That distinction is the real work: the reachability gate currently cannot tell "this filter is
+written against the wrong layout" from "this hook does not apply to this repository". Until it
+can, its verdict is unactionable in bulk and gets skipped, which is how five accumulated.
+
 **Fix direction.** Derive the filter from the layout rather than hardcoding one of the two, or
-match both — `(^|/)templates/`. The same substitution appears elsewhere in the generated config
-(`check-paths-integrity` is filtered on `^leafcutter/config/paths\.json$`), so the audit should
-cover every `^leafcutter/`-anchored `files:` pattern rather than this one entry. Whatever the
-fix, it should be verified by staging a template change in the package repo and observing the
-hook actually run — the skip line is quiet and reads like a pass.
+match both — `(^|/)templates/`. Do it for all three consumer-path hooks at once, mark
+`check-infra-docs` exempt if it is genuinely inapplicable, and decide what `check-output-drift`
+should point at given `.claude/` is gitignored. Verify by staging a template change in the
+package repo and observing `check-build-drift` actually run — the skip line is quiet and reads
+like a pass.
 
 **Trap.** `(no files to check) Skipped` is visually indistinguishable from a hook that ran and
 had nothing to say, and it appears in the middle of a long green hook list. Nothing in a normal
