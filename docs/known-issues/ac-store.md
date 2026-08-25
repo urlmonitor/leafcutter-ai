@@ -145,9 +145,12 @@ producing incorrect results in the tooling built on top of it".
 **Fix direction.** Add a store-wide uniqueness pass: collect every `id:` across the AC
 root, fail on any id claimed more than once, and name both paths in the error. This is
 a whole-store check rather than a per-file one, so it needs a mode that takes the store
-root — note the CLI currently accepts **file** arguments only and silently skips
-anything that is not a `.yaml`, which is also why a directory argument returns the
-misleading `No YAML files to validate.` Worth covering retired ids in the same pass:
+root. That part is now easier than when this was written: as of 2026-08-19 (KI-ACS-001)
+the CLI accepts a **directory** and walks it recursively, so a whole-store pass already
+has its entry point — `validate_ac_schema.py docs/acceptance-criteria` — and a run that
+resolves zero files exits non-zero instead of reporting the misleading
+`No YAML files to validate.` What is still missing is the cross-file comparison itself,
+which is the actual work here. Worth covering retired ids in the same pass:
 the id between GE-118 and GE-120 is recorded as retired and must never be
 reissued (see PR #453), which a pure uniqueness check would not catch on its
 own. It is not written out here because the GE-122e-1 guard fails the build on
