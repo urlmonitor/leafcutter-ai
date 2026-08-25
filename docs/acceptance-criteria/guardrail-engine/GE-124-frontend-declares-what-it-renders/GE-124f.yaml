@@ -1,0 +1,102 @@
+id: GE-124f
+title: "Follow one thread from the built screen back to the design and the requirement"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - ux_prototyping
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Built screen, approved design, requirement — one chain you can actually walk.
+
+  A finished page says which design it realises, and the design says which
+  requirements it answers, so the whole path from the thing on screen to the
+  thing that was asked for can be followed without a person joining it up by
+  hand. Comparing what was built against what was designed becomes a mechanical
+  check rather than a claim someone makes about their own work.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - component-diagram
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124f-1
+  - GE-124f-2
+  - GE-124f-3
+  - GE-124f-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA / IT PO).
+
+  THIS IS THE SECOND-ORDER VALUE, and it is why the declaration is worth more
+  than a comment convention. The product-truth store already resolves a screen
+  to its criteria (`mockup.screen`, plus flow `step.screen` and
+  `step.implements`). What is missing is the FIRST hop — from the built page to
+  the screen it realises. A `data-screen` attribute on the page root supplies
+  it, completing built component → mockup → flow step → requirement as a chain a
+  machine can walk end to end.
+
+  THREE THINGS THIS UNLOCKS. The BA should keep them as distinct L2 outcomes;
+  they are not restatements of each other:
+    1. THE FIRST HOP: a page root names its screen, and that name resolves to a
+       registered design. A name that resolves to nothing is a defect of the
+       same kind as an unresolvable criterion id (GE-124c), not a silent pass.
+    2. MOCKUP-VS-BUILT AS A MECHANICAL DIFF: when the mockup's own rendered
+       markup carries the same element pins as the built page, the two can be
+       compared automatically. This is what makes the `built | spec | mock`
+       label HONEST — today it is self-declared, and a self-declared status is
+       the phantom-done pattern this repo exists to prevent.
+    3. A FREE, CORRECT TEST SELECTOR: the selector a Playwright or
+       Testing-Library test uses is derivable from the attribute value, so it is
+       identical to the id the test already names in its `covers:` tag. A check
+       can then confirm the test and the element agree about which criterion is
+       under test — instead of the usual silent mismatch where a test claims one
+       criterion and exercises another.
+
+  ONLY THE PAGE ROOT CARRIES THE SCREEN NAME. A leaf component carries the
+  criterion pin only. The mock-data artifact states this as an "if and only if";
+  putting a screen name on a leaf would produce a page claiming to be two
+  screens.
+
+  DEPENDENCY, NOT DUPLICATION — flag for sequencing: outcomes 2 and 3 both
+  presuppose GE-124b's attribute exists and is stable. Land GE-124b first. This
+  L1 must NOT re-specify the attribute itself; it specifies what the chain does
+  with it. Nothing here makes the pin compulsory — a page with no design
+  modelled in the product-truth store is simply not part of the chain, and that
+  is a normal state, not a finding.
+
+  AND STILL NOT COVERAGE: a mockup-vs-built diff proves the built page LOOKS
+  like the approved design. It does not prove the behaviour behind it works.
+
+  documentation_triggers [component-diagram] — the value of this L1 IS the
+  shape of the chain across four stores (built app, mockups, flows, AC store).
+  A reader cannot use it without seeing how those pieces connect, and no
+  existing diagram shows the first hop because it does not exist yet.
+
+  BA decomposition note (2026-08-25). Four L2s, one per outcome the PO named
+  plus the diagram: GE-124f-1 (the first hop), GE-124f-2 (mockup-versus-built as
+  a mechanical comparison, with the derived result taking precedence over the
+  hand-written realisation label — without precedence the comparison is advice
+  and the phantom-done pattern survives), GE-124f-3 (the derived selector and
+  the test-to-criterion agreement check), GE-124f-4 (the component diagram).
+  The comparison in GE-124f-2 is over ELEMENT PINS, not pixels — deliberate,
+  and stated in that AC's notes so it is defensible at the next review.
+  GE-124f-3 stops at agreement; whether a test that agrees actually covers
+  anything is GE-124g-4.

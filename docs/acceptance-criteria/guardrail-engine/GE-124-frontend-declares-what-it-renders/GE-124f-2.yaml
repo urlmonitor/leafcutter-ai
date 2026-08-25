@@ -1,0 +1,145 @@
+id: GE-124f-2
+readiness: approved
+priority: high
+title: "Built page against approved design becomes a mechanical comparison, not a self-declared label"
+component: guardrail-engine
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+criteria: |
+  Given a built page that realises the design `plant-listing`
+  And the design's own rendered markup carries element pins for the criteria
+    UXP-100d-2 and UXP-100d-3
+  And the built page carries an element pin for UXP-100d-2 only
+  When the built page is compared against the design
+  Then the comparison reports UXP-100d-3 as present in the design and absent
+    from the built page
+  And the comparison names the design, the built page, and each criterion that
+    differs
+
+  Given a built page whose element pins match the design's element pins exactly
+  When the built page is compared against the design
+  Then the comparison reports no difference
+  And the page's realisation label is derived from that comparison rather than
+    from a value someone wrote by hand
+
+  Given a built page whose realisation label was set by hand to "built"
+  And the comparison finds criteria present in the design and absent from the
+    page
+  When the realisation label is resolved
+  Then the derived result takes precedence over the hand-written value
+depends_on:
+  - GE-124f
+  - GE-124f-1
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/ux-prototyping.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "PREREQUISITE THAT DOES NOT EXIST YET — READ THIS FIRST. The criteria assume 'the design's own rendered markup carries element pins'. It does not. Verified 2026-08-25: docs/product-truth/mockups/fern-and-fig/ contains five rendered .html files (plant-listing, plant-detail, cart, checkout, order-confirmation) and NONE of them contains a single `data-ac` attribute; the .mockup.json records carry `screen`, `renders` (the html filename) and `entities`, but no per-criterion element mapping. This AC therefore has an unbuilt prerequisite: mockup markup must start carrying data-ac pins, which is mockup-author's surface and is NOT covered by any AC in the GE-124 family. Either land that prerequisite first or this AC compares against an empty set and reports every criterion as missing from every built page. Flagged to the user rather than absorbed."
+  - "THE COMPARISON IS OVER ELEMENT PINS, NOT PIXELS, and is read from both sides with the SAME shared reader (GE-124b-1). Comparing rendered appearance is a different and much larger problem with a far worse signal-to-noise ratio; comparing which criteria each side claims to render is mechanical, stable, and answers the question the realisation label actually makes. Using one reader for both sides is what makes the two pin sets commensurable."
+  - "THE DERIVED LABEL TAKES PRECEDENCE, AND PRECEDENCE MEANS THE HAND-WRITTEN VALUE IS NOT CONSULTED WHEN A COMPARISON IS AVAILABLE. Resolve the label in one place, comparison-first. Without precedence the derived result is advice and the hand-written label still governs, which leaves the phantom-done pattern exactly where it was — the PO's whole reason for this AC."
+  - "A PAGE OUTSIDE THE CHAIN HAS NO COMPARISON AND MUST KEEP ITS HAND-WRITTEN LABEL WITHOUT PENALTY (GE-124f-1-ii). Precedence applies when a comparison exists; absence of a design is not evidence of a mismatch. Conflating the two would report every unmodelled page as unbuilt."
+  - "THE DIFFERENCE IS DIRECTIONAL AND BOTH DIRECTIONS ARE REPORTED SEPARATELY: in the design and absent from the page (the criteria's case, an incomplete build), and on the page and absent from the design (a page claiming a criterion the design never had — either an undocumented addition or a stale design). A symmetric set-difference collapses two different conversations into one number."
+  - "THIS IS A REPORTING/DERIVATION SURFACE, NOT A COMMIT GATE. It produces a comparison and a label; it must not block a commit, and its output feeds GE-124g-3's reporting, where it is counted on its own axis and never folded into a coverage figure. A matching comparison proves the built page CLAIMS what the design claims — it does not prove the behaviour behind it works."
+  - "Must handle errors gracefully per the project error handling policy; an unreadable mockup file must be named rather than silently producing an empty design-side pin set, which would report every criterion as missing from the built page."
+delivers_to:
+  agent: python-coder
+  contract: "A per-page comparison of the design's element pins against the built page's element pins — both sides read with the SAME shared reader, reported directionally (in-design-not-on-page and on-page-not-in-design kept separate) — plus a realisation label DERIVED from that comparison and taking precedence over any hand-written value whenever a comparison exists. A page outside the chain has no comparison and keeps its hand-written label without penalty. Output feeds GE-124g-3's reporting on its own axis, never a coverage figure."
+expects_from:
+  ac_id: GE-124f-1
+  contract: "The built-page-to-design link the comparison runs across, including the outside-the-chain state that means no comparison is available for that page"
+test_spec:
+  - name: test_ge_124f_2_criterion_in_the_design_and_absent_from_the_page_is_reported_directionally
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Design pins UXP-100d-2 and UXP-100d-3, built page pins UXP-100d-2 only: the comparison names the design, the page, and UXP-100d-3 as in-design-not-on-page. Assert the direction, not just membership in a difference set."
+  - name: test_ge_124f_2_criterion_on_the_page_and_absent_from_the_design_is_reported_as_the_other_direction
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The reverse asymmetry — a built page pinning a criterion the design does not — is reported in its own direction, not merged with the first. Two different conversations (incomplete build; undocumented addition or stale design), so two different report entries."
+  - name: test_ge_124f_2_derived_label_overrides_a_hand_written_built_label
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A page hand-labelled 'built' whose comparison finds a difference resolves to the derived label, not to 'built'. This is where the value of the AC lands: without precedence the derived result is advice and the phantom-done pattern survives untouched."
+  - name: test_ge_124f_2_comparison_reads_both_sides_with_the_same_reader_over_real_mockup_and_source_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the comparison over a real on-disk mockup .html file annotated with data-ac and a real front-end source file, using the shared reader for both sides. Assert an EMPTY design-side pin set is reported as 'no pins in the design' rather than as 'every criterion missing from the page' — that is today's actual state of docs/product-truth/mockups/ and it must not read as a total build failure."
+  - name: test_ge_124f_2_page_outside_the_chain_keeps_its_hand_written_label_without_penalty
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A page with no modelled design produces no comparison and no derived label, and its hand-written label stands. Absence of a design must never be reported as a mismatch."
+test_rationale: |
+  This AC's real hazard is not a comparison bug, it is an empty input: no mockup in the repo
+  carries a single data-ac pin today, so a naive implementation reports every criterion as
+  missing from every built page and floods the report on its first run. The fourth test pins
+  that case explicitly — an empty design-side set must read as 'the design has no pins', not as
+  a total mismatch — and runs over real on-disk mockup and source files rather than fixtures, so
+  the empty-input reality is exercised rather than assumed away. The directional tests exist
+  because a symmetric set difference is the obvious implementation and it merges two findings
+  with different remedies. The precedence test is where the AC's value lands and is the one line
+  that separates a working anti-phantom-done control from advice.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Recorded a verified unbuilt prerequisite: the five mockup .html files in docs/product-truth/mockups/fern-and-fig/ contain ZERO data-ac attributes and the .mockup.json records carry no per-criterion element mapping, so the design side of this comparison does not exist yet and annotating mockups is mockup-author's surface, uncovered by any AC in this family. Required both sides to be read with the same shared reader, made the difference directional, bounded precedence to pages that have a comparison, and required an empty design-side set to read as 'no pins' rather than a total mismatch. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  OUTCOME 2 of three. The PO's framing: a self-declared status is the
+  phantom-done pattern this repo exists to prevent, and the pins are what make
+  the label checkable instead.
+
+  THE COMPARISON IS OVER PINS, NOT PIXELS — deliberate and worth defending at
+  the next review. Comparing rendered appearance is a different, much larger
+  problem with a much worse signal-to-noise ratio; comparing which criteria each
+  side claims to render is mechanical, stable, and answers the question the
+  label actually makes.
+
+  The third scenario is where the value lands: without precedence, the derived
+  result is advice and the hand-written label still governs, which leaves the
+  phantom-done pattern exactly where it was.
+
+  AND STILL NOT COVERAGE — a matching comparison proves the built page CLAIMS
+  what the design claims. It does not prove the behaviour behind it works. This
+  is stated in the PO note and owned as a guarantee by GE-124g-3.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25) — THE ONE AC IN THIS TREE WITH A MISSING
+  PREREQUISITE. Verified on disk: docs/product-truth/mockups/fern-and-fig/
+  holds five rendered .html files, none carrying `data-ac`, and the
+  .mockup.json records model screen / renders / entities with no per-criterion
+  element mapping. GE-124f-2 therefore cannot produce a meaningful comparison
+  until mockup markup starts carrying pins — work that belongs to mockup-author
+  and is not covered anywhere in GE-124. This is the strongest candidate in the
+  family for a follow-up AC, and the reason this AC is sized L.

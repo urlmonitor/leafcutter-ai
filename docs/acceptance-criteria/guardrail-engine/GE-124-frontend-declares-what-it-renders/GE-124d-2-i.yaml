@@ -1,0 +1,102 @@
+id: GE-124d-2-i
+readiness: approved
+priority: high
+title: "An empty reason is refused and the file stays blocked"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+criteria: |
+  Given the staged set contains an in-scope screen component with no
+    component-level declaration
+  And its file header carries the opt-out marker with no text after it
+  When the commit-tier declaration check runs
+  Then the opt-out is refused
+  And the file's verdict is "block", not "pass-with-reason"
+  And the report states that the opt-out was refused because it carries no
+    reason
+
+  Given the same file, with the opt-out reason written as "N/A"
+  When the commit-tier declaration check runs
+  Then the opt-out is refused and the file's verdict is "block"
+
+  Given the same file, with the opt-out reason written as whitespace only
+  When the commit-tier declaration check runs
+  Then the opt-out is refused and the file's verdict is "block"
+depends_on:
+  - GE-124d-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d-2.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THREE INPUT SHAPES, THREE CODE PATHS, ONE OUTCOME: a marker with no value at all, a value that is a placeholder token, and a value that is only whitespace. An implementation that checks 'is the key present' passes the first; one that checks 'is the string non-empty' passes the second and third. Cover all three explicitly."
+  - "THE PLACEHOLDER LIST IS SHORT, CASE-INSENSITIVE, AND EXPLICIT — at minimum n/a, na, none, tbd, todo, -, ?, x — held as a named constant so it can be extended by a reviewer rather than rediscovered in a regex. Do not attempt to judge whether a longer reason is a GOOD reason."
+  - "DELIBERATE NON-REQUIREMENT: no minimum length, no required author name, no required date. A quality bar the check cannot judge would be theatre; the visibility of the reason in the diff is what makes it accountable, and a reviewer is the judge of whether it is a good reason. Do not add a length threshold."
+  - "THE REFUSAL IS EXPLAINED, NOT SILENT. The report must state that an opt-out was found and refused for want of a reason — distinct from the plain missing-declaration message, because the author's next action is different (write a reason, not add a declaration). An author who typed the marker and meant to fill it in must be told."
+  - "A REFUSED OPT-OUT LEAVES THE VERDICT AT BLOCK; it does not fall through to warn even if the path happens to be warn-listed. Precedence when both are present is GE-124d-3's; this AC only requires that a refused reason contributes nothing."
+delivers_to: null
+expects_from:
+  ac_id: GE-124d-2
+  contract: "The opt-out reader whose acceptance threshold this edge case sets — a non-empty, non-placeholder, non-whitespace reason string, with the refusal explained distinctly from a plain missing declaration"
+test_spec:
+  - name: test_ge_124d_2_i_all_three_empty_reason_forms_leave_the_file_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Bare marker, 'N/A', and whitespace-only each run through the real hook and each exits non-zero with verdict 'block' and suppression_reason null. Parameterise over the three — they are three distinct code paths and two of them pass the naive non-empty check."
+  - name: test_ge_124d_2_i_refusal_message_is_distinct_from_a_plain_missing_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The message states that an opt-out was found and refused for want of a reason, and differs from the message for a file with no marker at all. The author's next action differs, so the message must."
+  - name: test_ge_124d_2_i_a_short_but_real_reason_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A genuine but brief reason ('Icons only, no criteria.') is ACCEPTED as pass-with-reason. This is the guard against the over-correction — a minimum-length rule — which the deliberate non-requirement forbids and which a placeholder-rejection test alone would not catch."
+test_rationale: |
+  The three refused forms are three code paths and the criteria say so, but a single
+  parameterised test over them is enough — what the contract must add is the OPPOSITE case. The
+  natural over-correction to "reject placeholders" is a minimum-length rule, which is exactly
+  the quality bar the PO ruled out as theatre, and nothing in the criteria would catch it. So a
+  short-but-real reason is asserted accepted. The distinct-message test matters because the two
+  states send the author to different actions: one writes a reason, the other adds a
+  declaration, and a shared message sends half of them the wrong way.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made the placeholder list an explicit case-insensitive named constant, required the refusal message to differ from a plain missing declaration (different next action), and added the over-correction guard — a short but genuine reason must be accepted, since a minimum-length rule is the natural and forbidden response to placeholder rejection. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The PO's line: "An empty reason is not a reason. 'N/A', blank, or a bare
+  marker with no text must be rejected, or the opt-out becomes a one-token
+  bypass and this AC has delivered nothing."
+
+  All three forms are scenarios because they are three different code paths — a
+  marker with no value at all, a value that is a placeholder token, and a value
+  that is only whitespace. An implementation that checks only "is the reason
+  key present" passes the first, and one that checks only "is the string
+  non-empty" passes the second and third.
+
+  Mock-data invariant: verdict == 'pass-with-reason' implies a non-empty visible
+  reason string.
+
+  DELIBERATE NON-REQUIREMENT: no minimum length, no required author name, no
+  required date. A quality bar the check cannot judge would be theatre; the
+  visibility of the reason in the diff is what makes it accountable, and a
+  reviewer is the judge of whether it is a good reason.

@@ -1,0 +1,99 @@
+id: GE-124c-2-ii
+readiness: approved
+priority: high
+title: "A check that cannot read the criteria store says so instead of passing"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given the staged set contains an in-scope screen component whose declaration
+    names a criterion id
+  And the acceptance-criteria store cannot be reached, so no id can be resolved
+  When the commit-tier declaration check runs
+  Then the check reports that it could not resolve any id and names the reason
+  And its report is distinguishable from a clean pass — it does not print a
+    success message and does not report zero findings as though every id had
+    resolved
+depends_on:
+  - GE-124c-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE UNREACHABLE-STORE STATE MUST BE CARRIED, NOT INFERRED. Consume the third answer GE-124c-2-i's entry point returns (resolved | not-found | store-unreachable). A check that only sees not-found cannot implement this AC at all: it would resolve nothing, find no unresolved ids, and print a pass — 'green' indistinguishable from 'did not run', the exact defect class GE-120 exists to close."
+  - "THE FLOOR IS ANNOUNCE, AND IT IS UNCONDITIONAL. The check must emit an explicit could-not-resolve report naming the reason (store path absent, unreadable, or unparseable) and must NOT emit its normal success line. Silence plus exit 0 is forbidden even under the internal-error fail-open path, because the whole point is that the run is visible."
+  - "OPEN DECISION FOR THE USER — BLOCK OR ANNOUNCE. This AC deliberately does not settle whether an unreachable store should also REJECT the commit. GE-120 fixes the unit of the rule at VISIBILITY, and this component's standing note is explicit that block-versus-announce is a per-check decision with no blanket default. The IT-PO recommendation is ANNOUNCE-ONLY at the commit tier and BLOCK at the CI tier (GE-124e), on the grounds that a developer whose store is unreadable is usually mid-rebase and blocking them helps nobody, whereas a CI run that cannot read the store has produced no evidence and must not be merged on. Confirm before implementing; whichever is chosen, record it in the frontend_ac_declaration config section as a named value rather than as an unlabelled constant."
+  - "DISTINCT FROM THE OTHER TWO DEGRADE PATHS AND MUST NOT BE MERGED WITH THEM: GE-124c-3-i is ONE file unreadable while the run is otherwise sound; GE-124c-1's internal-error fail-open is an unexpected exception in the hook itself. Here the RESOLVER is unavailable and no file can be judged. Three different conditions, three different messages."
+  - "The declaration and pin PARSE results are still valid when the store is unreachable — only resolution is impossible. Missing-declaration findings (GE-124c-1) must still be produced and must still block, because they need no store access."
+delivers_to: null
+expects_from:
+  ac_id: GE-124c-2
+  contract: "The resolution step whose unavailability this edge case requires to be announced rather than silently passed — surfaced as the third state (store-unreachable) on GE-124c-2-i's shared entry point"
+test_spec:
+  - name: test_ge_124c_2_ii_unreachable_store_produces_an_explicit_could_not_resolve_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Run the real hook via subprocess against a staged declared file with the AC store path pointed at a non-existent directory: stdout/stderr must name the reason and must NOT contain the normal success line. Assert the ABSENCE of the pass message as well as the presence of the warning — a check that prints both is indistinguishable from a pass to anyone skimming."
+  - name: test_ge_124c_2_ii_unreachable_store_is_not_reported_as_zero_unresolved_ids
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With the store unreachable, the check's structured result records the unreachable state and does NOT record every declared id as resolved. This is the silent-degrade shape: nothing to resolve against means nothing fails, which reads as everything passing."
+  - name: test_ge_124c_2_ii_missing_declaration_findings_still_block_when_the_store_is_unreachable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Stage an undeclared file with the store unreachable: the missing-component-declaration finding is still produced and still blocks, because it needs no store access. An implementation that abandons the whole run on an unreachable store turns a resolver outage into a global bypass."
+test_rationale: |
+  This is a degrade-path AC, so a positive-path test tells us nothing; all three tests drive the
+  failure condition. The first asserts the ABSENCE of the success line, not merely the presence
+  of a warning — a check that prints both is, to a skimming reader, a pass, and that is the
+  precise defect GE-120 was written for. The third test is the guard against the over-correction:
+  abandoning the entire run when the resolver is unavailable would convert a store outage into a
+  way to bypass the floor, which is a worse failure than the one being fixed. Note the
+  block-versus-announce question is left open in it_requirements; the tests assert visibility
+  only, which is the floor either way, so they remain valid whichever the user chooses.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Tied the behaviour to the three-valued answer GE-124c-2-i must expose (without it this AC is unimplementable), separated it explicitly from the other two degrade paths, and required that missing-declaration findings still block when the store is unreachable so a resolver outage cannot become a global bypass. Recorded an IT-PO recommendation on the open block-versus-announce question (announce at commit, block at CI) for the user to confirm. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  INHERITED, NOT REPEALED — GE-120's standing rule for this component: a check
+  that cannot run says so. A resolver that cannot reach the store would
+  otherwise resolve nothing, find no unresolved ids, and print a pass; "green"
+  would be indistinguishable from "did not run", which is the exact defect class
+  GE-120 exists to close.
+
+  This AC deliberately does NOT decide whether the unreachable-store case should
+  also BLOCK. GE-120's rule fixes the unit at VISIBILITY, and the component
+  standing note is explicit that block-versus-announce is a per-check decision
+  with no blanket default. Flagged for the IT PO and the user to settle;
+  announcing is the floor either way.
+
+  IT-PO RESPONSE TO THAT FLAG (2026-08-25). Recommendation, not a decision:
+  ANNOUNCE at the commit tier, BLOCK at the CI tier. A developer with an
+  unreadable store is usually mid-rebase and blocking them helps nobody; a CI
+  run that could not read the store produced no evidence and must not be merged
+  on. Left open for the user at the final gate; the test contract asserts
+  visibility only, so it holds either way.

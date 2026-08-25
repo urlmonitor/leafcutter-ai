@@ -1,0 +1,130 @@
+id: GE-124a-3
+readiness: approved
+priority: high
+title: "Only a file that renders markup counts as a screen component"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given the staged set contains `components/coverage/gaps-callout.tsx`, which
+    returns a JSX element
+  When the frontend declaration reader decides which staged files are screen
+    components
+  Then `gaps-callout.tsx` is in scope
+  And the reader records the reason it is in scope — an in-scope extension plus
+    rendered markup
+
+  Given the staged set contains `lib/coverage-format.tsx`, which has an in-scope
+    extension and exports only a type alias and a formatting constant, with no
+    JSX element, no `<template>` block and no markup of any kind
+  When the frontend declaration reader decides which staged files are screen
+    components
+  Then `lib/coverage-format.tsx` is out of scope
+  And no declaration verdict of any kind is recorded for it
+  And the reader records the reason it is out of scope — an in-scope extension
+    with no rendered markup
+
+  Given the staged set contains a file whose extension is not one of
+    `.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`
+  When the frontend declaration reader decides which staged files are screen
+    components
+  Then the file is out of scope and no declaration verdict is recorded for it
+depends_on:
+  - GE-124a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE IN-SCOPE DECISION IS ITS OWN FUNCTION WITH ITS OWN RETURN VALUE — {path, in_scope: bool, reason: <enumerated code>} — not a filter predicate whose reasoning is discarded. GE-124d's opt-outs are the pressure valve for this rule being wrong at the edges, and the PO's instruction is that clustered opt-outs are evidence the rule needs narrowing. That evidence is only collectable if the decision records WHY, so `reason` must be a small closed enum (in-scope-markup, no-markup, extension-not-in-scope, re-export-only, story-file, test-file, generated-file), never free prose."
+  - "THE EXTENSION TEST READS GE-124a-2'S SINGLE EXTENSION-TO-FRAMEWORK MAP. Do not hard-code a second extension list here; a second list lets a file be in scope with no framework, or carry a framework while being out of scope."
+  - "MARKUP DETECTION IS HEURISTIC AND MUST FAIL TOWARDS IN-SCOPE, NOT OUT. Detecting JSX/`<template>`/markup in a text scan (no JS AST is available to a Python hook) will be imperfect; when the scan is genuinely ambiguous the file must be treated as IN scope, because a false in-scope is survivable — the author writes a visible opt-out reason (GE-124d-2) that a reviewer can argue with — whereas a false out-of-scope is a silent exemption, indistinguishable from the check not running (GE-120's standing rule for this component)."
+  - "OUT OF SCOPE MEANS NO RECORD AT ALL, not a record with a passing verdict. Every downstream count (GE-124c-3's pass records, GE-124g-3's declared axis) treats an absent record and a passing record differently, and conflating them inflates every figure built on this check."
+  - "The in-scope decision runs BEFORE the declaration and pin readers, so an out-of-scope file is never parsed. This is both the latency lever for a large staged set and the reason no verdict can leak from an out-of-scope file."
+  - "Must handle errors gracefully per the project error handling policy; a file that cannot be read for the markup test is GE-124c-3-i's named-and-skipped path."
+delivers_to:
+  agent: python-coder
+  contract: "The per-staged-file in-scope decision {path, in_scope: bool, reason: <enumerated code>} consumed by every commit-tier verdict in GE-124c, by the escape reporting in GE-124d, and — as the evidence for whether this rule needs narrowing — by any review of clustered opt-outs. An out-of-scope file yields this decision record and NO declaration verdict."
+expects_from: null
+test_spec:
+  - name: test_ge_124a_3_markup_bearing_file_is_in_scope_with_a_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A .tsx file returning a JSX element is in_scope with reason 'in-scope-markup'. Assert the reason code, not just the boolean — the boolean alone passes on a filter that discards the evidence GE-124d needs."
+  - name: test_ge_124a_3_markup_free_module_with_an_in_scope_extension_is_out_of_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A .tsx exporting only a type alias and a constant is out of scope with reason 'no-markup', and NO declaration verdict record exists for it. Assert the absence of the verdict record explicitly — a passing verdict here is the inflation this AC exists to prevent."
+  - name: test_ge_124a_3_out_of_scope_extension_yields_no_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A staged .py, .css and .md file each produce reason 'extension-not-in-scope' and no declaration verdict. Also assert the in-scope extension set equals the key set of GE-124a-2's framework map — one map, not two."
+  - name: test_ge_124a_3_ambiguous_markup_scan_resolves_to_in_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A file whose markup detection is genuinely ambiguous (e.g. JSX returned from a helper the scan cannot follow) is treated as IN scope. This is the fail-towards-visible direction: a false in-scope produces a reviewable opt-out, a false out-of-scope produces a silent exemption that reads exactly like the check not running."
+test_rationale: |
+  The reachability floor is charged once for the whole commit tier at GE-124c-1, whose
+  entry-point test blocks on a real undeclared staged file; adding a second subprocess run here
+  would re-prove the same wiring. What is specific to this AC is the SHAPE of its output —
+  a reason code, and the absence of a verdict record for out-of-scope files — so the tests
+  assert both rather than the boolean alone. A test that asserts only `in_scope is False`
+  passes on an implementation that discards the reason, which would silently remove the
+  evidence the PO requires for judging whether the rule needs narrowing. The ambiguity test is
+  a failure-direction test: it pins which way an imperfect heuristic must err, and that
+  direction is not inferable from the criteria.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made the in-scope decision a first-class record with a closed reason enum (the evidence GE-124d's clustered-opt-out review needs), pointed the extension test at GE-124a-2's single framework map, pinned the ambiguity direction to fail-towards-in-scope per GE-120, and required out-of-scope to mean no record rather than a passing one. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124a-3-i
+  - GE-124a-3-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ANSWERS THE PO's OPEN QUESTION on GE-124a — deliberately, in one place, so
+  the file glob does not decide it silently. The rule is TWO-PART: an in-scope
+  extension AND rendered markup in the file. Extension alone over-reaches
+  exactly as the PO warned (helpers, hooks, type-only modules and barrels all
+  share the extensions); markup-bearing is the narrowest rule that still
+  catches every file that can put something on a screen.
+
+  The recorded reason is not decoration. GE-124d's opt-outs are the pressure
+  valve for this rule being wrong at the edges, and the PO's instruction is
+  that clustered opt-outs are evidence the rule needs narrowing. That evidence
+  is only collectable if the in-scope decision says why.
+
+  Named exclusions that survive the markup test (stories, tests, generated
+  files, barrels) are GE-124a-3-i and GE-124a-3-ii.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). Markup detection has no exact
+  implementation available to a Python pre-commit hook — there is no JS AST in
+  that process. The criteria do not say which way an imperfect scan should err,
+  and that choice determines whether the guardrail's errors are visible or
+  silent. Pinned to fail-towards-in-scope, with GE-124d-2 as the accountable
+  exit.

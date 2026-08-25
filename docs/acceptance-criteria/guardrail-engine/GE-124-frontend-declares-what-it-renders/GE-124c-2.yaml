@@ -1,0 +1,132 @@
+id: GE-124c-2
+readiness: approved
+priority: high
+title: "An id that resolves to nothing is reported as its own verdict, not as a missing declaration"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given the staged set contains `components/coverage/coverage-explorer.tsx`
+  And its component-level declaration names KM-200f and UXP-609-3
+  And UXP-609-3 resolves to no criterion in the acceptance-criteria store
+  When the commit-tier declaration check runs
+  Then the commit is rejected
+  And a finding is reported with the code "unresolved-ac-id", not
+    "missing-component-declaration"
+  And the finding names the unresolvable value "UXP-609-3"
+  And the finding names the ids that did resolve, so the author can see the
+    declaration was read
+
+  Given a staged screen component whose component-level declaration resolves
+    fully
+  And one of its element pins names an id that resolves to no criterion
+  When the commit-tier declaration check runs
+  Then the commit is rejected
+  And a finding is reported with the code "unresolved-ac-id" naming the element's
+    line number and the unresolvable value
+depends_on:
+  - GE-124c
+  - GE-124a-1
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "RESOLUTION GOES THROUGH THE ONE SHARED ENTRY POINT IN scripts/ac_store/ac_coverage_resolver.py, never through a private store read in this hook. IMPLEMENTATION FACT the implementer must not rediscover: that module has NO public id-resolution function today — its API is ticket-shaped (resolve_coverage, verify_ticket_coverage, compute_verdict) and its only record load is the private path-based _load_ac_record. A public id-to-record entry point must be ADDED, backed by the existing scripts/commit_guardian/_ac_store_index.get_ac_index rather than by a third store walker. ac_coverage_resolver.py is already in build_ac_store's deploy_map, so no new manifest entry is needed for it — but _ac_store_index must be reachable from wherever the new entry point lives."
+  - "BOTH SURFACES ARE RESOLVED. Every id in declares[] and every id in every pin's ac_ids[] goes through resolution. A check that resolves only the component-level ids lets a typo in a pin ship silently, and the pin is the surface GE-124f-3 derives a test selector from, so the typo would resurface later as a selector that matches nothing."
+  - "MISSING AND UNRESOLVED ARE DIFFERENT CODES WITH DIFFERENT REMEDIES AND MUST NEVER BE FOLDED. 'You did not say' is fixed by adding a declaration; 'what you said is not true' is fixed by correcting the id or authoring the criterion. A reviewer told the wrong one wastes the whole remediation. This is the same distinction GE-117 draws, and the mock-data artifact states it as an invariant."
+  - "THE FINDING NAMES THE IDS THAT DID RESOLVE ALONGSIDE THE ONE THAT DID NOT, so the author can see the declaration was read rather than assuming the parser failed. For a pin, it additionally names the element's line number (available on the pin record, GE-124b-1)."
+  - "A nearest-id suggestion (as in the mock record gf-commit-coverage-explorer-unresolved) is desirable but must be computed from the shared resolver's index, never from a second scan, and must degrade silently to no suggestion rather than failing the check."
+  - "Resolution must complete within the pre-commit latency budget over the current store (roughly 3,000 records) — rely on _ac_store_index's existing fingerprinted cache rather than re-walking the store per id."
+  - "Must handle errors gracefully per the project error handling policy; an unreachable store is GE-124c-2-ii's contract, not a resolution failure per id."
+delivers_to:
+  agent: python-coder
+  contract: "The 'unresolved-ac-id' finding — carrying the unresolvable value, the ids that did resolve, and (for a pin) the element line number — so the remediation reads 'correct the id or author the criterion' rather than 'add a declaration'. Resolution comes from the single shared entry point in scripts/ac_store/ac_coverage_resolver.py that GE-124c-2-i requires GE-111 and GE-117 to share."
+expects_from:
+  ac_id: GE-124a-1
+  contract: "The declared id list (declares[]) and, via GE-124b-1, the per-pin ac_ids[] whose resolution this AC evaluates — both surfaces, resolved through the one shared resolver entry point"
+test_spec:
+  - name: test_ge_124c_2_unresolvable_declared_id_yields_unresolved_ac_id_not_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A file declaring one resolvable and one unresolvable id yields a finding with code 'unresolved-ac-id' and NO finding with code 'missing-component-declaration' for that subject. Assert the absence of the wrong code explicitly — the distinction is the point of the AC and asserting only the right code passes on an implementation that emits both."
+  - name: test_ge_124c_2_unresolvable_pin_id_is_reported_with_its_line_number
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A file whose component declaration resolves fully but whose pin names an unresolvable id still blocks, with code 'unresolved-ac-id' naming the value and the element's real line. This is the surface a resolver that only checks declares[] misses entirely."
+  - name: test_ge_124c_2_finding_names_the_ids_that_did_resolve
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The message includes the resolved id KM-200f alongside the unresolvable UXP-609-3, so the author can see the declaration was read. Assert the rendered message."
+  - name: test_ge_124c_2_resolution_reflects_the_real_on_disk_store_not_a_hand_built_index
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Build a temp AC store with the project's real serializer (yaml.safe_dump, block lists at column 0), point the shared resolver at it, and assert an id present on disk resolves and an absent one does not. Then ADD a record to that store and assert the previously-unresolvable id now resolves without any other change — this catches a resolver holding its own snapshot or a stale cache, which a hand-built index fixture cannot expose."
+test_rationale: |
+  The defining behaviour of this AC is a negative — the finding must NOT be
+  missing-component-declaration — so the tests assert the absence of the wrong code, not just
+  the presence of the right one; an implementation that emits both passes the weaker form while
+  destroying the distinction the tier is built on. The pin-surface test is separate because a
+  resolver wired only to declares[] passes every declaration-side test. The fourth test uses a
+  real on-disk store written by the real serializer and mutates it mid-test, because the
+  failure this AC is most exposed to is a resolver with its own cache or snapshot: it agrees
+  today and disagrees after the next authoring run, and no hand-built index fixture can show
+  that. That test is also the local half of GE-124c-2-i's cross-check agreement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Recorded that scripts/ac_store/ac_coverage_resolver.py has NO public id-resolution function today (its API is ticket-shaped) so one must be added, backed by the existing _ac_store_index.get_ac_index rather than a third store walker; noted the module is already in build_ac_store's deploy_map. Required both surfaces to be resolved and the wrong-code absence to be asserted. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124c-2-i
+  - GE-124c-2-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  VERDICT 2 of four. The PO's reasoning, carried verbatim in intent: "you did
+  not say" and "what you said is not true" are different mistakes with different
+  fixes, and a reviewer who is told the wrong one wastes the whole remediation.
+  This is the same distinction GE-117 draws between missing and invalid.
+
+  BOTH SURFACES ARE VALIDATED — the second scenario exists because the element
+  pin is optional but, per GE-124b, always validated when present. A check that
+  resolved only the component-level ids would let a typo in a pin ship silently,
+  and the pin is the surface a test selector is derived from (GE-124f-3), so the
+  typo would surface later as a selector that matches nothing.
+
+  Which resolver answers the question is GE-124c-2-i, and it is not a free
+  choice.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25), verified in the working tree. The "shared
+  resolver" named across this tree exists as a FILE but not as a shared
+  ID-RESOLUTION SERVICE: scripts/ac_store/ac_coverage_resolver.py resolves
+  TICKETS to their AC coverage and exposes no id-to-record function. The id
+  index that actually exists is scripts/commit_guardian/_ac_store_index.py
+  (get_ac_index, fingerprint-cached). The work implied by GE-124c-2-i is
+  therefore: add a public entry point to ac_coverage_resolver.py over
+  _ac_store_index, then migrate GE-111 and GE-117 onto it. That is real work
+  and it is larger than "call the existing resolver".

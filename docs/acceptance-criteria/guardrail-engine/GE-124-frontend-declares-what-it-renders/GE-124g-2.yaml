@@ -1,0 +1,137 @@
+id: GE-124g-2
+readiness: approved
+priority: high
+title: "Passing the declaration gate never finishes a criterion, and never says it did"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+criteria: |
+  Given the criterion KM-ADM-004 is pinned on a rendered element and has no
+    covering test
+  When the reverse-direction declaration gate passes for it
+  Then the criterion is still treated as unfinished by the done gate
+  And no tool marks it finished on the strength of the declaration gate passing
+
+  Given the same criterion
+  When the reverse-direction declaration gate reports its pass
+  Then the message says the criterion is declared and names where
+  And the message does not describe the criterion as verified, covered, proven,
+    tested or satisfied
+
+  Given a criterion that is declared and untested, and a criterion that is
+    tested and undeclared
+  When each is assessed for whether it is finished
+  Then both are unfinished, and each report names the specific obligation that
+    is unmet
+
+  Given any attempt to configure the declaration gate to satisfy, relax or stand
+    in for the test-proof obligation
+  When the configuration is loaded
+  Then no such setting exists and the two obligations remain independent
+depends_on:
+  - GE-124g
+  - GE-124e-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE BANNED-WORD SET IS AN EXPLICIT, IMPORTABLE CONSTANT — at minimum verified, covered, proven, tested, satisfied — checked against every message the declaration gate emits for a PASS, case-insensitively and including inflections (verify/verified/verification, prove/proven, cover/covered/coverage). Enumerating it is what makes this testable rather than a matter of taste. The message must say DECLARED and name where."
+  - "THE MESSAGE CLAUSE IS NOT COSMETIC. A gate that behaves correctly while printing 'UXP-607 verified' teaches every reader the wrong thing, and the reader is the mechanism by which the substitution actually happens — nobody writes a line of code saying a declaration is a test; they read a green message and stop looking."
+  - "NO TOOL MAY DERIVE done FROM A DECLARATION-GATE PASS. Audit the writers, not just the gate: mark_ac_done.py, the fast-lane completion path, and any agent or workflow that flips work_status must have no code path in which the declaration gate's result is an input to that decision. This is a search-and-assert obligation across the store's write surfaces, not a property of one module — which is why this is M and not S."
+  - "THE TWO OBLIGATIONS ARE INDEPENDENT INPUTS TO 'IS IT FINISHED', COMBINED BY CONJUNCTION. A UI criterion is unfinished if EITHER is unmet, and each report names the specific obligation. GE-124e-3-i owns the enforcement-side independence (the two gates must FAIL independently); this AC bounds what PASSING one of them is worth. Both are needed and neither substitutes for the other."
+  - "NO CONFIGURATION KEY MAY MAKE THE DECLARATION GATE SATISFY, RELAX OR STAND IN FOR THE TEST-PROOF OBLIGATION, and the key must be refused by name if supplied (GE-124g-1-i)."
+  - "THE WORKED CASE IS KM-ADM-004: pinned on a real element with covered_by empty. The mock-data artifact carries it deliberately so the dataset cannot be read as making a pin substitute for coverage — use it as the fixture rather than inventing one."
+delivers_to:
+  agent: python-coder
+  contract: "A declaration-gate result the done assessment consumes as ONE of two independent obligations combined by conjunction, carrying language drawn from an explicit banned-word constant so no pass message can be read as proof. No store write path — mark_ac_done.py, the fast-lane completion path, or any agent flipping work_status — may take the declaration gate's result as an input to marking a criterion finished."
+expects_from:
+  ac_id: GE-124e-3
+  contract: "The reverse-direction gate result whose worth this AC bounds — its pass value, and the message text whose vocabulary this AC constrains"
+test_spec:
+  - name: test_ge_124g_2_declared_but_untested_criterion_is_still_unfinished
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The KM-ADM-004 shape — pinned on a real element, covered_by empty — passes the declaration gate and is still assessed as unfinished. Run both the real declaration gate and the real done assessment; an in-process assertion about one function cannot show the conjunction."
+  - name: test_ge_124g_2_pass_message_contains_no_word_from_the_banned_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Every pass message the declaration gate emits, over a fixture exercising each pass shape, is free of verified/covered/proven/tested/satisfied and their inflections, and does contain 'declared' plus the location. Assert against the messages the gate really renders and against the importable banned-word constant, not a literal list retyped in the test."
+  - name: test_ge_124g_2_no_store_write_path_marks_a_criterion_done_from_a_declaration_gate_pass
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Drive each store write path that can set work_status — mark_ac_done.py and the fast-lane completion path — for a criterion that passes the declaration gate and has no covering test, and assert none of them marks it done. This is the assertion that actually protects the guarantee; the message test protects the reader, this one protects the data."
+  - name: test_ge_124g_2_the_two_half_finished_states_each_name_their_own_unmet_obligation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Declared-and-untested reports the missing test; tested-and-undeclared reports the missing declaration. Both are unfinished, and the two reports differ. Complements GE-124e-3-i, which asserts the two GATES fail independently; this asserts the two REPORTS say different things."
+test_rationale: |
+  Two distinct things need protecting and they need different tests. The data guarantee — that
+  nothing marks a criterion done on the strength of a declaration — is protected by driving the
+  real store write paths, because the substitution would be implemented in a writer, not in the
+  gate. The reader guarantee is protected by the banned-word test, and that test is not
+  cosmetic: nobody writes code asserting a declaration is a test, they read a green message
+  saying 'verified' and stop looking, so the message is the actual transmission mechanism. Both
+  are asserted against real artifacts — real gate output, real writers — because a
+  message-template assertion passes on a template that is never rendered and a writer assertion
+  in process passes on a writer nothing calls.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made the banned-word set an importable constant covering inflections, and — the substantive addition — required an audit of the store WRITE paths (mark_ac_done.py, the fast-lane completion path, any agent flipping work_status) rather than only the gate, since the substitution would be implemented in a writer. That search-and-assert obligation across write surfaces is why this stays M. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLACE 2 OF FOUR. THIS GATE IS NECESSARY, NEVER SUFFICIENT — the PO calls it
+  the sharpest risk in the whole tree.
+
+  THE MESSAGE CLAUSE IS NOT COSMETIC and is the reason it is a scenario of its
+  own. A gate that behaves correctly while printing "UXP-607 verified" teaches
+  every reader the wrong thing, and the reader is the mechanism by which the
+  substitution actually happens — nobody writes a line of code that says a
+  declaration is a test, they read a green message and stop looking. The banned
+  words are enumerated so the check on this is testable rather than a matter of
+  taste.
+
+  The worked case is KM-ADM-004: pinned on a real element, `covered_by` empty.
+  The mock-data artifact carries it deliberately so the dataset cannot be read
+  as making a pin substitute for coverage.
+
+  RELATIONSHIP TO GE-124e-3-i: that L3 requires the two gates to FAIL
+  independently; this AC bounds what PASSING one of them is worth. Both are
+  needed — the first stops one gate suppressing the other, the second stops a
+  pass being read as a finish.
+
+  IT-PO NOTE (2026-08-25). The criteria say "no tool marks it finished on the
+  strength of the declaration gate passing". That is an obligation on the store's
+  WRITE surfaces, not on the gate, and it is the half most likely to be skipped
+  because it requires looking outside the file being built. mark_ac_done.py and
+  the fast-lane completion path are the two concrete places to check.

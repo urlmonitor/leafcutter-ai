@@ -1,0 +1,103 @@
+id: GE-124c-3-i
+readiness: approved
+priority: high
+title: "One unreadable file does not block the rest of the commit, and is named"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given the staged set contains two in-scope screen components
+  And one of them cannot be read by the declaration check — its markup does not
+    parse
+  And the other carries a component-level declaration whose ids all resolve
+  When the commit-tier declaration check runs
+  Then the unreadable file does not cause the commit to be rejected
+  And the unreadable file is named in the check's output together with the
+    reason it could not be read
+  And the readable file is still evaluated and its pass record is still produced
+depends_on:
+  - GE-124c-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-116-consistent-agent-config"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "PER-FILE ERROR CONTAINMENT. Wrap each file's read-and-parse individually so one failure cannot abort the loop; the component's deliberate fail-open convention (approved as GE-116a-1-iii) is that one unparseable input must not block an unrelated commit. Catch specific exception types per the project error handling policy — never a bare except — and log at WARNING or higher."
+  - "SKIPPED-AND-NAMED IS A RECORDED OUTCOME, NOT A LOG LINE THAT SCROLLS PAST. The unreadable file appears in the check's output with the reason (decode error, unterminated construct, whatever the read actually failed on). A file skipped quietly is a permanent hole the author never learns about, and is the shape of a check that passes because it did nothing — GE-120's line."
+  - "SKIPPED IS NOT PASSED AND NOT EXAMINED. The unreadable file must not receive a pass record and must not be counted as declared anywhere. It occupies its own outcome, distinct from GE-124c-3's not-examined (never in the staged set) and from a genuine pass."
+  - "DISTINCT FROM GE-124c-2-ii, AND THE TWO MESSAGES MUST DIFFER: there the RESOLVER is unavailable and no file can be judged; here one FILE is unreadable and the rest of the run is sound. Merging the two messages would tell an author to check their AC store when the real problem is their markup."
+  - "The exit code is decided from the OTHER files' verdicts. An unreadable file contributes nothing to the block decision in either direction — it neither blocks nor rescues a run that would otherwise block."
+delivers_to: null
+expects_from:
+  ac_id: GE-124c-3
+  contract: "The proceed branch this edge case extends to a partially-unreadable staged set, plus the pass-record path that must still run for the readable files in that same set"
+test_spec:
+  - name: test_ge_124c_3_i_unreadable_file_is_named_with_its_reason_and_does_not_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Stage one unparseable file and one correctly declared file, run the hook via subprocess: exit 0, the unparseable path and its reason appear in the output, and the declared file's pass record is present. Assert all three together — exit 0 alone passes on a hook that swallowed the file silently, which is the exact hole this AC closes."
+  - name: test_ge_124c_3_i_unreadable_file_receives_no_pass_record_and_is_not_counted_as_declared
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The skipped file appears in the skipped outcome only: no pass record, and it contributes nothing to any declared count. Skipped is its own state, not a quiet success."
+  - name: test_ge_124c_3_i_an_unreadable_file_does_not_rescue_a_run_that_would_otherwise_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Stage an unparseable file alongside an undeclared in-scope file: the run still exits non-zero for the undeclared one. An implementation that treats any read failure as 'degrade the whole run to advisory' would turn a malformed file into a universal bypass."
+test_rationale: |
+  Exit 0 is the wrong assertion on its own here — it is satisfied by the very failure this AC
+  exists to prevent, a file swallowed in silence. Every test therefore pairs the tolerance
+  assertion with a visibility assertion, and all of them drive the hook from its entry point,
+  because 'the run continued and said so' is a property of the process output rather than of
+  any function's return value. The third test is the over-correction guard: the shortest path
+  to satisfying the first two is to catch broadly and downgrade the whole run, which would let
+  anyone bypass the floor by staging one malformed file alongside their undeclared component.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required per-file error containment with typed exceptions per the error-handling policy, made skipped-and-named a recorded outcome distinct from both not-examined and pass, separated its message from GE-124c-2-ii's, and added the over-correction guard — a malformed file must not degrade the whole run to advisory and become a universal bypass. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The component's deliberate fail-open convention (approved as GE-116a-1-iii):
+  one unparseable input must not block an unrelated commit. GE-120 does not
+  repeal it — the line GE-120 draws is that failing open on ONE bad input while
+  the check still ran is fine, whereas reporting success for a check that never
+  ran is not.
+
+  The last two clauses are what keep this from becoming a silent bypass. A file
+  that is skipped and named can be fixed; a file that is skipped quietly is a
+  permanent hole an author never learns about, and is the shape of a check that
+  passes because it did nothing.
+
+  Distinct from GE-124c-2-ii: there the RESOLVER is unavailable and no file can
+  be judged; here one FILE is unreadable and the rest of the run is sound.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). The tree now has three degrade paths that
+  an implementer will be tempted to merge into one broad handler: this one (one
+  file), GE-124c-2-ii (the store), and GE-124c-1's internal-error fail-open (the
+  hook itself). Each has a different message and a different effect on the exit
+  code; merging them produces a check that tells authors to fix the wrong thing.

@@ -1,0 +1,122 @@
+id: GE-124c-2-i
+readiness: approved
+priority: high
+title: "One shared resolver answers 'is this a real criterion id' for all three traceability checks"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given the same criterion id string is presented to the frontend declaration
+    check, to the code-declaration check that GE-117 governs, and to the
+    traceability check that GE-111 governs
+  When each check decides whether the id resolves
+  Then all three return the same answer for that id
+  And all three obtained it from the one shared resolver, with no private
+    resolution path in any of them
+
+  Given the acceptance-criteria store gains a new criterion
+  When the same id is presented to all three checks without any further change
+  Then all three now resolve it
+depends_on:
+  - GE-124c-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE ENTRY POINT MUST BE CREATED, NOT MERELY CALLED. scripts/ac_store/ac_coverage_resolver.py exposes no id-resolution function as of 2026-08-25 (public API: resolve_coverage, compute_verdict, verify_ticket_coverage, main; the only record load is the private path-based _load_ac_record). Add one public function there — id in, resolved record or None out — implemented over scripts/commit_guardian/_ac_store_index.get_ac_index, which is the store index that already exists and is already fingerprint-cached. Do NOT add a third walker."
+  - "MIGRATE GE-111 AND GE-117 ONTO IT IN THE SAME CHANGE, or this AC has not been satisfied. GE-117a-1's own it_requirements currently direct it to resolve component names against docs/components.json via check_components_integrity's loader, and its symbol-AC surface resolves ids by its own route; GE-111's reconciliation reads AC records for itself. This AC is a REFACTOR of two existing consumers plus one new one, not a greenfield addition — size it accordingly and expect to touch check_declaration_traceability and the GE-111 reconciliation check."
+  - "SCOPE THE MIGRATION TO AC-ID RESOLUTION ONLY. GE-117's component-name resolution against docs/components.json is a DIFFERENT namespace and must stay where it is; folding it in would make the shared resolver answer two unrelated questions and reintroduce the ambiguity this AC removes."
+  - "NO CACHE OF ITS OWN, NO SNAPSHOT. The entry point must observe the store as it stands at call time, invalidating through _ac_store_index's existing fingerprint mechanism. A resolver holding a private snapshot agrees with its siblings today and disagrees after the next authoring run — the second drift shape the criteria's second scenario targets."
+  - "THE DEPLOYED LAYOUT MUST WORK. ac_coverage_resolver.py is already in build_ac_store's deploy_map; whatever it now imports (_ac_store_index and its disk-cache helper) must be reachable in the deployed layout too. Verify by running the deployed hooks after a build.py round-trip, not only the source-tree tests."
+  - "Fail-open behaviour on an unreachable store belongs to GE-124c-2-ii and to each check's own policy; the shared entry point must surface 'could not read the store' as a state distinct from 'resolved to nothing', or all three checks lose the ability to honour GE-120."
+delivers_to:
+  agent: python-coder
+  contract: "A single public id-resolution entry point on scripts/ac_store/ac_coverage_resolver.py, backed by _ac_store_index.get_ac_index, with GE-111's and GE-117's private resolution paths migrated onto it. It distinguishes three answers — resolved, not-found, store-unreachable — because GE-124c-2-ii and GE-120 need the third kept apart from the second."
+expects_from:
+  ac_id: GE-124c-2
+  contract: "The resolution question whose answer this AC requires to come from one place, for both the declared-id and pinned-id surfaces"
+test_spec:
+  - name: test_ge_124c_2_i_all_three_checks_agree_on_the_same_id_against_one_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Point all three checks at one temp AC store and present the same id to each: assert the three verdicts are equal, for a resolvable id and for an unresolvable one. Written as an observable agreement rather than 'they import the same module', because a copy that imports the shared resolver and then overrides its answer passes an import assertion and fails this one."
+  - name: test_ge_124c_2_i_adding_a_record_makes_all_three_resolve_it_with_no_other_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Write a new AC record into the temp store with the project's real serializer, then re-present the id to all three checks IN THE SAME PROCESS and assert all three now resolve it. This is the cache/snapshot drift shape: a resolver with a private snapshot agrees on the first assertion and fails this one."
+  - name: test_ge_124c_2_i_store_unreachable_is_a_third_answer_not_a_not_found
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With the store path absent or unreadable, the entry point returns the store-unreachable state rather than not-found. Without this third answer GE-124c-2-ii cannot be implemented and all three checks would silently report 'nothing resolved' as a clean pass."
+  - name: test_ge_124c_2_i_no_check_retains_a_private_ac_id_resolution_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Monkeypatch the shared entry point to return not-found for every id, then run each of the three checks over a store where the ids DO exist: each must report unresolved. Any check still holding a private path keeps resolving and fails this test. This is the behavioural form of 'no private resolution path' — a grep for import lines is not."
+test_rationale: |
+  The obvious test here is a grep for a shared import, and it is worthless: a check that imports
+  the shared resolver and then overrides its answer passes it. The BA already wrote the criteria
+  as an observable agreement, and the contract carries that through with a fourth test that is
+  the real teeth — force the shared entry point to lie, and assert every check believes it. Any
+  surviving private path is then the only thing that can keep resolving, and it fails. The
+  second test mutates a real on-disk store mid-process because the second drift shape (a private
+  snapshot or cache) is invisible to a single-point agreement test. The third test exists
+  because GE-124c-2-ii is unimplementable unless the entry point distinguishes 'store
+  unreachable' from 'not found'.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Raised complexity S->M and recorded why: the shared entry point does not exist yet and this AC is a refactor of GE-111's and GE-117's existing private resolution paths, not a greenfield call. Scoped the migration to AC-id resolution only (GE-117's components.json namespace stays put), required a three-valued answer so GE-124c-2-ii is implementable, and added the monkeypatch-the-resolver test that actually detects a surviving private path. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The L0's SHARED RESOLVER constraint, made testable. Three private copies
+  drift, and the user-visible symptom of drift is that the same id is accepted
+  by one check and rejected by another — which destroys the reason to trust any
+  of them.
+
+  Written as an observable agreement between the three checks rather than as
+  "they import the same module", so the test cannot be discharged by a grep for
+  an import line. A structural test would pass on a copy that imports the shared
+  resolver and then overrides its answer; the agreement test would not.
+
+  The second scenario catches the other drift shape: a resolver with its own
+  cache or its own snapshot of the store, which agrees today and disagrees after
+  the next authoring run.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25) — THIS IS THE LARGEST HIDDEN ITEM IN THE
+  TREE. The mock-data invariant records the resolver path as settled, and the L0
+  presents sharing it as a constraint rather than as work. In the working tree
+  it is work: ac_coverage_resolver.py has no id-resolution function, GE-117 and
+  GE-111 each resolve for themselves, and _ac_store_index is the index that
+  actually exists. Complexity raised from S to M on that basis. If GE-111's and
+  GE-117's own trees are built before this one, they will each have shipped a
+  private path that this AC then has to unpick — worth sequencing deliberately.

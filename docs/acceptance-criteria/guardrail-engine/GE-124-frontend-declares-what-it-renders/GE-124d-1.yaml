@@ -1,0 +1,126 @@
+id: GE-124d-1
+readiness: approved
+priority: high
+title: "A named path can be put on the warn tier, and every path that is not stays blocking"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+criteria: |
+  Given the warn list names the path `storefront-jsx/src/components/`
+  And the staged set contains `storefront-jsx/src/components/CartSummary.jsx`,
+    an in-scope screen component with no component-level declaration
+  When the commit-tier declaration check runs
+  Then the commit proceeds
+  And a finding is still reported for that file with the verdict "warn" and the
+    code "missing-component-declaration"
+  And the finding states that the path is on the warn list and that every other
+    path blocks
+
+  Given the warn list is empty
+  And the staged set contains an in-scope screen component with no
+    component-level declaration
+  When the commit-tier declaration check runs
+  Then the commit is rejected with the verdict "block"
+
+  Given the warn list names `storefront-jsx/src/components/`
+  And the staged set contains `storefront-vue/src/pages/PlantListingPage.vue`
+    with no component-level declaration
+  When the commit-tier declaration check runs
+  Then the commit is rejected with the verdict "block" for the Vue file
+depends_on:
+  - GE-124d
+  - GE-124c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE WARN LIST LIVES IN commit_guardian.json UNDER THE `frontend_ac_declaration` SECTION (key `warn_paths`, as the mock record gf-commit-cart-summary-warn already names), in BOTH the templates/scripts/commit_guardian/ and scripts/commit_guardian/ copies. A list in a new bespoke config file would be a second configuration surface for one hook and would miss the build parity check."
+  - "MATCHING IS PATH-PREFIX ON REPO-RELATIVE, FORWARD-SLASH-NORMALISED PATHS, ANCHORED AT A DIRECTORY BOUNDARY. `storefront-jsx/src/components/` must not match `storefront-jsx/src/components-legacy/Foo.jsx`. Normalise before comparing — a Windows-style separator or a leading `./` slipping through would silently widen or narrow the list."
+  - "ABSENT AND EMPTY BOTH MEAN 'NOTHING IS ON WARN'. The default for a missing `warn_paths` key, an empty list and a null value is identical: every path blocks. An implementation that reads a missing key as 'unconfigured, therefore permissive' silently repeals the L0 — this is the second scenario and it is a real default-handling bug, not a hypothetical."
+  - "WARN DOWNGRADES THE VERDICT FIELD ON THE EXISTING FINDING; IT DOES NOT SUPPRESS THE FINDING AND DOES NOT CREATE A SECOND ONE. A warn that suppresses the finding is indistinguishable from the file being out of scope, and an area on the warn tier is meant to be visibly unfinished, not invisible. GE-124d-3 fixes the exclusivity."
+  - "THE MESSAGE MUST NAME THE LIST AND THE DEFAULT — that this path is on frontend_ac_declaration.warn_paths and that every other path blocks — so a reader of the output learns the tier is an opt-in rather than assuming the check is advisory everywhere."
+  - "A warn-tier finding must not change the exit code. Collect warn findings alongside block findings and decide the exit from the block set alone; an implementation that returns early on the first warn will also skip the block findings after it."
+delivers_to:
+  agent: python-coder
+  contract: "The per-path warn-tier lookup over commit_guardian.json's frontend_ac_declaration.warn_paths, downgrading the verdict field on an existing finding from 'block' to 'warn' for listed paths only, with the finding still reported and the exit code unaffected. Absent, empty and null warn_paths are all equivalent to 'every path blocks'."
+expects_from:
+  ac_id: GE-124c-1
+  contract: "The block verdict this escape downgrades, and the finding record whose verdict field it re-labels — never a second record"
+test_spec:
+  - name: test_ge_124d_1_listed_path_warns_and_the_commit_proceeds_with_the_finding_still_shown
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The CartSummary worked case: with warn_paths naming its directory, the real hook exits 0 AND prints a finding with verdict 'warn' and code 'missing-component-declaration' naming the list. Assert both the exit code and the finding's presence — exit 0 alone passes on a warn that suppresses the finding, which is the failure mode this AC names."
+  - name: test_ge_124d_1_absent_empty_and_null_warn_paths_all_block
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Run the same undeclared file under three configurations — no warn_paths key, warn_paths: [], warn_paths: null — and assert all three exit non-zero with verdict 'block'. Reading a missing key as permissive is a real default-handling bug that silently repeals the L0."
+  - name: test_ge_124d_1_a_listed_prefix_does_not_leak_to_unlisted_siblings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "With warn_paths naming `storefront-jsx/src/components/`, a file in `storefront-vue/src/pages/` blocks, and — the sharper case — a file in `storefront-jsx/src/components-legacy/` also blocks. Unanchored prefix matching passes the first and fails the second."
+  - name: test_ge_124d_1_a_warn_finding_does_not_mask_a_block_finding_in_the_same_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Stage one warn-listed undeclared file and one unlisted undeclared file together: the run exits non-zero and names both, with the correct verdict on each. An implementation that returns early on the first warn would exit 0 and skip the block entirely."
+test_rationale: |
+  Three of these tests drive the hook from its entry point because the promise is about the
+  EXIT CODE and the output together, and neither is observable from the verdict function alone
+  — a warn that computes correctly and then suppresses the finding, or one that short-circuits
+  the run, both pass an in-process verdict assertion. The three-configuration default test is
+  not padding: reading an absent key as permissive is a routine default-handling slip whose
+  effect here is to repeal the entire L0 silently, and the criteria only name the empty-list
+  case. The sibling-directory case (`components-legacy`) is the one that separates anchored
+  prefix matching from naive `startswith`, and the criteria's own example (a different app
+  entirely) does not.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Placed warn_paths in commit_guardian.json's frontend_ac_declaration section (both copies), required directory-boundary-anchored prefix matching on normalised paths, made absent/empty/null identical defaults, and required the warn finding to leave the exit code alone so it cannot mask a block in the same run. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124d-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ESCAPE 1 of the two the PO requires be kept separate. It is an OPT-IN: every
+  path that has not been listed blocks. The second and third scenarios are the
+  two ways that guarantee gets broken in practice — an empty list read as "warn
+  everywhere", and a listed prefix leaking to unlisted siblings.
+
+  THE FINDING IS STILL REPORTED. A warn that suppresses the finding is
+  indistinguishable from the file being out of scope, and an area on the warn
+  tier is meant to be visibly unfinished, not invisible.
+
+  Mock-data invariant: verdict == 'warn' implies the subject's tier is 'warn'.
+  Its contrapositive is what GE-124d-1-i tests.
+
+  IT-PO NOTE (2026-08-25). The criteria's third scenario tests leakage across
+  two different applications, which almost any implementation gets right. The
+  leak that actually happens is a sibling directory sharing a prefix
+  (`components/` matching `components-legacy/`), so that case is added to the
+  test contract rather than to the criteria.

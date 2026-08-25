@@ -1,0 +1,93 @@
+id: GE-124b-1-i
+readiness: approved
+priority: high
+title: "A CSS class is never read as a pin"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given a staged screen component file containing the element
+    `<span class="stock stock--out ac-UXP-100d-2">`
+  And the file contains no `data-ac` attribute
+  When the element-pin reader evaluates the file
+  Then no pins are recorded for the file
+
+  Given a staged screen component file containing the element
+    `<span class="stock stock--{status}" data-ac="UXP-100d-2">`
+  When the element-pin reader evaluates the file
+  Then one pin is recorded with the criteria ["UXP-100d-2"]
+  And the value of the `class` attribute contributes nothing to the recorded
+    criteria
+depends_on:
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE PIN SOURCE IS THE ATTRIBUTE NAME `data-ac`, MATCHED EXACTLY. Not a prefix match, not a substring search for an id pattern anywhere in the tag. `className`, `class`, `data-testid`, `data-screen` and any `data-ac-*` variant contribute nothing to ac_ids. The mock-data invariant is absolute: AcDeclaration.attribute == 'data-ac' for every record."
+  - "BOTH ATTRIBUTES ON ONE ELEMENT IS THE REAL CASE, NOT THE EDGE CASE. Real pinned elements carry class and data-ac together (mock record `decl-stock-badge`), and class values contain framework interpolation (`stock--{status}`, `${styles.x}`) that must not confuse the attribute scan. Parse the opening tag attribute-wise rather than regexing the whole tag for id-shaped tokens."
+  - "This constraint applies to the whole pipeline, not just the reader: no report, selector or store field may reconstruct a pin from a class name. A class-derived marker is mangled by CSS-modules hashing and purged by Tailwind content scanning, so it would produce a traceability link that exists in source and not in the built product — worse than none."
+delivers_to: null
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The pin record whose attribute source this edge case pins to data-ac alone — exact attribute-name match, with class/className contributing nothing to ac_ids"
+test_spec:
+  - name: test_ge_124b_1_i_class_based_marker_alone_produces_no_pin
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An element whose class contains `ac-UXP-100d-2` and which carries no data-ac attribute yields zero pins for the file. Assert zero, not 'the id is absent from some list' — a reader that records an empty-valued pin would pass the weaker form."
+  - name: test_ge_124b_1_i_element_with_both_class_and_data_ac_takes_ids_only_from_data_ac
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The `decl-stock-badge` worked case — `<span class=\"stock stock--{status}\" data-ac=\"UXP-100d-2\">` — yields exactly one pin with ac_ids ['UXP-100d-2'] and nothing drawn from the class value, including its interpolation braces."
+  - name: test_ge_124b_1_i_neighbouring_data_attributes_are_not_read_as_pins
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An element carrying data-testid, data-screen and a hypothetical data-ac-note contributes no ac_ids; only an exact `data-ac` attribute does. This is the prefix-match failure a substring scan makes."
+test_rationale: |
+  The failing implementation this AC guards against is more forgiving, not less: a reader that
+  also accepts a class-based marker looks helpful and produces pins that vanish from the built
+  output. Testing only the negative (no data-ac means no pin) does not catch it, because such a
+  reader would still be wrong in the presence of BOTH attributes — which is the shape every
+  real pinned element takes. So the second test is the load-bearing one, and it uses the real
+  mock record's markup including its framework interpolation, which is what breaks a
+  whole-tag regex. The third test closes the prefix-match variant. All three are pure parse
+  questions, observable in the reader; the tier wiring is charged once at GE-124c-1.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required exact attribute-name matching (not prefix or substring) and attribute-wise tag parsing, because real pinned elements carry class values with framework interpolation that defeats a whole-tag regex. Extended the constraint past the reader to every downstream surface. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Encodes the settled user decision as a test rather than as prose. `class` is
+  the styling namespace: mangled by CSS-modules hashing, purged by Tailwind
+  content scanning, and an invitation to style the marker. A reader that also
+  accepted a class-based marker would appear more forgiving while producing
+  pins that vanish from the built output — a traceability link that exists in
+  source and not in the product is worse than none.
+
+  The second scenario is the one that matters in practice: real pinned elements
+  carry both attributes, and the reader must take the criteria from exactly one
+  of them. The mock-data record `decl-stock-badge` is this element.
