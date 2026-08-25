@@ -41,6 +41,7 @@ doc_links:
       mid-run". The escalation path repeats it a third time.
 assigned_agent: workflow-architect
 estimated_complexity: S
+declares_side_effect: true
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
