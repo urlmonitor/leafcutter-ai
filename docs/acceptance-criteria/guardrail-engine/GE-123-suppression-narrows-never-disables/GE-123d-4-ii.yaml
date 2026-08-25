@@ -55,7 +55,7 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The reference being edited lives under templates/skills/ and is the canonical copy; the deployed copies under .claude/ and .leafcutter/ are build.py outputs and must not be hand-edited."
-assigned_agent: documentation-expert
+assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "The reference is templates/skills/security-scanner/SKILL.md, which already carries the allowlist, path-matching, detection-rules and false-positive-guidance sections. The new material belongs as one section beside those, not scattered across them, because the criteria promise a reader can answer the question from one place."
@@ -107,11 +107,46 @@ created: 2026-08-18
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-18)"
     detail: "Criteria untouched. assigned_agent documentation-expert confirmed, not changed to llm-expert despite the surface living under templates/skills/ — the content is reference documentation about a scanner's behaviour, not agent-behaviour prompt text. Complexity held at S. Authored eight policy-level it_requirements naming the concrete surface (templates/skills/security-scanner/SKILL.md, beside its existing allowlist and detection-rules sections), the ADR-001 parity obligation, the hard ordering constraint (this lands last, or it documents an intention), and the live self-referential hazard that the section describing credential shapes can block its own commit. Authored a five-entry test_spec plus test_rationale specifying documentation checks against the real file on disk — including a drift guard comparing the reference's enumerations to the lists the code reads — plus one entry staging the real reference through the pre-commit check. readiness draft->reviewed; work_status and priority untouched."
+  - reason: gating-correction
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'THREE ROUTING FIELDS CHANGED. NO REQUIREMENT CHANGED. criteria, title, level,
+      depends_on, the eight it_requirements, the five-entry test_spec, work_status, readiness and
+      priority are all untouched. change_target docs -> prompt, risk_surface safety ->
+      contract_boundary, assigned_agent documentation-expert -> llm-expert.
+
+      THIS ENTRY DIRECTLY REVERSES THE 2026-08-18 IT-PO DECISION RECORDED IMMEDIATELY ABOVE, which
+      states that assigned_agent was "confirmed, not changed to llm-expert despite the surface
+      living under templates/skills/ — the content is reference documentation about a scanner''s
+      behaviour, not agent-behaviour prompt text". That reasoning is about GENRE and it is correct
+      on its own terms. It is reversed on CAPABILITY, which it did not consider:
+      documentation-expert never authors files ("all authoring is delegated to specialists", stated
+      twice in its template), and every genre in config/doc_types.json has a default_path under
+      docs/. Handed templates/skills/security-scanner/SKILL.md it can only classify the work
+      `reference` and emit docs/reference/<topic>.md — a SECOND copy of the passage, in the wrong
+      tree, which this record''s own first it_requirement forbids ("The new material belongs as one
+      section beside those, not scattered across them, because the criteria promise a reader can
+      answer the question from one place"). The genre judgement was right and the routing
+      consequence was not checked against what the agent can actually do.
+
+      GATING. config/guardrail_gates.yaml maps docs.safety to an EMPTY mandatory-agent list against
+      docs.contract_boundary -> [documentation-expert, pr-reviewer]. This record was therefore
+      UNGATED — no required reviewer on documentation describing a security control. The more
+      alarming-sounding risk surface is the one that removed the gating. prompt.contract_boundary
+      yields [llm-expert, architect-review, pr-reviewer], and documentation_gates.risk_surface_triggers
+      adds documentation-expert and documentation-verifier independently of change_target, so
+      documentation-expert is RETAINED as reviewer. Nothing is lost; the genre owner keeps its say
+      over the genre and stops being asked to author a file it cannot author.
+
+      CONSISTENT WITH GE-123c-5 (same change, same date) and with GE-125a-3 / GE-125b-4 / GE-125c-4 /
+      GE-125d-5, which target the same passage in the same file. GE-125b-4 had cited THIS record as
+      its precedent for documentation-expert; that citation is now corrected on both sides rather
+      than in one tree only.'
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
-risk_surface: safety
+change_target: prompt
+risk_surface: contract_boundary
 notes: |
   THIS SATISFIES THE PARENT L1's documentation_triggers OF [reference-doc]. It
   is authored at L3 under GE-123d-4 rather than as a sixth L2 because the L1 is
