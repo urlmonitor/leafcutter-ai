@@ -234,9 +234,23 @@ from the deployed layout), though this one crashes rather than passing falsely.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` deploy step / `<worktree>/.leafcutter/scripts/commit_guardian/`; no staleness check anywhere in the commit path
+
+**Second occurrence, 2026-08-25 — the false-block direction, observed end to end.**
+Committing a merge of `origin/main` into a review branch, `check-contract-shrinking` blocked
+with a list of deleted test functions. Every one of them was deleted **by main**, arriving
+through the merge; the branch had deleted nothing. Main already carries the fix for exactly
+this — the merge-scoping logic in `_merge_scoped_paths()`, whose changelog entry
+(`2026-08-18-1920-merge-commits-no-longer-trip-the-contract-shrinking-guard-on-the-base-branch-s-history.md`)
+was *inside the very merge being committed*. The worktree's deployed hook predated it.
+
+Rebuilding the worktree's deploy (`python scripts/build.py --target-dir <worktree>`) made
+`_merge_scoped_paths` present and the same commit passed on its own merits. Worth recording
+because the tempting response is `SKIP=check-contract-shrinking`, which would have worked,
+produced the same green, and told the author nothing — the fix was already written and
+merely undeployed. A staleness check would have named that in one line.
 
 **Symptom.** `build.py` copies hook code into `.leafcutter/`. Nothing re-runs it and nothing
 compares it against the source tree, so the deployed copy is a snapshot of whenever the

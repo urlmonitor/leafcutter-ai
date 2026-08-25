@@ -529,3 +529,83 @@ bypassed.
 
 **Pattern:** the inverse of the usual false-green — a gate so brittle that the only
 available response is to turn it off, taking every sibling hook with it.
+
+---
+
+### KI-CG-010 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`), `_get_staged_ac_paths()` (fail-open documented in its own docstring), `_load_schema()`, and `_find_project_root()`
+
+**Symptom.** The hook exits 0 having validated nothing, and is indistinguishable from a
+hook that validated everything and found it clean. There is no "checked 0 files" line: a
+skipped Phase 1 and a passing Phase 1 produce identical output.
+
+**Evidence — two independent observations on the same day.**
+
+*Deliberate mutation.* `declares_side_effect: true` was removed from a staged
+`BP-600b-3.yaml` whose criteria assert a durable effect — the exact condition
+`validate_declares_side_effect` exists to catch. Both the direct invocation and
+`pre-commit run check-ac-schema` reported **Passed**. CI, on the same commit, failed the
+required `AC store valid` check and named the file and the rule. The local exit code
+carried no information; only CI evaluated the record.
+
+*Wrong-root run.* A separate agent, running the deployed hook against AC files in a
+worktree, saw it print `WARNING: config/ac_store_schema.json not found at
+/home/henzeh/projects/leafcutter; falling back to manual field validation` and exit 0. It
+had resolved the project root to the **workspace parent** — the untracked directory above
+the repo — where no `config/` tree exists.
+
+**Root cause, as far as the source states it.** Three separate mechanisms make a clean
+exit reachable without any file being checked:
+
+1. `main()` derives its root from **CWD**: `root = Path(os.environ.get("HOOK_ROOT",
+   str(Path.cwd())))`. Nothing constrains CWD to the repository whose index is being
+   committed.
+2. `_get_staged_ac_paths(root)` shells out to `git diff --cached` under that root, and its
+   own docstring states it "returns an empty list when `HOOK_NO_GIT` is set or git is
+   unavailable (**fail-open**)". `main()` then takes the `if not staged_files:` branch and
+   skips Phase 1 entirely. A wrong root and an absent git both land here.
+3. `_find_project_root()` — used by Phase 2, *not* by `main()` — walks ancestors accepting
+   `.git` **or `CLAUDE.md`**. The workspace parent has a `CLAUDE.md`, so that search can
+   stop at a directory that is not a repository at all. Two different root strategies in
+   one file, disagreeing.
+
+Note the schema fallback is **not** the whole story: `validate_declares_side_effect` is
+called unconditionally at `:625`, independent of whether the schema loaded. A missing
+schema alone would still have caught the mutation. What silences the hook is Phase 1 not
+running.
+
+**Honest limit of this report.** The `pre-commit run` invocation was not isolated to a
+single one of the three mechanisms — cwd was inside the worktree for that run, so (1) and
+(2) do not obviously explain it, and the exact path taken was not pinned down. The three
+code facts above are directly readable and each independently permits a silent pass; which
+one fired in that specific invocation is still open. Do not close this on the strength of
+fixing only the one that looks most likely.
+
+**Fix direction.** Make "checked nothing" impossible to confuse with "checked and passed".
+Three parts, in order of value:
+
+- **Never exit 0 on an empty file set.** If the hook was invoked and resolved zero files,
+  say so on stderr and exit non-zero, or at minimum print the count. `KI-ACS-001` fixed
+  exactly this shape in `validate_ac_schema.py` on 2026-08-19 — a bare directory printed
+  `No YAML files to validate.` and exited 0 — and the same reasoning applies here.
+- **Resolve the root once, from `git rev-parse --show-toplevel`**, and thread it to every
+  consumer. Drop the CWD default and the `CLAUDE.md` ancestor heuristic; a `CLAUDE.md`
+  marks a *workspace*, not a repository.
+- **Do not fail open when git is unavailable.** A gate that cannot determine what is being
+  committed has not passed; it has failed to run.
+
+**Relationship to existing entries.** Same family as **KI-CG-009**
+(`check-components-integrity` resolving the root to the main checkout rather than the
+worktree) and **KI-CG-002** (a silent fallback to a narrower rule when a declaring file is
+unreachable). It shares KI-CG-001's index-scoping premise but is a distinct failure: there
+the hook checks the wrong *set*, here it checks the *empty* set and says nothing. Worth
+fixing as one piece of work across the hook family rather than one hook at a time — the
+count is now four entries describing the same root-resolution surface.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → a gate whose silence is
+structurally indistinguishable from a pass.
