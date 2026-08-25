@@ -9,7 +9,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 created_by: "docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml"
 criteria: |
   Given a generated ticket that requires documentation and carries the
@@ -68,3 +68,35 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-DocumentationCoverageGuarantee/23_TICKET-20260715-BO-2200c-5.md
+notes: |
+  REOPENED 2026-08-25 (was work_status: done, readiness stays approved -- the requirement is
+  right, the two sides never agreed). Filed as KI-ACD-002 and KI-ACD-019.
+
+  The criterion says both agents draw from one block and that "a change to the Agent Contracts
+  block changes both what the writer is told to produce and what the verifier checks, keeping
+  brief and enforcement in lockstep". They are not in lockstep; they parse different formats.
+
+  Producer, scripts/ac_store/generate_ticket_from_ac.py:2064 --
+
+      lines.append(f"- [ ] AC-{i}: [{genre}] {doc_path} -- {constraint}")
+
+  Consumer, templates/agents/documentation-verifier.md:144-157 -- "parse the target
+  documentation path as the second pipe-delimited field ... If a line has no pipe separators
+  ... emit (status: blocker)".
+
+  The verifier's format specification IS the "second, separately maintained list" this
+  criterion forbids. The verifier therefore fail-closes on every generated ticket whose source
+  AC carries doc_links, and because the blocker is correctly classified cross_agent the phase
+  is skipped and the build still reports status: ok.
+
+  Its covering test asserts only the "^## Agent Contracts$" and "^### documentation-expert$"
+  headings and the "- [ ] AC-N:" prefix -- it never touches the field structure the verifier
+  parses, which is the only thing the two sides disagree about.
+
+  Occurrence count understated elsewhere: four real generated tickets under
+  tickets/99_done/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/ recorded the identical
+  blocker, all created 2026-08-11, a week before KI-ACD-002's First seen.
+
+  Close it with a test that runs the generator and then runs the verifier's Step 2 parser over
+  the output. Asserting the emitted line "contains a /" is not sufficient -- BO-2200c-2 does
+  exactly that and passes on "docs/(unspecified genre)/acd-400b-6.md".

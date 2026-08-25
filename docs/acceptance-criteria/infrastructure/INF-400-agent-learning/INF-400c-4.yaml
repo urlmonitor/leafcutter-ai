@@ -1,0 +1,59 @@
+id: INF-400c-4
+components:
+  - infrastructure
+title: "Emitters and the harvester resolve the same knowledge-emission sink from one declared location"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c.yaml"
+criteria: |
+  Given ADR-034 names debugging/logs/knowledge_emissions.jsonl as the sink
+    that agents emit knowledge_captured events to and the harvester drains,
+  And the emission sink path is declared exactly once, in a single named
+    location that both the emitting side and the harvesting side read,
+  When the emitting side resolves its sink path and the harvesting side
+    resolves its sink path in the same working tree,
+  Then both resolve to the identical absolute path,
+  And the harvester's own default sink (used when no --sink argument is given)
+    is that same declared value rather than an independently-written literal,
+  And a check exists that fails when the two sides resolve to different paths,
+    naming both resolved paths in its failure output,
+  And that check fails today, because the emitting side writes
+    debugging/logs/agent_telemetry.jsonl while the harvester defaults to
+    debugging/logs/knowledge_emissions.jsonl.
+depends_on: [INF-400c, INF-400c-1]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The sink path must be declared once and read by both sides — two literals kept in sync by convention do not satisfy this AC"
+  - "The parity check must compare resolved paths, not source strings, so a relative-vs-absolute difference is caught"
+  - "Must handle errors gracefully per the project error handling policy"
+  - "Must not silently create the sink file as a side effect of resolving its path"
+delivers_to:
+  agent: llm-expert
+  contract: "A single declared knowledge-emission sink path that the four shipped emit sites (signoff section 7 and the PO v3, BA v3, IT-PO v3 templates) must name verbatim instead of debugging/logs/agent_telemetry.jsonl"
+expects_from:
+  ac_id: INF-400c-1
+  contract: "ADR-011 as amended by ADR-034: the deferred-harvest model with a dedicated knowledge-emission sink separate from the telemetry sink"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [INF-400c-4-i, INF-400c-4-ii, INF-400c-4-iii]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

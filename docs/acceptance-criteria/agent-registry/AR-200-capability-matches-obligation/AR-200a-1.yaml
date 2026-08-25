@@ -1,0 +1,164 @@
+id: AR-200a-1
+title: "An agent template carrying a sign-off obligation declares a tool that can perform the write"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agent templates the build can dispatch as a ticket phase,
+    And the sign-off protocol requires the dispatched agent to write its outcome
+      into the ticket record itself -- an atomic change to the frontmatter agents
+      map, the Sign-offs checklist and the Comments section,
+  When each such template's declared tools are compared against that obligation,
+  Then every template that carries the obligation declares at least one tool
+      capable of performing the write,
+    And a template that carries the obligation while declaring no such tool is
+      reported, naming the template and the obligation it cannot discharge,
+    And the comparison derives BOTH sides from the templates themselves, so a
+      newly added phase agent with the same mismatch is reported without anyone
+      editing the check,
+  So a build halts only for reasons found in the work, never because the agent it
+    dispatched was required to do something its own definition forbids.
+depends_on:
+  - AR-200a
+doc_links:
+  - path: templates/agents/test-runner.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 1. Declares `tools: Bash, Read` and references sign-off 8 times. This is the template that stalled run wf_394d2b76-014."
+  - path: templates/agents/live-surface-tester.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 2. Declares `tools: Bash, Read` and references sign-off 12 times."
+  - path: templates/agents/user-surface-smoker.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 3. Declares `tools: Bash, Read, Agent` and references sign-off 8 times."
+  - path: templates/agents/research-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 4, found by the derived rule rather than by the original report. Declares 24 tools, none write-capable. The highest-risk of the five: nearly every phase agent dispatches it, so any dispatch passing a ticket_path reproduces the stall."
+  - path: templates/agents/worktree-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Instance 5, also found by the derived rule. Declares `tools: Bash, Read`."
+  - path: templates/agents/_signoff_block.md
+    relationship: describes
+    status: exists
+    relevance: "The injected `## Sign-off` section that is one of the two structural obligation signals; the other is frontmatter `signoff: true`."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "Defines the obligation as an atomic write, which is what makes a read-only toolset a contradiction rather than an inconvenience."
+  - path: unit_tests/commit_guardian/test_agent_verification_consistency.py
+    relationship: describes
+    status: exists
+    relevance: "Prior art: the existing registry-consistency test asserting a rule across every template rather than a hardcoded list."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 records the downstream symptom this defect produces."
+assigned_agent: llm-expert
+estimated_complexity: S
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/agents/test-runner.md
+  n_location_rule: "all -- every agent template that carries a sign-off obligation; FIVE violate it today (test-runner, live-surface-tester, user-surface-smoker, research-agent, worktree-agent), and the check must be derived rather than enumerated so the sixth is caught on arrival"
+  required_skills:
+    - llm-expert
+  post_write_commands:
+    - "python -m pytest unit_tests/commit_guardian/ -q"
+    - "python scripts/build.py --target-dir . --force-breaking"
+  constraints:
+    - "GRANT THE CAPABILITY, DO NOT REMOVE THE OBLIGATION. The tempting fix is to drop the sign-off requirement from these three templates. That converts a loud, correct blocker into a silent gap -- a phase that returns cleanly and leaves no record -- which is the exact phantom-done signature KI-BO-007 and the BO-2900f-1 family exist to detect. The agents must gain the ability to write."
+    - "REQUIRES_VERIFICATION IS MANDATORY WITH EDIT. Per CLAUDE.md, any template declaring Edit or Write must also declare requires_verification: true, or registry_validator.py rule A fails build.py's install_shims step -- which in CI blocks the required pytest gate BEFORE any test executes, presenting as a build failure rather than a template error."
+    - "DERIVE BOTH SIDES, DO NOT HARDCODE THE THREE NAMES. A test naming test-runner, live-surface-tester and user-surface-smoker passes forever and would not have caught any of them before they shipped. Obligation and capability must both be read from the templates, so the check has something to say about a template that does not exist yet."
+    - "VERIFY VIA THE BUILD, NOT ONLY THE UNIT SUITE. The registry validator runs inside build.py's install_shims phase; unit tests import from the source tree and can pass while the build fails."
+    - "THE AGENT'S CONDUCT WAS CORRECT. test-runner completed all its work, refused an unsafe mutation the global shell rules forbid, and failed closed with full evidence. Nothing in the fix should discourage that behaviour."
+delivers_to: null
+expects_from: null
+test_spec:
+  - name: test_every_signoff_obligated_agent_template_declares_a_write_capable_tool
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Derive the obligated set and the declared tools from templates/agents/*.md and assert no template carries a sign-off obligation without a write-capable tool. Must fail against the pre-fix tree naming all three violators."
+  - name: test_the_rule_reports_a_synthetic_template_that_violates_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Feed the rule a synthetic template that is sign-off-obligated and read-only, and assert it is reported by name. Proves the check can still fail once the three real instances are fixed -- without it the suite goes permanently green and stops constraining anything."
+  - name: test_a_read_only_template_with_no_signoff_obligation_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "CONTROL. A genuinely read-only, non-phase agent must not be flagged, so the rule cannot be satisfied by demanding Edit on every template in the repository."
+test_rationale: |
+  The defect is a contradiction between two halves of one file, and it survived
+  because nothing ever compared them. A test that reads the templates and
+  compares obligation against capability is therefore the fix's real deliverable;
+  editing three tools: lines is the smaller half.
+
+  The synthetic-violator descriptor is load-bearing. Once the three instances are
+  corrected the primary assertion passes trivially and can never fail again, so
+  without a case that still exercises the failure path the suite would record a
+  rule it no longer checks -- the grep-only failure mode in CLAUDE.md, one level
+  up. The control descriptor bounds the other side, preventing a fix that simply
+  demands Edit everywhere.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  FOUND LIVE, NOT BY INSPECTION. Workflow run wf_394d2b76-014, driving
+  TICKET-20260825-BP-900g-8, halted here. test-runner completed everything asked
+  of it -- 4 target tests passed, full suite 3984 passed / 0 failed, build.py
+  exit 0 -- then returned status: blocker with
+  result_status: tests_pass_signoff_blocked_no_edit_tool, because it had no tool
+  with which to record any of that. The failure ladder escalated through
+  mechanical retry to brainstorm-lead and re-dispatched the same agent, which
+  could not succeed: the tool allowlist is fixed at dispatch.
+
+  LIKELY A ROOT CAUSE OF KI-BO-007. That entry records the downstream symptom --
+  "build-feature counts a phase as completed when the agent halted without doing
+  it" -- and the BO-2900f-1 family was built to detect exactly this shape. The
+  detection was correct; this is one of the things generating it. A read-only
+  agent facing a mandatory write has two exits, and only one of them is loud.
+
+  THE DERIVED RULE FOUND TWO MORE THAN THE REPORT DID. The incident named three
+  templates. Writing the check as a rule over all templates -- rather than as a
+  test of the three -- immediately surfaced `research-agent` and
+  `worktree-agent`, which carry the identical contradiction: frontmatter
+  `signoff: true`, the injected `## Sign-off` section, and a read-only toolset.
+  That is the argument for constraint 3 stated as evidence rather than as
+  principle: an enumerated test would have closed this AC while two live
+  instances remained.
+
+  A NAIVE SIGNAL WOULD HAVE BEEN WORSE THAN NONE. Substring-matching "sign-off"
+  selects all 13 read-only non-obligated templates, each of which merely
+  mentions another agent's sign-off in prose. The two structural signals used
+  instead -- frontmatter `signoff: true`, and the injected `## Sign-off` heading
+  -- independently select the same five violators and cleanly exclude all five
+  correct counter-examples.
+
+  WHY THIS IS ITS OWN L0 RATHER THAN A CHILD OF AR-100. AR-100 is about
+  ownership -- whether the right specialist is assigned. This is about
+  capability -- whether the correctly-assigned specialist can do what is asked.
+  AR-100d ("mis-assignment warnings you can actually trust") is the nearest
+  neighbour and is still a different question: here the specialist is right and
+  the equipment is missing.

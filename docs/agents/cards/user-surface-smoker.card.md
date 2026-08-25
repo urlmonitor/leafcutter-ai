@@ -92,6 +92,7 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
+| `Edit` |
 | `Agent` |
 ---
 

@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -92,3 +92,31 @@ notes: |
   Distinguishing "paused awaiting input" from "cancelled" is what lets the rest
   of BO-2300 (resume, durability) target only pause records and never attempt to
   revive a truly-cancelled run.
+
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-ACD-006. The criterion says the
+  cancelled run reports status "cancelled", and this record's own constraint says the engine
+  must return a distinct status and "never 'ok'". It returns "ok".
+
+  templates/workflows-js/plan-feature.js:2089-2097, verbatim at HEAD:
+
+      if (ptAction === "cancel") {
+        return {
+          status: "ok",
+          message: `Pipeline cancelled at the product-truth gate (...). No PR was opened. ...`,
+          cancelled_at: `pt-gate-${ptStep.stage}`,
+        };
+      }
+
+  The cancellation is recorded in `message` and `cancelled_at`, which nothing machine-readable
+  reads, while `status` -- the field callers branch on -- says the run succeeded. A caller
+  cannot distinguish a cancelled authoring run from one that authored ACs, which is how a run
+  that produced zero ACs reported success (KI-ACD-006's original sighting).
+
+  Neither covering test reads `status` off a return value. test_paused_state_distinct_from_
+  cancelled asserts only the presence or absence of a pause-persist dispatch, and
+  test_cancel_answer_graceful_keeps_stages_no_pr asserts "no crash, no re-pause, no PR". The
+  distinction this AC exists to establish is the one thing its tests never assert.
+
+  FIX WITH BO-2300a-1, NOT SEPARATELY -- same 40-line block, same root decision, both marked
+  done in the same ticket. See KI-ACD-019 and
+  tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md.

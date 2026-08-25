@@ -1,0 +1,130 @@
+id: ACD-1200a-8-i
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: draft
+priority: high
+title: "The generated Master_Plan is accepted by the same frontmatter gate that guards a hand-written one"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-8.yaml"
+criteria: |
+  ACD-1200a-8 requires that a Master_Plan be written and that it carry certain CONTENT. This AC
+  adds the requirement that the artifact be committable: the generator must not emit a file that
+  the repository's own gate for that kind of file rejects.
+
+  Given the epic generator has produced an epic folder and its Master_Plan, with no hand editing
+    of any kind,
+  When that Master_Plan is staged and the commit-time frontmatter validation for ticket files
+    runs over it,
+  Then the validation accepts it,
+  And in particular it is not rejected for a missing "title" or a missing "depends_on" — the two
+    fields that gate requires and the generated frontmatter omits today.
+
+  And Given the same freshly generated Master_Plan,
+  When it is subsequently opened for editing in an authoring session, so the authoring-time
+    ticket guard runs over it,
+  Then that guard accepts it too, for whatever its own required set is at the time — the artifact
+    satisfies every gate that guards a hand-written file of its kind, not only the first one it
+    meets.
+
+  And Given a new field is added to a gate's required set,
+  When the acceptance above is evaluated again,
+  Then it fails until the generated frontmatter carries that field as well — so the generator and
+    the gates cannot drift apart unnoticed a second time.
+
+  And the acceptance is never obtained by weakening a gate, by removing a field from a required
+    set, or by exempting generated files or Master_Plan files from validation. The artifact is
+    what changes.
+
+  Coverage note: covered only by a test that generates a real epic and then RUNS the real gate
+  over the real generated file. A test that compares the generated frontmatter against a list of
+  field names written into the test is a second copy of the requirement, and it falls behind the
+  gate exactly as the generator already has — which is the whole defect. The third clause is what
+  makes the coverage durable, and it is unsatisfiable by any test that holds its own field list.
+depends_on: [ACD-1200a-8]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: context
+    status: exists
+    relevance: "KI-ACD-012 records the defect and both occurrences. NOTE: its identification of the failing gate is wrong and must not be inherited — see this record's notes. Its fix direction (run the real guard rather than assert a field list) is correct and is what the coverage note encodes. KI-ACD-013 and KI-ACD-016 record the same producer-versus-gate pattern on other generated artifacts."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: context
+    status: exists
+    relevance: "The registration and configuration surface for the commit-time gate whose required-field set this criterion defers to rather than restates."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-8
+  contract: "The generated Master_Plan file at the epic folder root, whose CONTENT that AC specifies. This criterion constrains the frontmatter it carries, so the file that AC produces can actually be committed."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE KNOWN-ISSUE ENTRY NAMES THE WRONG GATE, AND THE CORRECTION CHANGES THE SIZE OF THE DEFECT.
+  KI-ACD-012 attributes the rejection to templates/hooks/ticket_frontmatter_guard.py and counts
+  six missing fields. Verified 2026-08-25: that script is registered in templates/settings.json
+  under PostToolUse with matcher "Edit|Write" — it is an authoring-session tool hook, so it
+  cannot fire on a file the generator writes through its own file I/O. It never saw the artifact.
+
+  The gate that actually rejects the commit is the pre-commit doc-frontmatter validation, which
+  is registered in the hooks manifest with a files pattern covering tickets/**/*.md. Its
+  configured ticket_frontmatter.required_fields is exactly
+  ["title", "status", "components", "created", "depends_on"]. The generator emits epic_name,
+  created, status, components and source_ac. Intersecting those leaves TWO required fields
+  missing — "title" and "depends_on" — not six. The other four the register lists
+  (requires_diagram, requires_adr, change_target, risk_surface) are demanded by the session hook
+  only. The two keys the generator does emit beyond the overlap, epic_name and source_ac, carry
+  no weight with either gate.
+
+  BOTH GATES ARE STILL IN SCOPE, FOR DIFFERENT REASONS. The commit-time one is what blocks the
+  commit today and is the one whose required set is stated above from the configuration itself.
+  The authoring-time one is what a person or agent meets the moment they open the file to edit
+  it, which is why the second clause exists — but its required set is deliberately NOT enumerated
+  here. This BA read the commit-time configuration directly and did not independently verify the
+  session guard's field set; the register's account of that guard has already proved unreliable
+  once. Read it from the guard at implementation time, not from the register and not from this
+  record.
+
+  THE STATUS VALUE IS A SEPARATE MATTER AND IS NOT IN THIS CRITERION. The second occurrence also
+  corrected status from in_progress to todo, because no ticket in the generated epic had been
+  started. That is a correctness defect in what the generator claims, not a gate failure —
+  in_progress is in the gate's allowed_statuses and passes. It needs its own record if it is to
+  be fixed; folding it in here would make this criterion pass or fail for two unrelated reasons.
+
+  WHY THE ANTI-DRIFT CLAUSE IS THE LOAD-BEARING ONE. The producer and the gate are maintained
+  independently and each is individually correct, which is precisely the condition under which a
+  divergence goes unnoticed — it went unnoticed here through two occurrences. A fix that only
+  adds today's two fields restores the artifact and leaves the drift mechanism intact.
+
+  WHY THIS IS NOT AUTHORED AS ACD-1200a-7. scripts/goal_to_epic.py cites ACD-1200a-7 three times
+  as the governing criterion for Master_Plan generation, and no record with that id exists in the
+  store — the same is true of ACD-1200a-6 with six citations. Verified 2026-08-25 by searching
+  all git refs: no AC record declaring either id has ever been committed, yet both ids were
+  genuinely ISSUED — tickets 06 and 07 of EPIC-AcParentChildLinkEnforcement carry them as
+  source_ac, were implemented, reviewed and closed under them, and a live record in the
+  testing-quality component still cites ACD-1200a-6 as a worked example of an id-shaped string.
+  So these are neither free ids nor retired ones: they are records that were lost before they
+  ever reached the shared history, while their ids stayed in live use meaning what they always
+  meant. Minting them now for these two new promises would leave nine live citations resolving
+  confidently to the wrong criterion, which the store's own convention (docs/reference/ac-schema.md,
+  and ADR-029's neither-a-file-nor-a-citation rule) exists to prevent. Restoring the two ORIGINAL
+  criteria at those ids is the right repair and is store reconciliation rather than L2/L3
+  authoring — it is reported to the caller, not performed here.

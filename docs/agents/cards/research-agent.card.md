@@ -27,7 +27,7 @@ other coding agent carries these tools.
 | Tier | utility |
 | Priority | — |
 | Portable | Yes |
-| Sign-off capable | Yes |
+| Sign-off capable | No |
 
 ---
 
@@ -121,20 +121,14 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+| `question` | string | Structured question from the parent agent — either the compact one-liner form or the JSON form with question/scope/depth keys |
+| `ticket_path` | file_path | Optional absolute path to the ticket markdown file, supplied by the parent purely as reading context. Never written to. |
 
 ### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
-| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
-
-### Mutates (Side Effects)
-
-| Name | Type | Description |
-|------|------|-------------|
-| `ticket_frontmatter_agents_status` | — | Sets agents.research-agent to signed_off or failed |
-| `sign_offs_checklist` | — | Checks the research-agent checkbox with timestamp |
+| `research_findings` | markdown_report | Curated findings — file paths with 1-3 line descriptions each, plus a synthesis paragraph |
 ---
 
 ## Tools Available

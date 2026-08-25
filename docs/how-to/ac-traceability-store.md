@@ -4,7 +4,7 @@ description: "How-to guide for delivering approved ACs via the reviewed-PR path,
 type: how-to
 status: active
 created: 2026-06-04
-last_updated: 2026-08-18
+last_updated: 2026-08-25
 components:
   - build_pipeline
   - build_orchestration
@@ -669,5 +669,5 @@ All three commands should exit 0 with no error output.
 - `docs/how-to/ac-driven-build-loop.md` — end-to-end walkthrough of the AC-driven build loop on a consumer install.
 - `docs/how-to/approval-gate.md` — detailed explanation of the multi-stage approval gate and readiness state machine.
 - `docs/how-to/build-ac-unified.md` — auto-detection logic for leaf vs goal mode; epic-generation path for L0/L1 goal ACs.
-- `docs/README.md` — full documentation index.
+- `docs/INDEX.md` — full documentation index.
 - `templates/skills/knowledge-query/SKILL.md` — full reference for all `knowledge_query.py` flags and output modes.

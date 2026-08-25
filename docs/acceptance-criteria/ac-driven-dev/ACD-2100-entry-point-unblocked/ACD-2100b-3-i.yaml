@@ -1,0 +1,140 @@
+id: ACD-2100b-3-i
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: approved
+priority: medium
+title: "A registry that holds no agent entries is reported as unusable rather than as a missing agent"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a registry file that can be read and interpreted but does not carry the
+    collection of agent entries the startup check expects -- for example it holds
+    a single value where a list of agents belongs,
+  When the startup check runs,
+  Then the run stops with a report that the registry could not be used and states
+    what was found where the agent entries were expected,
+  And the report does not state that any agent is absent from the registry,
+  And the report does not state that any agent lacks permission,
+  And the check itself does not end the run with an unhandled failure.
+depends_on: [ACD-2100b-3]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must include the could-not-determine outcome, not only the four named ones."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009's pattern note -- a check must not report a specific failure cause it did not establish."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M8 inverted. The same 'green means checked' distinction GE-120 draws."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The entries.find lookup at 1745-1791 is the site where a non-collection value both raises and, once guarded, degrades into the absence branch."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the registry structure this outcome fails to find."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "Fail closed: the run stops."
+  - "A cause the check did not establish must not be asserted. When the outcome fits none of the four named cases the report must say the verdict could not be determined and say what was seen -- this is the general rule, and this record is one instance of it."
+  - "The report must state what was found where the agent entries were expected, so the operator can tell a wrong file from a structurally changed one."
+  - "The outcome must be a recorded report, not an unhandled failure. An unhandled failure also stops the run, so a fail-closed assertion alone cannot distinguish the two -- the report is the only observable difference."
+  - "Must satisfy the repository error-handling policy: the guard must catch by type and log at WARNING or higher; it must not be a bare except and must not silently substitute an empty collection, which is precisely how this outcome becomes a false absence verdict."
+test_spec:
+  - name: test_registry_without_an_entries_collection_reports_could_not_be_used
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A registry that parses cleanly but holds a single value where the agent entries
+      belong; the run stops with a report that the registry could not be used and that
+      names what was found in that position.
+  - name: test_no_entries_collection_report_asserts_neither_absence_nor_denial
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      That same report contains no statement that any agent is absent from the registry
+      and no statement that any agent lacks permission -- the two false verdicts this
+      outcome currently produces.
+  - name: test_no_entries_collection_does_not_raise_an_unhandled_failure
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      The run's recorded outcome is the report rather than an unhandled failure, and no
+      unhandled-failure trace appears in the captured output.
+  - name: test_outcome_is_produced_through_the_workflow_entry_point
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner with the malformed registry in place"
+    description: >-
+      The report is produced by driving the real workflow, and the run stops at the
+      check rather than proceeding to the next step.
+test_rationale: >-
+  A registry that is present, readable and interpretable but structurally not a registry
+  lands in the absence branch: the lookup over the expected entries finds nothing, so
+  the check concludes the agent is absent -- a specific verdict about something it never
+  established, and the operator is sent to audit an agent id that is not the problem.
+  That is the defect the parent L1 exists to close, reappearing one level down from
+  where it was fixed, which is why enumerating four outcomes is not sufficient. The
+  unhandled-failure clause is asserted separately because the current code searches a
+  collection and a non-collection value raises rather than returning nothing; whatever
+  replaces it must produce a report, and since a crash also stops the run, a fail-closed
+  assertion alone cannot tell the two apart.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100b-3
+    contract: "A lookup over the registry's agent entries whose result distinguishes entry-present-and-permitted, entry-present-and-denied, and entry-absent -- leaving 'the entries collection is not there' representable as a fourth state rather than folded into absence."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FIFTH OUTCOME -- the one the four-way split does not cover, and the reason
+  this L3 exists rather than being folded into ACD-2100b-3.
+
+  A registry that is present, readable and interpretable but structurally not a
+  registry lands in the absence branch: the lookup over the expected entries finds
+  nothing, so the check concludes the agent is absent. That is a specific verdict
+  about something the check never established -- the agent may well be listed in
+  the real registry, and the operator is sent to audit an agent id that is not the
+  problem. It is precisely the defect this L1 exists to close, reappearing one
+  level down from where it was fixed.
+
+  THE LAST CLAUSE MATTERS SEPARATELY. Where the current code searches a collection,
+  a value that is not a collection raises rather than returning nothing. Whatever
+  replaces it must produce this report rather than an unhandled failure, and the
+  test should assert the report -- an unhandled failure also stops the run, so a
+  fail-closed assertion alone cannot tell the two apart.
+
+  GENERAL FORM, worth stating for whoever implements it: a cause the check did not
+  establish must not be asserted. When the outcome fits none of the four named
+  cases, say that it could not be determined and say what was seen.
+
+  2026-08-25 (it-po): the it_requirement forbidding a silent empty-collection
+  substitution names the specific wrong fix. Guarding the lookup with "if it is not a
+  collection, treat it as empty" removes the unhandled failure, passes the last Then
+  clause, and reproduces the false absence verdict the first two clauses forbid -- so
+  a test written only against the crash would sign this off.

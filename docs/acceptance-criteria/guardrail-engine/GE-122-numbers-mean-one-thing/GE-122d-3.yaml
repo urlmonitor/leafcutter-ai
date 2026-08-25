@@ -142,6 +142,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-122d-3-i
+  - GE-122d-3-ii
 implemented_by: []
 change_target:
   - code

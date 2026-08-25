@@ -1,0 +1,46 @@
+id: AR-200a
+title: "A build never stalls because the specialist it dispatched was not given a pen"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Your build does not halt on a contradiction inside its own configuration.
+
+  Every specialist a build can dispatch is equipped for the job it is given. If
+  a specialist is required to write its verdict into the record, it arrives able
+  to write. The mismatch is caught when the specialist is defined, not the first
+  time a build dispatches it and stops.
+
+  The benefit is a build that fails only for real reasons. A halt tells you
+  something about your code, not something about a missing tool in a
+  configuration file you have never read.
+depends_on:
+  - AR-200
+doc_links:
+  - path: templates/agents/test-runner.md
+    relationship: modifies
+    status: exists
+    relevance: "The instance that stalled a live build: required to sign off, declared no writing tool."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The registry the equipment declaration is validated against."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-200a-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "No new user-facing surface — an existing class of halt stops occurring."

@@ -1,0 +1,67 @@
+id: INF-400c-5-ii
+components:
+  - infrastructure
+title: "Every entry_kind already in flight has a declared mapping into the canonical vocabulary"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-5.yaml"
+criteria: |
+  Given the 28 knowledge_captured events already emitted carry 15 distinct
+    entry_kind values — agent-memory, agent_memory, agent-learning,
+    component-convention, component_convention, component_context,
+    agent-assignment-pattern, framing-note, framing_note,
+    framing-convention, component-framing-note, component_framing_note,
+    framing_decomposition, framing_decomposition_note, and
+    component-decomposition-and-operational-note,
+  And after separator and case normalisation these collapse to 11 distinct
+    values, none of which is a member of the canonical vocabulary,
+  When the legacy mapping is defined,
+  Then a declared mapping exists that names a canonical vocabulary member for
+    each of the 15 observed values,
+  And the mapping is total over those 15: a check enumerates the distinct
+    entry_kind values present in the retained corpus and fails, naming each
+    unmapped value, if any has no entry,
+  And applying the mapping to the 28 retained events yields 28 events whose
+    entry_kind is a canonical vocabulary member and 0 events that are
+    unroutable,
+  And where an observed value is ambiguous, the mapping resolves it using the
+    event's own destination path rather than by guessing from the label, so
+    that an event recorded as written to a file under memory/ maps to the
+    canonical kind whose routing rule writes to memory/,
+  And the mapping is applied on read, leaving the retained events unmodified,
+    so a corrected mapping can be re-applied to the same corpus later.
+depends_on: [INF-400c-5]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "The totality check must read the distinct values present in the corpus, not a hardcoded list of 15 — new legacy values must surface as failures rather than pass unnoticed"
+  - "The mapping is a read-time translation layer, not a rewrite of the retained events; replay against a corrected mapping is the reason the corpus is retained"
+  - "This mapping must exist before the harvester is first pointed at the recovered corpus (see INF-400c-4-ii ordering)"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: python-coder
+  contract: "A total legacy-to-canonical entry_kind mapping that the recovery in INF-400c-4-ii depends on being in place before the first drain"
+expects_from:
+  ac_id: INF-400c-5
+  contract: "The declared canonical vocabulary that every legacy value must map into"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

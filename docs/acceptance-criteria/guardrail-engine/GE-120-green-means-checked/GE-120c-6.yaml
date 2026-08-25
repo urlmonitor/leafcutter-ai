@@ -1,0 +1,223 @@
+id: GE-120c-6
+title: "A guard cannot ship unregistered — a deployed check that nothing invokes is named and fails the sweep"
+component: guardrail-engine
+components:
+  - testing_quality
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the candidate set of guards, derived at run time from the guard directory convention —
+    every check script living where the commit-guardian's check scripts live — and never from a
+    list written into the sweep,
+  And a real built working copy in which the deployed registry the commit path reads has been
+    produced by the install,
+  When the harness sweep runs,
+  Then every candidate that no entry in that deployed registry resolves to is reported by name,
+  And the sweep fails,
+
+  And a candidate is exempt only when a declared opt-out applies to it — a property read from
+    the candidate itself or from a declared exemption record — never a match against an
+    identifier written into the sweep, so a guard added tomorrow inherits the rule instead of
+    inheriting an exemption by resemblance,
+  And every exempt candidate is reported together with the declaration that exempts it, so an
+    exemption is visible in the sweep's output rather than silent,
+
+  And given a candidate whose registration exists only in a manifest the install does not deploy
+    the registry from,
+  Then that candidate is reported as unregistered, because a registration the commit path never
+    reads is not a registration,
+
+  And given the package-development-only scripts that build the package and hold the epic lock —
+    which live outside the guard directory and which no registry entry and no deployable
+    template promises — neither appears in the sweep's report in any category, neither as
+    unregistered nor as exempt.
+
+  Coverage note: exercise the failing direction with a guard-directory fixture containing a
+  check that no deployed registry entry resolves to, and assert the sweep names it and fails. A
+  test asserting that today's candidates are all registered passes forever and catches nothing
+  on the day guard sixty-three is added, which is the day this AC exists for. The exemption
+  clause is covered by adding a candidate carrying a declared opt-out and asserting it is
+  reported as exempt with its declaration rather than omitted. The no-false-positive clause is
+  covered by a regression assertion pinning the two named package-development scripts out of
+  the verdict.
+depends_on:
+  - GE-120c
+  - GE-120c-1
+  - GE-120c-3
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: "The registration procedure a guard is required to have completed. The sweep asks whether it was completed, not whether it was documented."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: "The operative manifest — 55 entries, verified 2026-08-25 — from which the install produces the deployed registry. It is the registration SOURCE; the deployed registry is what the sweep measures against."
+  - path: templates/commit-guardian/commit_guardian.json
+    relationship: context
+    status: exists
+    relevance: "The non-operative file — 3 entries, verified 2026-08-25. A registration present only here is the case the third block of the criteria requires to be reported as unregistered."
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The no-false-positive rule this sweep must not contradict: package-development-only scripts that are promised by neither registry nor template are out of scope and are never flagged. IT-PO 2026-08-25 — the reciprocal cross-reference the BA deferred has now been added on BP-900e-3's side; its criteria, behaviour and readiness are unchanged, because its carve-out is correct and load-bearing (it is what stops build.py failing the merge gate as a false positive)."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The sibling completeness rule, comparing harness cases against the manifest. This AC compares guard SCRIPTS against the deployed REGISTRY — the axis GE-120c-3 cannot see, because a guard absent from the manifest is absent from its expected set and therefore never missed. The two must NOT be merged into one comparison; see the it_requirement that says so."
+  - path: templates/scripts/commit_guardian/check_identifier_uniqueness.py
+    relationship: related
+    status: exists
+    relevance: "One of the guards this sweep must name on the repository as it stands: verified 2026-08-25 as present in the guard directory and absent from every registry."
+  - path: templates/scripts/commit_guardian/check_adr_collision.py
+    relationship: related
+    status: exists
+    relevance: "The precedent case, already recorded in GE-122d's coverage matrix: written, tested, deployed, registered nowhere, never run."
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "THE CANDIDATE SET COMES FROM THE DIRECTORY, NOT FROM THE MANIFEST, and that inversion is the entire point. GE-120c-3 derives its expected set from the manifest, so a guard missing from the manifest is missing from the expected set and is never noticed — the sweep is complete with respect to a registry that is itself incomplete. This AC starts from what was BUILT and asks what was WIRED. Verified 2026-08-25: the guard directory holds 62 check scripts, the operative manifest holds 55 entries, and the deployed registry declares 50 hook identifiers. Do not encode those numbers; they are the reason the axis exists, not the assertion."
+  - "MEASURE AGAINST THE DEPLOYED REGISTRY, resolved the way the commit path resolves it in the second working copy GE-120c-1 stands up. Measuring against the source manifest would let a registration that the install never deploys count as wired, which is the same class of evidence as the four guards that are registered nowhere today."
+  - "DO NOT MERGE THIS SWEEP WITH GE-120c-3's — THEY RUN IN OPPOSITE DIRECTIONS AND A SINGLE COMPARISON LOSES ONE (IT-PO 2026-08-25). GE-120c-3 traverses manifest to harness and asks 'is every registered check exercised'. This traverses guard directory to deployed registry and asks 'is every built check registered'. Their inputs differ (manifest vs directory), their reference sets differ (harness cases vs deployed registry), and neither's finding implies the other's. Keep TWO independently-failing verdicts with two distinct failure messages, so a reader can tell 'registered but unexercised' from 'built but unregistered'. A future refactor that folds them into one set-difference is a regression, not a simplification."
+  - "THE OPT-OUT MUST BE DATA-DRIVEN AND MUST BE DECIDED, not left to the implementer's discretion at review time. A hardcoded identifier list is rejected: it is how check sixty-three inherits an exemption by resemblance, and it is the same rule GE-120c-3 already applies to its own sweepable-entry exemptions. Reuse that mechanism rather than inventing a second one — two independently-maintained exemption vocabularies will disagree. Legitimate exempt shapes to expect include a shared helper that is imported rather than invoked, and a check invoked directly rather than through the hook runner."
+  - "A SHARED EXEMPTION VOCABULARY MUST BE SCOPED PER SWEEP (IT-PO 2026-08-25). Reusing GE-120c-3's exemption mechanism is required, and it creates a specific hazard: an exemption declared for the harness-coverage sweep must not silently become an exemption from the registration sweep. A helper module that is legitimately exempt from 'must be exercised by a harness case' is NOT thereby exempt from 'must be registered', and vice versa. Each declaration therefore carries WHICH sweep or sweeps it applies to, and an unscoped declaration is rejected rather than defaulted to both. One vocabulary, one storage location, explicit scope per entry."
+  - "PIN THE NEGATIVE CASES AS REGRESSIONS, AND PIN THE PROPERTY AS WELL AS THE NAMES. scripts/build.py and scripts/epic_lock.py must stay out of the verdict in every category. BP-900e-3 exists precisely to stop that false positive and its exclusion rule is stated differently from this one — it excludes by 'not promised by registry or template reference', this sweep excludes by 'not in the guard directory'. Keep both statements distinct and satisfy both; a sweep that flags build.py contradicts an approved sibling AC. Assert the PROPERTY (a script outside the guard directory is never a candidate) alongside the two names, or a third package-development script added tomorrow inherits nothing from this pin."
+  - "STANDING FLAG — scripts/epic_lock.py DOES NOT EXIST IN THE TREE (verified 2026-08-25; referenced only by docs/components.json and templates/skills/building-epics/SKILL.md). BP-900e-3's approved criteria name it and are not amended here. For THIS sweep the consequence is concrete: a regression assertion written as 'epic_lock.py is absent from the verdict' is vacuous — a path that does not exist can never be a candidate, so the assertion passes on a completely broken sweep. Pin the property against a package-development script that actually exists, and treat the epic_lock reference as the store-hygiene finding it is rather than as a test subject."
+  - "EXPOSE THE COMPARISON AS A CALLABLE the sweep consumes, matching the shape GE-120c-3 requires for its own comparison, so a future gate can consume this verdict rather than reimplementing it."
+  - "SELF-DEMONSTRATION IS A DELIVERABLE, following GE-120c-1's precedent: the first run against this repository as it stands must be recorded, and it is expected to name at least check_adr_collision and check_identifier_uniqueness. Record the observed list as evidence on the implementing ticket. Do not encode that expected list as an assertion — it becomes false the day those guards are registered, which is the day the sweep starts earning its place. The durable assertions are the fixture-based ones."
+  - "HOME: unit_tests/portability/, alongside the rest of this harness. Not unit_tests/commit_guardian/, whose tests import from the source tree — the layout in which this defect class cannot reproduce."
+  - "FILE SCOPE — READ THIS BEFORE TRUSTING THE GENERATED TICKET'S files_touched. This AC creates one new sweep module under unit_tests/portability/ and edits nothing else in the tree. scripts/build.py and scripts/epic_lock.py are named above ONLY as negative regression subjects and MUST NOT be modified; generate_ticket_from_ac.py extracts path tokens from prose bullets and gates them on on-disk existence, so scripts/build.py will very likely appear in the generated ticket's files_touched. That is a generator artefact — correct the ticket, do not touch the file. Editing build.py to make this sweep pass would invert the AC."
+  - "Error handling per CLAUDE.md Rules 1-4 applies to the sweep's own directory and registry reads: specific exceptions, logged at WARNING or above, never swallowed. Per GE-120c-1-i, a sweep that could not enumerate the candidate set reports a failure, never a clean result — an unreadable guard directory yields zero candidates and zero findings, which would otherwise be the greenest possible run."
+test_spec:
+  - name: test_ge120c6_unregistered_candidate_in_fixture_is_named_and_sweep_fails
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A guard-directory fixture holds a check that no entry in the deployed registry resolves to: the sweep reports it by name and FAILS. Exercised against a fixture, not against today's tree, so the assertion still fails on the day guard sixty-three is added."
+  - name: test_ge120c6_candidate_set_is_read_from_the_guard_directory_at_run_time
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Adding a check script to the guard-directory fixture grows the candidate set with no change to the sweep's code, and removing one shrinks it. Goes red if the candidate set is a list written into the sweep, or is derived from the manifest instead of the directory."
+  - name: test_ge120c6_verdict_is_measured_against_the_deployed_registry_not_the_source_manifest
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "A candidate present in the source manifest but absent from the registry the install actually deployed is reported as unregistered. Measured against the deployed registry in the built second working copy, resolved the way the commit path resolves it."
+  - name: test_ge120c6_registration_only_in_the_non_operative_manifest_reads_as_unregistered
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "A candidate whose only registration lives in the 3-entry templates/commit-guardian/commit_guardian.json — the file the install does not deploy the registry from — is reported as unregistered, because a registration the commit path never reads is not a registration."
+  - name: test_ge120c6_declared_optout_candidate_is_reported_as_exempt_with_its_declaration
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A candidate carrying a declared opt-out is reported as exempt TOGETHER with the declaration that exempts it — present in the output, not omitted from it — so an exemption is visible rather than silent."
+  - name: test_ge120c6_exemption_scoped_to_the_other_sweep_does_not_exempt_here
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A declaration scoped to GE-120c-3's harness-coverage sweep does NOT exempt the same candidate from the registration sweep, and an unscoped declaration is rejected rather than treated as applying to both. Guards the one hazard created by sharing the exemption vocabulary."
+  - name: test_ge120c6_exemption_is_a_data_property_not_a_matched_identifier
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A newly added candidate that merely RESEMBLES an exempt one — similar name, same directory, no declaration — is reported as unregistered. Goes red if the exemption is implemented as an identifier list."
+  - name: test_ge120c6_scripts_outside_the_guard_directory_are_never_candidates
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The no-false-positive regression: a package-development script that lives outside the guard directory appears in NO verdict category, neither unregistered nor exempt. Asserts the property against a fixture script placed outside the directory AND pins scripts/build.py by name, so the sweep cannot contradict BP-900e-3."
+  - name: test_ge120c6_unreadable_guard_directory_reports_failure_not_a_clean_sweep
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A guard directory the sweep cannot enumerate produces a reported FAILURE, never zero candidates and zero findings. Per GE-120c-1-i, the greenest possible run is exactly the shape of the defect this AC exists to catch."
+  - name: test_ge120c6_comparison_is_reachable_as_a_callable_a_gate_can_consume
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The registry-reachability verdict is produced by one callable that the sweep invokes, and a second caller obtains the same verdict from it without re-deriving the candidate set — so a future gate consumes this rather than reimplementing it."
+test_rationale: "This AC exists because a sweep can be complete with respect to an incomplete registry, so the test contract has to attack the two ways this sweep could inherit that same blindness. First, every assertion is fixture-based: 'all of today's candidates are registered' would pass forever and would be silent on the day guard sixty-three is added, which is the only day this sweep matters — and it would be false today anyway, which is the point of the self-demonstration run being recorded as evidence rather than encoded as an assertion. Second, the counts observed on 2026-08-25 (62 scripts, 55 manifest entries, 50 deployed hook identifiers) are motivation and are deliberately absent from every descriptor; encoding them makes the sweep stale the day it starts working. The exemption descriptors are split into three because a data-driven opt-out has three distinct failure modes — silent omission instead of a reported exemption, an identifier list masquerading as a property, and an exemption declared for the sibling sweep leaking into this one — and a single test covers only the first. The scripts-outside-the-directory descriptor pins BOTH the property and the name, because a name-only pin teaches the sweep nothing about the next package-development script and a property-only pin cannot demonstrate that this sweep and BP-900e-3 agree."
+delivers_to:
+  agent: python-coder
+  contract: "A registry-reachability verdict over the guard directory that names every deployed-but-unregistered check, which a gate can consume rather than recompute."
+expects_from:
+  ac_id: GE-120c-1
+  contract: "The built second working copy and its deployed registry, resolved as the commit path resolves it."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: it-po-technical-enrichment
+    agent: it-po
+    date: '2026-08-25'
+    changed: "readiness draft->reviewed; four it_requirements added (do-not-merge-with-GE-120c-3, per-sweep exemption scoping, the scripts/epic_lock.py absence finding, file scope) and the negative-case pin strengthened to assert the property as well as the names; test_spec and test_rationale authored as ten fixture-based descriptors with no encoded counts; BP-900e-3 doc_link updated to record that the reciprocal cross-reference has now been added there. assigned_agent test-writer confirmed (matches the approved siblings GE-120c-1 and GE-120c-3 — the deliverable is verification apparatus). criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  FOUR TIMES IS A PATTERN, NOT AN ACCIDENT. This component has now shipped four guards that are
+  written, tested, deployed and registered nowhere. GE-122d's coverage matrix documented the
+  third one — check_adr_collision.py — and named the trap explicitly, and the very next guard
+  built in this epic fell into it anyway, with a green suite and six adversarial reviews behind
+  it. A rule that is documented, understood, and then violated by the people who documented it
+  is not a knowledge problem. This AC is the mechanical interlock that makes the fourth time the
+  last time.
+
+  WHY IT SITS UNDER GE-120c AND NOT UNDER GE-122. GE-120c is the anti-regression L1 — in the
+  PO's words, "the reason the other three do not quietly come back" — and it is the only place
+  in the store where a rule about the whole family of guards belongs. Filed under GE-122 it
+  would protect the numbering guard alone, which is precisely the mistake that produced four
+  instances of the same defect: each was fixed for one guard and for no other.
+
+  WHY IT IS NOT GE-120c-3 RESTATED. The two are mirror images and neither subsumes the other.
+  GE-120c-3 asks: is every REGISTERED check exercised by the harness? This asks: is every BUILT
+  check registered at all? A guard that is deployed and unregistered is outside GE-120c-3's
+  expected set by construction, so GE-120c-3 is green today while four such guards exist. Both
+  drift directions need their own answer, and the deployed-registry axis is the one that has
+  actually failed four times.
+
+  A GUARD THAT SHIPS UNREGISTERED IS WORSE THAN NO GUARD, which is why this fails rather than
+  warns: it appears in every inventory as coverage, so it does not merely fail to protect — it
+  actively stops anyone from noticing that nothing is protecting.
+
+  IT-PO (2026-08-25) — THE SHARED EXEMPTION VOCABULARY IS WHERE THE TWO SWEEPS COULD STILL
+  MERGE BY ACCIDENT. The BA correctly required reuse of GE-120c-3's exemption mechanism rather
+  than a second one. Reuse of the MECHANISM is right; reuse of the VERDICT is the merge this AC
+  must not suffer. If a declaration is stored without recording which sweep it applies to, then
+  exempting a shared helper from 'must be exercised' silently also exempts it from 'must be
+  registered' — and the two directions collapse into one after all, quietly, through the
+  exemption store rather than through the comparison. Scoping each declaration is what keeps one
+  vocabulary from becoming one sweep.
+
+  IT-PO — STORE-HYGIENE FINDING, NOT ACTIONED HERE. scripts/epic_lock.py does not exist in this
+  worktree; it survives only as a reference in docs/components.json and
+  templates/skills/building-epics/SKILL.md. Both this AC's criteria and BP-900e-3's approved
+  criteria name it as a package-development script. Neither set of criteria has been changed.
+  The consequence for the implementer is captured as an it_requirement: do not write a
+  regression assertion whose subject is a path that cannot exist, because it passes on a broken
+  sweep. The dangling reference itself is worth a separate ticket against whichever component
+  owns docs/components.json.

@@ -1195,8 +1195,19 @@ because nothing inspects the outcome.
 
 - **Severity:** medium
 - **Status:** open — the immediate duplicates are repaired; the convention that produced them is not
-- **Occurrences:** 9 in a single day (2026-08-25), of which 1 reached `main`
+- **Occurrences:** 10 in a single day (2026-08-25), of which 1 reached `main`
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+
+**Tenth occurrence, 2026-08-25 — this entry predicted it and then it happened here.** A triage
+authored `KI-BO-025` against an `origin/main` that had no 025; by the time that branch rebased,
+another session had landed 025, 026 and 027. Renumbered to `KI-BO-028` with four inbound
+references updated. Caught by a git merge conflict, which is luck rather than a check: the two
+sides appended to the same region of the same file. Had they appended to *different* registers,
+or had either landed via a path that auto-merges cleanly, the duplicate would have reached
+`main` exactly as the 019/020 pair did. This is the fourth id space to collide in one day
+(`KI-BO`, `GE-120`, `BP-900h-4/-5`, and the AC store's own `ACD-1200a`), which is the argument
+for option 3 below — a duplicate-heading check is cheap and is the only one of the three that
+fires without depending on where the collision happens to land.
 - **Where:** the "Adding an issue" instruction at the top of every `docs/known-issues/*.md`
 
 **Symptom.** The convention says to append using "the next free number". A branch reads the
@@ -1248,3 +1259,231 @@ references, and a missed one silently points a reader at someone else's defect.
    turns a silent duplicate on `main` into a blocked merge, and it is a few lines. **Worth doing
    regardless of which of the above is chosen** — it is the only one of the three that would
    have caught 2026-08-25 before it landed.
+
+---
+
+### KI-BO-025 — `/build-feature` plans only the first ready wave, so an epic with any dependency depth cannot be driven to completion in one run
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/build-feature.js` — the `epic-planner` `agent()` call
+  (deployed `~:2101`), and the `for (const batch of batches)` loop that consumes its output
+
+**Symptom.** Driving the 37-ticket `EPIC-TrustThatAGreenCheckActuallyChecked`, the planner
+returned 8 batches containing **17** tickets. The other 20 were never scheduled.
+
+The dropped set is not arbitrary. Measured against the epic folder:
+
+```text
+total tickets: 37 | planned: 17 | MISSING: 20
+tickets with non-empty depends_on: 20
+missing set == depends_on set ?  True
+planned tickets that have deps:  []
+```
+
+Every ticket carrying **any** `depends_on` was dropped; every ticket planned had none.
+
+**Root cause — the planner is asked for one antichain and is never asked again.** Its prompt
+says:
+
+> `(2) Compute the maximal antichain of ready tickets (all depends_on met).`
+
+At plan time no ticket is `done`, so "all depends_on met" is true only for tickets whose
+`depends_on` is empty. That is a correct reading of the instruction — the planner is not
+misbehaving. The defect is that this single ready-set is treated as the whole schedule: the
+`agent()` call sits **outside** the batch loop, so there is no re-plan after a batch completes
+and no wave 2. One invocation can therefore build at most the dependency-free tickets.
+
+The eight "batches" are misleading here. They are the antichain split by `files_touched`
+overlap — a *parallelism* split, not a dependency sequence. Seven of the eight contain a
+single ticket, which reads like a dependency chain and is not one.
+
+**Consequence.** An epic whose dependency graph is N levels deep needs N separate manual
+`/build-feature` invocations, and nothing in the run says so or says how many remain. For
+GE-120 that leaves the entire `b`/`d`/`e` chain — including every consumer of the `GE-120c-1`
+harness — unbuilt after a run that did substantial correct work on the other 17.
+
+**Not a false-complete, at least.** The completion guard does catch the shortfall and withholds
+the "complete" verdict — but it misdescribes the cause; see KI-BO-026.
+
+**Fix direction.** Either loop the planner until it returns an empty batch set (re-reading
+frontmatter each round, which the code comment at `~:2400` already anticipates as the resume
+mechanism), or have it emit the full topological schedule as ordered waves rather than one
+antichain. If the single-wave behaviour is deliberate, the run must state it: report the count
+of unscheduled-but-ready-later tickets and instruct the caller to re-invoke, rather than
+leaving the arithmetic to whoever compares the plan against the folder.
+
+**Pattern:** a stage that does part of the job correctly and reports no signal that the rest
+exists.
+
+---
+
+### KI-BO-026 — Work the planner never selected is reported as work "added to the epic after the plan was fixed"
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/build-feature.js` — `compareEpicTicketSets()`
+  (deployed `~:1838`) and `epicRecheckReport()` (deployed `~:1952`)
+
+**Symptom.** `compareEpicTicketSets` computes
+
+```js
+additions: currentOpen.filter((p) => plannedPaths.indexOf(p) === -1)
+```
+
+— every ticket that is open at completion time and was not in the plan. That correctly caught
+the 20 tickets of KI-BO-025 and correctly set `epic_complete: false`, which is the right
+verdict and worth keeping.
+
+But `epicRecheckReport` then files them under the field `discovered_after_planning` with the
+action text:
+
+> "This work was added to the epic after the plan for this drive was fixed, so it was never
+> built."
+
+That is false. All 20 tickets were committed to the epic folder before the drive was launched;
+none was added during it. They were never *added* — they were never *selected*.
+
+**Why the distinction matters.** The two causes have opposite remedies. Work genuinely added
+mid-drive is a scope question — someone changed the epic under a running build, and the
+sensible response is to find out who and decide whether it belongs. Work the planner skipped is
+a tooling question with no one to ask. A reader following the message as written goes looking
+for a change that never happened, and the real defect (KI-BO-025) stays invisible behind an
+explanation that sounds complete.
+
+The remedy sentence happens to be right — "re-run /build-feature to plan and build it" is
+exactly what KI-BO-025 requires — but it is right by accident, for a stated reason that does
+not hold.
+
+**Fix direction.** The comparison already has both inputs needed to tell these apart: a ticket
+present in the epic folder at *plan* time but absent from `plannedPaths` was skipped, while one
+absent at plan time and present at completion was added. Capture the plan-time folder listing
+and split `additions` into `never_planned` and `added_during_drive`, with the right remedy on
+each. Until then the field name asserts a cause the code cannot actually determine.
+
+**Pattern:** a correct verdict delivered with a fabricated cause.
+
+---
+
+### KI-BO-027 — `/build-feature`'s target resolution returns the epic folder as the worktree path
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/build-feature.js` — the `resolve-target` phase, dispatched
+  to `status-checker` against `RESOLVE_SCHEMA`
+
+**Symptom.** On the first phase of an epic drive, the resolver returned:
+
+```json
+{"target_type":"epic",
+ "epic_path":".../leafcutter-ai/tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked",
+ "worktree_path":".../leafcutter-ai/tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked"}
+```
+
+`worktree_path` is the epic's ticket folder **inside the main checkout** — it is not a worktree,
+and it is not even a repository root. The value satisfies `RESOLVE_SCHEMA` because the schema
+constrains the field to a string, and a path-shaped string is what it got.
+
+**No damage on this run.** A subsequent setup step created a real worktree at
+`worktrees/EPIC-TrustThatAGreenCheckActuallyChecked` and returned `status: "created"`, and the
+drive used that. Both `.leafcutter` and `.pre-commit-config.yaml` symlinks were present in it,
+so the silently-skipped-hooks condition did not arise either.
+
+**Why record it anyway.** The value that came back was wrong, nothing rejected it, and it was
+survivable only because a later step happened to overwrite it. Had the second step reused the
+first step's answer instead of computing its own, every phase agent would have been pointed at
+the user's main checkout on `main` — which is the shape of KI-ACD-007, where `/plan-feature`
+wrote its artifacts into the primary checkout for exactly this reason. The resolver failing open
+onto a plausible-looking path is the hazard; the recovery was luck, not design.
+
+**Fix direction.** Validate the resolved `worktree_path` before any consumer reads it: it must
+be a directory that `git -C <path> rev-parse --show-toplevel` resolves to, and it must not be
+the main checkout when the target is an epic. A schema that accepts any string cannot catch
+this — the check has to be behavioural.
+
+**Pattern:** a fail-open resolution rescued by a downstream step that did the work again.
+
+---
+
+### KI-BO-028 — Six `done` acceptance criteria in this component are falsified by defects already recorded in this register
+
+> **Numbered 028, not 025.** This entry was authored as `KI-BO-025` against an `origin/main`
+> that had no 025, and collided on rebase with the 025/026/027 another session landed in the
+> interval — a fresh instance of `KI-BO-024`, caught by a merge conflict rather than by any
+> check, which is the whole of that entry's argument. Renumbered here along with its four
+> inbound references. Counted as `KI-BO-024`'s occurrence, not filed separately.
+
+- **Severity:** high
+- **Status:** open — handover ticket raised, not started
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `BP-600e-2`, `BO-2400f-3`, `BO-2400e-4`, `BO-2200c-5`, `BO-202`, `BO-2300a-1`, `BO-2300a-2`, `BO-1500f-1` — and `unit_tests/workflows/test_fast_lane_ship_structure.py:289`, the test that let three of them read `done`
+
+**Ticket:** [`tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md`](../../tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md)
+
+**Symptom.** A read-only triage on 2026-08-25 walked all 65 entries across five
+known-issues registers and asked, per entry, whether an acceptance criterion already covered
+it. For this component the answer was repeatedly *yes, and the AC is marked done while the
+criterion it states is false*. The full evidence per record is in the ticket; this entry
+exists so the finding is reachable from the register rather than only from a PR body.
+
+**This entry is a handover.** It was raised from outside this component's work queue. The
+owner should re-scope, split or reject any of it — nothing in the ticket was written by
+someone holding the context that produced these records.
+
+**The mechanism is worth more than the list.** Three of the six were held up by
+**presence-only assertions over JavaScript source**. `BO-2400f-10`'s entire covering evidence
+was `self.assertIn("release", content)`, which passes while all eleven release dispatches go
+to an agent that refuses the role; its behavioural tests call `release_claim` directly, so the
+function works and its caller is dead. `KI-BO-008` files this mechanism in its own right, and
+`BP-1100b-5` (`work_status: todo`) already specifies the guard that would catch it — its
+scanned-source globs already include `templates/workflows-js/**/*.js`. **Building `BP-1100b-5`
+and running it retroactively over existing stock would have caught three of the six**, which
+makes it the highest-leverage item and arguably the thing to do before the individual repairs.
+
+**Two were already handled and are excluded.** `BO-2400f-10` and `BO-2400c-1-iii` moved from
+`done` to `in_progress` while the triage was running. Re-check the rest the same way before
+starting; this register moves fast enough that a day-old finding is worth re-verifying.
+
+**Corrections to existing entries, found during the same pass.** Recorded here rather than
+edited into each entry, because this triage did not own them:
+
+- **`KI-BO-011`** says the class — an unreachable file serving as a criterion's proof — "has no
+  AC and is the reason this entry stays open". `BO-2900a-3` ("Code that no way of running the
+  product can reach cannot be marked done, however many tests pass") specifies it precisely and
+  is `todo`, `readiness: reviewed`. The entry's own fix direction said to check the `BO-2900`
+  family first; that check was not done.
+- **`KI-BO-011`**'s evidence line — "`BO-2500d-1` also names the orphan in its `implemented_by`"
+  — is stale since 2026-08-19; that field now points at `fast-lane-ship.js`.
+- **`KI-BO-013`**'s headline, "`test_required: false` is honoured by nothing", is overstated.
+  `check_done_proof.py` honours it in two places and backs the required CI gate. The body's
+  narrower claim — that the *fast lane's* chain is blind to it — is correct and is what was
+  verified.
+- **`KI-BO-014`** calls `BO-2600a-5` "another phantom-done instance". It is not: every `Then`
+  clause in that record sits inside the `--ids` scenario and the final clause explicitly scopes
+  `--ac` out, so the record is satisfied by its own wording. The real finding is weaker and more
+  common — a hygiene rule written as a scenario-scoped clause when it should have been
+  unconditional. Calling it phantom-done makes the fix look like a reconciliation when it is an
+  amendment.
+- **`KI-BO-012`**'s status line reads "open — no AC" while its own body discusses `BO-2400d-3`
+  and `BO-2400d-1-i` as done ACs. Four ACs exist; the problem is that all four open with a
+  `Given` presupposing that telemetry is already being recorded, so none can be falsified by
+  zero emission.
+- **Stale line numbers.** PR #541 shifted `fast_lane.py`. `KI-BO-022`'s `:169-171`/`:205-207`
+  are now `:266`/`:186`; `KI-BO-023`'s `:180-185`/`:289`/`:347`/`:462` are now
+  `:281`/`:380`/`:438`/`:553`. Both defects are unchanged — only the addresses moved.
+
+**Not everything was still broken**, which is worth saying in a register that only ever
+accumulates: `KI-BO-007` is largely discharged — `build-feature.js` now has a real read-back
+adjudication that fails closed — and `KI-BO-016`'s filed N+1 defect is genuinely fixed by an AC
+whose criteria is a parse-count assertion rather than a wall clock, which is the right shape.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M1 (a test that greps for a string
+instead of exercising the behaviour) is the dominant one here; `KI-CG-001`'s population-vs-change
+scoping is the dominant one in the sibling registers.

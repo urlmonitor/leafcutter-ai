@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -29,3 +29,33 @@ covered_by: []
 implemented_by: [scripts/setup_ticket_worktree.py]
 change_target: pipeline
 risk_surface: internal
+notes: |
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-BO-017 and KI-BO-028. The criterion
+  promises a worktree "cut from the latest origin/main (never from stale local main)". That
+  holds only on the create path. On reconnect it is false.
+
+  templates/scripts/setup_ticket_worktree.py, _create_fastlane_worktree: when
+  _branch_exists(full_branch, repo_root) is true, the code runs
+
+      git -C <repo> worktree add <path> <branch>
+
+  with NO START POINT (:519-529). Only the else branch cuts from origin/main. The function's
+  own docstring names the behaviour -- "the checkout-only git worktree add <path> <branch> form
+  reuses it" -- so this is a documented choice that the criterion's absolute wording forbids.
+
+  The consequence is the one the criterion exists to prevent: a fast-lane re-run whose worktree
+  was pruned but whose branch survived silently rebuilds on the old branch tip, so the run
+  produces a diff against a base that may be days stale, with nothing in the output saying so.
+
+  Why nothing caught it: the single origin/main test,
+  unit_tests/build_orchestration/test_fastlane_worktree_mode.py:344
+  test_ac3_git_worktree_add_uses_fast_lane_branch_and_origin_main, stubs the _branch_exists
+  probe to return empty at :383 with the comment "branch doesn't exist -> use -b form". The
+  reconnect branch is not exercised by any of the seven "# covers: BO-2400f-3" tests. Note also
+  covered_by is empty on this record, so nothing linked the claim to that suite in the first
+  place.
+
+  Closing it means either resetting the reused branch to origin/main on reconnect, or narrowing
+  the criterion to the create path and saying explicitly what reconnect does instead -- and a
+  test that lets _branch_exists return true. See
+  tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md.

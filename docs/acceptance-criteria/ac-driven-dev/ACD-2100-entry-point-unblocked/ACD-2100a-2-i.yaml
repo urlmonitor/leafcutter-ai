@@ -1,0 +1,134 @@
+id: ACD-2100a-2-i
+components:
+  - ac_driven_dev
+  - worktree_manager
+readiness: approved
+priority: medium
+title: "An ambiguous repository location stops the setup step instead of being guessed"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a copy of the worktree setup step placed in a directory that is not inside
+    any git repository,
+  And two or more git repositories exist among the immediate subdirectories of
+    that directory,
+  When the setup step is executed from that directory with no repository location
+    supplied by the caller,
+  Then it exits with a failure status and creates no worktree under any of the
+    candidate repositories,
+  And its failure names every candidate it found and states that it will not
+    choose between them,
+  And no branch and no directory is left behind in any candidate repository by the
+    attempt.
+depends_on: [ACD-2100a-2]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must tell an operator what an ambiguous-layout refusal means and how to resolve it."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004's fix direction names the exactly-one rule: 'accept the result only when exactly one is found; otherwise re-raise'."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: implements
+    status: exists
+    relevance: "Canonical source of the resolver whose ambiguous case this pins."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the surface that must refuse rather than guess."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change must land under templates/scripts/ alongside ACD-2100a-2's resolver; the deployed copy is build output."
+  - "Fail closed: an ambiguous resolution is a non-zero exit, never a warning that proceeds. A worktree created in the wrong project is silent and expensive to unpick."
+  - "The refusal must be atomic with respect to the filesystem: the resolution must complete before any branch is created or any directory is written, so a partial attempt cannot leave residue in a candidate repository."
+  - "The refusal message must enumerate every candidate found. A bare 'could not determine the repository' sends the operator back to the same search by hand and is not distinguishable by a test from a resolver that simply failed."
+  - "Must satisfy the repository error-handling policy: raise a typed error rather than returning a sentinel that a caller can ignore."
+  - "Must be idempotent: rerunning after the refusal must produce the same refusal, not a different outcome caused by residue from the first attempt."
+test_spec:
+  - name: test_two_candidate_repositories_refuse_and_create_nothing
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A non-repository directory with two real git repositories among its immediate
+      subdirectories; the subprocess exits non-zero and no worktree directory exists
+      under either candidate afterwards.
+  - name: test_refusal_names_every_candidate_it_found
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The failure output contains the location of both candidate repositories and
+      states that the step will not choose between them.
+  - name: test_ambiguous_refusal_leaves_no_branch_in_any_candidate
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      After the refusal, `git branch` in each candidate repository lists exactly the
+      branches it had before the attempt, and no new directory is present in either.
+  - name: test_refusal_is_reached_through_the_command_line_entry_point
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/setup_ticket_worktree.py invoked as a subprocess with real argv from the ambiguous directory"
+    description: >-
+      The refusal is produced by running the script's real command-line entry point in
+      a fresh process, and its non-zero exit status is what the caller observes.
+test_rationale: >-
+  The dangerous implementation of ACD-2100a-2's fallback is a search that returns its
+  first hit: the run succeeds, a worktree appears, and it is in the wrong project. That
+  implementation passes every test written for the exactly-one case, so the ambiguous
+  case has to be asserted separately or it is not covered at all. The observed workspace
+  already holds more than one repository-shaped directory, so this is the normal case
+  here rather than a contrived one. The no-residue assertion is separate from the exit
+  code on purpose -- an implementation that creates the branch first and discovers the
+  second candidate afterwards exits non-zero and still leaves the operator with cleanup
+  in a repository they never meant to touch.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100a-2
+    contract: "A repository resolver whose search step returns its full candidate set rather than a single first hit, so that 'two or more candidates' is a state this record can act on rather than one the resolver has already collapsed."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS ITS OWN RECORD AND NOT A CLAUSE ON ACD-2100a-2. The fallback added by
+  ACD-2100a-2 is a search, and a search that returns the first hit is the easiest
+  thing to write and the hardest failure to notice: the run succeeds, a worktree
+  appears, and it is in the wrong project. The observed workspace already holds
+  more than one repository-shaped directory, so the ambiguous case is the normal
+  case here, not a contrived one.
+
+  THE FAILURE MUST NAME ALL CANDIDATES. A bare "could not determine the repository"
+  sends the operator back to the same search by hand. Naming the candidates is what
+  makes the message actionable, and it is also the only way a test can tell a
+  refusal-to-guess apart from a resolver that simply failed.
+
+  THE NO-RESIDUE CLAUSE IS LOAD-BEARING. A partial attempt that creates a branch in
+  candidate A before discovering candidate B leaves the operator with cleanup in a
+  repository they never meant to touch, and a rerun then sees a branch that already
+  exists. Assert the absence on disk in every candidate after the failure -- not the
+  exit code alone.
+
+  2026-08-25 (it-po): the no-residue clause is restated in it_requirements as an
+  ordering constraint (resolve fully before writing anything) because that is the only
+  way it is satisfiable by construction rather than by cleanup-on-error, and a
+  cleanup-on-error implementation is itself a new failure path that can leave residue
+  when it crashes.
