@@ -35,6 +35,7 @@ doc_links:
   status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+declares_side_effect: true
 it_requirements:
 - Reuse the worktree+branch setup mechanic proven in build-single-ticket (scripts/setup_ticket_worktree.py)
   rather than inventing a new isolation scheme.
