@@ -5,7 +5,7 @@ type: how-to
 category: how-to
 status: active
 created: 2026-06-17
-last_updated: 2026-06-17
+last_updated: 2026-08-25
 components:
   - ac_store
   - skills_system
@@ -409,4 +409,4 @@ Then re-run `mark_ac_done.py`.
   the design decision that makes the AC store the source of truth for the backlog.
 - [ADR-013 — Portable Skill Script Deployment Boundary](../architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md) —
   canonical policy for which skills and scripts are deployed to consumer installs.
-- [docs/README.md](../README.md) — project overview and navigation index.
+- [docs/INDEX.md](../INDEX.md) — documentation navigation index.

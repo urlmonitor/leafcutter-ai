@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-08-14
+last_updated: 2026-08-25
 components:
   - build_pipeline
 related_docs:
@@ -843,4 +843,4 @@ component IDs to their prefix and description.
 - `docs/how-to/declare-component-membership.md` — how to add the `components` list to an AC (or any knowledge item) so it joins the component view, and how to query a component back to its criteria and delivering code.
 - `docs/acceptance-criteria/README.md` — directory structure and quick-start.
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07) for the AC YAML format.
-- `docs/README.md` — full documentation index.
+- `docs/INDEX.md` — full documentation index.
