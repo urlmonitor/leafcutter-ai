@@ -23,7 +23,10 @@
     "Test",
     "Diff",
     "Commit",
-    "PR"
+    "PR",
+    "FrontendComponent",
+    "AcDeclaration",
+    "GuardrailFinding"
   ],
   "artifacts": [
     {
@@ -314,7 +317,7 @@
         "in_progress": 1,
         "not_started": 15,
         "total": 19,
-        "asof": "2026-07-20"
+        "asof": "2026-08-18"
       },
       "tags": [
         "build-pipeline",
@@ -705,7 +708,9 @@
   },
   "by_entity": {
     "Ac": {
-      "canonical_mock_data": {},
+      "canonical_mock_data": {
+        "guardrail-engine": "guardrails/frontend-ac-declarations"
+      },
       "flows": {
         "ac-driven-dev": [
           "leafcutter/ac-lifecycle"
@@ -718,6 +723,12 @@
           "leafcutter/define-a-feature"
         ]
       }
+    },
+    "AcDeclaration": {
+      "canonical_mock_data": {
+        "guardrail-engine": "guardrails/frontend-ac-declarations"
+      },
+      "flows": {}
     },
     "AcStore": {
       "canonical_mock_data": {},
@@ -763,6 +774,18 @@
           "leafcutter/define-a-feature"
         ]
       }
+    },
+    "FrontendComponent": {
+      "canonical_mock_data": {
+        "guardrail-engine": "guardrails/frontend-ac-declarations"
+      },
+      "flows": {}
+    },
+    "GuardrailFinding": {
+      "canonical_mock_data": {
+        "guardrail-engine": "guardrails/frontend-ac-declarations"
+      },
+      "flows": {}
     },
     "MockData": {
       "canonical_mock_data": {},
@@ -1099,7 +1122,7 @@
         "in_progress": 1,
         "not_started": 15,
         "total": 19,
-        "asof": "2026-07-20"
+        "asof": "2026-08-18"
       },
       "expands": [
         "leafcutter/python-coder-internal"

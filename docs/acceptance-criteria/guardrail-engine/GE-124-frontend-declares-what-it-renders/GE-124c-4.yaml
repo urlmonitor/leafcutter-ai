@@ -1,0 +1,121 @@
+id: GE-124c-4
+readiness: approved
+priority: high
+title: "A how-to tells a blocked author which of the two mistakes they made and how to clear it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given an author's commit has just been rejected by the frontend declaration
+    check
+  When they open the how-to named in the block report
+  Then the how-to has one section per verdict code the check emits, keyed by the
+    code as printed
+  And the missing-declaration section shows the remedy — add the declaration in
+    the shape their file type uses, or record a visible per-item opt-out reason
+  And the unresolved-id section shows the different remedy — correct the id or
+    author the criterion — and states plainly that this is not the same mistake
+    as a missing declaration
+  And the how-to states that an untouched file is never reported, so an author
+    does not go looking for a change they did not make
+depends_on:
+  - GE-124c
+  - GE-124c-1
+  - GE-124c-2
+  - GE-124c-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-4.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/how-to/clearing-a-frontend-declaration-block.md"
+    relationship: describes
+    status: planned
+  - path: "docs/how-to/managing-pre-commit-hooks.md"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/how-to/ with check_doc_frontmatter-compliant frontmatter (title, type: how-to, status, created, last_updated, components, description) and stay within the check_doc_length budget."
+  - "SECTIONS ARE KEYED BY THE VERDICT CODE AS THE CHECK PRINTS IT — a heading or anchor containing the literal code string (missing-component-declaration, unresolved-ac-id, and any further code the check emits), so an author can paste the code from the terminal and land on the right section. The block report must name this page and, ideally, the anchor."
+  - "THE SECTION SET MUST MATCH THE CHECK'S CODE SET EXACTLY — no missing sections and no sections for codes the check does not emit. The test contract asserts this against the code enum the check exposes, so adding a code without a section fails; make the enum importable rather than a set of scattered string literals so that assertion is possible at all."
+  - "KEEP THE TWO REMEDIES VISIBLY DIFFERENT. The whole point of the missing/unresolved split is that they have different fixes; a single 'how to satisfy the frontend declaration check' page re-merges them at the moment the author most needs them apart. State in the unresolved-id section, in words, that this is not a missing declaration."
+  - "DO NOT RE-DOCUMENT THE DECLARATION SYNTAX. GE-124a-4 owns the five file shapes and their placement; link to it. Two pages carrying the syntax drift, and this page's reader already has a file open."
+  - "COVER THE NOT-REPORTED CASE AS REASSURANCE, per the criteria: an untouched file is never reported, so an author who sees a neighbouring legacy component unflagged is not looking at a bug. Also state the reverse — that the same file WILL be flagged the day they edit it (GE-124c-3 scenario 3) — so the backfill is expected rather than surprising."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the how-to document."
+delivers_to:
+  agent: frontend-coder
+  contract: "The remediation path out of each block verdict, reachable from the block report itself and keyed by the verdict code as printed. Its section set is contractually equal to the check's emitted-code set, so a new code cannot ship undocumented."
+expects_from:
+  ac_id: GE-124c-1
+  contract: "The verdict codes and the finding message shape the how-to is keyed to, exposed as an importable code enum so the section-set agreement can be asserted"
+test_spec:
+  - name: test_ge_124c_4_howto_has_one_section_per_code_the_check_actually_emits
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The set of verdict codes appearing as section keys in the how-to equals the check's emitted-code enum, derived from the check at test time. Adding a code without a section fails; documenting a code the check does not emit also fails. A hard-coded two-item list in the test would pass on both."
+  - name: test_ge_124c_4_block_report_points_at_this_page
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the real check over an undeclared staged fixture and assert the message it prints references this how-to's path. A remediation page nobody is routed to is a page nobody reads, and the routing lives in the check, not in the doc."
+  - name: test_ge_124c_4_two_sections_give_different_remedies_and_the_unresolved_one_says_so
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The missing-declaration section names adding a declaration or recording an opt-out reason; the unresolved-id section names correcting the id or authoring the criterion and states in words that it is not the same mistake. This is the clause that stops the two being re-merged into one generic page."
+  - name: test_ge_124c_4_howto_states_the_untouched_file_rule_in_both_directions
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The page states both that an untouched file is never reported and that the same file will be reported once it is edited and staged. The second half is what turns the later block into an expected backfill rather than an apparent regression."
+test_rationale: |
+  A how-to keyed to verdict codes has exactly one interesting failure: the codes change and the
+  page does not, so the author pastes a code from their terminal and finds nothing. The first
+  test makes that impossible by deriving the expected section set from the check's own enum
+  rather than from a literal — which is also why it_requirements demand the enum be importable.
+  The second test asserts the routing in the other direction, from the real check's real output,
+  because a remediation page nobody is sent to might as well not exist. The two content tests
+  cover the clauses with no executable counterpart, and both guard specific documented harms:
+  re-merging the two remedies, and letting a backfill read as a regression.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made the section set contractually equal to the check's emitted-code enum (and required that enum to be importable so the assertion is possible), required the block report to route to this page and asserted that routing from the check's real output, and added the second half of the untouched-file rule so the backfill does not read as a regression. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for the `how-to` entry in GE-124c's `documentation_triggers`, which
+  the PO mirrors from GE-117d.
+
+  KEYED BY VERDICT CODE, deliberately. The whole point of keeping missing and
+  unresolved apart is that they have different fixes; a single "how to satisfy
+  the frontend declaration check" page would re-merge them at the moment the
+  author actually needs them separated.
+
+  Distinct reader from GE-124a-4: that how-to is for someone writing a new
+  component, this one is for someone who has just been stopped. The overlap is
+  the declaration syntax, which GE-124a-4 owns and this one links to.
+
+  IT-PO NOTE (2026-08-25). The code set this page must cover is not closed by
+  the criteria: GE-124b-1-ii introduces a malformed-pin state whose verdict code
+  GE-124c has not yet named. Deriving the section set from the check's enum
+  rather than from the two codes named here means the page stays correct
+  whichever way that is settled.

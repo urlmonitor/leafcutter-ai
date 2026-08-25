@@ -1,0 +1,101 @@
+id: GE-124b
+title: "Pin one thing on the page to the exact criterion it renders"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Mark a single element with the criterion it shows — inert, greppable, optional.
+
+  When one specific thing on the page is the visible answer to one specific
+  criterion, you can say so on that element itself, so a reviewer can go from
+  what they are looking at to the requirement behind it. The marker never
+  affects how the page looks and never reaches the people using the product.
+  It says only that this thing is on screen: it is not a claim that the
+  criterion behaves correctly, and it never counts as a test of it.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124b-1
+  - GE-124b-2
+  - GE-124b-3
+  - GE-124b-4
+  - GE-124b-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA / IT PO).
+
+  THE SURFACE IS A DATA ATTRIBUTE — `data-ac="<AC-ID>"`, space-separated when an
+  element renders more than one criterion. This is a settled user decision, not
+  an open option. Rationale, so it is not relitigated at L2: `class` is the
+  styling namespace — mangled by CSS-modules hashing, purged by Tailwind content
+  scanning, and an invitation to style the thing. A data attribute is inert,
+  greppable, survives minification, and follows the existing `data-testid`
+  precedent.
+
+  OPTIONAL BUT ALWAYS VALIDATED. Nothing requires an element-level pin. But
+  whenever one is present it must be well-formed and must resolve to a real
+  criterion — an id that resolves to nothing is a defect, and is a DISTINCT
+  verdict from an absent declaration (that distinction is owned by GE-124c).
+
+  THE HARD LIMIT — this is the AC that must state it. An element-level pin
+  expresses ON-SCREEN PRESENCE, NOT BEHAVIOUR. A validation rule, a sort order,
+  a debounce has no element to hang on. It therefore can NEVER be the only link
+  a file offers and can never satisfy GE-124a's floor. The mock-data artifact
+  encodes the case: `detail-drawer.tsx` pins KM-ADM-004 on an element while
+  carrying no component-level declaration, and is still reported — once — for
+  the missing floor.
+
+  AND IT IS NEVER COVERAGE. A pin says a criterion is rendered, never that it is
+  tested. It must not be written into an AC's `covered_by`, and must not be
+  accepted anywhere a covering test is required. This L1's criteria states the
+  limit so it cannot be lost in decomposition, but the GUARANTEE itself is
+  owned by GE-124g, which decomposes it into testable behaviour across all four
+  places the substitution could happen. Decompose this L1 against GE-124g open
+  beside it: nothing specified here may weaken it, and an L2 here that treats a
+  pin as evidence of correctness contradicts GE-124g directly.
+
+  PRODUCTION BEHAVIOUR IS PART OF THIS L1, NOT AN AFTERTHOUGHT: the attribute is
+  stripped from production builds by the same SWC/babel transform that already
+  strips `data-testid`, and retained in dev, test and the Atlas. If stripping is
+  not specified here, the first performance review will delete the attribute
+  wholesale instead.
+
+  documentation_triggers [how-to, reference-doc] — how-to for the author adding
+  a pin; reference-doc because the attribute is a contract with several
+  consumers at once (the commit check, the CI gate, the Atlas, and the test
+  selector in GE-124f). Its name, multi-value form, resolution rule, production-
+  stripping behaviour and — explicitly — what it does NOT prove need one
+  authoritative place to live.
+
+  BA decomposition note (2026-08-25). Five L2s, of which two are the documents
+  the two triggers require, leaving three behavioural: GE-124b-1 (the attribute
+  surface, the multi-value parse, and optionality as a positive behaviour),
+  GE-124b-2 (the hard limit, in both directions), GE-124b-3 (production
+  stripping and dev/test/Atlas retention). The child cap of five is the binding
+  constraint here — "optional but always validated" is folded into GE-124b-1's
+  third scenario and GE-124c-2's second scenario rather than taking a slot of
+  its own, because the VERDICT for a present-but-unresolvable pin is GE-124c's
+  to own. Nothing in this L1 restates GE-124g.

@@ -7,7 +7,7 @@ title: "emit_event.py exists and is deployed by the build system"
 component: infrastructure
 level: L2
 status: active
-work_status: todo
+work_status: done
 created_by: "tickets/00_inbox/TICKET-20260528-WireSupervisorFeedbackEmission.md"
 criteria: |
   Given the build system has deployed the leafcutter package
@@ -31,8 +31,10 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/test_emit_event.py"
+implemented_by:
+  - "templates/skills/agent-telemetry/scripts/emit_event.py"
 change_target:
   - code
   - infrastructure

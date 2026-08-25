@@ -1,0 +1,134 @@
+id: GE-124g
+title: "A screen saying it serves a requirement is never proof the requirement works"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A declaration tells you where to look. It never tells you it works.
+
+  Marking a screen or an element with the requirement it renders is a signpost,
+  not a result. It can never be recorded as evidence that the requirement is
+  satisfied, can never be counted where a proving test is required, and can
+  never let work be treated as finished on its own. Wherever the product asks
+  "is this actually proven?", a declaration answers no — every time, with no
+  exception and no way to configure one.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124g-1
+  - GE-124g-2
+  - GE-124g-3
+  - GE-124g-4
+  - GE-124g-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA / IT PO). READ THIS BEFORE DECOMPOSING ANY OTHER
+  L1 IN THIS TREE.
+
+  WHY THIS IS ITS OWN L1 AND NOT AN EDGE CASE OF GE-124b. Left inside the
+  pinning behaviour, this reads as a caveat on one feature, and a caveat is
+  exactly what gets folded into a single negative L2 assertion and then lost.
+  It is a distinct promise: GE-124b promises you CAN pin an element; this
+  promises what that pin is WORTH. It constrains four other L1s at once
+  (GE-124a, GE-124b, GE-124e, GE-124f), and a constraint that spans siblings
+  cannot live inside one of them.
+
+  THIS IS THE ANTI-PHANTOM-DONE CLAUSE. GE-124 introduces a brand-new, cheap,
+  machine-readable signal that a criterion is "connected to" running code. Every
+  cheap signal of that shape in this repo has eventually been read as proof of
+  correctness by something downstream. If that happens here, GE-124 will have
+  manufactured the precise defect the guardrail-engine component exists to
+  prevent — and it will be worse than the status quo, because the false
+  confidence is now automated and looks rigorous.
+
+  FOUR PLACES THE SUBSTITUTION MUST BE BLOCKED — the BA should expect roughly
+  one L2 per place, each independently testable:
+    1. THE STORE. A declaration or an element pin must never be written into an
+       acceptance criterion's `covered_by`, by any tool or any agent. That field
+       means "something asserts this", and a declaration asserts nothing. Note
+       there are already separate fields for the other direction
+       (`implemented_by`) — the BA should decide explicitly whether a
+       declaration belongs there or in a new field, and NOT default to
+       `covered_by` because it is convenient.
+    2. THE DONE GATE. Passing GE-124e must not, on its own, allow a criterion to
+       be treated as finished. The mock-data artifact pins this: a criterion may
+       be pinned on a real element and still have no covering test at all
+       (KM-ADM-004 is pinned with `covered_by: []`). The two gates are
+       independent and BOTH must hold — a UI criterion that is declared but
+       untested is exactly as unfinished as one that is tested but undeclared.
+    3. THE REPORTS. Anywhere coverage is counted, summarised or shown — CI
+       output, the proof-of-done report, the Atlas — declarations must be
+       counted on their own axis and must never be added into a coverage figure,
+       nor coloured as though they were. A number that silently mixes the two is
+       the same defect wearing a friendlier face.
+    4. THE TEST SELECTOR (guards GE-124f outcome 3). A test locating an element
+       by its declaration still has to ASSERT something. "The element exists and
+       carries the right marker" is not a test of the criterion, and an
+       existence-only test must not be accepted as covering it.
+
+  NO OPT-OUT, DELIBERATELY. GE-124d's escapes apply to whether a file must
+  declare — they do NOT apply here. There is no warn tier and no per-item
+  exception for treating a declaration as coverage, because a configurable
+  version of this rule is not a rule. Say so explicitly at L2 rather than
+  leaving it to be inferred from silence.
+
+  WORDING THE L2s SHOULD NOT DRIFT FROM: presence, not proof. On screen, not
+  correct. A signpost, not a result.
+
+  documentation_triggers [reference-doc] — this is a standing rule about what
+  each kind of evidence is worth, binding on future authors of all three
+  traceability checks (GE-111, GE-117, GE-124) and on anyone adding a new
+  coverage report. It has to be written down somewhere they will find it; a
+  how-to aimed at one task cannot carry it.
+
+  BA decomposition note (2026-08-25). ONE L2 PER PLACE, as the PO asked, plus
+  the reference doc: GE-124g-1 (the store), GE-124g-2 (the done gate),
+  GE-124g-3 (the reports), GE-124g-4 (the test selector), GE-124g-5 (the
+  reference doc). No single "declarations are not coverage" assertion exists
+  anywhere in this tree — the four are written so that each fails on its own
+  and none can be discharged by another.
+
+  THE FIELD DECISION THE PO REQUIRED IS MADE IN GE-124g-1 AND IS EXPLICIT: a
+  declaration goes into NEITHER `covered_by` NOR `implemented_by`, but into two
+  new fields, `declared_by` and `pinned_by`, matching the mock-data `Ac` entity.
+  `implemented_by` was rejected on the ground that it records a link established
+  by completed work, whereas a declaration is an unverified claim a file makes
+  about itself; folding them would make `implemented_by` mean two things. Two
+  fields rather than one because the two surfaces are non-interchangeable
+  everywhere else in this tree.
+
+  THE NO-OPT-OUT CLAUSE IS STATED IN THE CRITERIA OF ALL FOUR, not inferred, and
+  is additionally tested as a property of the configuration surfaces themselves
+  in GE-124g-1-i — which is filed under GE-124g-1 only because a parent had to
+  be chosen. Its scope is all four places; do not narrow it to the store.
+
+  The fifth L2 slot went to the reference doc rather than to a fifth behaviour.
+  No genuine fifth place of substitution was found: the authoring surfaces
+  (GE-124a-4, GE-124b-4, GE-124b-5, GE-124e-5) carry the rule as required
+  content rather than as their own guarantee, and the enforcement-side
+  independence of the two gates is GE-124e-3-i.

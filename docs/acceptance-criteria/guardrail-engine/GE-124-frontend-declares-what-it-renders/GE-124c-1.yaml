@@ -1,0 +1,130 @@
+id: GE-124c-1
+readiness: approved
+priority: high
+title: "A changed screen component with no declaration blocks the commit by default"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given the staged set contains `components/coverage/gaps-callout.tsx`, an
+    in-scope screen component with no component-level declaration
+  And the path is not on the warn list and carries no opt-out reason
+  When the commit-tier declaration check runs
+  Then the commit is rejected
+  And one finding is reported with the verdict "block" and the code
+    "missing-component-declaration"
+  And the finding names the file path, names the surface as the component-level
+    declaration, and states the two ways out — add the declaration, or record a
+    visible per-item opt-out reason
+
+  Given the staged set contains three in-scope screen components, all three
+    with no component-level declaration
+  When the commit-tier declaration check runs
+  Then the commit is rejected
+  And all three files are named in the report, rather than the report stopping
+    at the first
+depends_on:
+  - GE-124c
+  - GE-124a-1
+  - GE-124a-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d-1.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THIS AC CREATES THE HOOK. New check at templates/scripts/commit_guardian/check_frontend_ac_declaration.py with its deployed twin at scripts/commit_guardian/check_frontend_ac_declaration.py — the check name the mock-data artifact uses for every commit-tier finding. Register it in commit_guardian.json (BOTH the templates/ and scripts/ copies): a new `frontend_ac_declaration` config section plus one hooks_manifest.hooks entry with tier `judgment`, entry `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_frontend_ac_declaration.py`, matching the shape of the existing judgment-tier hooks. Add its row to the hook documentation index."
+  - "DEPLOY-MANIFEST OBLIGATION FOR THE SHARED READER. The hook imports _frontend_declaration_reader (GE-124a-1); that module MUST be in the commit-guardian deploy_map in scripts/build_phases.py in the same change. Verify by running the DEPLOYED hook after a build.py round-trip, not only the source-tree unit tests — done_proof.py shipped with exactly this gap on 2026-07-22 and crashed with ModuleNotFoundError in the deployed layout while every source-tree test stayed green."
+  - "BLOCK IS THE DEFAULT AND IS NOT CONFIGURABLE AWAY. Every in-scope missing declaration blocks unless the path is on the warn list (GE-124d-1) or the file carries an accepted opt-out reason (GE-124d-2). Do NOT add a global enforcement-mode key, an advisory-first rollout, or an environment-variable override; the per-path opt-in already covers staged adoption. This mirrors GE-117d-1's fail-closed default deliberately — do not invent a second enforcement idiom."
+  - "ENUMERATE ALL OFFENDERS, NEVER STOP AT THE FIRST. A branch adding six components would otherwise produce six sequential blocked commits, and six blocked commits in a row is how a guardrail gets turned off. Collect every finding, then decide the exit code once."
+  - "THE FINDING RECORD SHAPE IS {subject, subject_type: 'frontend_component', tier: 'commit', check, code, verdict, surfaces[], message, suppression_reason, ac_ids[], resolver} — matching the mock-data GuardrailFinding entity so the escapes in GE-124d downgrade a field rather than emit a parallel record, and so GE-124c-1-i can enforce at-most-one per (subject, code)."
+  - "THE MESSAGE MUST NAME BOTH WAYS OUT — add the declaration, or record a visible per-item opt-out reason — and point at the GE-124c-4 how-to by its verdict code. A bare 'missing declaration' leaves the author guessing, and the GE-117 house shape is that the verdict carries the remediation."
+  - "FAIL-OPEN ON INTERNAL ERROR ONLY: an unexpected exception exits 0 with a stderr-prefixed advisory and clean stdout, so a hook bug never masquerades as a declaration violation. A real missing declaration must still fail closed. The store-unreachable case is GE-124c-2-ii's, and the single-unreadable-file case is GE-124c-3-i's; neither is this fallback."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-4) and complete within the pre-commit latency budget."
+delivers_to:
+  agent: python-coder
+  contract: "The block/proceed decision plus the per-file finding record {subject, subject_type, tier, check, code, verdict, surfaces[], message, suppression_reason, ac_ids[], resolver} emitted by scripts/commit_guardian/check_frontend_ac_declaration.py. GE-124d's escapes DOWNGRADE the verdict field on this record rather than adding a second record; GE-124c-1-i fixes its cardinality at one per (subject, code); GE-124c-4's how-to is keyed to its code."
+expects_from:
+  ac_id: GE-124a-1
+  contract: "The per-file declaration record (declares[], declaration_block, verdict) from the shared reader, plus GE-124a-3's in-scope decision, which together determine which staged files this check turns into findings"
+test_spec:
+  - name: test_ge_124c_1_undeclared_staged_component_blocks_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "MUST-BLOCK, MANDATORY. Run the hook the way its real runner does (subprocess, real argv, temp git repo with the file genuinely git-added) and assert a non-zero exit plus one finding with code 'missing-component-declaration' and verdict 'block'. Feeding known-bad input through the production entry point is the only thing that distinguishes a wired gate from a defined-and-ignored one; an in-process call to the verdict function passes on a hook nothing invokes."
+  - name: test_ge_124c_1_report_enumerates_all_three_offenders_not_just_the_first
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Three undeclared in-scope components staged together: the output names all three. Assert the set of subjects equals the set of staged offenders, not merely that the count is greater than one."
+  - name: test_ge_124c_1_finding_message_names_the_file_the_surface_and_both_ways_out
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The emitted finding carries the file path, surfaces == ['component-declaration'], and a message naming both remedies (add the declaration; record a visible opt-out reason). Assert against the message the check really renders, not against a format-string constant."
+  - name: test_ge_124c_1_deployed_hook_runs_after_a_build_round_trip
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run build.py into a temp target, then execute the DEPLOYED check_frontend_ac_declaration.py against a staged undeclared file and assert it blocks rather than raising ModuleNotFoundError. This is the deploy-manifest ratchet for the shared reader module; source-tree tests import from the source tree, which is the one layout where the missing manifest entry cannot reproduce."
+test_rationale: |
+  This AC is the commit tier's entry point, so it carries the reachability floor and the
+  must-block modifier for the whole tier — every sibling verdict AC leans on the wiring proven
+  here. Two of the four tests therefore run the real hook as a subprocess over a real staged
+  git repo: one proves it blocks on known-bad input, and one proves the DEPLOYED copy blocks
+  after a build round-trip. The second is not redundant. The repo has already shipped a
+  commit-guardian dependency that was absent from the deploy manifest (done_proof.py, 2026-07-22),
+  which crashed only in the deployed layout while every source-tree test stayed green; once this
+  check is a required gate that crash blocks every merge. The message test asserts rendered
+  output rather than a constant, because a remediation string that is defined and never printed
+  is the dead-code false green this repo has shipped before.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Named the new hook, its dual template/deployed location, its commit_guardian.json config section and hooks_manifest entry (tier judgment), and the deploy_map obligation for the shared reader. Fixed the finding record to the mock-data GuardrailFinding shape so GE-124d downgrades a field rather than adding a record. Charged the tier's reachability floor and must-block modifier here, plus a deployed-layout test after a build round-trip. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124c-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  VERDICT 1 of the four the PO requires the commit tier to keep apart, and the
+  one that carries the BLOCK-IS-THE-DEFAULT guarantee. Mirrors GE-117d-1's
+  house shape deliberately — same fail-closed default, same enumerate-all-
+  offenders rule, no new enforcement idiom.
+
+  "Block by default" is a user-confirmed decision: do not relax it to an
+  advisory rollout. The staged-adoption path is the per-path warn opt-in in
+  GE-124d-1, which requires someone to name the path.
+
+  Enumerate-all matters more here than it looks: a first-offender-only report on
+  a branch that adds six components produces six commit attempts, and six
+  blocked commits in a row is how a guardrail gets disabled.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). This is where the commit tier physically
+  comes into existence, so it carries the registration and deployment
+  obligations for the whole tier: the hook file in both locations, the
+  commit_guardian.json config section and manifest entry, and the deploy_map
+  entry for the shared reader every sibling AC also imports.

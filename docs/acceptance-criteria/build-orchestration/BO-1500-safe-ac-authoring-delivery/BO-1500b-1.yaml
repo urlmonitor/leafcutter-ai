@@ -49,6 +49,52 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_full_pipeline_run_leaves_one_commit_per_approved_stage_in_pipeline_order
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: e2e
+  description: A complete PO -> BA -> IT-PO run with stubbed stage agents and auto-approved gates leaves
+    exactly three new commits on the authoring branch, each the first-parent ancestor of the next, in
+    pipeline order.
+- name: test_product_owner_files_are_already_on_branch_head_when_the_business_analyst_stage_is_dispatched
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: A dispatch observer records the authoring branch HEAD tree at the moment the BA stage starts;
+    the L0/L1 YAML from the PO stage is present in that tree and no L2/L3 file is, proving the commit
+    happens before the next stage rather than at the end of the run.
+- name: test_each_stage_commit_adds_only_its_own_stage_files_on_top_of_the_prior_commit
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: integration
+  description: Diffing each stage commit against its parent yields only that stage's AC YAML paths, so
+    the per-stage boundaries BO-1500b-2 resumes from are real rather than a single squashed end-of-run
+    commit.
+- name: test_next_stage_is_not_dispatched_when_the_prior_stage_commit_fails
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With the commit step forced to fail on the PO stage, the BA stage is never dispatched and
+    the run reports the failure, proving the commit gates stage progression rather than running alongside
+    it.
+- name: test_stage_commits_land_on_the_authoring_branch_and_leave_main_unmoved
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: integration
+  description: After the full run the fixture repo's main HEAD sha is unchanged and contains none of the
+    stage AC YAML paths, while the authoring branch carries all of them.
+test_rationale: "Every clause of this AC is about WHEN a commit happens relative to the next stage, so
+  a direct-import unit test over a commit_stage() helper cannot cover it -- such a test would prove a
+  commit can be made and would stay green on an implementation that batched all three stages into one
+  commit at the end of the run, which satisfies the final tree but destroys the per-stage resume boundaries
+  BO-1500b-2 depends on. The contract is therefore ordering-observing: the second test samples branch
+  HEAD at the moment the next stage is dispatched rather than after the run, which is the only observation
+  that distinguishes commit-per-stage from commit-at-end. The fourth test is the semantic-consumption
+  check required for gate behaviour -- it proves the commit result is actually consumed in control flow
+  rather than being a recorded no-op, so the AC cannot be satisfied by dead code. The child BO-1500b-1-i
+  covers the pre-commit-hook bootstrap that makes those commits checked; this parent covers the commit
+  sequencing itself, and the two do not overlap."
 delivers_to:
   agent: python-coder
   contract: Per-stage commits on the authoring branch (one per approved PO/BA/IT-PO stage) that mark durable

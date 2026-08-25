@@ -21,6 +21,7 @@ criteria: |
   whether the reuse held for the whole drive or broke partway through, so the cost
   claim is backed by evidence instead of by hope.
 depends_on: [BO-2400]
+child_limit_override: 6
 doc_links: []
 delivers_to: null
 expects_from: null
@@ -37,6 +38,7 @@ covered_by:
   - BO-2400c-3
   - BO-2400c-4
   - BO-2400c-5
+  - BO-2400c-6
 implemented_by: []
 documentation_triggers: [reference-doc]
 change_target: prompt

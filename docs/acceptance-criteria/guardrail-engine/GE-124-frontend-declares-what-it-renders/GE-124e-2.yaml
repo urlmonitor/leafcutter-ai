@@ -1,0 +1,125 @@
+id: GE-124e-2
+readiness: approved
+priority: high
+title: "Either declaration surface satisfies the reverse gate"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+criteria: |
+  Given a selected criterion is named in the component-level declaration of at
+    least one front-end file and is pinned on no element
+  When the reverse-direction gate evaluates it
+  Then the criterion satisfies the gate
+  And the recorded outcome names the file that declares it
+
+  Given a selected criterion is pinned on at least one rendered element and is
+    named in no component-level declaration
+  When the reverse-direction gate evaluates it
+  Then the criterion satisfies the gate
+  And the recorded outcome names the file and line of the pinned element
+
+  Given a selected criterion is both declared at component level and pinned on
+    an element
+  When the reverse-direction gate evaluates it
+  Then the criterion satisfies the gate
+  And the recorded outcome names both surfaces
+depends_on:
+  - GE-124e
+  - GE-124e-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE ANSWER COMES FROM SCANNING FRONT-END SOURCE, NOT FROM READING declared_by / pinned_by. This is the load-bearing implementation decision of the CI tier. Those store fields (GE-124g-1) are the RECORDED PROJECTION of a scan; a gate that reads them asks the store whether the store is right, and goes vacuous the moment they are stale — which is exactly the class of defect GE-111 exists to catch. Build the criterion-to-surfaces index by running the SHARED reader (GE-124a-1 / GE-124b-1) over the front-end source tree and inverting it. Writing declared_by / pinned_by from that same scan is fine and is GE-124g-1's business; reading them as evidence is not."
+  - "ONE INVERTED INDEX BUILT ONCE PER RUN — criterion id -> {declaring files[], pinning (file, line, pin id)[]} — not a per-criterion re-scan. The gate may evaluate many criteria and the front-end tree is scanned once."
+  - "EITHER SURFACE SUFFICES: the predicate is `declared_by_files OR pinned_locations` non-empty. There must be no code path and no configuration key that requires both. Requiring both would make the optional pin compulsory by the back door and contradict GE-124b-1 and GE-124b-2; the FLOOR is enforced at commit time by GE-124c, which is where it belongs."
+  - "THE FOUR DECLARATION-STATUS VALUES ARE RECORDED, matching the mock-data Ac entity: 'component' (declared only), 'element' (pinned only), 'both', 'undeclared'. GE-124e-3 turns the fourth into a failing finding and GE-124g-3 counts them on the declared axis; a boolean satisfies/does-not would destroy both."
+  - "THE OUTCOME NAMES THE EVIDENCE, per surface: the declaring file path for a component-level declaration, and the file AND line for a pin. A reviewer told only 'satisfied' cannot check the claim, and the line number is already on the pin record (GE-124b-1)."
+  - "SCANNING THE FRONT-END TREE MUST STAY WITHIN THE CI JOB'S BUDGET. Restrict the scan to the in-scope extensions (GE-124a-2's map) before reading any file, and reuse the in-scope decision from GE-124a-3 so the CI tier and the commit tier agree about which files can carry a declaration at all."
+  - "Must handle errors gracefully per the project error handling policy; an unreadable front-end file must be named rather than silently reducing the evidence set — a silently skipped file makes a declared criterion look undeclared."
+delivers_to:
+  agent: python-coder
+  contract: "The per-criterion declaration status — 'component' | 'element' | 'both' | 'undeclared' — computed by inverting a single fresh scan of the front-end source tree with the SHARED reader, never by reading the store's declared_by / pinned_by fields. Each satisfied outcome names its evidence (declaring file path; pinning file and line). GE-124e-3 consumes the 'undeclared' value as its failing finding."
+expects_from:
+  ac_id: GE-124e-1
+  contract: "The selected set of finished user-interface criteria this AC evaluates, and the shared AC index those records were read from"
+test_spec:
+  - name: test_ge_124e_2_component_declaration_alone_satisfies_and_names_the_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A selected criterion declared in one file and pinned nowhere satisfies the gate with status 'component' and an outcome naming that file path. The KM-200f worked case."
+  - name: test_ge_124e_2_element_pin_alone_satisfies_and_names_the_file_and_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The KM-ADM-004 worked case: pinned on one element, declared in no file, satisfies with status 'element' and an outcome naming the file and the pin's line. This is the scenario that proves 'either surface' is real; an implementation requiring the floor here fails only this one."
+  - name: test_ge_124e_2_evidence_comes_from_a_source_scan_not_from_declared_by
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Construct a store whose declared_by/pinned_by are deliberately WRONG in both directions — populated for a criterion no file declares, and empty for a criterion a real file does declare — and assert the gate follows the source files, not the fields. This is the single most important test in the CI tier: an implementation that reads the store passes every other test here and is completely vacuous in production."
+  - name: test_ge_124e_2_both_surfaces_yield_status_both_and_name_both
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The UXP-607 worked case: declared in two files and pinned on elements, status 'both', outcome naming both surfaces. Confirms the four status values are distinct rather than a satisfied/unsatisfied boolean."
+test_rationale: |
+  Three positive scenarios in the criteria are easy to satisfy and easy to satisfy WRONGLY: an
+  implementation that reads declared_by and pinned_by from the AC store passes all three on any
+  consistent fixture and is worthless in production, because those fields are written by this
+  system and a gate reading them is checking the store against itself. The third test is
+  therefore the centre of this contract — it deliberately desynchronises the fields from the
+  source in both directions and asserts the source wins. Nothing in the criteria forces that
+  choice, which is why it is pinned in it_requirements and given the sharpest test. The
+  element-only case is called out separately because it is the single scenario that fails if
+  someone re-imposes the floor at this tier.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Pinned the evidence source: the gate must invert a FRESH scan of front-end source with the shared reader, never read the store's declared_by/pinned_by, which are a projection of that scan and would make the gate check the store against itself. Required one inverted index per run, the four declaration_status values rather than a boolean, and named evidence per surface. Added the desynchronised-store test as the centre of the contract. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  EITHER SURFACE SATISFIES IT — the PO's rule, and the reason it matters:
+  requiring both here would make the optional pin compulsory by the back door
+  and contradict GE-124b. The floor is enforced at commit time by GE-124c, which
+  is where it belongs; this gate asks only "does anything claim this?".
+
+  The second scenario is the one that proves the rule is real. Its worked case
+  is KM-ADM-004, which is pinned on an element and declared in no file. Note
+  that same criterion has an empty covered_by in the mock data — satisfying this
+  gate says nothing about whether it is tested, which is GE-124g-2's guarantee.
+
+  The three scenarios correspond to the mock-data declaration-status values
+  'component', 'element' and 'both'; the fourth value, 'undeclared', is
+  GE-124e-3.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25) — THE VACUOUS-GATE HAZARD. The mock-data
+  Ac entity carries declared_by and pinned_by, and the obvious reading is that
+  the CI gate consults them. It must not: those fields are written FROM the scan
+  this gate performs, so reading them would make the gate a consistency check on
+  its own output. The gate scans front-end source; the fields are the recorded
+  result. GE-124g-1 owns writing them.

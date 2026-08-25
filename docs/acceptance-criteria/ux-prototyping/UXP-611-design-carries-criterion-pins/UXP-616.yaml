@@ -1,0 +1,80 @@
+id: UXP-616
+components:
+  - ux_prototyping
+readiness: draft
+priority: medium
+title: "Mockups drawn before this convention stay valid, and coverage grows as they are edited"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the five rendered mockups that exist today, none of which carries a
+    single pin
+  And a change that touches none of them
+  When the pin convention is evaluated
+  Then none of those mockups appears in any collection the run produces —
+    not as exempt, not as deferred, not as pre-convention, not as skipped,
+    not as passed, and not as failed
+  And none of their ids appears anywhere in the run's report
+
+  Given a change that edits one existing rendered mockup
+  When the pin convention is evaluated
+  Then that mockup, and only that mockup, is held to the convention
+  And the other untouched mockups remain unevaluated, so coverage grows
+    screen by screen as mockups are edited
+
+  Given a change that adds a new rendered mockup
+  When the pin convention is evaluated
+  Then the new mockup is held to the convention on the change that introduces it
+
+  Given the convention is introduced
+  When the mechanism that enforces it is defined
+  Then it uses no dated cutoff, no exemption list, no permanent opt-out
+    population, and no backfill counter
+  And no artifact anywhere records how many mockups are still unannotated
+depends_on:
+  - UXP-611
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-611-design-carries-criterion-pins/UXP-611.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e-4.yaml
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: internal
+notes: |
+  THE HOUSE PATTERN, CONFIRMED BY THE USER ON GE-124 ON 2026-08-25, REUSED
+  DELIBERATELY. Diff-scoping was chosen there over a dated cutoff precisely so
+  that no dated population is created — nothing to size, nothing to retire,
+  nothing to argue about. The same reasoning applies here without modification.
+  Precedents to match rather than reinvent: check_done_proof --mode ci-changed
+  --base origin/main, the diff-scoped component-vocabulary CI job, GE-111c-1,
+  and GE-124e-4.
+
+  NOT EVALUATED IS NOT A STATE — THIS IS THE CLAUSE MOST LIKELY TO BE SOFTENED
+  IN IMPLEMENTATION. The tempting version emits "12 mockups pre-convention"
+  for visibility. That single line recreates the dated population the decision
+  removed: it can be counted, it can be reported on, it becomes a backlog, and
+  someone will eventually be asked to burn it down. An untouched mockup must be
+  absent, not labelled.
+
+  THE FOURTH SCENARIO IS THE ANTI-COUNTER CLAUSE and is written as an explicit
+  negative because a counter added "for visibility" is a friendly-looking
+  change that a casual review would wave through.
+
+  WHY THE THIRD SCENARIO IS SEPARATE FROM THE SECOND. A newly added mockup is
+  in the diff by the ordinary rule, so it needs no exception — but stating it
+  makes clear the convention applies from day one to new work while never
+  reaching backwards.

@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   Given build-single-ticket completes a standalone ticket successfully at Step 4c,
   When the completion message template is rendered,
@@ -27,6 +27,34 @@ it_requirements:
   - "Worktree path comes from Step 2 output (WORKTREE_PATH variable)"
   - "Manual test suggestions must reference specific files from files_touched"
   - "The /finalize-feature command must include the BRANCH variable, not a placeholder"
+test_spec:
+  - name: test_bo300b1_step4c_template_parses_to_four_sections_in_order
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "Parsing templates/skills/build-single-ticket/SKILL.md into sections, extracting the Step 4c completion block delimited by the horizontal rules, and reading its level-2 headings yields exactly Summary, Worktree path, Things to manually test, Finalize command in that order."
+  - name: test_bo300b1_step4c_placeholders_resolve_to_step2_variables
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "Every upper-case placeholder token the parsed Step 4c block substitutes (WORKTREE_PATH, BRANCH) is bound by the Step 2 output-parse mapping earlier in the same document, so no section renders an unresolvable variable."
+  - name: test_bo300b1_finalize_command_argument_is_the_bound_branch_variable
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    description: "The finalize section's command line parses to the token /finalize-feature followed by the single bound BRANCH variable and nothing else — not a raw ticket path, an epic path, or an unbound prose placeholder — which is what makes it copy-pastable without editing."
+test_rationale: |
+  Step 4c lives in a prompt document with no rendering engine, so no test can
+  execute it. What a test CAN do, and what these descriptors require, is parse
+  the document: split it into sections, isolate the Step 4c completion block,
+  and then resolve its placeholder tokens against the variable bindings the same
+  document establishes in Step 2 (worktree_path -> WORKTREE_PATH, branch ->
+  BRANCH). That is a resolution assertion, not a substring search: it fails if a
+  section is dropped or reordered, if the finalize argument is changed to a raw
+  path or an unbound placeholder such as <your-branch>, or if a placeholder is
+  used that Step 2 never defines. A bare grep for "/finalize-feature" or for the
+  section headings would pass on all three of those regressions and is therefore
+  explicitly out of contract for this AC.
 delivers_to: null
 expects_from:
   agent: ticket-supervisor
@@ -40,3 +68,10 @@ implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
 change_target: code
 risk_surface: internal
+notes: |
+  Coverage limit, stated so it is not mistaken for more than it is: these tests
+  prove the Step 4c template is structurally complete and internally resolvable.
+  They cannot prove the model actually emits the four sections at runtime — no
+  unit layer can execute a prompt. The it_requirement "Manual test suggestions
+  must reference specific files from files_touched" is likewise a runtime-only
+  property of the emitted message and is not covered by any descriptor here.

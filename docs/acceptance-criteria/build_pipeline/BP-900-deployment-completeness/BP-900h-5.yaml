@@ -62,8 +62,73 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle vocabulary: deployed + reachability + failure. The three-way verdict is the criterion angle."
+  - path: templates/scripts/commit_guardian/doc_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. The 2026-08-25 acceptance instance. Its two-candidate ancestor walk resolves to .leafcutter/scripts/commit_guardian/config/doc_types.json and raises FileNotFoundError there in a genuine consumer install - the guardrail STOPS rather than judging, which is exactly the third category this AC creates. Named as the instance the harness must classify, not as the deliverable."
+  - path: templates/scripts/commit_guardian/diagram_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION, and a declared BLIND SPOT of this harness. _find_diagram_types_json is the identical walk but returns None and degrades silently to a built-in constant, so it produces a verdict and is recorded as passed while running on a narrower rule than it should. A three-way classifier cannot see it. Read BP-900g-10-i for the runtime prohibition; record this as a blind spot in the sign-off rather than counting it as covered."
+  - path: scripts/ac_store/_ac_components.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Evidence that unable-to-run is not confined to non-code declaring files: the deployed validate_ac_schema.py raises ModuleNotFoundError for this undeployed sibling. Any classification keyed to a missing config file and blind to a missing module leaves half of the live set unclassified."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5-ii.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION, and the scope line. h-5-ii widens the exercised set from the registry to every executable in the deployed tree and owns the startup sweep, the cold-process clause and the started / unable_to_run / not_exercised accounting. This AC owns the three-way verdict vocabulary that h-5-ii reuses; author it so h-5-ii can widen the set without inventing a second outcome vocabulary."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Carries the silent-degradation half of this defect class - a reader that returns nothing rather than raising - which is the reason a guardrail's own silence can never be read as evidence that it ran correctly."
 assigned_agent: python-coder
 estimated_complexity: L
+it_requirements:
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "1 — one guardrail-exercise step in the consumer-simulation job, iterating the set derived from the DEPLOYED registry. One step per known guardrail does not satisfy it: the count must come from the registry the install actually carries, so a guardrail registered tomorrow is exercised with no edit to the workflow."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir /tmp/lc-consumer-probe"
+    - "env -u PYTHONPATH python /tmp/lc-consumer-probe/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py docs/known-issues/commit-guardian.md"
+    - "env -u PYTHONPATH python /tmp/lc-consumer-probe/.leafcutter/scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-5.yaml"
+    - "python -m pytest unit_tests/portability/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-guardrail outcome record the harness emits inside the consumer install. It is a record with an explicit outcome value rather than a pass/fail pair because both the failed and the unable-to-run states exit non-zero in the live code - that identity is the whole defect, and any shape that leaves classification to the exit code reproduces the 2026-08-18 misdiagnosis by construction. h-5-ii reuses this vocabulary for a wider set; keep it stable."
+    required:
+      - guardrail
+      - outcome
+      - unresolved_location
+      - input_pair
+      - derivation
+    properties:
+      guardrail:
+        type: string
+        description: "The deployed path of the guardrail as invoked, so a red report names something an adopter can run themselves."
+      outcome:
+        type: string
+        description: "One of: passed, failed, unable_to_run. Three values, not two. Collapsing unable_to_run into failed is a faithful copy of the 2026-08-18 misdiagnosis, in which a guardrail that could not find its vocabulary reported a blocking failure against every commit and the report pointed at the commits rather than at the missing file."
+      unresolved_location:
+        type: string
+        description: "For an unable_to_run outcome: the file or location the guardrail could not resolve, as the guardrail itself searched for it. Null otherwise. This is the field that turns a red run into a remediation list instead of a symptom."
+      input_pair:
+        type: object
+        description: "The passing input and the failing input the guardrail was driven with, or an explicit record that no pair was declared. The BA flagged the registered-guardrail-with-no-input-pair case as the one under-specified point in this AC; whatever the implementer decides, it is recorded here so a skip is a visible decision rather than an absence."
+      derivation:
+        type: string
+        description: "How this entry reached the exercised set - which deployed registry it was read from. Present so a hand-written list is visible as such in the report rather than passing as a derived set."
+  constraints:
+    - "THE 2026-08-25 REPRODUCTION IS THE ACCEPTANCE INSTANCE, AND IT MUST BE RED BEFORE THE FIX. In a genuine adopter install (package at leafcutter-ai/, built with `python scripts/build.py --target-dir <consumer root>`, a main checkout rather than a worktree), `python .leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <doc>.md` raises FileNotFoundError naming .leafcutter/scripts/commit_guardian/config/doc_types.json. The harness must classify that guardrail unable_to_run and name that location - never as a failure of the probe document, which is how the defect was first reported. A second live instance from the same install: the deployed validate_ac_schema.py raises ModuleNotFoundError for _ac_components, so the classification must recognise a missing MODULE as unable-to-run too, not only a missing config."
+    - "INVOKE THE DEPLOYED COPY, IN A COLD SUBPROCESS, WITH THE PACKAGE SOURCE TREE OFF sys.path. Every existing unit test for these guardrails imports from scripts/, where every sibling and every config resolves by construction - which is exactly why five prior instances of this class stayed green and why no test had ever observed the difference between running and being unable to start. Importing a guardrail and calling it does not satisfy this AC. Assert the child process's effective search path contains no path under the package checkout, and launch it from a working directory that is not the package tree."
+    - "DERIVE THE SET FROM THE DEPLOYED REGISTRY, AND SAY WHICH FILE THAT IS. The doc_links record the registry's deployed location as status: planned - confirm it against a real install before implementing rather than assuming it, because a derivation that reads the package-source copy is reading a file the consumer does not have and is green on an install whose deployed registry is empty or absent. Assert the exercised set is non-empty and equals what the DEPLOYED registry declares."
+    - "IDENTIFY THE ENFORCEMENT POINT THAT ACTUALLY GATES, AND NAME EVERY ONE THE CHANGE TOUCHES. The harness's internal report is not the gate; the CI step's exit code is. Name in the sign-off every place the verdict surfaces and state which one is load-bearing. A step carrying continue-on-error, or a verdict that is only logged, is a no-op with a report attached - the same shape as the build-side deploy_map skip branch, which logs at WARNING and continues and has let this defect class through four times."
+    - "ADDING THE MISSING DECLARING FILE IS NECESSARY AND NOT SUFFICIENT. Deploying doc_types.json, or hand-placing it, makes this instance disappear and leaves the mechanism as it was - which is what happened four times on the build side, each time with a warning comment attached, and a sixth instance surfaced on 2026-08-25 when check_ac_parent_covered_by.py was found unable to import derive_parent_id in a deployed layout and exiting 0 silently. The harness must independently classify unable_to_run on a tree where a declaring file is withheld, whichever file that is."
+    - "A SILENTLY-DEGRADING GUARDRAIL IS A DECLARED BLIND SPOT OF THIS HARNESS, NOT A COVERED CASE. The three-way classification can only see a guardrail that STOPS. The sibling diagram-types lookup returns None and falls back to a built-in constant, so it answers, is recorded as passed, and is running on a narrower rule than it should - invisible here by construction. Name every such reader found during implementation in the sign-off as an uncovered blind spot. Do not close the gap by making the harness guess, and do not close it by making more readers silent: GE-118c removed exactly that fallback from the doc-types side deliberately, and reinstating it anywhere would turn this harness green while returning the behaviour to what it was before that removal."
+    - "ACCOUNT FOR THE REGISTERED GUARDRAIL WITH NO DECLARED INPUT PAIR - THE BA'S FLAGGED OPEN POINT. The criterion requires both that every registered guardrail be driven with an input pair and that the set be derived from the registry, and a guardrail registered tomorrow has no declared pair. The harness may not invent one. Whatever the decision, it must be visible in the report and counted against the derived set, so that exercised plus explicitly-unexercised equals the size of the registered set - a silent skip satisfies the derivation clause vacuously and is the most likely way this ships broken. State the chosen accounting in the sign-off."
+    - "WHATEVER THE HARNESS SURFACES ON FIRST RUN MUST BE ENUMERATED, NOT SKIPPED. Turning this on will reveal every registered guardrail that cannot currently start in a consumer install, not only the document-frontmatter one, and may turn the consumer-simulation job red on its first run. That is the intended effect. List the full set in the sign-off and resolve each entry or defer it explicitly with a date; a skip list reintroduces the hand-maintained list inside the mechanism built to remove it."
+    - "PACKAGE-DIRECTORY NAME INDEPENDENCE IS BP-900h-4-i's, NOT THIS AC's. That AC owns the layout matrix and the prohibition on spelling a package-directory name in any candidate path - the same lookup fails differently under different adopter names, resolving in a main checkout and failing in a worktree with the package at `leafcutter/`, and failing everywhere with it at `leafcutter-ai/`. Do not re-specify it and do not foreclose it: the harness must take the consumer root and the deployed output root as inputs from the BP-900h-4 fixture rather than constructing them from a directory name of its own."
 delivers_to:
   agent: python-coder
   contract: "A per-guardrail three-way outcome in the consumer install — passed, failed, or unable-to-run with the unresolvable location named — and a job conclusion that is failing when any entry is unable-to-run."
@@ -137,10 +202,26 @@ test_rationale: |
 origin_agent: business-analyst
 created: 2026-08-18
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added it_requirements in package-surface object form (the per-guardrail outcome
+      record with its three-value outcome, unresolved_location, input_pair and
+      derivation fields, plus nine constraints) and five IT-PO doc_links - the
+      2026-08-25 acceptance instance, the silently-degrading sibling recorded as a
+      declared blind spot, the module-half instance, the h-5-ii scope line, and the
+      commit-guardian known-issues register. The AC previously carried no
+      it_requirements at all, so generate_ticket_from_ac.py --verify emitted no
+      Implementation Notes section and the coder had only the criteria to work from.
+      Took up the BA's flagged open point - the registered guardrail with no declared
+      input pair - as an explicit accounting constraint rather than leaving it to the
+      implementer to discover. criteria, title, depends_on and req_status untouched.
 superseded_by: null
 covered_by:
   - BP-900h-5-i
+  - BP-900h-5-ii
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

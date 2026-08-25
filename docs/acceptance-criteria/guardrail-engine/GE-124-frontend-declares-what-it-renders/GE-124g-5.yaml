@@ -1,0 +1,125 @@
+id: GE-124g-5
+readiness: approved
+priority: high
+title: "A reference doc states what each kind of evidence is worth, for every future check"
+component: guardrail-engine
+components:
+  - ac_store
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+criteria: |
+  Given an author is writing a new traceability check or a new coverage report
+  When they open the evidence reference doc
+  Then it names each kind of evidence the store holds — a component-level
+    declaration, an element pin, a design-to-page link, and a covering test —
+    and states for each what it does and does not establish
+  And it states the rule in one sentence a reader will remember: a declaration
+    is a signpost, never a result
+  And it lists the four places the substitution must be blocked — the store, the
+    done gate, the reports, and the test selector — and what blocking looks like
+    in each
+  And it states that the rule has no configurable form, and that the warn tier
+    and per-item opt-out apply only to whether a file must declare
+  And it is reachable from the three traceability checks it binds, so an author
+    of any of them meets it
+depends_on:
+  - GE-124g
+  - GE-124g-1
+  - GE-124g-2
+  - GE-124g-3
+  - GE-124g-4
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "docs/reference/evidence-and-what-it-proves.md"
+    relationship: describes
+    status: planned
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/reference/ with check_doc_frontmatter-compliant frontmatter (title, type: reference, status, created, last_updated, components, description) and stay within the check_doc_length budget."
+  - "THE FOUR EVIDENCE KINDS MAP TO FOUR REAL STORE FIELDS AND MUST BE NAMED AS SUCH: declared_by (component-level declaration), pinned_by (element pin), the design-to-page link (GE-124f-1's data-screen chain record), and covered_by (a covering test). Cross-reference docs/reference/ac-schema.md rather than restating the field definitions, and make sure the two documents agree — GE-124g-1 adds two of these four fields to the schema, so this doc and that schema change land together or the reference describes fields that do not exist."
+  - "REACHABILITY IS THE CLAUSE THAT DECIDES WHETHER THIS WORKS, AND IT IS AN OBLIGATION ON THE CHECKS, NOT ON THE DOC. Each of the three traceability checks — the GE-111 reconciliation check, GE-117's declaration check, and GE-124's frontend declaration check — must carry a link to this reference in its module docstring or its help output. A standing rule nobody encounters is a rule that gets rediscovered as a defect, and the binding surfaces are the three checks themselves, which is where the author of a fourth one will be looking. The test contract asserts this from the checks' side."
+  - "THE FOUR BLOCKED PLACES MUST BE DESCRIBED IN TERMS OF WHAT BLOCKING LOOKS LIKE — a rejected covered_by write, a done assessment that stays unfinished, a report axis that is never summed, an existence-only test that is not accepted — with a pointer to the AC that owns each. Naming the places without naming their mechanism leaves a future author agreeing with the rule and unable to apply it."
+  - "STATE THE GE-124d BOUNDARY EXPLICITLY: the warn tier and the per-item opt-out apply ONLY to whether a file must declare, and never to what a declaration is worth. This is the boundary an author looking for an escape will test first."
+  - "WORDING THE DOC MUST NOT DRIFT FROM, per the PO: presence, not proof. On screen, not correct. A signpost, not a result. The one-sentence rule is required content — a reference doc a reader cannot quote back is a reference doc that does not travel."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the reference document."
+delivers_to:
+  agent: python-coder
+  contract: "The standing statement of what each kind of evidence is worth — mapped to the four real store fields declared_by, pinned_by, the chain record and covered_by — binding on the authors of the three traceability checks and on anyone adding a coverage report, and REACHABLE from each of those three checks' own docstring or help output so an author of a fourth one meets it."
+expects_from:
+  ac_id: GE-124g-1
+  contract: "The field decision — declarations live in declared_by / pinned_by, never in covered_by or implemented_by — and the two new schema fields that this reference doc records as the store's rule"
+test_spec:
+  - name: test_ge_124g_5_all_three_traceability_checks_link_to_this_reference
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "For each of the three traceability checks, assert its module docstring or help output contains this document's path. Asserted from the CHECKS' side, because reachability is an obligation on them — a reference that only links outward is a rule nobody encounters."
+  - name: test_ge_124g_5_the_four_named_evidence_fields_exist_in_the_ac_schema
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "declared_by, pinned_by and covered_by are all present in config/ac_store_schema.json, and the chain-record link the doc names resolves. Ties this document to GE-124g-1's schema change so it cannot describe fields that do not exist."
+  - name: test_ge_124g_5_doc_names_all_four_blocked_places_and_the_ac_that_owns_each
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The store, the done gate, the reports and the test selector each have a section naming what blocking looks like there and citing GE-124g-1 / -2 / -3 / -4 respectively. Assert the AC ids resolve in the store, so a renumbering breaks the test rather than the reader's trail."
+  - name: test_ge_124g_5_doc_carries_the_one_sentence_rule_and_the_ge_124d_boundary
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The document contains the signpost-never-a-result sentence and a statement that the warn tier and per-item opt-out apply only to whether a file must declare. These are the two clauses a length-trimmed reference loses first, and they are the two an author hunting for an escape reads first."
+test_rationale: |
+  The PO says outright that the reachability clause decides whether this document works, so the
+  first test asserts it from the direction that matters — the three checks must point HERE.
+  Testing the doc's own outbound links would prove nothing about whether anyone arrives. The
+  second and third tests are staleness ratchets against live sources (the schema, and the AC
+  ids), which is the same instrument used for every other reference in this tree and the only
+  way a standing rule survives a renumbering. The fourth test protects the two clauses with no
+  executable counterpart, both of which are exactly what a reference trimmed for length loses
+  and exactly what an author looking for a loophole reads first.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made reachability an obligation on the THREE CHECKS (each must link here from its docstring or help output) and asserted it from their side, mapped the four evidence kinds onto the four real store fields with a schema-existence ratchet tying this doc to GE-124g-1's change, and required the four blocked places to be described by their mechanism with the owning AC id cited. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for GE-124g's `documentation_triggers: [reference-doc]`. The PO's
+  reason: this is a standing rule about what each kind of evidence is worth,
+  binding on future authors of all three traceability checks and on anyone
+  adding a new coverage report. A how-to aimed at one task cannot carry it.
+
+  THE REACHABILITY CLAUSE IS THE ONE THAT DECIDES WHETHER THIS WORKS. A standing
+  rule nobody encounters is a rule that gets rediscovered as a defect. The
+  binding surfaces are the three checks themselves, which is where an author of
+  the fourth one will be looking.
+
+  WORDING THE DOC SHOULD NOT DRIFT FROM, per the PO: presence, not proof. On
+  screen, not correct. A signpost, not a result.
+
+  IT-PO NOTE (2026-08-25). Reachability is a change to the three CHECKS, not to
+  this document — each needs a link added to its docstring or help output. That
+  is a small edit in three files, but it is edit work in GE-111's and GE-117's
+  code as well as GE-124's, and it is the clause most likely to be quietly
+  dropped because it lives outside the deliverable.

@@ -1,0 +1,98 @@
+id: GE-124d
+title: "Opt out where it genuinely does not apply, with a reason everyone can see"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A deliberate exception, recorded in the open — never a silent one.
+
+  Some screen files genuinely render no requirement of their own, and some parts
+  of the product are not ready to be held to this yet. You can excuse either
+  case, but only on purpose: a skipped file carries a written reason that shows
+  up in the change for a reviewer to challenge, and a relaxed area is listed
+  somewhere a person can find it.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124d-1
+  - GE-124d-2
+  - GE-124d-3
+  - GE-124d-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA / IT PO).
+
+  TWO SEPARATE ESCAPES — they are not interchangeable and must not be merged
+  into one mechanism:
+    1. WARN TIER — a per-path, deliberate opt-in for an area not yet held to the
+       rule. The commit proceeds; the finding is still reported. It is opt-IN:
+       every path that has not been listed blocks. A blanket "warn everywhere"
+       setting would silently repeal the whole L0 and must not exist.
+    2. PER-ITEM OPT-OUT — one specific file excused for a stated reason, because
+       it truly renders no criterion of its own. The mock-data artifact's worked
+       case is a presentational primitives file (Card / Badge / Row) whose
+       consuming components declare instead.
+
+  THE REASON MUST STAY VISIBLE IN THE DIFF. An opt-out lives with the file it
+  excuses, so it appears in the change a reviewer reads and can be argued with
+  there. A reason parked in a central ignore-list is invisible at review time
+  and rots. The reason is also printed in the check's own report, so opted-out
+  files are LISTED rather than disappearing.
+
+  AN OPT-OUT AND A BLOCK CAN NEVER COEXIST for the same file — accepting the
+  reason downgrades the verdict; it does not sit alongside it. The mock-data
+  artifact states this as an invariant. Likewise the warn verdict may only ever
+  appear for a path that is actually on the warn list; a warn that appears any
+  other way means the default has leaked.
+
+  AN EMPTY REASON IS NOT A REASON. "N/A", blank, or a bare marker with no text
+  must be rejected, or the opt-out becomes a one-token bypass and this AC has
+  delivered nothing.
+
+  BOUNDARY WITH GE-124a's OPEN QUESTION: this L1 is deliberately the pressure
+  valve for GE-124a's unresolved "what counts as a screen component" rule. The
+  two are designed together — an over-broad file rule is survivable because the
+  reason is cheap to write and visible; it is not an excuse to leave the rule
+  vague forever. If opt-outs cluster on one kind of file, that is evidence the
+  GE-124a rule needs narrowing, not evidence the escape is working.
+
+  documentation_triggers [how-to] — the author needs to know how to record an
+  opt-out and how an area gets onto the warn list. Deliberately NO
+  sequence-diagram: unlike GE-117e this L1 has no multi-actor remediation flow,
+  it is a single authoring action plus a configuration list.
+
+  BA decomposition note (2026-08-25). Four L2s: GE-124d-1 (warn tier, opt-in),
+  GE-124d-2 (per-item opt-out, reason visible in the diff and in the report),
+  GE-124d-3 (the exclusivity invariant and the precedence between the two
+  escapes), GE-124d-4 (the how-to). GE-124d-3 exists as its own L2 because the
+  "never coexist" rule is about the INTERACTION of the two escapes with the
+  default, which cannot be tested from inside either one.
+
+  ONE DECISION MADE HERE THAT THE PO NOTE DOES NOT COVER, flagged for the user:
+  when a file is both warn-listed AND carries an accepted reason, GE-124d-3
+  resolves it to pass-with-reason, on the grounds that the reason is the more
+  specific and more accountable statement and resolving to warn would discard
+  something a reviewer could challenge. The alternative (warn wins) is
+  defensible; confirm rather than absorb.

@@ -3,6 +3,8 @@ readiness: reviewed
 priority: medium
 title: "Define a feature the product-truth way — describe it, review the draft, and get ACs from the flow"
 component: ux-prototyping
+components:
+  - ux_prototyping
 level: L1
 status: active
 req_status: approved

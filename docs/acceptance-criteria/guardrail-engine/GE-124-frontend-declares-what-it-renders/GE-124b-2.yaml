@@ -1,0 +1,108 @@
+id: GE-124b-2
+readiness: approved
+priority: high
+title: "A pin says a thing is on screen and can never stand in for the component declaration"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given a staged screen component file with no component-level declaration
+  And the file pins KM-ADM-004 on a rendered element
+  When the commit-tier check evaluates the file
+  Then the file is reported as missing its component-level declaration
+  And the pinned criterion KM-ADM-004 does not satisfy, reduce or downgrade that
+    report
+
+  Given a criterion that describes behaviour with no element of its own — a
+    validation rule, a sort order, or an input debounce
+  And the component that implements it names it in its component-level
+    declaration and pins it on no element
+  When the commit-tier check evaluates the file
+  Then the file passes
+  And the absence of an element pin for that criterion produces no finding
+depends_on:
+  - GE-124b
+  - GE-124a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE FLOOR TEST READS declares[] ONLY. The commit-tier decision 'does this file satisfy the component-level floor?' must be a function of the declaration record alone; pins[] must not appear anywhere in that predicate — not as a fallback, not as a downgrade input, not as a tie-breaker. The two collections are already separate at the reader (GE-124a-1-ii); this AC forbids re-joining them at the decision."
+  - "THE PIN MAY ONLY ENRICH THE MESSAGE. Per GE-124c-1-i the single missing-component-declaration finding for such a file states that the file does pin KM-ADM-004 and that an element attribute never satisfies the floor. That is message content, produced from pins[] after the verdict is already fixed — verdict first, message second, never the reverse."
+  - "NO PIN IS EVER REQUIRED PER DECLARED CRITERION. There must be no code path, and no configuration key, that emits a finding because a declared criterion has no matching pin. Scenario 2 is the load-bearing half: a criterion with nothing to point at (a validation rule, a sort order, a debounce) has no element, so demanding a pin would make the optional surface compulsory by the back door and contradict GE-124b-1 and GE-124e-2."
+  - "THIS AC IS ABOUT THE FLOOR, NOT ABOUT COVERAGE. Do not restate here that a pin is not a covering test — that guarantee is GE-124g's, decomposed across four places, and a fragment of it here would be the flattening the PO warned against."
+delivers_to: null
+expects_from:
+  ac_id: GE-124a-1
+  contract: "The component-level declaration record this AC asserts the element surface cannot substitute for — the floor predicate is a function of declares[] alone, with pins[] excluded from it by construction"
+test_spec:
+  - name: test_ge_124b_2_pin_does_not_satisfy_or_downgrade_the_missing_floor_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The detail-drawer case: a file with no component declaration that pins KM-ADM-004 is still reported missing-component-declaration with verdict 'block'. Assert the verdict equals the verdict for the SAME file with the pin removed — equality against the unpinned control is what proves the pin neither satisfies nor downgrades, where asserting 'verdict == block' alone would pass on an implementation that downgrades to warn in some other configuration."
+  - name: test_ge_124b_2_declared_criterion_with_no_element_pin_passes_with_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A file declaring a behaviour-only criterion at component level and pinning nothing produces zero findings and a pass. Assert the finding list is empty for that file, including advisory-level entries — this is the scenario that stops an implementation demanding a pin per declared criterion."
+  - name: test_ge_124b_2_pinned_and_unpinned_undeclared_files_block_identically_through_the_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run the real hook via subprocess over a temp git repo staging two undeclared files, one pinned and one not: both must be named and the process must exit non-zero. The must-block modifier applies — a floor rule that computes correctly but does not block is inert, and only the entry point shows it."
+test_rationale: |
+  The strongest available assertion here is a differential one: compare the verdict for the
+  pinned file against the verdict for the identical unpinned file. A bare `verdict == 'block'`
+  assertion passes on an implementation where the pin reduces severity in some other path, and
+  the criteria's word is 'does not satisfy, reduce or downgrade' — three things, only one of
+  which a single-verdict assertion covers. Scenario 2's test asserts an EMPTY finding list
+  rather than 'no block', because the failure it guards against is an advisory nudge that makes
+  the optional pin compulsory in practice. The entry-point run charges the must-block modifier
+  once for this AC's specific pairing.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made the floor predicate a function of declares[] alone with pins[] excluded by construction, ordered verdict-then-message so the pin can only enrich the report, and forbade any code path or configuration key that requires a pin per declared criterion. Test contract uses a differential assertion against an unpinned control, which is the only shape that covers 'satisfy, reduce or downgrade' as three claims. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE HARD LIMIT — GE-124's LIMIT 1, stated as behaviour. The two scenarios are
+  the two directions it runs in, and both are needed:
+
+  - Scenario 1 (the `detail-drawer.tsx` worked case): a pin does not buy you out
+    of the floor. Without this, the cheap surface displaces the required one.
+  - Scenario 2: the floor does not drag the pin in behind it. An element-level
+    pin can only express that something is ON SCREEN, so a criterion with
+    nothing to point at must be declarable at component level alone. Without
+    this, an implementation would demand a pin per declared criterion and make
+    the optional surface compulsory — contradicting GE-124b-1 and, via the back
+    door, GE-124e.
+
+  This AC states that a pin does not satisfy the FLOOR. It deliberately does
+  not state that a pin is not COVERAGE — that is GE-124g's guarantee, decomposed
+  across four places, and restating a fragment of it here is exactly the
+  flattening the PO warned against.
+
+  How many findings scenario 1 produces (one, not two) is GE-124c-1-i.

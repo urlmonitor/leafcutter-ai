@@ -39,6 +39,44 @@ estimated_complexity: S
 it_requirements:
   - "Edge-case test must be part of the same test suite as BO-510-3"
   - "Must use test fixtures, not modify the actual registry during testing"
+test_spec:
+  - name: test_both_registry_and_template_missing_both_errors_emitted
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "A fixture agent absent from both surfaces yields two distinct errors — one naming the registry entry and one naming the template file — not a single merged message."
+  - name: test_single_agent_missing_produces_in_registry
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "The registry-side error text matches the AC-specified wording, including the agent id and the phrase \"missing the 'produces' field\"."
+  - name: test_template_without_produces_triggers_error
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "The template-side error text matches the AC-specified wording, including the template filename and the phrase \"missing the 'produces' frontmatter field\"."
+  - name: test_validation_passes_after_produces_added_to_both
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    description: "Round trip — after produces: production_code is present in both the fixture registry entry and the fixture template frontmatter, validation returns no errors for that agent."
+  - name: test_validate_agent_registry_reports_missing_produces_on_fixture_package_root
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    description: "Running validate_agent_registry() against a synthetic package root (tmp_path with config/agent_registry.json plus templates/agents/new-agent.md, both lacking produces) returns produces errors — proving the check runs on the gate that actually blocks the build, not only via the helper called directly."
+test_rationale: |
+  The four unit descriptors exercise validate_produces_field with in-memory
+  fixtures, per the it_requirement that the live registry must not be mutated
+  during testing. On their own they would prove only that a helper can produce
+  an error string; they cannot distinguish "the check exists" from "the check
+  runs". The AC's final clause — "the commit is blocked" — is about
+  enforcement, so the integration descriptor drives the composed entry point
+  validate_agent_registry() (the function build.py's install_shims step calls,
+  and the step whose failure fails CI before pytest runs) against a synthetic
+  package root. Together they cover both the message contract and the
+  enforcement wiring; a passing helper with an unwired gate fails the
+  integration descriptor.
 delivers_to: null
 expects_from:
   ac_id: BO-510-3

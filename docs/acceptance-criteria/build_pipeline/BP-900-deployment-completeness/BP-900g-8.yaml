@@ -82,6 +82,7 @@ doc_links:
     relevance: "IT-PO ADDITION. 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest' is the prose statement of this defect after the done_proof.py incident. It records the rule as a convention for humans to remember, which is precisely what this AC replaces with a mechanism — the convention was written and the fourth instance still shipped."
 assigned_agent: python-coder
 estimated_complexity: L
+declares_side_effect: true
 it_requirements:
   reference_file_path: "scripts/build_phases.py"
   n_location_rule: "all"
@@ -204,7 +205,8 @@ covered_by:
   - BP-900g-8-i
   - BP-900g-8-ii
   - BP-900g-8-iii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-900g-8.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

@@ -759,6 +759,16 @@ def resolve_connected_build_set(
             all_records.append(record)
 
     id_index = _build_id_index(all_records)
+    # BO-2400c-6 correctness trap: _drain_cycles() below mutates id_index IN
+    # PLACE, deleting cycle nodes, so it can produce a deterministic order for
+    # the depends_on closure walk further down. Snapshot an UNDRAINED shallow
+    # copy first — the tree walk (traverse_ac_tree) must see every record as
+    # it stands on disk, including cycle members, or any subtree hanging off
+    # a cycle-adjacent node silently vanishes from the build set with no
+    # error (BO-2400c-6-i). The depends_on closure walk below intentionally
+    # keeps using the drained `id_index` — that is the pre-existing,
+    # unchanged behaviour this AC does not touch.
+    undrained_id_index = dict(id_index)
     _drain_cycles(id_index, all_records)
 
     if ac_id not in id_index:
@@ -769,7 +779,9 @@ def resolve_connected_build_set(
         raise ValueError(msg)
 
     # 1. Subtree leaves (not-done L2/L3 descendants via covered_by).
-    build_set: set[str] = set(traverse_ac_tree(ac_id, ac_root, exclude_done=True))
+    build_set: set[str] = set(
+        traverse_ac_tree(ac_id, ac_root, id_index=undrained_id_index, exclude_done=True)
+    )
 
     # 2. Transitive unmet depends_on closure. A done prerequisite is already met
     #    and is not pulled in; a not-done composite dep expands to its leaves.
@@ -790,7 +802,9 @@ def resolve_connected_build_set(
                     build_set.add(dep)
                     worklist.append(dep)
             else:
-                for leaf in traverse_ac_tree(dep, ac_root, exclude_done=True):
+                for leaf in traverse_ac_tree(
+                    dep, ac_root, id_index=undrained_id_index, exclude_done=True
+                ):
                     if leaf not in build_set:
                         build_set.add(leaf)
                         worklist.append(leaf)

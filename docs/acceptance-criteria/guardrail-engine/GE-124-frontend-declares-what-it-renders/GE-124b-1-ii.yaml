@@ -1,0 +1,98 @@
+id: GE-124b-1-ii
+readiness: approved
+priority: high
+title: "An empty or whitespace-only data-ac value is malformed, not absent"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given a staged screen component file containing the element
+    `<li className={styles.edgeRow} data-ac="">`
+  When the element-pin reader evaluates the file
+  Then a pin is recorded for that element with an empty criteria list and the
+    state "malformed"
+  And the malformed state is distinct from the state of a file that carries no
+    `data-ac` attribute at all
+
+  Given a staged screen component file containing the element
+    `<li className={styles.edgeRow} data-ac="   ">`
+  When the element-pin reader evaluates the file
+  Then a pin is recorded for that element with an empty criteria list and the
+    state "malformed"
+depends_on:
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "`state` IS A FIELD ON THE PIN RECORD with at least the values 'ok' and 'malformed'. A malformed pin is a RECORD with ac_ids == [], not an absent record: the distinction between 'you did not say' and 'what you said is not usable' must survive as data all the way to the check, because they are different mistakes with different fixes."
+  - "THIS AC DOES NOT DECIDE THE VERDICT. What a malformed pin earns at commit time is GE-124c's decision; this AC only guarantees the state reaches the check distinguishable. Do not emit a finding from the reader."
+  - "Three input shapes, three code paths, one state: `data-ac=\"\"` (empty value), `data-ac=\"   \"` (whitespace only), and a valueless boolean-style attribute `data-ac` with no `=`. All three are malformed. An implementation that checks only 'is the attribute present' passes the first; one that checks only 'is the string non-empty' passes the second and third."
+  - "A malformed pin must not contribute to any count of pinned elements (GE-124c-3's pass record) and must not populate any criterion's pinned_by (GE-124g-1) — it names no criterion, so there is nothing to link."
+delivers_to: null
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The pin record whose empty-value branch this edge case separates from the no-attribute branch, via the `state` field ('ok' | 'malformed') on that record"
+test_spec:
+  - name: test_ge_124b_1_ii_empty_and_whitespace_values_record_a_malformed_pin
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "`data-ac=\"\"` and `data-ac=\"   \"` each yield ONE pin record with ac_ids == [] and state == 'malformed'. Assert a record exists — asserting only that ac_ids is empty passes on a reader that drops the element entirely, which is the exact conflation this AC forbids."
+  - name: test_ge_124b_1_ii_valueless_attribute_is_also_malformed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A boolean-style `data-ac` with no `=` yields a malformed pin, not zero pins and not a crash. This is the third distinct code path and the one an 'is the attribute present' check silently passes."
+  - name: test_ge_124b_1_ii_malformed_is_distinguishable_from_no_attribute_at_the_record_level
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Compare two files — one with `data-ac=\"\"`, one with no data-ac at all — and assert the downstream consumer can tell them apart from the records alone (one pin with state 'malformed' versus zero pins). Feed both into the real consumer rather than inspecting field names, so a consumer that ignores `state` fails."
+test_rationale: |
+  The whole content of this AC is a distinction that a natural implementation erases: treating
+  `data-ac=""` as 'no attribute' is simpler, passes any test that only checks ac_ids, and turns
+  a half-finished edit into a silent pass. So the tests assert the presence of the record and
+  its state, not the emptiness of its id list. The third test is a seam test rather than a
+  field check because a `state` field that no consumer reads is the same defect one layer along
+  — the distinction has to be observable in the consumer's behaviour, not just in the record.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Named `state` as a field on the pin record with 'ok'/'malformed', added the valueless-attribute third code path, and required that a malformed pin contribute to no count and to no pinned_by. Test contract asserts record presence and consumer-observable distinguishability rather than an empty id list. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Same family of distinction the PO insists on throughout this tree: "you did
+  not say" and "what you said is not usable" are different mistakes with
+  different fixes. A reader that treated `data-ac=""` as no attribute would
+  turn a half-finished edit into a silent pass, and the author who typed the
+  attribute and meant to fill it in would never be told.
+
+  What VERDICT a malformed pin earns at commit time is GE-124c's decision, not
+  this AC's — this one only requires that the state reaches the check
+  distinguishable.
+
+  IT-PO NOTE (2026-08-25). GE-124c-2 owns the unresolved-id verdict and
+  GE-124c-1 owns missing-declaration; neither explicitly names the malformed-pin
+  verdict. The reader's obligation is fixed here; which of the two codes the
+  commit tier assigns to a malformed pin (or whether it warrants a third) is
+  left to GE-124c and is worth confirming when that AC is built.

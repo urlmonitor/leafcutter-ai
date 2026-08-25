@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500e.yaml
 criteria: |
   Given the user's current checkout is on the protected main branch,
@@ -46,6 +46,31 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_authoring_worktree_is_created_when_the_current_checkout_is_on_main
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: With the fixture checkout on main, the worktree-creation entry point exits 0 and returns
+    a worktree path on a non-main authoring branch whose merge base is the origin/main tip.
+- name: test_current_checkout_stays_on_main_with_head_unmoved
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: After the run, the original checkout is still on main with the same HEAD sha and a clean
+    porcelain status — no branch switch and no commit were performed there.
+- name: test_no_commit_is_attempted_against_the_main_branch
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a recording git shim on PATH, a run started from main issues no `git commit` whose
+    target worktree is on main, so the protected-branch rejection path is never reached.
+- name: test_run_started_on_main_completes_through_delivery_without_manual_branch_setup
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: The end-to-end run started on main reaches the delivery step and returns status "ok" with
+    no gate or error asking the user to switch branches or create one by hand.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1

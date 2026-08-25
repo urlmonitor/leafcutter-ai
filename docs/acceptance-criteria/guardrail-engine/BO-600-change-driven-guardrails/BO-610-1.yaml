@@ -40,6 +40,44 @@ it_requirements:
   - "Enum must be defined in a schema file, not hard-coded in validation logic"
   - "Schema must be extensible -- adding a new enum value must not require modifying the validation engine"
   - "Each enum value must have a documented one-line definition"
+test_spec:
+  - name: test_change_target_enum_in_schema_has_exactly_ten_values
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "config/ac_store_schema.json's change_target enum, read from the schema file, is exactly the 10 canonical labels — asserted as both an exact set equality and a cardinality of 10, so an addition or a swap both fail."
+  - name: test_schema_validator_rejects_out_of_enum_change_target
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Running validate_ac_schema.py over a fixture AC carrying an out-of-enum change_target exits non-zero and names the offending value — the negative-closure half of the criteria, exercised through the validator rather than by reading the enum."
+  - name: test_change_target_enum_is_read_from_schema_file_not_hardcoded
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Pointing load_ac_store_schema at a copy of the schema whose change_target enum carries one extra value causes that value to be accepted, with no change to validation code — proving the enum is data, not a literal in the engine."
+test_rationale: |
+  A test that only reads the enum back out of the schema file is a tautology
+  about the file's own contents; it cannot tell whether the validator honours
+  it. The two behavioral descriptors close that gap from both directions: the
+  rejection test proves an out-of-enum value is actually refused by the
+  running validator, and the modified-schema-copy test proves the accepted set
+  moves when the schema file moves (the it_requirement that the enum be data,
+  not a hard-coded literal in validation logic).
+  Deliberately NOT duplicated: the three-way parity between
+  ac_store_schema.json, ALLOWED_CHANGE_TARGETS in
+  templates/hooks/ticket_frontmatter_guard.py, and the top-level keys of
+  config/guardrail_gates.yaml is already asserted by
+  test_ac3_change_target_enum_identical_across_sources in
+  unit_tests/commit_guardian/test_check_ac_schema.py; these descriptors
+  complement it rather than restate it.
+  NOT COVERED — the third criteria clause ("each value is documented with a
+  one-line definition") has no implementation artifact to assert against: the
+  definitions exist only in this AC's own criteria. ADR-017 carries a
+  different ten-label vocabulary entirely, and the shipped enum spells two
+  values differently from the criteria (infrastructure, not infra). Authoring
+  a test here would require inventing the artifact, so the clause is left
+  uncovered and flagged for reconciliation instead.
 delivers_to:
   agent: python-coder
   contract: "A schema definition file containing the change_target enum with 10 values and their descriptions"

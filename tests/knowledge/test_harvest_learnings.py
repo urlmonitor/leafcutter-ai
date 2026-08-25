@@ -74,6 +74,7 @@ class TestRoutesMemoryProjectEvent(unittest.TestCase):
     """AC-2: harvester routes memory-project events to destination file."""
 
     def test_routes_memory_project_event(self) -> None:
+        # covers: INF-400c-2
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             sink = tmp / "knowledge_emissions.jsonl"
@@ -109,6 +110,7 @@ class TestRoutesPerFolderReadmeEvent(unittest.TestCase):
     """AC-2: harvester routes per-folder-readme events to destination file."""
 
     def test_routes_per_folder_readme_event(self) -> None:
+        # covers: INF-400c-2
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             sink = tmp / "knowledge_emissions.jsonl"
@@ -141,6 +143,7 @@ class TestIdempotentNoDuplicates(unittest.TestCase):
     """AC-3: running harvester twice does not re-process already-processed events."""
 
     def test_idempotent_no_duplicates(self) -> None:
+        # covers: INF-400c-3
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             sink = tmp / "knowledge_emissions.jsonl"
@@ -182,6 +185,7 @@ class TestSkipsUnrecognisedEntryKind(unittest.TestCase):
     """AC-4: harvester logs a warning for unknown entry_kind but does not crash."""
 
     def test_skips_unrecognized_entry_kind(self) -> None:
+        # covers: INF-400c-2-i
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             sink = tmp / "knowledge_emissions.jsonl"
@@ -265,6 +269,7 @@ class TestSummaryFormat(unittest.TestCase):
     """AC-2: summary string has the format 'N learnings routed: ...'."""
 
     def test_summary_string_format(self) -> None:
+        # covers: INF-400c-2
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             sink = tmp / "knowledge_emissions.jsonl"
