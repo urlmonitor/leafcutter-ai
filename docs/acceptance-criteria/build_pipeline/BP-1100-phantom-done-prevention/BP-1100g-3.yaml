@@ -146,7 +146,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100g-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-1100g-3.md
 change_target:
   - prompt
   - code
