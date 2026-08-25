@@ -690,6 +690,160 @@ specifying it.
 
 ---
 
+### KI-BO-022 — A CRLF acceptance-criterion record is rewritten LF end-to-end by a single `work_status` flip, and every value-level check still passes
+
+> **Renumbered 2026-08-25 from KI-BO-019.** PR #538 landed its own KI-BO-019 at 14:51 UTC;
+> PR #539 landed this one at 15:09 UTC and the two collided on `main`. #538 was first, so
+> it keeps the number and this entry moves. See KI-BO-024.
+
+- **Severity:** high
+- **Status:** open — latent, zero live instances today
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_orchestration/fast_lane.py:169-171` (read) and `:205-207` (write), function `_update_ac_work_status`; reached from all three call sites (`:288`, `:346`, `:461`)
+
+**Symptom.** Both the read and the write use text mode with default newline handling. The
+read collapses `\r\n` to `\n`; the write emits `\n`. So flipping one `work_status` value on
+a CRLF-encoded record rewrites **every line in the file**. Confirmed by execution against
+the real `BO-2400a-3-i.yaml` converted to CRLF: **154 changed lines** from one flip.
+
+```
+'-id: BO-2400a-3-i\r'
+'-components:\r'
+... 142 more
+```
+
+**Why it will not be noticed.** `yaml.safe_load` still reports `work_status = 'done'`
+afterwards, so every parsed-value assertion passes. This is the same blindness that let
+the original KI-BO-003 defect survive — a re-serialised record parses equal to the
+original. Any test that checks values rather than bytes is blind to it.
+
+**Why it matters.** This is precisely the failure `BO-2400e-4` ("Recording progress on a
+requirement changes the progress and nothing else") exists to prevent, arriving through a
+door that AC did not anticipate. `BO-2400e-4` was marked done on 2026-08-25 on the
+strength of tests that only exercise LF records, so the AC now reads as satisfied while
+this hole is open.
+
+**Exposure.** A scan of all 3,257 store records found **0** with CRLF, so nothing is
+broken today. It is filed rather than fixed because the exposure is one careless write
+away: this repo is developed under WSL2 with a checkout reachable from `/mnt/c`, and any
+Windows-side editor that normalises line endings on save would introduce a CRLF record
+silently. There is no guard that would report it.
+
+**Fix sketch.** Open both ends with `newline=""` so line endings round-trip, or read bytes
+and splice. A CRLF fixture belongs in
+`unit_tests/build_orchestration/test_ki_bo_003_ac_yaml_preservation.py` alongside the
+existing byte-level cases.
+
+---
+
+### KI-BO-023 — `_update_ac_work_status` raises `ValueError`, all three call sites catch only `OSError`, and the escape strands acceptance criteria in `in_progress` permanently
+
+> **Renumbered 2026-08-25 from KI-BO-020**, for the same collision described on KI-BO-022.
+> Note the coincidence worth reading: main's KI-BO-020, landed by PR #538 seventeen minutes
+> earlier, describes the *same consequence* — aborted runs stranding their claims — by a
+> different mechanism (its release path dispatches `status-checker`, which refuses the
+> role). Two independent branches found two independent causes of one symptom on the same
+> day. Both are real; neither supersedes the other.
+
+- **Severity:** high
+- **Status:** open — latent, zero live instances today
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** raise at `scripts/build_orchestration/fast_lane.py:180-185`; call sites catch `except OSError` only at `:289` (`claim_build_set`), `:347` (`release_claim`), `:462` (`mark_done_built_acs`)
+
+**Symptom.** When a record contains more than one column-0 `work_status:` line the
+function raises `ValueError` — deliberately, rather than guess which is the real key. But
+no caller catches it. Confirmed by execution; observed disk state after the escape:
+
+```
+claim_build_set:      ESCAPED ValueError ...  A left at: ['work_status: in_progress']
+release_claim:        ESCAPED ValueError ...  C left at: ['work_status: in_progress']
+mark_done_built_acs:  ESCAPED ValueError ...
+```
+
+**Two consequences, the second much worse.**
+
+*Lost claim payload.* `claim_build_set` flips records to `in_progress` on disk as it goes,
+then loses its return value to the exception. `fast-lane-ship.js:391-437` builds
+`claimedIdsCsv` from exactly that payload to feed every `release-on-*-fail` path, so the
+records it already flipped are never released.
+
+*The un-sticking mechanism is the thing that breaks.* `release_claim` is what returns a
+stranded AC to `todo`, and it aborts mid-loop on the same exception. Everything after the
+offending record stays `in_progress` **forever** and is then permanently excluded from
+future runs by `filter_already_claimed`. Recovery is a hand edit.
+
+**The docstring's justification is falsifiable.** It claims column-0 anchoring means an
+occurrence of `work_status` inside block-scalar prose is never mistaken for the real key.
+Two constructions defeat it, both confirmed:
+
+- A legal multi-line double-quoted scalar whose continuation begins at column 0. PyYAML
+  parses this correctly as one `work_status: todo`; the function counts two matches and
+  raises:
+
+  ```yaml
+  id: B-1
+  notes: "the release step resets it back to
+  work_status: todo when the run fails"
+  work_status: todo
+  ```
+
+- `U+2028` or `U+0085` inside a block scalar. `str.splitlines()` splits on `U+2028`,
+  `U+2029`, `U+0085`, `\x0b`, `\x0c` and `\x1c`-`\x1e`; YAML's line-break set is narrower.
+  The phantom second match raises on a perfectly valid record.
+
+**Exposure.** 0 of 3,257 records currently have more than one column-0 match, so no run is
+failing this way today.
+
+**Fix sketch.** Two independent halves, and the second matters more than the first. Narrow
+the detection (parse-aware, or at minimum split on YAML's line-break set rather than
+Python's) *and* widen the three call sites to catch `ValueError` alongside `OSError`, so
+that a raise can never leave claims stranded regardless of what triggers it. The release
+path in particular should be failure-tolerant per record rather than aborting the loop.
+
+---
+
+### KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap
+
+- **Severity:** medium
+- **Status:** open — coverage debt, tracked against `BO-2400e-4` (`work_status: done`)
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `unit_tests/build_orchestration/test_ki_bo_003_ac_yaml_preservation.py`; AC at `docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-4.yaml`
+
+**What is owed.** `BO-2400e-4`'s `test_spec` names four tests. The 14 existing tests supply
+two of them (single-record textual diff; field order and untouched text). Two are absent:
+
+1. `test_eleven_member_build_changes_only_its_progress_values` — eleven REAL records copied
+   from the store, driven through begin/finish, asserting the total textual change is
+   confined to the progress values.
+2. `test_progress_recording_preserves_the_record_via_the_real_surface` (angle:
+   `reachability`) — drives `claim_build_set` / `release_claim` / `mark_done_built_acs`
+   rather than the private helper.
+
+**Why the second one is the point.** Every existing test calls `_update_ac_work_status`
+directly. If `BO-2400e-3`'s durable-write work introduces a **new** writer and repoints the
+three call sites at it, this suite carries on testing an orphaned function and stays green
+while the shape-preservation guarantee is silently gone. `BO-2400e-4`'s own constraint 3
+names this outcome ("two writers will drift and one of them will stop preserving") and its
+`test_rationale` predicts it verbatim.
+
+**Why it is live rather than theoretical.** `BO-2400e-4` `depends_on: [BO-2400e, BO-2400e-3]`
+specifically so that e-3's durable writer would land *first* and this AC would then
+constrain it. The build order was inverted — e-4 was satisfied incidentally on 2026-08-18
+via KI-BO-003, and e-3 is being built afterwards. The protection the dependency was written
+to provide therefore does not exist, and these two tests are what would replace it.
+
+**Sequencing.** Write them **before** the `BO-2400e-3` work merges, so the durable write has
+to prove it preserves shape. Landing e-3 first loses the red-baseline evidence that these
+tests constrain it.
+
+**Not filed as an AC** because `BO-2400e-4` already specifies both tests exactly; this is
+unbuilt work against an existing spec, not a new requirement.
+
+---
+
 ### KI-BO-017 — A fast-lane re-run whose worktree was pruned silently rebuilds on the old branch tip instead of the latest `origin/main`
 
 - **Severity:** high
@@ -1025,3 +1179,72 @@ mainline", but a fast-lane run claims in its own workspace's copy of the store, 
 discarded with the workspace — the only reason the observed failure was harmless. Whether the
 release is meant to reach mainline at all is a product question; the new criteria are worded
 against "the store the run claimed in" so they hold either way.
+
+**Related, and it compounds — see `KI-BO-023`.** That entry records a *second*, independent way
+a claim gets stranded: `_update_ac_work_status` raises `ValueError`, all three call sites catch
+only `OSError`, and the escape leaves acceptance criteria `in_progress` permanently. So there
+are now two distinct mechanisms stranding claims — a release that is never *reached* (this
+entry) and a release that is reached and *throws past its own error handling* (KI-BO-023).
+Fixing either alone still leaves claims stranded. `BO-2400f-10-ii`'s requirement that the
+release's result be **read** is the common defence: both mechanisms are silent today precisely
+because nothing inspects the outcome.
+
+---
+
+### KI-BO-024 — "Append the next free number" is not a workable id convention under concurrent agents, and on 2026-08-25 it finally shipped a duplicate to `main`
+
+- **Severity:** medium
+- **Status:** open — the immediate duplicates are repaired; the convention that produced them is not
+- **Occurrences:** 9 in a single day (2026-08-25), of which 1 reached `main`
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+- **Where:** the "Adding an issue" instruction at the top of every `docs/known-issues/*.md`
+
+**Symptom.** The convention says to append using "the next free number". A branch reads the
+file, picks the next number, and by the time it lands that number is taken. There is no
+reservation, no allocator, and no check — the number is chosen against a snapshot and
+validated by nothing.
+
+**This is no longer a near-miss.** Every prior occurrence was caught by re-reading
+`origin/main` immediately before landing. On 2026-08-25 that defence failed for the first
+time, because the collision landed *inside the window between the final check and the merge*:
+
+| | |
+|---|---|
+| PR #539 renumbered 017/018/019 → **019/020/021**, checked against `origin/main` at `eed3601c` | ~14:40 UTC |
+| PR #538 merged, publishing **its own** KI-BO-019 and KI-BO-020 | 14:51 UTC |
+| PR #539 merged | 15:09 UTC |
+| `main` now carries two KI-BO-019 and two KI-BO-020 | — |
+
+Repaired by this entry's PR: #538 was first and keeps the numbers; #539's entries moved to
+`KI-BO-022` and `KI-BO-023`, taking a test filename and its 21 internal references with them,
+plus two published changelog entries whose pointers had gone stale.
+
+**Nine occurrences in one day.** `KI-BO-008 → 014 → 015`; `KI-CG-010 → 012`; `KI-BO-016/017/018
+→ 017/018/019 → 019/020/021 → 022/023`. Three of those were *second* renumbers — the file moved
+again while the first renumber was being written.
+
+**Why the current defence cannot be made to work.** "Re-read the free number against
+`origin/main` at the moment of landing" is already written into this file (under KI-BO-014) and
+was followed. It is a time-of-check-to-time-of-use race, and the window is the merge queue.
+Narrowing it does not close it. There is also no way to see numbers reserved in a *branch* or
+in someone's uncommitted working copy — while writing this entry, two candidate numbers had to
+be skipped because a concurrent session held them uncommitted, which no amount of checking
+`origin/main` would have revealed.
+
+**The cost is not the renumbering.** It is that every reference goes stale at once: section
+headings, `# covers:` tags, test filenames, cross-references between entries, commit messages,
+and already-merged changelog entries. The 019 → 022 move above touched four files and 20-odd
+references, and a missed one silently points a reader at someone else's defect.
+
+**Fix directions, cheapest first.**
+
+1. **Make the number non-sequential.** A date-plus-slug id (`KI-BO-20260825-crlf-rewrite`) cannot
+   collide, needs no allocator, and no coordination. Loses ordering, which the file does not
+   currently preserve anyway — `main` today lists 016 between 013 and 014.
+2. **Allocate at merge, not at authoring.** Author with a placeholder and have a hook or the
+   merge queue assign the number. Removes the race but needs tooling and rewrites references.
+3. **Detect rather than prevent.** A pre-commit hook and CI check that fails on a duplicate
+   `### KI-XX-NNN` heading in any known-issues file. This does not stop the collision, but it
+   turns a silent duplicate on `main` into a blocked merge, and it is a few lines. **Worth doing
+   regardless of which of the above is chosen** — it is the only one of the three that would
+   have caught 2026-08-25 before it landed.
