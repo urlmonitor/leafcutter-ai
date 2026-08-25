@@ -4,7 +4,7 @@ components:
 title: "Harvester skips events with an unrecognized entry_kind without crashing"
 component: infrastructure
 level: L3
-status: active
+status: superseded_by
 req_status: active
 work_status: done
 priority: high
@@ -25,6 +25,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
+  - "SUPERSEDED by INF-400c-2-ii. The 'mark skipped events as processed' clause below was implemented literally and causes silent, permanent loss of any event the harvester cannot route: a 2026-08-25 dry-run over the real sink found all 28 in-flight knowledge_captured events unroutable, and this rule would have burned every one on first run. INF-400c-2-ii keeps the original intent (no unbounded retry loop) by requiring the unroutable backlog be reported on every run instead of discarded. NOT YET RETIRED: tests/knowledge/test_harvest_learnings.py::TestSkipsUnrecognisedEntryKind::test_skips_unrecognized_entry_kind still asserts the superseded behaviour ('Unknown event is marked processed', 'Both events are marked processed') and still passes as of 2026-08-25 (7 passed). It must be rewritten in the same commit that implements INF-400c-2-ii, or that implementation will fail against it."
   - "Must log unrecognized entry_kind values at WARNING level with the event identifier"
   - "Must mark skipped events as processed to prevent infinite retry loops"
   - "Must exit with success status (exit code 0) even when events are skipped"
@@ -36,7 +37,7 @@ expects_from:
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
-superseded_by: null
+superseded_by: [INF-400c-2-ii]
 covered_by:
   - "tests/knowledge/test_harvest_learnings.py"
 implemented_by:
