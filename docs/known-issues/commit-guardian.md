@@ -1122,3 +1122,142 @@ matcher reads English correctly.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check measuring a proxy and
 reporting it as a verdict) — the proxy is "does the Then clause contain a write phrase", the
 verdict claimed is "this AC has a durable side effect", and negation is the gap between them.
+
+---
+
+### KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_governance.py:631-642` — `main()`
+
+**Symptom.** The hook returns `0` having read no file, with no output on stdout or stderr,
+and is indistinguishable at the call site from a run that checked every staged record and
+found nothing wrong.
+
+**Root cause — the diagnostic is downstream of the silent exits.** `main()` has two early
+returns, and the introspection counter that exists to prove the hook did work sits *after*
+both of them:
+
+```python
+631    if not ac_store.is_dir():
+632        # No AC store — exit 0 immediately without creating any directories
+633        return 0
+634
+635    # Get staged AC YAML files
+636    staged_paths = _get_staged_ac_paths()
+637    if not staged_paths:
+638        return 0  # No AC files staged — nothing to check
+639
+640    # Emit parsed file count to stderr for test introspection (AC-13)
+641    if os.environ.get("HOOK_COUNT_PARSED"):
+642        print(f"{_HOOK_PREFIX} parsed_files: {len(staged_paths)}", file=sys.stderr)
+```
+
+`HOOK_COUNT_PARSED` was added so a caller could confirm the hook saw its files. It is
+unreachable on precisely the two paths where it saw none. Setting it and getting silence is
+therefore ambiguous between "the variable is unset", "the hook is old", and "the hook
+checked nothing" — and only the third is true.
+
+Line 631 is reached with `ac_store` wrong whenever `_find_project_root()` resolves above the
+AC store. In the ADR-001 self-hosting layout the workspace parent carries a `CLAUDE.md` but
+no `docs/acceptance-criteria/`, so a run whose working directory is the workspace parent
+takes the 633 exit every time. Not intermittent.
+
+**Evidence.** Both observed on 2026-08-25 while authoring `ACD-2100`, by two agents
+independently, on a worktree that did contain 31 staged AC records:
+
+```
+$ HOOK_COUNT_PARSED=1 HOOK_TEST_FILES=<relative path to a real staged AC> \
+    python <worktree>/.leafcutter/scripts/commit_guardian/check_ac_governance.py
+(no output at all)
+exit: 0
+
+$ env --chdir=<worktree> HOOK_COUNT_PARSED=1 HOOK_TEST_FILES=<same path> \
+    python <worktree>/.leafcutter/scripts/commit_guardian/check_ac_governance.py
+[check-ac-governance] parsed_files: 1
+exit: 0
+```
+
+Same hook, same file, same exit code; only the working directory differs, and only the
+second run inspected anything.
+
+**Compounding: `argv` is ignored.** `_get_staged_ac_paths()` (`:285`) reads `git diff
+--cached` or `HOOK_TEST_FILES`. Passing paths on the command line does not make the hook
+check them, so a caller who verifies the hook by invoking it with a path gets a pass that
+means nothing. This is the same shape already recorded for the other AC hooks — silence is
+not a pass, and neither is exit 0 with an argument the hook never read.
+
+**Why this is worse than a crash.** In pre-commit the working directory is the repository
+root, so the gate does run there — its practical blast radius is ad-hoc verification, agent
+self-checks, and any CI step that invokes it from elsewhere. Those are exactly the callers
+who would report "governance passes" on the strength of an exit code.
+
+**Fix direction.** Three separable changes, in order of value:
+
+- Emit the `HOOK_COUNT_PARSED` diagnostic (or an unconditional one-line summary naming the
+  resolved root and the file count) **before** the early returns, so a run that checked
+  nothing says so. A check that cannot report what it looked at should not be able to
+  report success.
+- Distinguish "no AC store found at `<resolved root>`" from "AC store found, nothing
+  staged". Both are legitimately exit 0; they are not the same fact.
+- Resolve the root the way the guardian hooks that already handle this layout do —
+  `_resolve_root.py` exists for it. Falling back to a bare relative `_AC_STORE_DIR` when
+  `_find_project_root()` returns `None` (`:627`) is what makes the failure depend on cwd.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8, and a variant worth naming
+separately: the *instrumentation* meant to defeat M8 placed where the M8 path cannot reach
+it.
+
+---
+
+### KI-CG-019 — the `templates/` copy of `check_ac_parent_covered_by` fail-opens on an import it can never satisfy, so verifying from `templates/` always passes
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py` — the
+  `derive_parent_id` import guard
+
+**Symptom.** Run from `templates/`, the hook prints a warning and exits 0 without checking
+anything:
+
+```
+$ HOOK_ROOT=<worktree> HOOK_TEST_FILES=<a real AC record> \
+    python <worktree>/templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+[check-ac-parent-covered-by] WARNING: cannot import derive_parent_id: ac_parent_id.py not
+found via package import, script-relative, or project-root walk.; skipping check (fail-open)
+exit: 0
+```
+
+The deployed copy under `.leafcutter/scripts/commit_guardian/` imports cleanly and runs.
+
+**Root cause.** `ac_parent_id.py` lives in `scripts/ac_store/` and is placed next to the
+hook only by `build.py`. In `templates/` that sibling does not exist, and none of the three
+resolution strategies can find it — so the condition is not an environment accident but a
+permanent property of that copy. The failure is guaranteed, and the response to a guaranteed
+failure is to pass.
+
+**Why it matters.** It is louder than `KI-CG-018` — it does print a warning — but it lands in
+the same trap: anyone verifying AC parent back-links by running the hook out of `templates/`
+gets exit 0 and a clean-looking result. That is a natural thing to do, because `templates/`
+is where the source of truth for the hook lives and where an author editing it is already
+working. The hook that exists to catch a stale `covered_by` is the one that silently
+abstains.
+
+Found while verifying `ACD-2100e`: a business-analyst hit the fail-open, noticed the warning,
+re-ran the deployed copy, and additionally corroborated the invariant by reading the parent's
+`covered_by` directly rather than trusting either exit code.
+
+**Fix direction.** Fail **closed** when the import cannot be satisfied and the hook was given
+files to check — the check exists to be blocking, and a blocking check that cannot load its
+own dependency has not passed. If the `templates/` copy is genuinely not meant to be
+executable in place, make it say that explicitly ("this copy is a build source; run the
+deployed hook") and exit non-zero, rather than emitting a warning shaped like a skip.
+
+Related: the deployed hook has no `parsed_files`-style diagnostic at all, so even a correct
+run cannot state what it inspected. Adding one alongside the `KI-CG-018` fix would make both
+hooks answerable to the same question.
