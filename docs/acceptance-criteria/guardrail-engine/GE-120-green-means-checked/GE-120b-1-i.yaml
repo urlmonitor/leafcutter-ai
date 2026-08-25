@@ -31,6 +31,7 @@ criteria: |
   different condition.
 depends_on:
   - GE-120b-1
+  - GE-120a-2
 doc_links:
   - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
     relationship: modifies
@@ -78,9 +79,16 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-14'
+- action: depends_on extended with GE-120a-2 — the per-check blocks-or-announces
+    contract this AC already declared in expects_from. goal_to_epic.py orders an
+    epic on depends_on only and never reads expects_from, so without this edge the
+    edge is invisible to the generated Master_Plan. criteria untouched.
+  agent: BrainCandy
+  date: '2026-08-25'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/14_TICKET-20260825-GE-120b-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -95,3 +103,4 @@ notes: |
 
   IT-PO (2026-08-14): the never-built vs built-but-incomplete classifier is shared with
   GE-120d-2-i, which draws the same line on the set-up side. Build it once.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

@@ -25,6 +25,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _MODULE_PATH = _REPO_ROOT / "scripts" / "build_halt_guard.py"
 
 spec = importlib.util.spec_from_file_location("build_halt_guard", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 import sys
 sys.modules["build_halt_guard"] = _mod

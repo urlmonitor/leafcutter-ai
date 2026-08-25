@@ -29,6 +29,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _BUILD_PATH = _REPO_ROOT / "scripts" / "build.py"
 
 spec = importlib.util.spec_from_file_location("build", _BUILD_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_BUILD_PATH}"
 _build = importlib.util.module_from_spec(spec)
 # Ensure scripts/ is on sys.path so build.py can import its siblings.
 _scripts_dir = str(_BUILD_PATH.parent)

@@ -7,8 +7,8 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: done
-readiness: draft
+work_status: in_progress
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -24,10 +24,29 @@ criteria: |
     names the layer, invokes it, and then composes its prompts some other way does not
     satisfy it, however faithfully the layer was called.
 
-  Given the bundle cannot be obtained for this run — the assembling command fails, or it
-    returns nothing the run can use,
-  When the run reaches the point at which it would dispatch those agents,
-  Then it reports that the context bundle was not obtained and names it as the reason,
+  Given the assembling step has returned to the lane,
+  When the lane inspects what came back,
+  Then what came back is the bundle's content, in the lane's own hands — not a value
+    naming somewhere that content may be found, because the lane cannot read a
+    filesystem and a location it has been handed is not a bundle it has,
+  And a returned value that is a filesystem path, a file: URI, or any other locator
+    standing in for the content is refused as a reference rather than accepted as a
+    bundle,
+  And the size the lane expects is stated to whatever produces the bundle, so a step
+    handling roughly twenty kilobytes of text is told plainly that returning the text
+    itself is the ask — this refusal being a check on an already-small payload, never
+    the thing that makes it small (BO-2400c-1-vi).
+
+  Given the lane cannot use the bundle for this run,
+  When it halts,
+  Then its message names which one of three things happened, and names only that one:
+    the bundle was never obtained, because the assembling step failed or declined and
+    nothing came back; or the bundle was obtained and is unusable because it arrived as
+    a reference, in which case the message says the assembly SUCCEEDED, gives the size
+    and the location that were reported, and says the lane cannot follow a reference
+    because it cannot read a filesystem; or the bundle was obtained and is unusable
+    because its content is incomplete, the breakpoint marker being absent or a layer
+    empty,
   And it does not quietly fall back to prompts composed some other way, so a lane that
     is not assembling its context is visibly different from one that is — rather than
     looking identical from the outside, which is how this went unnoticed.
@@ -48,40 +67,73 @@ doc_links:
   - path: docs/reference/workflow-constraints.md
     relationship: describes
     status: exists
-    relevance: "Why the bundle must be fetched through an agent dispatch and threaded back into later prompts: the workflow body itself cannot read the files the stable layers are built from."
+    relevance: "Why the bundle must be fetched through an agent dispatch and threaded back into later prompts: the workflow body itself cannot read the files the stable layers are built from — which is also why a returned location is useless to it."
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
-    relevance: "KI-BO-006 records that the live lane never mentions the layer at all and that the only production reference sits in an orphan — the state this criterion ends."
+    relevance: "KI-BO-006 records that the live lane never mentions the layer at all and that the only production reference sits in an orphan — the state this criterion ends. KI-BO-019 records the transport failure this criterion's second and third scenarios were added for."
   - path: unit_tests/_workflow_engine_harness.py
     relationship: specifies
     status: exists
-    relevance: "The only way to observe what a dispatched agent actually received: run_workflow_under_e2 records every agent() call, and each recorded call carries the prompt the criterion is about."
+    relevance: "The only way to observe what a dispatched agent actually received: run_workflow_under_e2 records every agent() call, and each recorded call carries the prompt the criterion is about. It is equally the only way to observe the run's terminal payload, which is what the third scenario is asserted against."
+  - path: unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py
+    relationship: specifies
+    status: exists
+    relevance: "Added by the IT PO 2026-08-25. Read before writing any template-vs-deployed assertion: this file deliberately asserts that a template DIFFERS from its deployed copy (test_template_does_not_contain_probe_failure), so byte-parity is not the invariant here and a new parity test would contradict an existing one."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
   config_schema_fragment:
     fast_lane_context_bundle:
       type: object
-      description: "Bundle payload obtained once per run before the Test Writer phase: {bundle: str, obtained: bool, message: str}. The build-context-carrying dispatches send bundle verbatim as their prompt context. obtained false, absent, or a bundle that is empty or missing the breakpoint marker ends the run with the context-bundle phase named as the failure — never a silent fallback to an unbundled prompt."
+      description: >-
+        Bundle payload obtained once per run, before the Test Writer phase, and
+        classified by the lane into one usable state or one of three disjoint failure
+        states. Shape read from the assembling dispatch:
+        {bundle: str, obtained: bool, bytes: int|null, location: str|null, message: str}.
+        USABLE — obtained is truthy AND bundle is a non-empty string AND that string is
+        not a locator AND it carries the breakpoint marker. Only in this state is the
+        bundle string sent, verbatim, as the prefix of every build-context-carrying
+        dispatch.
+        NOT_OBTAINED — obtained is falsy, absent, null, or the reply is unparseable:
+        nothing came back.
+        OBTAINED_BUT_A_REFERENCE — obtained is truthy but the returned value is a
+        filesystem path, a file: URI, or any other locator standing in for the content.
+        The halt for this state states that the assembly SUCCEEDED, echoes the bytes and
+        the location that were reported, and says the lane cannot follow a reference
+        because it cannot read a filesystem.
+        OBTAINED_BUT_INCOMPLETE — obtained is truthy and the value is content rather than
+        a locator, but the breakpoint marker is absent or a layer is empty.
+        Each of the three failure states ends the run with the context-bundle phase named
+        and with a message naming that state and only that state. None of them falls back
+        to a prompt composed some other way.
   reference_file_path: "templates/workflows-js/fast-lane-ship.js"
-  n_location_rule: "1"
+  n_location_rule: "3"
   required_skills:
     - python-coder
   post_write_commands:
     - "python scripts/build.py --target-dir ."
   constraints:
-    - "The bundle is obtained once per run through a single agent-mediated command dispatch (the surface added by BO-2400c-1-ii) and the returned text is threaded into the later prompts. The workflow body cannot read the architecture, conventions or parent-AC content itself, and re-deriving the bundle per dispatch is what would break the byte-identity BO-2400c-1-iv asserts."
+    - "SCOPE — THIS RECORD IS THE JAVASCRIPT HALF ONLY. The three locations in templates/workflows-js/fast-lane-ship.js are: (1) the bundle-assembling dispatch prompt and its schema, currently lines 450-480, where the size expectation and the return-the-text-itself instruction are stated; (2) the usability gate, currently lines 490-498, where the classification is computed; (3) the halt payload, currently lines 508-521, where exactly one of the three failure states is named. NOTHING in scripts/injection_builders.py belongs to this record — the Python half (dropping the duplicate layers, and with them two required CLI arguments) is BO-2400c-1-vi. State the split in the sign-off, because a single-coder phase that quietly does both loses the ability to tell which record a later regression came from."
+    - "SOURCE VS GENERATED, VERIFIED 2026-08-25. templates/workflows-js/fast-lane-ship.js is the SOURCE and the only file to edit. build_workflow_scripts copies templates/workflows-js/*.js into <output_root>/workflows/ (scripts/build_phases.py:723-734), so the deployed copy is a build output and an edit made there is erased by the next build. There is no templates/scripts/ counterpart for this file, so the inverse trap (a scripts/ file that is itself a build output regenerated from templates/) does not apply to it. Do NOT add or extend a test asserting byte-parity between a template and its deployed copy: unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py deliberately asserts a template DIFFERS from the deployed layout, so parity is not the invariant and a new parity assertion would contradict an existing one."
+    - "The bundle is obtained once per run through a single agent-mediated command dispatch (the surface added by BO-2400c-1-ii) and the returned text is threaded into the later prompts. The workflow body cannot read the layer sources itself, and re-deriving the bundle per dispatch is what would break the byte-identity BO-2400c-1-iv asserts."
     - "The returned bundle text is inserted into the dispatched prompt unaltered. No trimming, no re-wrapping, no interpolation inside the stable region, no per-dispatch preamble prepended ahead of it. Anything the phase agent additionally needs goes after the breakpoint, with the volatile layers."
     - "Mentioning is not wiring. Adding the layer's name to a comment, to a phase list, to an agent instruction, or dispatching it and discarding the result does not satisfy this criterion. The single observable that counts is the prompt text the dispatched agent received."
-    - "Fail closed when the bundle is unobtainable: read the obtained flag with the same plain-falsy check the red-baseline gate_passed key already uses, so version skew and an explicit failure behave identically. No default-true, no `|| ''`, no optional read that yields undefined-as-empty and lets an unbundled prompt through."
-    - "Covering tests must EXECUTE the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2 with label_responses stubbing the bundle-assembling dispatch) and assert on the RECORDED agent_calls — specifically on their prompt text. A test that greps templates/workflows-js/fast-lane-ship.js for the layer's name, for a phase label, or for source-text ordering is not acceptable evidence: it passes on dead code. This exact feature is the proof — it carries roughly 25 green unit tests and a reference doc and has never executed once, and the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserted the layer's NAME appeared in an orphaned file, which kept a dead reference looking alive for a month."
+    - "LANE-RECEIVES: the value the lane holds must BE the content. Reference-rejection is a deterministic test on the returned string — a 'file:' (or other) URI scheme, a leading '/' or a drive-letter root, or any other locator form — evaluated by the lane itself. It is never a judgement call delegated to an agent, never a plausibility heuristic, and never a length threshold: a 47-character path and a 47-character bundle fragment must be separable by the rule. The observed failure value was exactly 'file:/tmp/bo2400f13-bundle/bundle_output.txt'. A locator that also happens to contain the breakpoint marker is still refused as a reference — reference-rejection is evaluated before the marker check, or the two states collapse."
+    - "STATE THE SIZE EXPECTATION TO THE PRODUCER, IN THE DISPATCH PROMPT: the assembling step is told plainly that the ask is roughly twenty kilobytes of text returned AS TEXT, not a path to it. This instruction is a BELT and must not be implemented as a mechanism: no truncation, no summarisation, no chunking, and no size cap anywhere in this record's three locations. The payload is made small by composition in BO-2400c-1-vi. If that record is not yet built when this one lands, the belt will still refuse a 149 KB pointer and the run will still halt — correctly — so do not compensate by loosening the refusal."
+    - "Fail closed on every read: obtained is read with the same plain-falsy check the red-baseline gate_passed key already uses (fast-lane-ship.js:590) and the review verdict_obtained check already uses (fast-lane-ship.js:737), so version skew, a null reply and an explicit failure behave identically. No default-true, no `|| true`, no `|| ''` turning an unreadable bundle into an empty-but-truthy string, and no optional read yielding undefined-as-empty that lets an unbundled prompt through."
+    - "The three failure messages are constructed at one site and are mutually distinguishable — each names its own state and no other, and no message is a superset of another that would satisfy all three string checks at once. Deliberately NOT in scope: the general rule that a halt must not state a reason its own evidence denies. The BA assigned that to the BO-2400f-4-vi family and duplicating it here would give it two owners and no home. Implement the instance, not the general rule."
+    - "NO GREP TESTS. Every criterion in this record is a workflow gate sitting on code that has never once executed correctly — the transport has never carried a real bundle. A test that searches fast-lane-ship.js for the layer's name, a label, an agentType, a message fragment or a statement ordering passes UNCHANGED on dead code, so it is not weaker evidence, it is no evidence. This feature's own history is the proof: roughly 25 green unit tests plus a reference doc across a month in which the layer never ran, and the grep test at unit_tests/workflows/test_bo2400a_runner_wiring.py:401 asserting the layer's NAME appeared in an orphaned file, which kept a dead reference looking alive."
+    - "THE SPECIFIC TRAP FOR THIS RECORD: stubbing the bundle label with a well-formed inline string proves nothing about the real path. A hand-written 200-byte stub containing the marker satisfies every gate assertion while the actual ~20 KB CLI stdout has still never been fed through the gate once. At least one covering test must therefore run scripts/injection_builders.py's assemble-bundle subcommand as a REAL SUBPROCESS against real on-disk layer files and push its ACTUAL stdout through the gate and into the recorded prompts. Harness-only tests are necessary for the halt wording and insufficient for the transport."
+    - "Covering tests execute the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2 with label_responses keyed on 'fastlane-context-bundle') and assert on HarnessResult.agent_calls prompt text and on HarnessResult.result, the terminal payload. Both instruments are needed: agent_calls proves what an agent received, .result proves what the operator was told."
 delivers_to:
-  agent: test-writer
-  contract: "The assembled context bundle, delivered verbatim as the prompt of each build-context-carrying phase dispatch — stable layers, one cache breakpoint, then this run's volatile layers."
+  - agent: test-writer
+    contract: "The assembled context bundle, delivered verbatim as the prefix of the 'test-writer-connected' dispatch prompt — stable layers, exactly one cache breakpoint marker, then this run's volatile layers. Delivered only in the USABLE state; on any of the three failure states this dispatch does not occur at all."
+  - agent: python-coder
+    contract: "The same bundle string, byte-identical to the one delivered to the test-writer, as the prefix of the 'coder-connected' dispatch prompt. Byte-identity across the two is BO-2400c-1-iv's property and is what forbids re-assembling per phase."
 expects_from:
   ac_id: BO-2400c-1-ii
-  contract: "A command an agent can run in one Bash call whose stdout is the assembled bundle, plus a non-zero exit and a named reason when it cannot be assembled."
+  contract: "A command an agent can run in one Bash call — python3 <worktree>/<output_root>/scripts/injection_builders.py assemble-bundle — whose stdout is the assembled bundle text and nothing else (all diagnostics on stderr), plus a non-zero exit and a named reason when a layer cannot be read. The lane requires the stdout ITSELF to cross the agent boundary in the reply's bundle field; a path to a file holding that stdout does not satisfy the contract and is refused as a reference."
 test_required: true
 test_spec:
   - name: test_dispatched_agent_prompt_is_the_assembled_bundle
@@ -89,34 +141,119 @@ test_spec:
     framework: pytest
     type: behavioral
     angle: criterion
-    description: "Executed under the E2 harness with the assembling dispatch stubbed to return a known bundle, the recorded test-writer and coder calls carry that bundle text in their prompts."
+    description: "Executed under the E2 harness with the assembling dispatch stubbed to return a known usable bundle, the recorded test-writer and coder calls both carry that bundle text in their prompts."
   - name: test_bundle_reaches_the_agent_verbatim
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
     angle: seam
-    description: "The stubbed bundle text appears in the recorded prompt unaltered — same bytes, same order, no re-wrapping and no interpolation inside the stable region."
+    description: "The stubbed bundle text appears in each recorded prompt unaltered — same bytes, same order, no re-wrapping and no interpolation inside the stable region — and is byte-identical between the test-writer and coder prompts."
   - name: test_bundle_assembly_dispatch_precedes_the_context_carrying_dispatches
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
     angle: seam
     description: "In a fully green harness run the recorded call order places the bundle-assembling dispatch before the test-writer and coder dispatches, asserted on executed call order rather than on source text."
-  - name: test_unobtainable_bundle_halts_instead_of_dispatching_unbundled_prompts
-    target_dir: unit_tests/workflows/
-    framework: pytest
-    type: behavioral
-    angle: failure
-    description: "With the assembling dispatch stubbed to return a failure, an empty payload, or nothing readable, the run records no test-writer or coder dispatch and its terminal payload names the context bundle as the reason."
   - name: test_breakpoint_marker_present_exactly_once_in_the_dispatched_prompt
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
     angle: criterion
     description: "Each recorded context-carrying prompt contains exactly one cache breakpoint marker, with the stable layers before it and the run's volatile content after it."
+  - name: test_real_cli_stdout_passes_the_gate_and_reaches_both_prompts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "The load-bearing transport test. Run the assemble-bundle subcommand as a REAL SUBPROCESS over real on-disk layer files, feed its actual multi-kilobyte stdout into the harness as the bundle dispatch's reply, and assert the gate classifies it USABLE and both recorded prompts carry it byte-for-byte. An inline hand-written stub does not substitute for this."
+  - name: test_file_uri_return_value_is_refused_as_a_reference
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the dispatch stubbed to the literal shape observed in run wf_bd4984e8-438 — {\"obtained\": true, \"bundle\": \"file:/tmp/bo2400f13-bundle/bundle_output.txt\"} — the run halts, records no test-writer or coder dispatch, and the terminal message says the assembly SUCCEEDED, reports the size and location given, and says the lane cannot follow a reference."
+  - name: test_bare_filesystem_path_return_value_is_refused_as_a_reference
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A returned value that is an absolute path with no URI scheme takes the same reference branch as the file: URI, so the rule is not scheme-specific. A locator that additionally contains the breakpoint marker is still classified as a reference, not as usable content."
+  - name: test_nothing_obtained_halts_naming_that_the_bundle_never_arrived
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the dispatch stubbed to obtained:false, to a null reply, and to an unparseable reply in turn, each run halts on the not-obtained branch, records no context-carrying dispatch, and names the context-bundle phase."
+  - name: test_incomplete_content_halts_naming_incompleteness
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the dispatch stubbed to real content that is missing the breakpoint marker (and, separately, content with an empty layer), the run halts on the incomplete branch — distinct from both the not-obtained and the reference branches."
+  - name: test_the_three_halt_messages_differ_from_one_another
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive all three failure states in one test and compare the three terminal messages pairwise: each names its own state and none satisfies another's assertion. Asserting each in isolation lets one undifferentiated message pass all three."
+  - name: test_no_unbundled_prompt_is_dispatched_on_any_unusable_bundle
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: ".claude/workflows/fast-lane-ship.js (top-level body under run_workflow_under_e2)"
+    description: "Across every unusable-bundle state, HarnessResult.agent_calls contains no dispatch labelled test-writer-connected or coder-connected — proving the gate is reached and terminates the run rather than being defined and skipped."
+  - name: test_bundle_dispatch_prompt_states_the_size_expectation_and_the_return_as_text_ask
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The RECORDED bundle-assembling dispatch's prompt states the roughly-twenty-kilobyte expectation and that the text itself is the ask. Weakest assertion in this list — it is the one thing a grep could also see — and is worth nothing without the reference-rejection tests above it."
+test_rationale: |
+  Every scenario here is a workflow gate, and the only instrument that can see one is a
+  run. Execute the lane under unit_tests/_workflow_engine_harness.py with
+  run_workflow_under_e2 and label_responses, and assert on the RECORDED dispatches'
+  prompt text and on the run's TERMINAL PAYLOAD. A test that greps
+  templates/workflows-js/fast-lane-ship.js for a string, a label, an agent type or a
+  statement order is not acceptable evidence and must be rejected at review: it passes
+  unchanged on dead code, and dead-but-green is the entire documented history of this
+  feature — roughly 25 green unit tests and a reference doc across a month in which the
+  layer never ran once.
+
+  The three scenarios need three different stubs, and the second and third are the ones
+  the pre-amendment tests never had:
+
+  Stub the assembling dispatch to return a well-formed bundle and assert both
+  context-carrying prompts contain it verbatim.
+
+  Stub it to return {"obtained": true, "bundle": "file:/tmp/…/bundle_output.txt"} —
+  the literal shape observed in run wf_bd4984e8-438 — and assert the run halts, records
+  no test-writer or coder dispatch, and that its terminal message says the assembly
+  succeeded, reports the size and location it was given, and says the lane cannot follow
+  a reference. A test that only asserts the run halted passes on today's code, which
+  halts for the wrong stated reason; the assertion has to be on the WORDING that
+  distinguishes the three cases.
+
+  Stub it three ways in turn — nothing back, a reference back, content back with the
+  breakpoint marker missing — and assert the three terminal messages differ from one
+  another. Asserting each in isolation lets one message that happens to satisfy all three
+  string checks pass all three tests.
+
+  The size expectation is prompt text and is proved by the recorded assembling dispatch's
+  prompt; it is the one assertion here that a grep could also make, and it is worth
+  almost nothing on its own. The payload is made small by BO-2400c-1-vi, and that is
+  where the load-bearing evidence for smallness lives.
+declares_side_effect: false
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-25"
+    reason: "Transport amendment plus a work_status correction, following KI-BO-019 and the Product Owner's decision of the same day. WORK_STATUS RESET done -> in_progress. This criterion has two halves and only one of them was ever built. The GATE half is done and fired correctly on run wf_bd4984e8-438: the lane checked the value it held for the breakpoint marker, did not find one, and halted fail-closed rather than dispatching an unbundled prompt. That is exactly right and is not being changed. The TRANSPORT half has never worked once. As written before this amendment the criterion constrained what the dispatched AGENT receives and said nothing about what the LANE receives, and that gap is the hole the run fell through: the assembling agent returned a 47-character pointer, `file:/tmp/bo2400f13-bundle/bundle_output.txt`, for a bundle that was on disk and well-formed at 148,891 bytes with the marker at line 958. The gate was right; the contract was unsound. WHAT THE AMENDMENT ADDS: (1) a lane-receives contract — what comes back is content in the lane's hands, because the E2 engine has no filesystem access and cannot follow a location it is handed; (2) reference-rejection — a value that is a path or a file: URI is refused AS A REFERENCE, distinguishably from nothing having come back; (3) the size expectation stated to the producer; (4) the three-way halt message the Product Owner specified, since today's message leads with 'was not obtained' while its own attached Detail block reads \"obtained\": true and 'Bundle assembled successfully'. WHAT IT DELIBERATELY DOES NOT ADD: the primary mechanism. Reference-rejection is a cheap belt on a payload already cut by construction in the new sibling BO-2400c-1-vi, which drops the two duplicate layers and takes the bundle from ~149 KB to ~20 KB. Specifying the belt as though it were the mechanism would be fighting the model instead of fixing the design. Also deliberately not added: the general rule that a halt must not state a reason its own evidence denies. That is a property of outcome construction, not of bundles, and the Product Owner assigned it to the BO-2400f-4-vi family; duplicating it here would give it two owners and no home. NOT re-litigated: accepting a pointer and giving the lane a way to read it (rejected — needs a filesystem primitive the engine does not have, and it destroys the only observable distinguishing a lane that assembled its context from one that did not), and chunking (rejected — buys nothing at 20 KB and adds a lost-or-misordered-chunk failure class). it_requirements and test_spec below are pre-amendment and cover only the first scenario; they need IT PO re-enrichment."
+  - agent: it-po
+    date: "2026-08-25"
+    reason: "TECHNICAL ENRICHMENT ONLY — no criteria, title, depends_on, covered_by, declares_side_effect, work_status or test_rationale text was touched. Re-enriched the it_requirements and test_spec the BA marked STALE, which covered only the pre-amendment first scenario. What changed: n_location_rule 1 -> 3, because the amendment turns one edit site into three (the assembling dispatch prompt where the size expectation is stated, the usability gate where the classification is computed, the halt payload where one of three states is named); config_schema_fragment now carries the four-state classification rather than a two-state obtained flag; delivers_to became a two-entry list, because the bundle has always had TWO consumers with different agent types (test-writer at fast-lane-ship.js:561, python-coder at :635) and a single-entry contract hid the byte-identity obligation between them; expects_from now states that the stdout ITSELF must cross the boundary, which is the clause whose absence caused KI-BO-019. Added constraints the BA could not see: the JS/Python split (this record is JS only; the Python half is BO-2400c-1-vi), the source-vs-generated finding, reference-rejection ordered BEFORE the marker check so a marker-bearing locator cannot masquerade as content, and the belt-not-mechanism rule forbidding truncation or a size cap. VERIFIED WHILE ENRICHING, and it bears on this record's premise: `cache_control` appears nowhere in templates/, scripts/ or config/ — there is no provider cache breakpoint anywhere in the system — and the two consumers run under different agent types, so no provider prompt cache anchoring on an exact prefix from the start of a request could ever span them. The breakpoint marker is a literal HTML comment. That does not weaken this criterion, whose subject is transport and consumption, but it does mean nothing here should be justified by cache-hit reasoning."
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -137,7 +274,35 @@ notes: |
   a wired lane from an unwired one is the text a dispatched agent actually received,
   which is why every covering test runs the lane and reads the recorded prompts.
 
-  The second scenario exists because silent fallback is what would let this regress
-  invisibly. If the assembly fails and the lane simply builds its prompts the old way,
-  the run still succeeds, the tests still pass, and the caching is gone again with no
-  signal. A lane that cannot assemble its context must say so.
+  The silent-fallback clause exists because that is how this would regress invisibly. If
+  the assembly fails and the lane simply builds its prompts the old way, the run still
+  succeeds, the tests still pass, and the layer is gone again with no signal. A lane that
+  cannot assemble its context must say so.
+
+  AMENDMENT CONTEXT, 2026-08-25. The three-scenario shape is not tidiness. Before the
+  amendment there were two states — obtained and not obtained — and the run that failed
+  was in a third: obtained, well-formed, and unusable, because what crossed the boundary
+  was a description of the bundle rather than the bundle. Collapsing that third state
+  into "not obtained" is what produced a halt message contradicting its own attached
+  evidence, and it is what would have sent an operator looking for an assembly bug that
+  did not exist. The assembling agent was not evasive; it said plainly what it had done
+  and where the content was. It answered a different question than the schema asked, and
+  the schema was asking for something no agent reliably delivers at that size. The size
+  is fixed in BO-2400c-1-vi; this record makes the boundary honest about what it will
+  accept and clear about what it saw.
+
+  ENRICHMENT NOTE, it-po, 2026-08-25 — ORDERING BETWEEN THE TWO BRANCHES. Reference
+  rejection must be evaluated BEFORE the breakpoint-marker check, not after. Evaluated
+  after, a locator that happens to contain the marker substring is classified as
+  incomplete content, and the two states the amendment exists to separate collapse back
+  into one. This is stated as a constraint rather than left to the implementer because
+  the natural reading order of the existing gate (fast-lane-ship.js:490-498) puts the
+  marker check last and invites appending the new test after it.
+
+  ENRICHMENT NOTE — WHAT THIS RECORD DOES NOT COVER, so it is not discovered late. The
+  bundle is currently 148,891 bytes of which 129,178 are a second copy of content the
+  receiving agent already holds. This record refuses a pointer; it does not make the
+  payload small. If BO-2400c-1-vi is not built, a correct implementation of this record
+  produces a lane that halts every time on a real target — correctly, loudly, and
+  uselessly. Build the two together, or expect that outcome and do not respond to it by
+  weakening the refusal.

@@ -78,7 +78,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/17_TICKET-20260825-GE-120c-1-i.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -98,3 +99,4 @@ notes: |
 
   IT-PO (2026-08-14): the exercised count must be compared against the manifest set from
   GE-120c-3, not against a constant, or the count itself becomes a number nobody checks.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

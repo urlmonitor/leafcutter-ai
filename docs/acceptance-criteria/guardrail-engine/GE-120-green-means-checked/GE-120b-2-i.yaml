@@ -83,7 +83,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/10_TICKET-20260825-GE-120b-2-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -104,3 +105,4 @@ notes: |
   a per-check baseline over 54 manifest entries, captured by execution before the sweep,
   plus the shared provoking fixture. Also pinned: capture via the GE-120c-1 harness rather
   than an implementer-authored script, and take the baseline against the DEPLOYED copies.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

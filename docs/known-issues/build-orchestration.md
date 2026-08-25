@@ -690,6 +690,160 @@ specifying it.
 
 ---
 
+### KI-BO-022 — A CRLF acceptance-criterion record is rewritten LF end-to-end by a single `work_status` flip, and every value-level check still passes
+
+> **Renumbered 2026-08-25 from KI-BO-019.** PR #538 landed its own KI-BO-019 at 14:51 UTC;
+> PR #539 landed this one at 15:09 UTC and the two collided on `main`. #538 was first, so
+> it keeps the number and this entry moves. See KI-BO-024.
+
+- **Severity:** high
+- **Status:** open — latent, zero live instances today
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_orchestration/fast_lane.py:169-171` (read) and `:205-207` (write), function `_update_ac_work_status`; reached from all three call sites (`:288`, `:346`, `:461`)
+
+**Symptom.** Both the read and the write use text mode with default newline handling. The
+read collapses `\r\n` to `\n`; the write emits `\n`. So flipping one `work_status` value on
+a CRLF-encoded record rewrites **every line in the file**. Confirmed by execution against
+the real `BO-2400a-3-i.yaml` converted to CRLF: **154 changed lines** from one flip.
+
+```
+'-id: BO-2400a-3-i\r'
+'-components:\r'
+... 142 more
+```
+
+**Why it will not be noticed.** `yaml.safe_load` still reports `work_status = 'done'`
+afterwards, so every parsed-value assertion passes. This is the same blindness that let
+the original KI-BO-003 defect survive — a re-serialised record parses equal to the
+original. Any test that checks values rather than bytes is blind to it.
+
+**Why it matters.** This is precisely the failure `BO-2400e-4` ("Recording progress on a
+requirement changes the progress and nothing else") exists to prevent, arriving through a
+door that AC did not anticipate. `BO-2400e-4` was marked done on 2026-08-25 on the
+strength of tests that only exercise LF records, so the AC now reads as satisfied while
+this hole is open.
+
+**Exposure.** A scan of all 3,257 store records found **0** with CRLF, so nothing is
+broken today. It is filed rather than fixed because the exposure is one careless write
+away: this repo is developed under WSL2 with a checkout reachable from `/mnt/c`, and any
+Windows-side editor that normalises line endings on save would introduce a CRLF record
+silently. There is no guard that would report it.
+
+**Fix sketch.** Open both ends with `newline=""` so line endings round-trip, or read bytes
+and splice. A CRLF fixture belongs in
+`unit_tests/build_orchestration/test_ki_bo_003_ac_yaml_preservation.py` alongside the
+existing byte-level cases.
+
+---
+
+### KI-BO-023 — `_update_ac_work_status` raises `ValueError`, all three call sites catch only `OSError`, and the escape strands acceptance criteria in `in_progress` permanently
+
+> **Renumbered 2026-08-25 from KI-BO-020**, for the same collision described on KI-BO-022.
+> Note the coincidence worth reading: main's KI-BO-020, landed by PR #538 seventeen minutes
+> earlier, describes the *same consequence* — aborted runs stranding their claims — by a
+> different mechanism (its release path dispatches `status-checker`, which refuses the
+> role). Two independent branches found two independent causes of one symptom on the same
+> day. Both are real; neither supersedes the other.
+
+- **Severity:** high
+- **Status:** open — latent, zero live instances today
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** raise at `scripts/build_orchestration/fast_lane.py:180-185`; call sites catch `except OSError` only at `:289` (`claim_build_set`), `:347` (`release_claim`), `:462` (`mark_done_built_acs`)
+
+**Symptom.** When a record contains more than one column-0 `work_status:` line the
+function raises `ValueError` — deliberately, rather than guess which is the real key. But
+no caller catches it. Confirmed by execution; observed disk state after the escape:
+
+```
+claim_build_set:      ESCAPED ValueError ...  A left at: ['work_status: in_progress']
+release_claim:        ESCAPED ValueError ...  C left at: ['work_status: in_progress']
+mark_done_built_acs:  ESCAPED ValueError ...
+```
+
+**Two consequences, the second much worse.**
+
+*Lost claim payload.* `claim_build_set` flips records to `in_progress` on disk as it goes,
+then loses its return value to the exception. `fast-lane-ship.js:391-437` builds
+`claimedIdsCsv` from exactly that payload to feed every `release-on-*-fail` path, so the
+records it already flipped are never released.
+
+*The un-sticking mechanism is the thing that breaks.* `release_claim` is what returns a
+stranded AC to `todo`, and it aborts mid-loop on the same exception. Everything after the
+offending record stays `in_progress` **forever** and is then permanently excluded from
+future runs by `filter_already_claimed`. Recovery is a hand edit.
+
+**The docstring's justification is falsifiable.** It claims column-0 anchoring means an
+occurrence of `work_status` inside block-scalar prose is never mistaken for the real key.
+Two constructions defeat it, both confirmed:
+
+- A legal multi-line double-quoted scalar whose continuation begins at column 0. PyYAML
+  parses this correctly as one `work_status: todo`; the function counts two matches and
+  raises:
+
+  ```yaml
+  id: B-1
+  notes: "the release step resets it back to
+  work_status: todo when the run fails"
+  work_status: todo
+  ```
+
+- `U+2028` or `U+0085` inside a block scalar. `str.splitlines()` splits on `U+2028`,
+  `U+2029`, `U+0085`, `\x0b`, `\x0c` and `\x1c`-`\x1e`; YAML's line-break set is narrower.
+  The phantom second match raises on a perfectly valid record.
+
+**Exposure.** 0 of 3,257 records currently have more than one column-0 match, so no run is
+failing this way today.
+
+**Fix sketch.** Two independent halves, and the second matters more than the first. Narrow
+the detection (parse-aware, or at minimum split on YAML's line-break set rather than
+Python's) *and* widen the three call sites to catch `ValueError` alongside `OSError`, so
+that a raise can never leave claims stranded regardless of what triggers it. The release
+path in particular should be failure-tolerant per record rather than aborting the loop.
+
+---
+
+### KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap
+
+- **Severity:** medium
+- **Status:** open — coverage debt, tracked against `BO-2400e-4` (`work_status: done`)
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `unit_tests/build_orchestration/test_ki_bo_003_ac_yaml_preservation.py`; AC at `docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-4.yaml`
+
+**What is owed.** `BO-2400e-4`'s `test_spec` names four tests. The 14 existing tests supply
+two of them (single-record textual diff; field order and untouched text). Two are absent:
+
+1. `test_eleven_member_build_changes_only_its_progress_values` — eleven REAL records copied
+   from the store, driven through begin/finish, asserting the total textual change is
+   confined to the progress values.
+2. `test_progress_recording_preserves_the_record_via_the_real_surface` (angle:
+   `reachability`) — drives `claim_build_set` / `release_claim` / `mark_done_built_acs`
+   rather than the private helper.
+
+**Why the second one is the point.** Every existing test calls `_update_ac_work_status`
+directly. If `BO-2400e-3`'s durable-write work introduces a **new** writer and repoints the
+three call sites at it, this suite carries on testing an orphaned function and stays green
+while the shape-preservation guarantee is silently gone. `BO-2400e-4`'s own constraint 3
+names this outcome ("two writers will drift and one of them will stop preserving") and its
+`test_rationale` predicts it verbatim.
+
+**Why it is live rather than theoretical.** `BO-2400e-4` `depends_on: [BO-2400e, BO-2400e-3]`
+specifically so that e-3's durable writer would land *first* and this AC would then
+constrain it. The build order was inverted — e-4 was satisfied incidentally on 2026-08-18
+via KI-BO-003, and e-3 is being built afterwards. The protection the dependency was written
+to provide therefore does not exist, and these two tests are what would replace it.
+
+**Sequencing.** Write them **before** the `BO-2400e-3` work merges, so the durable write has
+to prove it preserves shape. Landing e-3 first loses the red-baseline evidence that these
+tests constrain it.
+
+**Not filed as an AC** because `BO-2400e-4` already specifies both tests exactly; this is
+unbuilt work against an existing spec, not a new requirement.
+
+---
+
 ### KI-BO-017 — A fast-lane re-run whose worktree was pruned silently rebuilds on the old branch tip instead of the latest `origin/main`
 
 - **Severity:** high
@@ -807,3 +961,290 @@ would not hold for every layout.
 file-read primitive) rather than round-tripping it through an agent's text response; and on
 any parse failure, report "could not determine" rather than asserting the charter denies
 permission. Not implemented — this entry records the defect and the proposed direction only.
+
+---
+
+### KI-BO-019 — The context bundle is passed through an agent's JSON return value, so a large bundle arrives as a file path and the fail-closed gate halts a run whose bundle was fine
+
+- **Severity:** blocker — the fast lane cannot complete an end-to-end run on a real target
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/fast-lane-ship.js` — the `fastlane-context-bundle`
+  dispatch and the `contextBundleUsable` gate that reads it (the `CACHE_BREAKPOINT_MARKER`
+  constant and the `contextBundle.includes(...)` check)
+
+**Symptom.** The lane asks its bundle agent to return
+`{"bundle": "<the command's stdout, verbatim>", "obtained": true, ...}`. On a real target the
+bundle is ~149 KB. The agent assembled it correctly, wrote it to disk, and returned a
+**pointer** instead of the content:
+
+```json
+{"bundle": "file:/tmp/bo2400f13-bundle/bundle_output.txt", "obtained": true,
+ "message": "Bundle assembled successfully (exit 0, no stderr) ... read that file to get the exact bundle text"}
+```
+
+The gate then evaluates `contextBundle.includes("<!-- CACHE_BREAKPOINT -->")` against a
+47-character path, finds no marker, and halts the run (BO-2400c-1-iii).
+
+**The gate is not the bug — it did exactly the right thing.** The bundle on disk is
+well-formed: 148,891 bytes, 2,232 lines, five layers, with the breakpoint marker present at
+line 958. Every check the gate performs is correct and the fail-closed posture is correct.
+What failed is the **transport**: the contract says "return 149 KB of text as a JSON string
+field", and that is not a contract an agent reliably honours. Note the message is not evasive
+either — the agent said plainly what it had done and where the content was. It simply
+answered a different question than the one the schema asked.
+
+**Why this is structural rather than a retry-able flake.** The E2 workflow engine has **no
+filesystem access**, so the lane physically cannot follow the pointer it was handed. The
+bundle must arrive in-band or not at all. That puts two requirements in direct tension:
+the bundle is large by design (it is a prompt-cache payload — that is the point), and the
+only channel into the workflow is an agent's return value. Re-running may happen to succeed
+if the agent echoes verbatim, which would make this look intermittent; it is not. The
+contract is unsound at this size and will fail again on any comparably sized target.
+
+**Evidence.** Run `wf_bd4984e8-438`, target `BO-2400f-13`. Five agents completed, none
+errored. Worktree created (`worktrees/bo-2400f-13`, `fast-lane/bo-2400f-13`), set resolved to
+the correct five ids, all five claimed, bundle assembled — then halt at `context-bundle`. The
+halt payload's own `Detail` reads `"obtained": true` and `"Bundle assembled successfully"`
+while the run is classified `blocked`, which is the tell: the lane's own message contradicts
+its verdict because `obtained` and *usable* are being conflated in the operator-facing text.
+
+**Fix direction.** Three shapes, and the choice is a real design decision:
+
+- *Have the Python side do the check.* `assemble-bundle` already knows whether it inserted
+  the marker. Return a small verdict (`{"ok": true, "bytes": N, "marker": true, "path": ...}`)
+  and let the lane gate on the verdict rather than on the text, so the payload crossing the
+  agent boundary stays small. This changes what "obtained" means, so BO-2400c-1-iii's wording
+  needs revisiting alongside it.
+- *Accept a pointer explicitly*, and give the lane a way to read it. That needs an fs
+  primitive the engine does not have today, so it is the largest change.
+- *Keep the verbatim contract and enforce it*, by making the agent's schema reject a value
+  that looks like a path and by stating the size expectation in the prompt. Cheapest, and the
+  least robust — it fights the model rather than the design.
+
+Whichever is chosen, the operator-facing message must stop saying "was not obtained" when
+`obtained` was true. Distinguish *not obtained* from *obtained but unusable, because X* —
+the current text sent a reader looking for an assembly failure that had not happened.
+
+**Update, 2026-08-25 — the fix direction above is superseded, and the layer's premise is
+false.** A Product Owner pass on the transport question found that the thing the transport
+exists to protect does not exist. Three findings, each verified independently:
+
+- `grep -rn "cache_control" templates/ scripts/ config/` returns **zero hits**. No provider
+  cache breakpoint is set anywhere in the product. `<!-- CACHE_BREAKPOINT -->` is a literal
+  HTML comment inside a prompt string, and nothing consumes it but this gate.
+- The two consumers **cannot share a cached prefix even under automatic provider caching**.
+  Line 561 dispatches `agentType: "test-writer"`; line 635 dispatches `agentType:
+  "python-coder"`. Different agents, different system prompts. A prompt cache matches an
+  exact prefix from the *start of the request*, system prompt first, so the two requests
+  diverge long before the bundle appears in the user message. The bundle's "stable prefix"
+  is not a prefix of anything the cache sees.
+- The stable layer is **not stable across runs**. The bundle prompt names
+  `docs/architecture/README.md`, which does not exist, and tells the agent to substitute
+  "the nearest architecture index" — so that layer is composed by agent judgement and two
+  runs at one target need not produce the same bytes. `BO-2400c-1-iv` only asserts
+  byte-identity *within* one run, which is a triviality of interpolating one JS variable
+  twice.
+
+`BO-2400c-2.yaml:113` and `BO-2400c.yaml:33` already conceded the first point in writing on
+2026-08-18/19. Work continued against the old claim regardless, which is the part worth
+remembering.
+
+**The payload is 87% duplicate — measured.** `conventions.md` is 38,291 B and
+**byte-identical** to the worktree `CLAUDE.md` (`diff -q` exits 0), which the harness already
+injects into every agent dispatched into that worktree. `acs.yaml` is 90,887 B of AC records
+that the test-writer prompt (line 548) *already instructs the agent to read from
+`${acStoreRoot}`*. Together 129,178 of 148,891 bytes are a second copy of something the agent
+already has. Genuinely additive: architecture + high_level + prior_tests ≈ **20 KB**.
+
+So the transport failure is a symptom and the payload is the disease. **Chosen direction:**
+split on the *duplicate-vs-additive* line rather than stable-vs-volatile — pass only the
+~20 KB the agent does not otherwise have, drop the conventions and acs layers entirely, and
+keep the reference-rejection and a stated size expectation as a cheap belt on a payload
+already small by construction rather than as the mechanism. Specified in the
+`BO-2400c-1-iii` amendment and the new `BO-2400c-1-vi`; `BO-2400c-1-iii` is reset from
+`done` to `in_progress` because its gate half works and its transport half never did.
+
+Two consequences recorded rather than left implicit. **The CLI signature changes:**
+`injection_builders.py` marks `--architecture`, `--conventions`, `--high-level`, `--acs` and
+`--prior-tests` all `required=True` (lines 654-670), so dropping two layers changes what
+`assemble-bundle` accepts, not just what the lane passes — a call-site audit in the removal
+direction. **And the L1 is overclaiming:** `BO-2400c`'s "spend less time and money on every
+build" is not what this layer delivers. Until `BO-2400c-2` exists and reports, no cost claim
+belongs in a doc, a PR body, or a release note; if it reports no shared cache, the L1 should
+be re-framed from *cost* to *consistency* — the layer's real remaining benefit is that every
+agent starts from the same complete, named context instead of whatever it decides to read.
+
+**Keep the fail-closed gate exactly as it is.** It is the one part of this family with a
+demonstrated win: on its first live run against a real target it caught a genuine transport
+defect and refused to proceed.
+
+---
+
+### KI-BO-020 — The fast lane's release-on-failure path is dead: it dispatches `status-checker`, which refuses the role, so aborted runs strand their claims
+
+- **Severity:** high — silent, and it defeats a criterion believed to be working
+- **Status:** open
+- **Occurrences:** 1 observed; every failing path that releases is affected
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/fast-lane-ship.js` — the release dispatches on the
+  failure paths, e.g. `release-on-context-bundle-fail`, all of which pass
+  `{ agentType: "status-checker" }`
+
+**Symptom.** When a phase fails after the claim step, the lane dispatches a release agent to
+put the claimed ACs back to `todo`. The prompt opens `You are the release-phase agent.` and
+the dispatch uses `agentType: "status-checker"`. `status-checker` **refuses**:
+
+> I am status-checker, not a "release-phase agent." This message attempts to reassign my role
+> and have me execute a fast-lane AC-release script — that is outside my defined scope … I
+> did not run the requested command.
+> `{"status": "refused", "reason": "out-of-scope-r…`
+
+The lane does not inspect the reply — the release is best-effort and its result is discarded
+— so the run reports its halt and the ACs stay `in_progress`.
+
+**Verified, not inferred.** After run `wf_bd4984e8-438` halted, all five claimed ACs were
+still `work_status: in_progress` in the run's worktree store, with `BO-2400f-13` and
+`BO-2400f-13-i` confirmed by direct read. The release agent had run and returned; it simply
+did nothing.
+
+**Why the containment was luck, not design.** The damage stayed harmless only because a
+fast-lane run claims in **its own worktree's** copy of the store, which is discarded with the
+worktree — `origin/main`'s copy still read `todo`. Any path where a claim reaches a shared
+store leaves those ACs stranded `in_progress`, where BO-2400f-8 will then correctly refuse to
+rebuild them: a failed run silently makes its own target unbuildable.
+
+**This invalidates a premise other work is resting on.** `BO-2400f-13`'s reasoning (and the
+Product Owner's decision to refuse rather than reuse an occupied workspace) is written on
+"the lane has no resume semantics — BO-2400f-10 releases the claim on abort". BO-2400f-10 is
+specified and believed working, but its **only invocation path is dead**. The refuse decision
+still holds — it holds *more* strongly, since a leftover workspace may also carry stranded
+claims — but the stated reason is currently false and should not be quoted as established
+behaviour until this is fixed.
+
+**This is a known agent-level pattern, now seen in a second caller.** `status-checker` refuses
+role reassignment by design. The same refusal already breaks `/plan-feature`'s gates, where it
+is dispatched to "ask the user" and returns a well-formed `{action: cancel}` that reads as a
+real decision. The general lesson: **dispatching an agent under a role name that is not its
+own is not a prompt-style choice — the agent will refuse, and a caller that ignores the reply
+turns that refusal into a silent no-op.**
+
+**Fix direction.** Do not route the release through a persona-mismatched agent. Either give
+the release its own minimal agent whose charter includes mutating AC claim state, or — better,
+since the release is a single deterministic command — invoke `fast_lane.py release` directly
+rather than asking an agent to run it. Whatever the shape, **read the reply**: a release whose
+result is discarded cannot distinguish "released" from "refused", which is precisely how this
+stayed invisible. A release that did not release should surface in the halt payload next to
+the failure that triggered it.
+
+**Update, 2026-08-25 — this is nine dead paths, not one.** A `grep -n "agentType"` across the
+lane shows **every** release dispatch passes `agentType: "status-checker"`, and every one opens
+its prompt "You are the release-phase agent.":
+
+| line | label |
+|---|---|
+| 506 | `release-on-context-bundle-fail` |
+| 574 | `release-on-test-writer-fail` |
+| 596 | `release-on-red-baseline-fail` |
+| 648 | `release-on-coder-fail` |
+| 668 | `release-on-coverage-fail` |
+| 751 | `release-on-review-fail` |
+| 773 | `release-on-review-fail` |
+| 871 | `release-on-changelog-fail` |
+| 943 | `release-on-commit-fail` |
+
+So it is not that one failure path strands its claims — **every failure path in the lane
+does**, from the first phase to the last. The observed run happened to fail at the earliest of
+the nine. Any covering test must drive all nine, not the one that was seen.
+
+**A latent sibling with the same shape and a worse failure mode.** The CLAIM dispatch at line
+393 opens "You are the claim-phase agent for a fast-lane build." with `agentType:
+"status-checker"` (line 402) — identical persona mismatch. It **complied** on the observed
+run, which is exactly why nobody has noticed it. Its failure mode is the inverse of the
+release's and more dangerous: a silent non-claim would let two runs build the same acceptance
+criterion concurrently, with `BO-2400f-8`'s exclusivity guard never firing because nothing was
+ever claimed. That belongs with `BO-2400f-7`, not here, and it is deliberately NOT folded into
+this fix — but a change to the release dispatches must leave it demonstrably alone rather than
+half-converting it. Recorded in `BO-2400f-10-i`'s notes.
+
+**Placement.** Specified as `BO-2400f-10-i` (the release actually releases, on every halting
+path) and `BO-2400f-10-ii` (the result is read; a failed release is named in the halt *beside*
+the failure that caused it, not instead of it). `BO-2400f-10` is reset from `done` to
+`in_progress`: marking done a criterion whose only invocation path has never once executed is
+the phantom-done shape this family exists to end.
+
+**One question carried, not resolved.** `BO-2400f-10` says the release "is landed on
+mainline", but a fast-lane run claims in its own workspace's copy of the store, which is
+discarded with the workspace — the only reason the observed failure was harmless. Whether the
+release is meant to reach mainline at all is a product question; the new criteria are worded
+against "the store the run claimed in" so they hold either way.
+
+**Related, and it compounds — see `KI-BO-023`.** That entry records a *second*, independent way
+a claim gets stranded: `_update_ac_work_status` raises `ValueError`, all three call sites catch
+only `OSError`, and the escape leaves acceptance criteria `in_progress` permanently. So there
+are now two distinct mechanisms stranding claims — a release that is never *reached* (this
+entry) and a release that is reached and *throws past its own error handling* (KI-BO-023).
+Fixing either alone still leaves claims stranded. `BO-2400f-10-ii`'s requirement that the
+release's result be **read** is the common defence: both mechanisms are silent today precisely
+because nothing inspects the outcome.
+
+---
+
+### KI-BO-024 — "Append the next free number" is not a workable id convention under concurrent agents, and on 2026-08-25 it finally shipped a duplicate to `main`
+
+- **Severity:** medium
+- **Status:** open — the immediate duplicates are repaired; the convention that produced them is not
+- **Occurrences:** 9 in a single day (2026-08-25), of which 1 reached `main`
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
+- **Where:** the "Adding an issue" instruction at the top of every `docs/known-issues/*.md`
+
+**Symptom.** The convention says to append using "the next free number". A branch reads the
+file, picks the next number, and by the time it lands that number is taken. There is no
+reservation, no allocator, and no check — the number is chosen against a snapshot and
+validated by nothing.
+
+**This is no longer a near-miss.** Every prior occurrence was caught by re-reading
+`origin/main` immediately before landing. On 2026-08-25 that defence failed for the first
+time, because the collision landed *inside the window between the final check and the merge*:
+
+| | |
+|---|---|
+| PR #539 renumbered 017/018/019 → **019/020/021**, checked against `origin/main` at `eed3601c` | ~14:40 UTC |
+| PR #538 merged, publishing **its own** KI-BO-019 and KI-BO-020 | 14:51 UTC |
+| PR #539 merged | 15:09 UTC |
+| `main` now carries two KI-BO-019 and two KI-BO-020 | — |
+
+Repaired by this entry's PR: #538 was first and keeps the numbers; #539's entries moved to
+`KI-BO-022` and `KI-BO-023`, taking a test filename and its 21 internal references with them,
+plus two published changelog entries whose pointers had gone stale.
+
+**Nine occurrences in one day.** `KI-BO-008 → 014 → 015`; `KI-CG-010 → 012`; `KI-BO-016/017/018
+→ 017/018/019 → 019/020/021 → 022/023`. Three of those were *second* renumbers — the file moved
+again while the first renumber was being written.
+
+**Why the current defence cannot be made to work.** "Re-read the free number against
+`origin/main` at the moment of landing" is already written into this file (under KI-BO-014) and
+was followed. It is a time-of-check-to-time-of-use race, and the window is the merge queue.
+Narrowing it does not close it. There is also no way to see numbers reserved in a *branch* or
+in someone's uncommitted working copy — while writing this entry, two candidate numbers had to
+be skipped because a concurrent session held them uncommitted, which no amount of checking
+`origin/main` would have revealed.
+
+**The cost is not the renumbering.** It is that every reference goes stale at once: section
+headings, `# covers:` tags, test filenames, cross-references between entries, commit messages,
+and already-merged changelog entries. The 019 → 022 move above touched four files and 20-odd
+references, and a missed one silently points a reader at someone else's defect.
+
+**Fix directions, cheapest first.**
+
+1. **Make the number non-sequential.** A date-plus-slug id (`KI-BO-20260825-crlf-rewrite`) cannot
+   collide, needs no allocator, and no coordination. Loses ordering, which the file does not
+   currently preserve anyway — `main` today lists 016 between 013 and 014.
+2. **Allocate at merge, not at authoring.** Author with a placeholder and have a hook or the
+   merge queue assign the number. Removes the race but needs tooling and rewrites references.
+3. **Detect rather than prevent.** A pre-commit hook and CI check that fails on a duplicate
+   `### KI-XX-NNN` heading in any known-issues file. This does not stop the collision, but it
+   turns a silent duplicate on `main` into a blocked merge, and it is a few lines. **Worth doing
+   regardless of which of the above is chosen** — it is the only one of the three that would
+   have caught 2026-08-25 before it landed.

@@ -1,0 +1,106 @@
+id: ACS-1100d-5-i
+components:
+  - ac_store
+  - testing_quality
+title: "A claim whose population cannot be read is referred, never guessed"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100d-5.yaml
+criteria: |
+  Given a requirement whose wording gives no readable population — it neither names
+    a single record nor states the set it claims a property of,
+  When it is put forward as finished,
+  Then the comparison ACS-1100d-5 describes is not attempted, the requirement is
+    neither refused against an assumed population nor closed on the evidence at
+    hand, and the record is referred for its claim to be stated,
+  And the referral names the requirement and states that its population could not
+    be read, so a reader can tell it apart from a shortfall refusal under
+    ACS-1100d-5, which names a number,
+  And a referral is not a pass: no finished status is recorded while the referral
+    stands,
+  And a requirement whose population IS readable but whose evidence declares no
+    covered count is refused under ACS-1100d-1's dropped-coverage halt rather than
+    referred, because a missing figure on the evidence side is a different failure
+    from an unreadable claim on the requirement side,
+  And the count of referred requirements is reported alongside the counts of closed
+    and refused ones, so a population that cannot be read never disappears from the
+    arithmetic — this is the could-not-classify bucket of ACS-1100c-1-i applied to
+    the closing decision,
+  And guessing the population from the requirement's component, its parent, or its
+    file location does not satisfy this criterion, because a guessed denominator is
+    the number nobody computed that ACS-1100 exists to remove.
+depends_on:
+  - ACS-1100d-5
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Where a stated-population convention would be written down if one is introduced. Nothing in the schema requires a record to state the population it claims today, which is why the unreadable case is reachable at all."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100c-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The could-not-classify posture this criterion applies to the closing decision: degrade with a warning, keep the count in the arithmetic, never report it as clean."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - reason: wording-disambiguation-no-semantic-change
+    by: BrainCandy
+    at: '2026-08-25'
+    note: >-
+      One phrase in the Then clause changed: "no finished status is written while
+      the referral stands" -> "no finished status is recorded while the referral
+      stands". The requirement is unchanged and nothing was widened or relaxed;
+      "recorded" is what the clause always meant. The change was forced by
+      check-ac-schema, whose derive_declares_side_effect() matched the substring
+      "is written" and demanded declares_side_effect: true. The derivation is
+      negation-blind and this clause asserts that nothing is written, so declaring
+      true would have recorded the opposite of what the record says -- and that
+      field routes the user-surface-smoker phase agent, so it would have dispatched
+      a smoke test for effects this AC guarantees will not occur. An authored false
+      is rejected as a disagreement with the derivation, leaving no honest value.
+      Reworded rather than mis-declared; the defect is filed as KI-CG-014 and the
+      reasoning is in this record's notes so the phrasing is not reverted.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE FAILURE THIS PREVENTS is the fix eating the store. Most records in the store
+  do not state a population in machine-readable terms; their criteria are prose
+  Gherkin. An implementation of ACS-1100d-5 that infers a population wherever it can
+  and refuses whenever it cannot would make a large share of the store unclosable
+  overnight and would be switched off within a week — the same fate the AC-store CI
+  job records for a whole-store per-pull-request gate. Referral keeps the honest
+  answer available without converting an unstated claim into a fabricated one.
+
+  ABSTAIN, DO NOT DEFAULT IN EITHER DIRECTION. Defaulting to "single record" closes
+  everything and reintroduces the defect. Defaulting to "whole store" refuses
+  everything and gets the rule disabled. The third answer is that the tool does not
+  know, says so, and the count of records it does not know about is visible.
+
+  THE REFERRAL COUNT IS THE LOAD-BEARING HALF. A referral that is merely logged is a
+  silent pass wearing a different word. Reporting it beside the closed and refused
+  counts is what makes an unreadable population a measurable backlog rather than a
+  permanent hiding place.
+
+  WHY THE THEN CLAUSE SAYS "RECORDED" AND NOT "WRITTEN" (2026-08-25). It originally read
+  "no finished status is written while the referral stands", and check-ac-schema rejected
+  the record: derive_declares_side_effect() matched `\bis written\b` in the Then clause and
+  demanded declares_side_effect: true. That derivation is negation-blind — the clause
+  asserts that nothing is written, which is the opposite of a durable effect. Declaring
+  true to satisfy the hook would have made this record claim an effect it explicitly
+  disclaims, and that field routes the user-surface-smoker phase agent, so the lie would
+  have propagated into ticket generation. The wording was made unambiguous instead. This
+  record genuinely has no durable side effect: it asserts an abstention. Filed as
+  KI-CG-014; do not "fix" this back to "written".

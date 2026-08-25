@@ -20,9 +20,9 @@ import io
 import subprocess
 import sys
 import tempfile
-import types
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
@@ -56,8 +56,14 @@ REAL_TICKET_02 = (
 )
 
 
-def _load_hook() -> types.ModuleType:
-    """Dynamically load the hook module from its template path."""
+def _load_hook() -> Any:
+    """Dynamically load the hook module from its template path.
+
+    Typed ``Any`` rather than ``types.ModuleType``: the returned object's
+    attribute surface is defined entirely by whichever source file it
+    executes, which is not statically knowable. ``ModuleType`` would make
+    every dynamic attribute read/write below a false ``attr-defined`` error.
+    """
     if not HOOK_PATH.exists():
         msg = f"Hook not found at {HOOK_PATH}."
         raise ImportError(msg)

@@ -21,6 +21,7 @@ from __future__ import annotations
 import importlib.util
 import unittest
 from pathlib import Path
+from typing import ClassVar
 
 # ---------------------------------------------------------------------------
 # Path constants
@@ -74,6 +75,7 @@ def _load_submit_module(module_name: str = "submit_feedback"):
         module: The loaded submit_feedback module object.
     """
     spec = importlib.util.spec_from_file_location(module_name, str(_SUBMIT_SCRIPT))
+    assert spec is not None and spec.loader is not None, f"could not load spec for {_SUBMIT_SCRIPT}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -171,6 +173,8 @@ class TestConfigResolutionAnchoring(unittest.TestCase):
 
 class TestAllPhaseAgentsInAllowedWriters(unittest.TestCase):
     """AC INF-100c-3: all required phase agents are in allowed_writers for broad categories."""
+
+    cats: ClassVar[dict] = {}
 
     @classmethod
     def setUpClass(cls):

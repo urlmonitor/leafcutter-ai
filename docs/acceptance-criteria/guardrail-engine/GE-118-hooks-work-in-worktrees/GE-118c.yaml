@@ -6,7 +6,7 @@ component: guardrail-engine
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -266,3 +266,28 @@ notes: |
       with no build step the module reports 4 skips, which reads as green. CI
       builds before pytest so it is latent, but it is a silent-pass vector of
       precisely the kind GE-120a-1 is being written to outlaw.
+
+  REOPENED 2026-08-25 (was work_status: done; readiness stays approved — the requirement is
+  correct, the implementation does not meet it in the layout the criteria name). The first
+  clause is false for a consumer install, and the second recorded test-suite gap above is
+  exactly why nobody saw it.
+
+  The resolver was fixed as required: _find_doc_types_json() walks ancestors from __file__ and
+  the hand-counted parents[2] is genuinely gone. But config/doc_types.json is NOT in the build's
+  deploy manifest. Verified: .leafcutter/config/ contains only commit_guardian/ and
+  feedback_categories.yaml. From a deployed hook at <install>/.leafcutter/scripts/commit_guardian/,
+  the walk therefore finds nothing under .leafcutter/, escapes it, and continues up the consumer's
+  own tree, where config/doc_types.json does not exist because it is a leafcutter file. The walk
+  reaches the filesystem root, returns candidates_checked[0], and _load_doc_types() raises
+  FileNotFoundError — so the guard does not accept a declared type, it crashes.
+
+  It passes HERE for a reason that does not generalise: the git root is the package, so the walk
+  escaping .leafcutter/ lands on this repo's own tracked config/doc_types.json. The AC is
+  satisfied in the one layout that cannot distinguish the two failure modes, and its criteria
+  are written about the other one. That is the self-hosting mask, and it is the same
+  deploy-manifest omission class as KI-BP-003.
+
+  Closing this needs the file added to the deploy manifest and a test that runs the deployed hook
+  from a target directory that is NOT inside this repository. Re-running the existing suite will
+  not show the defect: it exercises this repo's own gitignored .leafcutter/, as its module
+  docstring admits.

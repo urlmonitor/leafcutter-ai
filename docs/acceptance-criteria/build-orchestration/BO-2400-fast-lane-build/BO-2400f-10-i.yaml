@@ -1,0 +1,282 @@
+id: BO-2400f-10-i
+components:
+  - build_orchestration
+title: "The release actually releases, on every path that halts after the claim"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has flipped its connected set to in_progress,
+  And the run then halts at any point after that — the context bundle is unusable, a
+    phase agent returns something other than ok, the red-baseline gate blocks, the
+    green-and-coverage gate blocks, the review verdict blocks, the changelog step fails,
+    or the commit step fails,
+  When the run ends,
+  Then every acceptance criterion that run claimed and did not carry through to done is
+    back at work_status todo, and that change is persisted in the acceptance-criteria
+    store the run claimed in,
+  And this holds on every one of the run's halting paths, not only on whichever one was
+    exercised first — a lane with one released path and eight stranded ones is
+    indistinguishable, from any single run, from a lane that releases.
+
+  Given the release is carried out on the run's behalf by some executor,
+  When that executor is asked to perform it,
+  Then the request falls inside what that executor will do, so it is never declined as
+    a role that is not its own — a release asked of a party that will not perform it
+    leaves the acceptance criteria exactly as stranded as asking nobody.
+
+  Given someone wants evidence that the release works,
+  When they look for it,
+  Then the evidence is the content of a real acceptance-criteria store after a run that
+    halted, and the mere presence of a release step in the run is not evidence: that step
+    has been present on every halting path throughout the entire period in which no run
+    ever released anything.
+depends_on: [BO-2400f-10]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Holds all nine release dispatches — release-on-context-bundle-fail, -test-writer-fail, -red-baseline-fail, -coder-fail, -coverage-fail, -review-fail twice, -changelog-fail and -commit-fail. Every one of them is the subject of this criterion; fixing one is fixing none of the others."
+  - path: templates/scripts/fast_lane.py
+    relationship: implements
+    status: planned
+    relevance: "SUPERSEDED BY THE NEXT ENTRY — corrected by the IT PO 2026-08-25. This path does not exist; templates/scripts/ holds ac_store/, commit_guardian/, feedback/, sync_platforms/ and seven loose files, none of them fast_lane.py. Kept with status planned rather than deleted so the correction is visible rather than silent. Use scripts/build_orchestration/fast_lane.py."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: implements
+    status: exists
+    relevance: "The real location of the release subcommand the lane invokes (release_claim at line 309; the CLI at 1471-1486, dispatched at 1660-1664). The command is deterministic and correct and is not what failed — what failed was getting anything to run it. Note the CLI passes done_ids=[] deliberately, so the commit-fail path resets even already-done claims; that is existing intended behaviour, documented at fast-lane-ship.js:933-936, and is not to be 'fixed' here."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 records the verified finding: after run wf_bd4984e8-438 halted, all five claimed ACs were still in_progress in the run's store, and the release agent had run and returned having done nothing."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Where an executor's charter is declared. Whatever performs the release must have making that change inside its own charter — that is the fact this criterion's second scenario turns on."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Executes the lane so every halting path can be driven in turn. It records the release step but cannot prove a release happened — the store does that, so this criterion needs both instruments."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Added by the IT PO 2026-08-25 because it bounds the fix direction. The workflow body reaches nothing outside itself except through agent(). Verified across templates/workflows-js/: the only awaited engine primitives are agent(), parallel() and prompt(); every other awaited name is a local helper. So 'invoke the command directly instead of asking an agent' is not currently expressible at the JavaScript layer, and the second scenario has to be satisfied by WHO is dispatched."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    fast_lane_release_outcome:
+      type: object
+      description: >-
+        The result of the release step, returned from each of the nine halting paths and
+        read (never discarded) by the halt payload construction in BO-2400f-10-ii:
+        {attempted: bool, released: [str], unreleased: [str], executor: str,
+        error: str|null}.
+        attempted is true only when an executor accepted the request and ran the command;
+        a refusal, an unparseable reply, a null reply and a missing key are all
+        attempted:false with the ids in unreleased. released holds the ids the store
+        actually reports as returned to todo, taken from the command's own JSON stdout
+        ({"released": [...]}), never inferred from the fact that the step ran. executor
+        names the agentType or command actually used, so a persona mismatch is visible in
+        the payload rather than only in a transcript. Fail closed: absent or unreadable
+        means NOT released.
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "9"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "ALL NINE SITES, IN ONE CHANGE. As of 2026-08-25 the release dispatches are at lines 506, 574, 596, 648, 668, 751, 773, 871 and 943 of templates/workflows-js/fast-lane-ship.js, labelled release-on-context-bundle-fail, -test-writer-fail, -red-baseline-fail, -coder-fail, -coverage-fail, -review-fail (twice), -changelog-fail and -commit-fail. Every one passes agentType 'status-checker' and opens its prompt 'You are the release-phase agent.' Fixing one is fixing none: the criterion's own words are that a lane with one released path and eight stranded ones is indistinguishable from a lane that releases."
+    - "TWO SITES SHARE ONE LABEL, AND THAT MAKES THEM UNTESTABLE APART. Lines 751 and 773 are both labelled 'release-on-review-fail' (no-verdict, and high-findings). run_workflow_under_e2 keys its stubs on label, so those two paths cannot be stubbed or observed independently as things stand. Give every release site a unique label in this change — e.g. -review-no-verdict-fail and -review-high-findings-fail — otherwise 'all nine paths covered' can only ever be eight. This is a prerequisite for the test_spec below, not a nicety."
+    - "THE ENGINE HAS NO COMMAND PRIMITIVE — VERIFIED 2026-08-25, AND IT CONSTRAINS THE PO'S FIX DIRECTION. Across templates/workflows-js/ the only awaited engine primitives are agent(), parallel() and prompt(); every other awaited identifier is a function defined in the same file. So 'the release is a single deterministic command, prefer invoking it directly' cannot be implemented at the JavaScript layer today without first adding a primitive to the engine, which is out of this record's scope. Two admissible shapes remain and the implementer must choose ONE and say which: (a) dispatch an executor whose declared charter in config/agent_registry.json already covers running a command that mutates AC work_status; or (b) obtain a direct-invocation primitive and use it. What is NOT admissible is keeping status-checker: it refuses role reassignment by design, and the same refusal already breaks /plan-feature's gates."
+    - "IF SHAPE (a): NO SUCH AGENT EXISTS TODAY. All 60 entries in config/agent_registry.json were read on 2026-08-25 and none declares mutating AC claim state; status-checker is a read-only status reporter. So shape (a) entails ADDING an agent, which means an agent template under templates/agents/*.md, a registry entry, and a build deploy path. A .md agent template is llm-expert's surface, not python-coder's (the registry gives python-coder .py and .js only). This record is deliberately NOT split for that, because splitting it would require inventing criteria the BA did not write — but the single-coder phase IS under-scoped for shape (a) and the implementer must say so at sign-off rather than authoring an agent template silently. If shape (a) is chosen, expect a companion AC for the template."
+    - "THE EXECUTOR'S CHARTER IS READ, NOT ASSERTED. Whatever is dispatched, the second scenario is satisfied only if the charter in config/agent_registry.json covers the action. Do not encode the expectation as a hardcoded agent name in the covering test: a hardcoded name becomes a test that passes because it was updated alongside the bug. Read the registry at test time and assert the dispatched agentType's own declared scope covers running a command that changes AC work_status."
+    - "'THE STORE THE RUN CLAIMED IN' RESOLVES TO acStoreRoot, THE VARIABLE THE LANE ALREADY HOLDS. It is the same value already interpolated into the claim invocation (fast-lane-ship.js:396) and into releaseInvocation (:436-437), and it points at the run's own isolated worktree copy of the store. Use that one variable. Do NOT introduce a second store path, do NOT resolve it against the repository the run was launched from, and do NOT reach for origin/main."
+    - "CARRY THE OPEN PRODUCT QUESTION; DO NOT SETTLE IT. BO-2400f-10's own text says the release is 'landed on mainline', while a run claims in its own workspace copy which is then discarded — which is the only reason the observed failure was harmless. Whether the release must reach mainline at all is a product question BrainCandy has explicitly not answered, and the BA worded this record against 'the store the run claimed in' so it stays true either way. This change must therefore neither implement a push to mainline nor add anything that makes the workspace-only reading permanent. If the implementation forces the question, stop and raise it rather than deciding it in code."
+    - "LEAVE THE CLAIM DISPATCH DEMONSTRABLY ALONE. fast-lane-ship.js:393 opens 'You are the claim-phase agent for a fast-lane build.' with agentType 'status-checker' at :402 — the identical persona-mismatch shape. It COMPLIED on the observed run, which is why nobody has noticed, and its failure mode is the worse-shaped one: a silent NON-claim lets two runs build the same AC concurrently. The BA recorded it as a latent sibling belonging with BO-2400f-7 and deliberately did NOT fold it in. Do not expand scope to fix it here. Equally, do not HALF-change it: if a new executor is introduced for the release, the diff must either leave the claim dispatch untouched — verifiable as zero changed lines in that block — or the implementer must flag explicitly that it was touched and why. The hazard is a shared-executor refactor that swaps the release sites and leaves the claim on status-checker with nobody noticing the inconsistency."
+    - "FAIL CLOSED ON THE RESULT, following BO-2400f-12's precedent and the review-verdict read at fast-lane-ship.js:737. A missing key, a null, an unparseable reply, or the observed refusal object {\"status\": \"refused\", \"reason\": \"out-of-scope-...\"} all take the not-released branch by a plain-falsy read. No default-true, no `|| true`, no treating 'the dispatch returned' as 'the release happened'."
+    - "BEST-EFFORT ACTION IS PRESERVED; BEST-EFFORT REPORTING IS NOT. A failed release must not turn a clean halt into a crash and must not change the run's halting status or its failing_phase. What changes is that the outcome is now READ and carried — which is BO-2400f-10-ii, whose contract this record delivers."
+    - "SOURCE VS GENERATED, VERIFIED 2026-08-25. templates/workflows-js/fast-lane-ship.js is source, copied to <output_root>/workflows/ by build_workflow_scripts (scripts/build_phases.py:723-734). scripts/build_orchestration/fast_lane.py is ALSO source — git-tracked, deployed as a whole directory by build_agent_support_scripts, with no templates/scripts/ counterpart — so the 'scripts/ is a build output' trap does not apply to it either. Note the AC's original doc_link named templates/scripts/fast_lane.py, which does not exist; the corrected path is in doc_links. Do NOT add a byte-parity assertion between any template and its deployed copy: unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py deliberately asserts a difference."
+    - "NO GREP TESTS, AND HERE IS THE SPECIFIC TRAP: 'a release dispatch exists on the failure path' IS GREEN TODAY. The dispatch exists on all nine paths, it runs, it returns, and it releases nothing. Any test of that shape — asserting a label appears, an agentType appears, a dispatch is recorded, a step is present, or that statements appear in a given order — must be rejected at review, because it passes unchanged on the exact code this record exists to replace. The load-bearing evidence is the STORE: a real on-disk acceptance-criteria store, records flipped to in_progress the way a claim does, a halting run driven, and the records read back off disk expecting todo. Assert on the parsed YAML on disk, never on what the command printed about itself."
+delivers_to:
+  agent: python-coder
+  contract: "A fast_lane_release_outcome object returned from each of the nine halting paths — {attempted, released, unreleased, executor, error} — where released is taken from the release command's own {\"released\": [...]} stdout and never inferred. BO-2400f-10-ii consumes this to name the release's result in the halt payload beside the failure that triggered it; a discarded outcome makes that criterion unimplementable."
+expects_from:
+  ac_id: BO-2400f-7
+  contract: "The ids THIS run flipped to in_progress — claimResult.claimed, already narrowed at fast-lane-ship.js:435 to exclude a concurrent run's claims, which land in excluded_claimed — together with acStoreRoot, the path to the store the claim was made in. Both are already computed in the lane; the release must use those exact values and not re-derive the set from the resolved batch."
+test_required: true
+test_spec:
+  - name: test_release_returns_claimed_not_done_records_to_todo_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python3 scripts/build_orchestration/fast_lane.py release"
+    description: "Build a real AC store in a temp dir, flip records to in_progress the way a claim does, run the release as a REAL SUBPROCESS, and read the YAML back off disk: every claimed-and-not-done record reads todo. Asserted on parsed on-disk YAML, never on the command's own stdout."
+  - name: test_release_leaves_records_claimed_by_another_run_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Records in_progress but not in this run's claimed list are still in_progress after the release — the excluded_claimed guard at fast-lane-ship.js:432-435 must survive."
+  - name: test_release_is_a_status_only_change_to_each_record
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Parse each touched YAML before and after: work_status is the only key whose value changed, and no other field, comment or ordering was rewritten."
+  - name: test_every_one_of_the_nine_halting_paths_reaches_a_release_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Under the E2 harness, drive each halting path in turn — unusable bundle, test-writer non-ok, red-baseline blocked, coder non-ok, coverage blocked, review no-verdict, review high-findings, changelog failed, commit failed — and assert each records a release step. Parameterised over all nine; a test over one path proves one path, and the defect is that all nine are wrong together."
+  - name: test_every_release_site_has_a_unique_label
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Collect the labels of the release steps recorded across all nine driven paths: nine distinct labels. Today two review paths share 'release-on-review-fail', which makes them unstubbable apart and silently collapses nine-path coverage to eight."
+  - name: test_each_release_step_carries_the_ids_this_run_actually_claimed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With the claim stubbed to return a claimed list narrower than the resolved set, every recorded release step targets the claimed list — not the resolved batch, and not the excluded ids."
+  - name: test_each_release_step_targets_the_store_the_run_claimed_in
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The --ac-root the release step carries is the same acStoreRoot value the claim step used. Guards against a second store path being introduced, and against the release silently reaching for a repository other than the run's own workspace."
+  - name: test_release_executor_charter_covers_mutating_ac_claim_state
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Read config/agent_registry.json at test time, look up the agentType each recorded release step dispatches, and assert its declared charter covers running a command that changes AC work_status. Must not hardcode the expected name — a hardcoded name passes because it was updated alongside the bug."
+  - name: test_status_checker_is_not_the_release_executor_on_any_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "No recorded release step across the nine paths dispatches status-checker, which refuses role reassignment by design. The concrete regression guard for KI-BO-020."
+  - name: test_a_halting_run_leaves_no_record_in_progress_in_a_real_store
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: e2e
+    angle: real_artifact
+    description: "THE LOAD-BEARING TEST. Real on-disk store, real claim, a driven halt, real release invocation, then read every record back: none is in_progress. This is the only assertion that would have failed on run wf_bd4984e8-438, where the dispatch existed, ran, returned, and left all five records in_progress."
+  - name: test_a_run_that_never_claimed_dispatches_no_release_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "On a path that halts before the claim, no release step is recorded — releasing on a run holding no claims would flip ACs another run legitimately holds (the BO-2400f-12 precedent)."
+  - name: test_the_claim_dispatch_is_not_altered_by_this_change
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "A no-collateral-change guard, asserted on the RECORDED claim dispatch rather than on source text. The claim step at fast-lane-ship.js:393 has the same persona-mismatch shape and belongs to a different record; this pins it so a shared-executor refactor cannot half-change it unnoticed. If the claim is deliberately changed later, this test is updated deliberately too."
+test_rationale: |
+  NAME THE TRAP FIRST, because the obvious test for this criterion passes today on the
+  broken code. A test asserting "a release step exists on the failure path" is green
+  right now: the dispatch does exist on all nine paths, it runs, it returns, and it
+  releases nothing. Any test of that shape must be rejected at review. So must any test
+  that greps templates/workflows-js/fast-lane-ship.js for a label, an agent type, or an
+  ordering — a grep passes unchanged on dead code, and this release path has been dead
+  for its entire existence.
+
+  The load-bearing evidence is the STORE. Build a real on-disk acceptance-criteria store
+  in a temporary directory, flip a set of records to in_progress the way a claim does,
+  run the release as a REAL SUBPROCESS the way the lane invokes it, and read the records
+  back off disk: every claimed-and-not-done record reads todo, records that reached done
+  are left alone, and records another run claimed are untouched. Assert on the parsed
+  YAML on disk, never on what the command printed about itself.
+
+  Cover every halting path, not one. Execute the lane under
+  unit_tests/_workflow_engine_harness.py with run_workflow_under_e2 and drive each of the
+  nine failure paths in turn — unusable bundle, test-writer non-ok, red-baseline blocked,
+  coder non-ok, coverage blocked, review blocked on each of its two exits, changelog
+  failed, commit failed — and assert each one reaches a release step whose recorded
+  request is the release invocation for the ids this run actually claimed. A test
+  parameterised over one path proves one path; the defect is that all nine are wrong
+  together.
+
+  The second scenario is about who is asked. Prove it by asserting the recorded release
+  step names an executor whose declared charter covers running it, read from
+  config/agent_registry.json rather than hardcoded in the test — a hardcoded expected name
+  turns into a test that passes because it was updated alongside the bug.
+declares_side_effect: true
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - agent: it-po
+    date: "2026-08-25"
+    reason: "TECHNICAL ENRICHMENT ONLY — no criteria, title, depends_on, covered_by, declares_side_effect, work_status or test_rationale text was touched. declares_side_effect stays true, which the enrichment confirms rather than contradicts: the release mutates work_status in an on-disk store. Set assigned_agent python-coder, estimated_complexity L, it_requirements, delivers_to, expects_from and test_spec; corrected one doc_link and added two. THREE FINDINGS THE ENRICHMENT TURNED UP THAT CHANGE THE WORK. (1) THE ENGINE HAS NO COMMAND PRIMITIVE. Across templates/workflows-js/ the only awaited engine primitives are agent(), parallel() and prompt() — everything else is a local helper — so the Product Owner's preferred direction, 'invoke the deterministic command directly rather than asking an agent', is not expressible at the JavaScript layer today. The second scenario therefore has to be satisfied by WHO is dispatched, and no agent among the 60 in config/agent_registry.json declares mutating AC claim state; status-checker is a read-only reporter. Adding one means an agent template under templates/agents/*.md, which is llm-expert's surface and not python-coder's, so the single-coder phase is under-scoped for that shape. Flagged rather than split, because splitting would require inventing criteria the BA did not write. (2) TWO OF THE NINE RELEASE SITES SHARE A LABEL — lines 751 and 773 are both 'release-on-review-fail'. run_workflow_under_e2 keys its stubs on label, so those two paths cannot be driven or observed apart, and 'all nine covered' is arithmetically impossible until the labels are unique. Making them unique is now a constraint and has its own test. (3) THE DOC_LINK templates/scripts/fast_lane.py DOES NOT EXIST. The real path is scripts/build_orchestration/fast_lane.py (release_claim at 309, CLI at 1471-1486, dispatch at 1660-1664). The dead entry is kept with status planned rather than deleted so the correction is visible. CARRIED, NOT SETTLED, as the BA intended: whether the release must reach mainline or only the workspace store the claim was made in. 'The store the run claimed in' is resolved in the constraints to acStoreRoot — the variable the lane already holds and already passes to the claim — which keeps the record true under either answer, and the implementer is explicitly forbidden from deciding the question in code."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Written because BO-2400f-10 is a correct promise with no working invocation. The parent
+  says the claim is released on failure and it is marked done; verified 2026-08-25 that
+  no fast-lane run has ever released anything. All nine release dispatches in the lane
+  pass agentType "status-checker" and open their prompt "You are the release-phase agent."
+  status-checker refuses role reassignment by design, and the lane discards the reply, so
+  the refusal is silent. Lines 506, 574, 596, 648, 668, 751, 773, 871 and 943 are all the
+  same defect.
+
+  WHY THIS IS A SEPARATE CRITERION RATHER THAN A REWRITE OF THE PARENT. The parent states
+  the outcome and states it correctly. What was missing is any requirement that the
+  outcome be reachable, and any evidence standard that could tell a release from a request
+  for one. Those are additions, not corrections — the parent's text needs no change, only
+  its status.
+
+  THE CONTAINMENT WAS LUCK. The damage stayed harmless only because a fast-lane run claims
+  in its own workspace's copy of the store, which is discarded with the workspace, so
+  origin/main's copy still read todo. Any path on which a claim reaches a shared store
+  leaves those criteria stranded in_progress, where BO-2400f-8 will then correctly refuse
+  to rebuild them: a failed run silently makes its own target unbuildable. That is why the
+  priority here is critical while the observed blast radius was nil.
+
+  IT INVALIDATES A PREMISE OTHER WORK RESTS ON. BO-2400f-13's reasoning, and the Product
+  Owner's decision to refuse rather than reuse an occupied workspace, are written on "the
+  lane has no resume semantics — BO-2400f-10 releases the claim on abort". The decision
+  still holds, and holds more strongly now, since a leftover workspace may also carry
+  stranded claims. But the stated reason is currently false and should not be quoted as
+  established behaviour until this lands.
+
+  ADJACENT AND DELIBERATELY NOT AUTHORED HERE: the CLAIM dispatch at fast-lane-ship.js:393
+  has the identical shape — agentType "status-checker", prompt opening "You are the
+  claim-phase agent." It happened to comply on the observed run, which is why nobody has
+  noticed it. Flagged for the Product Owner as a latent sibling rather than folded into
+  this criterion, since the claim's failure mode is the opposite one and belongs with
+  BO-2400f-7.
+
+  CAP CHECK: BO-2400f-10 is an L2, and check_ac_limits._MAX_CHILDREN carries keys for L0
+  and L1 only, continuing past every other level. Adding children here trips nothing and
+  needs no override.
+
+  ENRICHMENT NOTE, it-po, 2026-08-25 — HOW THE CLAIM DISPATCH IS KEPT OUT OF SCOPE WITHOUT
+  BEING FORGOTTEN. The BA's decision not to fold it in is respected, but "do not fix it"
+  and "do not accidentally half-fix it" are different obligations and only the first was
+  written down. The risk is concrete: the natural implementation of this record introduces
+  one release executor and applies it at nine sites, and the tenth site with the same shape
+  sits forty lines above the first. Either it is left with zero changed lines — which
+  test_the_claim_dispatch_is_not_altered_by_this_change pins behaviourally — or the
+  implementer says at sign-off that it was touched and why. What must not happen is a
+  shared refactor that leaves the claim on status-checker with nobody noticing the
+  inconsistency, because the next reader will take the inconsistency for a considered
+  decision.

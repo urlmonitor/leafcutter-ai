@@ -40,6 +40,7 @@ covered_by:
   - ACS-1100d-1
   - ACS-1100d-2
   - ACS-1100d-4
+  - ACS-1100d-5
 implemented_by: []
 documentation_triggers:
   - component-diagram
@@ -78,3 +79,14 @@ notes: |
   hops that can drop a coverage figure, and the map is currently the only one of
   them that does not. ACS-1100d-1's enumeration of consuming hops should say so
   explicitly rather than leaving human-read surfaces implicit.
+
+  THE LAST HOP IS A DURABLE WRITE (added 2026-08-25, BA, via ACS-1100d-5). d-1 makes
+  the figure survive each hop and d-2 caps what a verdict may claim, but the chain
+  stopped one hop short of where the damage lands: an agent or a person reads a
+  verdict earned over a fraction of a population and writes work_status: done on a
+  record whose wording claims the whole of it. d-5 caps that write — a requirement
+  claiming a population is not closed on a verdict narrower than the claim, and the
+  two honest routes are to widen the evidence or to reword the claim. The worked
+  examples are in-component and measured: ACS-300h-1 and ACS-300i-2 each stood as
+  finished while 36 of the 45 entries in docs/components.json broke the property
+  they claim (counted 2026-08-25).

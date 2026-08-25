@@ -86,7 +86,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/18_TICKET-20260825-GE-120c-2.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -107,3 +108,4 @@ notes: |
   IT-PO (2026-08-14): the unproven state must reuse the GE-120a-1 outcome vocabulary rather
   than being a second three-state model. The red baseline artifact must carry the pre-fix
   commit SHA so it can be re-verified rather than trusted.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

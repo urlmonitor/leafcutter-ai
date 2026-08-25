@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -67,3 +67,28 @@ implemented_by:
   - "scripts/ac_store/done_proof.py"
   - "scripts/ac_store/test_enforcement.py"
   - "scripts/ac_store/mark_ac_done.py"
+notes: |
+  REOPENED 2026-08-25 (was work_status: done). The criteria say an AC with at least one
+  passing covers-linked test is ELIGIBLE. For two common test shapes it is not, so the
+  eligibility verdict is false-negative rather than merely incomplete.
+
+  scripts/ac_store/done_proof.py:95 defines
+
+      _TEST_DEF_RE = re.compile(r"^\s*def\s+(test_\w+)")
+
+  and matches it per-line at line 368. There is no `async` alternative, so `async def
+  test_...` never associates with the `# covers:<id>` tag above it. Parametrised tests are
+  affected for the related reason that the reported node id carries a `[...]` suffix the
+  matcher does not reconcile. An author whose covering test is async therefore cannot mark
+  the AC done through the normal path — the same operator-blocking shape that ACS-200f was
+  written to end.
+
+  Re-verified against HEAD after PR #493 (proof-of-done remediation for this slice) landed;
+  the gap is still present, so this is not stale. NOTE FOR THE BUILD-ORCHESTRATION OWNER:
+  this record was reopened from an ac-store-side triage, not from the BO work queue. If
+  #493's follow-up already covers the async case, close it again with the evidence rather
+  than treating this as new scope.
+
+  Also worth resolving while here: this record carried work_status: done alongside
+  req_status: draft and readiness: draft. A draft requirement cannot honestly be done —
+  whichever way it settles, the three fields should agree.

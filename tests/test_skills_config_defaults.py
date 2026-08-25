@@ -26,6 +26,7 @@ _MODULE_PATH = _REPO_ROOT / "scripts" / "config_loader.py"
 
 # Load config_loader module
 spec = importlib.util.spec_from_file_location("config_loader", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["config_loader"] = _mod
 spec.loader.exec_module(_mod)

@@ -46,8 +46,8 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `--verify` readiness report
 
 **Symptom.** The readiness report's surface check asserts only that *some* paths were
@@ -81,6 +81,53 @@ a path arrived only via the prose fallback. Report provenance per path honestly.
 that cannot assess correctness should report `INFO`, not `PASS`. Related: the prose
 fallback itself is `BP-1100a-4`, and the authoring-side rule is documented in
 `docs/how-to/ac-traceability-store.md`.
+
+**Second occurrence, 2026-08-25 — the prose fallback can name a BUILD OUTPUT as the
+edit surface, and the sentence it scrapes may be one warning against exactly that.**
+Found on the first ticket generated after the test-contract fix, `BP-1100g-1`. Report:
+
+```
+[PASS] files_touched has 3 path(s) from doc_links
+```
+
+The three were `docs/testing/test-angles.md`, `templates/agents/test-writer.md`, and
+`.claude/agents/test-writer.md`. The third is not one of that AC's five `doc_links`
+— it came from the prose fallback, scraped out of the it_requirement sentence *"The
+taught set must be present in the DEPLOYED copy (`.claude/agents/test-writer.md`), not
+only in `templates/`"*. That sentence exists to say the deployed copy is the
+**assertion target**; the derivation read it as an **edit target**. And
+`.claude/agents` is a symlink to `.leafcutter/agents`, so it is a build output that
+`build.py` regenerates from `templates/`.
+
+This occurrence is worth recording separately from the first because the consequence is
+not a merely-inaccurate list — it is a live phantom-done trap, on the AC whose whole
+purpose is preventing phantom-done:
+
+1. `BP-1100g-1`'s fourth `test_spec` entry is a **reachability** test that runs
+   `build.py` and then reads the DEPLOYED `.claude/agents/test-writer.md`, deliberately,
+   because the agent runtime loads the built copy.
+2. An implementer following `files_touched` edits the deployed copy. That test passes
+   immediately.
+3. `templates/` is untouched, so the next `build.py` overwrites the deployed copy and
+   the work disappears.
+4. The ticket has already closed green.
+
+Also, in the same report, the directory where all four tests land
+(`unit_tests/prompt_assembly/`) was **absent** from `files_touched`, which would have
+made the actual deliverable read as unexpected scope to `change-scope-reviewer`. So the
+derived surface was wrong in both directions at once, and the count-based check called
+it `PASS`.
+
+Worked around on the ticket by hand (correct `files_touched`, plus an `out_of_scope`
+naming `.claude/agents/` and `.leafcutter/` so a diff there is a hard violation), not
+fixed at source.
+
+**Sharpened fix direction.** Beyond reporting provenance honestly: the derivation should
+never emit a path under a known build-output root as an edit surface. Those roots are
+already knowable — `.leafcutter/` and everything symlinked into it from `.claude/` — so
+this is a filter, not a judgement. A path that resolves inside a build output is either
+an assertion target or a mistake, and in both cases it does not belong in
+`files_touched`.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8.
 

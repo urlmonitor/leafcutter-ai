@@ -105,7 +105,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-120c-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/12_TICKET-20260825-GE-120c-1.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -137,3 +138,4 @@ notes: |
   guaranteed cleanup recorded as requirements; the binding constraints are stated separately
   from the recommendation so the coder keeps latitude. Home is unit_tests/portability/
   alongside test_build_deployment.py, deliberately NOT unit_tests/commit_guardian/.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

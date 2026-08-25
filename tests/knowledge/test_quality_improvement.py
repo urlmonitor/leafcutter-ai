@@ -40,7 +40,7 @@ _HARVEST_PATH = _REPO_ROOT / "scripts" / "knowledge" / "harvest_learnings.py"
 def _load_module(name: str, path: Path):
     """Load a module from source path; returns (module, error_string)."""
     spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None:
+    if spec is None or spec.loader is None:
         return None, f"Could not create spec for {path}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
@@ -115,31 +115,29 @@ def _simulate_ba_injection(component_dir: Path, memory_dir: Path) -> dict:
       - 'po_memory_files': list of str — PO memory files found (cross-agent sharing)
       - 'standing_rules_found': list of str — any standing-rule text from PROJECT_CONTEXT
     """
-    result = {
-        "project_context_read": False,
-        "readme_read": False,
-        "memory_files": [],
-        "po_memory_files": [],
-        "standing_rules_found": [],
-    }
+    project_context_read = False
+    readme_read = False
+    memory_files: list[str] = []
+    po_memory_files: list[str] = []
+    standing_rules_found: list[str] = []
 
     # Step 2: Read component PROJECT_CONTEXT.md (BA §0 step 2)
     ctx_path = component_dir / "PROJECT_CONTEXT.md"
     if ctx_path.exists():
         text = ctx_path.read_text(encoding="utf-8")
         if text.strip():
-            result["project_context_read"] = True
+            project_context_read = True
             # Extract any "standing rule" entries
             for line in text.splitlines():
                 if "standing" in line.lower() or "all l2" in line.lower():
-                    result["standing_rules_found"].append(line.strip())
+                    standing_rules_found.append(line.strip())
 
     # Step 3: Read component README.md (BA §0 step 3)
     readme_path = component_dir / "README.md"
     if readme_path.exists():
         text = readme_path.read_text(encoding="utf-8")
         if text.strip():
-            result["readme_read"] = True
+            readme_read = True
 
     # Step 4: Scan memory/ for BA-pattern files (BA §0 step 4)
     if memory_dir.exists():
@@ -147,16 +145,22 @@ def _simulate_ba_injection(component_dir: Path, memory_dir: Path) -> dict:
         for f in memory_dir.iterdir():
             name = f.name.lower()
             if any(pat in name for pat in ba_patterns) and f.suffix == ".md":
-                result["memory_files"].append(f.name)
+                memory_files.append(f.name)
 
         # Step 5: Scan memory/ for PO-pattern files (BA §0 step 5 — cross-agent)
         po_patterns = ["po", "product", "product-owner"]
         for f in memory_dir.iterdir():
             name = f.name.lower()
             if any(pat in name for pat in po_patterns) and f.suffix == ".md":
-                result["po_memory_files"].append(f.name)
+                po_memory_files.append(f.name)
 
-    return result
+    return {
+        "project_context_read": project_context_read,
+        "readme_read": readme_read,
+        "memory_files": memory_files,
+        "po_memory_files": po_memory_files,
+        "standing_rules_found": standing_rules_found,
+    }
 
 
 def _simulate_po_injection(component_dir: Path, memory_dir: Path) -> dict:
@@ -168,26 +172,24 @@ def _simulate_po_injection(component_dir: Path, memory_dir: Path) -> dict:
       - 'memory_files': list of str — memory file names matching PO patterns
       - 'framing_preferences_found': list of str — framing preference text found
     """
-    result = {
-        "project_context_read": False,
-        "readme_read": False,
-        "memory_files": [],
-        "framing_preferences_found": [],
-    }
+    project_context_read = False
+    readme_read = False
+    memory_files: list[str] = []
+    framing_preferences_found: list[str] = []
 
     # Step 2: Read component PROJECT_CONTEXT.md (PO S0 step 2)
     ctx_path = component_dir / "PROJECT_CONTEXT.md"
     if ctx_path.exists():
         text = ctx_path.read_text(encoding="utf-8")
         if text.strip():
-            result["project_context_read"] = True
+            project_context_read = True
 
     # Step 3: Read component README.md (PO S0 step 3)
     readme_path = component_dir / "README.md"
     if readme_path.exists():
         text = readme_path.read_text(encoding="utf-8")
         if text.strip():
-            result["readme_read"] = True
+            readme_read = True
 
     # Step 4: Scan memory/ for PO-pattern files (PO S0 step 4)
     if memory_dir.exists():
@@ -195,14 +197,19 @@ def _simulate_po_injection(component_dir: Path, memory_dir: Path) -> dict:
         for f in memory_dir.iterdir():
             name = f.name.lower()
             if any(pat in name for pat in po_patterns) and f.suffix == ".md":
-                result["memory_files"].append(f.name)
+                memory_files.append(f.name)
                 # Extract any framing preference entries
                 text = f.read_text(encoding="utf-8")
                 for line in text.splitlines():
                     if "start with the problem" in line.lower() or "framing" in line.lower():
-                        result["framing_preferences_found"].append(line.strip())
+                        framing_preferences_found.append(line.strip())
 
-    return result
+    return {
+        "project_context_read": project_context_read,
+        "readme_read": readme_read,
+        "memory_files": memory_files,
+        "framing_preferences_found": framing_preferences_found,
+    }
 
 
 def _simulate_itpo_injection(component_dir: Path, memory_dir: Path) -> dict:
@@ -214,23 +221,21 @@ def _simulate_itpo_injection(component_dir: Path, memory_dir: Path) -> dict:
       - 'prior_agent_mappings_found': list of str — prior component-agent mapping text
       - 'po_ba_memory_files': list of str — cross-agent PO/BA memory files found
     """
-    result = {
-        "project_context_read": False,
-        "memory_files": [],
-        "prior_agent_mappings_found": [],
-        "po_ba_memory_files": [],
-    }
+    project_context_read = False
+    memory_files: list[str] = []
+    prior_agent_mappings_found: list[str] = []
+    po_ba_memory_files: list[str] = []
 
     # Step 2: Read component PROJECT_CONTEXT.md (IT PO S0 step 2)
     ctx_path = component_dir / "PROJECT_CONTEXT.md"
     if ctx_path.exists():
         text = ctx_path.read_text(encoding="utf-8")
         if text.strip():
-            result["project_context_read"] = True
+            project_context_read = True
             # Extract any prior agent assignment entries
             for line in text.splitlines():
                 if "python-coder" in line.lower() or "llm-expert" in line.lower():
-                    result["prior_agent_mappings_found"].append(line.strip())
+                    prior_agent_mappings_found.append(line.strip())
 
     # Step 4: Scan memory/ for IT PO patterns (IT PO S0 step 4)
     if memory_dir.exists():
@@ -238,16 +243,21 @@ def _simulate_itpo_injection(component_dir: Path, memory_dir: Path) -> dict:
         for f in memory_dir.iterdir():
             name = f.name.lower()
             if any(pat in name for pat in itpo_patterns) and f.suffix == ".md":
-                result["memory_files"].append(f.name)
+                memory_files.append(f.name)
 
         # Step 5: Cross-agent PO + BA memory (IT PO S0 step 5)
         cross_patterns = ["po", "product", "product-owner", "ba", "business-analyst", "analyst"]
         for f in memory_dir.iterdir():
             name = f.name.lower()
             if any(pat in name for pat in cross_patterns) and f.suffix == ".md":
-                result["po_ba_memory_files"].append(f.name)
+                po_ba_memory_files.append(f.name)
 
-    return result
+    return {
+        "project_context_read": project_context_read,
+        "memory_files": memory_files,
+        "prior_agent_mappings_found": prior_agent_mappings_found,
+        "po_ba_memory_files": po_ba_memory_files,
+    }
 
 
 # ---------------------------------------------------------------------------
