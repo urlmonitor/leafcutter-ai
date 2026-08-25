@@ -1,0 +1,157 @@
+id: GE-122d-6-i
+title: "A pass states what it inspected, so a pass is distinguishable from a hook that never ran"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a built working copy in which the numbering check is registered as GE-122d-6 requires,
+  And each namespace the check holds itself responsible for contains a known number of
+    artifacts, with no number claimed twice anywhere,
+  And a change staged that claims no contested number,
+  When a commit is attempted through the ordinary commit path,
+  Then the commit completes,
+  And the check's output carries one inspected count per namespace it is responsible for,
+  And each reported count equals the number of artifacts actually present in that namespace,
+
+  And given one further artifact is then added to exactly one of those namespaces and the same
+    clean commit is attempted again,
+  Then that namespace's reported count is one higher than before and the other namespaces'
+    counts are unchanged, so the counts are read from the collection on each run rather than
+    emitted as fixed text,
+
+  And given the check is deregistered and the working copy rebuilt,
+  When the same clean commit is attempted,
+  Then the commit completes and NO inspected counts are produced at all,
+  And a reader comparing the two runs can tell the two situations apart from the output alone,
+    without inferring anything from the absence of an error.
+
+  Coverage note: covered only by executing all three runs against a real built working copy and
+  comparing their outputs. A test asserting that the output contains the word "inspected", or
+  that a count field is present in a returned value, covers none of this — a constant satisfies
+  it. The count must be shown to MOVE with the collection, and the deregistered run must be
+  performed, because "the commit succeeded and nothing was said" is precisely what this
+  repository's four unregistered guards produce today and it is currently indistinguishable
+  from a clean pass.
+depends_on:
+  - GE-122d-6
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The sibling policy that a check which could not perform its inspection reports a degraded outcome rather than a clean pass. This L3 applies the same insight one step earlier — to a check that never started — and does not restate or replace it."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The exercised-count clause for the verification harness, and the closest precedent for this criterion: a green sweep over zero subjects is the failure mode, and a printed count of what was actually examined is the interlock. Reuse that reasoning, not that code."
+  - path: templates/scripts/commit_guardian/check_identifier_uniqueness.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO 2026-08-25 — promoted from 'related' to an edit surface. The passing-path per-namespace count line is emitted from this module, so this AC changes it; the ticket's files_touched must say so or the coder has no file-scope signal."
+  - path: templates/scripts/commit_guardian/_uniqueness_scanners.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO 2026-08-25 — where the per-namespace walk happens, and therefore where the attempted-read counter GE-122d-3 already requires must live. This AC reads that one counter rather than introducing a second."
+  - path: docs/architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md
+    relationship: context
+    status: exists
+    relevance: "Defines the namespaces the pass is responsible for, which is the set the per-namespace counts must span."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE COUNTS ARE THE PROOF OF EXECUTION, so they must be emitted on the PASSING path, at the commit-time stage, where nobody is looking. A count emitted only on the failing path proves nothing about a green commit, and a green commit is the state the repository has been in for four unregistered guards."
+  - "One count per namespace, never a single total. A total hides the case this criterion is about: three namespaces read and one skipped sums to a plausible-looking number, and the blind spot is invisible."
+  - "The count must be the number of artifacts the pass ATTEMPTED to read in that namespace, tracked during the walk — the same counter GE-122d-3 requires for the degraded path, not a second one. Two independently-maintained counts will disagree, and the disagreement will be settled by whichever is quieter."
+  - "THE NAMESPACE SET IS DERIVED, NEVER LISTED (IT-PO 2026-08-25). The set of namespaces the count line spans must come from the same declaration the pass resolves its roots from — ADR-034's responsibility set as it is expressed in configuration — so that a namespace added tomorrow gets a count line without an edit here. A per-namespace count emitted from a literal sequence written into the reporting code is the same always-green shape this AC exists to defeat, one layer up: the fifth namespace would silently have no line and nobody would miss it."
+  - "Keep the output legible on a passing commit without making it noise. The commit-time stage prints on every commit in the repository; a per-namespace count line is the budget, and a per-artifact listing is not."
+  - "OUTPUT STREAM AND VISIBILITY ARE PART OF THE DELIVERABLE. The count line must land where a reader of an ordinary successful commit actually sees it, under the hook framework's normal passing-hook presentation — not on a stream the framework swallows on success, and not behind a verbosity flag nobody sets. A count that is emitted but not shown satisfies the letter of this AC and none of its purpose; the deregistered-run comparison is what proves it is visible, because the comparison is made on captured commit output."
+  - "FILE SCOPE: this AC edits the check and its scanner module (both under templates/scripts/commit_guardian/, with their scripts/commit_guardian/ counterparts regenerated by build.py per ADR-001, never hand-edited) plus the new test module. It does not touch the registry — registration is GE-122d-6's surface, and this AC consumes it."
+  - "Error handling per CLAUDE.md Rules 1-4. This criterion covers the clean path only; the could-not-establish and terminated-abnormally outputs are GE-122d-3's and GE-122d-3-i's and are not re-specified here."
+test_spec:
+  - name: test_ge122d6i_clean_commit_reports_one_inspected_count_per_namespace
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In a built working copy with the check registered, an ordinary commit of a change claiming no contested number completes, and the captured commit output carries one inspected count per namespace the pass is responsible for, each equal to the artifacts actually present in that namespace."
+  - name: test_ge122d6i_added_artifact_moves_only_its_own_namespace_count
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "One further artifact is added to exactly one namespace and the same clean commit is repeated: that namespace's count is one higher and every other namespace's count is unchanged. This is the constant-defeating run — a hard-coded or cached count passes the first test and fails this one."
+  - name: test_ge122d6i_deregistered_run_produces_no_inspected_counts_at_all
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The check is deregistered and the copy rebuilt; the same clean commit completes and NO inspected counts are produced. Delete the wiring line and this test goes red — it is the only descriptor here that can distinguish a hook that ran from a hook that was never reached."
+  - name: test_ge122d6i_passing_run_and_deregistered_run_outputs_are_distinguishable
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The captured outputs of the registered clean commit and the deregistered clean commit are compared in one assertion and shown to differ in a way a reader can act on, with the difference carried by the counts themselves rather than inferred from the absence of an error. Both commits succeed, so exit status alone cannot separate them."
+  - name: test_ge122d6i_count_line_is_visible_on_the_stream_a_successful_commit_shows
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "The count line appears in the output a user sees from a plain successful `git commit` in the deployed layout — captured from the commit invocation itself, not from a direct call to the check with verbose flags set."
+test_rationale: "The whole point of this L3 is that a green commit currently proves nothing, so the test contract cannot be allowed to reduce to assertions over the check's return value — a script that prints counts and is wired to nothing satisfies every such assertion and is the exact state four guards in this component occupy. Three real commits against a real built working copy are therefore the minimum: registered-and-clean, registered-with-one-more-artifact, and deregistered. The middle run is what stops a constant from passing (a literal count satisfies the first run perfectly), and the deregistered run is what makes the claim about the COMMIT rather than the script. The visibility descriptor is separate because an emitted-but-swallowed count would pass a comparison made on the check's own captured stdout while failing the criterion's actual promise, which is that a reader of an ordinary commit can tell the two situations apart."
+delivers_to: null
+expects_from:
+  ac_id: GE-122d-6
+  contract: "A registered commit-time check that an ordinary commit actually invokes, whose passing output this criterion constrains."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: it-po-technical-enrichment
+    agent: it-po
+    date: '2026-08-25'
+    changed: "readiness draft->reviewed; check_identifier_uniqueness.py promoted from 'related' to 'modifies' and _uniqueness_scanners.py added as a second modifies edge so files_touched carries a real surface; three it_requirements added (derived namespace set, output-stream visibility, file scope); test_spec and test_rationale authored as five behavioural descriptors covering all three runs. criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS AN L3 UNDER GE-122d-6 AND NOT A RESTATEMENT OF GE-122d-2 OR GE-122d-3. Three ACs
+  in this tree ask for inspected counts, at three different points, for three different reasons,
+  and collapsing them would lose one of the three:
+    - GE-122d-2 asks for per-namespace counts on the SHARED-BUILD passing path, so a gate that
+      passed over an empty checkout is distinguishable from one that passed over the collection.
+    - GE-122d-3 asks for a read count on the DEGRADED path, so the size of a blind spot is
+      visible when the pass could not read everything.
+    - This AC asks for them on the COMMIT-TIME passing path, and pairs that with a run in which
+      the check is deregistered, so that "the guard ran and found nothing" and "the guard was
+      never reached" are two different observations rather than one silence.
+  The third is the only one that fails on the repository as it stands today.
+
+  THE DEREGISTERED RUN IS THE LOAD-BEARING CLAUSE. Without it this AC is satisfiable by a check
+  that prints counts and is wired to nothing, which is the exact state four guards in this
+  component are in. With it, the AC is a statement about what the COMMIT produces, not about
+  what the script produces, and no assertion over a script's return value can satisfy it.
+
+  THE HONEST LIMIT OF THIS CRITERION, worth stating so nobody over-claims it: a reader still has
+  to look. This makes the two situations distinguishable; it does not make anyone notice. What
+  makes it mechanical is GE-120c-6, which sweeps for guards that ship unregistered, and this
+  criterion is what gives that sweep something observable to check a live commit against.
+
+  IT-PO (2026-08-25) — THE COUNT AND THE NAMESPACE LIST FAIL THE SAME WAY. The criteria already
+  forbid a fixed count. They do not forbid a fixed LIST of namespaces to report counts for, and
+  that is the identical defect one level up: a fifth namespace added to ADR-034's responsibility
+  set would get no line, and its absence would look exactly like the four-line output everyone
+  is used to. The added it_requirement derives the reported set from the same declaration the
+  pass resolves its roots from, which is also what keeps this AC consistent with GE-122d-3-ii's
+  requirement that no root be resolved from a location written into the pass.

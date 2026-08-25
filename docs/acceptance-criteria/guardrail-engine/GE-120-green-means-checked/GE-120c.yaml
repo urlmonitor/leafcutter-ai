@@ -31,12 +31,14 @@ origin_agent: BrainCandy
 created: 2026-08-14
 amended_by: []
 superseded_by: null
+child_limit_override: 6
 covered_by:
   - GE-120c-1
   - GE-120c-2
   - GE-120c-3
   - GE-120c-4
   - GE-120c-5
+  - GE-120c-6
 implemented_by: []
 change_target: code
 risk_surface: internal
