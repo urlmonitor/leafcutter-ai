@@ -188,6 +188,7 @@ class TestComputeProducibilityVerdictUnit(unittest.TestCase):
         self.assertFalse(verdict["producible"], f"Got: {verdict}")
         entry = next((e for e in verdict["unproducible"] if e["ac_id"] == "FLT-950b"), None)
         self.assertIsNotNone(entry, f"FLT-950b must be named in unproducible. Got: {verdict}")
+        assert entry is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual(entry.get("declared_producer"), "documentation-expert")
 
     def test_ac12_roster_excludes_agents_this_lane_never_dispatches(self) -> None:
@@ -226,6 +227,7 @@ class TestComputeProducibilityVerdictUnit(unittest.TestCase):
                     (e for e in verdict["unproducible"] if e["ac_id"] == ac_id), None
                 )
                 self.assertIsNotNone(entry, f"{ac_id} must be named. Got: {verdict}")
+                assert entry is not None  # narrowing for mypy; the assert above is the real check
                 self.assertEqual(entry.get("declared_producer"), agent)
 
         _write_ac(self.ac_root, "FLT-951-test-writer", assigned_agent="test-writer")
@@ -436,6 +438,7 @@ class TestCheckProducibilityCliRealSubprocess(unittest.TestCase):
         self.assertIsNotNone(
             entry, f"FLT-952a must be named in the real subprocess's unproducible list. Got: {verdict}"
         )
+        assert entry is not None  # narrowing for mypy; assertIsNotNone above is the real check
         self.assertEqual(entry.get("declared_producer"), "llm-expert")
 
     def test_undeclared_members_default_to_producible_real_subprocess(self) -> None:
