@@ -157,7 +157,7 @@ covered_by:
   - GE-122d-6-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/08_TICKET-20260825-GE-122d-6.md
-declares_side_effect: true
+declares_side_effect: false
 change_target:
   - code
   - pipeline
