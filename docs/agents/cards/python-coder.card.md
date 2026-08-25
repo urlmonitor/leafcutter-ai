@@ -742,6 +742,9 @@ flowchart TD
 - BO-1800e-1-i: An attempt to commit onto local main during a drive is prevented or flagged
 - BO-1800e-2: Scaffold and finalize bookkeeping lands via a branch and pull request, never a direct local-main commit
 - BO-1800e-3: A developer's local main sync is fetch plus fast-forward-only (read-only)
+- BO-1900a-4: Resolving an epic target says the isolated working copy is not yet determined, never a stand-in location
+- BO-1900a-4-i: No phase agent is spawned while the isolated working copy is still undetermined
+- BO-1900a-4-ii: A plan reply the drive cannot use holds the ticket back, and is never read as a ticket with no work left
 - BO-1900b-1: A premise that no longer reproduces at dispatch halts the run
 - BO-1900b-1-i: A premise with no attached reproduction command is treated as unfit
 - BO-1900b-1-ii: A reproduction command that errors or times out fails closed
@@ -901,6 +904,9 @@ flowchart TD
 - BO-2900e-2: One run reports every unreachable thing it found, so the fix list is complete the first time
 - BO-2900e-3: A refusal cause with no exercised message cannot be added — message quality is proven by running the guard
 - BO-2900f-1: A requested gate that did not run still records a skipped outcome naming the reason
+- BO-2900f-1-i: A gate that reports success but leaves no entry in the work item's record is adjudicated failed, not passed
+- BO-2900f-1-ii: A gate recorded more than once is adjudicated from its latest entry, and the duplication is surfaced rather than erased
+- BO-2900f-1-iii: The record check runs after every dispatched gate, so verification cannot hold on one work item and lapse on the next
 - BO-2900f-2: Exactly one recorded outcome per requested gate — on the executed path and the skipped path alike
 - BO-2900f-2-i: A run that halts leaves later gates with no entry, and the halt itself is recorded so the shortfall is explained
 - BO-2900f-3: A skipped gate is reported apart from a passing gate and never satisfies a requirement that it pass
@@ -917,11 +923,18 @@ flowchart TD
 - BO-300a-2-1: Zero files_touched across all tickets still renders the manual_tests section
 - BO-300a-3: build-feature.md On-ok block renders all four sections from the return value
 - BO-300a-4: build-feature.md inline fallback template includes all four sections with placeholders
+- BO-300a-5: The epic's work is re-read before the drive reports, and anything added after planning is named
+- BO-300a-5-i: An epic whose work set is not affirmatively confirmed re-read is reported unverified, and pre-existing or removed work raises no false alarm
+- BO-300a-5-ii: The epic's machine-readable outcome never says success while the epic itself is reported not complete
+- BO-300a-5-iii: Work that vanished from the epic is judged against what the drive actually completed, so no output calls the same work both completed and not built
 - BO-300b: Single-ticket completion shows summary, worktree, test hints, and finalize command
 - BO-300b-1: build-single-ticket Step 4c template includes all four completion sections
 - BO-300c: Finalize command always uses the epic or branch name, never a raw path
 - BO-300c-1: Finalize command uses epic or branch name, not a raw path, in all three locations
 - BO-300c-1-1: Nested epic path is reduced to just the epic name in the finalize command
+- BO-400a-2-ii: A ticket the drive carried to completion is recorded done in the ticket's own record
+- BO-400a-2-iii: A ticket with any needed phase skipped, blocked or unrecorded is never recorded done
+- BO-400a-2-iv: A completion decision reached with no phase required of the ticket never records it done
 - BO-400a-4: Dependency graph uses frontmatter status to determine completed tickets
 - BO-400a-5: ticket-prioritizer excludes in_progress tickets from the ready set
 - BO-400b-1: set_ticket_status.py accepts a ticket path and target status

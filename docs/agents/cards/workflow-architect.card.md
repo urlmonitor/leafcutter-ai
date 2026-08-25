@@ -125,7 +125,7 @@ flowchart TD
 - BO-1900a-1-i: Preflight that errors internally fails closed and holds the ticket back
 - BO-1900a-1-ii: Held-back reason is surfaced to the operator, not only buried in logs
 - BO-1900a-2: A fit ticket passes preflight and dispatch proceeds unchanged
-- BO-1900d-1: A payload of only allowlisted pointers is accepted
+- BO-1900d-1: A dispatch names each allowlisted pointer as an explicit named token
 - BO-1900d-1-i: A payload missing a required pointer is held back
 - BO-1900d-2: A payload carrying a free-composed prose prompt is rejected before spawn
 - BO-1900d-2-i: A premise injected inside an allowlisted pointer value is rejected

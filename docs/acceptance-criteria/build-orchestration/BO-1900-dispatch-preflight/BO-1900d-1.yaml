@@ -1,22 +1,33 @@
 id: BO-1900d-1
 components:
   - build_orchestration
-title: "A payload of only allowlisted pointers is accepted"
+title: "A dispatch names each allowlisted pointer as an explicit named token"
 component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given a dispatch payload whose keys are exactly the allowlisted pointers
-    (ticket_path, worktree_path, branch, files_touched) with well-formed values,
-  When the supervisor constructs the payload and preflight validates it before spawn,
-  Then the payload is accepted,
-  And the phase agent is spawned with only those pointer values,
-  And no free-composed prose prompt is attached to the dispatch.
+  Given a dispatch for a phase agent that carries the allowlisted pointers
+    (ticket_path, worktree_path, branch, files_touched), each present and non-empty,
+  When the supervisor assembles the dispatch and preflight validates it before spawn,
+  Then the dispatch is accepted,
+  And every allowlisted pointer the dispatch carries is named in the prompt the
+    agent receives as an explicit token pairing the pointer's own name with its
+    value -- name and value separated by ":" or "=", either side optionally
+    quoted -- so a template that keys on the pointer name finds it,
+  And a pointer that appears only inside narrative phrasing, such as "for ticket:
+    <path>", does not satisfy that requirement, because the pointer name is not
+    used as a name there,
+  And the pointer tokens are carried inside the prompt rather than instead of it:
+    surrounding briefing text is permitted and does not weaken the requirement,
+  And each dispatch names the pointer values of the work item it is dispatched
+    for, and names no other work item's values,
+  So the dispatch never relies on the agent inferring its pointers from how the
+    sentence happened to be phrased.
 depends_on:
   - BO-1900d
 doc_links:
@@ -32,16 +43,19 @@ doc_links:
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
-  - "The dispatch payload schema must be a closed allowlist: ticket_path, worktree_path, branch, files_touched."
-  - "A payload containing only allowlisted keys with well-formed values must be accepted and spawned as-is."
+  - "The dispatch pointer set must be a closed allowlist: ticket_path, worktree_path, branch, files_touched."
+  - "A dispatch carrying only allowlisted pointers, each present and non-empty, must be accepted and spawned."
+  - "Each pointer must reach the agent as a named token (pointer name, then ':' or '=', then the value) embedded in the prompt string. The prompt is the only channel available: the agent(prompt, opts) call accepts opts of only {agentType, schema, label, phase, model, effort, isolation}, and any extra key placed in opts is dropped before the agent sees it."
+  - "Every dispatch on every work item must carry its own pointer values; a pointer hardcoded to one work item is worse than an absent one, because the receiving gate then acts on the wrong record."
 delivers_to:
   agent: ticket-supervisor
-  contract: "An allowlisted-pointer dispatch payload that carries no free-composed prompt"
+  contract: "A dispatch whose allowlisted pointers are present as explicitly named tokens in the prompt the agent receives"
 expects_from: null
 origin_agent: business-analyst
 created: 2026-07-07
 amended_by:
   - it-po-v3
+  - "2026-08-18 BrainCandy: retired the clauses 'the phase agent is spawned with only those pointer values' and 'no free-composed prose prompt is attached to the dispatch' as unsatisfiable under the runtime contract. The workflow agent(prompt, opts) call accepts opts of only {agentType, schema, label, phase, model, effort, isolation}; there is no arbitrary-args channel, so an extra ticket_path key in opts is silently dropped and prose is the ONLY channel from a workflow driver to a phase agent. As written the AC demanded a dispatch mechanism that does not exist, so it could never be satisfied or tested, while the real defect it was aimed at went unspecified: 30 agent templates gate their sign-off on 'Skip this entire section if no ticket_path was provided' (templates/agents/_signoff_block.md:1,35), and both drivers send the path as narrative ('You are the <phase> phase agent for ticket: <path>.') rather than as the named token build-epic.js:357 already uses ('worktree_path: <path>'). That is the most plausible mechanism for sign-off recording being INCONSISTENT across tickets rather than uniformly absent. The intent is preserved -- a dispatch must not rely on an agent inferring its pointers from narrative phrasing -- but is now expressed as the achievable contract: named pointer tokens embedded IN the prompt. Also amended the title, the delivers_to contract and it_requirements, which restated the same retired mechanism. Testable as amended by unit_tests/prompt_assembly/test_phase_dispatch_ticket_path_pointer.py, whose matcher is deliberately permissive about form (':' or '=', value optionally quoted) so it pins the contract without pinning wording. work_status left todo -- the fix is not built yet. NOTE: the L1 parent BO-1900d still says 'never a free-written prompt'; that is PO-owned wording and is left for the PO to reconcile."
 superseded_by: null
 covered_by:
   - BO-1900d-1-i

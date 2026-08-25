@@ -350,6 +350,7 @@ flowchart TD
 - BO-2500e-6: The required CI done-proof gate covers JS-covered ACs
 - BO-2600a-3: build-ac leaf path is unchanged when the connected build set is just the target AC
 - BO-2600a-4: build-ac emits a dependency-ordered epic when the connected build set has more than one AC
+- BO-2900f-2-ii: An agent recording an outcome for a gate it has already recorded updates that entry instead of appending a second
 - BO-400a-1: ticket-supervisor sets status to in_progress at drive start
 - BO-400a-1-i: Ticket already in_progress from a previous failed run
 - BO-400a-2: ticket-supervisor sets status to done when all agents complete
