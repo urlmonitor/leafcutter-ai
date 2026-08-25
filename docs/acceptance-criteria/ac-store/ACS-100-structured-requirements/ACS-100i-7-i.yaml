@@ -31,7 +31,7 @@ doc_links:
   - path: docs/known-issues/ac-store.md
     relationship: describes
     status: exists
-    relevance: "KI-ACS-001 — the validator exits 0 on a bare directory, so a store-wide sweep can be success-shaped while checking nothing. The last scenario is why the zero-refusal claim in ACS-100i-7 cannot be trusted without it."
+    relevance: "KI-ACS-001 (closed 2026-08-25 by PR #515) — the validator exited 0 on a bare directory, so a store-wide sweep could be success-shaped while checking nothing. The last scenario is why the zero-refusal claim in ACS-100i-7 cannot be trusted without it, and it stays enforced after the fix so the no-op cannot return."
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists

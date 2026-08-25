@@ -352,6 +352,8 @@ flowchart TD
 - ACD-400a-3-i: No transitive ancestor at any depth gates a leaf AC's readiness
 - ACD-400a-3-ii: A genuine non-ancestor dependency still gates readiness on work_status done
 - ACD-400a-4: A freshly-authored tree of approved todo leaves yields a non-empty ready list end to end
+- ACD-400a-5: A prerequisite that can itself be built still holds back its dependant, even when it also sits above it in the hierarchy
+- ACD-400a-5-i: When a refinement names both a buildable prerequisite and a composite one, only the buildable one is reported as holding it
 - ACD-400b-1-i: Generator rejects an AC that has no criteria field with a descriptive error
 - ACD-400b-2: Generator writes implemented_by back-reference into source AC without modifying other fields
 - ACD-400b-2-i: Back-reference write preserves YAML formatting by using targeted append rather than full rewrite
@@ -445,6 +447,13 @@ flowchart TD
 - ACS-100i-1: Parent ID is derived from child ID by stripping the last segment
 - ACS-100i-2: Pre-commit hook blocks a child AC whose parent covered_by omits it
 - ACS-100i-2-i: Hook fails open when a staged YAML file contains non-UTF-8 binary content
+- ACS-100i-6: The structured-spec obligation is triggered by an explicit declaration on the record, not inferred from who is assigned or which namespace it sits in
+- ACS-100i-6-i: A record that declares a package surface but omits any of the five spec fields is still refused, and the refusal names each field it is missing
+- ACS-100i-6-ii: How a record spells its component no longer changes whether the spec obligation applies
+- ACS-100i-7: The records that declare no package surface stop being refused, and nothing else about the store's verdict changes
+- ACS-100i-7-i: A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check
+- ACS-100i-8: A package surface cannot come into existence without a record that declared it
+- ACS-100i-8-i: Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration
 - ACS-1200a-1: A parked tree is marked by a field its author sets on purpose, never by an empty child list
 - ACS-1200a-2: The commit-time back-link check passes a parked tree with nothing skipped
 - ACS-1200a-2-i: A parked marker exempts only the record it is set on, never the records beneath it
@@ -826,8 +835,12 @@ flowchart TD
 - BO-2400a-4: Green verification and coverage check are deterministic script gates before commit
 - BO-2400c-1: Agent prompts are assembled as stable-prefix, cache breakpoint, then variable suffix
 - BO-2400c-1-i: Stable-prefix churn that would bust the cache is detected
-- BO-2400c-2: Extended one-hour cache TTL is configured for drives
-- BO-2400c-2-i: Cache TTL expiry mid-drive re-primes the prefix instead of dropping it
+- BO-2400c-1-ii: The prompt-caching layer is reachable the only way the lane can reach Python — as a command that runs
+- BO-2400c-1-iii: The prompt a dispatched fast-lane agent receives is the assembled bundle
+- BO-2400c-1-iv: Across one run's successive dispatches the cacheable prefix is byte-identical
+- BO-2400c-1-v: The orphaned second runner is removed once the live lane is wired, and the grep test guarding it goes with it
+- BO-2400c-2: A drive's own record states whether the stable prefix held across its invocations
+- BO-2400c-2-i: A prefix that changes mid-drive shows in the record as a break, never as a clean anchor
 - BO-2400c-3: Prior-phase distilled outputs are threaded forward rather than re-derived
 - BO-2400d-1: Each agent invocation records duration and token counts to the telemetry sink
 - BO-2400d-1-i: An unreachable telemetry sink is surfaced loudly, never silently
@@ -836,6 +849,13 @@ flowchart TD
 - BO-2400e-3: An interrupted update never destroys the work record it was updating
 - BO-2400e-3-i: A store that cannot be written is announced, and the build does not carry on as if it had been
 - BO-2400e-4: Recording progress on a requirement changes the progress and nothing else
+- BO-2400f-11: The green change is reviewed before it is committed, and the reviewer's own high-confidence findings stop the run
+- BO-2400f-4-i: Whether the run owes a changelog entry is decided by the merge check's own rule, not a copied list
+- BO-2400f-4-ii: A run whose whole change is exempt writes no changelog entry
+- BO-2400f-4-iii: The run writes the required changelog entry itself, from what it already knows
+- BO-2400f-4-iv: The entry's breaking flag is never guessed: emitted not-breaking and declared undetermined
+- BO-2400f-4-v: Failing to produce a required entry halts the run with a named reason; it never proceeds as a warning
+- BO-2400f-4-vi: A reported success means a landable pull request — never one with a known-failing required check
 - BO-2400g-1: Work built the fast way is asked for the same proof-of-wiring as work built the thorough way
 - BO-2400g-1-i: Every requirement the run picked up is asked for the proof, not just the one that was named
 - BO-2500a-1: An AC with no linked covers test cannot be marked done
@@ -860,6 +880,10 @@ flowchart TD
 - BO-2600a-1: resolve_connected_build_set can exclude a node's structural parent from the depends_on walk
 - BO-2600a-2: The select_connected CLI exposes --exclude-structural-parent
 - BO-2600a-5: goal_to_epic can build an epic from an explicit connected-set id list, not just a single AC's subtree
+- BO-2600b-1: The fast lane resolves its build set with structural-parent prerequisites excluded, on every run
+- BO-2600b-1-i: Aiming at a parent still resolves the whole branch beneath it
+- BO-2600b-1-ii: A set that is empty once structural siblings are excluded is a clean stop that says why
+- BO-2600b-2: The run states the scope it resolved before it acts on that scope
 - BO-2700a-1: selectDispatchPhases removes the pull-request phase when isEpicMember is true
 - BO-2700a-1-i: selectDispatchPhases is a safe no-op for epic members when no pull-request phase is present
 - BO-2700a-2: selectDispatchPhases retains the commit phase and every non-PR phase when isEpicMember is true
@@ -1036,6 +1060,9 @@ flowchart TD
 - BP-100m-2: Any set of two or more sources mapping to one target is detected, with every colliding source named
 - BP-100m-2-i: One template deployed to different per-platform directories is not a collision
 - BP-100m-3: A later phase can never silently overwrite an earlier phase's artifact — collision is fatal, not last-write-wins
+- BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change
+- BP-1100a-4: A file the requirement mentions but never says will change is not named as the work's surface
+- BP-1100a-4-i: A file the requirement forbids touching is never named as the work's surface
 - BP-1100b-4: The run-progress journal test is re-authored from a function-declaration regex into an executed assertion
 - BP-1100b-5: A newly added presence-only assertion over workflow or gate source is rejected before the change is accepted
 - BP-1100d-1: A pre-commit guard blocks workflow JavaScript that pairs git commit with a non-commit agent
@@ -1194,6 +1221,9 @@ flowchart TD
 - BP-900g-1: A deployed command referencing a workflow by a path that does not resolve post-deploy fails the build
 - BP-900g-1-i: A name-based workflow reference that resolves through the workflow registry passes
 - BP-900g-10: A deployed script that cannot load a dependency it needs stops instead of emitting degraded output
+- BP-900g-10-i: A missing rule-declaring file is never replaced by a substitute rule
+- BP-900g-10-ii: A missing capability-declaring file is never read as a denial
+- BP-900g-10-iii: A declaring file is located relative to the install that owns the reader, so the verdict does not depend on where the process was started
 - BP-900g-2: Every Workflow/Skill target of every deployed command must resolve, or the build fails naming it
 - BP-900g-2-i: A command referencing a Skill by name that is actually deployed passes — no false positive
 - BP-900g-3: Handoff targets resolve in the actual consumer install tree — copy-tier presence is insufficient
@@ -1205,11 +1235,15 @@ flowchart TD
 - BP-900g-7-i: The registry-resolution rule distinguishes a named artifact from prose, and a missing one from a merely undeployed one
 - BP-900g-8: A deployed script's own intra-package imports are deployed with it, proven in the deployed tree
 - BP-900g-8-i: The dependency closure holds at the second hop and survives a newly added module
+- BP-900g-8-ii: The deployed-dependency closure covers the data and configuration files a script reads, not only the modules it imports
 - BP-900g-9: A declared deploy entry whose source is missing fails the build instead of warning and continuing
 - BP-900g-9-i: The fail-closed deploy loop reports the whole set and leaves no half-built target behind
 - BP-900h-1: CI installs the package into an empty project and the build succeeds
 - BP-900h-2: Two consecutive builds into the same project produce zero difference
 - BP-900h-3: A broken consumer install blocks the merge, it does not just report
+- BP-900h-4: The install under test is a vendoring consumer, so a guardrail's data file cannot pass by borrowing the package's own tree
+- BP-900h-5: Every guardrail the package ships reaches a verdict in the consumer install, and one that cannot run is reported as such
+- BP-900h-5-i: A guardrail whose comparison source exists only in the package repository still reaches a verdict in a vendoring consumer
 - BP-901: goal_to_epic.py main() only resolves the worktree root when a default path is actually needed
 - CR-100a-1: Structural bucket names exactly its six Modern smells
 - CR-100a-2: Design bucket names exactly its six Modern smells
@@ -1348,7 +1382,7 @@ flowchart TD
 - GE-117e-2-i: An opt-out with no reason, or a global silent disable, does not clear the block
 - GE-118a-1: check_secrets resolves scan_secrets from the layout build.py deploys, not a hardcoded .claude path
 - GE-118b: The drift hooks find the build manifest where build.py actually writes it
-- GE-120: A guard enforces the document types the project declared, not a narrower list it kept to itself
+- GE-118c: A guard enforces the document types the project declared, not a narrower list it kept to itself
 - GE-120a-1: A check that could not perform its inspection reports a degraded outcome, not a clean pass
 - GE-120a-1-i: One unparseable input, while the check still ran, remains an ordinary pass
 - GE-120a-1-ii: A check that falls back to a weaker inspection reports its clean result as unverified
@@ -1386,6 +1420,28 @@ flowchart TD
 - GE-122e-1: The one contested requirement number is resolved without breaking what cites it
 - GE-122e-2: Each work item that exists twice is reduced to the one copy that is right
 - GE-122e-3: The repaired collection passes the guard itself, with nothing excused
+- GE-123a-1: A file recognised by its sensitive filename is also read line by line for its contents
+- GE-123a-1-i: Every sensitively-named file in the same run is read, not just the first one, and no finding is lost between the per-file scan and the run's report
+- GE-123a-2: Suppressing the filename finding leaves every content finding in that file reported
+- GE-123a-3: A file whose name marks it as sensitive is still reported for its name — de-privileging the name signal must not delete it
+- GE-123b-1: A suppression that would leave a file with no rule able to report is refused for that file
+- GE-123b-1-i: The author is told which line was declined and which file it would have left unprotected, without the commit being stopped
+- GE-123b-2: One allowlist line cannot silence every file in the repository
+- GE-123b-3: A file with nothing to report has not lost its coverage, and is not treated as though it had
+- GE-123b-4: The guarantee holds however many lines the author spreads the suppression across
+- GE-123c-1: A suppression whose line-number field is not a line number is reported instead of being loaded as a rule that can never fire
+- GE-123c-1-i: An entry carrying a fourth field, including a Windows drive letter, is caught by the same unmatchable-entry rule
+- GE-123c-2: A note written after a two-field suppression is reported rather than absorbed into the file path it follows
+- GE-123c-2-i: A suppression naming a rule the scanner cannot report is told so, instead of waiting silently for a finding that will never arrive
+- GE-123c-3: The author is told about an unmatchable entry on the real commit path, in the one warning shape this file already uses, and the commit still proceeds
+- GE-123c-3-i: The repository's own live suppressions produce no warning and continue to suppress exactly what they suppress today
+- GE-123c-3-ii: A suppression that could have matched but had nothing to match this time is left alone
+- GE-123d-1: A quoted value that names a file is not read as a credential, in any file
+- GE-123d-2: In a named prose location, a credential-shaped line whose value is recognisably not a credential is not reported
+- GE-123d-3: A real credential written into a ticket or a requirement is still caught and still blocks
+- GE-123d-4: Source, configuration and any location not on the list never inherit the exemption
+- GE-123d-4-i: An executable script inside a prose location does not inherit the exemption
+- GE-123d-5: Every exemption granted is announced, and the announcement never echoes the value
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1602,8 +1658,8 @@ flowchart TD
 - TQ-100b-4: Only captures shaped like an acceptance-criterion id count as coverage tags
 - TQ-100b-4-i: A real tag whose id is malformed is reported as malformed, never dropped
 - TQ-100b-4-ii: An id-shaped covers phrase inside a string literal or docstring is not a tag
-- TQ-100b-5: Both live coverage-tag readers recognise the same tags over the real tree
-- TQ-100b-5-i: Changing one coverage-tag reader without the other is blocked, not merely noted
+- TQ-100b-5: Every coverage-tag recognition rule in the repo recognises the same tags over the real tree
+- TQ-100b-5-i: Changing one coverage-tag rule without the others is blocked, not merely noted
 - TQ-100c-1: A test with no covers tag is enforced by default, requiring no backfill
 - TQ-100c-1-i: Removing a covers tag makes a test unlinked-and-enforced, not informational
 - TQ-100c-2: A done-AC test has no in-test path to downgrade itself to informational
@@ -1630,6 +1686,14 @@ flowchart TD
 - TQ-200b-2: The eval suite is wired into CI as a quality gate that blocks on regression
 - TQ-200b-3: An eval runs whenever any file in its dependency closure changes
 - TQ-200b-4: A triggering change with a missing or stale eval result is a hard failure, never a skip
+- TQ-200c-1: A requirement can state that a proof is judged rather than asserted, in words both sides understand
+- TQ-200c-1-i: A proof word one side knows and the other does not is a failure, not a downgrade
+- TQ-200c-2: Which kinds of proof a piece of work needs is derived from what the work says about itself, not from a list of names
+- TQ-200c-2-i: Work that needs only one layer of proof is not made to carry the other
+- TQ-200c-3: One piece of work can be asked for a deterministic proof and a judged proof at the same time
+- TQ-200c-4: A judged proof that was asked for becomes a scorable row in the harness that already exists
+- TQ-200c-4-i: A row that exists but that no run would ever reach is a gap, not coverage
+- TQ-200c-5: A proof the pipeline cannot honour is announced, and never reported as a success
 - TQ-300a-1: Registry loading and top-level validation are covered by tests
 - TQ-300a-2: Spawn bidirectionality checking is covered by tests
 - TQ-300a-3: Registry injection into templates is covered by tests
@@ -1656,7 +1720,7 @@ flowchart TD
 - TQ-400c-3: Each report states the direction of travel against the previous run
 - TQ-400c-3-i: The first report has no predecessor and says so rather than inventing one
 - TQ-400c-4: A scheduled run that does not complete shows as failed, not as an absent report
-- TQ-400d-1: The unproven-finished pile is a worked list carrying a decision on each item
+- TQ-400d-1: The unproven-finished pile is a worked list that declares its population and carries a decision on each item
 - TQ-400d-2: Progress through the pile is measurable from one cycle to the next
 - TQ-400d-3: A record only leaves the pile with a decision recorded against it
 - TQ-400d-3-i: Age is not a decision — an old record is triaged on the same terms as a new one

@@ -1,7 +1,7 @@
 id: BP-600b-1
 components:
   - build_pipeline
-title: "Quick-fix workflow creates an AC YAML file in the AC store"
+title: "Quick-fix writes a schema-complete AC into the hierarchical AC store and back-links its parent"
 component: build-pipeline
 level: L2
 status: active
@@ -13,12 +13,29 @@ criteria: |
     line 42, _resolve_precommit_cmd() returns a non-executable path because
     the executability probe is missing",
   When the workflow completes the AC creation phase,
-  Then a new YAML file exists under docs/acceptance-criteria/ in the component
-    directory matching the diagnosed file,
-  And the file contains the required fields: id, title, component,
-    status (set to "active"), and criteria with Given/When/Then structure,
+  Then a new YAML file exists in the hierarchical AC store at
+    docs/acceptance-criteria/<component>/<L0-feature-directory>/<new-AC-id>.yaml
+    — inside the L0 feature directory of the matched component, not loose in the
+    component directory,
+  And the new record carries every field the store schema requires: id, title,
+    component (the kebab-case component id from the AC-store index), components
+    (a non-empty list of underscore component ids from the component registry),
+    status set to "active", and criteria with Given/When/Then structure,
+  And it additionally carries the fields the store's guardian hooks require of a
+    usable leaf record — level (L2, or L3 when the fix is a technical constraint
+    on an existing behaviour), readiness, work_status, priority, depends_on
+    naming its parent, origin_agent, and created — so that the record is not the
+    flat six-field shape the schema rejects,
+  And because the record is an approved, not-yet-done, leaf criterion targeting
+    code, it also carries a non-empty test_spec, since a code criterion declared
+    test-free is rejected outright,
   And the criteria field describes the specific bug behavior that the fix
-    will prevent from recurring.
+    will prevent from recurring,
+  And the parent record named in depends_on has the new AC's id appended to its
+    covered_by list,
+  And the new record's id is a next unused sibling suffix under that parent —
+    the workflow does not invent a new L0 or L1 node, and does not raise a
+    parent's child cap to make room; it stops and asks instead.
 depends_on:
   - BP-600b
   - BP-600a-1
@@ -29,26 +46,80 @@ doc_links:
   - path: docs/acceptance-criteria/index.yaml
     relationship: describes
     status: exists
+    relevance: >-
+      Source of the scalar kebab `component` value. The `components` LIST is a
+      different axis and comes from docs/components.json — do not conflate them.
+  - path: docs/components.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Source of the underscore ids for the `components` list. The
+      hyphen-to-underscore swap is the store's prevailing convention but not a
+      guarantee; the id must be confirmed present here before it is written.
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The authoritative required set — id, title, component, components,
+      status, criteria — validated by jsonschema on the dominant path.
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: "Phase 1, Steps 1.1-1.6, is the implementation of this criterion."
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "Generated AC must conform to the AC YAML schema defined in docs/reference/ac-schema.md"
-  - "Must read docs/acceptance-criteria/index.yaml to resolve component prefix"
+  - >-
+    Generated AC must conform to the AC YAML schema in
+    config/ac_store_schema.json and to docs/reference/ac-schema.md, and must be
+    validated with scripts/ac_store/validate_ac_schema.py before the workflow
+    continues. Pass the file path; a bare directory makes that script report
+    "No YAML files to validate" and exit 0, which is a pass-shaped no-op.
+  - >-
+    Must read docs/acceptance-criteria/index.yaml to resolve the component
+    prefix and the kebab component id, and docs/components.json to resolve the
+    underscore ids for the `components` list. Two registries, two axes.
+  - >-
+    Must place the file inside the parent L0's feature directory. A file written
+    directly under the component directory is in the wrong place even though the
+    schema alone will not catch it.
+  - >-
+    Must respect the child caps enforced by check_ac_limits.py (7 L1 per L0,
+    5 L2 per L1, superseded children not counted, child_limit_override honoured
+    only when explicitly present). At the cap, the sanctioned move is a
+    Roman-suffix L3 technical-constraint child on the most relevant existing L2;
+    adding child_limit_override is an audited waiver and not a quick-fix decision.
 delivers_to:
   agent: workflow-architect
-  contract: "AC YAML file absolute path (string) that the test-writer phase consumes as input. File contains: { id: string, title: string, component: string, level: 'L2', status: 'active', criteria: string (Gherkin) }"
+  contract: "Two absolute paths the commit phase consumes: the new child AC YAML and the parent AC YAML whose covered_by was back-linked. The child contains at minimum { id, title, component (kebab), components (list, underscore), level, status, readiness, work_status, priority, criteria (Gherkin), depends_on, origin_agent, created, test_spec }"
 expects_from:
   ac_id: BP-600d-1
   contract: "Structured diagnosis object: { file_path: string, location: string|null, symptom: string, root_cause: string }"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Criteria rewritten on two counts, both of which made the original text
+      describe a record the store would now reject. First, location: the store
+      is hierarchical (component / L0-feature-directory / ID.yaml), not
+      flat-in-the-component-directory as the original said. Second, the field
+      set: the original named id, title, component, status and criteria as "the
+      required fields", but config/ac_store_schema.json requires `components`
+      as well, and the guardian hooks additionally demand level, readiness,
+      work_status, priority, depends_on, origin_agent and — for an approved
+      leaf code AC — a non-empty test_spec. The parent covered_by back-link and
+      the child-cap rule were added because both are part of what the AC
+      creation phase now does and both are load-bearing for the four-file
+      commit in BP-600d-3. Title amended to match. work_status left done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
@@ -56,3 +127,12 @@ covered_by:
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  BP-600f is the cautionary artifact for this record. It is a live AC in this
+  same folder, authored by a real /quick-fix run against the old flat six-field
+  template this criterion previously described — it has no level, no
+  work_status, no depends_on, no covered_by. That is what shipping against the
+  stale version of this criterion produced.

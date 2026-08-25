@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-25
 components:
   - ac_driven_dev
 related_docs:
@@ -506,5 +506,151 @@ workflow exists to enforce.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8, inverted — not a check
 reporting success it did not establish, but a check reporting a *specific failure cause*
 it did not establish.
+
+---
+
+### KI-ACD-010 — An ASCII comma in an AC title survives every normalisation step and lands in the epic folder name, the AC store, and Master_Plan
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:217` (`_normalize_non_ascii_punct`) and `:306`
+  (`_to_pascal_case`, the split regex)
+- **Reported by:** customer bug report 2026-08-25
+
+**Symptom.** An epic folder is created whose name ends in a comma. The punctuation is
+not cosmetic damage confined to the folder — it becomes the epic's identity, so every
+downstream field derived from that name carries the comma too.
+
+**Root cause.** Punctuation removal in this generator has exactly two paths, and an
+ASCII comma is on neither. `_normalize_non_ascii_punct()` normalises **non-ASCII**
+punctuation, symbols and separators only, so a plain `,` is untouched by construction.
+`_to_pascal_case()` then splits the normalised title on `[\s\-_]+` — whitespace, hyphen,
+underscore — and a comma is none of those either, so it is not a separator and is not
+dropped. It simply rides along inside whatever word token it is attached to and emerges
+in the PascalCase result. There is no third filter and no final whitelist, so nothing
+downstream can catch it.
+
+**Evidence.** AC `DTW-100n` produced a folder named literally
+`EPIC-ReconcileWiringNodesToRealRdkMaterials,` — trailing comma included. From there the
+comma propagated into `target_epic` on **8** ACs, into every `implemented_by` path those
+ACs carry, and into the generated Master_Plan. The name is 39 characters, which keeps it
+under the 40-character `_EPIC_NAME_MAX_CHARS` cap (`:314`), so truncation never fired and
+never incidentally clipped the trailing character — a one-character-longer title would
+have hidden the defect by accident.
+
+**Why it ranks high rather than low.** This corrupts silently and persistently. A blocked
+commit is loud and costs an hour; this lands bad data *in the AC store*, survives the
+epic, requires manual cleanup across 8 records plus their paths, and poisons any
+traceability lookup that string-matches on epic names — a search for
+`EPIC-ReconcileWiringNodesToRealRdkMaterials` will not match the folder that exists.
+
+**AC-coverage note — this is a phantom-done instance, and it should be recorded as one.**
+`ACD-1200a-3-iii` is `work_status: done` and `readiness: approved`, and it explicitly
+claims that the em-dash "and any surrounding stray punctuation" are stripped, and that
+the resulting name "does not end in a dangling separator". The observed folder name ends
+in a dangling separator. The claim is false as written, and the store says it is
+satisfied and approved. Its three tests
+(`unit_tests/ac_driven_dev/test_acd_1200a_3_iii.py`) every one construct a title
+containing an em-dash; none feeds an ASCII comma, and none feeds any ASCII punctuation at
+all. The trailing-character assertion the criterion depends on
+(`result[-1].islower() or result[-1].isdigit()`) would in fact have caught the comma — it
+was simply never given one.
+
+**Fix direction.** Strip or normalise ASCII punctuation on the same path as non-ASCII, so
+there is one place where "what is not allowed in a name" is decided. Better still, make
+the final derived name conform to an explicit `[A-Za-z0-9]` whitelist before it is used
+for anything — a whitelist cannot be defeated by a character class nobody thought of,
+which is precisely how this survived. Whatever lands must be parametrised over ASCII
+punctuation, not over one more hand-picked character.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M4 — the fixtures encode the
+punctuation the author had in mind (the em-dash they were fixing), not the punctuation
+real AC titles contain.
+
+---
+
+### KI-ACD-011 — Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:385-433` — `_truncate_pascal_at()`
+- **Reported by:** customer bug report 2026-08-25
+
+**Symptom.** A long AC title yields an epic name that stops mid-phrase, on a word that
+carries no meaning by itself.
+
+**Root cause.** `_truncate_pascal_at()` locates word starts with
+`re.finditer(r"[A-Z][a-z0-9]*")` and keeps the longest prefix that fits under the cap.
+That is a PascalCase *word boundary* and nothing more. It has no notion of content words
+versus function words, so a preposition or article that happens to fall inside the budget
+is kept and becomes the last word of the name.
+
+**Evidence.** AC `DTW-100r` produced `EPIC-WiringReconciliationActuallyLandsInThe`.
+
+**AC-coverage note — a behaviour gap, not a regression.** No existing AC claims this.
+`ACD-1200a-3-iii` requires only that truncation cut at a PascalCase word boundary, and
+`…InThe` satisfies that requirement literally: it ends on a complete word, and it passes
+the criterion's own trailing-character assertion because `e` is lowercase. File this as
+new behaviour to specify rather than as a broken promise — the promise that exists was
+kept.
+
+**Note which path this is.** `_derive_epic_name()` (`:436`) reaches truncation only when
+`_summarise_title_via_llm()` is unavailable or errors; when the summariser answers, the
+concise name it returns is used instead. So this is the offline/fallback path — which
+means it is the path CI takes, the path any key-less environment takes, and the path any
+run takes when the API is having a bad minute. The degraded path is the common one, not
+the rare one.
+
+**Fix direction.** Drop trailing stopwords after truncating, or require the fallback to
+cut at the last *content*-word boundary rather than the last word boundary. Either way,
+keep the cap — the defect is where the cut lands, not that a cut happens.
+
+---
+
+### KI-ACD-012 — The generated `Master_Plan.md` is missing six fields the repo's own ticket guard requires
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:1626` — the frontmatter block in
+  `_render_master_plan()`; against `templates/hooks/ticket_frontmatter_guard.py`
+- **Reported by:** customer bug report 2026-08-25
+
+**Symptom.** The generator emits an artifact that the repository's own pre-commit gate
+rejects. Every epic it produces therefore arrives with a Master_Plan that cannot be
+committed without either hand-editing the file or skipping the hook.
+
+**Root cause — producer and consumer disagree about the required field set.**
+`_render_master_plan()` writes frontmatter with five keys: `epic_name`, `created`,
+`status`, `components`, `source_ac`. `ticket_frontmatter_guard.py` demands rather more.
+Its `REQUIRED_FIELDS` constant (`:26`) is
+`("title", "status", "components", "created", "depends_on")`; on top of that it calls
+`_check_required_tristate()` for `requires_diagram` and `requires_adr` (`:556-557`), and
+`_check_change_target()` / `_check_risk_surface()` (`:560-561`) — the last two promoted
+from optional to REQUIRED by BO-610-4.
+
+Intersecting the two lists leaves **six** required fields the generator never writes:
+`title`, `depends_on`, `requires_diagram`, `requires_adr`, `change_target`,
+`risk_surface`. Note also that `epic_name` and `source_ac`, the two keys the generator
+does emit beyond the overlap, carry no weight with the guard at all — so the artifact is
+not merely thin, it is describing itself in a vocabulary the gate does not read.
+
+**AC-coverage note — a genuine spec gap.** No AC claims this. `ACD-1200a-8` is
+`work_status: todo` and enumerates Master_Plan **content** only; it never mentions
+frontmatter fields, so even completing it as written would not close this. There is no
+criterion anywhere stating that generated artifacts must satisfy the gates that guard
+hand-written ones.
+
+**Fix direction.** Render the full required frontmatter set. Then add a test that runs
+`ticket_frontmatter_guard` against a freshly generated Master_Plan, so the generator and
+the gate cannot drift apart again — the two are maintained independently and each is
+individually correct, which is exactly the condition under which a divergence goes
+unnoticed. The test must run the real guard rather than assert a field list, or it
+becomes a second copy of the requirement that can itself fall behind.
 
 ---

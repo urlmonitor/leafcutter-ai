@@ -1,7 +1,7 @@
 id: BP-600d-3
 components:
   - build_pipeline
-title: "Quick-fix workflow dispatches commit agent after green-phase verification"
+title: "Quick-fix commits child AC, parent AC, test and fix together in one commit"
 component: build-pipeline
 level: L2
 status: active
@@ -9,13 +9,25 @@ readiness: reviewed
 priority: medium
 work_status: done
 criteria: |
-  Given the green-phase test verification has passed (all tests green),
+  Given the green-phase verification has passed and the mutation proof has held
+    — the test is green with the fix applied, red again with the fix reverted,
+    and green once more with it restored,
   When the workflow reaches the commit phase,
   Then it dispatches the commit agent (never calls git commit directly),
-  And the commit stages only the files touched by the quick-fix
-    (AC YAML file, test file, fixed source file, and minimal ticket file),
+  And the commit stages at least four files: the new child AC YAML, the parent
+    AC YAML whose covered_by was back-linked to that child, the test file, and
+    the fixed source file,
+  And the parent AC YAML is in that same commit rather than a later one, because
+    the AC guardian hooks validate only the files present in that commit's index
+    and never read the store — an unstaged parent is never checked at all, so a
+    stale covered_by rots silently and the hooks' silence is not a pass,
+  And before staging, the child AC's work_status is flipped from todo to done
+    and the green test is recorded in its covered_by, in that same commit rather
+    than as a follow-up,
+  And no file outside that set is staged, so unrelated build-output drift in the
+    worktree stays out of the commit,
   And the commit message references the AC ID created during the
-    AC-creation phase.
+    AC-creation phase, and every claim it makes is verifiable in the staged diff.
 depends_on:
   - BP-600d
   - BP-600c-3
@@ -26,6 +38,18 @@ doc_links:
   - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
     relationship: describes
     status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "AC-store commits — stage the parent alongside the child" is the rule this
+      criterion enforces, and records the ACD-400a drift that motivated it:
+      20 composites store-wide marked done with unfinished children, every
+      commit in the window passing every AC hook.
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: "Phase 5 is the implementation; Step 1.5 is where the parent back-link is written."
 assigned_agent: workflow-architect
 estimated_complexity: S
 it_requirements:
@@ -34,18 +58,73 @@ it_requirements:
   - "Must handle errors gracefully per the project error handling policy"
   - "Must dispatch the commit agent via the Agent tool — never call git commit directly (per CLAUDE.md commit delegation policy)"
   - "Must pass the AC ID to the commit agent so it appears in the commit message"
+  - >-
+    Must name the parent AC file explicitly in the staging instruction. Relying
+    on the hooks to notice a missing back-link cannot work: they read the commit
+    index, so an unstaged parent is unreachable to them.
+  - >-
+    When the AC creation phase produced a Roman-suffix L3 child, the immediate
+    parent to stage is that child's L2, not the L1 grandparent.
 delivers_to:
   agent: workflow-architect
-  contract: "Committed changeset on the current branch containing: AC YAML, test file, fixed source file, and optional ticket file"
+  contract: "Committed changeset on the active branch containing at least four files: child AC YAML (work_status flipped to done, covered_by naming the test), parent AC YAML (covered_by back-link), test file, fixed source file"
 expects_from:
   ac_id: BP-600c-3
-  contract: "Green-phase result: { all_passed: boolean } — must be true to proceed to commit"
+  contract: "Green-phase and mutation-proof result: { passed: boolean, strict_command_run: string } from the strict green run, plus { red_without_fix: boolean, green_with_fix_restored: boolean, fix_restored: boolean } from the mutation proof. The commit phase proceeds only when passed, red_without_fix, green_with_fix_restored and fix_restored are all true."
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      The staging clause is corrected from "only the files touched by the
+      quick-fix (AC YAML file, test file, fixed source file, and minimal ticket
+      file)" to at least four files including the PARENT AC YAML. The parent is
+      not optional: the AC guardian hooks validate the commit index rather than
+      the store, so a parent left unstaged is never examined. The "minimal
+      ticket file" clause is DROPPED, and its removal is a correction of the
+      record rather than a change in behaviour — see the pre-existing-gap note
+      below. The precondition was also tightened from "all tests green" to
+      green-plus-mutation-proof, matching the gate the workflow now runs before
+      commit. Title amended to match. work_status left done.
+  - reason: contract-alignment
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      expects_from rewritten to the contract BP-600c-3 actually describes now
+      that its own criteria state the mutation proof. The previous text named
+      an all_passed field that exists in neither the shipped result shape nor
+      BP-600c-3's delivers_to, so the two records named the same seam with
+      different vocabulary — the disjoint-vocabulary failure that lets each
+      side look correct in isolation. Both now carry the identical field list.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: safety
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  PRE-EXISTING GAP, RECORDED NOT ERASED — the "minimal ticket file". The original
+  criteria listed a "minimal ticket file" among the staged files. No version of
+  /quick-fix ever wrote one: neither the previous in-place workflow nor the
+  current templates/skills/quick-fix/SKILL.md and
+  templates/workflows-js/quick-fix.js create, stage, or reference a ticket file
+  at any phase. The current skill states its scope boundary explicitly — "this
+  skill does not create tickets or epics" — and the JS workflow contains no
+  ticket path at all. So this clause was never satisfied and was never going to
+  be; it was specified and silently dropped at build time, and this record
+  asserted it for the whole interval it was marked done. It is removed here
+  because a criterion no implementation has ever met is not evidence of
+  anything, but the removal must not read as the requirement having been met.
+  The same clause appeared on BP-600d-4 and BP-600d-4-i and was removed from
+  both on the same date, with the same note. If a ticket artifact is genuinely
+  wanted from /quick-fix, that is new scope and needs its own AC — it is not
+  recoverable by reinstating this clause.
+
+  Note also that the workflow now produces a SECOND commit after this one, for
+  the changelog entry (a required status check). That commit is out of scope
+  here; this criterion governs the fix commit only.

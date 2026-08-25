@@ -1,7 +1,7 @@
 id: BP-600d-4
 components:
   - build_pipeline
-title: "Quick-fix workflow pushes to origin and closes the ticket lifecycle"
+title: "Quick-fix pushes its commits to origin and closes the run"
 component: build-pipeline
 level: L2
 status: active
@@ -9,14 +9,23 @@ readiness: reviewed
 priority: medium
 work_status: done
 criteria: |
-  Given the commit agent has completed successfully,
+  Given the commit phase has completed successfully and the changelog entry has
+    been committed,
   When the workflow reaches the close phase,
-  Then it pushes the committed changes to the current branch's remote
-    tracking branch,
-  And if a PR exists for the current branch the PR is updated with
-    the new commit automatically,
-  And a minimal ticket file is created (or updated if one was provided)
-    with "status: done" in its frontmatter and a reference to the AC ID.
+  Then it pushes every commit this run produced — the fix commit and the
+    changelog commit — to the active branch's remote,
+  And if the push fails the workflow halts and says the work is committed
+    locally but not visible on the remote, giving the recovery command, rather
+    than reporting the run as closed,
+  And if a PR already exists for the active branch, the push updates that PR
+    with the new commits automatically and the workflow reports its URL without
+    opening a second one,
+  And if no PR exists for the active branch, the close phase follows BP-600d-4-i,
+    which opens one only behind an explicit user confirmation,
+  And the workflow reports a completion summary naming the AC, the test, the
+    fixed file, the changelog entry, the worktree, the branch, and the PR URL or
+    its absence,
+  And it does not merge the PR.
 depends_on:
   - BP-600d
   - BP-600d-3
@@ -30,21 +39,53 @@ doc_links:
   - path: templates/skills/build-single-ticket/SKILL.md
     relationship: contrast
     status: exists
+    relevance: >-
+      The contrast is now sharper, not weaker: build-single-ticket drives a
+      ticket lifecycle, quick-fix does not have one at all. See the
+      pre-existing-gap note below.
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: "Phase 7, Steps 7.1-7.5."
 assigned_agent: workflow-architect
 estimated_complexity: M
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
-  - "Must handle git push failures gracefully (e.g., no remote tracking branch, auth failure) and report to user"
-  - "Must use gh pr list to detect existing PRs for the current branch before attempting PR update"
+  - >-
+    A push failure is a halt with recovery instructions, not a warning the run
+    continues past. Until the push succeeds the work is not closed, and
+    reporting otherwise is the failure this criterion exists to prevent.
+  - "Must use gh pr list to detect existing PRs for the active branch before attempting PR creation"
+  - >-
+    Must anchor the push to the worktree established in Phase 0 rather than the
+    session's starting directory, since the two differ whenever self-isolation
+    ran.
 delivers_to: null
 expects_from:
   ac_id: BP-600d-3
-  contract: "Committed changeset on the current branch — ready to push to origin"
+  contract: "Committed changeset on the active branch — ready to push to origin"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      The "minimal ticket file is created (or updated if one was provided) with
+      status: done in its frontmatter and a reference to the AC ID" clause is
+      removed. No version of /quick-fix has ever produced a ticket file — see
+      the pre-existing-gap note below — and this record's own child,
+      BP-600d-4-i, no longer mentions one either, so keeping it here left the
+      parent asserting an artifact the child had already stopped claiming. Two
+      further corrections: the push now covers two commits, not one, because a
+      changelog commit was added ahead of it; and push failure is stated as a
+      halt, which is what the workflow does, rather than the softer "handle
+      gracefully and report" the it_requirements implied. The no-PR case is
+      delegated explicitly to BP-600d-4-i so the parent/child seam is legible
+      from the parent. Title amended — "closes the ticket lifecycle" named a
+      lifecycle that does not exist. work_status left done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
@@ -53,3 +94,28 @@ implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600d-4.md
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  PRE-EXISTING GAP, RECORDED NOT ERASED — the "minimal ticket file". This was
+  the third and last place the ticket-file clause appeared; the other two were
+  BP-600d-3 ("and minimal ticket file" in the staged set) and BP-600d-4-i ("the
+  ticket lifecycle still closes normally with status: done"). None of the three
+  was ever implemented. Neither the previous in-place workflow nor the current
+  templates/skills/quick-fix/SKILL.md and templates/workflows-js/quick-fix.js
+  creates, stages, or references a ticket file at any phase; the skill states
+  the boundary outright — "this skill does not create tickets or epics". The
+  clause was specified across three records, silently dropped at build time,
+  and asserted for the whole interval all three were marked done. If a ticket
+  artifact is genuinely wanted from /quick-fix, that is new scope needing its
+  own AC — it is not recoverable by reinstating these clauses.
+
+  DANGLING REFERENCE, LEFT AS FOUND. implemented_by points at
+  tickets/00_inbox/TICKET-20260608-BP-600d-4.md, which does not exist in the
+  repository. It is also a ticket path in a field the schema defines as source
+  file paths. Left untouched deliberately — correcting it is a provenance
+  decision, not a criteria amendment, and silently deleting the only surviving
+  pointer to how this record was built would destroy the evidence. Worth noting
+  that the one ticket this AC family does reference is itself missing, in a
+  family whose defining gap is a ticket artifact that was never produced.
