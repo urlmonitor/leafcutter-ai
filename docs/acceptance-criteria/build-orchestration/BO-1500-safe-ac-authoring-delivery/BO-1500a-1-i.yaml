@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500a.yaml
 criteria: |
   Given a previous authoring run for the same feature crashed and left behind
@@ -41,6 +41,27 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_second_run_reuses_existing_authoring_worktree
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: In a fixture git repo with an origin, invoking the create-ac-worktree entry point twice
+    for the same feature returns the pre-existing worktree path and branch and exits 0, instead of failing
+    with a "worktree already exists" error.
+- name: test_reuse_preserves_ac_yaml_already_committed_on_the_authoring_branch
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: An AC YAML file committed on the authoring branch by the prior run is still reachable from
+    the branch HEAD, with unchanged content, after the reuse path has run.
+- name: test_no_prior_worktree_creates_a_fresh_one
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: With no matching worktree or branch on disk, the same entry point creates a new authoring
+    worktree whose branch is rooted at the origin/main tip, so reuse detection does not alter the normal
+    path.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1

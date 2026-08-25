@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   Given build-epic.js completes all ticket batches successfully,
   When the Step 6 return object is constructed,
@@ -25,6 +25,27 @@ it_requirements:
   - "worktree_path must be an absolute path, not relative"
   - "manual_tests must be an array of strings, minimum 3 items"
   - "Existing return fields must not be renamed or removed (backward compat)"
+test_spec:
+  - name: test_bo300a1_step6_return_includes_worktree_path_and_manual_tests
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Executing build-epic.js to completion under the E2 workflow harness with args.epic_path and args.worktree_path injected and a planner label_response yielding one non-empty batch returns a Step 6 object whose worktree_path equals the injected absolute path and whose manual_tests is a list of at least 3 strings."
+  - name: test_bo300a1_step6_return_preserves_existing_fields
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "The same captured Step 6 return object still carries message, epic_path, title, batches_run, tickets_completed and completed_batches with their pre-existing types, so adding the two new fields renamed or dropped nothing."
+test_rationale: |
+  build-epic.js is a top-level E2 workflow script and exports no helper for the
+  Step 6 return, so the only honest coverage is to execute the script and inspect
+  the value it actually returns. unit_tests/_workflow_engine_harness.py already
+  runs the script under Node with mocked agent()/parallel() globals and accepts
+  injected args and label_responses; it needs one extension to surface the wrapper
+  function's return value, which it does not expose today (only agent_calls,
+  stdout and contract_violations). A test that scans build-epic.js source for the
+  strings worktree_path and manual_tests would pass even if the fields were
+  assigned into a dead object literal, so a source-scan test is not sufficient.
 delivers_to:
   agent: build-feature
   contract: "Return object with worktree_path: string and manual_tests: string[]"

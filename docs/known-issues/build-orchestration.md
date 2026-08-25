@@ -402,7 +402,7 @@ fails the run. The lane also has no documentation phase (it dispatches `test-wri
 the ticket-generation path, but the entire done-proof chain the fast lane depends on is
 blind to it.
 
-Reproduction, re-measured 2026-08-19 after the aiming fix (BO-2600b-1) landed in this
+Reproduction, re-measured 2026-08-24 after the aiming fix (BO-2600b-1) landed in this
 same branch — the originally-recorded repro (`--ac BO-2600b-1` resolving five ids) no
 longer reproduces, because that command now carries `--exclude-structural-parent` and
 because b-1/-1-i/-1-ii are now `done`; it returns `[]`. The current standing repro is:
@@ -442,6 +442,102 @@ front door.
 
 ---
 
+### KI-BO-016 — Resolving a one-criterion build set takes ~3 minutes, because every traversal re-parses the entire AC store
+
+> **Renumbered at merge, 2026-08-25: filed as `KI-BO-014`, now `KI-BO-016`.** `main`
+> independently minted its own `KI-BO-014` and `KI-BO-015` while this branch was in
+> flight. Three acceptance criteria (`BO-2400c-6`, `-6-i`, `-6-ii`) and two commit
+> messages cite the old id; they resolve here. Physical position kept where it was
+> written rather than moved to the end, so the surrounding merge history stays legible.
+
+- **Severity:** high → medium
+- **Status:** the N+1 re-parse is FIXED by **BO-2400c-6** / **-6-i** / **-6-ii**; the entry
+  stays open for the residual recorded at the bottom, which has no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
+- **Where:** `scripts/ac_store/scan_ac_store.py` — `traverse_ac_tree`, against
+  `scripts/build_orchestration/fast_lane.py` — `resolve_connected_build_set`
+
+**Kept rather than deleted, deliberately.** This register's policy is to delete a section
+when its fix lands. Not done here for two reasons: three acceptance criteria and two commit
+messages already cite `KI-BO-014` by id, and deleting it would leave those references
+dangling; and the defect as filed — N+1 full parses — is fixed while the cost it was filed
+*about* is only reduced. Closing it would read as "resolution is fast now", which is not
+what was achieved.
+
+**Symptom.** Phase 2 of every fast-lane run — resolving the connected build set — costs
+minutes before any work begins, and the cost grows with the store rather than with the
+size of the set being resolved. Resolving a set of **one** criterion is as expensive as
+resolving a large one.
+
+**Evidence.** Measured on `main` at `ef8c6343` against the real store of **3,232** AC
+files:
+
+```
+/usr/bin/time -f "%e seconds" fast_lane.py select_connected \
+    --ac BO-2400c-1-i --ac-root docs/acceptance-criteria --exclude-structural-parent
+  -> ["BO-2400c-1-i"]
+  -> 178.32 seconds
+```
+
+Correct answer, one id, just under three minutes. Before the aiming fix (BO-2600b-1) the
+same call resolved five ids and exceeded a 120-second probe repeatedly, which was
+originally misread as a store-size problem rather than an algorithmic one.
+
+**Mechanism.** `traverse_ac_tree` opens by building a complete id→record index of its own:
+it `rglob`s `*.yaml` under the store root and YAML-parses **every** file, on **every
+call**. `resolve_connected_build_set` has already built exactly that index before calling
+it, and then calls it again once per not-done composite dependency it expands. So a run
+pays for N+1 full parses of the whole store where N is the number of composite
+expansions — never fewer than two. At roughly 90 seconds per full parse, the tight path
+costs ~178s and the wide path (structural-parent walk, pre-fix) costs a multiple of it.
+This is also why the exclusion flag looked like a performance fix: it removes traversals,
+not just criteria.
+
+**Why it is worse than a slow script.** It is a per-run tax on the lane's whole promise —
+"point at one id and get a PR" — paid before the first agent is dispatched, and it scales
+with total store size, so it worsens every time anyone authors an AC anywhere in the
+repo. It is also invisible as a defect: the command returns the right answer, so nothing
+fails and nobody files it. It surfaced only because a probe timed out.
+
+**Fix direction.** Pass the index that already exists. `traverse_ac_tree` should accept an
+optional prebuilt id→record map and use it when supplied, with the self-building path kept
+for standalone callers; `resolve_connected_build_set` then hands over its own `id_index`
+and the run drops to a single parse. Check the other `traverse_ac_tree` call sites in the
+same pass — the same re-read is paid by anything that walks the tree in a loop. A
+behavioural guard is straightforward: assert the resolver parses the store once for a
+multi-expansion set, rather than asserting a wall-clock bound, which would be flaky.
+
+**Outcome, 2026-08-24 — fixed as specified, and the number is worth reading carefully.**
+`traverse_ac_tree` gained an optional prebuilt `id_index`; `resolve_connected_build_set`
+now builds the index once and passes it. The correctness trap was handled the right way:
+it snapshots `dict(id_index)` **before** `_drain_cycles` mutates it and hands the traversal
+that undrained view, so cycle-adjacent subtrees still resolve. The self-building path
+survives for `goal_to_epic.py`, which holds no index. Guarded by a parse-count assertion,
+not a wall clock.
+
+Measured on the same command, `select_connected --ac BO-2400c-1-i
+--exclude-structural-parent`, returning the identical `["BO-2400c-1-i"]` throughout:
+
+```
+before:  178.32 s
+after:    27.10 s  (implementing agent's measurement)
+after:    39.11 s  (independent re-measurement, different machine load)
+```
+
+Both figures are real; the spread is load, and the honest range is roughly 4.5-6.5×.
+
+**The residual, which is why this entry stays open.** One full parse of 3,232 YAML files
+still costs ~30-40 seconds, and that is now the floor. The lane's cold start went from
+"unusable" to "noticeable", not to "fast", and it still scales with total store size — so
+it will drift back toward a minute as the store grows. Removing the repeated parse was the
+filed defect; making a single parse cheap is a different problem and needs a different
+answer, most likely a cached or incrementally-maintained index rather than a full YAML
+walk per invocation. Not filed as its own entry only because it is the same measurement in
+the same place; whoever picks it up should split it out then.
+
+Worth stating plainly so the improvement is not oversold: an operator pointing the lane at
+one criterion still waits half a minute before the first agent is dispatched.
 ### KI-BO-014 — `goal_to_epic`'s `--ac` entry path never received the BO-2600a-5 hygiene fixes, so it writes absolute `implemented_by` and untranslated `depends_on`
 
 - **Severity:** high
@@ -587,9 +683,84 @@ same note from an earlier round. A number reserved in a long-lived branch is not
 the free number must be re-read against `origin/main` at the moment of landing, not at the
 moment of drafting.
 
+**Status update, 2026-08-25.** Specified by `BO-2400f-13` and its four children. The chosen
+ending is a **named refusal**, not reuse and not a run-distinct path — see that criterion's
+`notes` for the reasoning, and `KI-BO-017` below for a pre-existing defect found while
+specifying it.
+
 ---
 
-### KI-BO-016 — `/plan-feature` halts on a false `worktree-agent` permission verdict, caused by a truncated agent-relayed config read rather than anything wrong with the agent's charter
+### KI-BO-017 — A fast-lane re-run whose worktree was pruned silently rebuilds on the old branch tip instead of the latest `origin/main`
+
+- **Severity:** high
+- **Status:** open — found while specifying `BO-2400f-13`, deliberately not fixed there
+- **Occurrences:** 0 observed directly; reachable today on every AC the lane has already built
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/setup_ticket_worktree.py:529` — the checkout-only branch of
+  `_create_fastlane_worktree`, reached from `cmd_create_fastlane_worktree` at `:1289`
+
+**Symptom.** When the branch `fast-lane/<slug>` exists but its worktree has been pruned or
+removed, `_create_fastlane_worktree` takes its checkout-only path — `git worktree add <path>
+<branch>` with no start point. That reconnects the workspace at **the old branch tip**, which
+is wherever the prior run left it. Nothing re-cuts it from `origin/main` and nothing says it
+did not.
+
+**Why this contradicts a `done` criterion.** `BO-2400f-3` (`work_status: done`) promises a
+branch "cut from the latest `origin/main` (never from stale local main)". That promise holds
+on a first run and silently fails on a reconnect. The lane then builds, tests and reports
+green against a mainline that may be days old — a green result measured against a tree that
+no longer exists. This is the same hazard that led the Product Owner to reject
+reuse-in-place for `KI-BO-015`, arriving through a different door: the reject decision
+covered the case where the *worktree* survives, and this is the case where only the *branch*
+does.
+
+**Why it is the common case, not an edge.** Every finished run leaves exactly this state
+behind once its worktree is cleaned up. `worktrees/` is periodically reclaimed (the
+`wsl-reclaim` timer removes merged-and-clean worktrees with no age wait), so the branch
+routinely outlives its workspace. So the population at risk is "every AC the lane has ever
+successfully built", and it grows monotonically.
+
+**Why it is invisible.** The reconnect succeeds, exits 0, and returns a well-formed payload
+with a real `worktree_path`. There is no warning, and the payload carries no indication of
+which commit the workspace was cut from. From the lane's point of view — and the operator's
+— a stale reconnect and a fresh cut are indistinguishable.
+
+**Evidence.** Read at HEAD, not inferred from a failure. `_create_fastlane_worktree`
+branches on `_branch_exists(full_branch, repo_root)`; the true branch runs `git -C <repo>
+worktree add <path> <branch>` (no start point, `:529`), while only the false branch cuts from
+`origin/main`. `git worktree list` on 2026-08-25 shows three live fast-lane worktrees
+(`bo-1500a-5`, `bo-2400e-3`, `bo-2900g-3`); each becomes an instance of this issue the moment
+its directory is reclaimed while the branch remains.
+
+**What `BO-2400f-13` does and does not do about it.** `BO-2400f-13-iv` requires that this
+residual state — branch present, location free — is **not** refused, because refusing it
+would make the lane unusable on every AC it has already built. To keep the divergence from
+staying silent, the IT PO specified that the first-phase report carry `base_commit`, read
+**from the workspace** (`git -C <worktree> rev-parse HEAD`) rather than from the commit-ish
+handed to git, alongside an explicit `base_matches_origin_main`. That makes the staleness
+*visible* in phase one. It does not make it *correct*.
+
+**Fix direction — genuinely undecided, and a product call.** Two candidates, and the choice
+is not obvious:
+
+- *Re-cut.* Reset the reconnected branch to `origin/main` before building. Correct with
+  respect to `BO-2400f-3`, and destructive: it discards any commits the prior attempt made
+  that were never merged. Must not be done silently.
+- *Reuse and report.* Build on the old tip but state the base commit and its distance from
+  `origin/main` in the outcome. Honest and non-destructive, but still ships a green result
+  measured against a stale tree, which is what `BO-2400f-3` exists to prevent.
+
+A third shape worth considering is to refuse this case too, consistently with `BO-2400f-13` —
+at the cost of making a very common state require manual intervention.
+
+**Do not fix this inside `BO-2400f-13`.** It predates that criterion, it is reachable
+independently of any occupancy check, and the implementer of `BO-2400f-13` is explicitly
+forbidden from resolving it by reset or rebase. It needs its own criterion once the product
+decision is made.
+
+---
+
+### KI-BO-018 — `/plan-feature` halts on a false `worktree-agent` permission verdict, caused by a truncated agent-relayed config read rather than anything wrong with the agent's charter
 
 - **Severity:** blocker — this is not a workflow inconvenience: per ADR-012, `/plan-feature`
   is the canonical entry path for **all** new work, and this defect halts that workflow

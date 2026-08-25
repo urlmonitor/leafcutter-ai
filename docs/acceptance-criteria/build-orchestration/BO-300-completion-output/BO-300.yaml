@@ -8,7 +8,7 @@ component: build-orchestration
 level: L0
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   Given a build workflow (build-epic.js or build-single-ticket) completes successfully,
   When the completion output is displayed to the user,

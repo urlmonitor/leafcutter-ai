@@ -52,8 +52,23 @@ from pathlib import Path
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
 
-# A skill path as written in prose: .claude/skills/<name> or templates/skills/<name>
-_SKILL_REF_RE = re.compile(r"(?:\.claude|templates)/skills/([a-z0-9][a-z0-9._-]*)")
+# A skill path as written in prose: .claude/skills/<name> or templates/skills/<name>,
+# plus any path INSIDE the bundle (group 2), e.g. /SKILL.md or /scripts/emit_event.py.
+#
+# The bundled-file half matters as much as the directory half. Skill bundles ship
+# executables — `python .claude/skills/agent-telemetry/scripts/emit_event.py` — and a
+# check that stopped at the directory would pass a bundle whose script was never
+# written. That is the exact shape of the defect this guard exists for, one level in.
+#
+# These paths are deliberately OUT OF SCOPE for build_referential_integrity.py, which
+# resolves `scripts/...` deploy-namespace keys against the deploy manifest. A
+# skill-bundled script is deployed by build_skills as part of its bundle, not by the
+# scripts/ manifest, so normalising it into a `scripts/...` key would demand a manifest
+# entry for a file that is already correctly deployed — the false-positive class
+# EPIC-BuildGuardFalsePositive had to fix once. Two reference classes, two guards.
+_SKILL_REF_RE = re.compile(
+    r"(?:\.claude|templates)/skills/([a-z0-9][a-z0-9._-]*)((?:/[\w.\-]+)*)"
+)
 
 # HTML comment blocks — DECISION HISTORY and friends. Stripped before scanning.
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
@@ -75,8 +90,11 @@ def load_skill_names(templates_dir: Path) -> set[str] | None:
         return None
 
 
-def _scan_text(text: str) -> list[tuple[int, str, bool, str]]:
-    """Return (lineno, skill_name, is_imperative, line) for each reference.
+def _scan_text(text: str) -> list[tuple[int, str, str, bool, str]]:
+    """Return (lineno, skill_name, inner_path, is_imperative, line) per reference.
+
+    ``inner_path`` is the path inside the bundle ("scripts/emit_event.py"), or ""
+    when the reference names only the skill directory.
 
     HTML comment blocks are blanked (newlines preserved, so line numbers in the
     report still match the file on disk).
@@ -86,18 +104,35 @@ def _scan_text(text: str) -> list[tuple[int, str, bool, str]]:
 
     scrubbed = _COMMENT_RE.sub(_blank, text)
 
-    hits: list[tuple[int, str, bool, str]] = []
+    hits: list[tuple[int, str, str, bool, str]] = []
     for lineno, line in enumerate(scrubbed.splitlines(), start=1):
         imperative = bool(_IMPERATIVE_RE.search(line))
         # One line often names both forms of the same path ("`.claude/skills/x`
         # (or `templates/skills/x`)"). That is one reference, not two.
-        for name in dict.fromkeys(m.group(1) for m in _SKILL_REF_RE.finditer(line)):
-            hits.append((lineno, name, imperative, line.strip()))
+        seen: dict[tuple[str, str], None] = {}
+        for m in _SKILL_REF_RE.finditer(line):
+            seen.setdefault((m.group(1), m.group(2).lstrip("/")), None)
+        for name, inner in seen:
+            hits.append((lineno, name, inner, imperative, line.strip()))
     return hits
+
+
+def _missing_target(skills_dir: Path, name: str, inner: str, known: set[str]) -> str | None:
+    """Return a description of what is missing, or None when the reference resolves.
+
+    Checks the skill directory first, then — when the reference names a file inside
+    the bundle — that the file itself is there.
+    """
+    if name not in known:
+        return f"no skill directory templates/skills/{name}/"
+    if inner and not (skills_dir / name / inner).is_file():
+        return f"skill '{name}' exists but has no {inner}"
+    return None
 
 
 def scan(templates_dir: Path, known: set[str]) -> tuple[list[dict], list[dict]]:
     """Scan every template .md file. Return (dangling_imperative, dangling_mentions)."""
+    skills_dir = templates_dir / "skills"
     bad: list[dict] = []
     mentions: list[dict] = []
     for path in sorted(templates_dir.rglob("*.md")):
@@ -106,10 +141,12 @@ def scan(templates_dir: Path, known: set[str]) -> tuple[list[dict], list[dict]]:
         except OSError as exc:
             print(f"WARNING: cannot read {path}: {exc}", file=sys.stderr)
             continue
-        for lineno, name, imperative, line in _scan_text(text):
-            if name in known:
+        for lineno, name, inner, imperative, line in _scan_text(text):
+            reason = _missing_target(skills_dir, name, inner, known)
+            if reason is None:
                 continue
-            record = {"path": path, "line": lineno, "skill": name, "text": line}
+            record = {"path": path, "line": lineno, "skill": name,
+                      "reason": reason, "text": line}
             (bad if imperative else mentions).append(record)
     return bad, mentions
 
@@ -121,13 +158,15 @@ def _report(bad: list[dict], repo_root: Path) -> None:
         by_skill[rec["skill"]].append(rec)
 
     print(
-        f"FAIL: {len(bad)} imperative reference(s) to {len(by_skill)} skill(s) that do "
-        f"not exist in templates/skills/.",
+        f"FAIL: {len(bad)} imperative reference(s) to {len(by_skill)} skill target(s) "
+        f"that do not exist under templates/skills/.",
         file=sys.stderr,
     )
     for name in sorted(by_skill):
         recs = by_skill[name]
-        print(f"\n  '{name}'  ({len(recs)} reference(s)):", file=sys.stderr)
+        reasons = sorted({rec["reason"] for rec in recs})
+        print(f"\n  '{name}'  ({len(recs)} reference(s)) — {'; '.join(reasons)}:",
+              file=sys.stderr)
         for rec in recs[:10]:
             rel = rec["path"].relative_to(repo_root)
             print(f"    - {rel}:{rec['line']}", file=sys.stderr)

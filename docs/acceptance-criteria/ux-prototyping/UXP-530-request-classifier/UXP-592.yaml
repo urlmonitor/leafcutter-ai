@@ -3,6 +3,8 @@ readiness: reviewed
 priority: medium
 title: "The system decides which product-truth artifacts a request needs"
 component: ux-prototyping
+components:
+  - ux_prototyping
 level: L1
 status: active
 req_status: approved

@@ -1,0 +1,93 @@
+id: ACS-100i-7
+components:
+  - ac_store
+title: "The records that declare no package surface stop being refused, and nothing else about the store's verdict changes"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the acceptance-criteria store exactly as it stands, with no record
+    edited and no record carrying `package_surface: true`,
+  When every record in the store is validated in one pass,
+  Then the number of records refused for lacking a structured implementation
+    spec is zero,
+  And that number was 243 on the same corpus before the change.
+
+  And given the same pass,
+  When its refusals are compared against the refusals recorded before the
+    change,
+  Then the remaining refusals are exactly the 37 that were failing for other
+    reasons — the same file paths and the same messages, none added and none
+    removed.
+
+  And given the specific records BO-2000d-1, BO-2000d-2, BO-2000d-1-i,
+    BP-006a-1 and BO-1800a-1 — all previously refused on this rule and none of
+    them edited —
+  When each is validated on its own,
+  Then each is accepted.
+
+  And given a commit whose diff contains one of those records unchanged
+    alongside an unrelated edit elsewhere,
+  When the commit-time acceptance-criteria check runs,
+  Then it does not block, and no skip directive is needed to complete the
+    commit.
+depends_on:
+  - ACS-100i
+  - ACS-100i-6
+doc_links:
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-005. Its stated closing condition is that a commit touching a build-orchestration AC no longer needs [HOOK-SKIP: check-ac-schema] — the last scenario here is that condition, expressed as a test."
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-6
+  contract: "The narrowed trigger. This criterion asserts its effect on the real corpus rather than on constructed fixtures."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100i-7-i
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  BASELINE, so the test has something to compare against. Measured at 9b16d013
+  by validating every AC YAML in docs/acceptance-criteria/ except index.yaml:
+  280 records refused in total, 243 of them for lacking a structured
+  implementation spec, leaving 37 refused for unrelated reasons (chiefly a
+  missing `components` list, plus two on a `framework` value outside its enum).
+  Re-measure and pin these two numbers in the test as of the implementing
+  commit; they drift as other work lands, and a test that hard-codes 243 without
+  re-measuring will fail for the wrong reason.
+
+  This is deliberately an assertion about the REAL store, not about fixtures.
+  The defect KI-ACS-005 records is a property of the corpus — a gate that is
+  diff-scoped and therefore invisible until an unrelated change drags one of
+  these records into a diff. A fixture-only test cannot observe that property.
+
+  Second-scenario intent: the change must be a narrowing, not a loosening. If an
+  implementation reaches "zero refusals on this rule" by weakening validation
+  generally, the 37 unrelated refusals will shrink too, and this scenario fails.
+
+  Honest statement of what this AC concedes: on today's corpus, where no record
+  declares a package surface, the obligation applies to nothing. That is the
+  intended outcome of the narrowing and the reason the backfill is a separate
+  epic — the 243 records are not being certified as correct, they are being
+  taken out of the gate's scope until an author or the backfill declares them.

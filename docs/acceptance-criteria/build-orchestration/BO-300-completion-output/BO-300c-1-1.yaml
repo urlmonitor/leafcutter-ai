@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: done
+work_status: in_progress
 criteria: |
   Given an epic is located at a nested path such as tickets/00_inbox/epics/EPIC-Foo,
   When the completion message constructs the /finalize-feature command,
@@ -24,6 +24,25 @@ estimated_complexity: S
 it_requirements:
   - "Path extraction must handle both Unix and Windows path separators"
   - "Must work with paths of any depth (tickets/00_inbox/epics/EPIC-Foo and tickets/01_todo/EPIC-Bar)"
+test_spec:
+  - name: test_bo300c1_1_finalize_command_uses_epic_basename_for_nested_path
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Executing build-epic.js under the E2 workflow harness with args.epic_path set to tickets/00_inbox/epics/EPIC-Foo yields a Step 6 message whose finalize line is exactly '/finalize-feature EPIC-Foo' and contains no parent directory segment such as epics/ or tickets/."
+  - name: test_bo300c1_1_epic_name_extraction_is_depth_agnostic
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    description: "Driving the same script with epic paths of differing depth (tickets/01_todo/EPIC-Bar and a deeper nested path) each yields the trailing directory name alone as the finalize argument, proving the extraction is not tied to a fixed number of parents."
+test_rationale: |
+  The epic-name extraction happens inline in build-epic.js's Step 6 message
+  assembly with no exported helper to call, so coverage has to execute the script
+  through the E2 workflow harness (which can inject args.epic_path) and assert on
+  the finalize line of the returned message. Re-implementing basename extraction
+  in a Python test would assert against a copy of the logic rather than the
+  shipped workflow, and a source scan for '/finalize-feature' cannot distinguish
+  a basename argument from a full path argument.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
@@ -35,3 +54,11 @@ implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
 change_target: code
 risk_surface: internal
+notes: |
+  Scope note from the IT PO: the two descriptors are derived strictly from this
+  AC's criteria (basename extraction, depth-agnostic). The Windows-separator
+  clause in it_requirements is NOT covered by them — the shipped extraction uses
+  epicPath.split("/").pop(), which does not split on a backslash. Authoring a
+  backslash descriptor here would encode a behaviour the criteria do not state
+  and that the implementation does not have; the gap is raised for BA/PO
+  reconciliation rather than silently tested or silently dropped.

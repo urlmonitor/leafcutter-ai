@@ -352,6 +352,48 @@ contract differ, so compliance with the message is not compliance with the gate.
 
 ---
 
+### KI-CG-012 — The hooks' test seams disagree on both variable name and separator, so verifying a hook the wrong way exits 0 having checked nothing
+
+> **Renumbered at merge, 2026-08-25: filed as `KI-CG-008`, now `KI-CG-012`.** `main`
+> independently minted its own `KI-CG-008` (plus 009-011) while this branch was in flight.
+> Same collision `KI-BO-016` records, in a second register on the same day.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
+- **Where:** `scripts/commit_guardian/check_ac_limits.py:398,418` versus
+  `scripts/commit_guardian/check_ac_schema.py`
+
+**Symptom.** The commit-guardian hooks each provide an environment-variable seam so a
+caller can hand them a file list instead of reading the git index. The seams are not the
+same. `check_ac_limits` reads **`HOOK_TEST_FILES`** and splits on **newlines**;
+`check_ac_schema` reads **`HOOK_TEST_STAGED_FILES`** and splits on **`os.pathsep`**. Use
+the wrong name or the wrong separator and the hook does not error — it resolves the whole
+list to one nonexistent path, finds no AC files to examine, prints nothing, and **exits
+0**. The caller sees a clean run from a hook that inspected nothing.
+
+**Evidence.** Found 2026-08-24 by an authoring agent verifying six new AC files. Passing
+a colon-separated list to `check_ac_limits` via `HOOK_TEST_FILES` produced silence and
+exit 0. Re-running the identical file set newline-separated produced the expected
+`OVERRIDE ACTIVE` audit lines for `BO-2400c` (6/6) and `BO-2400f` (12/12) — so the hook
+was working correctly the whole time and the first invocation had simply handed it
+nothing.
+
+**Why it matters more than a CLI quirk.** This is the verification path. Someone reaching
+for the seam is, by definition, trying to confirm a hook would have blocked something —
+and the failure mode returns exactly the answer they were hoping for. It is the same shape
+as the `argv`-ignoring trap already recorded against these hooks in KI-CG-001 and in
+`CLAUDE.md`'s "AC-store commits" section: *silence from an AC hook is not a pass, it may
+mean the hook was never given your file*. Two seams with two names and two separators
+multiplies the ways to get that silence.
+
+**Fix direction.** One seam, one name, one separator, shared by every hook — and make it
+**fail closed**: if the variable is set and resolves to zero existing files, exit non-zero
+naming what could not be resolved, rather than exiting 0 having examined nothing. An
+explicitly-provided list that matches nothing is a caller error, never a pass. Until then,
+the reliable way to prove a hook saw your files is the one used here: re-run it with a
+deliberately invalid file alongside the real ones and confirm it fails on the invalid one.
 ### KI-CG-009 — `check-components-integrity` resolves the repo root to the main checkout instead of the worktree, so a branch-only `detail_ref` doc is reported missing
 
 - **Severity:** high
@@ -440,6 +482,7 @@ checkout — deploying more files fixes nothing here.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the same family — a hook that
 cannot reach a file it depends on because it is wrong about where it is — though M2's
 mechanism is the deploy manifest and this one's is root resolution through a symlink.
+
 ---
 
 ### KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable
@@ -529,3 +572,252 @@ bypassed.
 
 **Pattern:** the inverse of the usual false-green — a gate so brittle that the only
 available response is to turn it off, taking every sibling hook with it.
+
+---
+
+### KI-CG-010 — `check-roadmap-schema` never validates the roadmap, and the roadmap would fail it if it did
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_roadmap_schema.py:27` — `SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"`
+
+**Symptom.** The hook resolves its schema at `<git-root>/leafcutter/config/roadmap.schema.json`.
+In this repository the git root **is** the package, so the real path is
+`config/roadmap.schema.json` with no `leafcutter/` segment. The file it looks for does not
+exist, so the hook takes its fail-open branch and reports an advisory skip. Every commit
+touching `docs/roadmap.json` has passed a check that never ran.
+
+The second half is worse than the first: **if the hook ever found its schema, the roadmap
+would fail it.** Every phase in `docs/roadmap.json` carries a `components` key, and the
+schema's phase item declares `additionalProperties: false` over exactly six permitted
+properties — `description`, `exit_criteria`, `id`, `status`, `tickets_advancing_outcome`,
+`title`. `components` is not among them. So fixing the path alone converts a silent no-op
+into a blocked commit on an unrelated change.
+
+**Evidence.** Verified 2026-08-25 while rewording a phase_1 exit criterion.
+`ls <repo>/leafcutter/config/roadmap.schema.json` → no such file. The schema's own
+`properties.phases.items` was read directly: six properties, `additionalProperties: false`.
+The hook reported no failure on the commit that changed `docs/roadmap.json`.
+
+This is the same shape as `KI-BP-003` and `KI-CG-002` — a guardrail that cannot reach its
+own declaring file in the self-hosted layout — and the third instance found. Unlike
+`KI-CG-002`, which narrows an enum, this one skips the check entirely.
+
+**Fix direction.** Resolve the schema the way `KI-CG-009`'s repair does, from the running
+artifact's own location rather than a hardcoded `leafcutter/` segment that assumes a
+consumer layout. Land the `components`-vs-schema disagreement in the **same** change —
+either add `components` to the phase schema or drop it from the roadmap — because repairing
+the path first turns a dormant no-op into an immediate merge blocker. Note the regression
+test must run with the CWD somewhere other than the layout under test, or it will be green
+against both the broken and the fixed resolver.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that reports
+success having checked nothing) and M2 (a guardrail that cannot reach a file it depends on).
+
+---
+
+### KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/regenerate_roadmap_mirror.py:155-163` — the frontmatter block
+
+**Symptom.** The generator emits a fixed six-line frontmatter: `title`, `type`, `status`,
+`created`, `last_updated`, `components`. Two defects follow.
+
+It never emits `description`, so any `description` present in `docs/roadmap.md` is **deleted
+on every regeneration**. The comment above the block says the frontmatter is "required by
+check_doc_frontmatter.py", which is exactly the convention the omission violates.
+
+And `created` is written from the regeneration timestamp
+(`date_only = generated_at[:10]`, line 154), so a file created on one date silently claims
+it was created today, every time the mirror is rebuilt. `created` is supposed to be
+immutable; only `last_updated` should move.
+
+**Evidence.** Verified 2026-08-25 in the commit that reworded a phase_1 exit criterion. A
+one-line change to `docs/roadmap.json` produced a 16-line diff in `docs/roadmap.md`: the
+criterion itself, the two generated timestamps, quoting and indentation churn, and the
+removal of `description: Overview of Project Roadmap.`. `created` moved `2026-08-17` →
+`2026-08-25` on a file that plainly was not created that day.
+
+Not currently merge-blocking — `check-description-field` is not among the six required CI
+checks — so this erodes quietly.
+
+**Fix direction.** Emit `description` in the generated frontmatter, and preserve the
+existing `created` value when the mirror already exists rather than stamping the
+regeneration date. Both are small, and both are worth doing together with a test that
+regenerates twice and asserts the only field that moves is `last_updated`.
+
+**Related.** This is `KI-BP-002`'s shape in another file — a tracked generated artifact that
+drifts every time it is rebuilt — and `BP-1500a` is the acceptance criterion written against
+that class. The roadmap mirror is not currently in `BP-1500a`'s scope; worth checking
+whether it should be when that AC is built.
+
+---
+
+### KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 3
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` (`_is_leaf_ac`)
+  vs `scripts/ac_store/done_proof.py` (`verify_done_eligible`)
+
+**Symptom.** Two gates that run against the same record define "leaf" from different fields:
+
+| Gate | Definition of a leaf |
+|------|----------------------|
+| `_is_leaf_ac()` | `level` is `L2` or `L3` |
+| `verify_done_eligible()` | `covered_by` resolves to no real AC record |
+
+An `L2` that has real children is therefore a **leaf** to the schema hook and a
+**composite** to the oracle. The schema hook demands the record carry its own `test_spec`;
+the oracle derives its proof from the children and expects no direct tag. Neither is wrong
+on its own terms, and nothing reconciles them.
+
+**Evidence.** `BO-1500a-1`, `BO-1500b-1` and `BO-1500c-1`. Each was corrected from
+`work_status: done` to `in_progress`, which brought it into the schema rule's scope — it
+fires on `readiness: approved` AND `work_status != done` AND a code AC AND a leaf AC — and
+produced:
+
+```
+approved code AC must declare a test contract — add a non-empty test_spec
+```
+
+while the oracle treated the same three records as composites resolving through their
+children.
+
+**How it was handled.** Each parent was given an integration-level `test_spec` distinct
+from its children's unit contracts. That is a defensible outcome on its own merits — an L2
+with children can legitimately own an integration test — but it resolved the symptom by
+satisfying both definitions at once, not the divergence. The next record in this shape will
+hit it again, and an author who reads only one gate's rule will conclude the other is
+malfunctioning.
+
+**Consequence.** Bounded today: it demands an extra `test_spec` rather than passing
+something unproven. The risk is that the two definitions drift further, or that someone
+"fixes" one gate to match the other without noticing the fix inverts a proof obligation
+somewhere else.
+
+**Fix direction.** Decide which field is canonical for leafness — `level` or resolvable
+`covered_by` — and make both gates read one shared predicate, rather than aligning them by
+hand. `covered_by` is the better candidate, being the thing the tree is actually built
+from; `level` is an assertion about a record that its children can contradict. Whichever
+wins, it wants a test asserting the two gates classify an identical fixture set the same
+way, including the awkward case this issue is about: an `L2` with real children.
+
+**Related.** `KI-ACS-006` (composite-resolution defects in the oracle) and `KI-CG-006` (the
+pre-commit proof-of-done gate and the CI backstop disagreeing on what a valid covers tag
+is). All three are the same underlying shape — two halves of the AC guardrail system
+holding different definitions of one concept — and a fix for any one of them should check
+whether it moves the other two.
+
+---
+
+### KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`, `:673`), `_get_staged_ac_paths()` (`:307`, fail-open documented in its own docstring), the `if not staged_files:` branch (`:685`), and `_find_project_root()` (`:99`)
+
+**Symptom.** The hook exits 0 having validated nothing, and its output is indistinguishable
+from a run that validated everything and found it clean. There is no "checked 0 files"
+line: a skipped Phase 1 and a passing Phase 1 look identical.
+
+**Evidence — two independent observations on the same day.**
+
+*Deliberate mutation.* `declares_side_effect: true` was removed from a staged
+`BP-600b-3.yaml` whose criteria assert a durable effect — precisely the condition
+`validate_declares_side_effect` exists to catch. Both the direct invocation and
+`pre-commit run check-ac-schema` reported **Passed**. CI, on that same commit, failed the
+required `AC store valid` check and named both the file and the rule. The local exit code
+carried no information; only CI evaluated the record.
+
+*Wrong-root run.* A separate agent, running the deployed hook against AC files in a
+worktree, saw it print `WARNING: config/ac_store_schema.json not found at
+/home/henzeh/projects/leafcutter; falling back to manual field validation` and exit 0. It
+had resolved the project root to the **workspace parent** — the untracked directory above
+the repository, which has no `config/` tree.
+
+**Root cause, as far as the source states it.** Three mechanisms each independently make a
+clean exit reachable without any file being checked:
+
+1. `main()` derives its root from **CWD**: `root = Path(os.environ.get("HOOK_ROOT",
+   str(Path.cwd())))`. Nothing constrains CWD to the repository whose index is being
+   committed.
+2. `_get_staged_ac_paths(root)` shells out to `git diff --cached` under that root, and its
+   own docstring states it "returns an empty list when `HOOK_NO_GIT` is set or git is
+   unavailable (**fail-open**)". `main()` then takes `if not staged_files:` and skips
+   Phase 1 entirely. A wrong root and an absent git both land here.
+3. `_find_project_root()` — used by Phase 2, **not** by `main()` — walks ancestors
+   accepting `.git` **or `CLAUDE.md`**. The workspace parent has a `CLAUDE.md`, so that
+   search can terminate at a directory that is not a repository. Two different root
+   strategies in one file, and they disagree.
+
+The schema fallback is **not** the whole story. `validate_declares_side_effect` is called
+unconditionally at `:625`, independent of whether the schema loaded, so a missing schema
+alone would still have caught the mutation. What silences the hook is Phase 1 not running.
+
+**Honest limit of this report.** The `pre-commit run` invocation was not isolated to a
+single mechanism — cwd was inside the worktree for that run, so (1) and (2) do not
+obviously explain it, and the exact path taken was not pinned down. The three code facts
+above are directly readable and each permits a silent pass; which one fired in that
+specific invocation is still open. Do not close this on the strength of fixing only the
+one that looks most likely.
+
+**Third occurrence, 2026-08-25 — mechanism (2) isolated, and `HOOK_TEST_FILES` does not
+rescue it.** CI's required `AC store valid` refused `BO-1500a-1.yaml` for a missing
+`declares_side_effect`. Reproducing locally from inside the worktree, with the correct
+root, the hook exited 0 three ways:
+
+1. `HOOK_TEST_FILES` set to the 46 changed records — exit 0.
+2. `HOOK_TEST_FILES` set to the single offending record, **before** the fix — exit 0.
+3. The fix applied and staged — exit 0.
+
+Run 2 is the control, and it is the informative one: the hook passed a record that CI
+refused by name, on a rule that record genuinely violated. The common factor is that
+`BO-1500a-1.yaml` was already at `HEAD` unmodified, so `git diff --cached` was empty and
+`main()` took the `if not staged_files:` branch — **regardless of `HOOK_TEST_FILES`**.
+Whatever that variable is honoured by, it is not the gate that decides whether Phase 1
+runs, so it cannot be used to point the hook at a file for verification. The docstring's
+fail-open note (mechanism 2) is therefore reachable with a correct root and a working
+git, not only with a wrong root or an absent one.
+
+This also explains why CI sees what local runs cannot: the `ac-store-valid` job does
+`git reset --soft origin/main` before invoking the hooks, which stages the branch's entire
+diff. Locally, only files differing from `HEAD` are ever examined — so a defect already
+committed is structurally invisible to the local gate, and no amount of re-running it
+proves anything about those records.
+
+Add to the fix direction: whatever `HOOK_TEST_FILES` is for, it must either drive the
+Phase 1 file set or be removed. A test seam that silently does nothing is how a
+verification step becomes theatre.
+
+**Fix direction.** Make "checked nothing" impossible to confuse with "checked and passed":
+
+- **Never exit 0 on an empty file set.** If the hook was invoked and resolved zero files,
+  say so on stderr and exit non-zero, or at minimum print the count. `KI-ACS-001` fixed
+  exactly this shape in `validate_ac_schema.py` on 2026-08-19 — a bare directory printed
+  `No YAML files to validate.` and exited 0 — and the same reasoning applies here.
+- **Resolve the root once**, from `git rev-parse --show-toplevel`, and thread it to every
+  consumer. Drop the CWD default and the `CLAUDE.md` ancestor heuristic: a `CLAUDE.md`
+  marks a *workspace*, not a repository.
+- **Do not fail open when git is unavailable.** A gate that cannot determine what is being
+  committed has not passed; it has failed to run.
+
+**Relationship to existing entries.** Same family as **KI-CG-009**
+(`check-components-integrity` resolving the root to the main checkout rather than the
+worktree) and **KI-CG-002** (a silent fallback to a narrower rule when a declaring file is
+unreachable). It shares **KI-CG-001**'s index-scoping premise but is a distinct failure:
+there the hook checks the wrong *set*; here it checks the *empty* set and says nothing.
+Four entries now describe the same root-resolution surface, which argues for one piece of
+work across the hook family rather than one hook at a time.
+
+**Pattern:** a gate whose silence is structurally indistinguishable from a pass.

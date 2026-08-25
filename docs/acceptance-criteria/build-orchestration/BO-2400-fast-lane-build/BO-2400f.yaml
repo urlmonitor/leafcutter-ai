@@ -11,7 +11,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  One command, one AC id, a PR back — no other input.
+  One command, one AC id — a PR back, or an up-front reason why not.
 
   An operator names any single acceptance criterion and the fast lane does the rest:
   it opens a fresh isolated worktree from the latest mainline, works out everything
@@ -21,8 +21,14 @@ criteria: |
   the lean two-agent loop, and opens a pull request. The operator does not create a
   worktree, list a batch, or open the PR by hand. Pointing at the AC is the go-ahead,
   so a not-yet-approved AC is still built.
+
+  Where the connected set contains work this lane has no way to produce, the answer
+  is a refusal given before any work begins — naming what it cannot make and why —
+  never a halt part-way through. There are exactly two honest endings: a pull
+  request, or a reason. Being unable to finish a piece of work is acceptable;
+  discovering that only after the operator has paid for it is not.
 depends_on: [BO-2400a, BO-2400e]
-child_limit_override: 12
+child_limit_override: 13
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-07-23
@@ -30,8 +36,14 @@ amended_by:
   - agent: BrainCandy
     date: "2026-08-18"
     reason: "Wording clarification only — no change of scope and no new child. The phrase 'any prerequisites it depends on' read as though every depends_on edge is a prerequisite, which is how the lane behaves today and is the defect: an AC lists its structural parent in depends_on, so aiming at a leaf expands through the parent to every not-done leaf under it (measured 2026-08-18 — BO-2400c-1-v resolved to the whole 5-id BO-2400c subtree). The scope-tightness behaviour itself is owned by BO-2600b, not here; this text is amended only so it stops describing the buggy resolution as the intended one. Deliberately NOT added to depends_on: a dependency edge from this L1 to the BO-2600 family would itself widen every connected set resolved from this tree, which is the very failure being fixed."
+  - agent: product-owner
+    date: "2026-08-24"
+    reason: "Honest-promise correction — no new child, no widening of scope. The existing text promised a pull request unconditionally ('does the rest ... and opens a pull request'), which is false today and will stay false under every candidate fix. KI-BO-013 records the live counterexample: a documentation-only criterion anywhere in a resolved set makes the whole set unbuildable, and the lane discovers this at Phase 5, AFTER the test-writer and the coder have both run and been paid for, with a halt message ('mark_done stale: <ids>') that reads like a coverage bug. The operator cannot avoid it — sets are resolved from the store, not chosen — and cannot see it coming. The amendment states the property that is true under any of the three fix directions in KI-BO-013: a run ends in a PR or in a refusal issued before work starts, never in a late jam. Note this deliberately does NOT commit the lane to acquiring a documentation phase; that remains one implementation option (KI-BO-013 fix direction 1) and is a capability decision for BrainCandy, not something this L1 should presuppose. It also does not license skipping untestable criteria, which KI-BO-013 correctly identifies as phantom-done through the front door — refusing is not skipping. Precedent: the roadmap already blesses this property at phase_acbuild_2a ('The fast lane refuses any requirement whose checklist declares a deliverable it cannot produce'), so this is pulling a sanctioned behaviour forward, not inventing one. Rewritten in full because the Edit tool was unavailable in this session; only the tagline, the criteria body's final paragraph, and this amended_by entry differ from the prior revision."
+  - agent: business-analyst
+    date: "2026-08-25"
+    reason: "Structural only — no change to the criteria text, the tagline, or the scope. Adds BO-2400f-13 (an occupied build workspace ends the run in a named refusal, KI-BO-015) to covered_by and raises child_limit_override from 12 to 13 so the new child does not trip the cap. The parent travels with the child because the AC hooks validate only what a commit stages, so a covered_by fact that is true of the store but absent from the index is structurally unreachable. Rewritten in full because the Edit tool was unavailable in this session; only child_limit_override, covered_by, and this amended_by entry differ from the prior revision. Product Owner's flag, recorded in BO-2400f-13's notes: this should be the LAST override bump — a fourteenth child must force a Pattern C intermediate split rather than child_limit_override: 14."
 superseded_by: null
-covered_by: [BO-2400f-1, BO-2400f-2, BO-2400f-3, BO-2400f-4, BO-2400f-5, BO-2400f-6, BO-2400f-7, BO-2400f-8, BO-2400f-9, BO-2400f-10, BO-2400f-11]
+covered_by: [BO-2400f-1, BO-2400f-2, BO-2400f-3, BO-2400f-4, BO-2400f-5, BO-2400f-6, BO-2400f-7, BO-2400f-8, BO-2400f-9, BO-2400f-10, BO-2400f-11, BO-2400f-12, BO-2400f-13]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

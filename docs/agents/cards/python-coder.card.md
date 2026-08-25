@@ -447,6 +447,13 @@ flowchart TD
 - ACS-100i-1: Parent ID is derived from child ID by stripping the last segment
 - ACS-100i-2: Pre-commit hook blocks a child AC whose parent covered_by omits it
 - ACS-100i-2-i: Hook fails open when a staged YAML file contains non-UTF-8 binary content
+- ACS-100i-6: The structured-spec obligation is triggered by an explicit declaration on the record, not inferred from who is assigned or which namespace it sits in
+- ACS-100i-6-i: A record that declares a package surface but omits any of the five spec fields is still refused, and the refusal names each field it is missing
+- ACS-100i-6-ii: How a record spells its component no longer changes whether the spec obligation applies
+- ACS-100i-7: The records that declare no package surface stop being refused, and nothing else about the store's verdict changes
+- ACS-100i-7-i: A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check
+- ACS-100i-8: A package surface cannot come into existence without a record that declared it
+- ACS-100i-8-i: Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration
 - ACS-1200a-1: A parked tree is marked by a field its author sets on purpose, never by an empty child list
 - ACS-1200a-2: The commit-time back-link check passes a parked tree with nothing skipped
 - ACS-1200a-2-i: A parked marker exempts only the record it is set on, never the records beneath it

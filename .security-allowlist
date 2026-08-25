@@ -93,3 +93,8 @@ ENTROPY_HIGH:unit_tests/test_setup_ticket_worktree.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_bo2400c_context_bundle.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_finalize_feature_preflight.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_workflow.py:*
+# ACS-100i-7 baseline fixture: a recorded list of AC file paths and their
+# validator messages. The long hyphenated store paths trip the entropy
+# heuristic. Glob rather than per-line, since the file is regenerated when the
+# store legitimately changes and line numbers would shift silently.
+ENTROPY_HIGH:tests/fixtures/acs_100i_7/pre_change_refusal_baseline.json:*

@@ -35,6 +35,47 @@ estimated_complexity: S
 it_requirements:
   - "Enum must be defined in the same schema file as change_target (BO-610-1)"
   - "risk_surface is a single value, not a list -- unlike change_target"
+test_spec:
+  - name: test_risk_surface_enum_in_schema_has_exactly_six_values
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "config/ac_store_schema.json's risk_surface enum is exactly the 6 canonical labels — asserted as an exact set equality and a cardinality of 6 — and lives in the same schema file as change_target."
+  - name: test_schema_validator_rejects_out_of_enum_risk_surface
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Running validate_ac_schema.py over a fixture AC carrying an out-of-enum risk_surface exits non-zero and names the offending value."
+  - name: test_schema_validator_rejects_list_valued_risk_surface
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A fixture AC whose risk_surface is a list of two otherwise-valid values is rejected — risk_surface is scalar-only, unlike change_target which accepts either form."
+  - name: test_every_guardrail_gates_section_declares_all_six_risk_surfaces
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Every change_target section of config/guardrail_gates.yaml has sub-keys exactly equal to the 6-value risk_surface enum, so no (change_target, risk_surface) cell of the gate matrix can be silently missing."
+test_rationale: |
+  The inner axis of config/guardrail_gates.yaml is the gap this contract
+  closes. The existing parity test in
+  unit_tests/commit_guardian/test_check_ac_schema.py
+  (test_ac3_risk_surface_enum_identical_across_sources) compares the schema
+  enum to ALLOWED_RISK_SURFACES, and its change_target sibling compares the
+  YAML's TOP-LEVEL keys — but nothing checks the per-section risk_surface
+  sub-keys. A dropped or misspelled sub-key there produces a lookup miss for
+  one (change_target, risk_surface) pair at gate-computation time while every
+  existing test stays green, so
+  test_every_guardrail_gates_section_declares_all_six_risk_surfaces is the
+  load-bearing descriptor here.
+  The scalar-only descriptor covers the it_requirement that distinguishes this
+  axis from change_target; without it the schema could widen to anyOf
+  string/array unnoticed.
+  NOT COVERED — the "one-line definition" clause has no artifact: the
+  definitions live only in this AC's criteria, and the shipped enum spells the
+  second value contract_boundary rather than the criteria's contract, so the
+  criteria and the implementation disagree on the vocabulary. Flagged for
+  reconciliation rather than papered over with an invented test.
 delivers_to:
   agent: python-coder
   contract: "A schema definition file containing the risk_surface enum with 6 values and their descriptions"

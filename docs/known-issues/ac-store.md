@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-19
+last_updated: 2026-08-25
 components:
   - ac_store
 related_docs:
@@ -145,9 +145,12 @@ producing incorrect results in the tooling built on top of it".
 **Fix direction.** Add a store-wide uniqueness pass: collect every `id:` across the AC
 root, fail on any id claimed more than once, and name both paths in the error. This is
 a whole-store check rather than a per-file one, so it needs a mode that takes the store
-root — note the CLI currently accepts **file** arguments only and silently skips
-anything that is not a `.yaml`, which is also why a directory argument returns the
-misleading `No YAML files to validate.` Worth covering retired ids in the same pass:
+root. That part is now easier than when this was written: as of 2026-08-19 (KI-ACS-001)
+the CLI accepts a **directory** and walks it recursively, so a whole-store pass already
+has its entry point — `validate_ac_schema.py docs/acceptance-criteria` — and a run that
+resolves zero files exits non-zero instead of reporting the misleading
+`No YAML files to validate.` What is still missing is the cross-file comparison itself,
+which is the actual work here. Worth covering retired ids in the same pass:
 the id between GE-118 and GE-120 is recorded as retired and must never be
 reissued (see PR #453), which a pure uniqueness check would not catch on its
 own. It is not written out here because the GE-122e-1 guard fails the build on
@@ -161,80 +164,6 @@ looked like when this issue was filed. **This entry stays open**: `validate_ac_s
 still performs no store-wide uniqueness pass, so the next duplicate id will merge just as
 cleanly. Note also that the false-orphan symptom above is the strongest available argument
 for that pass — it is the only reason this particular duplicate was noticed at all.
-
----
-
-### KI-ACS-005 — The package-surface `it_requirements` rule blocks commits that did not cause it
-
-- **Severity:** blocker
-- **Status:** open
-- **Occurrences:** 3
-- **First seen:** 2026-08-13 · **Last seen:** 2026-08-18
-- **Where:** `config/ac_store_schema.json` (the top-level `if`/`then`, BO-2000d), enforced
-  by `check-ac-schema` locally and by the required `AC store valid` CI job
-
-**Symptom.** The `if` fires on `assigned_agent: python-coder` AND `component` in
-`{build_pipeline, build-orchestration}`, and the `then` demands `it_requirements` be an
-object with five fields (`config_schema_fragment`, `reference_file_path`,
-`n_location_rule`, `required_skills`, `post_write_commands`). The trigger is a proxy for
-"package-surface AC" and it over-matches: it catches every python-coder AC in those two
-components, most of which register no config key at all, so there is no honest
-`config_schema_fragment` or `reference_file_path` to supply.
-
-The rule also postdates most of the data. Enum and `if`/`then` landed together in
-`9e59b1fe7` (2026-07-09); the records it rejects were authored earlier with the older
-list-of-strings form.
-
-**Evidence.** Whole store at `f8cfdfc47`, `index.yaml` excluded: 2887 AC YAML files, 253
-failing schema validation, **251 of them on `it_requirements`** (the other 2 are
-`framework: playwright`, outside the enum). `BO-100a.yaml` is an untouched control — it
-fails on a clean checkout with no local modifications.
-
-**Correction, 2026-08-19 — it also UNDER-matches, and that half is worse.** The original
-writeup above described only the over-match. Measured at `9b16d013`, the enum mixes the two
-component spellings:
-
-```
-component: build-orchestration   845   <-- in enum (kebab)
-component: build_pipeline         65   <-- in enum (underscore)
-component: build-pipeline        440   <-- NOT in enum
-```
-
-`components.json` graph ids use underscores; `index.yaml` namespaces use kebab. The enum
-took one of each. So of 1610 python-coder records, the rule fires on 411 and **misses 239
-build-* records — 215 of which carry non-object `it_requirements` and have therefore never
-been checked once.** The gate is simultaneously too tight and too loose, keyed off a
-spelling.
-
-The proxy is also false of the population it does catch: of 245 records carrying the object
-form, **73 set `config_schema_fragment: null`** — nearly a third wrote an explicit null to
-get past a rule that does not apply to them.
-
-Any fix must therefore do more than narrow the trigger; it must stop keying on `component`
-at all, or the 440 kebab records stay invisible. Specified in `ACS-100i-6`, `ACS-100i-6-ii`
-and `ACS-100i-7`.
-
-**Why it matters.** Both gates are diff-scoped, so the violation is invisible until an
-unrelated change puts one of these files in a diff — then it blocks that commit. It has
-now been deferred with a documented `[HOOK-SKIP: check-ac-schema]` twice, in `7c8c505e3`
-(PR #424) and again on 2026-08-18, both times by authors who did not write the offending
-records. On the second occasion 29 files were flagged and **all 29 were verified to fail
-identically at HEAD** — zero introduced by the commit. A gate skipped twice by people who
-cannot fix it is training people to reach for `SKIP=`.
-
-The skip does not clear CI: `AC store valid` is a required check and re-blocks the same
-files at the PR, so the local skip only moves the wall.
-
-**Fix direction.** Two, not mutually exclusive. (1) Narrow the trigger — key the `if` off
-an explicit marker such as `package_surface: true` rather than inferring it from
-`assigned_agent` + `component`. Smaller, and it stops the class growing. (2) Backfill the
-existing records — an epic, and it should depend on
-`TICKET-20260710-ITPOv3-StructuredItRequirements.md` so the authoring agent stops emitting
-list-form `it_requirements` before the backfill starts. Closing condition: a commit
-touching a `build-orchestration` AC no longer needs `[HOOK-SKIP: check-ac-schema]`.
-
-**Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse; a gate that fires
-where it should not, whose only escape trains the reader to disarm it.
 
 ---
 
@@ -376,8 +305,8 @@ false refusals train the operator to bypass it.
 
 - **Severity:** high
 - **Status:** open — no AC authored yet; the semantics question below is the reason
-- **Occurrences:** 15
-- **First seen:** 2026-08-17 · **Last seen:** 2026-08-19
+- **Occurrences:** 18
+- **First seen:** 2026-08-17 · **Last seen:** 2026-08-24
 - **Where:** `scripts/ac_store/mark_ac_done.py`; also reached from
   `scripts/build_orchestration/fast_lane.py` — `_update_ac_work_status`, used by
   `mark_done_built_acs`
@@ -572,9 +501,32 @@ is indistinguishable from one that passes).
 **Symptom.** There are two AC validators and they enforce different rules.
 `scripts/ac_store/validate_ac_schema.py` checks the record against the schema. The
 required CI job runs `pre-commit run check-ac-schema`, which additionally enforces
-binding completeness, field preservation (ACS-500f-1) and derived-field rules such as
-`declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight section prescribes only the
-former. Running it and seeing `OK: all N AC YAML files are valid` therefore establishes
+binding completeness, field preservation (ACS-500f-1), test-contract rules, and
+derived-field rules such as `declares_side_effect` (BO-2900g-2). `CLAUDE.md`'s pre-flight
+section prescribes only the former.
+
+**A retracted correction, 2026-08-25 — and the retraction is the useful part.** On
+2026-08-24 this paragraph was edited to say the `declares_side_effect` (BO-2900g-2) example
+was fabricated and that no gate enforces the field. **That edit was wrong. The original
+text was right, and has been restored.** `check-ac-schema` does enforce it: CI failed PR
+#529 with *"declares_side_effect is authored as True but this AC's own Then clause derives
+False — the two disagree … (BO-2900g-2)"*.
+
+The mistake is worth keeping because it is this entry's own subject, one layer down. Two
+agents independently grepped `scripts/commit_guardian/` and `.leafcutter/scripts/
+commit_guardian/`, found nothing, and concluded the rule did not exist. The rule lives in
+**`templates/scripts/commit_guardian/_ac_schema_validators.py`** — `templates/` is the
+source the build deploys *from*; `scripts/commit_guardian/` in a worktree is a build output
+frozen at whenever that worktree was last built (KI-BP-004). Running the hook locally
+passed for exactly the same reason: the local hook was the stale copy, without the rule.
+
+So the sequence was: entry states a true fact → two agents check it against the deployed
+tree and get a false negative → entry is "corrected" into an untruth → CI, which builds
+before running the hooks, contradicts all of it. Local hook agreement is not evidence the
+rule is absent; it is evidence about the age of your deploy. Grep `templates/scripts/` when
+asking what a hook enforces, and treat a passing local hook as unverified until CI agrees.
+
+Running the weaker validator and seeing `OK: all N AC YAML files are valid` therefore establishes
 much less than it appears to, and the gap is invisible because both are called "the
 schema validator" in conversation.
 
@@ -600,3 +552,75 @@ understood. Longer term the two should not diverge silently: either the hook cal
 script, or the script grows the hook's rules, so there is one answer to "is this store
 valid". Note the hook reads the git **index**, so files must be staged before it can see
 them — an unstaged fix will appear not to work.
+
+---
+
+### KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `config/ac_store_schema.json` → `test_spec[].framework` and
+  `test_spec[].type`, against the ACs under `docs/acceptance-criteria/ux-prototyping/`
+  and `docs/acceptance-criteria/build_pipeline/BP-1400-web-app-ci-gate/`
+
+**Symptom.** `test_spec[].framework` permits exactly `unittest` and `pytest`; `test_spec[].type`
+permits exactly `unit`, `integration`, `e2e`, `behavioral`. The repo now contains a Next.js
+app under `leafcutter-web/`, and the ACs written for it declare the tests that app actually
+uses — `framework: vitest` (40 entries), `framework: playwright` (2), and `type: component`
+(12). None of those three values is in either enum, so **every one of those records fails
+the store schema right now**, on `main`, unmodified.
+
+**Why nothing has caught fire.** The required `AC store valid` job is diff-scoped by
+design — `ci.yml:210` explains the choice, and it is a defensible one. The consequence is
+that a record can be invalid indefinitely and cost nobody anything until the moment
+somebody edits it for an unrelated reason, at which point they inherit a failure they did
+not cause and cannot fix without either widening the schema or falsifying their own test
+contract. `ci.yml:212` states the intended bargain plainly — *"Touch a broken record and
+you own it"* — which is a fair rule for 57 orphaned children and an unfair one here,
+because these 29 records are not malformed. They are correct descriptions of real tests
+that the schema has no vocabulary for.
+
+This is the exact shape BO-2900g-3's MIGRATE-DO-NOT-DEFER constraint was written against:
+*"'The hook validates staged files only, so existing records are not invalidated in bulk'
+is not a mitigation — it converts an immediate, visible breakage into a landmine that
+fires on whoever next edits an untouched record for an unrelated reason."* Here the
+narrowing was never a decision at all; the schema simply predates the web app.
+
+**Evidence.** 2026-08-25, at `d37687ff`, whole-store run:
+
+```
+$ python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria
+AC schema validation FAILED:
+  ... 28 files: schema violation at test_spec ...
+```
+
+Single-record reproduction, showing it is the enum and not a malformed record:
+
+```
+$ python scripts/ac_store/validate_ac_schema.py \
+    docs/acceptance-criteria/ux-prototyping/UXP-596-decision-diamonds/UXP-601.yaml
+AC schema validation FAILED: ... 'framework': 'vitest', 'type': 'component' ...
+exit: 1
+```
+
+28 files fail the schema validator; a 29th carries the same vocabulary and is caught only
+by the stricter hook (KI-ACS-009). The whole-store run was only possible at all because
+KI-ACS-001 was fixed on 2026-08-19 — before that the bare-directory form exited 0 without
+reading anything, which is why a population this size went unnoticed.
+
+**Fix direction.** Widen both enums rather than rewriting 29 records to say something
+untrue about themselves: add `vitest` and `playwright` to `framework`, and decide
+deliberately whether `component` joins the level axis or those 12 entries move to an
+existing level. Note the axis question is genuine and should not be settled by reflex —
+`component` is a test **level** (heavier than a unit test, lighter than e2e, renders a
+component in a DOM), so it belongs on `type` and not on `angle`; adding it to `angle`
+would repeat the level/kind muddle BO-2900g-3 exists to have removed. Whichever way it
+goes, per BO-2900g-3 the change must move the affected records in the same commit, not
+leave them for whoever touches them next.
+
+**Related.** KI-ACS-009 (the pre-flight is weaker than the gate — the reason a
+locally-clean folder run does not clear these). BO-2900g-3 (the MIGRATE-DO-NOT-DEFER
+constraint this violates). `ACS-200h`, named at `ci.yml:215` as the unbuilt whole-store
+backstop, is the check that would have surfaced this on day one.

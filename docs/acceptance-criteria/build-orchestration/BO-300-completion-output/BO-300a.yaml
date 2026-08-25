@@ -8,7 +8,7 @@ component: build-orchestration
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 criteria: |
   After an epic drive completes successfully, the output tells the user
   what the epic accomplished (title and ticket count), where the worktree

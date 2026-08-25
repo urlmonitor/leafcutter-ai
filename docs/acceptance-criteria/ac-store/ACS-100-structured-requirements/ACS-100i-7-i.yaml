@@ -1,0 +1,59 @@
+id: ACS-100i-7-i
+components:
+  - ac_store
+title: "A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a copy of the acceptance-criteria store into which one record has been
+    added carrying `package_surface: true` and implementation requirements
+    written as a list of strings,
+  When every record in that copy is validated in one pass,
+  Then the pass refuses exactly one record, and it is that record,
+  And the refusal names it by file path.
+
+  And given the same copy,
+  When only that one record is passed to the validator by file path,
+  Then it is refused with the same message the whole-store pass produced.
+
+  And given a directory path is passed to the validator instead of a file path,
+  When the run completes,
+  Then it does not report success for a run in which it examined no records —
+    an empty examination is reported as such and is distinguishable from a pass.
+depends_on: [ACS-100i-7]
+doc_links:
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-001 (closed 2026-08-25 by PR #515) — the validator exited 0 on a bare directory, so a store-wide sweep could be success-shaped while checking nothing. The last scenario is why the zero-refusal claim in ACS-100i-7 cannot be trusted without it, and it stays enforced after the fix so the no-op cannot return."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-7
+  contract: "The whole-store pass whose zero-refusal result this criterion proves is a real pass and not an empty one."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  Without this, ACS-100i-7's headline result — "zero records refused on this
+  rule" — is indistinguishable from a run that validated nothing at all. That is
+  not hypothetical: the store-wide sweep prescribed in CLAUDE.md was itself a
+  no-op from 2026-08-10 to 2026-08-18 because it passed a bare directory, and the
+  validator exited 0 having examined no files. The first two scenarios prove the
+  gate still bites inside the whole-store pass; the third proves the pass was a
+  pass.

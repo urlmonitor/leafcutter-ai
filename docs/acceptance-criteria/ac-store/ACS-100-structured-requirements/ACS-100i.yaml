@@ -25,9 +25,10 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "2026-08-19 [business-analyst]: added ACS-100i-6, ACS-100i-7 and ACS-100i-8 to covered_by. These decompose the KI-ACS-005 narrowing of the package-surface it_requirements cross-field rule — a conditional constraint keyed off assigned_agent + component, which is this L1's subject matter. Child ids -3, -4 and -5 were skipped: they are already in use by EPIC-AcParentChildLinkEnforcement (tickets and # covers: tags exist) even though their YAML records are absent from the store, and re-issuing them would create the duplicate-id defect recorded as KI-ACS-003."
 superseded_by: null
-covered_by: [ACS-100i-1, ACS-100i-2]
+covered_by: [ACS-100i-1, ACS-100i-2, ACS-100i-6, ACS-100i-7, ACS-100i-8]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
