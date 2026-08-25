@@ -216,12 +216,33 @@ const TICKET_PLANNER_SCHEMA = {
  * Per-phase result schema — mirrors build-ticket.js PHASE_RESULT_SCHEMA.
  * Used by driveTicketPhases() for each phase agent dispatch.
  */
+/**
+ * Every status a phase result may legally carry.
+ *
+ * 'undetermined' is the boundary-failure value: it means "I could not perform
+ * my task", as distinct from "I performed it and the answer is no". Without it
+ * an agent that cannot do its job has no truthful value to return, so its
+ * failure gets forced onto a status meaning something else — the shape behind
+ * KI-SS-001. Any status outside this list is treated as unrecognised and
+ * therefore NOT a success.
+ *
+ * TWIN: mirrors build-ticket.js PHASE_STATUS_VALUES. Keep in sync.
+ */
+const PHASE_STATUS_VALUES = [
+  "ok",
+  "blocker",
+  "failed",
+  "question",
+  "handoff",
+  "undetermined",
+];
+
 const PHASE_RESULT_SCHEMA = {
   type: "object",
   properties: {
     status: {
       type: "string",
-      enum: ["ok", "blocker", "failed", "question", "handoff"],
+      enum: PHASE_STATUS_VALUES,
     },
     result_status: { type: "string" },
     message: { type: "string" },
@@ -1535,13 +1556,26 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       // silently recorded as completed — letting the driver proceed to commit /
       // pull-request on incomplete work. Treat an absent result or unrecognized
       // status as a halt so the ticket stops rather than shipping half-done.
-      if (!phaseResult || !resultStatus) {
+      //
+      // Recognition, not truthiness: the comment above promises "or unrecognized
+      // status", but a truthiness test cannot deliver it. A hallucinated status
+      // ("complete", "done") is truthy, so it passed this guard and then matched
+      // neither the blocker/failed nor the handoff branch below — landing back in
+      // the silent-success hole the guard exists to close. Checking membership in
+      // PHASE_STATUS_VALUES closes it, and also catches an explicit
+      // 'undetermined' (the agent saying it could not perform its task).
+      //
+      // TWIN: mirrors build-ticket.js. Keep in sync with that file.
+      if (!phaseResult || !PHASE_STATUS_VALUES.includes(resultStatus) ||
+          resultStatus === "undetermined") {
         return {
           status: "blocked",
           message:
             `Phase '${phaseName}' returned no usable result (agent died, was ` +
-            `skipped, or returned an empty status). Halting to avoid proceeding ` +
-            `on incomplete work.`,
+            `skipped, or returned an empty, unrecognised, or undetermined ` +
+            `status: ${JSON.stringify(resultStatus)}). Halting to avoid ` +
+            `proceeding on incomplete work — treat the phase as NOT run and ` +
+            `verify the repository, not this payload.`,
           ticket_path: worktreeTicketPath,
           failing_phase: phaseName,
           classification: "halt",
@@ -2194,15 +2228,30 @@ if (target_type === "epic") {
           const result = await driveTicketPhases(worktreeTicketPath, true);
           return {
             ticket_path: ticket.path,
-            status: result && result.status ? result.status : "ok",
+            // Fail CLOSED. This previously defaulted to "ok", which converted a
+            // ticket drive that returned nothing usable into a completed
+            // ticket — the halt filter below then had nothing to catch and the
+            // epic reported tickets_completed with no work done.
+            status: result && result.status ? result.status : "undetermined",
             result,
           };
         })
       );
 
-      for (const r of chunkResults) {
+      for (let idx = 0; idx < chunkResults.length; idx += 1) {
+        const r = chunkResults[idx];
         if (r) {
           batchResults.push(r);
+        } else {
+          // parallel() resolves a thunk that threw to null. Silently dropping it
+          // would remove the ticket from the batch record altogether — the run
+          // would report a smaller batch rather than a failure. Record it as
+          // undetermined so the halt filter below sees it.
+          batchResults.push({
+            ticket_path: chunk[idx] && chunk[idx].path,
+            status: "undetermined",
+            result: null,
+          });
         }
       }
     }
@@ -2212,7 +2261,9 @@ if (target_type === "epic") {
         r.status === "failed" ||
         r.status === "blocked" ||
         r.status === "halt" ||
-        r.status === "error"
+        r.status === "error" ||
+        // A ticket whose drive returned nothing usable has NOT completed.
+        r.status === "undetermined"
     );
 
     if (haltedTickets.length > 0) {
