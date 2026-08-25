@@ -1,0 +1,202 @@
+id: ACS-100i-8
+components:
+  - ac_store
+  - precommit_hooks
+title: "A package surface cannot come into existence without a record that declared it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a change that adds a new entry to a package registry — one of the files
+    the build reads to decide what a consumer project receives, such as the
+    agent registry, the skill registry, the hook registry or the path registry —
+  And the acceptance criteria that change cites, whether through the ticket it
+    is being built from or through its commit message,
+  When the change is evaluated at commit time,
+  Then the change is refused unless at least one cited record carries
+    `package_surface: true`,
+  And the refusal names the registry file, the key of the entry being added, and
+    every acceptance criterion the change cited.
+
+  And given the same change, where one cited record carries
+    `package_surface: true`,
+  When it is evaluated,
+  Then the change is allowed.
+
+  And given a change that edits the value of an entry already present in a
+    package registry, or removes one, and adds no new entry,
+  When it is evaluated,
+  Then the change is allowed with no declaration required — the obligation
+    attaches to bringing a surface into existence, not to maintaining one.
+
+  And given a change that touches no package registry at all,
+  When it is evaluated,
+  Then it is allowed, and the check reports that it had nothing to evaluate
+    rather than reporting a pass.
+depends_on:
+  - ACS-100i
+  - ACS-100i-6
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "One of the package registries. An entry added here is what makes an agent reachable in a consumer project — the registration event this check watches for."
+  - path: config/skill_registry.json
+    relationship: describes
+    status: exists
+  - path: config/paths.json
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    type: object
+    description: >-
+      The two additions this AC makes to
+      templates/scripts/commit_guardian/commit_guardian.json. Both are entry
+      keys in the very registry this check watches — WATCHED_REGISTRIES maps
+      this file to ("hooks_manifest.hooks", "list_ids") and ("", "mapping_keys")
+      — so registering this gate is itself the act the gate governs.
+    properties:
+      package_surface_declaration:
+        type: object
+        description: >-
+          Top-level config section read by
+          check_package_surface_declaration._is_enabled() through
+          config.load_config(). An absent section, an absent `enabled` key, or a
+          config that cannot be read all leave the gate ON: a check that
+          switches itself off when its own configuration is unreadable is the
+          failure mode this tree exists to prevent.
+        properties:
+          _comment:
+            type: string
+          enabled:
+            type: boolean
+            default: true
+        additionalProperties: false
+      hooks_manifest:
+        type: object
+        description: >-
+          The manifest entry build_precommit.py reads to emit this hook into
+          .pre-commit-config.yaml; it renders `stages: [...]` verbatim from the
+          entry, so the commit-msg stage is carried by this field alone.
+        properties:
+          hooks:
+            type: array
+            contains:
+              type: object
+              required:
+                - id
+                - name
+                - entry
+                - language
+                - stages
+              properties:
+                id:
+                  const: check-package-surface-declaration
+                tier:
+                  const: judgment
+                name:
+                  type: string
+                entry:
+                  type: string
+                  description: >-
+                    Invoked through run_hook.py against
+                    scripts/commit_guardian/check_package_surface_declaration.py
+                    under {{config.output_root}}.
+                language:
+                  const: system
+                stages:
+                  const:
+                    - commit-msg
+                pass_filenames:
+                  const: true
+                always_run:
+                  const: true
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    2 — one top-level config section (`package_surface_declaration`) and one
+    entry in `hooks_manifest.hooks` (id `check-package-surface-declaration`),
+    both inside the single reference file. Registering only the manifest entry
+    leaves the gate running unconfigured; registering only the config section
+    leaves it never emitted into .pre-commit-config.yaml. There is no second
+    copy to update in this repo — `scripts/commit_guardian/` does not exist
+    here, so the template file is the only location, and the hook-parity
+    manifest list must not be read as implying otherwise.
+  required_skills:
+    - python-coder
+    - test-writer
+    - create-hook
+  post_write_commands:
+    - "python scripts/build.py --target-dir . --force"
+    - "pre-commit install --hook-type commit-msg"
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-6
+  contract: "The `package_surface` declaration whose presence this check reconciles against the registry entries a change actually adds."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100i-8-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: safety
+notes: |
+  THIS IS THE CRITERION THAT KEEPS THE NARROWING FROM BEING A SWITCH-OFF, AND
+  IT IS THE WEAKEST LINK IN THE TREE. Read the concessions below before building
+  it.
+
+  The problem it answers: once the obligation is keyed off a declaration, an
+  author who registers a package surface and simply does not write
+  `package_surface: true` escapes the gate entirely. At authoring time there is
+  no signal in the AC record that contradicts them — the record is a statement of
+  intent, and intent is exactly what the author controls. Searched for one and
+  found none: `doc_links.relationship` is a free-form string, so a `modifies`
+  link is not dependable; `change_target` is optional, so it is as omissible as
+  the marker itself; and `components` is a membership axis, not a surface axis.
+
+  The signal that is NOT under the author's control is the registration itself.
+  A package surface does not exist because an AC said so; it exists because an
+  entry appears in a registry the build reads. That entry is in the diff, it is
+  enumerable, and it cannot be omitted without also failing to ship the feature.
+  So the check runs against the registration, not against the record.
+
+  CONCESSION 1 — detection moves from authoring time to landing time. BO-2000d
+  set out to validate the spec "before it can ever be handed to an agent". This
+  check fires when the registration lands, by which point a coder has already
+  worked from a thin spec. That is a genuine reduction in the gate's reach and
+  should be recorded as such rather than glossed. What survives is the guarantee
+  that the surface cannot reach a consumer undeclared.
+
+  CONCESSION 2 — it needs a change-to-record link, and that link is itself a
+  known-weak surface in this repo. The check can only reconcile against
+  acceptance criteria a change cites. The uncited-change hole is specified in
+  ACS-100i-8-i; note it is a pre-existing hole, not one this narrowing opens.
+
+  CONCESSION 3 — the registry list is a maintained enumeration, so it can go
+  stale. A new kind of registry added later is unwatched until someone adds it
+  to the list. Pair the list with the deploy-manifest invariant already stated in
+  CLAUDE.md ("New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest")
+  so the two enumerations are checked against each other rather than drifting
+  independently.
+
+  Last scenario is deliberate: a check that reports "pass" when it examined
+  nothing is the failure mode KI-ACS-001 documents, and it would make this
+  criterion unfalsifiable.

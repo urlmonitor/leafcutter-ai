@@ -440,6 +440,7 @@ checkout — deploying more files fixes nothing here.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the same family — a hook that
 cannot reach a file it depends on because it is wrong about where it is — though M2's
 mechanism is the deploy manifest and this one's is root resolution through a symlink.
+
 ---
 
 ### KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable
@@ -532,69 +533,151 @@ available response is to turn it off, taking every sibling hook with it.
 
 ---
 
-### KI-CG-010 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
+### KI-CG-010 — `check-roadmap-schema` never validates the roadmap, and the roadmap would fail it if it did
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_roadmap_schema.py:27` — `SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"`
+
+**Symptom.** The hook resolves its schema at `<git-root>/leafcutter/config/roadmap.schema.json`.
+In this repository the git root **is** the package, so the real path is
+`config/roadmap.schema.json` with no `leafcutter/` segment. The file it looks for does not
+exist, so the hook takes its fail-open branch and reports an advisory skip. Every commit
+touching `docs/roadmap.json` has passed a check that never ran.
+
+The second half is worse than the first: **if the hook ever found its schema, the roadmap
+would fail it.** Every phase in `docs/roadmap.json` carries a `components` key, and the
+schema's phase item declares `additionalProperties: false` over exactly six permitted
+properties — `description`, `exit_criteria`, `id`, `status`, `tickets_advancing_outcome`,
+`title`. `components` is not among them. So fixing the path alone converts a silent no-op
+into a blocked commit on an unrelated change.
+
+**Evidence.** Verified 2026-08-25 while rewording a phase_1 exit criterion.
+`ls <repo>/leafcutter/config/roadmap.schema.json` → no such file. The schema's own
+`properties.phases.items` was read directly: six properties, `additionalProperties: false`.
+The hook reported no failure on the commit that changed `docs/roadmap.json`.
+
+This is the same shape as `KI-BP-003` and `KI-CG-002` — a guardrail that cannot reach its
+own declaring file in the self-hosted layout — and the third instance found. Unlike
+`KI-CG-002`, which narrows an enum, this one skips the check entirely.
+
+**Fix direction.** Resolve the schema the way `KI-CG-009`'s repair does, from the running
+artifact's own location rather than a hardcoded `leafcutter/` segment that assumes a
+consumer layout. Land the `components`-vs-schema disagreement in the **same** change —
+either add `components` to the phase schema or drop it from the roadmap — because repairing
+the path first turns a dormant no-op into an immediate merge blocker. Note the regression
+test must run with the CWD somewhere other than the layout under test, or it will be green
+against both the broken and the fixed resolver.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that reports
+success having checked nothing) and M2 (a guardrail that cannot reach a file it depends on).
+
+---
+
+### KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/regenerate_roadmap_mirror.py:155-163` — the frontmatter block
+
+**Symptom.** The generator emits a fixed six-line frontmatter: `title`, `type`, `status`,
+`created`, `last_updated`, `components`. Two defects follow.
+
+It never emits `description`, so any `description` present in `docs/roadmap.md` is **deleted
+on every regeneration**. The comment above the block says the frontmatter is "required by
+check_doc_frontmatter.py", which is exactly the convention the omission violates.
+
+And `created` is written from the regeneration timestamp
+(`date_only = generated_at[:10]`, line 154), so a file created on one date silently claims
+it was created today, every time the mirror is rebuilt. `created` is supposed to be
+immutable; only `last_updated` should move.
+
+**Evidence.** Verified 2026-08-25 in the commit that reworded a phase_1 exit criterion. A
+one-line change to `docs/roadmap.json` produced a 16-line diff in `docs/roadmap.md`: the
+criterion itself, the two generated timestamps, quoting and indentation churn, and the
+removal of `description: Overview of Project Roadmap.`. `created` moved `2026-08-17` →
+`2026-08-25` on a file that plainly was not created that day.
+
+Not currently merge-blocking — `check-description-field` is not among the six required CI
+checks — so this erodes quietly.
+
+**Fix direction.** Emit `description` in the generated frontmatter, and preserve the
+existing `created` value when the mirror already exists rather than stamping the
+regeneration date. Both are small, and both are worth doing together with a test that
+regenerates twice and asserts the only field that moves is `last_updated`.
+
+**Related.** This is `KI-BP-002`'s shape in another file — a tracked generated artifact that
+drifts every time it is rebuilt — and `BP-1500a` is the acceptance criterion written against
+that class. The roadmap mirror is not currently in `BP-1500a`'s scope; worth checking
+whether it should be when that AC is built.
+
+---
+
+### KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
 
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`), `_get_staged_ac_paths()` (fail-open documented in its own docstring), `_load_schema()`, and `_find_project_root()`
+- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`, `:673`), `_get_staged_ac_paths()` (`:307`, fail-open documented in its own docstring), the `if not staged_files:` branch (`:685`), and `_find_project_root()` (`:99`)
 
-**Symptom.** The hook exits 0 having validated nothing, and is indistinguishable from a
-hook that validated everything and found it clean. There is no "checked 0 files" line: a
-skipped Phase 1 and a passing Phase 1 produce identical output.
+**Symptom.** The hook exits 0 having validated nothing, and its output is indistinguishable
+from a run that validated everything and found it clean. There is no "checked 0 files"
+line: a skipped Phase 1 and a passing Phase 1 look identical.
 
 **Evidence — two independent observations on the same day.**
 
 *Deliberate mutation.* `declares_side_effect: true` was removed from a staged
-`BP-600b-3.yaml` whose criteria assert a durable effect — the exact condition
+`BP-600b-3.yaml` whose criteria assert a durable effect — precisely the condition
 `validate_declares_side_effect` exists to catch. Both the direct invocation and
-`pre-commit run check-ac-schema` reported **Passed**. CI, on the same commit, failed the
-required `AC store valid` check and named the file and the rule. The local exit code
+`pre-commit run check-ac-schema` reported **Passed**. CI, on that same commit, failed the
+required `AC store valid` check and named both the file and the rule. The local exit code
 carried no information; only CI evaluated the record.
 
 *Wrong-root run.* A separate agent, running the deployed hook against AC files in a
 worktree, saw it print `WARNING: config/ac_store_schema.json not found at
 /home/henzeh/projects/leafcutter; falling back to manual field validation` and exit 0. It
 had resolved the project root to the **workspace parent** — the untracked directory above
-the repo — where no `config/` tree exists.
+the repository, which has no `config/` tree.
 
-**Root cause, as far as the source states it.** Three separate mechanisms make a clean
-exit reachable without any file being checked:
+**Root cause, as far as the source states it.** Three mechanisms each independently make a
+clean exit reachable without any file being checked:
 
 1. `main()` derives its root from **CWD**: `root = Path(os.environ.get("HOOK_ROOT",
    str(Path.cwd())))`. Nothing constrains CWD to the repository whose index is being
    committed.
 2. `_get_staged_ac_paths(root)` shells out to `git diff --cached` under that root, and its
    own docstring states it "returns an empty list when `HOOK_NO_GIT` is set or git is
-   unavailable (**fail-open**)". `main()` then takes the `if not staged_files:` branch and
-   skips Phase 1 entirely. A wrong root and an absent git both land here.
-3. `_find_project_root()` — used by Phase 2, *not* by `main()` — walks ancestors accepting
-   `.git` **or `CLAUDE.md`**. The workspace parent has a `CLAUDE.md`, so that search can
-   stop at a directory that is not a repository at all. Two different root strategies in
-   one file, disagreeing.
+   unavailable (**fail-open**)". `main()` then takes `if not staged_files:` and skips
+   Phase 1 entirely. A wrong root and an absent git both land here.
+3. `_find_project_root()` — used by Phase 2, **not** by `main()` — walks ancestors
+   accepting `.git` **or `CLAUDE.md`**. The workspace parent has a `CLAUDE.md`, so that
+   search can terminate at a directory that is not a repository. Two different root
+   strategies in one file, and they disagree.
 
-Note the schema fallback is **not** the whole story: `validate_declares_side_effect` is
-called unconditionally at `:625`, independent of whether the schema loaded. A missing
-schema alone would still have caught the mutation. What silences the hook is Phase 1 not
-running.
+The schema fallback is **not** the whole story. `validate_declares_side_effect` is called
+unconditionally at `:625`, independent of whether the schema loaded, so a missing schema
+alone would still have caught the mutation. What silences the hook is Phase 1 not running.
 
 **Honest limit of this report.** The `pre-commit run` invocation was not isolated to a
-single one of the three mechanisms — cwd was inside the worktree for that run, so (1) and
-(2) do not obviously explain it, and the exact path taken was not pinned down. The three
-code facts above are directly readable and each independently permits a silent pass; which
-one fired in that specific invocation is still open. Do not close this on the strength of
-fixing only the one that looks most likely.
+single mechanism — cwd was inside the worktree for that run, so (1) and (2) do not
+obviously explain it, and the exact path taken was not pinned down. The three code facts
+above are directly readable and each permits a silent pass; which one fired in that
+specific invocation is still open. Do not close this on the strength of fixing only the
+one that looks most likely.
 
-**Fix direction.** Make "checked nothing" impossible to confuse with "checked and passed".
-Three parts, in order of value:
+**Fix direction.** Make "checked nothing" impossible to confuse with "checked and passed":
 
 - **Never exit 0 on an empty file set.** If the hook was invoked and resolved zero files,
   say so on stderr and exit non-zero, or at minimum print the count. `KI-ACS-001` fixed
   exactly this shape in `validate_ac_schema.py` on 2026-08-19 — a bare directory printed
   `No YAML files to validate.` and exited 0 — and the same reasoning applies here.
-- **Resolve the root once, from `git rev-parse --show-toplevel`**, and thread it to every
-  consumer. Drop the CWD default and the `CLAUDE.md` ancestor heuristic; a `CLAUDE.md`
+- **Resolve the root once**, from `git rev-parse --show-toplevel`, and thread it to every
+  consumer. Drop the CWD default and the `CLAUDE.md` ancestor heuristic: a `CLAUDE.md`
   marks a *workspace*, not a repository.
 - **Do not fail open when git is unavailable.** A gate that cannot determine what is being
   committed has not passed; it has failed to run.
@@ -602,10 +685,9 @@ Three parts, in order of value:
 **Relationship to existing entries.** Same family as **KI-CG-009**
 (`check-components-integrity` resolving the root to the main checkout rather than the
 worktree) and **KI-CG-002** (a silent fallback to a narrower rule when a declaring file is
-unreachable). It shares KI-CG-001's index-scoping premise but is a distinct failure: there
-the hook checks the wrong *set*, here it checks the *empty* set and says nothing. Worth
-fixing as one piece of work across the hook family rather than one hook at a time — the
-count is now four entries describing the same root-resolution surface.
+unreachable). It shares **KI-CG-001**'s index-scoping premise but is a distinct failure:
+there the hook checks the wrong *set*; here it checks the *empty* set and says nothing.
+Four entries now describe the same root-resolution surface, which argues for one piece of
+work across the hook family rather than one hook at a time.
 
-**Pattern:** `docs/reference/false-green-mechanisms.md` → a gate whose silence is
-structurally indistinguishable from a pass.
+**Pattern:** a gate whose silence is structurally indistinguishable from a pass.

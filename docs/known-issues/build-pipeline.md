@@ -362,6 +362,23 @@ staleness is the actual bug: it destroys the only record that the file was ever 
 the mechanism, a build that removes an entry and leaves the artifact must say so out loud
 rather than printing a clean bill of health.
 
+**Two more instances of this class, both found 2026-08-19.** The proposed fix above ("walk
+`.leafcutter/` and delete unclaimed files") would resolve all three, which is the argument for
+doing it that way rather than diffing manifests:
+
+- **A live orphan the cleanup mechanism structurally cannot see.**
+  `.leafcutter/workflows/pause-resume-substrate.js` has no template and is claimed by nothing.
+  Clean-mode has a `workflows` entry meant to remove exactly this, and it never executes — see
+  KI-BP-010.
+- **Hand-placed files are indistinguishable from deployed ones.**
+  `.leafcutter/config/doc_types.json` and `diagram_types.json` are present in the self-hosted
+  workspace and deployed by no build phase; someone copied them in as a workaround for
+  KI-BP-003. Since `.leafcutter/` is gitignored and nothing reconciles it against the manifest,
+  that workaround is invisible **and** it masks the deploy gap it was working around, so
+  KI-BP-003 tests as fixed there. Same root cause as the orphan, opposite origin: this file
+  arrived from outside the build rather than being abandoned by it. It also means any local
+  verdict on KI-BP-003 taken from that workspace is vacuous.
+
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
 from the source you are reading), in its orphan form — the deployed tree holds something the
 source no longer has.
@@ -573,6 +590,10 @@ workspace working.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
 from the source you are reading), in its stale form — the deployed tree holds an older
 version of something the source has moved on from.
+
+**Related.** KI-BP-010 is the cleanup-side counterpart for this same `workflows/` directory:
+its `--clean` entry has never executed, so nothing reaps what this phase declines to rewrite.
+
 ---
 
 ### KI-BP-009 — `.claude/skills/` is symlinked wholesale to the generated tree, so an adopter's own skills have nowhere to live and `--clean` targets them
@@ -629,13 +650,18 @@ Mitigating factor: those files are git-tracked in the adopter repo, so a deletio
 `site/middleware.ts` incident, where an untracked file disappeared silently and left
 production ungated for two weeks.
 
-**A second defect in the same function, found while verifying.** `_MANAGED_ARTIFACT_DIRS`
-maps `"workflows"` → `".claude/workflows"`, but the value is joined onto `claude_dir` (which
-is already `<target>/.claude`), producing `<target>/.claude/.claude/workflows`. That never
-exists, so the loop `continue`s and clean-mode has **never** cleaned workflows. The typo is
-currently load-bearing: `_build_source_manifests` returns no `"workflows"` key at all, so
-`expected_names` would be the empty set and a corrected path would delete **every** deployed
-workflow on the first `--clean`. Fix both halves together or neither.
+**A second, independent defect in the same function, found while verifying** — a doubled path
+segment that has made clean-mode's `workflows` entry unreachable since it was added. Filed
+separately as **KI-BP-010**, where it can be picked up on its own.
+
+**Correction, 2026-08-25.** An earlier revision of this paragraph claimed the typo was
+"load-bearing" because `_build_source_manifests` returns no `"workflows"` key, so fixing the
+path alone would delete every deployed workflow. **That is wrong.** The key exists —
+`scripts/build.py:1246-1258` populates it from `templates/workflows-js/*.js`. The manifest
+side is correct and the entry is simply never consulted, so repairing the path is safe and is
+the fix, not a hazard. The mistake mattered in the one direction that costs something: it
+argued for leaving a broken cleanup step alone. Corrected in KI-BP-010, which carries the
+verified analysis.
 
 **Confidentiality angle worth flagging.** `prod-deploy/SKILL.md` in the reporting repo holds
 Roche sandbox infrastructure detail — subscription name, ACR name, Container App names,
@@ -667,3 +693,95 @@ is to run it destructively cannot be verified by the people most at risk from it
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2, in its ownership form: the
 deployed tree and the adopter's tree are the same directory, so the package cannot tell its
 own output from someone else's source.
+
+---
+
+### KI-BP-010 — Clean-mode's `workflows` entry has a doubled path segment, so it has never run and a real orphan survives every `--clean`
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_phases.py:2820-2825` (`_MANAGED_ARTIFACT_DIRS`), `:2859-2864`
+  (the join in `clean_stale_artifacts`)
+
+**Symptom.** `_MANAGED_ARTIFACT_DIRS` mixes two path conventions in one dict. Three entries
+are bare subdirectory names; the fourth carries a `.claude/` prefix:
+
+```python
+_MANAGED_ARTIFACT_DIRS = {
+    "agents": "agents",
+    "skills": "skills",
+    "hooks": "hooks",
+    "workflows": ".claude/workflows",
+}
+```
+
+The consumer joins the value onto `claude_dir`, which is *already* `<target>/.claude`:
+
+```python
+claude_dir = target_dir / ".claude"
+...
+managed_dir = claude_dir / subdir_name        # <target>/.claude/.claude/workflows
+if not managed_dir.exists():
+    continue
+```
+
+That path never exists, so the loop `continue`s every time and clean-mode has **never**
+cleaned workflows — silently, since the function only prints when it removes something or
+when the total is zero.
+
+**The manifest side is fine, and this correction matters.** `_build_source_manifests`
+(`scripts/build.py:1246-1258`) *does* populate a `workflows` key, from
+`templates/workflows-js/*.js`. An earlier draft of this finding — which reached `main` inside
+KI-BP-009 via `#520` — asserted the opposite: that no such key exists, that `expected_names`
+would therefore be empty, and that repairing the path would delete every deployed workflow on
+the first `--clean`. That was wrong, and wrong in the expensive direction: it recommended
+leaving a broken cleanup step in place. Repairing the path is safe.
+
+**Evidence — there is a real orphan it should have caught.** In the self-hosted workspace
+`.leafcutter/workflows/` holds **ten** files while `templates/workflows-js/` holds **nine**.
+The extra one is `pause-resume-substrate.js`, which has no template and is claimed by
+nothing:
+
+```text
+$ ls <package>/templates/workflows-js/ | wc -l
+9
+$ ls <workspace>/.leafcutter/workflows/ | wc -l
+10
+$ ls <package>/templates/workflows-js/pause-resume-substrate.js
+No such file or directory
+```
+
+It is exactly the artifact the `workflows` entry was added to remove, and it survives every
+`--clean` while the run reports success. This is a live instance of KI-BP-005 that the
+mechanism intended to catch it cannot see.
+
+Found while verifying KI-BP-009, not by any failure report — nothing surfaces it, because a
+no-op cleanup and a genuinely clean tree produce identical output.
+
+**Related — the other half of the workflows story.** KI-BP-008 records a *deploy* path that
+can silently skip the workflow-install phase, leaving deployed workflows stale. This entry
+records the *cleanup* path for the same directory never running at all. Between them,
+`.leafcutter/workflows/` has neither a reliable writer nor a working reaper, and both failure
+modes print success. Whoever fixes either should read the other first.
+
+**Relationship to KI-BP-009.** Same function, same `--clean` invocation, distinct defects with
+distinct fixes: BP-009 is about *whose files* clean-mode is entitled to touch; this is about a
+path it cannot reach. Sequence them deliberately — repairing this one activates a code path
+that BP-009 shows is unsafe for any directory an adopter also writes into. Workflows are not
+currently such a directory, so the two are separable here, but only by accident of which trees
+adopters happen to use.
+
+**Fix direction.** Normalise the dict to one convention — all values relative to `.claude/`,
+or all absolute from `target_dir` — and add a test that asserts every entry resolves to a real
+directory in a freshly built target. A dict where three entries follow one rule and the fourth
+follows another is the actual defect; the unreachable path is just where it surfaced first.
+Then confirm the orphan is removed rather than assuming it: run `--clean` on a scratch target
+and check `pause-resume-substrate.js` is gone.
+
+While in there, decide whether `pause-resume-substrate.js` is dead or whether its template was
+lost — clean-mode deleting it is only the right outcome if the answer is "dead".
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 — a step that checks less than it
+claims to and reports success.
