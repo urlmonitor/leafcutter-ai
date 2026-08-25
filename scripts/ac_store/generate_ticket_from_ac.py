@@ -916,7 +916,7 @@ def _build_agents_map(
             # Collect the set of change_target values covered by a non_triggering
             # entry for the current risk_surface.
             suppressed_targets: set[str] = {
-                entry.get("change_target")
+                str(entry["change_target"])
                 for entry in non_triggering
                 if isinstance(entry, dict)
                 and entry.get("change_target")
@@ -996,8 +996,9 @@ def _build_agents_map(
         #       sufficient regardless of files_touched content.
         # Docs/config/diagram-only tickets (no source file in files_touched AND
         # a non-coder assigned agent) satisfy neither condition and are not gated.
-        _has_source_file = bool(files_touched) and any(
-            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS for p in files_touched
+        _has_source_file = any(
+            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS
+            for p in (files_touched or [])
         )
         _is_coder_assigned = assigned_agent in _KNOWN_CODERS
         if _has_source_file or _is_coder_assigned:
@@ -2226,8 +2227,8 @@ def _build_components_list(ac: AcRecord, ac_id: str = "") -> list[str]:
                 )
                 warned_values.add(resolved)
         return result
-    kebab = ac.get("component", "unknown")
-    return [_COMPONENT_MIGRATION_MAP.get(kebab, kebab)]
+    kebab = str(ac.get("component") or "unknown")
+    return [str(_COMPONENT_MIGRATION_MAP.get(kebab, kebab))]
 
 
 def _build_frontmatter(
@@ -3027,8 +3028,9 @@ def _build_verification_report(
 
     is_code_ac = _computed_map_has_production_code_producer(agents)
     criteria = str(ac.get("criteria") or "").strip()
-    test_spec = ac.get("test_spec")
-    has_spec = isinstance(test_spec, list) and len(test_spec) > 0
+    raw_spec = ac.get("test_spec")
+    test_spec: list = raw_spec if isinstance(raw_spec, list) else []
+    has_spec = len(test_spec) > 0
     test_required = ac.get("test_required")
 
     # 1. Criteria present — a coder and test-writer both need it.
