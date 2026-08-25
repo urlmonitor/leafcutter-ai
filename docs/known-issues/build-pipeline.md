@@ -103,6 +103,15 @@ ACs that caused the drift, and picking them up in an unrelated change invites a 
 is itself the point — the cost of this defect is paid by whoever happens to run a build next,
 and it is always someone with no reason to care.
 
+**Same finding as `KI-BP-015`, recorded twice on the same day by two sessions.** That entry
+reports the same four cards and 63 lines against this occurrence's 68, from an independent
+build. Per this file's own rule — *"Hitting an existing issue. Increment `Occurrences` and
+update `Last seen`. Do not add a duplicate entry"* — the occurrence increment is the correct
+form and `KI-BP-015` should be folded into this entry rather than kept alongside it. Left for
+whoever consolidates: deleting another session's entry mid-flight is how the `KI-BO-019`/`020`
+collision got worse. Worth noting that two independent observers filing the same defect within
+hours is itself evidence of how often this fires.
+
 **Symptom.** The cards are generated from two sources that change constantly — each
 agent's template `description`, and the AC store — but they are **tracked files**, and the
 PRs that change those sources do not regenerate them. So the committed cards drift out of
