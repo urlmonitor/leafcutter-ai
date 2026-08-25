@@ -98,7 +98,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/07_TICKET-20260825-GE-120a-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -127,3 +128,4 @@ notes: |
   edit is a one-paragraph correction on the same change; python-coder owns markdown.
   Also recorded: this validator is source-only and ADR-013-exempt, so it carries NO
   template-parity obligation unlike every other code AC in this tree.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

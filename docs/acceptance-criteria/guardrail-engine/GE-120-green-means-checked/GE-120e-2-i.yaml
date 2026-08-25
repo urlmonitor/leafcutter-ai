@@ -85,7 +85,8 @@ created: 2026-08-17
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/31_TICKET-20260825-GE-120e-2-i.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -103,3 +104,4 @@ notes: |
   mechanically checked against the family's own registry decays one addition at a time —
   applied to a third field. If a shared registry-conformance mechanism emerges from those
   two, this should use it rather than adding a fourth private sweep.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

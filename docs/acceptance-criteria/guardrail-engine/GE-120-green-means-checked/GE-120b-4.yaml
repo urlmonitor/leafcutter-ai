@@ -30,6 +30,7 @@ criteria: |
 depends_on:
   - GE-120b
   - GE-120b-2
+  - GE-120c-1
 doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
@@ -93,9 +94,17 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-14'
+- action: depends_on extended with GE-120c-1 — the harness contract this AC already
+    declared in expects_from. goal_to_epic.py orders an epic on depends_on only and
+    never reads expects_from, so without this edge the generated epic could schedule
+    this ticket before the out-of-process harness it is verified through exists.
+    criteria untouched.
+  agent: BrainCandy
+  date: '2026-08-25'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/15_TICKET-20260825-GE-120b-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -118,3 +127,4 @@ notes: |
   root-walk instances, not the registered checks. Two invocation shapes and a hooks/
   subdirectory must both be handled. Runtime is ~108 subprocesses per sweep; build each copy
   once and mark the sweep slow rather than narrowing the subject list.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

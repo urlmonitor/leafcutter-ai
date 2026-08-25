@@ -95,7 +95,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-120e-4-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/35_TICKET-20260825-GE-120e-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -126,3 +127,4 @@ notes: |
   a deliberate act. If the answer goes the other way for one check, record it as that
   check's behaviour rather than by removing this AC — the copy-of-a-recorded-change half
   stands regardless.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

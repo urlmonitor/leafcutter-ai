@@ -72,7 +72,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/08_TICKET-20260825-GE-120a-5.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -91,3 +92,4 @@ notes: |
   hooks_manifest.hooks[] — there is no existing mode field to extend. Also added
   docs/how-to/creating-a-claude-code-hook.md to the sweep, since that is the surface a new
   check author reads before touching the reference.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked
