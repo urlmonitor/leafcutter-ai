@@ -119,7 +119,8 @@ amended_by:
   date: '2026-08-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/04_TICKET-20260825-GE-122d-3-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -147,3 +148,4 @@ notes: |
   from them. Deriving it from the exception class instead is the tidy-looking implementation that
   passes every test written today and inverts the boundary the first time an unfamiliar exception
   crosses it.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

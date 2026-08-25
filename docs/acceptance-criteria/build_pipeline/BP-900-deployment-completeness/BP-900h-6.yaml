@@ -104,43 +104,43 @@ it_requirements:
     are deployed and registered nowhere. The first would surface here as a blocked first commit;
     the second as an empty executed-guard record.
 test_spec:
-  - name: test_bp900h4_adopter_first_commit_completes_in_a_from_empty_install
+  - name: test_bp900h6_adopter_first_commit_completes_in_a_from_empty_install
     target_dir: unit_tests/portability/
     framework: unittest
     type: behavioral
     angle: deployed
     description: "A project built into an EMPTY directory holding only a minimal skills_config.json, with no opt-in documentation-seeding step, is git-initialised and an ordinary adopter change is committed through the ordinary commit path — no skip flag, no environment override, no direct guard invocation — and the commit completes. Runs the same entry point the ci.yml step invokes."
-  - name: test_bp900h4_executed_guard_record_is_captured_from_the_commit_itself
+  - name: test_bp900h6_executed_guard_record_is_captured_from_the_commit_itself
     target_dir: unit_tests/portability/
     framework: unittest
     type: behavioral
     angle: reachability
     description: "The record of which guards ran is read from what the commit path reported during that commit, and is non-empty. Goes red if the record is derived by re-reading the deployed registry, because a derived record is identical on a wired and an unwired install."
-  - name: test_bp900h4_empty_executed_guard_record_fails_the_job
+  - name: test_bp900h6_empty_executed_guard_record_fails_the_job
     target_dir: unit_tests/portability/
     framework: unittest
     type: behavioral
     angle: failure
     description: "A simulated commit in which no guard executed produces a non-zero job result, so an install in which nothing was wired is never reported as a successful adopter experience. Must-block case."
-  - name: test_bp900h4_adopter_hostile_guard_fixture_turns_the_job_red
+  - name: test_bp900h6_adopter_hostile_guard_fixture_turns_the_job_red
     target_dir: unit_tests/portability/
     framework: unittest
     type: behavioral
     angle: criterion
     description: "A guard fixture that blocks over content a brand-new project legitimately lacks makes the job fail, naming the guard that blocked and the content it demanded. This is the can-it-go-red demonstration: without it the step is a green box that would stay green on the exact defect it exists to catch."
-  - name: test_bp900h4_nothing_ran_is_reported_differently_from_everything_passed
+  - name: test_bp900h6_nothing_ran_is_reported_differently_from_everything_passed
     target_dir: unit_tests/portability/
     framework: unittest
     type: behavioral
     angle: boundary
     description: "The output of a commit that completed because every guard that ran passed is compared with the output of a commit that completed because no guard ran, and the two are visibly distinct, with guard names printed. Both commits succeed, so exit status alone cannot separate them."
-  - name: test_bp900h4_ci_step_has_no_continue_on_error_and_no_pull_request_skip
+  - name: test_bp900h6_ci_step_has_no_continue_on_error_and_no_pull_request_skip
     target_dir: unit_tests/portability/
     framework: unittest
     type: unit
     angle: real_artifact
     description: "The consumer-simulation job's use-the-install step is read from the actual .github/workflows/ci.yml the runner parses: it carries no continue-on-error and no condition that skips it on pull_request events. Asserted against the real on-disk workflow, never a hand-typed fixture."
-  - name: test_bp900h4_workflow_step_and_test_invoke_the_same_entry_point
+  - name: test_bp900h6_workflow_step_and_test_invoke_the_same_entry_point
     target_dir: unit_tests/portability/
     framework: unittest
     type: unit
@@ -161,7 +161,8 @@ amended_by:
     changed: "readiness draft->reviewed; five constraints added to the structured package-surface it_requirements (one entry point shared by the ci.yml step and its tests, captured-not-derived executed-guard record, three visibly distinct outcome reports, idempotency against BP-900h-2's comparison, and the post-registration re-run obligation); doc_links gained a context edge to GE-122d-6 recording the scaffold/register/re-run order; test_spec and test_rationale authored as seven descriptors, five behavioural real-commit and two against the real on-disk ci.yml. The five machine-checked package-surface keys are unchanged and reference_file_path still resolves. criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/10_TICKET-20260825-BP-900h-6.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
