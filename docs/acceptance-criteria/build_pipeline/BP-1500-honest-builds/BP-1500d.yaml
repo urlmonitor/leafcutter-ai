@@ -42,7 +42,12 @@ created: 2026-08-25
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1500d-1
+  - BP-1500d-2
+  - BP-1500d-3
+  - BP-1500d-4
+  - BP-1500d-5
 implemented_by: []
 documentation_triggers:
   - reference-doc
@@ -137,3 +142,20 @@ notes: |
   matching BP-1500, a, b and c and the namespace convention in this component's
   PROJECT_CONTEXT.md. The graph vocabulary id `build_pipeline` is carried in
   `components`, which is the field that axis belongs to.
+
+  DECOMPOSED 2026-08-25 by business-analyst -- five L2 children, exactly at the
+  five-per-L1 cap, no child_limit_override. Mapping to the guarantee above:
+  BP-1500d-1 owns (a) and (b) -- the record is written into the receiving project
+  and accounts for it, so it travels with that project; (b) is a consequence of
+  (a) rather than a separate mechanism, which is why they share one child.
+  BP-1500d-2 owns (c) -- still readable after the project is moved or copied.
+  BP-1500d-3 owns (d) -- a build that cannot produce the record fails, which is
+  the enforcement floor for the other three. BP-1500d-4 owns the sentence in this
+  L1's own criteria about checks that protect nobody and say nothing about it: a
+  check with no readable record must be distinguishable from a check that passed.
+  BP-1500d-5 is the reference-doc AC required by documentation_triggers, framed so
+  it is proved by FOLLOWING the reference against a real out-of-package install
+  rather than by confirming a document exists. Every child carries the mandated
+  out-of-package proof shape and its own negative control in its criteria text.
+  No child's headline is the BP-1500a clobbering, and BP-1500c's drift guarantee
+  is cited as a boundary rather than re-derived.
