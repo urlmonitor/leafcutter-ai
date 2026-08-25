@@ -315,7 +315,12 @@ def _resolve_ac_yaml_paths(args: list[str]) -> tuple[list[Path], list[str]]:
     # plus a file inside it) must not validate the same record twice, which
     # would double-count files_checked and any error it produces.
     seen: set[Path] = set()
-    unique = [p for p in resolved if not (p in seen or seen.add(p))]
+    unique: list[Path] = []
+    for path in resolved:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
     return unique, errors
 
 
