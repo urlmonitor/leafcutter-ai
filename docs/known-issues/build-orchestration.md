@@ -1487,3 +1487,65 @@ whose criteria is a parse-count assertion rather than a wall clock, which is the
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M1 (a test that greps for a string
 instead of exercising the behaviour) is the dominant one here; `KI-CG-001`'s population-vs-change
 scoping is the dominant one in the sibling registers.
+
+---
+
+### KI-BO-029 — The fast lane stages with `git add -A` into a worktree its own bootstrap already dirtied, so every fast-lane PR silently carries unrelated generated diff
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/fast-lane-ship.js:916-920` (Commit phase, Step 2) interacting with `scripts/setup_ticket_worktree.py`'s bootstrap `build.py` run
+
+**Symptom.** A fast-lane worktree is dirty from birth. `setup_ticket_worktree.py` runs
+`build.py` as part of bootstrap, which regenerates `docs/agents/cards/*.card.md` (the drift
+recorded as **`KI-BP-015`**). No agent has run yet and the tree already has modified tracked
+files. The Commit phase then stages with `git add -A`, so that churn lands inside the pull
+request the lane opens.
+
+**Evidence.** Three independent worktrees created on 2026-08-25, all off `origin/main`, all
+dirty immediately after bootstrap with no agent having touched anything:
+
+```
+worktrees/knowledge-harvest-wiring   4 cards modified
+worktrees/fastlane-ki-findings       4 cards modified
+worktrees/inf-400c-2-ii              7 files: docs/INDEX.md + 6 cards   (+119 / -4)
+```
+
+The third is a real `/fast-lane-build INF-400c-2-ii` run. At the point that run halted in
+review, `git status` showed the seven unrelated files alongside the three the build actually
+authored. The lane halted before Step 2, so the sweep is **not** observed in a landed commit —
+but the code path is unconditional, so a run that reaches commit will include them.
+
+**`add -A` is deliberate, which is why this is not a one-line fix.** The comment at
+`fast-lane-ship.js:796-802` explains it: the Changelog phase writes `emit_entry.py` output to
+disk uncommitted, and relies on the Commit phase's `add -A` to pick it up so the entry lands in
+the PR's own diff rather than a follow-up commit. Narrowing the stage to the coder's
+`files_modified` would drop the changelog entry. The fix has to stage a computed set —
+`files_modified` ∪ the changelog path ∪ the claimed AC files — not simply narrow `add -A`.
+
+**Why it matters more than the diff size.** The commit message is a fixed template:
+`"feat: fast-lane build of ${targetAc} connected set (N ACs)"`, immediately followed by the
+instruction *"Every claim in the commit message must be verifiable in the staged diff."* The
+message cannot describe card regeneration because it is generated before the diff is known, so
+every affected PR ships a diff its own message does not account for — the failure this repo
+codifies as a hard rule in `CLAUDE.md` → "Commit messages must match the diff", and the same
+shape as the `EPIC-PhantomDoneFilesTouched` KI-4 postmortem that rule came from.
+
+It also silently launders `KI-BP-015`. That entry is rated **low** on the reasoning that the
+cards merely drift; if the fast lane regenerates and commits them as a side effect of unrelated
+work, the drift is repaired at random intervals by PRs that never mention it, which makes the
+drift harder to reason about rather than easier.
+
+**Fix direction.** Either (a) stage a computed path set in Step 2 and drop `add -A`, or
+(b) have the bootstrap leave a clean tree — `git restore docs/agents/cards/` after the
+bootstrap `build.py`, which is already the manual workaround prescribed at
+`build-pipeline.md:162`. (b) is smaller and also fixes the same sweep for `/build-feature`
+worktrees; (a) is the one that makes the lane's staging honest regardless of what dirtied the
+tree. They are complementary, not alternatives.
+
+**Related:** `KI-BP-015` (the card churn itself, occurrence count raised to 3 by this run),
+`KI-BP-016` (the `docs/INDEX.md` case, which is destructive rather than additive and also
+appeared in the `inf-400c-2-ii` worktree; `KI-BP-001` describes the same defect but is marked a
+duplicate of 016, so 016 is the one to fix).
