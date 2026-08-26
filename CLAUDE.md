@@ -473,7 +473,25 @@ ls <worktree-root>/.leafcutter/config/feedback_categories.yaml
 
 If the command fails (`No such file or directory`), the file is missing.
 
-Fix: run `python scripts/build.py --target-dir <workspace-root>`, which deploys it, or symlink the worktree's `.leafcutter` to the main tree's alongside the `.pre-commit-config.yaml` fix in the section below.
+Fix: **do not** reach for `python scripts/build.py --target-dir <workspace-root>` here. That
+command is the subject of KI-BP-016 (severity high, filed the same day this line was added):
+when `docs_root` points into a subdirectory — as it does in this workspace, where
+`.claude/skills_config.json` sets `docs_root: "leafcutter-ai/docs/"` — the doc-index phase
+scans `<target_root>/docs`, finds nothing, and overwrites the tracked `docs/INDEX.md` with a
+nine-section `No docs found.` stub. It also deploys a worktree's unmerged templates over the
+shared `.leafcutter` install tree, which is a second and quieter way to lose work.
+
+Prefer the symlink instead — point the worktree's `.leafcutter` at the main tree's, alongside
+the `.pre-commit-config.yaml` fix in the section below. If you do run the build, run
+`git status` immediately afterwards and look at `docs/INDEX.md` before staging anything: a
+`git add -A` after an affected build silently commits a ~175-line deletion of the very index
+this file points agents at for doc discovery.
+
+Caveat on the symlink, so it is chosen with eyes open: a symlinked `scripts/feedback` makes
+`submit_feedback.py` resolve `__file__` through the link, so its walk-up for `.claude/` lands
+in the **install tree** and feedback is written to the install tree's
+`debugging/logs/feedback.jsonl` rather than the worktree's. See KI-BP-017 and KI-FC-001 — the
+sink still works, it is just not where you will look for it.
 
 **The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
 (Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)

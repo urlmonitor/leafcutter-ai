@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - build_pipeline
 related_docs:
@@ -1489,6 +1489,39 @@ index with an all-empty scan: a run that resolves zero documents in every catego
 certainly resolved the wrong directory, and should exit non-zero saying which directory it
 scanned rather than rendering the emptiness as content.
 
+> **Review note, 2026-08-26 — the first half of that fix direction is wrong as written; the
+> second half is the one to build.**
+>
+> "`generate_index` should take the same `target_root / docs_dir`" would reproduce this exact
+> bug rather than fix it. Every entry in `_CATEGORIES` (`generate_doc_index.py:64-74`) already
+> carries the `docs/` prefix — `("Components", "docs/architecture/components", True)`,
+> `("How-To Guides", "docs/how-to", True)`, and so on for all nine. Hand the generator a root
+> that already ends in `docs/` and it scans `<root>/docs/docs/architecture/components`, which
+> exists nowhere, so every category comes back empty and it writes the identical nine-section
+> `No docs found.` stub. The failure would look like no fix had been applied at all. It would
+> also break every link the index renders, since those are built from the same prefixed paths.
+>
+> Whoever picks this up has to choose one of two coherent shapes, not mix them:
+>
+> 1. **Keep `_CATEGORIES` prefixed and pass the repo root.** The generator's contract stays
+>    "give me the root that *contains* `docs/`". The build phase's bug is then simply that it
+>    passes `target_root` where it should pass the root implied by `docs_root` — strip the
+>    trailing `docs/` from `docs_root` and pass that. Smallest change; the generator is
+>    untouched.
+> 2. **Strip the `docs/` prefix from all nine `_CATEGORIES` entries and pass the docs root.**
+>    Then `target_root / docs_dir` is correct. But this changes the generator's contract and
+>    every rendered link path, so the link-rendering code has to be audited in the same commit.
+>
+> Option 1 is smaller and safer, and it is the one that matches how the generator already
+> behaves when invoked directly — the reproduction recorded in this entry passes
+> `--repo-root .../leafcutter-ai`, a root *containing* `docs/` rather than a docs root, and
+> gets a correct 221-line index. That invocation is the working contract; the build phase is
+> what disagrees with it.
+>
+> The refuse-to-overwrite-on-an-all-empty-scan guard is independently correct and worth landing
+> on its own, ahead of either option. It is the part that turns this from a silent 175-line
+> deletion into a loud failure, and unlike the path fix it cannot itself be got subtly wrong.
+
 **Pattern:** a resolver that reads one tree and writes another, with the failure rendering as
 ordinary output.
 
@@ -1574,6 +1607,30 @@ one it already makes. (b) Stop prescribing a relative path: change `SKILL.md:180
 agent templates to invoke `.leafcutter/scripts/feedback/submit_feedback.py`, which resolves in
 both layouts. (b) alone stops the crash but routes the write to the install-tree sink, which
 is `KI-FC-001` — so it must land together with that fix, not before it.
+
+> **Review note, 2026-08-26 — the KI-FC-001 condition belongs on (a) as well, not only (b).**
+>
+> As written, the "must land together with that fix" condition is attached only to (b), which
+> reads as though (a) were safe to ship alone. It is not, and for the same underlying reason.
+>
+> `_find_project_root()` (`templates/scripts/feedback/submit_feedback.py:65-77`) starts from
+> `Path(__file__).resolve().parent`, and `.resolve()` follows symlinks. So the moment
+> `scripts/feedback` in a worktree becomes a **symlink** into the shared install tree — which
+> is precisely what (a) creates — `__file__` resolves into the install tree, the six-level
+> walk-up finds the install tree's `.claude/`, and `_JSONL_DEFAULT` becomes
+> `<install-tree>/debugging/logs/feedback.jsonl`. Same destination as (b). Either way the crash
+> stops and the feedback lands somewhere nobody is looking, which is arguably worse than the
+> loud `(submit-failed)` it replaces, because it reads as success.
+>
+> So the accurate statement is: **KI-FC-001 gates both (a) and (b)**, since both route through
+> a `__file__` resolved into the install tree. Fix the sink resolution first and (a) and (b)
+> become interchangeable in ordering.
+>
+> One thing to check before reproducing: that symlink now **exists** in the GE-120 worktree,
+> created after this entry was filed. A fresh attempt to reproduce the original
+> `(submit-failed)` crash there will not reproduce it — it will silently exercise the
+> install-tree-sink path instead. Confirm whether `scripts/feedback` is a symlink before
+> concluding which of the two failure modes you are looking at.
 
 **Pattern:** a build output that reaches the project root and not the worktrees, called
 through a path that only resolves at the project root.
@@ -1702,3 +1759,8 @@ BP-900g-9's fail-closed principle but worth fixing on sight; it is one line.
 
 **Pattern:** an exception handler that makes a missing dependency indistinguishable from a
 satisfied one.
+
+*The changelog-entry validation gap first drafted here as KI-BP-021 was refiled as KI-CL-001 in
+`docs/known-issues/changelog.md`: the `changelog` component owns entry emission and the
+`changelogs/` corpus, whereas this register covers the template compiler. No KI-BP-021 was ever
+published — the number is unused and free.*
