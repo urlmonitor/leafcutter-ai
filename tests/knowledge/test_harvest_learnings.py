@@ -48,6 +48,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from conftest import load_fixture  # noqa: E402
@@ -61,7 +62,10 @@ _HARVEST_PATH = _REPO_ROOT / "scripts" / "knowledge" / "harvest_learnings.py"
 
 spec = importlib.util.spec_from_file_location("harvest_learnings", _HARVEST_PATH)
 assert spec is not None and spec.loader is not None, f"could not load spec for {_HARVEST_PATH}"
-_mod = importlib.util.module_from_spec(spec)
+# Annotated Any: the module is loaded dynamically, so mypy cannot see its
+# attributes and reports attr-defined on every access (e.g. _KNOWN_ENTRY_KINDS,
+# which the retryability tests swap to extend the routing rules).
+_mod: Any = importlib.util.module_from_spec(spec)
 sys.modules["harvest_learnings"] = _mod
 spec.loader.exec_module(_mod)
 
