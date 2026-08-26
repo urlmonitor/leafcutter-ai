@@ -1,0 +1,71 @@
+id: INF-700b
+readiness: approved
+priority: medium
+components:
+  - infrastructure
+title: "A learning an agent has today actually gets written down"
+component: infrastructure
+level: L1
+status: active
+work_status: todo
+criteria: |
+  The capture step works end to end -- no learning dies in a dead instruction.
+
+  When an agent finishes a piece of work and has learned something about this
+  project, that learning becomes durable, readable knowledge. Every step the
+  capture path asks the agent to take leads somewhere that exists. Whether the
+  loop is working is something a person can see: a quiet week because agents
+  genuinely learned nothing looks different from a quiet week because the path
+  was broken.
+
+  Why this is not already true (evidence, 2026-08-26): the shared sign-off
+  block's capture step -- section 7 of both templates/skills/signoff/SKILL.md
+  and the deployed .claude/skills/signoff/SKILL.md -- instructs agents to load
+  route-learning and capture-learning. Neither directory exists in templates/
+  or .claude/, and the step is specified to fail open ("log a warning and
+  proceed"), so the warning is the only reachable path. The symptom is
+  countable: of the 28 knowledge_captured events ever emitted, 27 fall between
+  2026-06-16 and 2026-07-01 and exactly one has been emitted since. The loop
+  did not degrade loudly; it went quiet.
+
+  Note for BA/IT PO -- scope boundary. INF-400b owns the agent noticing a
+  learning and offering it without being asked. INF-700a owns when the routing
+  step runs. This criterion owns only that the path an agent is instructed to
+  follow at that moment is live rather than dangling, and that its silence is
+  observable. Do not restate the sink-path mismatch (INF-400c-4) or the
+  entry_kind vocabulary (INF-400c-5) here.
+
+  Note for governance: ADR-034 section 2 item 3 retired route-learning and
+  capture-learning as concepts and required their references to be struck from
+  section 7 and the agent templates. That strike has not happened, which is why
+  the live instruction still names them.
+depends_on:
+  - INF-700
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: constrains
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-700b-1
+  - INF-700b-2
+  - INF-700b-3
+  - INF-700b-4
+  - INF-700b-5
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+  - reference-doc
+change_target:
+  - prompt
+  - pipeline
+risk_surface: contract_boundary

@@ -1,0 +1,170 @@
+id: INF-700b-2
+components:
+  - infrastructure
+  - commit_guardian
+  - skill_registry
+title: "A template that names a step which does not exist is refused by the repository's own gating"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
+criteria: |
+  Given a shipped agent or skill template is changed so that it instructs an
+    agent to load a skill directory that is not present in the package,
+  When the change is put through the repository's own gating path — the
+    commit-time hook run and the continuous-integration run, each invoked the
+    way the repository itself invokes it rather than by calling the checking
+    script directly,
+  Then both runs fail,
+  And each failure names the offending template file and the skill name that
+    does not resolve,
+  And the change is refused rather than merely reported, so it cannot reach the
+    default branch while the reference is unresolved,
+  And when the same two runs are made over a tree in which every skill named by
+    a template resolves to a real directory, both pass and report no violation,
+  And a tree in which the checking script is present but is not reached by
+    either run is treated as a failure of this criterion, not a pass.
+depends_on:
+  - INF-700b
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    type: object
+    required:
+      - id
+      - tier
+      - name
+      - entry
+      - language
+      - stages
+    properties:
+      id:
+        const: check-skill-refs
+      tier:
+        const: judgment
+      name:
+        const: "Check Skill References (leafcutter)"
+      entry:
+        type: string
+        description: "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_skill_refs.py"
+      language:
+        const: system
+      files:
+        type: string
+        description: "Regex limiting the hook to template and deployed-agent/skill Markdown surfaces."
+      stages:
+        type: array
+        items:
+          const: pre-commit
+      pass_filenames:
+        const: false
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "1 — one new entry appended to hooks_manifest.hooks, carrying the '@package-managed' marker convention so build_precommit.py regenerates it on every build. TWO further locations lie outside reference_file_path and are equally load-bearing: a job in .github/workflows/ci.yml, and that job's name added to the main-branch ruleset's required status checks. A hook entry alone satisfies the commit-time half of the criteria and NOT the 'refused rather than merely reported' half."
+  required_skills:
+    - python-coder
+    - create-hook
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python3 scripts/check_skill_refs.py"
+    - "pre-commit run check-skill-refs --all-files"
+  constraints:
+    - "ENFORCEMENT POINTS — name all three, and know which one gates. (1) templates/scripts/commit_guardian/commit_guardian.json hooks_manifest.hooks is the SOURCE; .pre-commit-config.yaml is a build output generated from it by scripts/build_precommit.py and symlinked to .leafcutter/pre-commit-config.yaml, so editing the generated file is a change the next build erases. (2) .github/workflows/ci.yml. (3) The main-branch ruleset's required-status-check list — the criteria's 'refused rather than merely reported' clause is satisfied ONLY at (3); a green-optional CI job reports and does not refuse. Point (3) is a repository-administration action, not a code change; if it cannot be performed in the same change, say so at sign-off rather than declaring the criterion met."
+    - "TURNING THIS GATE ON MAKES CI RED IMMEDIATELY, and the red is not all this feature's. Verified 2026-08-26: `python3 scripts/check_skill_refs.py` exits 1 with 'FAIL: 13 imperative reference(s) to 5 skill target(s)'. Ten belong to this feature — route-learning (6) and capture-learning (4), struck by INF-700b-1. The remaining three do not: templates/agents/research-agent.md lines 142, 143 and 144 name import-scanner, find-context-candle and trade-analysis, routing rows inherited when research-agent was copied in from a trading-system project. None of the three has ever existed in this package."
+    - "DISPOSITION OF THE THREE UNRELATED REFERENCES — required, in the same change that wires the gate. Delete the three routing table rows from templates/agents/research-agent.md. They name capabilities this package does not have and never had, so repointing is impossible and the rows are dead instructions of exactly the class this gate exists to refuse. Do NOT satisfy the gate by adding an allowlist, an exemption list, a per-file skip, or by demoting the lines below the imperative threshold: an exemption mechanism introduced to green a gate on its first run is the mechanism that will hide the next dangling reference."
+    - "ORDERING — the gate must not be wired before INF-700b-1's strike lands, or main becomes unmergeable. Either land both in one change, or land INF-700b-1 first. Verify the ordering held by running the checker on the merge result before enabling the required check, not after."
+    - "SCOPE IS DELIBERATELY NOT WIDENED. scripts/check_skill_refs.py scans templates_dir.rglob('*.md') only, so AC YAML, ADRs and docs/ prose naming a retired skill are out of its reach. That matches this AC's criteria, whose subject is 'a shipped agent or skill template'. Widening the scan to docs/ or the AC store in this change would surface a further, unmeasured set of references and block the gate's activation on work nobody has scoped. Record a follow-up AC for the widening; do not do it opportunistically here."
+    - "BEHAVIOURAL PROOF ONLY (project CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'). A test that reads commit_guardian.json or ci.yml and asserts the string 'check-skill-refs' appears passes on a hook that is registered and never reached — which is the present state of every other correctly-registered-but-unwired guard. The proof must invoke the gating path and observe the non-zero exit."
+    - "The failure output must name the offending template file and the unresolved skill name. The existing _report() already groups by skill and prints path:line; do not reduce it to a count when wiring."
+test_spec:
+  - name: test_precommit_hook_refuses_a_commit_introducing_a_dangling_skill_reference
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Runs the generated pre-commit hook entry (not the script directly) over a staged template naming a nonexistent skill and asserts a non-zero exit naming the file and the skill."
+  - name: test_precommit_hook_passes_over_a_consistent_template_tree
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The same hook invocation over a tree in which every named skill resolves exits zero and reports no violation."
+  - name: test_ci_job_invokes_the_skill_reference_gate_and_fails_the_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "The CI job's command is executed as ci.yml defines it and its non-zero exit is asserted to propagate as a job failure, not merely be printed."
+  - name: test_generated_precommit_config_contains_the_gate_after_a_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After build_precommit_config runs from the manifest entry, the generated .pre-commit-config.yaml carries the check-skill-refs hook — proving the source-of-truth edit survives regeneration rather than being an edit to the build output."
+  - name: test_research_agent_routing_rows_for_absent_skills_are_gone
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "templates/agents/research-agent.md names none of import-scanner, find-context-candle or trade-analysis, so the gate's first real run is green for a reason other than an exemption."
+test_rationale: |
+  Four of the five descriptors execute the gating path rather than inspecting a
+  manifest, because the defect being closed is a correctly-written checker that
+  nothing calls — a registration assertion cannot tell that state from a wired
+  one. The fourth descriptor is the specific guard against fixing this in the
+  build output: .pre-commit-config.yaml is generated, so a test that only reads
+  it would stay green while the manifest edit was missing and the next build
+  silently removed the hook. The fifth is a content assertion, and is
+  deliberately so: it pins the disposition of the three unrelated references so
+  a later re-introduction of an allowlist cannot quietly restore them.
+delivers_to:
+  agent: python-coder
+  contract: "A wired, refusing skill-reference gate at three enforcement points (hook manifest entry, CI job, required status check), whose deployed-layout reachability INF-700b-2-i then verifies from a consumer install."
+expects_from:
+  ac_id: INF-700b-1
+  contract: "A template tree in which every skill named by an imperative instruction resolves — specifically the strike of the 10 route-learning / capture-learning references across templates/skills/signoff/SKILL.md, templates/skills/README.md, templates/agents/{product-owner,business-analyst,it-po,retrospective-agent}.md. Without it this gate cannot be enabled: it fails on main on its first run."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Declared package_surface: true — the hook entry lands in templates/scripts/commit_guardian/commit_guardian.json, one of the four registries the AC schema enumerates as package surfaces, so the structured it_requirements form is obligatory and check-package-surface-declaration would otherwise refuse the landing commit. Named all three enforcement points and identified the required-status-check as the only one that satisfies 'refused rather than merely reported'. Dispositioned the three research-agent references that are unrelated to this feature but block the gate's activation, and forbade closing the gap with an allowlist. Corrected the notes' count of 43 references across 11 files: the checker reports 13 imperative references to 5 targets, of which 10 across 6 files are this feature's."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by:
+  - INF-700b-2-i
+implemented_by: []
+notes: |
+  Evidence this exists to close (verified 2026-08-26): scripts/check_skill_refs.py
+  is written, has unit tests, and appears in no CI workflow, no pre-commit
+  configuration and no hook manifest. It has never run in anger. Forty-three
+  references to the two retired skill names survive across eleven files
+  precisely because the guard against them is unwired.
+
+  Coverage constraint (project CLAUDE.md, "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep"): the proof for this AC must be a test that
+  executes the gating path and observes the refusal. A test that searches a
+  workflow or manifest file for the gate's name passes on a gate that is
+  registered and never reached, which is the exact defect being closed.
+change_target: pipeline
+risk_surface: contract_boundary

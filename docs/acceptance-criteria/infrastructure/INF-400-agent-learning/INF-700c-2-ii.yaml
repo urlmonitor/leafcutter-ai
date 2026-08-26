@@ -1,0 +1,118 @@
+id: INF-700c-2-ii
+components:
+  - infrastructure
+  - knowledge_system
+title: "The waiting count stays truthful in the other direction — a real unwritten learning still raises it"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-2.yaml"
+criteria: |
+  Given the count of knowledge still waiting to be written,
+  And a record carrying real learning text that has been emitted and not yet
+    written to any knowledge surface,
+  When the count is produced,
+  Then that record is counted, and the count is greater than zero,
+  And a run over an input holding exactly one such record together with any
+    number of honoured or content-free records reports exactly one outstanding,
+  And the count reaches zero only when no record carrying learning text remains
+    unwritten,
+  And after the honoured body has been brought to its resting state, emitting
+    one new record carrying learning text raises the count from zero to one on
+    the very next run,
+  And once that record has been written to its surface, the count returns to
+    zero.
+depends_on:
+  - INF-700c-2
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DEFINITION OF THE COUNT, stated once so both directions are the same function: outstanding = the number of knowledge records carrying non-empty `text` that have not yet been written to their destination. Records with no `text` are ineligible and contribute zero (INF-700c-1); records already written are watermarked in the idempotency record and contribute zero; every other record contributes one. Nothing else may adjust the figure — no floor, no cap, no exclusion by age, agent, kind or destination."
+  - "MUST NOT BE DERIVED FROM skipped_unknown OR unroutable_by_kind. Those describe records the routing table cannot place, which is a different condition from a record waiting to be written; a record with real text and an unrecognised entry_kind is BOTH unroutable and outstanding, and collapsing the two would make the count fall as the routing vocabulary shrinks."
+  - "AN UNROUTABLE-BUT-TEXT-BEARING RECORD MUST COUNT. INF-400c-2-ii keeps such a record retryable and out of the idempotency record; it is unwritten, so it is outstanding. This is the boundary case that decides whether INF-700c-2's resting state was achieved by fixing the definition or by narrowing it: after the 28 reach zero, a new record with real text and an entry_kind outside _KNOWN_ENTRY_KINDS must still read as one outstanding."
+  - "THE RISE MUST HAPPEN ON THE VERY NEXT RUN, with no cache, no manual refresh and no state reset in between. The count must be re-derived from the sink and the watermark on every invocation."
+  - "THE RETURN TO ZERO MUST FOLLOW THE WRITE, not the attempt. A record whose destination write failed is counted as a write failure (exit 4) and is deliberately NOT watermarked, so it remains outstanding on the next run. Confirm this against the current control flow: harvest() skips adding the hash to new_hashes when capture_fn raises, and a state-persist failure sets state_persist_failed and re-routes everything next run."
+  - "MUST HOLD WHATEVER SURFACE PRESENTS THE COUNT. INF-700a owns when and where the backlog is displayed and that decision is unsettled; this AC constrains the number, not its presentation. Do not couple the definition to a particular report, command or trigger."
+  - "The count is over records, not runs — the denominator distinction INF-700b-3's it_requirements record. One agent run may emit zero or several records; this figure must never be presented as a number of runs."
+test_spec:
+  - name: test_record_with_text_is_counted_as_outstanding
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A single unwritten record carrying non-empty text yields an outstanding count of one."
+  - name: test_one_text_bearing_record_among_the_28_reports_exactly_one_outstanding
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The real 28-record corpus plus one text-bearing record reports exactly one outstanding, not 29 and not zero."
+  - name: test_count_rises_from_zero_to_one_on_the_run_immediately_after_emission
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "From a resting state of zero, appending one text-bearing record raises the count on the very next invocation with no intervening action."
+  - name: test_count_returns_to_zero_once_the_record_is_written
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After a successful write and watermark, the following run reports zero outstanding."
+  - name: test_record_whose_write_failed_remains_outstanding
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With the destination unwritable the run reports exit 4 and the record is still outstanding on the next run, proving the count follows the write rather than the attempt."
+  - name: test_text_bearing_record_with_an_unknown_entry_kind_still_counts
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An unroutable record carrying real text is counted as outstanding, so the resting state was reached by correcting the definition rather than by narrowing what counts."
+test_rationale: |
+  The sixth descriptor is the anti-cheat this AC exists for, sharpened: the
+  obvious way to make the 28 disappear is to count only records the routing
+  table recognises, and every other descriptor here passes under that
+  implementation because a well-formed new record has a known kind. Only a
+  text-bearing record with an unknown kind separates "we fixed the definition"
+  from "we narrowed it". The fifth covers the exit-4 path added to the harvester
+  on this branch, where a write failure deliberately leaves the record
+  unwatermarked — a count derived from routed-versus-read rather than from the
+  watermark would report zero there and lose a real learning.
+delivers_to: null
+expects_from:
+  ac_id: INF-700c-2
+  contract: "The resting state reached by the eligibility rule, from which this AC verifies the count still rises for a record carrying real text — including one whose entry_kind the routing table does not recognise"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Pinned the count's definition as a single function of text-presence and watermark, and forbade deriving it from the harvester's unroutable counters. Added the decisive boundary case the criteria imply but do not name: a record with real text AND an unrecognised entry_kind must still count, which is the only case that distinguishes correcting the definition of outstanding from narrowing it. Recorded that the count must follow the write and not the attempt, against the exit-4 write-failure path now present in harvest_learnings.py."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the anti-cheat clause for INF-700c-2. The cheapest way to make a
+  permanently non-zero backlog go to zero is to stop counting, and that would
+  pass INF-700c-2 read on its own while destroying the same signal it was
+  written to protect. The rise-again clause is the discriminator: only a count
+  that still responds to new input is a count.
+change_target: code
+risk_surface: contract_boundary

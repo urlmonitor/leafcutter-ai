@@ -1,0 +1,104 @@
+id: INF-700c-2-i
+components:
+  - infrastructure
+  - knowledge_system
+title: "The disposition of an honoured record is auditable afterwards, and the record itself survives"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-2.yaml"
+criteria: |
+  Given the retained records have been brought to a state in which they no
+    longer count as outstanding,
+  When a person asks, later, what became of one specific record,
+  Then that record is still retrievable, with its original timestamp, agent,
+    component, destination and kind unchanged from the values it carried
+    before,
+  And the reason it no longer counts as outstanding is recorded — either
+    alongside the record or in a document that names the body of records and
+    the decision taken over it,
+  And a reader can establish from what is recorded, without running anything,
+    that resolving it wrote nothing to any knowledge surface,
+  And a later decision to revisit the body of records is still possible,
+    because no record was destroyed in reaching the resting state.
+depends_on:
+  - INF-700c-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "RETRIEVABILITY IS SATISFIED BY NON-MUTATION, and must be proven that way. The chosen mechanism (INF-700c-2) moves nothing, so every record keeps its original six fields at its original line in debugging/logs/agent_telemetry.jsonl. The proof is a byte-level comparison of the sink before and after a run — a hash, not an eyeball — because 'unchanged' is the whole claim and a summary count cannot distinguish an untouched file from a rewritten one that happens to hold the same records."
+  - "THE AUDIT TRAIL MUST BE TRACKED IN GIT. The criteria require a reader to establish the disposition 'without running anything'. debugging/logs/ is gitignored (.gitignore:60) and is therefore absent from a fresh clone and from every consumer install, so the record itself cannot be the audit trail for a reader who was not on the machine. The disposition document must live under docs/ and is delivered to INF-700c-3."
+  - "THE DOCUMENT MUST MAKE THE 'WROTE NOTHING' CLAIM CHECKABLE, not merely assert it. State the rule that makes these records ineligible (no learning text), and name the artefacts a reader can inspect: the nine destination files that were already substantial before the disposition, and the tenth that was never created. A claim a reader cannot check against a named artefact is the class of documentation this feature exists to stop producing."
+  - "REVISITABILITY REQUIRES NO UN-MARKING STEP. Because no per-record exemption is stored, revisiting the body means changing the rule or supplying `text`; the next run then re-includes the affected records automatically. The document must say so, because a reader's default assumption on encountering a resolved backlog is that something was marked and would have to be un-marked."
+  - "DO NOT BUILD A BESPOKE RETRIEVAL TOOL. 'Still retrievable' is satisfied by the records being in the file they were always in; a query command over the sink is INF-400c's territory and would add a surface this AC does not need. If a reader convenience is wanted, it belongs in the documentation as an instruction, not in a new script."
+  - "This AC must fail loudly if INF-700c-2's mechanism is later changed to one that moves or marks records. Its byte-identity test is the guard: an archival or state-seeding implementation would break it, which is the intended behaviour rather than a brittle test."
+test_spec:
+  - name: test_sink_is_byte_identical_after_the_resting_state_is_reached
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "SHA-256 of the sink file is unchanged across a full run over the 28-record corpus, proving no record was moved, rewritten or removed."
+  - name: test_every_original_field_is_recoverable_from_the_sink_after_the_run
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Each of the 28 records is read back with its original timestamp, agent, component, destination and entry_kind values."
+  - name: test_no_destination_file_was_created_or_modified_by_the_resolution
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The nine existing destinations hash identically and the tenth is still absent, supporting the 'resolving it wrote nothing' claim the disposition document makes."
+  - name: test_changing_the_rule_re_includes_the_records_with_no_un_marking_step
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Supplying `text` on one of the retained records makes it outstanding on the very next run with no state reset, proving reversibility is structural rather than a documented promise."
+test_rationale: |
+  The fourth descriptor is the one that distinguishes this mechanism from the
+  ones INF-700c-2 rejected, and it is also this AC's real subject: reversibility
+  is claimed by every candidate mechanism and delivered only by the ones that
+  store nothing. A state-seeding or archival implementation would pass the first
+  three descriptors and fail this one, which is exactly the discrimination the
+  criteria ask for. The first descriptor uses a hash rather than a record count
+  because a rewritten file containing the same records satisfies a count and
+  violates the criterion.
+delivers_to:
+  agent: documentation-expert
+  contract: "The audit facts INF-700c-3 must record in tracked documentation: the body of 28 records and where they remain, the rule under which they are not outstanding, the named artefacts that evidence nothing was written (nine substantial destinations, one never created), and the statement that revisiting requires no un-marking step."
+expects_from:
+  ac_id: INF-700c-2
+  contract: "The resting state reached by rule with the corpus unmoved, whose byte-identity and no-un-marking-step reversibility this AC verifies and requires to be recorded"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Made the audit-trail location explicit: the criteria require a reader to establish the disposition without running anything, and the records live in a gitignored directory, so the trail must be a tracked document under docs/ and cannot be the records themselves. Turned reversibility into a behavioural test rather than a documentation promise — supplying `text` on a retained record must raise the count on the next run with no state reset, which is the property that separates the chosen rule-based mechanism from state-seeding and archival."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Retention rather than deletion is the point ADR-011 chose the separate sink
+  for: a corrected rule can be re-run over a retained corpus and cannot be
+  re-run over a deleted one. This AC keeps that property intact through
+  whichever resting-state mechanism the IT PO picks, including archival.
+change_target: code
+risk_surface: contract_boundary

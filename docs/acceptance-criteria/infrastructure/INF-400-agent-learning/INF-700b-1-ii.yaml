@@ -1,0 +1,119 @@
+id: INF-700b-1-ii
+components:
+  - infrastructure
+  - knowledge_system
+  - agent_telemetry
+title: "A capture step that cannot complete leaves a countable failure record, not only a warning"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-1.yaml"
+criteria: |
+  Given a phase agent holds a learning and reaches an instruction in the
+    knowledge-capture step whose target is missing at the moment it runs,
+  And the step is specified to let the agent proceed rather than fail its run,
+  When the agent takes that proceed-anyway branch,
+  Then a durable failure record is written that names the agent, the piece of
+    work it was finishing, and the specific target that was missing,
+  And that record survives the end of the agent's process and can be read by a
+    later count without replaying the run's console output,
+  And the agent still returns its primary output and its sign-off is not
+    blocked,
+  And a run in which capture completed produces no such failure record,
+  And a period containing one such failed run is distinguishable from a period
+    containing one run that simply had nothing to record.
+depends_on:
+  - INF-700b-1
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+# Derived from the Then clause: a countable failure record is persisted, which
+# is the whole point of the criterion -- a warning alone is what it replaces.
+declares_side_effect: true
+it_requirements:
+  - "SINK BOUNDARY (preserves INF-400c-4-iii's invariant). The failure record must NOT be written to the knowledge-emission sink. It carries no learning, so a reader that finds it there would either count it as backlog or bucket it as no-learning-text — both wrong, and the second would make it invisible to INF-700c-2's resting-state rule. It belongs on the operational telemetry stream alongside the capture-attempt records of INF-700b-1-i."
+  - "The record must be written by a deployed, tested writer, never composed free-hand by the agent in an ad-hoc shell append. Evidence that free-hand appends corrupt the stream: line 19 of debugging/logs/agent_telemetry.jsonl is the bare fragment `</content>` and four further lines are `{\"probe\": \"pre-drive-check\"}` writability probes, all produced by hand-composed appends into the same file."
+  - "SURFACE CONSTRAINT — read before estimating. The only writer currently deployed for this stream, templates/skills/agent-telemetry/scripts/emit_event.py, emits a fixed payload of exactly { phase, outcome, retry_count } and has no field that can carry the name of the missing target. `outcome` must not be overloaded as a free-text field. Satisfying this AC therefore needs either an additive payload field on that writer or a second writer — either way a Python surface that llm-expert does not own. See the caveat recorded in amended_by: do not silently widen this AC into a Python change; the emitter extension is a python-coder follow-up."
+  - "One failed attempt produces at most one failure record. A retried attempt is a new record with its own timestamp, not an amendment to the previous one, so a count over a period is a count of attempts rather than of distinct agents."
+  - "The failure-record write is itself best-effort and must never block the agent's sign-off or alter its primary output. Its own failure must be reported on stderr — a silent failure to record a silent failure is the same defect one level up."
+  - "The record must name the missing target specifically enough to act on: the literal path or skill name the instruction asked for, not a category such as 'skill unavailable'. The 2026-06-to-08 silence is exactly the failure this clause exists to make legible, and 'a warning was logged' is what it produced."
+  - "Distinguishability is a property of the record's outcome field, not of a count. The failed record and the nothing-to-record record must differ by a value from the closed outcome set defined in INF-700b-1-i's delivers_to contract, so INF-700b-3 partitions rather than infers."
+test_spec:
+  - name: test_failed_capture_writes_one_record_naming_the_missing_target
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Driving the proceed-anyway branch with a named missing target writes exactly one durable record carrying the agent, the work item and that literal target name."
+  - name: test_successful_capture_writes_no_failure_record
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A run whose capture completed leaves the failure ledger unchanged."
+  - name: test_failure_record_never_lands_in_the_knowledge_emission_sink
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "After a failed capture, the knowledge-emission sink contains no new line and the harvester's read of it reports zero records read — holding the INF-400c-4-iii two-stream split."
+  - name: test_failure_record_survives_the_process_that_wrote_it
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The record is read back from disk in a fresh process, not from an in-memory result, proving durability rather than intent."
+  - name: test_capture_step_does_not_block_signoff_when_the_record_write_fails
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With the failure ledger unwritable, the agent's primary output is returned unchanged and the condition is reported on stderr."
+test_rationale: |
+  The fourth descriptor reads the artefact back in a fresh process because the
+  defect this AC closes is precisely a record that existed only in a console
+  buffer — an in-memory assertion would reproduce the bug it is meant to
+  detect. The third descriptor exists because the cheapest implementation is to
+  append the failure to whichever sink is already open, which would silently
+  breach the two-stream split and re-inflate the backlog INF-700c-2 is driving
+  to zero. The fifth covers the fail-open-on-fail-open case, which is
+  unreachable from the happy path and would otherwise ship untested.
+delivers_to:
+  agent: python-coder
+  contract: "A durable failure record per unsuccessful capture attempt on the operational telemetry stream, carrying at minimum { timestamp: ISO-8601, agent: string, work item identifier: string, outcome: \"failed\", missing_target: string (the literal path or skill name that did not resolve) }. Never written to the knowledge-emission sink. INF-700b-3's capture-health report counts these as its 'attempted and could not' figure."
+expects_from:
+  ac_id: INF-700b-1
+  contract: "The capture step whose proceed-anyway branch this AC makes observable, and the closed outcome set shared with INF-700b-1-i's attempt ledger"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. CAVEAT (BP-1100f-3-i partial-surface flag): assigned_agent remains llm-expert because the criteria's subject is the capture step's branch behaviour, which lives in Markdown templates. But the failure record's writer is a Python surface llm-expert cannot author, and the deployed emitter (agent-telemetry/scripts/emit_event.py) has a closed payload of { phase, outcome, retry_count } with nowhere to put the missing-target name. Not split: a split would require inventing criteria about a writer script that the BA's criteria never mention, and INF-700b is already at its five-child cap so a sibling is structurally unavailable. Recorded instead as an it_requirement plus a recommended python-coder follow-up AC for the emitter payload extension."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the AC that closes the specific way this loop died: the step declares
+  itself mandatory and then permits a warning as the exit, so eight weeks of
+  total silence produced no artefact anyone could count. Fail-open is retained
+  deliberately — an agent's primary work must not be blocked by a knowledge
+  step — but fail-open silently is not.
+change_target: prompt
+risk_surface: contract_boundary
