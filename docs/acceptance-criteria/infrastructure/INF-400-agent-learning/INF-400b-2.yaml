@@ -31,13 +31,20 @@ doc_links:
   - path: docs/architecture/agent_knowledge_system.md
     relationship: describes
     status: exists
+  - path: docs/known-issues/knowledge-management.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+# Derived from the Then clause: the emission is appended as a durable line to
+# a JSONL file on disk.
+declares_side_effect: true
 it_requirements:
   - "Must produce valid single-line JSON (no multi-line pretty-printing)"
   - "Must use ISO-8601 datetime format for the timestamp field"
   - "Must be schema-compatible with existing knowledge_captured events from phase agents"
   - "Must append atomically — partial writes must not corrupt the JSONL file"
+  - "AMENDMENT PENDING — do not implement this AC's field list as written. Verified 2026-08-26: the structural-identity clause above does not hold in the shipped artefacts and never has, and the enumerated field list goes stale the moment INF-700b-1 adds `text`. Both are being repaired by the children below; the criteria themselves need a BA/PO amendment (see amended_by). An implementer who satisfies the list as currently written will re-ship the divergence."
 delivers_to:
   agent: python-coder
   contract: "JSONL events appended to debugging/logs/agent_telemetry.jsonl with schema: { event: \"knowledge_captured\", timestamp: string (ISO-8601), agent: string, component: string, destination: string, entry_kind: string }"
@@ -46,9 +53,14 @@ expects_from:
   contract: "V3 agent templates with knowledge-capture step that calls route-learning, capture-learning, and emits telemetry"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "IT PO, 2026-08-26. Added two L3 technical-constraint children for the defects filed as KI-KM-010, and populated covered_by accordingly. The criteria field was NOT touched. INF-400b-2-ii repairs the structural-identity clause, which is already violated in the shipped artefacts — templates/skills/signoff/SKILL.md:691 documents a record keyed on `ticket`, while templates/agents/product-owner.md:473, business-analyst.md:911 and it-po.md:812 document `agent` + `component`; all 28 on-disk records use the v3 shape — and installs the parity check that keeps it true. INF-400b-2-i re-keys the harvester's idempotency digest, which today includes `ticket`, a field empty in every real record. CRITERIA AMENDMENT REQUIRED, raised to BA/PO and deliberately not made here: (a) the enumerated field list becomes incomplete when INF-700b-1 adds `text`, and must additionally classify `ticket` as required or optional per INF-400b-2-ii's reconciliation; (b) the structural-identity clause is written in the indicative, as though it describes a property that holds, when it has never held — it must read as an obligation the package is checked against."
+    by: it-po
+    at: 2026-08-26
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-400b-2-i
+  - INF-400b-2-ii
 implemented_by: []
 change_target: schema
 risk_surface: contract_boundary
