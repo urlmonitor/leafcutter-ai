@@ -169,7 +169,8 @@ amended_by:
     out-of-scope cases are untouched.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/08_TICKET-20260825-GE-122e-2.md
 change_target: docs
 risk_surface: internal
 notes: |

@@ -1,0 +1,132 @@
+id: ACD-2100c-3-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "An answer naming a different decision than the one being waited on is not applied"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run paused at one decision point with drafted work on disk,
+  When the route is started again supplying an answer that names a different
+    decision point,
+  Then the answer is not applied to the decision being waited on,
+  And the run remains paused with its record still on disk,
+  And it reports which decision it is waiting on,
+  And the drafted work is unchanged and nothing is discarded.
+depends_on: [ACD-2100c-3]
+doc_links:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: planned
+    relevance: "The how-to authored by ACD-2100e-2 must tell an operator what a mistyped resume looks like and that the run survives it."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The re-entry path an out-of-band answer arrives on."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The re-entry path that binds a supplied answer to the gate the run is paused at."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the record that must survive the mismatch."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "A mismatch must leave the run paused rather than fail it. The person is still owed the question; a failure that clears the record makes the recovery from a mistyped resume a full re-run."
+  - "The record must be unchanged on disk after the mismatch -- not rewritten, not re-timestamped in a way that loses which decision is outstanding."
+  - "The report must name the decision the run is actually waiting on, so the operator can correct the answer without inspecting the store by hand."
+  - "The subject binding must be checked before any part of the answer is acted on. Checking after the branch has been taken is not a check."
+  - "Must satisfy the repository error-handling policy."
+  - "Must be idempotent: repeated mismatched resumes leave the run in the same waiting state each time."
+test_spec:
+  - name: test_answer_naming_a_different_decision_is_not_applied
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A run paused at one decision point; a resume supplying a well-formed answer that
+      names a different decision point takes neither branch of the waiting decision --
+      no step after it executes.
+  - name: test_run_remains_paused_with_its_record_intact_after_a_mismatch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      After the mismatched resume the record is still present on disk and still names
+      the original decision point, and a fresh process listing waiting runs still lists
+      it.
+  - name: test_mismatch_report_names_the_decision_actually_being_waited_on
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The mismatched resume reports the decision point the run is waiting on, not the
+      one the supplied answer named.
+  - name: test_mismatched_resume_discards_nothing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The drafted artifacts are byte-identical before and after the mismatched resume --
+      including when the supplied answer names a decision whose choices include
+      discarding.
+test_rationale: >-
+  The route has five decision points and a supplied answer is a small structure carrying
+  an action; nothing in the shape of an answer for the covered-route decision
+  distinguishes it from an answer for the final approval, since both may legitimately
+  say proceed or stop. So the natural implementation of resume -- apply whatever answer
+  it was handed to whatever decision it happens to be paused at -- silently converts an
+  answer to one question into an answer to another, and given that one of the five
+  decisions can delete drafts, that failure is destructive rather than merely wrong. The
+  discards-nothing test deliberately supplies an answer naming a destructive choice on
+  another decision, because that is the case where a subject check applied after the
+  branch is taken is indistinguishable from one applied before it, except by what is
+  left on disk.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100c-3
+    contract: "A resume path in which the supplied answer and the decision point the run is paused at are separate bindings, both available before the answer is acted on."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  WHY THIS EDGE AND NOT ANOTHER. The route has five decision points and a supplied
+  answer is a small structure carrying an action. Nothing in the shape of an answer
+  for the covered-route decision distinguishes it from an answer for the final
+  approval -- both may legitimately say "proceed" or "stop". So the natural
+  implementation of resume, which applies whatever answer it was handed to whatever
+  decision it happens to be paused at, silently converts an answer to one question
+  into an answer to another. Given that one of the five decisions can delete drafts,
+  the failure is destructive rather than merely wrong.
+
+  IT IS THE SAME DEFECT AS THE PARENT L1, ONE LEVEL IN. ACD-2100c-4 refuses an
+  answer that did not come from the person; this refuses an answer that came from
+  the person but was about something else. Provenance and subject are two separate
+  bindings and an answer needs both.
+
+  STAY PAUSED RATHER THAN FAIL. The person is still owed the question, so the record
+  must survive the mismatch and the report must say which decision is outstanding --
+  otherwise the recovery from a mistyped resume is to start the whole run again.
+
+  2026-08-25 (it-po): the check-before-acting requirement is stated separately from
+  the not-applied clause because an implementation that validates the subject after
+  dispatching on the action satisfies "the answer is not applied" in the reported
+  result while having already taken a side effect. The fourth test is built to catch
+  exactly that, which is why it supplies a destructive choice from another decision.

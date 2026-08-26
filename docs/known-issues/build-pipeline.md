@@ -693,9 +693,49 @@ absence as a pass.
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-24 · **Last seen:** 2026-08-24
-- **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720
+- **Occurrences:** 2
+- **First seen:** 2026-08-24 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720;
+  and (second occurrence) the breaking-change gate in `scripts/build.py`
+
+**Second occurrence, 2026-08-25 — same outcome, a completely different cause, and the cause is
+arguably worse.** Before driving a ticket I checked the deployed driver against source:
+
+```text
+.leafcutter/workflows/build-feature.js   919 lines
+templates/workflows-js/build-feature.js  2416 lines   (origin/main)
+```
+
+1497 lines behind — predating essentially a month of hardening. Had the drive run, it would
+have executed that driver.
+
+The version gate was not involved. `build.py` had been **halting on an unacknowledged
+breaking-change gate since 2026-08-18** — the `GE-113c-3` security-allowlist entry — and
+refusing to proceed without `--force-breaking`:
+
+```text
+  BREAKING CHANGES DETECTED — BUILD HALTED
+  [2026-08-18] fix(security-scanner): allowlist basename matching over-suppressed ...
+  To proceed after reviewing the steps above, re-run with:
+    python build.py --force-breaking
+```
+
+That gate did its job: it stopped, loudly, and printed migration steps. The defect is that
+**nothing connects "the build halted" to "the deployed tree is therefore now stale."** The halt
+is a single event, noticed once by whoever ran it; the staleness is a standing condition that
+then persists silently for a week while every workflow run uses the old code. A halted build
+leaves exactly the same deployed state as a skipped phase, and neither is reported at *use*
+time.
+
+This widens the issue: the register's original framing is about one `return 0` in one phase.
+The general statement is that **the deployed tree has no freshness signal of any kind** — not
+after a skipped phase, not after a refused build, not after no build at all. Any fix scoped only
+to the version gate leaves the breaking-gate route live, and vice versa.
+
+Reproduced end to end: `--force-breaking` brought the deployed driver to 2416 lines, byte-equal
+to source, and the subsequent drive ran the current code.
+
+**First occurrence (version gate) follows.**
 
 **Symptom.** The phase probes `claude --version` and compares against
 `_MINIMUM_VERSION = "2.1.154"`. When a version is detected and is below the minimum, the
@@ -965,10 +1005,38 @@ claims to and reports success.
 
 - **Severity:** high
 - **Status:** open — AC: BP-1500d
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build_helpers.py:185` (manifest write target); `:83`, `:95-96`
   (`output_mappings` keying); `:193-195` (manifest key relativization)
+
+**Second occurrence, 2026-08-25 — reached from a git worktree, and it blocked a commit.** A
+phase agent ran `build.py --target-dir <worktree>` inside a worktree whose `.leafcutter` was a
+symlink to the workspace parent's, per the bootstrap `CLAUDE.md` recommends. Two things
+followed. The deploy went *through* the symlink into the parent's `.leafcutter`, and the
+manifest written carried **no `output_mappings` at all** — the target sits under
+`.../worktrees/`, which is not a subpath of the package, so the same `UserWarning` this entry
+already documents fired and the mapping was silently dropped.
+
+The consequence was not theoretical. On the next commit, `check-build-drift` read that manifest
+and reported **every template in the repository** as unregistered:
+
+```text
+UNCOMPARABLE: GAP templates/agents/README.md action=run build.py to register it
+UNCOMPARABLE: GAP templates/agents/ac-validator.md action=run build.py to register it
+... (one line per template)
+```
+
+The commit contained no template change whatsoever — only a changelog entry and two AC YAML
+files. Recovery was to re-run the canonical `build.py --target-dir .` from the workspace parent,
+which regenerates a manifest that does have `output_mappings`.
+
+**What this adds to the entry.** The original framing is about portability to a *consumer*
+install. This shows the same defect reached from the package's own recommended worktree
+workflow, where it is not merely unportable but actively corrupting: a worktree-targeted build
+overwrites the shared parent manifest with one that no gate can use. Any fix should treat
+"target is a worktree of this repo" as a first-class case, not an exotic one — `/feature`,
+`worktree-agent` and `building-epics` all create worktrees by design.
 
 **Symptom.** The build's own record of what it wrote is not written to the install it
 describes. `scripts/build_helpers.py:185` computes
@@ -1234,6 +1302,85 @@ repair this instance without preventing the next one.
 `Check Product-Truth Derived-Data Drift (generator --check)` job, which already does exactly this
 for a different generated surface). Alternatively stop committing them and generate on demand —
 but they are read by agents from the deployed tree, so the ratchet is the smaller change.
+
+---
+
+### KI-BP-020 — `_ac_components.py` is missing from the AC-store deploy map, so the deployed `validate_ac_schema.py` crashes on import — and it is the command CLAUDE.md tells consumers to run
+
+> **Numbering note.** Filed as KI-BP-016 and renumbered to 020 at merge: `main` published its
+> own KI-BP-016 (the `docs_root` index defect, below) plus 017-019 while this branch was in
+> review. The free number was re-read against `origin/main` at the moment of landing, per the
+> standing instruction — which is the only reason this was caught rather than shipped as a
+> duplicate. `KI-BO-024` records the same collision class reaching `main` undetected on this
+> date, and argues the convention needs a mechanical duplicate check rather than another
+> paragraph. Physical position kept where the merge left it rather than moved to the end, so
+> the surrounding history stays legible.
+
+- **Severity:** high — the documented store-hygiene command is dead in every consumer layout
+- **Status:** open
+- **Occurrences:** 1 (second occurrence of this defect *class* — see below)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build_phases.py` — `build_ac_store`'s hardcoded `deploy_map`, against
+  `scripts/ac_store/validate_ac_schema.py:45`
+
+**Symptom.** The deployed validator raises on import, before it can check anything:
+
+```
+$ python <target>/.leafcutter/scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/ac-store
+Traceback (most recent call last):
+  File ".../.leafcutter/scripts/ac_store/validate_ac_schema.py", line 45, in <module>
+    from _ac_components import components_field_errors, load_registry_ids
+ModuleNotFoundError: No module named '_ac_components'
+```
+
+**Evidence.** Reproduced by running the deployed copy, not inferred. `validate_ac_schema.py:45`
+imports `_ac_components` at module scope; `grep -n "_ac_components" scripts/build_phases.py`
+returns **nothing**, so the module is never deployed; and `ls` of a freshly built
+`.leafcutter/scripts/ac_store/` lists 18 files with `validate_ac_schema.py` present and
+`_ac_components.py` absent. The build was run from this repo at `origin/main` immediately
+before the reproduction, so this is the current state of the shipped artifact.
+
+**Why the repo's own CI does not catch it.** Nothing in `.github/workflows/` invokes
+`validate_ac_schema.py` — the required "AC store valid" job runs the commit-guardian hook
+`check_ac_schema.py`, which is deployed by a whole-directory rglob and therefore unaffected. In
+*this* repo `scripts/` is source, so every local run imports the module that sits beside it and
+succeeds. The failure is only reachable from the deployed tree, which this repo never exercises.
+
+**Who it actually breaks.** In a consumer install `scripts/` **is** the deployed output. The
+root `CLAUDE.md`, under "AC-store hygiene — bulk pre-flight before a finalization drive",
+instructs precisely:
+
+```bash
+python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>
+```
+
+So the documented defence against store rot is not merely unreliable in a consumer project — it
+cannot start. That instruction has a history of being wrong in the other direction too: the same
+section records that from 2026-08-10 to 2026-08-18 a bare directory argument matched nothing,
+printed `No YAML files to validate.` and exited **0**. This is the second distinct way the same
+prescribed command has failed to do what it says.
+
+**This is the second occurrence of a documented defect class.** `CLAUDE.md` carries a whole
+convention titled *"New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest"*, written
+after `done_proof.py` was created in `scripts/ac_store/` and omitted from this same `deploy_map`,
+crashing the deployed hook with `ModuleNotFoundError: done_proof`. `done_proof.py` is in the map
+today; `_ac_components.py` — added later, by the change that gave the `components` field its
+referential integrity — is not. The convention was written and then not applied to the next
+module that needed it, which suggests the rule needs a mechanical check rather than another
+paragraph.
+
+**Found while** specifying `assigned_agent` referential integrity (`ACS-100i-9`), whose design
+copies `_ac_components.py` into a sibling `_ac_agents.py`. Filing it separately because it is
+live now, independent of that work, and because the new module would inherit the same omission:
+**a fix for `ACS-100i-9` that adds `_ac_agents.py` to the map while leaving `_ac_components.py`
+out would ship a validator that still cannot start.** Fix both in the same change.
+
+**Fix direction.** Add `_ac_components.py` (and any future sibling helper) to `build_ac_store`'s
+`deploy_map`. Then close the class rather than the instance: a test that runs `build.py` into a
+temporary target and **executes** each deployed entry point — import-only is enough to catch this
+— so a module added without its dependency fails at build time instead of at the consumer. A
+grep for import statements is not sufficient; this defect is invisible to any check that reads
+the source tree, because in the source tree the import resolves.
 
 ---
 
