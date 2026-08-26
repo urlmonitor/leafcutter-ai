@@ -102,7 +102,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/25_TICKET-20260826-ACD-2100e-2.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -204,3 +205,4 @@ notes: |
   docs/components.json, which are the underscore graph ids, so that instruction would
   fail the gate. Both records in this L1 state the underscore form; ACD-2100d-4 is
   already approved and is reported for correction rather than edited here.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways
