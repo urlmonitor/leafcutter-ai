@@ -4,10 +4,11 @@ description: "Catalogue of the recurring mechanisms by which a green test, hook,
 type: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-26
 components:
   - ac_store
   - build_orchestration
+  - build_pipeline
   - commit_guardian
   - injection_builder
   - testing_quality
@@ -21,6 +22,7 @@ related_docs:
   - docs/how-to/done-proof-enforcement.md
   - docs/how-to/real-artifact-fixtures.md
   - docs/reference/fixture-policy.md
+  - docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml
   - CLAUDE.md
 ---
 
@@ -107,6 +109,34 @@ Normative rule and incident narrative: `CLAUDE.md` → "New Hook / Gate Dependen
 Be in the Build Deploy-Manifest".
 
 **Defeats it:** run the deployed hook, not just the unit tests that mask the gap.
+
+**Update — BP-900g-8 (2026-08-25) closes the statically-resolvable half of this gap
+mechanically.** The prior defeat ("run the deployed hook") depended on a human
+remembering to do it — the `CLAUDE.md` rule was written down after the `done_proof.py`
+incident and a fourth instance (`generate_ticket_from_ac.py` resolving its undeployed
+sibling `_component_migration_map.py`) still shipped anyway. `build.py` now runs
+`_check_intra_package_closure_guard()` before `_run_phases()` writes any output: for
+every script the build will deploy it computes the DERIVED, TRANSITIVE closure of the
+intra-package modules that script actually resolves —
+`build_referential_integrity.compute_intra_package_closure()`, AST-based static analysis
+of imports, relative imports, and `importlib.util.spec_from_file_location` dynamic
+loads, never a hand-maintained list — and fails the build, naming the deployed script,
+the missing dependency, and the deploy phase that would have to carry it, when the
+deploy declaration (`build_phases.AC_STORE_DEPLOY_MAP`) does not contain it. A module a
+deployed script starts importing tomorrow is caught on the next build without anyone
+editing a list.
+
+This does not retire the "run the deployed hook" defeat, it narrows what it is still
+needed for: a dynamic loader that builds a module path from a runtime value is a
+declared static-analysis blind spot (`compute_intra_package_closure` logs it as an
+unresolvable reference for a human, rather than silently assuming it is external), so a
+manual deployed-hook run remains the fallback for that residual case. Verified via a
+deployed-tree subprocess harness (`unit_tests/test_bp_900g_8.py`): a positive/negative
+control pair runs `python scripts/build.py --target-dir <tmp>` as a real subprocess,
+withholding one intra-package dependency from the deploy declaration and asserting the
+build blocks, then re-running unmodified and asserting it exits zero — the check
+performed against the source tree alone cannot distinguish these, because the source
+tree contains every module by construction.
 
 ---
 
@@ -321,3 +351,8 @@ cannot assess correctness should report `INFO`, not `PASS`.
 - `scripts/ac_store/validate_ac_schema.py` (M5), `scripts/evals/run_agent_eval.py` (M6),
   `templates/workflows-js/fast-lane-build.js` + `scripts/injection_builders.py` (M7),
   `scripts/ac_store/generate_ticket_from_ac.py` (M8) — implementations referenced above.
+- [`BP-900g-8`](../acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml) —
+  the AC that closed the statically-resolvable half of M2 mechanically;
+  `scripts/build_referential_integrity.py` (`compute_intra_package_closure`,
+  `find_uncovered_closure_dependencies`) and `scripts/build.py`
+  (`_check_intra_package_closure_guard`) are the implementation.
