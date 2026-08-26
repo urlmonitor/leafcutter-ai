@@ -1,0 +1,129 @@
+id: BO-3200c-3-i
+title: "A decision point added later without the distinction is reported, not silently exempt"
+component: build-orchestration
+components:
+  - ac_driven_dev
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run in which every decision point distinguishes no-answer from the person declining,
+  When a new decision point is added that produces the same outcome for both states,
+  Then it is reported and named, with nothing changed in the check that reports it.
+
+  Given a new decision point that does distinguish the two,
+  When the check runs,
+  Then it is not reported.
+
+  Given a run in which a decision point exists but could not be driven into either state during
+    the check,
+  When the check runs,
+  Then that point is reported as not having been exercised, distinguishable from one that was
+    exercised and found correct.
+depends_on:
+  - BO-3200c-3
+doc_links:
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-001 — the validator that reported a pass having examined zero files for eight days, while being the documented defence against store rot."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — three gates were patched and the fourth was not; nothing would have noticed a fifth."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
+it_requirements:
+  - "THE CHECK MUST DRIVE EACH POINT INTO BOTH STATES AND COMPARE THE OBSERVED OUTCOMES. Reading a gate's declared outcome vocabulary passes on a gate that defines both values and emits only one — which is the defect in its most likely form."
+  - "THE POINT SET MUST BE DERIVED, and adding a point must require NO edit to the check. A recorded list passes on the day it lands and says nothing about the next gate, which is precisely how three patched gates left a fourth open."
+  - "THREE STATES PER POINT IN THE REPORT — exercised-and-distinguishing, exercised-and-collapsed, not-exercised — and not-exercised must be reported, never omitted. A check that quietly skips the points it cannot reach reports clean over a shrinking fraction of them; this repository's own AC-store validator did exactly that for eight days while being the documented defence against the thing it was not checking."
+  - "A RUN IN WHICH NO POINT COULD BE EXERCISED MUST FAIL, not report clean."
+  - "The not-exercised report is BO-3200e's requirement applied to this check itself: an inspection that could not happen says so. Reuse that vocabulary rather than inventing a third spelling."
+  - "The report must NAME the collapsed point, so the remaining work is enumerable rather than estimated."
+  - "A correct point must produce no output, so the check does not report the whole set on every run and get switched off."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200c-3
+    contract: "The two-value outcome vocabulary (no_answer_obtained / person_declined), shared across all points, and the derived enumeration of decision points. This check walks that enumeration and compares each point's two observed outcomes."
+test_spec:
+  - name: test_bo_3200c_3_i_new_collapsed_point_is_named_with_the_check_unmodified
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE DURABILITY TEST. From a fixture where every point distinguishes the two states, add a new decision point that returns the same outcome for both; re-run the identical check with no source edit and assert it is reported and named."
+  - name: test_bo_3200c_3_i_new_distinguishing_point_is_not_reported
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A newly added point that does distinguish the two produces no report line — keeps the check from reporting the whole set and being switched off."
+  - name: test_bo_3200c_3_i_unexercisable_point_is_reported_as_not_exercised
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A point that could not be driven into either state is reported with a state distinguishable from exercised-and-correct. The check must not commit the failure it exists to detect."
+  - name: test_bo_3200c_3_i_zero_points_exercised_fails
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A run in which no point could be exercised exits non-zero rather than reporting clean — the KI-ACS-001 shape committed by the instrument that prevents it."
+  - name: test_bo_3200c_3_i_check_observes_outcomes_rather_than_reading_vocabulary
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Fixture point that DECLARES both outcome values but only ever emits one; assert the check reports it as collapsed. A vocabulary-reading check passes on this and is the most likely wrong implementation."
+test_rationale: |
+  Three gates were patched and the fourth was not, and nothing would have noticed a fifth — so
+  the durability test adds a gate and re-runs the unmodified check, which is the only shape that
+  can tell a derived enumeration from a recorded list.
+  The vocabulary-versus-observation test is the second discriminator and is easy to skip: a check
+  that reads a gate's declared outcome values passes on a gate that defines both and emits one,
+  which is exactly what a half-migrated gate looks like.
+  The not-exercised and zero-points tests exist because this check is itself an inspection that
+  can fail to inspect. It would be a particular kind of embarrassment for the instrument
+  enforcing "say when you could not look" to report clean having looked at nothing, and this
+  repository has that exact precedent on record.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface (auth). criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent AC establishes the distinction at the gates that exist today. This one keeps it
+  true tomorrow, which is the difference between a repair and a guarantee. Three gates were
+  patched by PR #565; the fourth was not, and nothing would have noticed a fifth.
+
+  THE THIRD SCENARIO GUARDS THE CHECK AGAINST ITSELF. A check that quietly skips gates it
+  cannot reach reports clean while covering a shrinking fraction of them — the zero-file
+  success recorded against this repository's own AC-store validator (KI-ACS-001), which printed
+  a pass and exited 0 having examined nothing for eight days, and was itself the documented
+  defence against store rot the whole time. Reporting the unexercised point is also the same
+  requirement BO-3200e makes of every check: an inspection that could not happen says so.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The observation-versus-vocabulary requirement is added
+  because the cheapest implementation of this check inspects each gate's declared outcome enum
+  and passes when both values are present. That is green against a gate which defines both and
+  emits only one — the shape a half-migrated gate actually has, and therefore the shape the check
+  most needs to catch.

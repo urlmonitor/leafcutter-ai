@@ -1,0 +1,138 @@
+id: BO-3100a-2
+title: "The reconciliation reads the declarations as they stand, so a newly added agent is covered without editing the check"
+component: build-orchestration
+components:
+  - agent_registry
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every existing hand-off mismatch has been corrected so that assembly completes,
+  When a new agent is added whose definition grants the means to hand off work and whose
+    registry record lists no cleared recipient,
+    And the system is assembled again with no change made to the reconciliation itself,
+  Then assembly stops and names the new agent.
+
+  Given an assembly that completes with no mismatches,
+  When the reconciliation reports its result,
+  Then it states the number of agents it examined and the number holding a hand-off means,
+    both as observed during that assembly,
+    And re-running the assembly after adding one further agent that holds a hand-off means
+    and clears a recipient raises both reported numbers by one without any edit to the
+    reconciliation.
+depends_on:
+  - BO-3100a
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The declaration source the reconciliation enumerates rather than hard-codes."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-001 — the precedent for a check that reports clean having examined nothing; the observed-count report is the defence against it."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE UNNAMED LOAD-BEARING CONSTRAINT, stated once rather than per-criterion: the reconciliation derives its subject set by ENUMERATING the two declaration sources at run time. No agent name, count, or exemption may be written into the check, a fixture list, a suppression file, or a test. If any file has to be edited when an agent is added, the AC is not met."
+  - "Any exemption must derive from a DATA PROPERTY of the declarations (e.g. the definition grants no hand-off means), never from a name or a name pattern. A new agent with the same property inherits the same treatment automatically."
+  - "The two reported numbers must be counted during that run, from the objects actually examined — not recomputed from a second enumeration, and not read from a cached manifest. A number produced by a different traversal than the one that made the verdict can agree with the roster while the verdict was made over a smaller set."
+  - "The counts must be reported on a CLEAN run as well as a failing one, on the assembly's normal output channel. Silence on success is indistinguishable from a check that did not run (KI-ACS-001), and this AC's whole point is distinguishing those two."
+  - "A run in which the enumeration resolves to zero agents must be a FAILURE, not a clean pass. Zero is the shape of a broken path, not of a clean roster."
+  - "Adding one agent must move both numbers by exactly one — the count must not be derived from a set that silently de-duplicates or filters."
+  - "Deploy-manifest rule and repo-root resolution as stated on BO-3100a-1 apply unchanged; this AC adds no separate entry point."
+delivers_to:
+  - agent: python-coder
+    contract: "A reconciliation summary emitted on every assembly run: {agents_examined: int, agents_holding_means: int, mismatches: list[MismatchRecord]}, where the two integers are counted from the objects traversed during that run."
+expects_from:
+  - ac_id: BO-3100a-1
+    contract: "The reconciliation pass inside the assembly entry point and its MismatchRecord shape; this AC constrains how that pass derives its subject set and what it reports on a clean run."
+test_spec:
+  - name: test_bo_3100a_2_new_offender_caught_with_check_unmodified
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE DISCRIMINATOR. Assemble a corrected fixture roster (passes), then add ONE new agent definition granting the hand-off means with an empty registry clearance, re-run the identical assembly binary with no source edit, and assert it now stops and names the new agent."
+  - name: test_bo_3100a_2_counts_move_by_one_when_population_moves
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the real assembly over two fixture rosters differing by exactly one agent that both holds the means and clears a recipient; parse the reported counts from each run's output and assert both integers increased by exactly one, with no edit to the check between runs."
+  - name: test_bo_3100a_2_clean_run_reports_observed_counts
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A mismatch-free roster still emits both numbers on the assembly's normal output. Asserts the success path is not silent."
+  - name: test_bo_3100a_2_zero_agents_examined_is_a_failure
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Point the assembly at a fixture tree containing no agent definitions and assert it exits non-zero stating it examined none — a run that checked nothing is not a pass (KI-ACS-001 shape)."
+  - name: test_bo_3100a_2_real_roster_counts_match_independent_enumeration
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Against the repository's ACTUAL registry and agent templates, assert the reconciliation's reported agents_examined equals an independently computed count of agent records, so a traversal that silently skips a subdirectory is caught."
+test_rationale: |
+  The cheap implementation of BO-3100a-1 is a recorded list of the nine known offenders, and
+  every test written against today's roster passes on it. Only a test that CHANGES the agent
+  population between two runs of the same unmodified binary can tell the two apart — hence the
+  seam test. A test that reads the check's source for the absence of hard-coded names is
+  worthless here: it passes on a check that hard-codes them in a data file instead.
+  The zero-agents test is not a nicety. This repository's own AC-store validator reported a
+  clean pass for eight days having examined zero files while being the documented defence
+  against store rot; a reconciliation that enumerates nothing would fail in exactly that shape.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent L1 is explicit that the surveyed counts — roughly 25 records with cleared
+  recipients, roughly 30 definitions holding the means, 9 mismatches — are evidence to
+  verify, not scope, and "must be re-measured at build time rather than hard-coded into a
+  test". This AC is that instruction turned into a behaviour.
+
+  WHY IT NEEDS ITS OWN CRITERION. The cheapest implementation of BO-3100a-1 is a recorded
+  list of the 9 known offenders, which passes every test written against today's roster and
+  silently stops working the first time an agent is added. The second scenario exists so a
+  frozen roster cannot satisfy this AC: the reported numbers must move when the population
+  moves.
+
+  Reporting the observed numbers on a CLEAN run also matters on its own. A reconciliation
+  that prints nothing when it finds nothing is indistinguishable from one that did not run —
+  the same trap recorded against the AC-store validator, which exited 0 having checked zero
+  files for eight days (KI-ACS-001).
+
+  Verification must run the real assembly twice over fixture sets whose agent population
+  differs, with no change to the check between runs. A test that reads the check for the
+  absence of hard-coded names passes on a check that hard-codes them somewhere else.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The nine current offenders will have to be repaired for
+  the first scenario's precondition ("every existing mismatch has been corrected") to hold.
+  That repair is part of delivering BO-3100a-1, not a separate AC, and it must be done by
+  changing the declarations — never by adding a suppression list, which would violate this
+  AC's first it_requirement and re-create the frozen-roster defect under another name.

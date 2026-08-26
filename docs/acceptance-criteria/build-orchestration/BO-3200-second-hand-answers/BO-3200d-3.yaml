@@ -1,0 +1,121 @@
+id: BO-3200d-3
+title: "A sequence diagram shows the result travelling out of band and the reply carrying no content"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader designing a step that produces a substantial finding,
+  When they open the sequence diagram for how a result is handed over,
+  Then it shows the producer placing the result at the agreed handover, shows the reply
+    returning separately and carrying no part of the result's content, shows the consumer
+    obtaining the result from the handover, and shows the consumer's verdict being formed from
+    what it obtained there.
+
+  Given the diagram,
+  When it is compared against a real run in which a result of at least 149 kilobytes is
+    produced and consumed,
+  Then every interaction it shows occurred, in the order shown, and the reply in that run
+    carried no part of the result's content.
+depends_on:
+  - BO-3200d
+  - BO-3200d-1
+  - BO-3200d-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: modifies
+    status: exists
+    relevance: "The lane whose bundle handover the new diagram depicts."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new diagram must be reachable from."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert."
+  - "THE REPLY AND THE RESULT MUST BE TWO SEPARATE ARROWS, and the reply must be marked as carrying no part of the result's content. The arrangement this replaces had one arrow doing both jobs, and every diagram of it looked correct at any size — the failure only appears when the payload is large, which is exactly the case nobody draws."
+  - "THE CARRIES-NO-CONTENT PROPERTY MUST BE DECLARED DATA, not a visual convention, so the coherence test can assert it against a real run's reply."
+  - "THE HANDOVER LOCATION MUST BE SHOWN AS SUPPLIED BY THE CONSUMER'S SIDE, matching BO-3200d-2's decision. A diagram showing the producer choosing the location documents the arrangement that was rejected and will be re-implemented from it."
+  - "THE CONSUMER'S VERDICT MUST BE DRAWN AS FORMED FROM WHAT IT OBTAINED AT THE HANDOVER, with no edge from the reply to the verdict — the same negative claim BO-3100b-5 makes about the exit-time judgement's inputs."
+  - "The coherence check must run against a result of AT LEAST 149 KB. A diagram checked against a small-payload run cannot pass, because the small-payload case is the one that always looked correct."
+  - "The diagram page must declare its participants and ordered interactions in a machine-readable form so the coherence test reads data, not a picture."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200d-1
+    contract: "The ordered trace of a real run in which a result of at least 149 KB is produced and consumed, including the reply's content, so the diagram can be checked at the real size."
+  - ac_id: BO-3200d-2
+    contract: "The caller-supplied handover location and the rule that the reply is never an input to the verdict — the two structural facts the diagram must draw."
+test_spec:
+  - name: test_bo_3200d_3_diagram_declares_two_separate_arrows_and_no_reply_to_verdict_edge
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the declared interactions: assert the result placement and the reply are separate arrows, the reply is marked as carrying no content, the handover location originates from the consumer's side, and no declared edge runs from the reply to the verdict."
+  - name: test_bo_3200d_3_diagram_matches_a_real_149kb_run
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "THE COHERENCE CHECK AT THE REAL SIZE. Drive a real run producing and consuming at least 149 KB; assert every declared interaction occurred in the order shown, and that the reply in that run contained no part of the result's content."
+  - name: test_bo_3200d_3_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  The arrangement this diagram replaces looked correct in every drawing, at every size, because
+  the single arrow that did both jobs is a perfectly reasonable thing to draw. The failure only
+  appears above a size threshold — so the coherence check is pinned to a run at the real 149 KB
+  size, and a diagram validated against a small payload cannot pass.
+  Making the carries-no-content property declared data rather than a line style is what allows
+  the check to assert it against a real reply; a dashed arrow conveys the intention and proves
+  nothing.
+  Deliberately NOT covered: layout and legibility, which are human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the sequence-diagram entry in BO-3200d's documentation_triggers.
+
+  Drawing the reply and the result as two separate arrows is the correction. The arrangement
+  this replaces had one arrow doing both jobs, and every diagram of it looked correct at any
+  size — the failure only appears when the payload is large, which is exactly the case nobody
+  draws. Showing the reply explicitly as carrying no content records the decision where the next
+  author will see it before re-merging the two.
+
+  The second scenario checks the diagram against a run at the real size, so a diagram drawn
+  against a small-payload run cannot pass.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). One addition follows from BO-3200d-2's settled decision:
+  the diagram must show the handover location originating from the CONSUMER'S side. A drawing in
+  which the producer chooses the location and returns it depicts the arrangement that was
+  explicitly rejected, and this is the diagram a future author consults before designing the next
+  handover — so it would be re-implemented from the picture.

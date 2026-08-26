@@ -1,0 +1,94 @@
+id: BO-3200a
+title: "Facts about your project are read at the source, never relayed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What the system knows comes from the real thing, not from a retelling.
+
+  When the build needs to know something about your project — a setting, a file,
+  the state of your repository — it reads it directly. No fact it depends on is
+  obtained by asking a specialist to look and report back, so a shortened,
+  reworded or partial retelling can never be mistaken for the fact itself.
+depends_on:
+  - BO-3200
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — a relayed configuration read truncated at 75,000 characters became a false verdict that halted the canonical entry workflow."
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Why the halted entry path had no fallback: /plan-feature is the canonical entry for all new work."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one ADR doc_link; recorded the judgement-declaration decision in notes. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3200a-1
+  - BO-3200a-2
+  - BO-3200a-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  Anchor case (KI-BO-018, blocker, open): the permission check in the
+  /plan-feature entry path resolved a setting by dispatching a reporting
+  specialist with "run this command and return only the raw stdout". The file is
+  ~130 KB, the round trip truncated at exactly 75,000 characters, splitting an
+  escape sequence, and parsing raised. The catch was fail-closed, so a TRANSPORT
+  failure became the substantive claim that an agent lacked a permission it
+  actually had. The workflow halted before dispatching any authoring agent, and
+  per ADR-012 there is no fallback entry path.
+
+  Note for the BA: the two halves of that failure decompose to different
+  children. "Read the file directly instead of relaying it" is this criterion.
+  "A check that could not perform its inspection must not emit a substantive
+  verdict" is BO-3200e. Fixing only one leaves the other class of failure open —
+  a direct read can also fail, and must then report uncertainty rather than a
+  verdict.
+
+  Scope: this is about facts the build DEPENDS ON. A specialist summarising a
+  file as part of forming a judgement is exactly what specialists are for and is
+  not in scope here.
+
+  IT-PO DECISION (2026-08-26) — HOW A JUDGEMENT DISPATCH DECLARES ITSELF OUT OF
+  SCOPE. The BA recorded this as the open residual on BO-3200a-2: without a
+  declaration mechanism the sweep either false-positives on every judgement
+  dispatch or is quietly narrowed until it means nothing. The full specification
+  is in BO-3200a-2's it_requirements; the shape is recorded here because it binds
+  the whole L1:
+
+  - Each dispatch site carries an explicit `result_use` declaration on the
+    dispatch options object itself, alongside the fields the runtime already
+    reads. Permitted values: `fact` and `judgement`.
+  - ABSENCE MEANS `fact`, AND AN UNDECLARED SITE FAILS THE SWEEP. The exemption
+    is opt-out by explicit declaration, never opt-in by omission. Otherwise the
+    sweep's scope shrinks silently every time a dispatch is added.
+  - THE DECLARATION IS VERIFIED, NOT TRUSTED. With specialists unavailable, a
+    genuine judgement path must still reach a terminal outcome, recording the
+    judgement as unobtained in BO-3200e's vocabulary. If the run cannot terminate
+    without the value, the build BRANCHES on it — so it was a fact, the
+    declaration is contradicted by observation, and the path is reported. This is
+    what stops "declare everything judgement" from being the cheap way out: the
+    declaration selects which assertion is applied, never whether the path is
+    examined.

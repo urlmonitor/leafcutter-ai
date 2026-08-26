@@ -925,8 +925,8 @@ piece of work across the hook family rather than one hook at a time.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 7 records in two families, all on 2026-08-25 (3 × `BO-2400e`, 4 × `BP-1500d`; the two families were resolved in opposite directions — see the amendment below)
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 14 records in three families (3 × `BO-2400e`, 4 × `BP-1500d` on 2026-08-25; 7 × `BO-3100`/`BO-3200` on 2026-08-26 — see the third-family note below)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `derive_declares_side_effect` and `_DURABLE_EFFECT_RE` in `scripts/commit_guardian/_ac_schema_validators.py:560-607`; enforced by `validate_declares_side_effect`; rule is BO-2900g-2
 
 **Symptom.** `check-ac-schema` requires the authored `declares_side_effect` to equal a value
@@ -1081,6 +1081,38 @@ derivation. KI-CG-014 is what happens when someone does: the attempt is rejected
 value the author can honestly write. So the sweep's conclusion that the pattern is not too strict
 holds; it says nothing about the pattern being too *loose*, which is a different axis and is also
 broken. Whichever reading wins here, negation handling is needed regardless.
+
+**Third family, 2026-08-26 — `BO-3100` / `BO-3200`, and the first evidence that the derivation
+is too LOOSE on a whole class it was not previously tested against.** The IT-PO enrichment pass
+authored `declares_side_effect: true` on seven records; the gate rejected all seven with
+`derives False`. On three the gate was plainly right and the authored value was implementation
+reasoning rather than a reading of the Then clause — `BO-3100a-1` (assembly stops with a
+failure), `BO-3200d-1` and `BO-3200d-2` (what a step *reads*, what verdict it *forms*). Those
+are exactly the "authored by opinion" case BO-2900g-2 forbids, and removing the field was the
+correct resolution.
+
+On the other four the derivation looks wrong, and they share a shape the earlier two families
+did not have — **a durable change to a store, expressed without any of the writing verbs the
+pattern matches**:
+
+| Record | Then clause | Why it is durable |
+|---|---|---|
+| `BO-3200b-1` | "every item it claimed is **back in its unclaimed state in that same store**" | mutates a store explicitly described as outliving the run |
+| `BO-3200b-1-i` | "every item it had already claimed is **back in its unclaimed state**" | same |
+| `BO-3100b-2` | "**no completed step is recorded**" / "**exactly one completed step is recorded**" | a sign-off persisted to the ticket record |
+| `BO-3200c-1` | the run **pauses resumably** awaiting a person | a pause record that survives the run |
+
+`_DURABLE_EFFECT_RE` looks for writing verbs. "Is back in its unclaimed state", "is recorded"
+and "pauses resumably" describe the *resulting state* rather than the act, so the pattern misses
+them. That is a third axis, distinct from both the too-strict reading of the first two families
+and from KI-CG-014's negation blindness: **state-described-as-outcome rather than as an action.**
+
+Resolved by removing the field on all seven rather than authoring a value the gate rejects — the
+schema is explicit that this value is derived, not authored, so a conflicting authored value is
+not a legitimate way to record the disagreement. The observation is recorded here instead, which
+is the point of this register. Four records therefore now carry a derived `false` that is
+arguably wrong; when the deriver learns outcome-state phrasing they should flip to `true` with
+no criteria change, and that is the regression test for the fix.
 
 ---
 

@@ -1,0 +1,80 @@
+id: BO-3100a
+title: "Only helpers cleared to pass work along are able to pass it along"
+component: build-orchestration
+components:
+  - agent_registry
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Permission to hand off work is declared up front and checked automatically.
+
+  Whether a specialist is allowed to pass work to another specialist is written
+  down as a deliberate decision, and that decision is checked every time the
+  system is assembled. A specialist that was quietly given the means to hand off
+  work it was never cleared for is reported as a mismatch and does not ship.
+depends_on:
+  - BO-3100
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 fix direction — enforce the boundary mechanically at build time rather than in prose."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry record half of the two declarations this L1 reconciles."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one architecture doc_link. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3100a-1
+  - BO-3100a-2
+  - BO-3100a-3
+  - BO-3100a-4
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - reference-doc
+notes: |
+  Known starting state, from the user's survey on 2026-08-25 — treat as evidence
+  to verify, not as settled scope: roughly 25 registry entries currently declare
+  a non-empty spawn allowlist, roughly 30 agent templates are granted the means
+  to spawn, and 9 templates hold that means with an EMPTY allowlist. Those 9 are
+  the drift this criterion is meant to make impossible; the exact counts must be
+  re-measured at build time rather than hard-coded into a test.
+
+  The two declarations (what the registry says an agent may do, and what the
+  agent's own template actually grants it) must be reconciled with each other.
+  A check that reads only one of them cannot see the drift, because the drift IS
+  the disagreement between them.
+
+  Boundary: INF-600g already covers agent-card / registry coherence in general
+  and INF-600k covers tolerating non-agent external callers. This criterion is
+  specifically about spawn AUTHORITY being a declared, validated property. Cite
+  those, do not re-derive them, and do not add a thirteenth L1 to INF-600.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). risk_surface is contract_boundary rather
+  than internal: the reconciliation is a hard gate on the two declarations that
+  every agent dispatch depends on, and a false verdict here stops the whole
+  package assembling. The two declarations are `spawn_allowlist` in
+  config/agent_registry.json and the `tools:` frontmatter of
+  templates/agents/*.md. This L1's children all land in the assembly path
+  (scripts/build.py -> scripts/registry_validator.py), which is why the
+  deploy-manifest rule in CLAUDE.md applies to every one of them.

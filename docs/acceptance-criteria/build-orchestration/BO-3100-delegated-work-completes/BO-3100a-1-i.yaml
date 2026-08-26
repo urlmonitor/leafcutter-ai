@@ -1,0 +1,113 @@
+id: BO-3100a-1-i
+title: "A record clearing recipients an agent cannot reach is reported as its own distinct mismatch"
+component: build-orchestration
+components:
+  - agent_registry
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose registry record lists one or more cleared recipients while its own
+    definition grants it no means to hand work to another agent,
+  When the system is assembled,
+  Then assembly stops with a failure that names that agent and states that its record
+    clears a hand-off its definition cannot perform,
+    And that failure text differs from the failure raised when a definition grants a
+    hand-off the record does not clear, so a reader is sent to the declaration that is
+    actually wrong.
+
+  Given the same agent after either declaration is corrected — the means granted, or the
+    cleared recipients removed,
+  When the system is assembled,
+  Then that agent is not reported and assembly completes.
+depends_on:
+  - BO-3100a-1
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry-record side of the mismatch this AC reports."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 records the cost of a misdirecting message — the reader repairs something that was already correct."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "The two failure texts must differ in the SUBSTANTIVE clause, not only in a code or a field name a reader will not see. Each must name the declaration to change and the direction of the repair. A shared template parameterised by direction satisfies this only if the rendered text differs."
+  - "The direction must be carried as a machine-readable discriminator on the mismatch record as well as in the rendered text, so a downstream consumer can branch on it without parsing prose."
+  - "Both directions must be produced by the SAME reconciliation pass over the same two declarations. A second, separately-invoked check for the reverse direction can be skipped independently and will drift out of step with the first."
+  - "Correcting either declaration must clear the report with no other change. An implementation that requires both to be edited has encoded a third, undeclared rule."
+  - "Reuses the deploy-manifest and repo-root-resolution constraints stated on BO-3100a-1; this AC adds no new module of its own if the parent's reconciliation is extended in place."
+delivers_to:
+  - agent: reference-author
+    contract: "The exact rendered text of the clearance-without-means failure and its repair instruction, paired with the means-without-clearance text from BO-3100a-1, so BO-3100a-4 can document both failures and their different repairs."
+expects_from:
+  - ac_id: BO-3100a-1
+    contract: "The reconciliation pass and its mismatch record shape {agent_id: str, direction: 'means_without_clearance' | 'clearance_without_means', message: str}; this AC populates and renders the second direction."
+test_spec:
+  - name: test_bo_3100a_1_i_clearance_without_means_stops_assembly
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Fixture agent whose registry record clears a recipient while its definition grants no hand-off means: the real assembly exits non-zero, names the agent, and writes no output."
+  - name: test_bo_3100a_1_i_two_directions_emit_different_text
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Run the real assembly twice — once over a means-without-clearance fixture, once over a clearance-without-means fixture — capture both messages and assert the substantive clauses are not equal and each names the declaration to change. Comparing only exit codes passes on a collapsed message."
+  - name: test_bo_3100a_1_i_either_correction_clears_the_report
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "From the clearance-without-means fixture, apply each of the two corrections independently (grant the means; remove the cleared recipients) and assert assembly completes and the agent is unnamed in both variants."
+test_rationale: |
+  The whole content of this AC is that two runs produce two DIFFERENT texts, so no single-run
+  test can cover it — the discriminating test must execute the real assembly twice and compare
+  the captured messages. Asserting only exit outcomes is exactly the weaker shape that passes
+  on the collapsed one-message implementation this AC exists to forbid, and a test that reads
+  the source for two distinct format strings passes on a branch that never renders one of them.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the silent half of the drift and the reason the reconciliation must run in both
+  directions. An agent cleared for a hand-off it cannot perform never delegates, and
+  nothing fails — the work simply is not done and no message is produced. That is the same
+  success-shaped silence KI-SS-001 describes, arriving through the declarations rather than
+  through a stalled agent.
+
+  THE TWO MESSAGES MUST DIFFER. Collapsing both directions onto one failure text yields the
+  right verdict with the wrong instruction: the author is told to clear a recipient that is
+  already cleared, concludes the check is broken, and works around it. The distinguishing
+  clause is the whole content of this AC, so the covering test must compare the text
+  emitted by the two runs rather than only their exit outcomes.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Complexity S because this extends BO-3100a-1's pass
+  rather than adding a mechanism; the cost is in the two-run comparison test, not the code.
+  The machine-readable `direction` discriminator is required in addition to the text so that
+  BO-3100a-4's documentation-to-behaviour check can select a fixture by direction without
+  matching prose.

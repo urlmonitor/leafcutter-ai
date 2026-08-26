@@ -1,0 +1,128 @@
+id: BO-3200b-1-i
+title: "A run that stops part-way through claiming releases what it already claimed, and one that claimed nothing reports no failure"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run that claims several items one after another and stops before the last one is
+    claimed,
+  When the run ends,
+  Then every item it had already claimed is back in its unclaimed state, and the items it
+    never reached are untouched.
+
+  Given a run that stops before it claims anything,
+  When it ends,
+  Then no release failure is reported and no item in the store changes state.
+
+  Given a run whose release cannot complete for one particular item,
+  When it ends,
+  Then the remaining items are still released, and the item that could not be released is
+    named.
+depends_on:
+  - BO-3200b-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 (the stranded claims) and KI-BO-022 (the adjacent raise-escapes defect this AC deliberately does not adopt)."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE RELEASE MUST NOT DEPEND ON A COMPLETE RECORD OF WHAT WAS CLAIMED. The interesting state is mid-list, and the run's own record is exactly what is incomplete there. Either record each claim as it is made (before the next one is attempted), or derive what to release from the store itself; a record written after the whole list succeeds cannot survive a stop in the middle."
+  - "ITEMS NEVER REACHED MUST BE UNTOUCHED. A release that resets everything the run was going to claim is a different defect: it unclaims work another run may legitimately hold."
+  - "A RUN THAT CLAIMED NOTHING MUST REPORT NO RELEASE FAILURE and change nothing. A path that reports a failure whenever it finds nothing to release trains everyone to ignore the very line in the halt report BO-3200b-2 exists to make meaningful — and once ignored, the real stranded-claim line is ignored with it."
+  - "PER-ITEM TOLERANCE, NOT ALL-OR-NOTHING. A release that abandons the list on the first item it cannot handle strands everything after it permanently, and the un-sticking mechanism becomes the broken thing. Continue through the list; collect failures rather than raising on the first."
+  - "THE UNRELEASABLE ITEM MUST BE NAMED in the outcome, so the residue is recoverable by hand rather than invisible."
+  - "SCOPE BOUNDARY PRESERVED: this AC specifies the required BEHAVIOUR of partial claim and partial release. It does not adopt KI-BO-022's mechanism or its remediation, which belong to whoever owns that entry. Do not let an it_requirement here become that entry's fix by another name."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200b-1
+    contract: "The inline release operation and its per-item outcome list [{item_id, released, reason}] plus aggregate {attempted, released, failed}. This AC constrains its behaviour when the claim list is partial, empty, or contains one item that cannot be released."
+test_spec:
+  - name: test_bo_3200b_1_i_mid_list_stop_releases_what_was_claimed_only
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Claim items one at a time and stop before the last; assert every already-claimed item is unclaimed again AND the items never reached are byte-for-byte untouched in the store."
+  - name: test_bo_3200b_1_i_run_that_claimed_nothing_reports_no_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A run stopping before any claim reports no release failure and changes no item's state. Keeps the halt report's release line meaningful rather than routine noise."
+  - name: test_bo_3200b_1_i_one_unreleasable_item_does_not_strand_the_rest
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Make the release fail for exactly one item; assert the remaining items are still released and the failing item is named in the outcome. An all-or-nothing release would strand everything after it."
+  - name: test_bo_3200b_1_i_claim_record_survives_a_stop_mid_list
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the release can identify what was claimed after a stop between two claims — i.e. the record is written per claim, not after the whole list. This is the mechanism the first criterion depends on and it is invisible to an assertion on the final store state alone when the list happens to be length one."
+test_rationale: |
+  The parent assumes the claim either happened or did not; every one of this AC's scenarios lives
+  in between, so a test with a single claimed item cannot produce any of them. Each test therefore
+  uses a multi-item list and stops at a specific position.
+  The claim-record test is the one that would be easy to omit and would leave the AC hollow: a
+  release driven from a record written after the whole list succeeds passes the first test
+  whenever the list has length one, and strands everything the first time a real run stops in the
+  middle. Asserting the record is written per claim is what makes the first criterion true for
+  the reason it needs to be true.
+  The no-claims test protects a human behaviour rather than a machine one: a release line that
+  cries wolf gets ignored, and then the real one is ignored too.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface, declares_side_effect. criteria
+    untouched; KI-BO-022 boundary preserved.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent AC assumes the claim either happened or did not. The interesting state is in
+  between, and it is the one that strands work: items are marked as the run walks the list, so
+  a stop mid-list leaves a set of claims that no later release knows about — the run's own
+  record of what it claimed is what the release reads from, and that record is incomplete.
+
+  THE SECOND SCENARIO KEEPS THE GUARD FROM CRYING WOLF. A release path that reports a failure
+  whenever it finds nothing to release trains everyone to ignore the line in the halt report
+  that BO-3200b-2 exists to make meaningful.
+
+  THE THIRD SCENARIO IS PER-ITEM TOLERANCE. A release that abandons the whole list on the first
+  item it cannot handle leaves everything after that item stranded permanently, and the
+  un-sticking mechanism is then the thing that is broken. Naming the item that could not be
+  released is what makes the residue recoverable by hand instead of invisible.
+
+  ADJACENT, NOT CLAIMED: the repository separately records a latent defect (KI-BO-022) in which
+  a raise inside the claim and release helpers escapes uncaught and strands records for exactly
+  these reasons. This AC specifies the required BEHAVIOUR of partial claim and partial release;
+  it does not adopt that entry's mechanism or its remediation, which belong to whoever owns it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The it_requirement that the claim record be written per
+  claim (or the release list derived from the store) is the BA's first scenario turned into a
+  mechanism. It is stated explicitly because the natural implementation — collect the claimed
+  ids, write them when the loop completes — satisfies every test that uses a single item and
+  fails silently on the exact state this AC exists for.

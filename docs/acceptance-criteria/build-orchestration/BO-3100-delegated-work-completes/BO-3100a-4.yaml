@@ -1,0 +1,126 @@
+id: BO-3100a-4
+title: "Reference documentation tells an author how to grant, revoke and repair hand-off authority"
+component: build-orchestration
+components:
+  - documentation_system
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author whose assembly has stopped on a hand-off mismatch,
+  When they open the reference documentation for hand-off authority,
+  Then it states where each of the two declarations is recorded, how to grant an agent
+    hand-off authority, how to revoke it, and what each of the two mismatch failures means
+    and which declaration to change for each.
+
+  Given the reference documentation,
+  When each statement it makes about what the reconciliation accepts or refuses is turned
+    into an assembly run over a fixture in that state,
+  Then the assembly outcome matches what the documentation says it will be.
+depends_on:
+  - BO-3100a
+  - BO-3100a-1
+  - BO-3100a-1-i
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the reference page lands, alongside the store's other reference documentation."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new reference must be reachable from."
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+    relevance: "The decision the granting and revoking guidance must remain consistent with."
+assigned_agent: reference-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: reference-author, the leaf author, not documentation-expert. Dispatching documentation-expert to then dispatch a leaf author is the exact defect BO-3100c forbids — a specialist that depends on the result of something it spawned."
+  - "EVERY BEHAVIOURAL CLAIM THE PAGE MAKES MUST BE PAIRED WITH A FIXTURE AND AN ASSEMBLY RUN. The pairing must be structural — each claim carries an identifier that names the fixture exercising it — so a claim added later without a fixture is a failing test, not an unnoticed addition. A page whose claims are checked by review rots exactly the way building-epics §2.1-R1 rotted."
+  - "The two mismatch failures must be documented with their DISTINCT texts and their DIFFERENT repairs, sourced from BO-3100a-1 and BO-3100a-1-i rather than paraphrased. A paraphrase that drifts from the emitted string sends the author searching for a message that does not exist."
+  - "The page must state where each declaration is recorded as a path, and that path must be asserted to exist by the covering test — a reference to a moved or renamed file reads as coverage while pointing nowhere."
+  - "The page must NOT restate the prohibition as an instruction ('do not grant hand-off authority without clearing a recipient'). It must give the author the reconciliation's own accept/refuse rule, so guidance and enforcement cannot diverge."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100a-1
+    contract: "The means-without-clearance failure text verbatim, its machine-readable direction discriminator, and the paths of the two declaration sources."
+  - ac_id: BO-3100a-1-i
+    contract: "The clearance-without-means failure text verbatim and its direction discriminator, so both failures and their different repairs can be documented."
+  - ac_id: BO-3100a-3
+    contract: "The published component-diagram path and element ids, so the reference can point at the picture of the two declarations."
+test_spec:
+  - name: test_bo_3100a_4_every_documented_claim_has_a_fixture
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the page's claim identifiers and assert each one resolves to a fixture in the test suite; assert also that no fixture is orphaned. A claim added without a fixture fails here."
+  - name: test_bo_3100a_4_documented_outcomes_match_real_assembly
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE ANTI-ROT CHECK. For each documented accept/refuse claim, run the REAL assembly over its fixture and assert the observed outcome (exit status, and which failure text was emitted) equals what the page states. A page that drifts from the behaviour fails."
+  - name: test_bo_3100a_4_declaration_paths_named_by_the_page_exist
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Every declaration-source path the page names is asserted to exist in the repository, so a rename turns into a failing test rather than a reference that resolves to nothing."
+  - name: test_bo_3100a_4_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  This AC exists because a correct written rule stayed on the page while the behaviour moved
+  away from it. So the only coverage worth having is the one that executes the page's claims
+  against the real assembly — a test asserting the page CONTAINS the right sentences is the
+  grep-on-prose form the goal's hard constraint rejects, and it would have passed on
+  building-epics §2.1-R1 throughout the period that rule was silently not firing.
+  The claim-to-fixture pairing test is the anti-vacuum half: without it, the cheapest way to
+  pass the seam test is to document one claim and leave the rest unexercised.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf reference author), complexity, it_requirements,
+    expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc entry in BO-3100a's documentation_triggers.
+
+  THE SECOND SCENARIO IS THE REASON THIS IS NOT PROSE-ONLY. The parent goal exists because a
+  written rule stayed on the page while the behaviour drifted away from it — the
+  building-epics synchronous-dispatch rule was correct, in force, and did not fire. A
+  reference doc whose behavioural claims are each executable against the real assembly
+  cannot rot silently: the claim and the check disagree and something fails.
+
+  Depends on both mismatch directions because the doc must describe both failures and their
+  different repairs; writing it before BO-3100a-1-i exists would document half the behaviour.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The claim-identifier requirement is the mechanism that
+  makes the second scenario enforceable rather than aspirational. Without an explicit link
+  from each claim to its fixture, "each statement is turned into an assembly run" is a
+  process instruction — the unacceptable form — and coverage silently shrinks as the page
+  grows. BO-3100d-1 applies the same pairing discipline to the delivery record; the two
+  should share one mechanism rather than invent two.

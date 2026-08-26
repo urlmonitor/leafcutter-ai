@@ -1,0 +1,138 @@
+id: BO-3100b-2-i
+title: "A step that parks every time ends as a named failure, not as an endless retry"
+component: build-orchestration
+components:
+  - supervisor_system
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose specialist produces nothing on every attempt,
+  When it is re-run,
+  Then the number of attempts is bounded, and after the last permitted attempt the build
+    stops with a failure that names the step, states that every attempt produced nothing,
+    and states how many attempts were made.
+
+  Given that same step,
+  When the build stops,
+  Then no completed step is recorded for it and no step that depends on it is started.
+
+  Given a step that produces nothing on its first attempt and produces work on a later
+    attempt within the bound,
+  When it finishes,
+  Then the build proceeds normally and the failure above is not raised.
+depends_on:
+  - BO-3100b-2
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the chronic parker this bound turns into a visible failure."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 records the cost of a failure message that does not name what actually went wrong."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+  - config
+risk_surface: internal
+it_requirements:
+  - "IT-PO DECISION — THE BOUND. Three attempts total (the initial run plus two retries), read from a single declared configuration key with that default. Rationale: two is the smallest bound that both satisfies BO-3100b-2's retry requirement and leaves headroom for one transient failure, and the observed defect is deterministic — an agent that parks parks every time, so a larger bound only burns drive time before reaching the same conclusion."
+  - "THE BOUND MUST BE FINITE AND VALIDATED AT LOAD. A configured value that is absent, non-integer, zero, negative, or unbounded must be rejected at load with a named error, not silently coerced. A bound configurable to infinity re-introduces the endless loop through configuration."
+  - "The bound must be enforced by a counter attached to the step identity, so it survives the retry mechanism and cannot be reset by re-entering the step through a different path."
+  - "The failure must name the step, state that every attempt produced nothing, and state the attempt count — all three in the emitted message, not only in a structured field a human never reads. Without them a chronic parker reports as a generic build failure and the diagnosis starts from nothing."
+  - "The failure must be distinguishable from an `undetermined` outcome (BO-3200e vocabulary) and from a substantive step failure. 'Every attempt produced nothing' and 'the judgement could not be made' send a reader to different places."
+  - "A run that succeeds on a later attempt within the bound must leave no residue of the failure path: no failure message, no failed-outcome value, and exactly one completion record."
+  - "The bound applies per step per build, not globally across a drive. A global budget lets one chronic parker consume the allowance of every subsequent step."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100b-2
+    contract: "The step-lifecycle record entry {step_id, attempt, outcome, evidence} and the retry loop that produces it. This AC counts `attempt` per `step_id` and terminates the loop at the configured bound, emitting outcome `produced_nothing_failed`."
+test_spec:
+  - name: test_bo_3100b_2_i_chronic_parker_stops_at_the_bound
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the real lifecycle with a specialist that produces nothing on every attempt; assert the number of actual executions equals the configured bound (not more), the build stops, and the emitted failure contains the step id, the every-attempt-produced-nothing statement, and the attempt count."
+  - name: test_bo_3100b_2_i_halt_records_no_completion_and_starts_no_dependent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After the bounded failure, assert zero completed-step records for that step and that a step declared dependent on it was never executed."
+  - name: test_bo_3100b_2_i_success_within_the_bound_proceeds_cleanly
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Specialist produces nothing on attempt 1 and work on attempt 2. Assert the build proceeds, exactly one completion is recorded, and the bounded-failure message is absent from the output. Fails any implementation that set the bound to one attempt."
+  - name: test_bo_3100b_2_i_invalid_bound_is_rejected_at_load
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Zero, negative, non-integer and unbounded configured values are each rejected at load with a named error rather than coerced — a bound configurable to infinity is the endless loop arriving through config."
+  - name: test_bo_3100b_2_i_budget_is_per_step_not_global
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two steps each park once then succeed. Assert both complete — a global budget would have exhausted the allowance on the first and failed the second."
+test_rationale: |
+  Counting attempts is only meaningful against real executions, so every discriminating test
+  here drives the real lifecycle and counts how many times the specialist actually ran. A unit
+  test of the counter passes on a counter that is never consulted by the loop.
+  The success-within-the-bound test is what stops the bound being implemented as "one attempt
+  only", which would satisfy the letter of this AC while destroying BO-3100b-2's retry. The
+  invalid-bound test is the config-shaped route back to the endless loop, and the per-step test
+  is the shape in which one chronic parker silently fails every later step in the drive.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Settled the bound left to the IT PO (3 attempts total, single declared config
+    key, validated at load). Added assigned_agent, complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  One of the two failure modes the parent L1 names explicitly as what makes this hard rather
+  than routine: "the retry must terminate — a specialist that parks identically every time
+  must end as a visible failure, not an endless loop."
+
+  A build that loops forever is worse than the defect it replaced. The 2026-08-18 stall at
+  least ended; an unbounded retry consumes the drive and produces no report at all, which is
+  the same invisibility arriving by a different route.
+
+  THE FAILURE MUST NAME THE STEP AND THE ATTEMPT COUNT. Without those, a chronic parker is
+  reported as a generic build failure and the diagnosis starts from nothing — the same cost
+  KI-BO-018 records, where a misdirected message sent the reader to fix something that was
+  already correct.
+
+  The third scenario stops the bound from being implemented as "one attempt only", which
+  would defeat the retry BO-3100b-2 requires.
+
+  Deliberately left to the IT PO: the value of the bound and whether it is fixed or
+  configurable. The criterion requires only that a bound exists, is finite, and is reported.
+
+  IT-PO DECISION (2026-08-26). Bound = 3 attempts total (initial + 2 retries), configurable
+  through one declared key with that default, validated at load so it cannot be set to zero or
+  to unbounded. Configurable rather than fixed because a consumer project with a slower or
+  flakier environment has a legitimate reason to raise it; validated at load because the whole
+  point of the bound is that it cannot be removed, and an unvalidated config key is exactly how
+  it would be.

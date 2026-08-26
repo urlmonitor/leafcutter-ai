@@ -1,0 +1,85 @@
+id: BO-3200d
+title: "A large result arrives whole, however large it is"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Findings are handed over intact, so size never becomes a false failure.
+
+  When a specialist produces a substantial result, that result reaches the rest
+  of the build complete and unaltered. Size alone never causes a good result to
+  arrive shortened or replaced by a note about where to find it, so a build never
+  fails, halts, or reports a problem that exists only in the handover.
+depends_on:
+  - BO-3200
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 — a ~149 KB result was returned as a 47-character file path, and the gate reading it halted a run whose work was correct."
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: modifies
+    status: exists
+    relevance: "The lane whose bundle handover this L1 changes."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one diagram doc_link; recorded the handover decision in notes. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3200d-1
+  - BO-3200d-2
+  - BO-3200d-3
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  Anchor case (KI-BO-019, blocker, open): the fast lane asked its bundle
+  specialist to return ~149 KB of text as a field inside a structured reply. The
+  specialist assembled the bundle correctly, wrote 148,891 bytes to disk, and
+  returned a pointer to it along with a plain description of what it had done.
+  The gate then checked the 47-character path for a marker, did not find one, and
+  halted. The bundle was well-formed and the marker was present at line 958.
+
+  THE GATE IS NOT THE BUG. Its fail-closed posture is correct and must be
+  preserved — do not let this criterion be decomposed into loosening it. What
+  failed is the contract: "return 149 KB of text as a string field" is not
+  something a specialist reliably honours, and the specialist was not evasive
+  about it, it simply answered a different question than the schema asked.
+
+  Related to BO-3200a but distinct, and both are needed. BO-3200a removes the
+  cases where a specialist should never have been the source at all. This
+  criterion covers the cases where a specialist legitimately IS the source — it
+  did real work and produced a real finding — and only the handover is at fault.
+  A fix to either one leaves the other class open.
+
+  IT-PO DECISION (2026-08-26) — WHAT THE AGREED HANDOVER IS. The BA left this open
+  on BO-3200d-2; it is settled there in full, and the shape is recorded here because
+  it binds all three children:
+
+  THE CALLER SUPPLIES THE PATH AT DISPATCH; THE PRODUCER DOES NOT CHOOSE IT AND
+  DOES NOT REPORT IT. The coordinating layer allocates a run-scoped artifact path,
+  passes it in the dispatch, and reads the file at that path when the dispatch
+  returns. This is the decision that makes the criteria structurally true rather
+  than conventionally true: if the caller already knows the path, the reply cannot
+  be the transport for it, there is no pointer to be truncated or paraphrased, and
+  a reply carrying none of the content is the normal case rather than a special one.
+  A producer-chosen path returned in the reply is the SAME defect as returning the
+  content — a value the build depends on, arriving second-hand.

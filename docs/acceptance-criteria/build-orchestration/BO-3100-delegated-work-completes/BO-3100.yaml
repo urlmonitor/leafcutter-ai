@@ -1,0 +1,128 @@
+id: BO-3100
+title: "Every step of a build either really runs or visibly fails"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A step that never ran can never be counted as one that passed.
+
+  When you hand work to this system, it breaks that work into steps and gives
+  each one to a specialist. Today a specialist can quietly end without doing
+  anything, and because it ended calmly rather than with an error, the step is
+  recorded as finished. Whole stretches of a build can therefore be reported as
+  complete when nothing happened at all.
+
+  This goal removes that possibility. A step that produced nothing is recognised
+  as a step that produced nothing — from evidence of what actually changed, never
+  from the specialist's own account of itself — and it is retried or surfaced,
+  never counted. The arrangement of the work is changed so that the silent
+  disappearance becomes impossible rather than merely detectable, and so it stays
+  impossible as the underlying tools change.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the blocker this goal closes, and the corrected account of why a specialist ends without doing its work."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Where the dispatch topology and the fan-out this goal relocates are defined."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface for BO-2900 parity. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3100a
+  - BO-3100b
+  - BO-3100c
+  - BO-3100d
+implemented_by: []
+notes: |
+  Authored 2026-08-25 from a user (BrainCandy) request, against KI-SS-001
+  (blocker, open) and its same-root-cause relatives KI-ACD-005, KI-BO-018,
+  KI-BO-019 and KI-BO-020. Framing decisions recorded for the BA and IT PO.
+
+  THE DURABLE INVARIANT this tree exists to enforce, stated in the user's words
+  because every child must be traceable to it:
+
+    A subagent must never depend on the result of anything it spawns. If it
+    needs the result, it must not delegate — it must do the work itself, or not
+    be the one orchestrating.
+
+  That statement references no harness version, no fork mode and no depth limit,
+  which is exactly why it is the invariant. The underlying reason it must hold:
+  a subagent has no idle state. Emitting text with no tool call ends the AGENT,
+  not the turn, and that text becomes its result. There is no wait primitive
+  available to a subagent.
+
+  ALREADY SHIPPED — DO NOT RE-SPECIFY. PR #565 (merged 88c6395e, 2026-08-25)
+  made the workflow runtime fail closed: a missing, unrecognised or
+  `undetermined` agent result can no longer be counted as a completed phase,
+  ticket or epic, and the three /plan-feature gates no longer default to
+  discarding work. A new `undetermined` status exists. That narrows the blast
+  radius; it does NOT stop an agent parking in the first place. This tree is the
+  remainder only.
+
+  HARD CONSTRAINT ON DECOMPOSITION — mechanical enforcement only. Any criterion
+  whose enforcement reduces to "an agent is told to..." must be REJECTED at L2.
+  The prompt-level fix has already been tried and rotted: building-epics/SKILL.md
+  §2.1-R1 "Synchronous phase dispatch (MANDATORY)" was authored from the
+  2026-07-06 retrospective of this exact failure, was in force on 2026-08-18, and
+  the failure recurred anyway — twice in one drive. It could not even reach the
+  second-level stall, because the skill is loaded by ticket-supervisor only and
+  the agent that stalled never loads it. Prompt discipline is not a fix here.
+
+  VERDICTS COME FROM REPOSITORY EVIDENCE, NEVER SELF-REPORT. This is the repo's
+  standing doctrine (CLAUDE.md "Real-artifact behavioral spot-check") and it is
+  binding on BO-3100b in particular. The 2026-08-18 stall was caught only by
+  checking git status and git log against the agent's own report.
+
+  BOUNDARIES — four adjacent trees this must NOT be folded into or duplicate:
+  - BO-2500 (mechanical done-proof) and BO-2900 (runtime reachability) are the
+    ARTIFACT layer: is the code real, tested, and actually reached. BO-3100 is
+    the ORCHESTRATION layer: did the step run at all. KI-SS-001 names this
+    precisely — the same phantom-done shape "relocated from the artifact layer to
+    the orchestration layer". Distinct failure mode, distinct tree.
+  - BO-1900 (dispatch preflight) fires BEFORE a specialist is spawned and asks
+    "is this ticket fit to dispatch". BO-3100b fires at the moment a specialist
+    tries to EXIT. Do not merge them.
+  - AR-200 (capability matches obligation) is the inverse axis: a specialist that
+    must record a verdict has the means to record one. BO-3100a is about
+    authority being BOUNDED and declared, not about capability being sufficient.
+  - INF-600 (self-describing agents) is registry-card coherence and is already at
+    twelve L1 children. BO-3100a is deliberately not a thirteenth; per the
+    build-orchestration PROJECT_CONTEXT component-choice rule, a concern about
+    what happens DURING a drive belongs here.
+
+  SPLIT RATIONALE. The user's material was authored as two sibling L0s, not one.
+  BO-3100 is "a delegated step cannot silently vanish" (structure). BO-3200 is
+  "a build never acts on a second-hand answer" (what may be delegated at all).
+  Together they would have made a nine-child L0, over the seven-child cap and
+  spanning two clearly distinct themes — the semantic trigger in the
+  ac-tree-split skill. Each tree stands alone and is independently shippable.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). change_target: pipeline and
+  risk_surface: internal mirror BO-2900's L0/L1 parity. The whole tree changes
+  how a drive is orchestrated (the pipeline), not what any one artifact contains.
+  risk_surface stays `internal` at L0 because the blast radius is this
+  repository's own build; individual children that change a cross-agent contract
+  (BO-3100a-1, BO-3100c-1, BO-3100c-2) carry `contract_boundary` themselves.

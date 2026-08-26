@@ -1,0 +1,158 @@
+id: BO-3100d-2
+title: "A decision replaced on a false premise stays readable, marked superseded, and linked both ways"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a recorded decision that was argued from a premise since shown to be false,
+    And a newer decision that replaces it,
+  When either record is read,
+  Then the older record is still present and readable, is marked as superseded, and names
+    the record that replaced it,
+    And the newer record names the record it replaced and states which premise was found to
+    be false.
+
+  Given both records,
+  When the pointer on each is followed,
+  Then it resolves to a record that exists.
+
+  Given the older record,
+  When it is read by someone who does not know the history,
+  Then both what was believed and what replaced it are visible from that record alone,
+    without needing to know that a newer one exists.
+depends_on:
+  - BO-3100d
+  - BO-3100d-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: modifies
+    status: exists
+    relevance: "Expected subject of the supersession; asserts a hard depth-1 limit with deeper calls silently blocked."
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: modifies
+    status: exists
+    relevance: "Expected subject of the supersession; same false premise in different wording."
+  - path: docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The numbering rule the superseding record must follow."
+  - path: docs/architecture/adrs/README.md
+    relationship: describes
+    status: exists
+    relevance: "The ADR index the supersession must remain consistent with."
+assigned_agent: adr-author
+estimated_complexity: L
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: adr-author, the leaf author of decision records, not documentation-expert. A documentation-expert dispatch that then dispatches a leaf author is the defect BO-3100c removes."
+  - "THE SUPERSESSION MUST BE COMPLETED IN BOTH PLACES IN THE SAME CHANGE: the superseding record names its predecessor and the premise found false, and the predecessor is marked superseded and names its successor. The half that is normally forgotten is the predecessor's own marking — and that is the half a reader depends on, because the reader arrives at the old record first."
+  - "BOTH POINTERS MUST BE MACHINE-READABLE FIELDS, not sentences in the body. BO-3100d-2-i's checker has to resolve them; a pointer expressed only in prose is unresolvable and reads as coverage while pointing nowhere."
+  - "THE PREDECESSOR MUST REMAIN READABLE IN PLACE. It is not deleted, not emptied, not reduced to a redirect. The value of the supersession is that a later reader can see both what was believed and what replaced it."
+  - "THE SUPERSEDING RECORD MUST STATE WHICH PREMISE WAS FALSE, specifically — not merely that the predecessor is superseded. 'Superseded by ADR-N' with no stated reason leaves the false depth story intact in the reader's head, and the reader will re-derive it."
+  - "The superseding record's own behavioural claims are subject to BO-3100d-1: each must carry a claim identifier and be paired with an executable check. A new decision record that asserts unverified runtime behaviour re-creates the defect one generation on."
+  - "HUMAN-REVIEW OBLIGATION (records the boundary of what can be automated). Whether the superseding record REASONS well — draws a sound conclusion from the now-true premise — is not mechanically checkable and is not claimed by any test in this AC's test_spec. It is discharged by a named human review recorded on the delivering ticket before the AC is marked done. Do not add a test that appears to cover it; an assertion that the record 'contains' the right reasoning is a grep on prose and would be worse than no test, because it would read as coverage."
+delivers_to:
+  - agent: python-coder
+    contract: "The supersession field pair as machine-readable metadata on each decision record: on the predecessor {status: superseded, superseded_by: <id>}, on the successor {supersedes: <id>, false_premise: <string>}. BO-3100d-2-i's checker resolves exactly these."
+  - agent: reference-author
+    contract: "The corrected constraint as settled in the superseding decision, so BO-3100d-3's delegation reference restates the decision rather than re-deriving it."
+expects_from:
+  - ac_id: BO-3100d-1
+    contract: "The claim-identifier mechanism and the three-state claim report, so the superseding record's own behavioural claims are bound to executable checks rather than asserted."
+test_spec:
+  - name: test_bo_3100d_2_predecessor_is_marked_and_names_its_successor
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "For every superseded decision record, assert the machine-readable status marks it superseded and the superseded_by field names the successor."
+  - name: test_bo_3100d_2_successor_names_its_predecessor_and_the_false_premise
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The superseding record carries a supersedes pointer and a non-empty false_premise field. Empty or absent fails."
+  - name: test_bo_3100d_2_both_pointers_resolve_to_records_that_exist
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Follow each pointer against the real docs/architecture/adrs/ tree and assert the target file exists. A pointer that resolves to nothing reads as coverage to everyone who checks for one."
+  - name: test_bo_3100d_2_predecessor_remains_readable_in_place
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The superseded record still exists at its original path with its original argument body intact — not deleted, emptied, or reduced to a redirect stub."
+  - name: test_bo_3100d_2_reader_arriving_at_the_old_record_can_see_both
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Reading ONLY the predecessor file, assert both facts are obtainable from it: that it is superseded, and by which record. Encodes the third scenario's reader position — a reader who found the old record has by definition not found the new one."
+test_rationale: |
+  Only part of this AC is mechanically checkable, and the split is drawn deliberately.
+  COVERED, by the tests above: the structural facts — both markings present, both pointers
+  resolving, the predecessor still readable in place, and the old record self-sufficient for a
+  reader who arrives at it first. Those are facts about the records and are exactly why this
+  criterion is enforceable where "keep the documentation accurate" would not be.
+  NOT COVERED, deliberately and by decision: whether the superseding record reasons WELL. A
+  decision record can reason correctly from a true premise to a poor conclusion, and every
+  structural check above will pass. That half is discharged by a named human review recorded on
+  the delivering ticket. No test here claims it, and none should be added: an assertion that the
+  record "contains" the right reasoning is the grep-on-prose form this whole tree rejects, and
+  it would be strictly worse than the honest gap because it would read as coverage. The
+  distinction is stated here rather than left implicit so the absence is a recorded decision.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (adr-author, leaf), complexity, it_requirements incl.
+    an explicit human-review obligation for the non-falsifiable half, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3100d-2-i
+implemented_by: []
+notes: |
+  The parent L1 asks for the correction to happen "in the open — the old decision is kept and
+  marked as superseded, so anyone reading later can see both what was believed and what
+  replaced it." The third scenario is that requirement stated from the reader's position,
+  which is the only position that matters: a superseded record that is only discoverable from
+  its successor is not discoverable at all, because a reader who has found the old one has by
+  definition not found the new one.
+
+  MECHANICALLY CHECKABLE WITHOUT READING PROSE. Whether a pointer resolves, and whether the
+  pointer exists in both directions, are structural facts about the records. That is what
+  makes this criterion enforceable where a requirement to "keep the documentation accurate"
+  would not be.
+
+  SCOPE HELD AS THE PO SET IT: which decisions are superseded, and what replaces them, is a
+  judgement for the decision-record author and is deliberately not pre-committed here. This
+  AC constrains only the shape of a supersession once one is made. ADR-006 and ADR-019 are
+  the expected subjects — both were confirmed on 2026-08-25 to assert a hard depth-1 limit
+  with deeper calls silently dropped — but naming them in the criteria would pre-commit the
+  judgement the L1 reserves.
+
+  IT-PO DECISION (2026-08-26) — THE HUMAN-REVIEW BOUNDARY, made explicit rather than implied.
+  This AC has a falsifiable half and a non-falsifiable half. The falsifiable half is covered by
+  the test_spec above and by BO-3100d-2-i. The non-falsifiable half — that the replacement
+  reasons soundly — is discharged by a named human review recorded on the delivering ticket, is
+  stated as an it_requirement, and is stated again in test_rationale so that nobody later reads
+  the absence of a test as an oversight and closes it with a prose grep. That would be the worst
+  available outcome: it would read as coverage while proving nothing, which is the failure shape
+  this entire tree exists to remove.

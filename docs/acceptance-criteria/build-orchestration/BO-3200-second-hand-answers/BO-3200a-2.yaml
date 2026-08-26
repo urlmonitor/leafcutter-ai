@@ -1,0 +1,184 @@
+id: BO-3200a-2
+title: "Every path that needs a project fact still works with specialists unavailable, and one that does not is named"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every path through which a build resolves a fact about the project that it then
+    branches on,
+  When each is exercised in an environment where dispatching a specialist is impossible,
+  Then every one of them obtains its value and proceeds.
+
+  Given one such path restored to obtaining its fact by dispatching a specialist, while every
+    other path reads directly,
+  When all paths are exercised in that same environment,
+  Then the restored path is reported as depending on a relayed fact and is named,
+    And the fact that every other path succeeds does not suppress the report.
+
+  Given a path that dispatches a specialist for a judgement rather than for a fact — the value
+    it returns being an opinion the build records rather than a value it branches on,
+  When the paths are exercised,
+  Then that path is not reported, so asking a specialist for judgement remains available.
+depends_on:
+  - BO-3200a
+  - BO-3200a-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — the relayed fact this sweep verifies is gone from every path, not just the one that was fixed."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where dispatch options and agent capabilities are declared; the result_use declaration rides the same dispatch surface."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-001 — the precedent for a sweep that reports clean having examined nothing; the exempt-count report is the defence."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+  - schema
+risk_surface: contract_boundary
+it_requirements:
+  - "IT-PO DECISION — THE DECLARATION MECHANISM FOR A JUDGEMENT PATH. The BA recorded this as the open residual: without it the sweep either false-positives on every judgement dispatch or is quietly narrowed until it means nothing. Settled as follows, and all five parts are required together."
+  - "(1) WHERE IT LIVES. Every dispatch site carries an explicit `result_use` field on the dispatch options object itself — the same object the runtime already reads for agent type and label. Permitted values: `fact` and `judgement`. A `judgement` declaration must also carry a non-empty `judgement_reason` string. It is NOT a separate registry, allowlist or config file: a second surface drifts from the code, and the drift is invisible because both look correct in isolation."
+  - "(2) ABSENCE MEANS `fact`, AND AN UNDECLARED SITE FAILS THE SWEEP. The exemption is opt-OUT by explicit declaration, never opt-in by omission. If a missing declaration were tolerated, the sweep's scope would shrink silently with every dispatch anyone adds — which is precisely how building-epics §2.1-R1 stopped applying to the agent that stalled."
+  - "(3) THE DECLARATION IS NEVER INFERRED. Not from the prompt text, not from the agent name, not from the label, not from the returning value's shape. Any of those is the text heuristic the BA correctly rejected."
+  - "(4) THE DECLARATION IS VERIFIED, NOT TRUSTED — this is what stops 'declare everything judgement' being the cheap way out. A declared-judgement path is still EXERCISED with specialists unavailable. It is not required to obtain its value; it IS required to reach a terminal outcome, recording the judgement as unobtained in BO-3200e's vocabulary. If the run cannot terminate without the value, the build BRANCHES on it — so it was a fact, the declaration is contradicted by observation, and the path is reported as a falsely-declared judgement. The declaration therefore selects WHICH assertion applies, never whether the path is examined. Every path is examined either way."
+  - "(5) THE EXEMPT SET IS REPORTED ON EVERY RUN, clean or not: the count and the list of declared-judgement dispatches with their stated reasons. A silently growing exemption set is how a sweep is narrowed until it means nothing, and it is invisible unless the exemptions are enumerated."
+  - "THE PATH SET MUST BE DERIVED FROM THE DEPLOYED SURFACE, not hard-coded. A path added later must be swept without editing the sweep. The parent L0's count of roughly 69 errand-runner dispatches is evidence to re-measure, never a list to encode."
+  - "A VIOLATION MUST NOT BE SUPPRESSED BY SUCCESS ELSEWHERE: per-path verdicts, an aggregate report, no early return, no summarisation that collapses several named paths into one line."
+  - "A SWEEP THAT EXERCISED NO PATHS MUST FAIL, not report clean, and a path that could not be exercised must be reported as not-exercised rather than omitted (KI-ACS-001)."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py to produce the specialists-unavailable environment by withholding the dispatch surface from the real workflows."
+delivers_to:
+  - agent: python-coder
+    contract: "The `result_use` dispatch-site declaration ({result_use: 'fact' | 'judgement', judgement_reason: str}) and the relay sweep's report: {paths: [{name: str, state: 'completed' | 'relayed_fact' | 'falsely_declared_judgement' | 'not_exercised', declaration: str}], exempt: [{name: str, reason: str}], total: int}."
+  - agent: reference-author
+    contract: "The sweep's discriminating rule stated as a question an author can apply to their own dispatch before the sweep does — 'would the build still reach a terminal outcome with no specialist available' — plus the declaration's field names, so BO-3200a-3's documentation and this enforcement cannot diverge."
+expects_from:
+  - ac_id: BO-3200a-1
+    contract: "The direct source-read resolver {value, outcome, source_path, looked_in}. BO-3200a-1 proves one path reads directly; this AC proves no path still relays."
+test_spec:
+  - name: test_bo_3200a_2_every_fact_path_completes_with_specialists_unavailable
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Exercise every derived path in an environment where dispatch is impossible; assert each obtains its value and proceeds, and that the report accounts for every path with an explicit state."
+  - name: test_bo_3200a_2_one_restored_relay_is_named_despite_the_others_passing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE PARTIAL-FIX TEST. Restore exactly one path to obtaining its fact by dispatch while every other reads directly; assert that path is named as relayed and the other paths' success does not suppress or summarise the report away."
+  - name: test_bo_3200a_2_declared_judgement_path_is_not_reported_as_a_relay
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A path declaring result_use: judgement with a reason, whose returned value the build records rather than branches on, reaches a terminal outcome with specialists unavailable (recording the judgement unobtained) and is NOT reported. Keeps judgement delegation available."
+  - name: test_bo_3200a_2_falsely_declared_judgement_is_caught_by_observation
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE ANTI-ABUSE TEST. A path declares result_use: judgement but actually branches on the returned value, so with specialists unavailable it cannot reach a terminal outcome. Assert the sweep reports it as a falsely-declared judgement and names it. Without this test, declaring everything judgement empties the sweep."
+  - name: test_bo_3200a_2_undeclared_dispatch_site_fails_the_sweep
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A dispatch site carrying no result_use field is reported, not silently treated as exempt. Absence must fail, or the swept set shrinks with every dispatch anyone adds."
+  - name: test_bo_3200a_2_exempt_set_is_reported_on_a_clean_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "On an all-clean run the report still lists every declared-judgement dispatch and its stated reason. A silently growing exemption set is how a sweep is narrowed until it means nothing."
+  - name: test_bo_3200a_2_path_set_is_derived_and_zero_paths_fails
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Adding a path to the deployed surface fixture makes it appear in the report with the sweep unmodified; and a sweep that exercises zero paths exits non-zero rather than reporting clean."
+test_rationale: |
+  Fact-versus-judgement cannot be decided by looking at a dispatch, which is why the BA made the
+  observable property "the path still completes with no specialist available". That leaves one
+  residual — a genuine judgement path legitimately cannot complete — and the tests here close it
+  from both sides rather than by narrowing the sweep.
+  The pair that matters is the declared-judgement test and the falsely-declared test. The first
+  keeps judgement delegation available; the second makes the declaration a claim that OBSERVATION
+  can contradict, so declaring everything judgement fails rather than exempting. Without the
+  second, the declaration is self-certification and the sweep means nothing — which is exactly
+  the outcome the BA warned about.
+  The undeclared-site test and the exempt-set report are the two ways the swept set shrinks
+  silently: by omission at the site, and by an exemption list nobody looks at. Both have
+  precedent in this repository.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Settled the judgement-declaration mechanism the BA left open (result_use on
+    the dispatch site; absence means fact and fails; never inferred; verified by observation,
+    not trusted; exempt set reported every run). Added assigned_agent, complexity,
+    it_requirements, delivers_to/expects_from, doc_links, test_spec/test_rationale,
+    change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent L0 records the starting state to be re-measured rather than trusted: roughly 69
+  dispatches currently use a read-only reporting specialist as a general-purpose errand runner.
+  This AC is the absence half — BO-3200a-1 proves one path reads directly; without this one, a
+  system with sixty-eight remaining relays passes it.
+
+  THE SECOND SCENARIO IS WRITTEN TO FAIL A PARTIAL FIX, in the same shape as BO-3100c-2. A
+  working direct read somewhere must not mask a surviving relay elsewhere, and the report must
+  name the path so the remaining work is enumerable rather than estimated.
+
+  THE THIRD SCENARIO IS THE SCOPE LINE THE PARENT DRAWS: "Judgement is the only thing worth
+  asking a specialist for." A sweep that reports every dispatch would be trivially satisfied by
+  deleting all delegation, which is not the goal and would be reverted. The distinguishing
+  property is whether the build BRANCHES on the returned value — that is what makes a
+  paraphrase, a truncation or a pointer able to change the outcome.
+
+  A NOTE ON WHERE THIS IS HARD, recorded for the IT PO rather than hidden: fact-versus-judgement
+  is easy to state and awkward to decide mechanically. The formulation above deliberately makes
+  the observable property "the path still completes with no specialist available" rather than
+  "the dispatch looks like a fact request", because the former is executable and the latter is
+  a text heuristic. A path that needs a judgement will legitimately be unable to complete
+  without a specialist, and must therefore be identified as out of scope by its contract before
+  the sweep runs, not inferred from its prompt.
+
+  IT-PO DECISION (2026-08-26) — THE DECLARATION MECHANISM, answering the BA's residual. Full
+  specification is in it_requirements; the part worth restating is the one that makes it more
+  than a self-certification:
+
+  THE DECLARATION SELECTS THE ASSERTION, NOT WHETHER THE PATH IS EXAMINED. Every path is
+  exercised with specialists unavailable, always. A path declared `fact` must obtain its value
+  and proceed. A path declared `judgement` must reach a terminal outcome recording the judgement
+  as unobtained. If a declared-judgement path CANNOT terminate without the value, the build was
+  branching on it — the declaration is contradicted by observation and the path is reported.
+
+  That is what closes the loophole the BA identified. A declaration that merely removed a path
+  from the sweep would be narrowed to meaninglessness within a few sprints, one honest-looking
+  exemption at a time; a declaration that changes which assertion is applied cannot be, because
+  the false declaration fails DIFFERENTLY rather than silently. The reported exempt set is the
+  second line of defence: even a correctly-declared judgement path stays visible and countable,
+  so growth in the exemption set is something a reader can notice.

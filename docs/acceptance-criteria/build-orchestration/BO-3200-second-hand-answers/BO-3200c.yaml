@@ -1,0 +1,101 @@
+id: BO-3200c
+title: "Your approval is asked of you, never assumed on your behalf"
+component: build-orchestration
+components:
+  - ac_driven_dev
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A decision that needs you reaches you — your work waits until it does.
+
+  When the build reaches a point where only you can decide, the question is put
+  to you. Your answer is the only thing that can settle it, and nothing else is
+  ever interpreted as your reply. If the question cannot be put to you, the build
+  stops and says so with your work intact, rather than proceeding on a guess
+  about what you would have wanted.
+depends_on:
+  - BO-3200
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — approval gates were dispatched to a reporting specialist whose out-of-scope refusal was parsed as the user choosing cancel."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause-and-resume substrate this L1's pause path must build on rather than reinvent."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "The component page for that substrate, including where a resumable record lives."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the harness removes AskUserQuestion from every subagent, which is why the gate must be raised at a layer that still has it."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: auth
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface (auth — the property under test is the provenance of a consent answer) and three doc_links to the existing pause-resume substrate. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3200c-1
+  - BO-3200c-2
+  - BO-3200c-3
+  - BO-3200c-4
+  - BO-3200c-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+notes: |
+  SCOPE — READ BEFORE DECOMPOSING. Half of this is already fixed and must not be
+  re-specified. PR #565 (88c6395e) stopped the gates defaulting to discard, so a
+  refusal no longer destroys authored work. The REMAINING value is that the
+  question genuinely reaches a person, and that no reply from anything other than
+  that person can be read as their answer.
+
+  Anchor case (KI-ACD-005, blocker, open): gates documented as user decision
+  points were dispatched as prompts to a reporting specialist. It replied that
+  approving these artifacts is not its job. That reply was parsed as an answer of
+  "cancel" and the pipeline discarded already-authored work. Note the specialist
+  was right and said so clearly; the defect is that a refusal and a decision were
+  not distinguishable to the caller.
+
+  The distinction the BA must make explicit: "no answer available" and "the user
+  answered no" are different outcomes with different consequences, and they were
+  collapsed into one. They must remain distinguishable at every gate, not just
+  the three that were patched.
+
+  Known constraint from KI-SS-001, relevant to how this can be built: the ability
+  to put a question to the user is not available to a specialist — the harness
+  removes it. So the gate has to be raised at a level that still has it. This is
+  the same structural point as BO-3100c and the two should be sequenced together.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). risk_surface is `auth` for this L1 and for
+  c-1, c-2, c-3 and c-3-i: the property under test is the PROVENANCE of an answer
+  that settles a consent gate — whether the reply came from the party authorised to
+  give it. BO-3200c-2's first scenario is literally an authentication requirement
+  (a well-formed, permitted-value decision from a non-person must be rejected
+  BECAUSE of who sent it, not because of how it is shaped). c-4 and c-5 are
+  documentation and carry `internal`.
+
+  BUILD ON THE EXISTING PAUSE SUBSTRATE. ADR-024 and scripts/pause_store.py already
+  provide a resumable pause record; BO-3200c-1 must extend that rather than author a
+  second pause mechanism. Two pause stores would be two places for a resumable record
+  to be lost, and the AC's third scenario — the resume that finds the work unchanged
+  — is what would silently stop holding.
