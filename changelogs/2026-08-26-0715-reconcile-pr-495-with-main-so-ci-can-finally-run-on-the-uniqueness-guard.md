@@ -38,7 +38,9 @@ three is caused by the merge resolution itself:
 - **Test suite** — six failures. Two are the branch's own uniqueness pass correctly
   reporting the duplicate `ADR-034`. Four are the placeholder detector flagging
   `TODO:` and `todo:` inside main's known-issues prose, which is the second half of
-  `KI-CG-017`, already filed on main against this branch.
+  `KI-CG-033`, already filed on main against this branch. (That entry was filed as
+  `KI-CG-017` and renumbered by PR #588 off the `check-build-drift` entry it collided
+  with; this citation is repointed to the new number.)
 - **AC store valid** — `BP-900e-3.yaml` is `readiness: approved` with no `test_spec`.
   Byte-identical to `origin/main` on that field; it fires only because the branch
   edits the file for an unrelated `doc_links` cross-reference and CI stages the whole
