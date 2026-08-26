@@ -111,6 +111,13 @@ notes: |
   how-to about the gate and pause-and-resume flow, which is a different subject and
   has no slot under c. Reported to the it-po rather than smuggled in here.
 
+  2026-08-26: those triggers are now served by `ACD-2100e-1` (the sequence diagram)
+  and `ACD-2100e-2` (the how-to), authored as a sibling L1. The boundary this
+  paragraph draws is unchanged and still binding IN BOTH DIRECTIONS: this page must
+  not describe the gate flow, and neither `e-1` nor `e-2` may restate which copy runs
+  where or what the startup checks report. What has changed is only that the other
+  side of the boundary now has an owner, so "reported to the it-po" is closed.
+
   WHY THE READER IS IN THE GIVEN. The failure this page exists for is a message about
   a missing file, and the reader arrives already confused about which of two copies
   they are looking at. A page organised around the layouts rather than around the

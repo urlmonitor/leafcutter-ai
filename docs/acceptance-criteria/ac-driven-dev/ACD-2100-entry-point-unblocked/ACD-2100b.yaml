@@ -20,8 +20,14 @@ criteria: |
   simply did not get to look and the run is worth retrying.
 depends_on: [ACD-2100]
 doc_links:
-  - docs/known-issues/ac-driven-dev.md
-  - docs/reference/false-green-mechanisms.md
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009's second and separable cause -- four distinct failure conditions rendered as one specific permissions verdict. Fixing the path (ACD-2100a) would hide this rather than close it."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M8 inverted: not a check reporting success it did not establish, but a check reporting a specific failure CAUSE it did not establish. The catalogue entry this L1 is calibrated against."
 assigned_agent: null
 delivers_to: null
 expects_from: null

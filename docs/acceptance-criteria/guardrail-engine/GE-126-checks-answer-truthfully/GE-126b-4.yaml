@@ -1,0 +1,158 @@
+id: GE-126b-4
+title: "The three answers a check can give are written down with the evidence that produced them"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader or an agent deciding what a result from this check means,
+  When they consult the reference material for the check family,
+  Then it names the three answers a run can produce — the work was refused the work was
+    examined and found clean and the check could not examine anything — and states which
+    of them share an exit status so nobody infers a verdict from an exit code again,
+  And it states that every run says what root it resolved and how many records it examined
+    before reporting any result and that this statement is unconditional,
+  And it records the observed pair that motivated the rule with its date: the same check
+    the same file and the same exit code from two working directories where only one run
+    inspected anything,
+  And any statement in the reference material that a zero exit from this check constitutes
+    a clean result is removed rather than qualified,
+  And the reference does not assert that any check other than the one repaired here
+    already behaves this way.
+
+  Coverage note: covered by a test that takes each of the three documented answers and
+  asserts the deployed check actually produces that answer under the condition the
+  reference describes. A test that asserts the reference contains the three words does not
+  cover this criterion.
+depends_on:
+  - GE-126b
+  - GE-126b-1
+  - GE-126b-2
+  - GE-126b-3
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: modifies
+    status: exists
+    relevance: "M8 lives here and so should the variant KI-CG-018 names — instrumentation placed where the path it measures cannot reach it."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: modifies
+    status: exists
+    relevance: "The component-level description of what a check result means. The three-answer vocabulary belongs where a reader looks up the component rather than only in the check's own source."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-9.yaml
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The precedent against a second copy of a rule: one shared source, one format string. Relevant because this record adds a vocabulary that also exists in the check's code. Read-only reference."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Prior art for the distinction the reference must draw between a gate that ran and a gate that was merely present."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "Each of the three documented answers must be written so a test can read it out of the shipped document and drive the condition it describes against the deployed check. A single paragraph naming all three cannot be walked and the coverage note demands that it is."
+  - "The reference must name check_ac_governance and must not assert that any other member of the family already speaks this vocabulary. Doing so would breach the L0 standing rule and would ship an unmeasured guarantee - GE-126e is what would measure it."
+  - "The dated observation must be recorded as an observation with its date and the commands that produced it, not paraphrased into a rule. An undated assertion is an opinion; a dated one is a fact a later reader can re-run."
+  - "The removal clause is a deletion obligation: assert that no statement remains anywhere in the reference material describing a zero exit from this check as a clean result. Leaving the old sentence beside the new vocabulary reproduces the drift ACS-100i-9 exists to prevent."
+  - "The reference must state that the component's deliberate fail-open-on-internal-error convention (GE-116a-1-iii) is unrepealed, so a reader does not conclude that two of the three answers becoming visible has made them blocking."
+  - "The three answer names in the reference and the machine-readable outcome values in the check must be the same strings, not two similar vocabularies. Two paraphrases of one rule become two rules."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the page."
+test_spec:
+  - name: test_each_documented_answer_is_driven_against_the_deployed_check
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "The test reads the three answers and their conditions out of the shipped reference and, for each, runs the deployed check under that condition and asserts the documented answer is the one produced."
+  - name: test_the_refused_answer_is_driven_with_a_record_that_genuinely_violates
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The 'work was refused' answer's condition is exercised with a real violating record so the documented answer is proven by a refusal, not by a run that had nothing to object to."
+  - name: test_documented_answer_names_match_the_checks_outcome_value_strings
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The answer names the reference publishes and the outcome value strings the deployed check emits are the same strings - the producer and the consumer of the vocabulary are compared to each other, not each to a literal."
+  - name: test_zero_exit_means_clean_advice_is_absent_and_no_wider_claim_is_made
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "No statement remains in the reference material that a zero exit from this check is a clean result, and the reference makes no claim about any check other than the one repaired here."
+test_rationale: |
+  A reference that names three answers passes any string assertion whether or not the
+  code produces them, and this component has shipped documentation describing behaviour
+  that never existed — the belief that created was worse than no documentation at all.
+  Driving each documented answer against the deployed check is the only form that binds
+  the page to the system. The third descriptor is the one most likely to be skipped and
+  is the one ACS-100i-9's finding predicts will matter: if the reference's answer names
+  and the check's outcome values are two similar vocabularies rather than the same
+  strings, a caller matching on the published name gets nothing, and both sides stay
+  green. The fourth descriptor covers two deletions, both invisible to an addition test.
+delivers_to: null
+expects_from:
+  - ac_id: GE-126b-2
+    contract: "The three-answer outcome vocabulary, the machine-readable value of each, and which two share a zero exit status. The reference publishes exactly these and must use the same strings."
+  - ac_id: GE-126b-3
+    contract: "The resolved root reported by every run and the unresolvable-root report. The reference's claim that every run states the root it resolved is only true once this has landed."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE reference-doc LEG of GE-126b's documentation_triggers. It is the only
+  documentation trigger this L1 carries.
+
+  THE NO-WIDENING CLAUSE IS LOAD-BEARING. The L0 forbids any criterion in this tree from
+  stating or implying how many checks share the defect until GE-126e has measured it. A
+  reference that describes the three-answer vocabulary as the family's behaviour would
+  breach that, and would be read as a guarantee nobody has verified.
+
+  THE REMOVAL CLAUSE MATTERS MORE THAN THE ADDITION. The reference material currently
+  documents an unlimited fail-open convention and readers act on it. Leaving the old
+  sentence standing beside the new vocabulary reproduces the drift ACS-100i-9 exists to
+  prevent.
+
+  RECORDING THE EVIDENCE WITH ITS DATE IS DELIBERATE. This component has repeatedly had
+  measurements repeated at a higher confidence than they were recorded at. A dated
+  observation is a fact a later reader can re-run; an undated assertion is an opinion.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it is the last record in the GE-126b branch and its output is reference prose.
+  Nothing in this tree reads the reference; GE-126e-5 writes to the same reference file
+  but is a separate measurement published later and does not consume this page. DO NOT
+  REFILL.
+
+  AGENT — documentation-expert, two documentation surfaces. Verify both pages are on
+  disk before accepting the sign-off.
+
+  THE SAME-STRINGS REQUIREMENT IS THE ONE TECHNICAL ADDITION HERE that the BA could not
+  see. The check emits machine-readable outcome values; the reference publishes answer
+  names. If those are two vocabularies, a caller matching on the published name gets
+  nothing and both sides pass their own tests. The third test descriptor compares the two
+  populations directly, which is the ACS-100i-9 shape applied to a doc-versus-code pair
+  rather than to two code entry points.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

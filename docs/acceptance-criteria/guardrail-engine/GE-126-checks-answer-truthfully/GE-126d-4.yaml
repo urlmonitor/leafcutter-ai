@@ -1,0 +1,170 @@
+id: GE-126d-4
+title: "Following the procedure for adding a check leaves nothing to discover later"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author adding a new check who has never read the autofix configuration and never
+    will,
+  When they follow the documented procedure for adding a check from beginning to end,
+  Then the procedure presents every place the check must be registered including membership
+    of the autofix roster and it presents that membership as a decision the author makes
+    rather than a step they can skip by inaction,
+  And it states what follows from each choice in the author's terms — a check on the roster
+    gets a repair attempt when it fails and a check off it does not — so the decision can be
+    made without reading the autofix machinery,
+  And it tells the author how to record a deliberate exclusion and what the registration
+    parity check will report if they record nothing,
+  And an author who follows the procedure to its end and then runs the parity check receives
+    no finding about their new check,
+  And the legs the procedure presents come from the single declaration rather than being
+    listed again in the procedure's own words.
+
+  Coverage note: covered by an end-to-end exercise that registers a fixture check by
+  following the documented procedure step for step and then runs the registration parity
+  check asserting it reports nothing. A test that asserts the procedure document contains a
+  fourth step does not cover this criterion — the L1 says so directly: a sentence nobody
+  reads passes that test.
+depends_on:
+  - GE-126d
+  - GE-126d-1
+  - GE-126d-2
+  - GE-126d-3
+doc_links:
+  - path: templates/skills/create-hook/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "The procedure that exists to enumerate the legs and currently enumerates three."
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: related
+    status: exists
+    relevance: "The reader-facing how-to surface adjacent to the procedure. Whichever of the two an author reaches first must lead to the complete leg list."
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: context
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The component page the procedure routes to for what each leg buys. GE-126d-5 owns that page; this procedure must link rather than restate."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. create-hook is a portable skill, so what the author actually reads is the DEPLOYED SKILL.md. The procedure must be verified in its built form, not only as the template reads."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The procedure must render its leg list from the single declaration GE-126d-3 introduces and must not enumerate the legs in its own prose. A procedure that lists them in words while the parity check lists them in code is how the fourth leg drifted apart in the first place."
+  - "The surface is templates/skills/create-hook/SKILL.md, a skill body rather than an ordinary document. Follow the conventions for skill bodies in that tree and verify the DEPLOYED SKILL.md after a build, because the deployed copy is what an author actually reads (ADR-013)."
+  - "Roster membership must be presented as a decision with two recorded outcomes, never as a step an author can leave undone. An omission by default is the current behaviour and is precisely the thing being removed."
+  - "The consequence of each choice must be stated in the author's terms - a repair attempt is made or it is not - so the decision is possible without reading the autofix machinery. The author who never reads that configuration is the real reader; the one who does is how KI-CG-020 was found and is not the population being served."
+  - "The procedure must route to the component reference for what each leg buys rather than restating it. GE-126d-5 owns that surface and a second statement of it will drift."
+  - "The two entry surfaces - the skill procedure and docs/how-to/creating-a-claude-code-hook.md - must both lead an author to the complete leg list. Whichever one they reach first has to be sufficient or the omission simply moves."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the change."
+test_spec:
+  - name: test_registering_a_fixture_by_following_the_procedure_yields_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "the deployed create-hook procedure followed step by step, then .leafcutter/scripts/commit_guardian/check_hook_parity.py"
+    description: "A fixture check is registered by executing the procedure's steps as written in an isolated tree, then the parity check is run and reports nothing about it. This is the direct inverse of the observed KI-CG-020 failure."
+  - name: test_omitting_the_roster_decision_produces_the_finding_the_procedure_predicts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same exercise with the roster decision skipped produces exactly the finding the procedure told the author to expect - the two are compared to each other, so a procedure that predicts a message the parity check does not emit fails."
+  - name: test_the_procedures_leg_list_is_rendered_from_the_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "A leg added to the declaration in a fixture tree appears in the procedure with no edit to the procedure's text - the procedure carries no second copy of the list."
+  - name: test_the_deployed_skill_body_is_what_carries_the_complete_leg_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/build.py --target-dir <temp>"
+    description: "After a real build, the deployed create-hook SKILL.md presents the full leg list, and the adjacent how-to leads to it too - verifying the copy an author reads rather than the template."
+test_rationale: |
+  The L1 states the disqualifying test directly: asserting the procedure document
+  contains a fourth step passes on a sentence nobody reads, and that sentence is exactly
+  what a documentation change produces by default. The first descriptor is therefore an
+  end-to-end exercise — follow the procedure, then run the parity check — because that
+  sequence is the literal inverse of the observed failure, in which an author completed
+  the documented procedure, watched the parity check pass, and had landed an
+  incompletely registered check. The second descriptor compares the procedure's
+  predicted message to the parity check's actual message rather than to a literal, so a
+  procedure that promises a warning nobody emits fails. The fourth verifies the built
+  skill body, because create-hook is portable and the author reads the deployed copy.
+delivers_to: null
+expects_from:
+  - ac_id: GE-126d-2
+    contract: "The deliberate-exclusion record: what it is, where it lives, and what it must carry. The procedure tells an author how to record one and what the parity check reports if they record nothing."
+  - ac_id: GE-126d-3
+    contract: "The single leg declaration and the one wording per leg. The procedure renders its leg list from this rather than enumerating it in prose, and the message it predicts is the same string the parity check emits."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE how-to LEG of GE-126d's documentation_triggers. The reference-doc leg is
+  GE-126d-5.
+
+  THE END-TO-END EXERCISE IS THE COVERAGE AND IT IS WHY THIS IS AN ACCEPTANCE CRITERION
+  RATHER THAN A DOCUMENTATION REQUEST. The defect KI-CG-020 records is precisely that an
+  author can complete the documented procedure, watch the parity check pass, and have
+  landed an incompletely registered check. Requiring the procedure-then-parity sequence to
+  come out clean is the direct inverse of the observed failure.
+
+  THE AUTHOR WHO NEVER READS THE AUTOFIX CONFIGURATION IS THE REAL READER. KI-CG-020 was
+  found by someone reading that configuration for an unrelated reason, which is the only
+  way it has ever been found. A procedure that assumes the author will go and look has not
+  fixed anything.
+
+  DO NOT RE-LIST THE LEGS IN THE PROCEDURE'S OWN WORDS — GE-126d-3 owns that constraint and
+  this record inherits it. A procedure that enumerates the legs in prose while the parity
+  check enumerates them in code is how the fourth leg drifted apart in the first place.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: its output is a procedure an author follows. GE-126d-5 is the sibling
+  reference-doc leg of the same L1 and routes TO this record's surface rather than
+  consuming it, and no code record reads the procedure. DO NOT REFILL.
+
+  AGENT — documentation-expert, AND THIS IS THE ONE ASSIGNMENT IN THE TREE WORTH
+  CHALLENGING. The dominant surface is templates/skills/create-hook/SKILL.md, a skill body,
+  which the agent registry's selection criteria would ordinarily route to llm-expert.
+  documentation-expert is assigned because (a) the record satisfies GE-126d's how-to
+  documentation trigger and the adjacent reader-facing surface
+  docs/how-to/creating-a-claude-code-hook.md is squarely its own, and (b) both surfaces
+  are markdown, so there is no technology contradiction between the assigned implementer
+  and the declared surface. A driver that prefers llm-expert for skill bodies should route
+  this record there and note that the how-to leg of the documentation gate is satisfied by
+  the same work. Raised as a caveat at the IT PO gate rather than settled silently.
+
+  VERIFY THE BUILT SKILL, NOT THE TEMPLATE. create-hook is portable, so the author reads
+  the deployed SKILL.md. This component has shipped template-only changes that were no-ops
+  in every consumer layout.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

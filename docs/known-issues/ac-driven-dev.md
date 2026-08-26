@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - ac_driven_dev
 related_docs:
@@ -80,8 +80,8 @@ the fix is in what gets *fed* to it, not in the sort.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-26
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `## Agent Contracts` →
   `### documentation-expert` emitter
 
@@ -111,13 +111,54 @@ target_path)". Repaired by hand on that branch — naming the two docs
 `documentation-expert` actually wrote — so the phase could run; the generator itself is
 unchanged and will reproduce this on the next generated ticket.
 
-**Fix direction.** Emit the contract format the verifier documents, and source
-`target_path` from the docs the change *requires* (the `creates`/`modifies` doc_links, or
-the `requires_documentation` types) rather than from `describes` back-references. Whatever
-lands should be covered by a test that runs the generator and then runs the verifier's
-Step 2 parser over the output — the two sides have disagreed silently, which is the same
-producer/consumer divergence class as the `ac_traceability` shape mismatch that
-`ACD-1900b-5-i` fixes.
+**Occurrence 2 — 2026-08-26, `TICKET-20260825-BP-900g-8.md:263`, during PR #578.** The
+generator reproduced the malformed line exactly as predicted above, and the drive played
+out precisely as the first occurrence describes: `documentation-verifier` fail-closed,
+the blocker was classified `cross_agent`, and the phase was skipped. Repaired by hand on
+that branch again. Two things this occurrence adds:
+
+**A third defect in the same line: the contract is emitted even when the AC says no
+documentation exists.** `_resolve_doc_genres` (`:1841-1849`) reads the parent L1's
+`documentation_triggers`; when that list is **empty** it logs a WARNING and returns the
+`["(unspecified genre)"]` marker — then the caller emits the contract line anyway. But an
+empty `documentation_triggers` is not a missing value. It is the AC store's way of saying
+*this change requires no documentation*, and `BP-900g.yaml:23-24` says exactly that, with
+a written rationale that the change introduces no user-facing surface. So the generator
+takes a deliberate "no docs" declaration, converts it to a marker meaning "genre unknown",
+and emits a documentation obligation the parent AC explicitly disclaims.
+
+That turns the malformed-line defect into a compounding one. `documentation-verifier`
+blocks on the missing pipes; repair the pipes and it blocks again, this time demanding a
+document the governing AC states must not exist. There is no form of the line that both
+parses and is satisfiable. On BP-900g-8 the only correct resolution was to record the
+verifier as `not_needed` — verified against its own dispatch condition
+(`requires_documentation_verification`, absent from the ticket) rather than against the
+line it was choking on.
+
+**The warning is real but goes nowhere.** Unlike the pipe defect, this one *does* log at
+WARNING naming the AC. It is emitted at ticket-generation time, into the generator's
+stderr, hours or days before the drive that trips over it — nothing carries it forward to
+the drive, and no gate reads it. A warning whose only consumer is a human watching a
+one-off command is, in practice, silence.
+
+**Fix direction.** Three changes, in increasing order of value:
+
+1. Emit the pipe-delimited format the verifier documents.
+2. Source `target_path` from the docs the change *requires* (the `creates`/`modifies`
+   doc_links, or the `requires_documentation` types) rather than from `describes`
+   back-references.
+3. **Distinguish "no documentation required" from "genre unknown."** An empty
+   `documentation_triggers` on the parent should suppress the `### documentation-expert`
+   subsection entirely — and, correspondingly, should stop the generator marking
+   `documentation-expert: needed` in the agents map. Only a parent that is genuinely
+   *unresolvable* warrants the `(unspecified genre)` marker. Distinguishing these is what
+   stops the pipe fix from converting one blocker into another.
+
+Whatever lands should be covered by a test that runs the generator and then runs the
+verifier's Step 2 parser over the output — the two sides have disagreed silently, which is
+the same producer/consumer divergence class as the `ac_traceability` shape mismatch that
+`ACD-1900b-5-i` fixes. Add a second case for the empty-`documentation_triggers` parent,
+asserting that **no** contract line is emitted at all.
 
 ---
 

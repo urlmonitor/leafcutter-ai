@@ -59,7 +59,7 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: context
     status: exists
-    relevance: "KI-BO-4 — the install does not scaffold two of the four namespace roots. This criterion is the behaviour that known issue is waiting on, expressed so that scaffolding is the only way to satisfy it."
+    relevance: "KI-BO-030 — the install does not scaffold two of the four namespace roots. This criterion is the behaviour that known issue is waiting on, expressed so that scaffolding is the only way to satisfy it."
   - path: docs/known-issues/commit-guardian.md
     relationship: context
     status: exists
@@ -118,7 +118,7 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "After the base install in that from-empty project, every namespace root the pass is responsible for — including docs/architecture/adrs/ and docs/architecture/diagrams/, the two KI-BO-4 names — exists as a real directory carrying a real placeholder file, so git can track it."
+    description: "After the base install in that from-empty project, every namespace root the pass is responsible for — including docs/architecture/adrs/ and docs/architecture/diagrams/, the two KI-BO-030 names — exists as a real directory carrying a real placeholder file, so git can track it."
   - name: test_ge122d3ii_first_commit_reports_inspected_count_zero_per_namespace
     target_dir: unit_tests/portability/
     framework: unittest

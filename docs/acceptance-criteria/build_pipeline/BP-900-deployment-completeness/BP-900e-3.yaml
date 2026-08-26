@@ -48,19 +48,85 @@ doc_links:
   - path: "docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md"
     relationship: describes
     status: exists
+  - path: "docs/testing/test-angles.md"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the set-cover angle taxonomy the test_spec below is charged against, and the negative-control failure class that a purely-negative AC like this one is most exposed to."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "The candidate set is derived ENTIRELY from the union of (a) scripts resolved from registered hook entries and (b) script paths extracted from deployable templates. A script that appears in neither source is never a candidate — do not enumerate scripts/ and then subtract; build the promised set first."
   - "This is the critical no-false-positive class: legitimate package-dev-only tooling (build.py, epic_lock.py, and the source-only directories enumerated in BP-1000d-1: agent-health/, ci/, workflows/, worktree/, etc.) must never be flagged. A regression test must pin that at least build.py and epic_lock.py stay out of the verdict."
   - "Aligns with BP-1000d-1's stance that source-only tooling is legitimately exempt — but where BP-1000d-1 excludes by 'has no template counterpart', THIS check excludes by 'is not promised by registry or template reference'. The exclusion criteria differ; keep both stated distinctly."
+  - "CORRECTION to the regression-pin instruction above: scripts/epic_lock.py does not exist in this repository and never has — there is no addition commit for that path on any ref as of 2026-08-26. A test asserting that it stays out of the verdict passes vacuously and proves nothing. Pin the live regression on scripts/build.py, which IS real, IS absent from the hook registry, IS unreferenced by any deployable template, and has NO copy under templates/scripts/ — so it is genuinely at risk of being flagged by a wrong implementation."
+  - "Every criterion in this AC is a NEGATIVE assertion ('X is never flagged'), and a check that flags nothing at all satisfies all of them. The verdict-narrowing property must therefore be proved with a positive control in the SAME fixture: one genuinely promised-but-undeployed script must still make the verdict ok=false and appear in items, alongside the unpromised script that must not appear. Without that control the suite is not a gate."
+  - "The exemption must be a property of the data (the script is absent from the promised set), never a hard-coded script name or path prefix. A script name never seen before must inherit the exemption automatically, with no code change."
+test_spec:
+  - name: test_source_only_build_py_absent_from_real_tree_verdict
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the registry-completeness check against the repository's REAL scripts/commit_guardian/commit_guardian.json and REAL templates/ tree (no hand-typed fixture) and assert no verdict item has script_path 'scripts/build.py'. build.py is unregistered, unreferenced and has no templates/scripts/ copy, so an implementation that enumerates scripts/ and subtracts will flag it here."
+  - name: test_unpromised_novel_script_is_never_a_candidate
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "In a temp package tree, a script under scripts/ that is absent from the hook registry AND unreferenced by every deployable template AND has no templates/scripts/ copy does not appear in the verdict items. The script name is one the implementation has never seen, so a name-based exemption list cannot satisfy this test — only a promised-set-first derivation can."
+  - name: test_candidate_set_equals_registry_union_template_references
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The set of script paths the check evaluates is exactly equal to the union of (a) paths resolved from registered hook entries and (b) paths extracted from deployable templates — asserted with set equality against both promised sets computed independently in the test, not a subset spot-check. Catches a candidate set that is a superset (tree enumeration leaked in) or a subset (one promise source silently dropped)."
+  - name: test_gate_proceeds_when_only_unpromised_scripts_lack_templates
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build_propagation_audit.py — the registry-completeness invocation the finalize merge gate shells out to (wired by BP-900e-5)"
+    description: "Invoke the check through its production entry point in a subprocess (never a direct helper import) against a tree whose only template-less scripts are unpromised; assert ok=true and process exit code 0, so the merge gate's halt-vs-proceed branch takes the proceed path. Catches an implementation that filters correctly in an internal helper while the entry point the gate actually calls re-derives the candidate set."
+  - name: test_promised_undeployed_script_still_fails_in_same_fixture
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Negative control. Reusing the exact fixture from test_unpromised_novel_script_is_never_a_candidate, add one registered hook whose script has no templates/scripts/ copy; assert ok=false and that items contains that script and ONLY that script. Proves the exclusion narrows the verdict rather than emptying it — without this, a check hardcoded to return an empty verdict passes every other descriptor here."
+test_rationale: >
+  This AC is a pure no-false-positive assertion, which makes it unusually easy
+  to satisfy dishonestly: a registry-completeness check that returns an empty
+  verdict unconditionally satisfies every Then clause in the criteria. The
+  contract above is therefore built around one positive control
+  (test_promised_undeployed_script_still_fails_in_same_fixture) sharing a fixture
+  with the negative cases, so an empty-verdict implementation goes red. A direct
+  unit test of the exclusion helper would be insufficient for two further
+  reasons. First, the exemption must be data-driven: the criteria's third Then
+  clause is a universally-quantified negative over all unpromised scripts, which
+  cannot be enumerated, so it is discharged as a property probe with a
+  never-before-seen script name (descriptor 2) plus a set-equality contract on
+  the candidate set itself (descriptor 3) — a spot-check on build.py alone would
+  pass against a hard-coded exemption list. Second, the observable this AC cares
+  about is that a package-dev script does not block a merge, which is only true
+  at the entry point finalize invokes; descriptor 4 therefore runs the real
+  process and asserts exit code 0, since a helper-level filter that the CLI
+  re-derives around would leave the merge blocked while every direct-import test
+  stayed green. Descriptor 1 feeds the real on-disk commit_guardian.json and the
+  real templates/ tree rather than a hand-typed literal, because the failure this
+  AC exists to prevent is one that only a real tree exhibits — build.py is a live
+  unregistered, unreferenced, template-less script sitting in scripts/ right now.
+  The deployed angle is deliberately not charged here: the gate's placement in
+  the deployed finalize-feature.js is BP-900e-5's obligation, not this AC's.
 delivers_to: null
 expects_from:
   ac_id: BP-900e-1
   contract: "The promised-set derivation (registered hooks union template references) underlying the verdict items; this AC asserts the candidate set excludes anything not in that union."
 origin_agent: business-analyst
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - reason: "IT PO technical enrichment (2026-08-26): added the missing test contract (test_spec + test_rationale) that check-ac-schema's validate_test_contract requires of an approved, not-yet-done leaf code AC. This record was byte-identical to origin/main while already violating the required 'AC store valid' gate — the violation was unreachable because the AC hooks read only a commit's index and nobody had staged this file. Also added three it_requirements: a correction recording that scripts/epic_lock.py named in the criteria and in an earlier it_requirement does not exist in this repository (so pinning it is a vacuous assertion), the negative-control obligation that a purely-negative AC requires, and the data-driven-exemption constraint. The criteria field is unchanged."
+    agent: it-po
+    date: 2026-08-26
 superseded_by: null
 covered_by:
   - BP-900e-3-i

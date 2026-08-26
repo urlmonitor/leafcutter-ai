@@ -1,0 +1,95 @@
+id: GE-126c
+title: "A copy of a check that can never enforce anything refuses to answer"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A build source is not a working check and never answers like one.
+
+  Where a copy of a check is structurally incapable of doing its job — not by
+  accident of setup but by what that copy is — running it tells you that and
+  refuses. It never warns and passes. What it tells you names the copy you ran
+  and the one that works.
+depends_on:
+  - GE-126
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-019 carries the verbatim invocation, the warning text and the reason the condition is permanent rather than environmental: ac_parent_id.py is placed beside the check only by build.py, so in templates/ none of the three resolution strategies can ever succeed."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "Defines the source-versus-deployed boundary that makes the templates/ copy a build input rather than a runnable check."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120b-1-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The nearest neighbour and the reason this L1 exists separately. GE-120b-1-i requires the message to name an UNBUILT WORKSPACE. That diagnosis is wrong here: the workspace is fully built and the reader ran a copy that is a build source. Neither record closes the other."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126c-1
+  - GE-126c-2
+  - GE-126c-3
+  - GE-126c-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ONE PLACE THIS GOAL TAKES A POSITION ON BLOCK-VERSUS-ANNOUNCE, and
+  it does so deliberately rather than deferring to the per-check disposition. The
+  general rule elsewhere in this tree is that whether a cannot-answer condition
+  BLOCKS is a per-check L2 decision. Here it is not, and the reason is that the
+  failure is guaranteed rather than conditional. The response to a permanently
+  unsatisfiable dependency cannot be to pass, because that response is correct on
+  zero percent of runs. A check whose only possible behaviour is abstention is
+  not failing open on a bad day; it is a check-shaped object that never checks.
+
+  WHY SOMEONE RUNS THE WRONG COPY, WHICH IS WHY THIS IS NOT AN EDGE CASE.
+  templates/ is where the source of truth for these checks lives, so it is where
+  an author editing one is already working, and it is the natural thing to invoke.
+  It was found exactly that way: a business-analyst verifying AC parent back-links
+  ran the templates/ copy, hit the fail-open, noticed the warning, re-ran the
+  deployed copy and then corroborated the invariant by reading the parent's
+  covered_by directly rather than trusting either exit code. That last step is the
+  workaround this L1 exists to remove.
+
+  THE ACCEPTANCE SHAPE IS A THREE-WAY COMPARISON, NOT A PAIR.
+    - the templates/ copy, handed a record that genuinely violates the rule:
+      refuses, and says which copy to run instead
+    - the deployed copy, handed the same record: blocks, naming the violation
+    - the deployed copy, handed a clean record: ordinary pass
+  Without the second and third arms an implementer satisfies this by making the
+  templates/ copy exit non-zero unconditionally, which passes the first arm and
+  is not a fix.
+
+  THE MESSAGE IS A CRITERION, NOT POLISH, AND THE CURRENT ONE IS ACTIVELY
+  MISLEADING. "cannot import derive_parent_id: ac_parent_id.py not found via
+  package import, script-relative, or project-root walk" describes an internal
+  symptom and reads as a setup problem the reader could fix. Nothing the reader
+  does to their setup will ever fix it. The replacement must name the actual
+  situation — this copy is a build source, run the deployed one — because the
+  reader's next action depends entirely on which of the two it is.
+
+  DECIDE WHETHER THE CLASS IS ONE FILE OR MANY, AND SAY SO. This is written as a
+  property of any copy that cannot enforce, not as a property of one file, but
+  only one instance has been observed. Do NOT widen the criteria to an unmeasured
+  set. GE-126e is what establishes how many templates/ copies share this shape; if
+  it finds more, amend this record rather than pre-emptively generalising it now.

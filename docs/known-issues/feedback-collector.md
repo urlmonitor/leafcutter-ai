@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-25
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - feedback_collector
 related_docs:
@@ -147,3 +147,55 @@ convention that the signoff skill does not follow. Neither change is large; the 
 naming is only safe under serial dispatch, which is not how epics run.
 
 **Pattern:** a recovery path that assumes one writer, invoked from a fan-out.
+
+---
+
+### KI-FC-003 — `ac-validator` is in no category's `allowed_writers`, so it has never submitted a single feedback record
+
+- **Severity:** medium — silent, and it invalidates the corpus rather than just losing one record
+- **Status:** open — code and config are on `main` and live
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `config/feedback_categories.yaml` — the nine `allowed_writers` lists (lines 30, 56,
+  82, 91, 119, 147, 176, 185, 212); `scripts/feedback/submit_feedback.py`
+
+> **Recovered from an unmerged branch.** Recorded as `KI-FC-1` in PR #495's parallel
+> known-issues register, which was discarded during reconciliation. Re-verified before filing:
+> `grep -n 'ac-validator' config/feedback_categories.yaml` still returns **nothing**.
+
+**Symptom.** `ac-validator` is absent from `allowed_writers` in every category.
+`submit_feedback.py` therefore rejects it for **every** category, and the agent falls back —
+correctly, per the `signoff` skill — to recording `feedback-id: (submit-failed)` and continuing,
+because a failed submit is explicitly not a phase failure.
+
+Found on 2026-08-19 when `ac-validator` signed off `GE-122e-2` and reported that every category
+had been refused.
+
+**Why this is worse than a lost record.** It is not intermittent. Every `ac-validator` run since
+the allowlist was written has contributed **nothing**, so any analysis of the feedback corpus
+silently under-represents AC-coverage findings — and reads as *"ac-validator rarely has anything
+to report"* rather than *"ac-validator has never been able to report"*. The absence is
+indistinguishable from a quiet agent, which is why nine months of runs produced no signal that
+anything was wrong.
+
+**Root cause.** Two lists that must agree — the agent registry and the feedback allowlist — with
+nothing checking that they do. The file's own decision history shows this is the recurring
+failure mode, not a one-off: `user-surface-smoker` (2026-06-03), `frontend-coder` and
+`llm-expert` (2026-06-08), and `documentation-verifier` (2026-07-17) were each added
+retroactively after the same silent rejection was noticed by hand. `ac-validator` is the fifth.
+
+**Detection.** Grep the corpus for the agent name; an agent with zero entries across many runs is
+the tell. Or check membership directly:
+
+```bash
+grep -n "allowed_writers" -A 20 config/feedback_categories.yaml
+```
+
+**Fix direction.** Add `ac-validator` to the appropriate categories — but that is the fourth
+instance of the same manual patch, so it is the smaller half. The useful fix is a build-time or
+startup consistency check that every agent with `signoff: true` in `config/agent_registry.json`
+appears in at least one category's `allowed_writers`. The general defect is that the two lists
+can disagree with nothing noticing.
+
+**Pattern:** the same silent-gate shape as the commit-guardian register's `KI-CG-024` — exit 0, a
+fallback that keeps the pipeline moving, and no signal that a capability is entirely absent.

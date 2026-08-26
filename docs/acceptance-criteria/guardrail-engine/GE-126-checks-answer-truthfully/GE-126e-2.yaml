@@ -1,0 +1,173 @@
+id: GE-126e-2
+title: "The census says how many checks it examined beside how many it found"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the census is run three times — once over a registration set naming no checks at all
+    once over a fixture set of four checks of which exactly one is an instance and once over
+    a fixture set of four checks of which one cannot be executed at all,
+  When each run finishes,
+  Then the first run states that it examined no checks and does not report that no instances
+    were found so a run that executed nothing cannot read as a clean bill of health,
+  And the second run states that it examined four and found one and names the one,
+  And the third run states that it examined three attempted a fourth and could not execute it
+    and names that fourth check — a check the census tried and failed to run is its own
+    reported state and is never counted among the checks with no defect,
+  And every run names the commit it was measured at and the date so a later reader can tell a
+    current measurement from a stale one,
+  And no run reports a total that exceeds the number of checks it actually executed plus the
+    number it reports as unexecutable.
+
+  Coverage note: covered by the three runs above asserting the reported examined count the
+  reported found count and the reported unexecutable count in each. The empty run is the
+  load-bearing one: a census that reports no instances after failing to execute anything is
+  this whole goal's defect wearing the census's clothes and is the single most likely way
+  this work ships broken.
+depends_on:
+  - GE-126e
+  - GE-126e-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-10.yaml
+    relationship: context
+    status: exists
+    relevance: "The precedent to reuse rather than reinvent. It turned a silence discovered one record at a time into a state the store can be asked about and required the count found to be reported alongside the count examined for exactly this reason. Read-only reference."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: "M5 — a validator reporting success having checked nothing. The empty-run clause is the census being held to the rule it measures."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the census's report shape belongs at component level; GE-126e-4 draws it and GE-126e-5 publishes the first figures from it."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Its fail-closed-on-self-error invariant is the model for the empty-run clause: a measuring instrument that cannot measure must say so rather than return a clean result."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The examined count must be derived from the executions the census actually performed, not from the size of the population it intended to examine. A count taken from the enrolment list is a claim about intent and would report four examined when zero ran."
+  - "A run that examined zero checks must not be able to render as a clean result by any reading - not in the report's text, not in its outcome value, and not in whatever a caller parses. This is the census being held to the rule it measures and it is the single most likely way this work ships broken."
+  - "The unexecutable count is a first-class reported figure, never an omission and never folded into either of the other two. A check the census could not run is indistinguishable from a check with no defect if it is silently dropped, which is the exact substitution this tree exists to stop."
+  - "The arithmetic invariant - reported total never exceeds executed plus unexecutable - must be asserted by the census itself as well as by its tests, because a total larger than what was executed means something was inferred rather than observed."
+  - "The commit and the date must be captured at run time from the working copy under measurement, not passed in by a caller. A caller-supplied commit lets a stale figure be relabelled as current, which is exactly what the field exists to prevent."
+  - "The report must be machine-readable, because GE-126e-5 publishes figures from it and a test at that record has to compare published figures against a re-run. A human-formatted-only report makes that comparison a parsing exercise that will be skipped."
+  - "Error handling must follow the four rules in CLAUDE.md."
+test_spec:
+  - name: test_a_run_over_an_empty_registration_set_states_it_examined_none
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the census entry point"
+    description: "A census run over a registration set naming no checks reports an examined count of zero and does NOT report that no instances were found - the load-bearing descriptor, because a census that executed nothing must not read as a clean bill of health."
+  - name: test_four_checks_one_instance_reports_examined_four_found_one_and_names_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Over a fixture set of four checks with exactly one instance, the reported examined count is four, the found count is one, and the instance is named."
+  - name: test_an_unexecutable_check_is_counted_separately_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Over a fixture set of four in which one cannot be executed, the run reports three examined, one attempted-and-unexecutable, names that fourth check, and does not count it among the checks with no defect."
+  - name: test_the_report_never_totals_more_than_executed_plus_unexecutable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Across all three fixture runs the arithmetic invariant holds, and a deliberately inconsistent internal state is asserted to be rejected by the census itself rather than reported."
+  - name: test_every_run_carries_the_commit_and_date_it_was_measured_at
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Each run records the commit of the working copy under measurement and the date, read from that working copy at run time rather than supplied by the caller - a run in a copy moved to a different commit reports the different commit."
+test_rationale: |
+  The census's own defect wears the census's clothes: a run that executed nothing and
+  reported no instances is a green gate that checked nothing, one level up from the
+  defect being measured. That makes the empty-run descriptor the load-bearing one, and
+  it must assert two things separately — that examined is zero AND that the report does
+  not read as clean — because reporting zero examined while still saying "no instances
+  found" is exactly the ambiguity. The unexecutable descriptor is separate from both
+  counts for the same reason: a silently dropped check shrinks the denominator and makes
+  the number improve without anything improving. The commit-and-date descriptor asserts
+  the value is read from the measured copy rather than supplied, because a caller-supplied
+  commit is how a stale figure gets relabelled as current.
+delivers_to:
+  agent: documentation-expert
+  contract: "The census report: examined count, instance count with each instance named, unexecutable count with each named, the commit and date measured at, and the arithmetic invariant relating them - in a machine-readable form. GE-126e-5 publishes the first measurement from exactly these fields and its coverage requires re-running the census at the recorded commit and comparing."
+expects_from:
+  ac_id: GE-126e-1
+  contract: "The per-check classification - two working directories, two outcomes, which of the four pairings - for every check executed. This record aggregates those into counts without inferring anything the classifications do not contain."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126e-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE CENSUS IS SUBJECT TO ITS OWN FINDING AND THIS RECORD IS WHERE THAT IS ENFORCED. The L1
+  names it as the most likely way this ships broken: a run reporting no checks with the defect
+  after failing to execute any of them. Requiring the examined count beside the found count is
+  ACS-100i-10's answer to the same problem and it is reused deliberately rather than
+  reinvented.
+
+  THE UNEXECUTABLE STATE IS A THIRD CATEGORY AND NOT A ROUNDING ERROR. A check the census
+  could not run is indistinguishable from a check with no defect if it is silently omitted,
+  which is the exact substitution this tree exists to stop. It is reported separately so the
+  reader can see the boundary of the measurement.
+
+  THE COMMIT AND THE DATE ARE PART OF THE REPORT because the number will move. The L1 calls
+  the first measured number a deliverable and requires it to be recorded with its date and the
+  commit it was measured at; making that part of every report rather than a one-off note is
+  what stops a stale figure being quoted as current. Until such a report exists no record in
+  this tree may state or imply how widespread the defect is.
+
+  THE UPPER-BOUND CLAUSE IS THE ARITHMETIC HONESTY CHECK. A total larger than what was
+  executed means the census inferred something it did not observe, which is the source-reading
+  shortcut GE-126e-1 forbids arriving through the reporting layer instead.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. GE-126e-5 publishes the first
+  measured figures and its coverage requires re-running the census at the recorded commit
+  and comparing the output to what the reference states. That is only possible against a
+  machine-readable report, which is why the contract names the form as well as the fields
+  and why a matching it_requirement exists. A human-formatted-only report turns that
+  comparison into a parsing exercise, and a parsing exercise in a documentation test is a
+  test that gets skipped.
+
+  THE ONE FIELD I ADDED THE BA DID NOT NAME is the arithmetic invariant being asserted by
+  the census itself, not only by its tests. A self-check costs nothing here and is the
+  difference between a report that is internally consistent and one that is merely
+  externally audited once.
+
+  THE COMMIT MUST BE READ, NOT PASSED. If a caller supplies it, a figure from an old run
+  can be relabelled with today's commit and the field stops meaning anything - which
+  defeats the entire reason the L1 called the first measured number a dated deliverable.
+
+  AGENT — python-coder. Ordering lives in depends_on; the expects_from edge is data-shape
+  documentation only (KI-ACD-015).
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

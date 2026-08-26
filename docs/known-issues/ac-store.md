@@ -856,7 +856,7 @@ asked of tests rather than of contracts; a record can appear in both). `KI-KM-00
 
 ### KI-ACS-013 — `delivers_to` and `expects_from` are the two ends of one edge keyed on different things, so the forward half is not traversable and nothing validates either
 
-- **Severity:** medium
+- **Severity:** high
 - **Status:** open
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
@@ -929,12 +929,37 @@ roster). `delivers_to.agent` and `expects_from.agent` were not in that scope and
 unvalidated, so the store now has one producer field that is checked and two consumer fields
 that are not.
 
-**What it costs today.** Low and quiet. The only live readers are `pr-reviewer`'s Cross-File
-Contract Tracing and `ac-validator` §2d, both LLMs told to open the consuming file named in
-the contract — so a wrong or absent value degrades a review pass rather than breaking a
-build. The cost is that "who consumes this?" is unanswerable without a full-store scan, and
-that a field 64% of whose populated entries name their own `assigned_agent` teaches readers
-to skip it.
+**What it costs today.** Quiet, but not small, and the quietness is the problem.
+
+Nothing here breaks a build. The only live readers are `pr-reviewer`'s Cross-File Contract
+Tracing and `ac-validator` §2d, both LLMs told to open the consuming file named in the
+contract, so a wrong or absent value degrades a review pass rather than failing a gate.
+
+**Raised from `medium` to `high` on 2026-08-26.** The first assessment weighed the blast
+radius of a single bad value, which is genuinely low. That was the wrong unit. Three things
+together make this a `high`:
+
+- **It silently disables two review checks across the whole store.** `ac-validator` treats a
+  contract gap as a **blocker** and `pr-reviewer` as a **high-confidence finding**. Point
+  either at a contract naming no openable consumer and it has two options — skip, or invent
+  a consumer. The first makes the check a no-op that reads as performed; the second produces
+  a fabricated finding against correct work. Both are the false-green shape this repo exists
+  to prevent, sitting *inside* the machinery meant to catch it.
+- **The traversal gap has a compounding cost.** Every question of the form "what depends on
+  this?", "is this AC terminal?", "what breaks if I change this contract?" requires a
+  full-store scan. That is not a one-off inconvenience: it is a tax on every future
+  reasoning pass over the store, and it is why an authoring session in 2026-08-25 had to
+  build a reverse index over 3,376 records to answer that question for one record.
+- **The store is actively drifting away from the fix.** 64% of populated `delivers_to`
+  entries name their own `assigned_agent`, and 65 records have already invented an
+  undocumented `ac_id` key. Every week this stays open, more records are authored to a
+  convention the schema does not describe, and the eventual correction gets larger. The
+  sibling field `assigned_agent` is being validated right now (`ACS-100i-9..11`), so the gap
+  between the checked producer field and the unchecked consumer fields is widening rather
+  than closing.
+
+The severity reflects the store-wide, compounding, self-concealing character of the defect —
+not the cost of any one wrong value.
 
 **Related.** `KI-ACS-012` (approved code leaves with no test contract — the same shape asked
 of `test_spec`). `KI-ACD-015` (`expects_from` is invisible to the build sequencer, so

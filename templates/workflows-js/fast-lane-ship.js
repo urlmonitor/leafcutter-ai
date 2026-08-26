@@ -230,6 +230,86 @@ function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
 }
 
 // ---------------------------------------------------------------------------
+// buildReleaseOutcomeFields — the SINGLE construction site for the
+// release-outcome fields merged into every one of the nine halting payloads
+// (BO-2400f-10-ii). Fails CLOSED: only a reply shaped like
+// { "released": [...] } — the release CLI's own JSON stdout
+// (scripts/build_orchestration/fast_lane.py's `release` subcommand) — counts
+// as a successful release. A refusal (e.g. the observed
+// {"status": "refused", "reason": "..."} shape from run wf_bd4984e8-438,
+// KI-BO-020), a null/empty reply, or a reply missing the "released" key are
+// all reported as NOT released, with every id this run claimed carried in
+// unreleased_ac_ids — never inferred from the mere fact that the dispatch ran.
+//
+// Pure function: no agent(), no I/O — safe to extract and execute directly.
+// ---------------------------------------------------------------------------
+
+// Shape (a) per BO-2400f-10-i's it_requirements: dispatch an executor whose
+// declared config/agent_registry.json entry does not explicitly forbid
+// running shell commands (permits_shell !== false) — status-checker's entry
+// declares permits_shell: false and is a structural charter mismatch
+// (KI-BO-020). python-coder's entry declares no such restriction and is
+// already dispatched elsewhere in this exact workflow (context-bundle,
+// coder, changelog) to run Bash commands that mutate on-disk state, so it is
+// reused here rather than inventing a new agent template — authoring one is
+// llm-expert's surface, out of scope for this single-coder-phase build
+// (documented at sign-off).
+const RELEASE_EXECUTOR_AGENT_TYPE = "python-coder";
+
+/**
+ * buildReleaseOutcomeFields
+ * @param {*} releaseReply - The raw reply from the release-phase dispatch.
+ * @param {string[]} claimedIds - The ids THIS run claimed (claimResult.claimed).
+ * @param {string} executorAgentType - The agentType actually dispatched.
+ * @returns {{fields: object, note: string}}
+ */
+function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) {
+  var claimed = claimedIds || [];
+  var releasedIds =
+    releaseReply && Array.isArray(releaseReply.released)
+      ? releaseReply.released
+      : null;
+
+  if (releasedIds !== null) {
+    var unreleasedOnSuccess = claimed.filter(
+      (id) => releasedIds.indexOf(id) === -1
+    );
+    return {
+      fields: {
+        release_attempted: true,
+        released_ac_ids: releasedIds,
+        unreleased_ac_ids: unreleasedOnSuccess,
+        release_executor: executorAgentType,
+        release_error: null,
+      },
+      note:
+        unreleasedOnSuccess.length === 0
+          ? `Release: succeeded — ${releasedIds.join(", ") || "(none claimed)"} returned to todo.`
+          : `Release: partially succeeded — ${releasedIds.join(", ")} returned to todo; ` +
+            `${unreleasedOnSuccess.join(", ")} left at in_progress; a later run aimed at ` +
+            `those ids will be refused while they remain in_progress.`,
+    };
+  }
+
+  var errorDetail = releaseReply
+    ? JSON.stringify(releaseReply)
+    : "no reply from the release dispatch";
+  return {
+    fields: {
+      release_attempted: false,
+      released_ac_ids: [],
+      unreleased_ac_ids: claimed,
+      release_executor: executorAgentType,
+      release_error: errorDetail,
+    },
+    note:
+      `Release: refused or unreadable (${errorDetail}) — ` +
+      `${claimed.join(", ") || "(none)"} left at in_progress; a later run aimed at ` +
+      `those ids will be refused while they remain in_progress.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Phase 0 — Argument validation
 // ---------------------------------------------------------------------------
 
@@ -587,12 +667,15 @@ const contextBundleUsable =
   contextBundle.includes(CACHE_BREAKPOINT_MARKER);
 
 if (!contextBundleUsable) {
-  await agent(
+  const releaseReplyContextBundle = await agent(
     `You are the release-phase agent. The context-bundle phase failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-context-bundle-fail", phase: "Resolve" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-context-bundle-fail", phase: "Resolve" }
+  );
+  const releaseOutcomeContextBundle = buildReleaseOutcomeFields(
+    releaseReplyContextBundle, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
@@ -601,12 +684,14 @@ if (!contextBundleUsable) {
       "assembling dispatch failed, returned nothing usable, or the bundle " +
       "was empty or missing the cache breakpoint marker. The run halts " +
       "rather than falling back to prompts composed some other way " +
-      `(BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)}`,
+      `(BO-2400c-1-iii). Detail: ${JSON.stringify(bundleResult)} ` +
+      releaseOutcomeContextBundle.note,
     failing_phase: "context-bundle",
     worktree_path: worktreePath,
     branch,
     built_ac_ids: acIds,
     classification: "halt",
+    ...releaseOutcomeContextBundle.fields,
   };
 }
 
@@ -655,21 +740,26 @@ const testWriterResult = await agent(
 );
 
 if (!testWriterResult || testWriterResult.status !== "ok") {
-  await agent(
+  const releaseReplyTestWriter = await agent(
     `You are the release-phase agent. The test-writer phase failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-test-writer-fail", phase: "Test Writer" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-test-writer-fail", phase: "Test Writer" }
+  );
+  const releaseOutcomeTestWriter = buildReleaseOutcomeFields(
+    releaseReplyTestWriter, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "test-writer phase did not return ok. " +
-      `Detail: ${JSON.stringify(testWriterResult)}`,
+      `Detail: ${JSON.stringify(testWriterResult)} ` +
+      releaseOutcomeTestWriter.note,
     failing_phase: "test-writer",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeTestWriter.fields,
   };
 }
 
@@ -677,12 +767,15 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
 // skew between this workflow and an older/newer fast_lane.py) fails closed
 // exactly like an explicit gate_passed: false — never treated as passing.
 if (!testWriterResult.gate_passed) {
-  await agent(
+  const releaseReplyRedBaseline = await agent(
     `You are the release-phase agent. The red-baseline gate failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-red-baseline-fail", phase: "Test Writer" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-red-baseline-fail", phase: "Test Writer" }
+  );
+  const releaseOutcomeRedBaseline = buildReleaseOutcomeFields(
+    releaseReplyRedBaseline, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
@@ -690,11 +783,13 @@ if (!testWriterResult.gate_passed) {
       "verify_red_baseline gate failed: test-writer reported gate_passed=false. " +
       `Reason: ${testWriterResult.reason || "unknown"}. ` +
       `Green-at-baseline: ${JSON.stringify(testWriterResult.green_at_baseline || [])}. ` +
-      "At least one newly-added scoped test must be red before the coder is dispatched.",
+      "At least one newly-added scoped test must be red before the coder is dispatched. " +
+      releaseOutcomeRedBaseline.note,
     failing_phase: "test-writer",
     gate: "verify_red_baseline",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeRedBaseline.fields,
   };
 }
 
@@ -729,32 +824,40 @@ const coderResult = await agent(
 );
 
 if (!coderResult || coderResult.status !== "ok") {
-  await agent(
+  const releaseReplyCoder = await agent(
     `You are the release-phase agent. The coder phase failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-coder-fail", phase: "Coder" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-coder-fail", phase: "Coder" }
+  );
+  const releaseOutcomeCoder = buildReleaseOutcomeFields(
+    releaseReplyCoder, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "python-coder phase did not return ok. " +
-      `Detail: ${JSON.stringify(coderResult)}`,
+      `Detail: ${JSON.stringify(coderResult)} ` +
+      releaseOutcomeCoder.note,
     failing_phase: "python-coder",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeCoder.fields,
   };
 }
 
 // Gate is the arbiter: no commit, no PR unless green AND coverage hold (BO-2400f-4).
 if (!coderResult.green || !coderResult.coverage_ok) {
-  await agent(
+  const releaseReplyCoverage = await agent(
     `You are the release-phase agent. The green+coverage gate failed after claiming.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-coverage-fail", phase: "Coder" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-coverage-fail", phase: "Coder" }
+  );
+  const releaseOutcomeCoverage = buildReleaseOutcomeFields(
+    releaseReplyCoverage, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
@@ -762,12 +865,14 @@ if (!coderResult.green || !coderResult.coverage_ok) {
       "verify_green_and_coverage gate failed: " +
       `green=${coderResult.green}, coverage_ok=${coderResult.coverage_ok}. ` +
       `Uncovered ACs: ${JSON.stringify(coderResult.uncovered_ac_ids || [])}. ` +
-      "No PR is opened — fix failing tests and/or add AC coverage.",
+      "No PR is opened — fix failing tests and/or add AC coverage. " +
+      releaseOutcomeCoverage.note,
     failing_phase: "python-coder",
     gate: "verify_green_and_coverage",
     uncovered_ac_ids: coderResult.uncovered_ac_ids || [],
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeCoverage.fields,
   };
 }
 
@@ -832,46 +937,57 @@ const reviewHighFindings =
     : [];
 
 if (!reviewVerdictUsable) {
-  await agent(
+  const releaseReplyReviewNoVerdict = await agent(
     `You are the release-phase agent. No usable review verdict was obtained before commit.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-review-fail", phase: "Review" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-review-no-verdict-fail", phase: "Review" }
+  );
+  const releaseOutcomeReviewNoVerdict = buildReleaseOutcomeFields(
+    releaseReplyReviewNoVerdict, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "No review verdict was obtained from pr-reviewer before commit — an unread review " +
       "is never treated as a clean pass. The run halts rather than committing on an " +
-      `unusable verdict. Detail: ${JSON.stringify(reviewResult)}`,
+      `unusable verdict. Detail: ${JSON.stringify(reviewResult)} ` +
+      releaseOutcomeReviewNoVerdict.note,
     failing_phase: "review",
     worktree_path: worktreePath,
     branch,
     built_ac_ids: acIds,
     classification: "halt",
+    ...releaseOutcomeReviewNoVerdict.fields,
   };
 }
 
 if (reviewHighFindings.length > 0) {
-  await agent(
+  const releaseReplyReviewHighFindings = await agent(
     `You are the release-phase agent. A high-confidence review finding blocked the run before commit.\n\n` +
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-review-fail", phase: "Review" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-review-high-findings-fail", phase: "Review" }
+  );
+  const releaseOutcomeReviewHighFindings = buildReleaseOutcomeFields(
+    releaseReplyReviewHighFindings, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "Review blocked the run before commit — high-confidence finding(s): " +
-      reviewHighFindings.join(" | "),
+      reviewHighFindings.join(" | ") +
+      " " +
+      releaseOutcomeReviewHighFindings.note,
     high_findings: reviewHighFindings,
     failing_phase: "review",
     worktree_path: worktreePath,
     branch,
     built_ac_ids: acIds,
     classification: "halt",
+    ...releaseOutcomeReviewHighFindings.fields,
   };
 }
 
@@ -952,12 +1068,15 @@ if (changelogRequired) {
   );
 
   if (!changelogEntryOk) {
-    await agent(
+    const releaseReplyChangelog = await agent(
       `You are the release-phase agent. The changelog phase failed after claiming.\n\n` +
       `Release all claimed ACs back to todo by running this single Bash command:\n` +
       `   ${releaseInvocation}\n\n` +
       `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-      { agentType: "status-checker", label: "release-on-changelog-fail", phase: "Changelog" }
+      { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-changelog-fail", phase: "Changelog" }
+    );
+    const releaseOutcomeChangelog = buildReleaseOutcomeFields(
+      releaseReplyChangelog, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
     );
     const changelogHaltReason =
       changelogResult && changelogResult.status === "ok"
@@ -969,13 +1088,15 @@ if (changelogRequired) {
         `Changelog phase did not produce a verified entry (reason: ${changelogHaltReason}). ` +
         "No pull request is opened — the built work is committed nowhere and the claim is " +
         `released; built ACs: ${batchIds} on branch ${branch}. ` +
-        `Detail: ${JSON.stringify(changelogResult)}`,
+        `Detail: ${JSON.stringify(changelogResult)} ` +
+        releaseOutcomeChangelog.note,
       failing_phase: "changelog",
       reason: changelogHaltReason,
       built_ac_ids: acIds,
       branch,
       worktree_path: worktreePath,
       classification: "halt",
+      ...releaseOutcomeChangelog.fields,
     };
   }
 }
@@ -1023,22 +1144,27 @@ if (!commitResult || commitResult.status !== "ok") {
   // done on disk (e.g. a stale-todo mark_done, or a pre-commit hook rejecting
   // the commit). Nothing was committed, so roll the whole run's claims back to
   // todo — releasing done_ids=[] resets even already-done claims (BO-2400f-10).
-  await agent(
+  const releaseReplyCommit = await agent(
     `You are the release-phase agent. The commit phase failed after claiming and ` +
     `marking done, but nothing was committed.\n\n` +
     `Roll all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: "status-checker", label: "release-on-commit-fail", phase: "Commit" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-commit-fail", phase: "Commit" }
+  );
+  const releaseOutcomeCommit = buildReleaseOutcomeFields(
+    releaseReplyCommit, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
   );
   return {
     status: "blocked",
     message:
       "Commit phase did not succeed — no PR opened. " +
-      `Detail: ${JSON.stringify(commitResult)}`,
+      `Detail: ${JSON.stringify(commitResult)} ` +
+      releaseOutcomeCommit.note,
     failing_phase: "commit",
     worktree_path: worktreePath,
     classification: "halt",
+    ...releaseOutcomeCommit.fields,
   };
 }
 
