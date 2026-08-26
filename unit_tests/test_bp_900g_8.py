@@ -41,19 +41,29 @@ ARCHITECTURE: Four tests, matching the ticket's Test Requirements table exactly.
     via graceful degradation) but that its sibling module actually LOADS --
     the "Cannot load MIGRATION_MAP" WARNING is the observable proof of the gap.
 
-None of `compute_intra_package_closure` / `find_uncovered_closure_dependencies`
-exist yet in build_referential_integrity.py as of this writing -- tests 1 and 3
-are expected to fail with AttributeError until python-coder implements them.
-Tests 2 and 4 exercise the real, currently-unguarded build.py / deployed script
-and are expected to fail on assertions (not import errors).
+    Tests 5-7 were added in a post-commit review-fix pass: the original
+    implementation resolved only two of the three reference shapes AC
+    BP-900g-8's Gherkin names (static imports, and the
+    ``spec_from_file_location`` dynamic loader). The third shape --
+    ``sys.path.insert(0, <dir>)`` followed by a plain import that resolves
+    against the pushed directory -- was silently dropped with NO log output
+    at any level, which is strictly worse than the documented dynamic-loader
+    blind spot (that one at least logs a WARNING). (5) is the regression test
+    for the real ``goal_to_epic.py`` instance of this gap. (6) is the negative
+    control proving an unresolvable ``sys.path`` push is disclosed via a
+    WARNING log record, asserted on the emitted record rather than on source
+    text. (7) confirms the fix did not regress the existing
+    ``validate_ac_schema.py`` / ``_ac_components.py`` resolution.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -386,9 +396,178 @@ def test_bp_900g_8_deployed_generate_ticket_cold_imports_in_a_fresh_subprocess(
     )
 
 
+# ---------------------------------------------------------------------------
+# Test 5 -- regression test for the review-found defect: sys.path.insert()
+# followed by a plain import is a third reference shape the original
+# implementation did not resolve, and dropped with NO log output at all.
+# ---------------------------------------------------------------------------
+
+
+def test_bp_900g_8_syspath_pushed_import_resolves_in_the_real_goal_to_epic_script():
+    """Regression test for the review-found defect (independently reproduced
+    by the reviewer and confirmed against a control before the fix landed).
+
+    ``scripts/goal_to_epic.py`` computes ``_sibling_dir`` at module level as a
+    ternary over two statically-known directories, then inside ``run()``
+    does::
+
+        sys.path.insert(0, str(_sibling_dir))
+        from scan_ac_store import traverse_ac_tree
+
+    Before the fix, ``compute_intra_package_closure`` tried only
+    ``scripts/scan_ac_store.py`` (the script's own directory) and the
+    package-root forms -- never the directory actually pushed onto
+    ``sys.path`` -- so the closure for this real file was the empty set,
+    with zero log output at any level. This is RED against the pre-fix
+    implementation (empty closure) and must be GREEN after the fix.
+    """
+    # covers: BP-900g-8
+    script = _REPO_ROOT / "scripts" / "goal_to_epic.py"
+
+    closure = _bri.compute_intra_package_closure(script, _REPO_ROOT)
+
+    assert "scripts/ac_store/scan_ac_store.py" in closure, (
+        "compute_intra_package_closure() did not include "
+        "'scripts/ac_store/scan_ac_store.py' in the closure of goal_to_epic.py. "
+        f"Closure: {sorted(closure)!r}. goal_to_epic.py resolves this sibling "
+        "via `sys.path.insert(0, str(_sibling_dir))` followed by "
+        "`from scan_ac_store import traverse_ac_tree` inside run() -- a third "
+        "reference shape (alongside static imports and the "
+        "spec_from_file_location dynamic loader) that the closure must "
+        "resolve, not silently drop (AC BP-900g-8)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 -- negative control: an unresolvable sys.path push must be disclosed
+# via a WARNING naming the file and line, never silently dropped.
+# ---------------------------------------------------------------------------
+
+
+def test_bp_900g_8_unresolvable_syspath_push_logs_a_warning(tmp_path, caplog):
+    """AC constraint: 'STATIC ANALYSIS HAS A KNOWN BLIND SPOT AND IT MUST BE
+    DECLARED, NOT PAPERED OVER' -- a sys.path mutation whose pushed-path
+    argument does not reduce statically (here: read from an environment
+    variable at runtime) must be reported for a human, not silently
+    classified as external. Asserted on the emitted log record via caplog,
+    never by grepping source text for a string.
+    """
+    # covers: BP-900g-8
+    script = tmp_path / "unresolvable_syspath.py"
+    script.write_text(
+        textwrap.dedent(
+            """\
+            import os
+            import sys
+
+
+            def load():
+                dynamic_dir = os.environ["SOME_RUNTIME_DIR"]
+                sys.path.insert(0, dynamic_dir)
+                from some_module import thing  # noqa: PLC0415
+
+                return thing
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with caplog.at_level(logging.WARNING, logger="build_referential_integrity"):
+        closure = _bri.compute_intra_package_closure(script, tmp_path)
+
+    assert closure == set(), (
+        "An unresolvable sys.path push must not manufacture a false-positive "
+        f"closure entry. Closure: {sorted(closure)!r} (AC BP-900g-8)."
+    )
+
+    matching_records = [
+        record
+        for record in caplog.records
+        if record.levelno >= logging.WARNING
+        and "unresolvable sys.path mutation" in record.getMessage()
+    ]
+    assert matching_records, (
+        "compute_intra_package_closure() produced NO WARNING log record for a "
+        "sys.path push whose argument does not reduce statically. Silence "
+        "here is the exact defect this AC forbids: an unresolved intra-package "
+        f"reference must be disclosed, never dropped silently. Captured "
+        f"records: {[r.getMessage() for r in caplog.records]!r} (AC BP-900g-8)."
+    )
+    assert str(script) in matching_records[0].getMessage(), (
+        "The WARNING record did not name the offending file "
+        f"({script}). Message: {matching_records[0].getMessage()!r} "
+        "(AC BP-900g-8)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7 -- no-regression guard: the existing spec_from_file_location
+# resolution (validate_ac_schema.py -> _ac_components.py) must still work.
+# ---------------------------------------------------------------------------
+
+
+def test_bp_900g_8_validate_ac_schema_closure_still_resolves_ac_components():
+    """No-regression guard for the fix in test 5/6: the pre-existing
+    ``spec_from_file_location``-based resolution
+    (``scripts/ac_store/validate_ac_schema.py`` -> ``_ac_components.py``)
+    must be untouched by the sys.path-mutation handling added alongside it.
+    """
+    # covers: BP-900g-8
+    script = _REPO_ROOT / "scripts" / "ac_store" / "validate_ac_schema.py"
+
+    closure = _bri.compute_intra_package_closure(script, _REPO_ROOT)
+
+    assert "scripts/ac_store/_ac_components.py" in closure, (
+        "compute_intra_package_closure() no longer includes "
+        "'scripts/ac_store/_ac_components.py' in the closure of "
+        f"validate_ac_schema.py. Closure: {sorted(closure)!r}. This is a "
+        "regression in the pre-existing spec_from_file_location resolution "
+        "(AC BP-900g-8)."
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/BP-900g-8 review-fix]: compute_intra_package_closure()
+#   resolved only two of the three reference shapes the AC's Gherkin covers
+#   ("resolving, importing, or executing another module ... whether by import
+#   statement, by path construction relative to its own location, or by
+#   dynamic loader"). A third live shape -- `sys.path.insert(0, <dir>)`
+#   followed by a plain import resolved against the pushed directory, the
+#   exact pattern goal_to_epic.py's run() uses for `from scan_ac_store import
+#   traverse_ac_tree` -- was silently dropped with NO log output at any
+#   level, which is worse than the documented dynamic-loader blind spot (that
+#   one logs a WARNING). Root cause: `_module_name_candidates()` only tried
+#   the importing script's own directory and the package root, never a
+#   directory pushed onto sys.path. Fix: (1) `_eval_static_path()` -- the
+#   existing local-variable-aware evaluator already used for
+#   `spec_from_file_location` -- was extended to return a LIST of candidate
+#   Paths (previously a single Path), added `ast.IfExp` handling (a ternary
+#   over two statically-known branches, as goal_to_epic.py's
+#   `_sibling_dir = _scripts_dir if <cond> else _scripts_dir / "ac_store"`
+#   is, resolves to BOTH candidates rather than being treated as
+#   unresolvable), and unwraps a bare `str(...)` call (the argument is
+#   literally `str(_sibling_dir)`). (2) `_build_local_assignments()` now
+#   falls back to module-level assignments when resolving a name inside a
+#   function scope that does not itself assign it -- `_sibling_dir` is a
+#   MODULE global referenced inside `run()`, not a function-local. (3) New
+#   `_extract_syspath_directories()` walks the AST for
+#   `sys.path.insert`/`sys.path.append` calls, resolves the pushed-path
+#   argument via the same `_eval_static_path()`, and -- mirroring
+#   `_extract_dynamic_loader_paths()` exactly -- logs a WARNING naming the
+#   file and line for anything that does not reduce statically, rather than
+#   dropping it. The resulting directories are threaded into
+#   `_module_name_candidates()` as `extra_dirs`, applied only to absolute
+#   (not relative) imports. Verified behaviorally: before the fix,
+#   `compute_intra_package_closure(goal_to_epic.py, root)` returned `set()`
+#   with zero log output; after, it returns
+#   `{"scripts/ac_store/scan_ac_store.py"}`. The pre-existing
+#   `validate_ac_schema.py` -> `_ac_components.py` resolution (via
+#   `spec_from_file_location`) is unchanged (test 7). A synthetic
+#   unresolvable sys.path push (argument read from an environment variable)
+#   now emits the same WARNING treatment an unresolvable dynamic-loader call
+#   already got (test 6). (#BP-900g-8)
 # - 2026-08-25 [test-writer/BP-900g-8]: Initial red-baseline test authoring.
 #   Introduces the expected contract for two new functions in
 #   build_referential_integrity.py -- compute_intra_package_closure() and

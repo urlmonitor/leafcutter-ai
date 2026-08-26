@@ -593,6 +593,22 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         if (templates_scripts / fname).is_file():
             manifest.add(f"scripts/{fname}")
 
+    # scripts/release/check_changelog_presence.py: deployed by the dedicated
+    # _deploy_fast_lane_release_dependency() helper (called from
+    # build_build_orchestration_scripts) rather than a generic glob, because it
+    # is fast_lane.py's own module-scope import dependency, not a
+    # build_orchestration script itself. It was previously absent from this
+    # manifest even though the build genuinely deploys it -- AC BP-900g-8's
+    # closure guard surfaced this the moment compute_intra_package_closure()
+    # started resolving the sys.path.insert()-based import pattern
+    # build_dataflow.py and fast_lane.py both use to reach it (the same
+    # reference shape goal_to_epic.py's sibling-module load uses), which
+    # otherwise fails every build with a false-positive "undeployed
+    # dependency" finding for a file the build already ships.
+    release_src = package_root / "scripts" / "release"
+    if (release_src / "check_changelog_presence.py").is_file():
+        manifest.add("scripts/release/check_changelog_presence.py")
+
     return manifest
 
 
@@ -726,6 +742,13 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
         for f in templates_scripts.glob("*.py"):
             if f.is_file():
                 source_paths.add(f"templates/scripts/{f.name}")
+
+    # scripts/release/check_changelog_presence.py: source namespace equals
+    # deploy namespace (see the matching block in
+    # _get_source_deployable_scripts) -- must be registered here too or
+    # test_guard_source_paths_match_deployable_set fails on cardinality.
+    if (package_root / "scripts" / "release" / "check_changelog_presence.py").is_file():
+        source_paths.add("scripts/release/check_changelog_presence.py")
 
     return source_paths
 
@@ -1882,6 +1905,20 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/BP-900g-8 review-fix]: Registered
+#   scripts/release/check_changelog_presence.py in both
+#   _get_source_deployable_scripts() and _get_source_paths_for_guard() (source
+#   namespace equals deploy namespace for this file). This file was already
+#   genuinely deployed by _deploy_fast_lane_release_dependency() but absent
+#   from the declarative manifest the BP-900g-8 closure guard checks Set B
+#   against. That gap was invisible until build_referential_integrity.py's
+#   compute_intra_package_closure() was fixed (same commit) to resolve the
+#   `sys.path.insert(0, <dir>)` + plain-import reference shape:
+#   build_dataflow.py and fast_lane.py both reach check_changelog_presence.py
+#   via exactly that pattern, and once the closure correctly saw it, every
+#   build failed with a false-positive "undeployed dependency" finding for a
+#   file the build already ships. Fixing the manifest (not the deploy logic,
+#   which was already correct) restores `build.py --target-dir` to exit 0.
 # - 2026-05-13 15:30 [epic-supervisor/T03]: Added build_precommit_config to (#EPIC-LeafcutterMVP/01)
 #   the phase dispatch list. Reads hooks_manifest from commit_guardian.json
 #   template and emits/merges .pre-commit-config.yaml at the consumer project
