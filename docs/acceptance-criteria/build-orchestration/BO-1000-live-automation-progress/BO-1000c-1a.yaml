@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -201,6 +201,55 @@ amended_by:
       load-bearing dependency is real but is a doc_links relationship
       ("modifies"/"describes"), not a covers-tag claim; conflating the two is
       exactly the imprecision this correction removes.
+  - reason: "work_status reverted to in_progress — an independent adversarial review (Fable-5) found the harness-landing gate was satisfied on a false premise, and the AC's central in-flight-readability clause has zero coverage"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      The immediately preceding entry flipped work_status to done on the premise
+      that BP-1100b-4's vm-sandboxed harness was a real PREREQUISITE for this AC's
+      four executed test_spec descriptors — i.e. that they were "unblocked" by the
+      harness landing, per this file's own 2026-08-26 20:05-equivalent gate: "Flip
+      to done when the harness and the remaining four land." An independent review
+      falsified that premise by direct execution: it loaded the PRE-vm harness
+      (the one that ran a workflow body as a plain CommonJS module, letting
+      require('fs') resolve) and ran all five of this AC's tests against it. All
+      five passed, including all four "unblocked" ones. Only BP-1100b-4's OWN
+      three harness-fidelity tests were red against the old harness. The four
+      executed BO-1000c-1a tests are therefore *indifferent* to whether the
+      harness is vm-sandboxed at all — they assert on agent-dispatch capture
+      (call_index, phase_name), a signal the harness recorded correctly even
+      before the fidelity fix. The dependency was real for the ORIGINAL
+      per-step-journal-file test_spec (deleted by the 2026-08-18 redefinition);
+      once the criterion moved onto agent-dispatch capture, the dependency
+      evaporated and nobody re-derived the gate.
+
+      This does not make the four tests worthless — they are real, executed,
+      falsifiable coverage of finalize-feature.js's step-dispatch behavior (and,
+      separately, an additional review finding — since fixed — that the original
+      versions tolerated losing two-thirds of that signal to a suppressed phase
+      tag; see BP-1100b-4's own amended_by for the fix, applied to the same
+      functions via dual `# covers:` tagging). They stay in covered_by. What they
+      are NOT is evidence that this AC's own criterion is satisfied, because that
+      criterion was never about whether finalize-feature.js dispatches agents
+      correctly — it is about IN-FLIGHT visibility: "readable by a caller outside
+      the background run while the run is still in flight" and "accumulate over
+      the run rather than appearing only once it ends." `HarnessResult` — the only
+      thing any test in this file can inspect — is constructed exclusively AFTER
+      `subprocess.run()` returns, i.e. after the run has already ended. Every test
+      in this file inspects a POST-EXIT snapshot. Zero executed coverage exists,
+      or can exist at the unit level, for the actual in-flight-accumulation
+      property this AC's criteria demand — the file's own "HONEST LIMITATION"
+      docstring block says so directly. That gap, not a harness dependency that
+      turned out not to exist, is the reason work_status reverts to in_progress.
+      Closing it for real requires an integration-level harness around the actual
+      E2 engine (able to poll <transcriptDir>/journal.jsonl DURING a live run),
+      which does not exist and is out of scope for BP-1100b-4 or this correction.
+
+      No file or test-spec name changes accompany this entry: the five
+      descriptors and their five implementing tests are unchanged and remain a
+      literal 5/5 match (independently re-derived by the same review via AST +
+      YAML parsing). Only the work_status conclusion drawn from that match is
+      corrected.
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bo_1000c_1a.py

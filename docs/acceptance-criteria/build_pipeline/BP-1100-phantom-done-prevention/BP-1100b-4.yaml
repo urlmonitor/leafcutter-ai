@@ -108,10 +108,10 @@ test_spec:
     type: behavioral
     description: "RENAMED 2026-08-26 from test_journal_records_are_still_present_when_the_run_ends (see amended_by), same reason. The literal replacement asserts the harness's captured agent_calls are only ever available AFTER the Node.js subprocess has exited, so a non-empty, correctly-ordered result after process exit is a genuine post-exit durability check."
   - name: test_run_that_cannot_append_fails_instead_of_passing
-    target_dir: unit_tests/workflows/test_bp_1100b_4.py
+    target_dir: unit_tests/workflows/test_bp_1100b_4_calibration.py
     framework: unittest
     type: behavioral
-    description: "MOVED 2026-08-26 from target_dir test_bo_1000c_1a.py to test_bp_1100b_4.py (see amended_by) — name unchanged, now a real, dedicated test rather than folded into the calibration descriptor below. A purpose-built synthetic script gates a step's agent() dispatch behind require('fs') wrapped in a try/catch that swallows the failure (mirroring the exact removed finalize-feature.js shape) and still returns a normal {status: 'ok'} terminal payload — 'the run reports success' verbatim from this AC's criteria. Under the engine-faithful harness the gate never opens, producing zero dispatches; the test then asserts that applying the SAME non-vacuous coverage assertion the real positive tests above use to that outcome RAISES AssertionError, proving a swallowed-append defect fails the suite rather than passing it silently. This is a different, stronger claim than the zero-records calibration below, which would pass on this exact outcome."
+    description: "MOVED 2026-08-26 from target_dir test_bo_1000c_1a.py to test_bp_1100b_4.py, then to test_bp_1100b_4_calibration.py in a later module-split (see amended_by) — name unchanged throughout, a real, dedicated test rather than folded into the calibration descriptor below. A purpose-built synthetic script gates a step's agent() dispatch behind require('fs') wrapped in a try/catch that swallows the failure (mirroring the exact removed finalize-feature.js shape) and still returns a normal {status: 'ok'} terminal payload — 'the run reports success' verbatim from this AC's criteria. Under the engine-faithful harness the gate never opens, producing zero dispatches; the test then asserts that applying the SAME non-vacuous coverage assertion the real positive tests above use to that outcome RAISES AssertionError, proving a swallowed-append defect fails the suite rather than passing it silently. This is a different, stronger claim than the zero-records calibration below, which would pass on this exact outcome."
   - name: test_renaming_narrate_does_not_change_dispatch_based_coverage
     target_dir: unit_tests/workflows/test_bo_1000c_1a.py
     framework: unittest
@@ -261,9 +261,119 @@ amended_by:
       scan in scripts/ac_store/done_proof.py, one ac_id per tag line), so
       test_bo_1000c_1a.py's presence in covered_by is now a genuine tag claim,
       not a cross-reference argued in prose.
+  - reason: "F3/F4/F6/F7 fixed after an independent adversarial review (Fable-5) found the sandbox escapable and strict mode silently lost; F1/F2/F5 findings against this AC are corrected or noted, not this AC's own to hold work_status hostage to"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      The review found, by direct execution, that `vm.createContext()` on a
+      plain object literal left the sandboxed body's `globalThis` prototype-
+      chained to the DRIVER realm's `Object.prototype` (F3): `globalThis.
+      constructor.constructor('return process')()` returned a live `process`
+      object and was used to append a real line to a real file on disk — the
+      exact outcome `test_filesystem_dependent_journaling_produces_zero_
+      records_under_the_harness` exists to certify is impossible. Fixed with
+      `Object.setPrototypeOf(__sandbox__, null)` before `vm.createContext()`.
+      Verified closed for the primary route plus every sibling route the
+      review named (`globalThis.__proto__...`, `({}).constructor.
+      constructor`, the AsyncFunction and GeneratorFunction constructors) and
+      for the exact file-write scenario, all in the new
+      unit_tests/workflows/test_bp_1100b_4_sandbox_fidelity.py — each
+      confirmed RED without the fix (direct execution, not a comment) and
+      GREEN with it.
+
+      The review also found strict mode was silently lost (F4): the pre-vm
+      harness spliced the target body into a file whose first line is
+      `'use strict';`, so the body inherited it; `vm.runInContext` compiles
+      the body as a SEPARATE source unit with no directive prologue, so an
+      undeclared assignment silently created an implicit global instead of
+      throwing. Invisible to a line-level deletion audit — no line was
+      deleted to cause it, the loss came from splicing into a NEW source unit
+      rather than the old one. Fixed by prefixing `inner_source` with
+      `'use strict';` in `_build_shim()`. Verified RED then GREEN in the same
+      new test file.
+
+      The review also found the injected-globals enumeration test (F6)
+      checked 8 names present and 6 names absent rather than truly enumerating
+      the namespace, and that the set was hand-typed a second time in
+      test_bp_1100b_4.py in direct violation of this AC's own "declared ONCE"
+      constraint (F7). Fixed together: `_workflow_engine_harness.py` now
+      exports `ADR_030_INJECTED_GLOBALS` and `SANDBOX_BACK_COMPAT_GLOBALS` as
+      the single source of truth, used to BUILD the actual `__sandbox__`
+      object literal (via a generated `{SANDBOX_ENTRIES_JS}` template
+      placeholder, not a second hand-typed literal) and imported directly by
+      `test_harness_exposes_only_the_engine_injected_globals`, which now
+      enumerates `Object.getOwnPropertyNames(globalThis)` from inside the
+      sandbox and diffs it against the same enumeration of a bare, empty,
+      null-prototype `vm.createContext()` computed fresh on whatever Node the
+      test runs under (never a hardcoded intrinsics list). Verified this
+      genuinely catches a leak: a probe that monkeypatched an extra
+      `leakyGlobal` entry into the sandbox construction made the diff fail as
+      expected. Empirical finding worth recording: `console` turned out to
+      already be a Node vm intrinsic present on a bare context, not something
+      this harness's `console: console` entry actually adds — the enumeration
+      test accounts for this and checks `console`'s reachability directly
+      rather than folding it into the "added beyond baseline" diff.
+
+      F1 and F2 are findings primarily AGAINST BO-1000c-1a's record, not this
+      one, and are corrected there (BO-1000c-1a's work_status reverts to
+      in_progress; see that AC's own amended_by for the full account). F1
+      found the four dispatch-based tests this AC's test_spec points at (via
+      dual `# covers:` tagging) pass unchanged against the pre-vm harness —
+      i.e. they never actually depended on this AC's fidelity work. That does
+      not unwind this AC's own harness-fidelity criterion (the second Given/
+      When/Then block): the sandbox genuinely is more faithful now, verified
+      by F3/F4/F6 above, independent of whether those four particular tests
+      needed it. F2 found the same four tests, before this correction round,
+      derived their "expected" step set FROM the run being asserted on,
+      making three of the four assertions tautological — proved by mutation
+      (suppressing two of three step tags left every assertion green). Fixed
+      in test_bo_1000c_1a.py by pinning the expected step set as an
+      independent literal constant
+      (`_EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO`) and adding a shared,
+      non-tautological helper (`assert_dispatch_coverage_matches_expected`)
+      all four positive tests now call; verified the fix by replaying the
+      review's own MUTANT 1 against the new helper directly (it now raises).
+
+      F5 found `test_run_that_cannot_append_fails_instead_of_passing`'s
+      `assertRaises` block was inert — it re-derived its input from an
+      assertion 15 lines above that had already pinned it to empty, reducing
+      the block to `assertRaises(AssertionError): assertTrue(set())`, true
+      for any empty-set input with no harness involved. Fixed by having that
+      block call the SAME shared helper the positive tests use
+      (`assert_dispatch_coverage_matches_expected`, imported from
+      test_bo_1000c_1a) with a real expectation (`{"0"}`), so it genuinely
+      exercises the real coverage logic rather than a hand-rolled stand-in.
+
+      Stale suite counts (F9) are also corrected: previous entries cited 468
+      and 469; the true count as of this correction, unit_tests/workflows/
+      under AC_ENFORCE_STRICT=1, is 484 passed (461 pre-existing baseline at
+      d97eb399 + 3 original harness-fidelity tests + 4 BO-1000c-1a executed
+      tests + 1 descriptor-4 test + 7 new F3/F4 regression tests + 8 from
+      main's own #570 landing in between), zero regressions. The four
+      external harness importers the review flagged outside
+      unit_tests/workflows/ (test_workflow_dual_engine.py,
+      test_bp_1100f_4.py, test_bp_300e_parse_agent_json.py,
+      test_fail_closed_agent_results.py) were also re-run: 57 passed, 1
+      xfailed, matching the review's own clean bill, no regressions from any
+      fix in this entry.
+
+      covered_by extended to add
+      unit_tests/workflows/test_bp_1100b_4_sandbox_fidelity.py (7 genuine
+      `# covers: BP-1100b-4` tags).
+
+      Module split (file-size guideline, no behavioral change): once these
+      fixes pushed test_bp_1100b_4.py past 400 lines, its two calibration
+      tests (test_filesystem_dependent_journaling_produces_zero_records_
+      under_the_harness and test_run_that_cannot_append_fails_instead_of_
+      passing) moved verbatim to a new
+      unit_tests/workflows/test_bp_1100b_4_calibration.py, added to
+      covered_by below (2 genuine `# covers: BP-1100b-4` tags). Full suite
+      re-verified after the split: unchanged at 484 passed.
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bp_1100b_4.py
+  - unit_tests/workflows/test_bp_1100b_4_calibration.py
+  - unit_tests/workflows/test_bp_1100b_4_sandbox_fidelity.py
   - unit_tests/workflows/test_bo_1000c_1a.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md

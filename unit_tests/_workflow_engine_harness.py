@@ -86,6 +86,53 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# ADR-030 injected-globals contract — SINGLE SOURCE OF TRUTH (F7 fix)
+# ---------------------------------------------------------------------------
+# Declared ONCE here and read by both _build_shim() (to construct the actual
+# vm sandbox object literal — see {SANDBOX_ENTRIES_JS} below) and by any test
+# that wants to assert the sandbox's exact namespace (see
+# unit_tests/workflows/test_bp_1100b_4.py), so the two can never
+# independently drift from ADR-030 or from each other. Previously this set
+# was hand-typed a second time as a test-only constant
+# (_ENGINE_INJECTED_GLOBALS in test_bp_1100b_4.py), in direct violation of
+# BP-1100b-4's own it_requirements constraint: "The injected-globals set must
+# be declared ONCE and read by the harness, not duplicated as a literal in
+# the harness and again in the runner; a second copy is free to drift from
+# ADR-030 and from the real engine."
+ADR_030_INJECTED_GLOBALS: tuple[str, ...] = (
+    "agent",
+    "parallel",
+    "pipeline",
+    "phase",
+    "log",
+    "args",
+    "workflow",
+    "budget",
+)
+
+# Documented back-compat exception (see the module docstring's "ENGINE
+# FIDELITY" note): NOT part of the ADR-030 contract, but exposed anyway
+# because several already-shipped, non-offending workflow scripts reference
+# it and re-sandboxing it was out of BP-1100b-4's scope. Kept as its own
+# public constant (rather than folded into ADR_030_INJECTED_GLOBALS) so a
+# reader — and a test — can distinguish "the real contract" from "the
+# disclosed exception" without re-deriving the split from prose.
+SANDBOX_BACK_COMPAT_GLOBALS: tuple[str, ...] = ("console",)
+
+# JS object-literal entries for __sandbox__ (see _JS_SHIM_TEMPLATE's
+# {SANDBOX_ENTRIES_JS} placeholder), generated FROM the two constants above
+# rather than hand-typed a second time — the mechanism that actually
+# satisfies the "declared once" constraint, not just a comment claiming it.
+# Each JS-side name (agent, parallel, ...) is also a Python-side identifier
+# already bound in this shim by the time __sandbox__ is constructed (agent(),
+# parallel(), ... are defined earlier in the template; args/console are
+# plain identifiers), so `name: name` is valid for every entry.
+_SANDBOX_ENTRIES_JS = ",\n".join(
+    f"  {_name}: {_name}"
+    for _name in (*ADR_030_INJECTED_GLOBALS, *SANDBOX_BACK_COMPAT_GLOBALS)
+)
+
+# ---------------------------------------------------------------------------
 # Public types
 # ---------------------------------------------------------------------------
 
@@ -455,16 +502,28 @@ var args = Object.assign({
 // that reference it; it is not part of the ADR-030 contract and is not one
 // of the engine-injected globals under test).
 const __sandbox__ = {
-  agent: agent,
-  parallel: parallel,
-  pipeline: pipeline,
-  phase: phase,
-  log: log,
-  args: args,
-  workflow: workflow,
-  budget: budget,
-  console: console,
+{SANDBOX_ENTRIES_JS}
 };
+// ESCAPE FIX (F3): `vm.createContext()` on a plain object literal leaves that
+// object's prototype chain pointing at the DRIVER realm's `Object.prototype`,
+// so the sandboxed body's own `globalThis` inherits the driver's `Object`,
+// and therefore the driver's `Function` constructor, via
+// `globalThis.constructor.constructor` (equivalently `({}).constructor.
+// constructor`, `globalThis.__proto__.constructor.constructor`, or the
+// AsyncFunction/GeneratorFunction constructors reached the same way from an
+// async function or generator literal). `new Function(...)` compiles in the
+// DRIVER realm, not the sandboxed one, so code run through it sees the
+// driver's real `process`, `require`, etc. — a complete escape, verified to
+// be able to append to a real file on disk. Severing the prototype link
+// BEFORE `vm.createContext()` closes every route that pivots through a
+// shared `Object`/`Function` ancestor: the contextified global object has no
+// prototype at all, so `globalThis.constructor` (and `({}).constructor`,
+// since object literals evaluated inside the sandbox construct their
+// prototype from the SANDBOXED realm's `Object.prototype`, which `vm`
+// installs into the context once it has its own global object) is
+// `undefined` inside the sandbox, and referencing `.constructor` off it
+// throws instead of yielding a live constructor from either realm.
+Object.setPrototypeOf(__sandbox__, null);
 vm.createContext(__sandbox__);
 
 // ─── Script body ─────────────────────────────────────────────────────────────
@@ -724,7 +783,23 @@ def _build_shim(
     # rather than spliced as raw JS text, so the target script's own quoting,
     # backticks, and newlines can never break the outer shim's own syntax
     # (BP-1100b-4 engine-fidelity hardening).
+    #
+    # STRICT MODE (F4 fix): the pre-vm harness spliced {SCRIPT_BODY} directly
+    # into the outer shim file, whose first line is `'use strict';` — so the
+    # body inherited strict mode from the enclosing file. `vm.runInContext`
+    # compiles inner_source as its OWN separate source unit with no directive
+    # prologue of its own, so without an explicit `'use strict';` here the
+    # body would silently run SLOPPY: an undeclared assignment (e.g. a typo'd
+    # or mis-scoped variable) creates an implicit global instead of throwing
+    # ReferenceError. This was invisible to a line-level deletion audit — no
+    # line was deleted to cause it, the loss came from splicing into a NEW
+    # source unit rather than the old one, which is a structural change, not
+    # a textual one. Restoring strict mode here also matches the E1 sibling
+    # path (run_e1_import_check uses --input-type=module, and ES modules are
+    # always strict), so a script is checked strict and executed strict on
+    # both engines rather than checked strict and executed sloppy on E2.
     inner_source = (
+        "'use strict';\n"
         "(async function __e2body__() {\n"
         "// BEGIN TARGET SCRIPT\n"
         f"{body}\n"
@@ -735,6 +810,7 @@ def _build_shim(
 
     return (
         _JS_SHIM_TEMPLATE
+        .replace("{SANDBOX_ENTRIES_JS}", _SANDBOX_ENTRIES_JS)
         .replace("{INNER_SOURCE_JSON}", inner_source_json)
         .replace("{LABEL_RESPONSES}", label_responses_json)
         .replace("{ARGS_OBJECT}", args_json)

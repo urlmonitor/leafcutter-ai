@@ -72,6 +72,24 @@ _HARNESS_TIMEOUT = 30
 # "Pre-flight" / "Pre-flight 2", which carry no step number).
 _STEP_PHASE_RE = re.compile(r"^Step (\d+(?:\.\d+)?)$")
 
+# F2 FIX: the expected step set for _run_finalize_minimal()'s deterministic
+# scenario, PINNED as a literal constant rather than derived from the run
+# under test. An adversarial review (Fable-5) proved by mutation testing that
+# deriving "expected" from `result.agent_calls` and then asserting membership
+# back against those same `result.agent_calls` is tautological: suppressing
+# the phase tag on every step except Step 0 (destroying two-thirds of the
+# run-progress signal) left every positive assertion in this file green,
+# because the only genuinely falsifiable content was "at least one numbered
+# step was dispatched at all". Pinning the expected set here — verified once,
+# by hand, against the real script's actual behavior for this scenario
+# (Step 0 and Step 1 always run; Step 2's generic stub response for
+# step-2-merge-main is not a status the step recognises, so the run halts
+# there) — makes the comparison genuinely independent: the run must reproduce
+# an outcome fixed in advance, not merely be self-consistent.
+_EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO: frozenset[str] = frozenset(
+    {"0", "1", "2"}
+)
+
 
 def _js_text() -> str:
     """Return the full text of finalize-feature.js."""
@@ -142,6 +160,60 @@ def _ordered_numbered_step_sequence(result) -> list[float]:
         if match:
             sequence.append(float(match.group(1)))
     return sequence
+
+
+def assert_dispatch_coverage_matches_expected(
+    testcase: unittest.TestCase, result, expected_steps: frozenset[str]
+) -> set[str]:
+    """Assert `result`'s numbered-step dispatch coverage EQUALS `expected_steps`.
+
+    F2 FIX / shared coverage helper. `expected_steps` MUST be supplied by the
+    caller as an independently-known value (a pinned scenario constant, or a
+    captured baseline from a separate prior run) — never derived from `result`
+    itself, which is exactly the tautology an adversarial review found here
+    (see `_EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO`'s comment).
+
+    Used by every positive test in this file AND by
+    `test_bp_1100b_4.TestRunThatCannotAppendFailsInsteadOfPassing` (F5 fix),
+    so a synthetic zero-dispatch run exercises this SAME real coverage logic
+    rather than a hand-rolled re-derivation that could drift from it.
+
+    Asserts:
+        1. The observed step set equals `expected_steps` exactly — not a
+           subset check, so losing coverage for any expected step, OR gaining
+           an unexpected one, both fail.
+        2. Each expected step has at least one real `agent_calls` entry
+           tagged with that step's phase (redundant with #1's equality check
+           in the passing case, kept for a more specific failure message when
+           it does not).
+
+    Returns:
+        The observed step set, for callers that want to use it further.
+
+    Raises:
+        AssertionError: via the wrapped `testcase.assertEqual`/`assertTrue`
+            calls, whenever coverage does not match `expected_steps`.
+    """
+    observed_steps = _numbered_step_phases(result)
+    testcase.assertEqual(
+        observed_steps,
+        set(expected_steps),
+        msg=(
+            f"Observed step-dispatch coverage {observed_steps} does not match "
+            f"the independently-pinned expected coverage {set(expected_steps)}. "
+            f"agent_calls: {[(c.label, c.phase_name) for c in result.agent_calls]}"
+        ),
+    )
+    for step_number in expected_steps:
+        matching = [
+            c for c in result.agent_calls
+            if (c.phase_name or "") == f"Step {step_number}"
+        ]
+        testcase.assertTrue(
+            matching,
+            msg=f"No agent() dispatch found tagged with phase 'Step {step_number}'",
+        )
+    return observed_steps
 
 
 def _prepare_finalize_copy_with_renamed_narrate(tmp_dir: Path) -> Path:
@@ -246,34 +318,22 @@ class TestStepDispatchesStillReachableAndOrderedAfterJournalRemoval(unittest.Tes
         (e.g. Step 1's PR probe followed by opening a PR) legitimately
         produces more than one record — cardinality is therefore asserted
         per phase (>=1), not as an exact global count.
+
+        F2 FIX: the expected step set is the PINNED
+        `_EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO` constant, not derived
+        from this run's own `result.agent_calls` — an adversarial review
+        proved the self-referential version tolerates losing two-thirds of
+        the run-progress signal (suppressing the phase tag on Steps 1 and 2
+        left the old version of this test green). Comparing to an
+        independent, pinned expectation closes that gap.
         """
         with tempfile.TemporaryDirectory() as tmp:
             result = _run_finalize_minimal(_JS_PATH, tmp)
 
             self.assertEqual(result.error, "", msg=f"harness error: {result.error}")
-            expected_steps = _numbered_step_phases(result)
-            self.assertTrue(
-                expected_steps,
-                msg=(
-                    "Ground-truth extraction found no numbered step dispatches at "
-                    "all — cannot calibrate this test. agent_calls: "
-                    f"{[(c.label, c.phase_name) for c in result.agent_calls]}"
-                ),
+            assert_dispatch_coverage_matches_expected(
+                self, result, _EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO
             )
-            # Every phase in expected_steps was, by construction of
-            # _numbered_step_phases, derived from at least one agent_calls
-            # entry — so this is a genuine (if structurally guaranteed once
-            # expected_steps is non-empty) executed assertion that dispatches
-            # occurred, not a hardcoded step count or a re-parsed on-disk file.
-            for step_number in expected_steps:
-                matching = [
-                    c for c in result.agent_calls
-                    if (c.phase_name or "") == f"Step {step_number}"
-                ]
-                self.assertTrue(
-                    matching,
-                    msg=f"No agent() dispatch found tagged with phase 'Step {step_number}'",
-                )
 
     def test_agent_dispatches_appear_in_step_order(self):
         # covers: BO-1000c-1a
@@ -283,17 +343,31 @@ class TestStepDispatchesStillReachableAndOrderedAfterJournalRemoval(unittest.Tes
         the steps actually completed (monotonically non-decreasing step
         numbers), derived from call_index (the harness's real capture order),
         never from a re-parsed on-disk journal file.
+
+        F2 FIX: also asserts the SET of distinct step values observed equals
+        the pinned `_EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO` constant,
+        not merely that whatever was observed happens to be sorted. Without
+        this, suppressing Steps 1 and 2's phase tags leaves a single-element
+        `[0.0]` sequence, which is trivially "sorted" and passed under the
+        adversarial review's MUTANT 1 — the same tautology as the sibling
+        test above, closed the same way.
         """
         with tempfile.TemporaryDirectory() as tmp:
             result = _run_finalize_minimal(_JS_PATH, tmp)
             self.assertEqual(result.error, "", msg=f"harness error: {result.error}")
 
             observed_order = _ordered_numbered_step_sequence(result)
-            self.assertTrue(
-                observed_order,
+            expected_floats = {
+                float(s) for s in _EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO
+            }
+            self.assertEqual(
+                set(observed_order),
+                expected_floats,
                 msg=(
-                    "No numbered 'Step N' phase found among the dispatched agent "
-                    f"calls: {[(c.label, c.phase_name) for c in result.agent_calls]}"
+                    f"Distinct step values observed {set(observed_order)} do not "
+                    f"match the pinned expected set {expected_floats} — some "
+                    "step's phase tag was lost (or an unexpected one gained). "
+                    f"agent_calls: {[(c.label, c.phase_name) for c in result.agent_calls]}"
                 ),
             )
             self.assertEqual(
@@ -316,25 +390,24 @@ class TestStepDispatchesStillReachableAndOrderedAfterJournalRemoval(unittest.Tes
         durability check, the executed analogue of "journal records are still
         present when the run ends": the record of what was dispatched is not
         lost once the process backing the run has terminated.
+
+        F2 FIX: the previous `dispatch_count >= len(expected_steps)` check was
+        arithmetically guaranteed once `expected_steps` was derived from the
+        same `result.agent_calls` it was compared against, AND it would not
+        even have caught partial phase-tag loss — `dispatch_count` counts raw
+        agent() calls, which a mutation that strips only the phase TAG (not
+        the call itself) leaves unchanged. Reusing the shared, pinned-constant
+        helper here closes both gaps: it is post-exit (this is inherent to
+        when `result` becomes available at all, not an extra property to
+        assert) AND it is sensitive to per-step tag loss.
         """
         with tempfile.TemporaryDirectory() as tmp:
             result = _run_finalize_minimal(_JS_PATH, tmp)
             self.assertEqual(result.error, "", msg=f"harness error: {result.error}")
             self.assertEqual(result.returncode, 0, msg=f"stderr: {result.stderr}")
 
-            expected_steps = _numbered_step_phases(result)
-            self.assertTrue(
-                expected_steps,
-                msg="Ground-truth extraction found zero step dispatches post-exit.",
-            )
-            self.assertGreaterEqual(
-                result.dispatch_count,
-                len(expected_steps),
-                msg=(
-                    "Fewer agent dispatches were readable after the harness process "
-                    f"exited ({result.dispatch_count}) than distinct steps reached "
-                    f"({len(expected_steps)})."
-                ),
+            assert_dispatch_coverage_matches_expected(
+                self, result, _EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO
             )
 
 
@@ -358,29 +431,24 @@ class TestCoverageDoesNotDependOnInternalHelperNaming(unittest.TestCase):
         are still reached with a real agent() dispatch each — proving the
         step-dispatch coverage in this file does not depend on that (or any)
         specific identifier name.
+
+        F2 FIX: "the same numbered steps" is checked against the pinned
+        `_EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO` constant — the SAME
+        expectation the unrenamed-script tests above use — rather than a
+        baseline derived from this run itself. The previous version never
+        captured an independent baseline at all (its own docstring claimed
+        "the same numbered steps" while comparing the renamed run only to
+        itself), so it could not have detected the rename silently changing
+        which steps are reached.
         """
         with tempfile.TemporaryDirectory() as tmp:
             copy_path = _prepare_finalize_copy_with_renamed_narrate(Path(tmp))
             result = _run_finalize_minimal(copy_path, tmp)
             self.assertEqual(result.error, "", msg=f"harness error: {result.error}")
 
-            expected_steps = _numbered_step_phases(result)
-            self.assertTrue(
-                expected_steps,
-                msg="Ground-truth extraction found zero step dispatches after rename.",
+            assert_dispatch_coverage_matches_expected(
+                self, result, _EXPECTED_NUMBERED_STEPS_FOR_MINIMAL_SCENARIO
             )
-            for step_number in expected_steps:
-                matching = [
-                    c for c in result.agent_calls
-                    if (c.phase_name or "") == f"Step {step_number}"
-                ]
-                self.assertTrue(
-                    matching,
-                    msg=(
-                        f"After renaming narrate -> narrateRenamedForTest, no agent() "
-                        f"dispatch is tagged with phase 'Step {step_number}'."
-                    ),
-                )
 
 
 if __name__ == "__main__":

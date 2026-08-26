@@ -13,3 +13,20 @@ breaking: false
 ---
 
 ## Entry
+
+**Correction (2026-08-26, 11:20 entry, and see BO-1000c-1a's own amended_by):**
+the title and summary above claim the harness "unblocks" BO-1000c-1a's four
+dispatch-based tests. An independent adversarial review found this false by
+direct execution: all four pass unchanged against the PRE-vm harness too —
+only BP-1100b-4's own three harness-fidelity tests were ever red against it.
+The dependency was real for the ORIGINAL per-step-journal-file test_spec that
+BO-1000c-1a's 2026-08-18 redefinition deleted; once the criterion moved onto
+agent-dispatch capture, the dependency evaporated and nobody re-derived the
+gate before flipping work_status to done. BO-1000c-1a has since reverted to
+`work_status: in_progress`. The rest of this entry's factual claims about the
+sandbox (denies require/module/exports/process/__dirname/__filename; the
+zero-records calibration; the 461→468 suite delta at the time) are accurate
+and stand — only the causal "unblocks" framing is wrong. See the 11:20 entry
+in this same changelogs/ directory for the fuller correction, including two
+further defects (an escapable sandbox and silently-lost strict mode) found
+in the same review.
