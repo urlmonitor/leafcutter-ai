@@ -26,9 +26,9 @@ criteria: |
 depends_on: [ACD-2100d, ACD-2100a-5, ACD-2100b-3, ACD-2100b-4, ACD-2100d-1, ACD-2100d-2]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
-    relationship: describes
+    relationship: creates
     status: planned
-    relevance: "THE TARGET FILE. ACD-2100d-1 and ACD-2100d-2 already link this exact path as planned; authoring the page anywhere else leaves both of those links dangling."
+    relevance: "THE TARGET FILE, AND THIS RECORD'S SOLE DELIVERABLE. ACD-2100d-1, ACD-2100d-2, ACD-2100d-2-i and ACD-2100d-3 all link this exact path as planned; authoring the page anywhere else leaves four links dangling. Relationship is 'creates' rather than 'describes' because this record authors the page -- the four siblings that merely reference it keep 'describes'."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
     status: exists
@@ -95,7 +95,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/23_TICKET-20260826-ACD-2100d-4.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -154,3 +155,39 @@ notes: |
   ACD-2100d-2 and ACD-2100d-3, all three of which already carry build_pipeline. Tagging
   this record too would put a page into the build component view for a reader who cannot
   act on it, and would not add a fact the graph does not already have.
+
+  IT PO ENRICHMENT -- 2026-08-26 (files_touched backfill).
+
+  THE SAME DEFECT AS THE d SIBLINGS, POINTED THE OTHER WAY. This record was the only one
+  in the d family whose ticket had a non-empty files_touched, so it was cited as the
+  precedent for the others. It is not a good one. Its three paths -- the documentation
+  index, the AC-store index and the components registry -- all arrived by accident:
+  generate_ticket_from_ac.py scans it_requirements prose for slash-bearing tokens that
+  exist on disk, and those three were mentioned in passing while explaining the
+  two-axis component vocabulary and the generated index. Meanwhile THE PAGE THIS RECORD
+  EXISTS TO AUTHOR was absent from its own surface, because the same extractor drops
+  tokens that do not yet exist on disk and every doc_link here was "describes" or
+  "related", neither of which is an edit-surface relationship.
+
+  So the ticket declared a surface consisting entirely of files the record incidentally
+  mentions and none of the file it creates. For a change-scope reviewer that is worse
+  than empty: an empty list is visibly unusable, whereas this one looks populated and
+  would have made the actual deliverable look out of scope.
+
+  THE FIX IS ONE RELATIONSHIP. The first doc_link's relationship changed from "describes"
+  to "creates". That is the only edit-surface relationship that survives the extractor's
+  existence gate, so it is how a not-yet-existing deliverable enters files_touched at all.
+  The four sibling records that merely reference this page keep "describes", which is
+  correct for them -- exactly one record creates it. The resulting surface is the three
+  incidental paths plus the target page.
+
+  THE THREE INHERITED PATHS ARE LEFT IN PLACE, deliberately rather than by omission.
+  docs/INDEX.md is genuinely touched: the tenth it_requirement requires the page to be
+  registered by running the build and committing the regenerated index. The AC-store
+  index and the components registry are weaker -- they are named as the authorities the
+  component spelling is checked against, not as files this record edits -- but both are
+  plausibly read during the work and removing them would mean rewriting requirement prose
+  that is otherwise correct and load-bearing. Flagged here rather than silently trimmed,
+  because a reviewer comparing this list against the criteria will notice them and should
+  know they were considered.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

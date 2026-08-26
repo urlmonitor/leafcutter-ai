@@ -1,0 +1,82 @@
+id: INF-700c
+readiness: approved
+priority: medium
+components:
+  - infrastructure
+title: "Nothing enters the knowledge record that is not real knowledge"
+component: infrastructure
+level: L1
+status: active
+work_status: todo
+criteria: |
+  No empty entries on a page, and no phantom items on the backlog.
+
+  What lands on a knowledge surface is content a person can learn from. A
+  record that is only a receipt of a past write -- no learning in it -- is
+  never expanded into a placeholder line on a real, curated file. And the
+  count of knowledge still waiting to be written means what it says: history
+  that has already been honoured is not reported forever as work outstanding,
+  so a non-zero backlog always means real knowledge that nobody has written
+  down yet.
+
+  Evidence this exists to close (verified 2026-08-26). The 28 retained
+  knowledge_captured events in debugging/logs/agent_telemetry.jsonl carry
+  exactly six keys each -- event, timestamp, agent, component, destination,
+  entry_kind. There is no learning text in any of them and there never was:
+  the emitter contract in signoff section 7 step 4 specifies precisely those
+  six fields, so the event is a receipt of a write, not a payload carrying a
+  learning. The harvester nonetheless substitutes
+  f"[{entry_kind}] Learning from {ticket}" when text is absent
+  (scripts/knowledge/harvest_learnings.py line 324), and ticket is absent from
+  all 28 -- so draining them would append 28 content-free strings of the form
+  "[agent-assignment-pattern] Learning from " into curated files.
+
+  And the learnings were never lost. Nine of the ten destination paths named
+  by the 28 events exist and are substantial (3.6 KB to 23 KB), including
+  memory/feedback_itpo_agent_assignment_by_surface.md, whose own header
+  ("Captured 2026-06-16 during BO-210 / GE-102 technical enrichment") matches
+  the timestamp, agent and destination of the first event exactly. Only
+  memory/feedback_itpo_bo1700_worktree_gate_parity.md is absent, and it has
+  never existed in git history. So a recovery-and-drain of this corpus would
+  degrade nine real knowledge files to buy back at most one lost learning.
+
+  Note for BA/IT PO -- the outcome is stated, the mechanism is not. Marking
+  the retained events terminally honoured, archiving the sink, or any other
+  route is an IT PO choice, subject to one constraint: a permanently
+  unroutable corpus that makes every future run report a non-empty backlog is
+  not an acceptable resting state, because it destroys the very signal
+  INF-700a asks for.
+
+  Note for governance -- this criterion supersedes INF-400c-5-ii. It also
+  makes INF-400c-4-ii (carry the 28 across into the emission sink) and the
+  permanent non-zero exit behaviour introduced by INF-400c-2-ii open questions
+  for the BA to re-decide, since both are premised on the 28 being recoverable
+  knowledge rather than honoured receipts.
+depends_on:
+  - INF-700
+  - INF-400c
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "BA decomposition, 2026-08-26. Decided the two open questions the PO left. INF-400c-4-ii is superseded by INF-700c-2: carrying the 28 receipts into a second file relocates the false backlog rather than resolving it, and its own depends_on already named the withdrawn INF-400c-5-ii. INF-400c-2-ii is left standing and unmodified: its retry-and-report behaviour is correct for genuinely new unroutable events, and the permanent non-zero exit it produces today is a consequence of the retained corpus, which INF-700c-2 removes as an input. Sequencing follows from that -- INF-700c-2 must reach its resting state before INF-400c-2-ii's exit status carries signal."
+    by: business-analyst
+    at: 2026-08-26
+superseded_by: null
+covered_by:
+  - INF-700c-1
+  - INF-700c-2
+  - INF-700c-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary

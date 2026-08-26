@@ -24,9 +24,22 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-BP-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new section with a **date-and-slug id**:
+`### KI-BP-YYYYMMDD-short-slug`. Nothing here is generated — edit it by hand. Fill in what
+you actually know; an issue recorded with a thin `Evidence` line is far better than one not
+recorded.
+
+**Why not the next free number.** The sequential `KI-BP-NNN` form is retained for the
+entries that already carry it, and must not be renumbered — inbound references would break.
+But it is not usable for new entries. "Append the next free number" requires every author to
+read the same file at the same moment and act on it before anyone else does, which fails the
+moment two agents or two sessions work in parallel. On 2026-08-25 it produced **ten**
+collisions in a single day, one of which reached `main`, and this register already carries
+two renumbering notes as scar tissue (KI-BP-020, and the KI-CG-012 collision recorded in
+`commit-guardian.md`). KI-BO-024 diagnosed this and named the remedy: *"Make the number
+non-sequential. A date-plus-slug id cannot collide."* Two authors would have to pick the same
+slug on the same day, and if they did they are describing the same defect anyway. Both id
+forms sort and grep identically on the `KI-BP-` prefix.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -99,9 +112,26 @@ concurrent author, since it appears in a tree you did not knowingly edit.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 3
+- **Occurrences:** 4
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` — the agent-card generation phase; output at `docs/agents/cards/*.md`
+
+**Earlier occurrence, 2026-08-19 — recovered from an unmerged branch.** PR #495's parallel
+known-issues register recorded this independently as `KI-BO-2` while driving
+`EPIC-GE122UniquenessPassAndRepair`. That register was discarded during reconciliation; the
+occurrence is folded in here rather than duplicated, per this file's own rule. `build.py --force`
+regenerated **eight** cards with AC-store content absent from the committed versions — entries
+such as `ACD-1600g-*` and `ACD-1800a-*`, belonging to components unrelated to the work in hand.
+The committed cards were simply older than the store.
+
+It adds two things to the three occurrences below. First, it is the **earliest** recorded
+instance and it is already purely AC-store drift, which dates the drift source to at least a
+week before the 2026-08-25 occurrence that first isolated it. Second, it names the operational
+cost precisely: eight modified files in `git status` during unrelated work, each of which must be
+excluded from every commit by hand — and which makes a genuinely-related card change easy to miss
+in the noise. The workaround used was `git restore docs/agents/cards/` for the unrelated ones
+before staging, keeping any card that reflects a change actually made in the commit. That is the
+same workaround `build-pipeline.md:162` prescribes, arrived at independently.
 
 **Third occurrence, 2026-08-25.** Reproduced again on a clean worktree cut from `origin/main`,
 this time rewriting **four** cards with 68 insertions and zero deletions:
@@ -783,6 +813,13 @@ version of something the source has moved on from.
 
 **Related.** KI-BP-010 is the cleanup-side counterpart for this same `workflows/` directory:
 its `--clean` entry has never executed, so nothing reaps what this phase declines to rewrite.
+
+KI-BP-20260826-1331 is the **write-side twin**: the identical stale-workflow symptom (same
+file, same missing review and changelog phases) reached on 2026-08-25 by a build whose install
+phase ran fail-open and wrote older bytes from a stale worktree, rather than by this entry's
+skip branch. Counted separately because a skipped-phase alarm would not fire on it — but the
+source-revision stamp proposed in the fix direction above resolves both, and is the reason to
+prefer it over merely making the skip loud.
 
 ---
 
@@ -1726,6 +1763,14 @@ written. Do **not** fix this by adding to `deploy_map`.
 **Pattern:** a build whose report is a count of what it wrote, in a system where the failure
 mode is not writing something.
 
+**Related.** KI-BP-20260826-1331 is a different defect with the same consequence: many
+worktrees write a shared `.leafcutter/` output root last-writer-wins, so a deployed file may
+carry any worktree's revision. This entry explains why an *absent* artifact is never noticed;
+that one explains why a *present* artifact cannot be attributed to a commit. Together they mean
+the deployed tree does not correspond to any revision. The fixes are complementary, not
+overlapping — BP-900g-8/9 derive the deploy closure and fail closed; a source-revision stamp on
+each deployed artifact makes provenance checkable.
+
 ---
 
 ### KI-BP-019 — A missing `pyyaml` strips the frontmatter from every deployed agent, silently, with no output on any stream
@@ -2020,3 +2065,402 @@ handled.
 
 **Pattern:** a completeness claim written as prose in the docstring of the function whose
 incompleteness it is describing.
+
+---
+
+### KI-BP-20260826-1331 — a shared deployed `.leafcutter/` is a per-file collage of whatever each writing worktree last wrote — no single commit produces the tree the gates actually run
+
+> **This id is a timestamp, not a sequence number — and that is deliberate.**
+> `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time.
+>
+> This entry was first authored as `KI-BP-018`, renumbered to `KI-BP-021` when 018/019/020
+> were taken mid-review, and would have had to move a **third** time: `KI-BP-021` was itself
+> claimed on `main` before this PR could land. Across two rounds, **four ids collided twice**
+> — eight collisions in one day, all while the PR sat open being reviewed. Renumbering is a
+> race the reviewer always loses, because review is exactly the interval during which `main`
+> moves.
+>
+> `KI-BO-024` predicted this and proposed a duplicate-heading check. That check is still worth
+> building, but it detects collisions rather than preventing them. A timestamp prevents them:
+> two entries collide only if authored in the same component register in the same minute,
+> which no observed workflow does. Cost is a longer id; the benefit is that an id, once
+> written down and cited, never has to move.
+>
+> **Existing sequential ids are not being renumbered.** Mass-renaming would break every
+> citation in the repo to fix a problem only new entries have. The convention is
+> forward-only: sequential ids stay valid and stay cited, new entries are timestamped. Both
+> forms will coexist indefinitely, and that is fine — the id's only job is to be unique and
+> stable.
+>
+> Worth an ADR rather than a note buried in one entry; recorded here because the convention
+> was adopted to unblock this PR.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/build.py --target-dir <workspace-root>` · the workflow-scripts install
+  phase in `scripts/build_phases.py` · the single shared output root
+  `/home/henzeh/projects/leafcutter/.leafcutter/`
+
+**Symptom.** Caught during a pre-flight parity check before launching a fast-lane run.
+The deployed `.leafcutter/workflows/fast-lane-ship.js` had an **mtime of 22:15 today** —
+newer than every source file — while its **content was seven days old**. It predated both
+PR #485 (2026-08-18) and PR #510 (2026-08-24):
+
+```text
+grep -c "exclude-structural-parent|Phase 4.6 — Changelog|
+         fastlane-context-bundle|fastlane-review"  ->  0
+```
+
+Zero occurrences of all four markers. No review phase, no changelog phase, no context
+bundle, no `--exclude-structural-parent`.
+
+It was not one file. A substitution-neutral comparison — building current `origin/main` to a
+scratch target and diffing that against the deployed tree, so `{{config.output_root}}`
+expansion could not be mistaken for drift — found **six of nine workflows regressed,
+4,114 drifted lines**:
+
+| workflow | drifted lines |
+|---|---|
+| `build-feature.js` | 1631 |
+| `build-ticket.js` | 1110 |
+| `quick-fix.js` | 781 |
+| `fast-lane-ship.js` | 467 |
+| `plan-feature.js` | 64 |
+| `finalize-feature.js` | 61 |
+
+**Root cause — a mutable shared surface with many writers and no ownership.**
+`build.py --target-dir` is last-writer-wins: it compares deployed content against *its own*
+templates and rewrites whatever differs, in either direction. It has no notion of which
+revision the deployed tree came from, so it cannot tell "this file is older than mine" from
+"this file is newer than mine" — it only sees "different", and makes it match. A build run
+from a worktree behind `origin/main` therefore *downgrades* the shared surface for every
+worktree pointing at it.
+
+**Correction, 2026-08-26 — the first draft of this entry said "58 worktrees, all resolving
+`.leafcutter` to the same workspace-root directory". That is false, and the entry contradicted
+itself three paragraphs later.** Measured:
+
+Resolving each worktree's `.leafcutter` with `readlink -f` rather than reading the link text:
+
+```text
+symlink, resolving to leafcutter/.leafcutter   ->  ~20   (one shared inode)
+private real directory                         ->  ~47
+no .leafcutter at all                          ->    5
+```
+
+A few of the symlinks are transient, created by one session on 2026-08-26 and pointing at a
+scratch build under `/tmp`. Absolute counts drift by the hour as worktrees come and go — two
+probes minutes apart returned 72 and 73 — so **treat the shape as the finding and re-measure
+the numbers before relying on them**.
+
+The distribution matters more than the total:
+
+- **The symlinked population really does share one root.** `leafcutter-ai/.leafcutter` is
+  itself a symlink to `leafcutter/.leafcutter`, so link text that appears to name two roots
+  resolves to a single inode. "Rebuild the shared tree" is unambiguous and reaches all of them.
+- **The larger group (~47) are private real directories**, not shares. Those cannot be
+  corrected by any rebuild of a shared root; each holds whatever the build wrote when that
+  worktree was created. That is KI-BP-004, and it is the *more common* case rather than the
+  exception this entry originally implied — though "frozen indefinitely" overstates it for the
+  roughly one-third created within the last two days.
+- **Five have no `.leafcutter` at all** — including `deploy-main2`, which this entry names
+  further down as a plausible overwrite source. A worktree with no deployed tree cannot have
+  written one, which weakens that particular attribution.
+
+So a remedy aimed at the shared root fixes the shared population and silently misses the
+private one. The collage claim below is unaffected — it concerns what happens *within* the
+shared root, and was verified directly against it.
+
+**How the error happened — twice, which is the instructive part.** The "58" came from a
+`git worktree list` count, and "all resolving to the same directory" was assumed rather than
+measured, while the very next section of this entry described a worktree with a private frozen
+copy the author had found by hand. A counter-example sat three paragraphs from a claim it
+falsifies and neither was checked against the other.
+
+**The first correction then introduced a second false claim, in the same shape.** It reported
+"not one shared root but **two**", derived from counting the *raw link text* of each symlink —
+which really does split into two spellings. One `readlink -f` shows both resolve to a single
+inode, because `leafcutter-ai/.leafcutter` is itself a symlink to `leafcutter/.leafcutter`.
+The correction fixed the magnitude and broke the mechanism, and it argued the remedy was
+harder than it is.
+
+Both errors are the same move: **a property established on part of a set, asserted of the
+whole**, where the discriminating command is about one line long. Worth stating plainly in an
+entry whose subject is deployed trees that are not what they appear to be — the register is
+not exempt from the failure it documents, and this one has now demonstrated that twice.
+
+The install accounting confirms the write happened rather than being skipped. Today's
+corrective build reported `6 installed (3 unchanged)` — exactly matching the observed mtime
+split, where the same six carried 22:15 stamps and `build-epic.js`, `create-ticket.js` and
+`fast-lane-build.js` kept stamps from July and August 18. The phase writes only files whose
+content differs, so the six that were stale are precisely the six some earlier build wrote.
+
+**It is not staleness. It is a collage — and that is the finding.** The first pass through
+this called the deployed tree "seven days old", which is wrong in a way worth correcting,
+because a coherent older revision is something you can reason about and this is not that.
+Rebuilding `origin/main` to a scratch target and diffing the whole `commit_guardian/`
+directory against the deployed one shows the deployed tree holds **more** files than
+`origin/main`, not fewer:
+
+```text
+Only in <deployed>: check_presence_only_assertions.py   _presence_only_scanner.py
+Only in <deployed>: check_identifier_uniqueness.py      _uniqueness_scanners.py
+Only in <deployed>: check_outcome.py                    check_hook_trigger_reachability.py
+Only in <deployed>: _work_items_scanner.py              repair_work_item_duplicates.py   (+6 more)
+```
+
+None of those exist on any merged branch. They come from unmerged feature worktrees
+(`EPIC-BuildPipelinePhantomRemediation`, `epic/ge122-registration`) that ran a build at some
+point. So at the same instant the deployed tree was **behind** `origin/main` on six workflows
+and **ahead** of it on a dozen guardian modules — while also *missing* content those same
+guardian files should have (see below).
+
+The right mental model is not "the deployed tree is at revision X". It is: **each file is at
+whatever revision the last worktree to write that file happened to be at.** There is no X.
+Anything that reasons about the deployed tree as a version — a drift check, a manifest, a
+human — is reasoning about something that does not exist.
+
+**The same build left a guardian module missing a rule its own source has.** After the
+corrective build, `_ac_schema_validators.py` in the deployed tree had **0** occurrences of
+`declares_side_effect`, against **12** in both the template and a scratch build from the same
+source in the same run:
+
+```text
+template                         12
+scratch target (fresh dir)       12
+workspace root (existing tree)    0
+```
+
+One `build.py` invocation, one source, two targets, different results — so writing into an
+existing deployment does not converge it on the source the way writing into an empty one
+does. The consequence was immediate and load-bearing: `check_ac_schema` ran locally over 16
+staged AC records and exited **0**, while calling `validate_declares_side_effect` directly
+against the same records returned real errors on two of them. CI, which builds fresh, would
+have failed the required `AC store valid` check on a change that passed every local gate.
+
+That run also printed `WARNING: config/ac_store_schema.json not found at
+/home/henzeh/projects/leafcutter; falling back to manual field validation` — the hook had
+resolved its root to the workspace root rather than the worktree being committed, and
+degraded to a weaker check rather than refusing. Exit 0 from a gate that never saw the files
+it was asked about.
+
+**This is not KI-BP-008, though the symptom is identical.** That entry's cause is the
+version gate *refusing* to install (`return 0` on a parsed-and-too-old `claude --version`).
+Here the gate ran its documented **fail-open** path — `[WARNING] Claude Code version
+unknown. Installing workflow scripts (fail-open).` — and the install proceeded and wrote
+stale bytes. KI-BP-008 is "the phase declined to run"; this is "the phase ran, from the
+wrong source". Its occurrence count is deliberately **not** incremented, because the two
+have different fixes: a skipped-phase alarm would not have fired on this event.
+
+Worth recording that KI-BP-008's own fix direction already anticipates this case — *"record
+the deployed workflow's source revision … so a stale deployed file is reported as drift
+regardless of why it was skipped"*. A source-revision stamp is the one fix that covers both.
+
+**Consequence, had the pre-flight check not run.** The fast-lane launch that prompted this
+would have executed the pre-#485 lane, which has **no changelog phase**. Its PR would then
+have failed the required `Changelog entry present` CI check — the exact defect #485 was written
+to fix, reappearing not through a regression in the source but through the deployment layer
+serving an older copy of the fix. It would also have run without
+`--exclude-structural-parent` (#510), resolving a larger build set than the operator aimed
+at, and without the pr-reviewer gate — committing unreviewed. Three separate protections,
+all present in `main`, all absent at the point of use.
+
+**Why high.** The failure is invisible from every angle an operator would normally check.
+The source tree is correct. `git status` is clean. The build reports success. The deployed
+file's mtime is *newer* than the source, so every freshness heuristic based on timestamps
+reports it as current — the one signal an operator would trust is actively inverted. And
+because the surface is shared, a worktree that never runs a build at all still inherits
+another worktree's regression.
+
+The collage shape makes it worse than plain staleness in one specific way: a *missing* rule
+and an *extra* module are indistinguishable from a correct tree by inspection. A guardian
+directory holding twelve modules that main does not have looks like a tree that is ahead, not
+one that is broken — so the natural reading of the evidence is the reassuring one.
+
+**A second, independent copy problem sits underneath it.** Not every worktree even shares the
+surface. `worktrees/ac-pipeline-work/.leafcutter` is a **real directory dated 2026-08-18**,
+not a symlink — a frozen private copy that the workspace-root rebuild cannot reach. So the
+population splits into worktrees that share one incoherent tree and worktrees pinned to a
+private snapshot of an arbitrary past build, with nothing distinguishing the two from inside.
+That is KI-BP-004 observed live, and it means "rebuild and re-run" is not a reliable remedy:
+it fixes the shared tree and silently misses the frozen ones.
+
+**Fix direction.** Stamp provenance and check it. Record the source revision alongside each
+deployed artifact (the build manifest already tracks output mappings) and have `build.py`
+refuse — or at minimum loudly report — a write that would replace an artifact built from a
+descendant commit with one built from an ancestor. That single change turns this from silent
+to blocking, and covers KI-BP-008's skip case in the same mechanism.
+
+Two cheaper mitigations worth having regardless: (a) a pre-flight parity check in the
+fast-lane and build-feature entry points, comparing deployed workflow content against the
+invoking worktree's templates before dispatching anything — the check that caught this,
+promoted from ad-hoc to automatic; (b) stop deploying from arbitrary worktrees, or give each
+worktree its own output root so the surface stops being shared. Note `deploy-main2` is
+pinned detached at `93dfba23` (2026-08-17), a commit predating all four missing markers, and
+is a plausible source for this particular overwrite — but the mechanism does not depend on
+which worktree it was, and naming a culprit is not the fix.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2 (the deployed layout differs
+from the source you are reading), in its stale form — here reached by an install that ran
+successfully rather than one that was skipped.
+
+**Related.** KI-BP-018 — a different defect with the same consequence, and the two should be
+read together. That entry is about what the build *never verifies*: no phase can fail the
+build, the deploy set is hand-listed in ~26 places, and nothing checks the deployed tree is
+complete. This entry is about what the build *overwrites*: many worktrees write a shared output
+root last-writer-wins. Between them the deployed tree cannot be trusted to correspond to any
+revision — 018 explains why a missing file is never noticed, 021 explains why a present file
+may be from anywhere. The fixes are complementary: BP-900g-8/9 make the deploy set derived and
+fail-closed; a source-revision stamp makes each deployed artifact's provenance checkable.
+Neither alone gives you a tree you can name a commit for.
+
+Also KI-BP-008 (same symptom, skip-side cause). KI-BP-004 (a worktree's deployed hooks frozen
+at build time — the same shared-surface staleness for hooks rather than workflows).
+KI-BP-011 (`.build_manifest.json` written to the package that ran the build rather than the
+target it describes — which is precisely why the deployed tree carries no usable provenance
+today).
+
+**A dangling id, noted in passing.** Earlier drafts of this entry cited **`KI-BO-001`** for the
+changelog-presence gate. That id has **no definition anywhere in the registers** — it is cited
+seven times across the repo, including in `fast-lane-ship.js`'s own source comments and in two
+other register entries, and defined zero times. The citations here have been replaced with
+plain description. Whoever owns `build-orchestration.md` should either write the entry or
+retire the id; a reference that resolves to nothing is indistinguishable from one whose target
+was deleted, and readers cannot tell which they are looking at.
+
+---
+
+**Independently rediscovered, 2026-08-26 (EPIC-BuildPipelinePhantomRemediation).** A second
+session hit the same mechanism from the drift-gate side and authored a duplicate entry as
+`KI-BP-20260826-1340`, nine minutes after this one and — independently — with the same
+timestamped-id convention. That duplicate is withdrawn in favour of this entry; its distinct
+evidence is folded in below rather than filed twice. Two sessions converging on the same
+hazard and the same fix for ids, in the same hour, without either knowing of the other, is
+itself the strongest available argument that the convention above was the right call.
+
+Five further observations, all from the drift-gate side, all cleared by a single rebuild from
+the correct worktree:
+
+1. `check-output-drift` reported `drifted=27`. Twenty-six were files the branch never touched —
+   `git diff origin/main...HEAD` showed no change to `templates/agents/adr-author.md` or the
+   other nine agent templates flagged.
+2. Later in the same session the same gate reported `drifted=55`, again entirely cleared by a
+   rebuild.
+3. Three failures in `unit_tests/commit_guardian/test_ge_120_doc_types_deployed_resolution.py`,
+   which reads the shared tree. Its `doc_type_validators.py` had been rewritten while the
+   `doc_types.json` beside it was a week older — the tree was internally inconsistent, mixing
+   two builds. They passed again later with no code change.
+4. `unit_tests/commit_guardian/test_bp_100k_4.py`'s real-registry test flipped red three
+   separate times while the source registry held the fix throughout, each time because a build
+   from the main checkout redeployed main's pre-fix `commit_guardian.json` over it. Fixed by
+   pointing the test at the *source* registry via `HOOK_TEST_CONFIG` — a test that asserts a
+   property of this repository must read the version-controlled artifact, not a build output of
+   unknown provenance.
+5. Seventeen orphaned files (12 of them `.py` under `scripts/commit_guardian/`) sat in the
+   shared tree with no template in any worktree and no git history in any commit — another
+   session's uncommitted work, leaked in and reported as coverage gaps against an unrelated
+   branch.
+
+**Beyond the deploy tree: any shared mutable state here has the same property.** On the same
+day a concurrent session removed an *active* worktree mid-drive, snapshotting first as
+`8cd1e3c0` (`WIP SNAPSHOT ... not for merge`, author `manual`, `git add -A --no-verify`).
+Nothing was lost, but a foreign commit appeared on the branch and one subagent's edits were
+silently absent afterwards. Separately, an uncommitted known-issues entry in the main checkout
+was overwritten by `4c47882a` within the hour. The deploy tree, the main checkout's working
+tree, and a worktree's very existence are all writable by a session that does not know you
+exist — so treat an uncommitted edit anywhere outside your own worktree as volatile, and commit
+register entries immediately rather than leaving them staged.
+
+---
+
+### KI-BP-20260826-worktree-hooks-only-on-one-path — A worktree made with plain `git worktree add` has no hooks, and nothing at commit time says so
+
+> **First entry using the date-and-slug id form.** See "Adding an issue" at the top of this
+> file, and KI-BO-024 for why the sequential form was abandoned for new entries.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 in one session (2026-08-26), all in the same session by the same operator
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/setup_ticket_worktree.py` — `_establish_pre_commit_config`
+  (~:585-670) and the AC-5 fail-fast probe at `~:864-872`. Also `CLAUDE.md` → "Worktree
+  pre-commit config (MANDATORY for worktree-based drives)".
+
+**The provisioning code is correct. That is the point of this entry.**
+`_establish_pre_commit_config` is well built: no-op if already present, symlink `.leafcutter`
+first, fall back to copying `.pre-commit-config.yaml` on filesystems where `os.symlink`
+raises, warn and continue if neither source exists — and then a fail-fast probe converts that
+last warn-and-continue into a hard `BootstrapError`. Nothing below is a criticism of it.
+
+The defect is that **this is the only path that runs it.** `git worktree add` is the obvious
+way to make a worktree, it is what the git documentation teaches, and it performs none of
+this. A worktree created that way has no `.pre-commit-config.yaml`, so `git commit` runs with
+`PRE_COMMIT_ALLOW_NO_CONFIG=1` and **every package hook is skipped in silence**.
+
+**Evidence — three for three, in one session.** An operator created three worktrees with
+`git worktree add` (`po-edit`, `ac-supervisor`, `red-baseline`). All three lacked
+`.pre-commit-config.yaml`. This was noticed only because one commit happened to refuse
+outright; the other two would have committed clean with no hooks at all.
+
+The cost is not hypothetical. Once the config was in place, the AC guards on ONE of those
+branches caught three real defects that would otherwise have merged:
+
+| guard | what it caught |
+|---|---|
+| `check-ac-governance` | a new AC file with no `origin_agent` |
+| `check-ac-parent-covered-by` | **8** missing L2→L3 parent back-links |
+| `check-ac-schema` | a `declares_side_effect` mismatch |
+
+Fifty-one new AC records were about to be committed with none of that checked.
+
+**A second, separable defect: the probe's success condition is an OR, and it is wrong.**
+
+```python
+if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
+    raise BootstrapError.missing_config(config_path, build_exc)
+```
+
+The comment above it states the intent plainly: *"a `.leafcutter` symlink alone is a valid
+established state."* **It is not.** `pre-commit` looks for `.pre-commit-config.yaml` at the
+repository root and nothing else. Directly observed twice this session: with the
+`.leafcutter` symlink present and correct, `git commit` still returned
+
+```
+No .pre-commit-config.yaml file was found
+- To temporarily silence this, run `PRE_COMMIT_ALLOW_NO_CONFIG=1 git ...`
+```
+
+and only began running hooks once the config file itself was copied in. In this workspace
+`/home/henzeh/projects/leafcutter/.leafcutter/.pre-commit-config.yaml` does not exist, so the
+symlink cannot be supplying it. So the probe passes a worktree in which hooks are entirely
+disabled — a fail-open in the guard written specifically to prevent a fail-open. Note that
+`CLAUDE.md`'s documented check has the same shape (`ls ... .pre-commit-config.yaml || ls
+... .leafcutter`) and will likewise report a healthy worktree that has no hooks.
+
+**Why the silence is the severity.** A skipped hook and a passing hook produce identical
+output: nothing. There is no line in the commit output saying "0 hooks ran". The operator
+learns about it at merge time, or never. KI-BO-027 records an epic worktree that *did* have
+both markers, so this is inconsistent rather than uniformly broken, which is worse — the
+condition cannot be inferred from experience.
+
+**Fix direction.**
+
+1. **Detect at commit time, not creation time.** Provisioning at creation only helps
+   worktrees created the blessed way. A guard that notices at commit — "this repository has
+   `.leafcutter/` but this worktree has no `.pre-commit-config.yaml`" — covers every creation
+   path including ones that do not exist yet. This is the highest-value half.
+2. **Fix the probe's OR to require `.pre-commit-config.yaml` specifically**, since that is
+   the file `pre-commit` actually reads, and correct the comment that asserts otherwise.
+   Correct `CLAUDE.md`'s check in the same change.
+3. Optionally hook `git worktree add` itself, or make the documentation lead with
+   `setup_ticket_worktree.py create-only` rather than presenting the raw git command as
+   equivalent.
+
+Do **not** fix this by adding a manual step to a checklist. There already is one — in
+`CLAUDE.md`, marked MANDATORY, with both fix recipes — and it was missed three times in one
+session by an operator who had read it.
+
+**Pattern:** a correct guard reachable from exactly one entry point, protecting against a
+condition whose only symptom is silence.

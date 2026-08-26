@@ -1,0 +1,83 @@
+id: BO-3100e-3
+title: "Declaring that a step produces nothing observable is deliberate, reasoned and visible, and never what silence means"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose declaration says nothing at all about the result it produces,
+  When the step ends and its completion is judged,
+  Then it is not counted as done,
+    And the build reports that the step declares no result, naming the step,
+  So an omission is never read as a step that was never expected to produce
+    anything.
+
+  Given a step that explicitly declares it produces nothing observable and states
+    the reason,
+    And it ends having produced nothing,
+  When its completion is judged,
+  Then it is counted as done,
+    And the build's record of the run names that step as one that passed on a
+      declaration of no observable result, together with its stated reason.
+
+  Given a build in which several steps declare that they produce nothing
+    observable,
+  When the build's record of the run is read,
+  Then it states how many steps passed on such a declaration and names each of
+    them,
+  So a build in which most steps declare nothing is immediately visible as such,
+    rather than reading identically to one in which every step delivered.
+
+  Given a step whose declaration previously named a result and now declares that it
+    produces nothing observable,
+  When the build is assembled,
+  Then the change is surfaced as a reduction in what the step owes, naming the
+    result no longer promised,
+  So a step cannot be quietly relieved of its obligation in order to get past this
+    judgement.
+depends_on:
+  - BO-3100e
+  - BO-3100e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — the failure being fixed is a loud blocker becoming a silent gap; a step declaring nothing to get past this check performs that conversion by hand."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100b-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The generic-emptiness counterpart: a step may pass with no change only on its own declared no-op, and nothing else confers one. This record governs the declaration of the step's OWN expected result, and adds the visibility and reduction clauses that record does not carry."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE NEGATIVE CLAUSE, and BO-3100e says it is binding: nothing here may be
+  satisfied by loosening what a step owes. Three defences, one per scenario after
+  the first — an omission fails rather than passes, every nothing-declaration is
+  counted and named so the rule cannot mark nothing while appearing to mark
+  everything, and a declaration downgraded to nothing is surfaced as the reduction
+  it is.
+
+  BO-2900g-2 records why the third scenario is not optional: a rule that marks
+  everything is indistinguishable from one that marks nothing, one gate later. Its
+  own finding was a declaration set on 0 of 2,888 records — a correct mechanism
+  firing on nothing, which is exactly what the count in that scenario would expose.
+
+  BOUNDARY vs BO-3100b-3: that record asks whether a step may legitimately change
+  nothing in the project. This one asks what a step declares its own result to be.
+  A step can legitimately change nothing and still owe a specific observable result,
+  and a step can change a great deal and owe none.

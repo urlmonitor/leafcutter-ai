@@ -38,6 +38,18 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Why build output is regenerated and why the loss is correct even though it must be announced."
+  - path: scripts/build.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE. The installer entry point, and the process whose stdout is 'the installer's own output for that run'. Holds one of the four compare-before-write branches, whose differs-from-disk case is the moment the announcement describes."
+  - path: scripts/build_phases.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE, AND THE LOAD-BEARING ONE. Three further compare-before-write branches live here, including the workflow-script phase's own inline hash comparison, which is the path the route's deployed copy takes and which does not route through the shared helper."
+  - path: unit_tests/build_guards/test_acd_2100d_2_i.py
+    relationship: creates
+    status: planned
+    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below; the generated ticket names this exact path."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -48,6 +60,9 @@ it_requirements:
   - "The statement must appear in the installer's own output for that run, on a stream an operator running the installer normally sees -- not only in a log file that has to be sought out."
   - "Must satisfy the repository error-handling policy: reading the pre-install contents is external I/O and a failure to read must not silently suppress the statement."
   - "Must not measurably slow a clean install -- the common case is that nothing diverged."
+  - "THE INSTALLER HAS FOUR SEPARATE COMPARE-BEFORE-WRITE BRANCHES AND THE ANNOUNCEMENT MUST FIRE FROM EVERY ONE OF THEM. They are write_file in scripts/build.py (text, equality compare); _write in scripts/build_phases.py (text, equality compare); _files_content_identical in scripts/build_phases.py, used ahead of shutil.copy2 at roughly fourteen call sites (binary, SHA-256); and the workflow-script phase in scripts/build_phases.py, which performs its own inline SHA-256 comparison and does NOT route through _files_content_identical. That fourth branch is load-bearing for this epic: it is the path the route's own deployed copy takes, so an implementation that instruments only the shared text helper is silent for exactly the file the epic is about while passing any test written against the text path."
+  - "CONSUME ACD-2100d-2's DETERMINATION, DO NOT AUTHOR ONE, AND DO NOT EDIT THE FILES THAT COMPUTE IT. The installer-derived mapping and the per-file divergence verdict are ACD-2100d-2's deliverable and arrive here through the expects_from contract. This record's surface is the write paths where the announcement is emitted; the determination's own surface belongs to the parent and is deliberately absent from this record's files_touched. If implementing this reveals that the determination needs to change, that is a change to ACD-2100d-2, not an extension of this record's scope."
+  - "A COMPARE-BEFORE-WRITE BRANCH ALONE CANNOT SATISFY THE THIRD THEN CLAUSE, WHICH IS WHY THE SHARED DETERMINATION IS NOT OPTIONAL. Each branch knows only that what is on disk differs from what is about to be written -- which is equally true after an ordinary source change with no local edit at all. Announcing on that signal alone would fire on every legitimate template change and would be filtered within a week, which is the failure the second requirement above forbids. The parent's determination is what distinguishes the two cases."
 test_spec:
   - name: test_install_announces_a_locally_changed_generated_file_by_name
     target_dir: unit_tests/build_guards/
@@ -97,13 +112,14 @@ test_rationale: >-
 delivers_to: null
 expects_from:
   - ac_id: ACD-2100d-2
-    contract: "An installer-derived source-to-installed mapping plus a per-file divergence determination -- the same computation, so the delivery check and the install-time announcement cannot disagree about which files diverged."
+    contract: "An installer-derived source-to-installed mapping plus a per-file divergence determination -- the same computation, so the delivery check and the install-time announcement cannot disagree about which files diverged. Consumed as a callable determination; this record does not modify the files that compute it."
 origin_agent: business-analyst
 created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/21_TICKET-20260826-ACD-2100d-2-i.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
@@ -127,3 +143,64 @@ notes: |
   it is the reason this record has an expects_from edge at all rather than standing
   alone. Its depends_on already carries ACD-2100d-2, so the edge is visible to the
   build sequencer.
+
+  IT PO ENRICHMENT -- 2026-08-26 (files_touched backfill).
+
+  WHY THIS RECORD PRODUCED AN EMPTY files_touched. generate_ticket_from_ac.py derives
+  the ticket surface as the union of path tokens found in it_requirements prose that
+  exist on disk, plus doc_links whose relationship is one of constrains / creates /
+  implements / modifies / specifies. Every doc_link here was "describes" and no
+  it_requirement named a path, so the union was empty. Fixed at the cause below, so a
+  regeneration reproduces the same three paths.
+
+  NARROWED ON REVIEW, SAME DAY. My first pass listed four paths and included
+  build_helpers.py, on the reasoning that the divergence determination lives there and
+  this record depends on it. That was wrong, and the coordinator was right to push back.
+  A dependency is not a surface. The determination is ACD-2100d-2's deliverable and
+  reaches this record through the expects_from contract; listing the file here would have
+  given two tickets authority over one file for two different reasons, which is exactly
+  the ambiguity files_touched exists to remove. The boundary rule applied: THE RECORD
+  THAT AUTHORS A SHARED ARTIFACT LISTS IT; THE RECORD THAT CONSUMES IT DECLARES THE
+  DEPENDENCY IN expects_from AND DOES NOT LIST THE FILE. Under that rule the two records
+  now have zero overlap.
+
+  THE THREE PATHS, AND WHY EACH ONE IS THERE.
+
+  scripts/build.py -- the installer entry point and the owner of the process whose stdout
+  the criteria call "its output for that run". Its write_file helper carries one of the
+  four compare-before-write branches; the branch that decides the on-disk content differs
+  from what is about to be written is exactly the moment the announcement describes.
+
+  scripts/build_phases.py -- three more of those branches, and the reason this record is
+  worth more care than its S sizing suggests. Verified on 2026-08-26: _write does a text
+  equality compare, _files_content_identical does a SHA-256 compare ahead of copy2 at
+  roughly fourteen call sites, and the workflow-script phase does its own inline SHA-256
+  compare that never calls _files_content_identical. That last phase is the one that
+  installs the route itself. An implementation that instruments only the obvious shared
+  text helper would therefore be silent for precisely the file this whole epic is about,
+  and every test written against the text path would still pass. This is the
+  enforce-on-the-gate-that-actually-runs shape; naming all four branches in the
+  requirements is what keeps a coder from shipping a partial no-op.
+
+  unit_tests/build_guards/test_acd_2100d_2_i.py -- the four descriptors. target_dir is
+  the build_guards package on every one, and the generator already names this exact path
+  in the ticket's Test Requirements block.
+
+  PATHS CONSIDERED AND REJECTED.
+
+  build_helpers.py -- rejected on review; see the narrowing note above. It is where
+  ACD-2100d-2's determination is computed, and it is that record's surface.
+
+  check_output_drift.py under the commit-guardian tree -- rejected for the same reason. It
+  is the delivery check, which is the parent's reporting side. This record is the
+  installer's announcement at write time.
+
+  The generated build manifest -- rejected. It is an artifact the installer writes, not a
+  file anyone edits.
+
+  A SECOND-ORDER RISK WORTH FLAGGING TO WHOEVER IMPLEMENTS THIS. The announcement fires
+  from inside the installer's write path, and the tests run the real installer as a
+  subprocess against a temporary target. Take care that the announcement cannot fire for
+  the manifest file the installer writes about itself, or the exactly-once assertion in
+  the boundary descriptor becomes order-dependent.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

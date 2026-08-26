@@ -1,0 +1,74 @@
+id: BO-3600c-3
+title: "The check states which kinds of staleness it looks for, so a clean entry is never read as a true one"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fault entry whose headline makes a claim about how the system behaves —
+    a claim no lookup can settle — and whose every structured reference resolves
+    correctly,
+  When the register is checked,
+  Then the entry is not flagged,
+    And the entry is not reported as verified, checked or up to date.
+
+  Given any run of the check,
+  When its output is read,
+  Then it states which kinds of staleness it looked for,
+    And it states which kinds it does not look for, naming claims about behaviour as
+      one of them,
+  So a reader knows what a clean result covers before relying on it.
+
+  Given a run in which no entry was flagged,
+  When the output is read,
+  Then it states how many entries it examined and how many references it resolved,
+    And a run that examined no entries is distinguishable from a run that examined
+      all of them and found nothing.
+
+  Given the kinds of staleness the check does look for,
+  When each is compared against what the check actually decides,
+  Then every kind it claims to look for is one it decides,
+    And no kind it decides is missing from the claim,
+  So the stated scope cannot drift from the implemented scope in either direction.
+depends_on:
+  - BO-3600c
+  - BO-3600c-1
+  - BO-3600c-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028's correction list contains five instances of three different kinds. KI-BO-013's overstated headline is the one no lookup can settle; KI-BO-011's stale evidence line and KI-BO-022's shifted line numbers are the ones that can."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-3600c's notes require the BA to say plainly which kinds of staleness are out of
+  reach rather than writing a criterion only a reader could satisfy. This is that
+  instruction as behaviour: the scope is declared in the output, so the boundary
+  travels with every result instead of living in a design note nobody reads at
+  triage time.
+
+  The first scenario is the trap being closed. Of the five instances in KI-BO-028's
+  correction list, the overstated-headline one is genuinely undecidable; a check
+  that reported the containing entry as clean would give that entry a certificate it
+  has not earned, and the next reader would stop looking.
+
+  The third scenario is the same absence-is-not-evidence rule BO-3600e-1 applies to
+  scope: a run that examined nothing must not read like a run that found nothing.

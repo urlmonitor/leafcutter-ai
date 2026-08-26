@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -145,9 +145,14 @@ amended_by:
     entry: "Filled the three fields that made this AC non-ticket-generatable: assigned_agent (was null -> python-coder; the generator was emitting a literal '- [ ] None' Sign-offs line that the parity guard rejects), estimated_complexity (was null -> L: engine-faithful harness + re-authored journal module + finalize-feature.js across 3+ files, plus triage of every workflow test the harness change turns red), and it_requirements (was absent -> structured package-surface spec keyed on unit_tests/_workflow_engine_harness.py with n_location_rule 'all'). Added 8 test_spec descriptors — 5 executing the finalize workflow under the harness, 3 pinning the harness to the ADR-017 injected-globals contract — plus test_rationale explaining why the naive remedy is a false green today. Added delivers_to (the engine-faithful harness, consumed by test-writer). Promoted three doc_links from 'describes' to 'modifies' (test_bo_1000c_1a.py, finalize-feature.js, _workflow_engine_harness.py) so files_touched names the real edit surface instead of one incidental path. Recorded the harness-first ordering, the shared-test-infrastructure hazard flagged in the AC notes, and the Bundle B file-scope statement. criteria, readiness (draft), req_status and work_status left unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/workflows/test_bp_1100b_4.py
+  - unit_tests/workflows/test_bo_1000c_1a.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/test_bo_1000c_1a.py
+  - templates/workflows-js/finalize-feature.js
 change_target: code
 risk_surface: internal
 notes: |

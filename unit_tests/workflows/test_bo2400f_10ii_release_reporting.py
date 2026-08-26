@@ -25,6 +25,7 @@ at every one of the nine call sites.
 """
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -220,6 +221,69 @@ class TestSuccessfulReleaseNamed(_FixtureCase):
             f"payload does not name the released ids: {payload!r}",
         )
         self.assertTrue(payload.get("release_attempted") is True)
+
+    def test_a_successful_release_returned_as_a_json_STRING_is_read_as_success(self) -> None:
+        # covers: BO-2400f-10-ii
+        """A successful release whose reply arrives as a JSON *string* is read
+        as a success, not reported as a failure.
+
+        THIS IS THE SHAPE THE ENGINE ACTUALLY PRODUCES when a dispatch carries
+        no schema: agent() returns the agent's final text verbatim. Every other
+        test in this file stubs a dict, which the engine only ever produces for
+        a dispatch that declares one — so all of them passed while the real lane
+        reported every single release, successful or not, as failed.
+
+        Observed on run wf_3b98fa8a-241: the release genuinely worked and all
+        three criteria were todo on disk afterwards, while the terminal payload
+        said `release_attempted: false`, listed all three under
+        `unreleased_ac_ids`, and warned that a later run would be refused. An
+        operator following that message would have gone to unstick criteria that
+        were already free, and would have concluded the just-shipped release fix
+        did not work.
+        """
+        reply_as_text = json.dumps(_SUCCESSFUL_RELEASE)
+        self.assertIsInstance(reply_as_text, str)
+
+        result = self._run_with_release_reply(reply_as_text)
+        payload = result.result or {}
+
+        self.assertTrue(
+            payload.get("release_attempted") is True,
+            f"a string-shaped successful release must read as attempted: {payload!r}",
+        )
+        self.assertEqual(
+            sorted(payload.get("released_ac_ids") or []),
+            sorted(_SUCCESSFUL_RELEASE["released"]),
+            f"payload does not name the released ids: {payload!r}",
+        )
+        self.assertEqual(
+            payload.get("unreleased_ac_ids") or [],
+            [],
+            f"nothing was left behind, so unreleased_ac_ids must be empty: {payload!r}",
+        )
+        self.assertIsNone(
+            payload.get("release_error"),
+            f"a successful release must record no error: {payload!r}",
+        )
+
+    def test_a_non_json_release_reply_is_still_reported_as_not_released(self) -> None:
+        # covers: BO-2400f-10-ii
+        """Tolerating a JSON string must not become tolerating anything.
+
+        The string path exists so a real success is read as success — not so
+        that prose, an apology, or a truncated reply quietly counts as one. A
+        reply with no parseable object still takes the failure branch.
+        """
+        result = self._run_with_release_reply("I was unable to run that command.")
+        payload = result.result or {}
+        self.assertTrue(
+            payload.get("release_attempted") is False,
+            f"unparseable prose must not read as a release: {payload!r}",
+        )
+        self.assertTrue(
+            payload.get("unreleased_ac_ids"),
+            f"claimed ids must be reported as unreleased: {payload!r}",
+        )
 
     def test_the_released_and_refused_payloads_differ(self) -> None:
         # covers: BO-2400f-10-ii

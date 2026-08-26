@@ -389,11 +389,12 @@
                 "name": "Check Build Drift (leafcutter)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_build_drift.py",
                 "language": "system",
-                "files": "^leafcutter/templates/",
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "always_run": true,
+                "_comment": "BP-100k-4: was gated on files=^leafcutter/templates/, a CONSUMER-install-only prefix that never matches this package's own self-host layout (templates live at templates/ here) — the gate had never fired in this repository. This hook scans the whole tree by hash and never consults the staged file list (pass_filenames: false), so always_run: true (mirrors ensure-precommit-config) is the correct activation, not a files filter."
             },
             {
                 "id": "check-secrets",
@@ -536,7 +537,8 @@
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "_comment": "BP-100k-4 correction: the files filter is CORRECT, not dead — it matches zero tracked paths only because this package repo has no Docker infrastructure by design, which is a different condition from 'cannot ever match' (a consumer project with a real docker-compose.yml would trigger this normally). Restored the filter (an earlier round of this fix wrongly deleted it, which would have made the gate unconditional in every consumer install) and declared it EXEMPT-with-ground in hook_trigger_reachability_exemption_registry below instead."
             },
             {
                 "id": "check-agent-diagrams",
@@ -644,11 +646,12 @@
                 "name": "Check Paths JSON Integrity",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_paths_integrity.py",
                 "language": "system",
-                "files": "^leafcutter/config/paths\\.json$",
+                "files": "^(leafcutter-ai/)?config/paths\\.json$",
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "_comment": "BP-100k-4: was anchored to ^leafcutter/config/paths\\.json$ — the same consumer-install-only prefix defect as check-build-drift, and the prefix itself was wrong (the documented consumer clone directory is leafcutter-ai/, not leafcutter/ — see CLAUDE.md 'Repository Structure'). This package's own self-host layout tracks config/paths.json with no prefix at all, so the trigger never matched here. Corrected to the real consumer prefix and made it optional. Also declared EXEMPT-with-ground below: in a consumer install where leafcutter-ai/ is untracked/gitignored/a submodule, this path is never part of the consumer's own tracked tree even with the corrected prefix, so exemption is what keeps this from becoming a universal commit-blocker."
             },
             {
                 "id": "check-architecture-scaffolds",
@@ -656,11 +659,12 @@
                 "name": "Check Architecture Scaffold Integrity",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_architecture_scaffolds.py",
                 "language": "system",
-                "files": "^leafcutter/templates/docs/architecture/",
+                "files": "^(leafcutter-ai/)?templates/docs/architecture/",
                 "stages": [
                     "pre-commit"
                 ],
-                "pass_filenames": false
+                "pass_filenames": false,
+                "_comment": "BP-100k-4: was anchored to ^leafcutter/templates/docs/architecture/ — the same consumer-install-only prefix defect as check-build-drift, and the prefix itself was wrong (the documented consumer clone directory is leafcutter-ai/, not leafcutter/ — see CLAUDE.md 'Repository Structure'). This package's own self-host layout tracks templates/docs/architecture/ with no prefix at all, so the trigger never matched here. Corrected to the real consumer prefix and made it optional. Also declared EXEMPT-with-ground below: in a consumer install where leafcutter-ai/ is untracked/gitignored/a submodule, this path is never part of the consumer's own tracked tree even with the corrected prefix, so exemption is what keeps this from becoming a universal commit-blocker."
             },
             {
                 "id": "check-feedback-id",
@@ -680,12 +684,12 @@
                 "name": "Check Output Drift (leafcutter Direction B)",
                 "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_output_drift.py",
                 "language": "system",
-                "files": "^(\\.claude/agents/|\\.claude/skills/|\\.claude/commands/|\\.claude/hooks/|\\.claude/workflows/|\\.agents/rules/)",
                 "stages": [
                     "pre-commit"
                 ],
                 "pass_filenames": false,
-                "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). Fires when any .claude/ or .agents/ output directory files are staged."
+                "always_run": true,
+                "_comment": "Direction B drift guard: blocks direct edits to built output files. Companion to check-build-drift (Direction A). BP-100k-4: was gated on a files list of six .claude/*|.agents/rules/ prefixes; all six .claude/* prefixes are gitignored and .agents/rules/ does not exist at repo root, so the gate had never fired. This hook scans the whole tree and never consults the staged file list (pass_filenames: false), so always_run: true is the correct activation."
             },
             {
                 "id": "check-glossary-coverage",
@@ -789,6 +793,18 @@
                 ],
                 "pass_filenames": false,
                 "_comment": "EPIC-TDDWorkflowEnforcement/04: Blocks commits when test-weakening changes (test deletion, pytest.skip, pytest.mark.xfail, @unittest.skip, @unittest.expectedFailure) are staged concurrent with production code changes. Exits 0 when only test changes or only production changes are staged. See docs/how-to/writing-a-tdd-ticket.md."
+            },
+            {
+                "id": "check-presence-only-assertions",
+                "tier": "judgment",
+                "name": "Check Presence-Only Assertions (BP-1100b-5 Ratchet Guard)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_presence_only_assertions.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "EPIC-BuildPipelinePhantomRemediation/09 (BP-1100b-5): Blocks commits that add a NEW presence-only assertion (substring form or regex-declaration form) over a scanned-source file configured in presence_only_assertion_guard.scanned_source_globs. Reads staged hunks only (git diff --cached) — never a whole-file/whole-tree scan — so pre-existing violations do not block this hook's own introducing commit. A `# presence-only: <reason>` comment with a non-empty reason waives a specific assertion."
             },
             {
                 "id": "check-exception-handling",
@@ -1063,6 +1079,21 @@
                 "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
             },
             {
+                "id": "check-hook-trigger-reachability",
+                "tier": "judgment",
+                "name": "Check Hook Trigger Reachability (BP-100k-4)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_trigger_reachability.py",
+                "language": "system",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "always_run": true,
+                "script": "check_hook_trigger_reachability.py",
+                "description": "Registry-wide reachability verdict: reports and blocks on any hooks_manifest gate whose activation condition cannot match a path this repository tracks, or whose always_run gate also carries a files filter it never consults.",
+                "_comment": "BP-100k-4: the registry's own reachability check. Inspects the WHOLE hooks_manifest, never a staged file list, so it declares always_run: true with no files key (mirrors ensure-precommit-config) rather than carrying the very defect shape it exists to police. Fail-closed (BP-100k-4-i): an unreadable registry or an unobtainable tracked-path set is INDETERMINATE (exit 2), never a silent pass."
+            },
+            {
                 "id": "check-done-proof",
                 "tier": "judgment",
                 "name": "Check Done Proof (BO-2500b — covers-tag presence gate)",
@@ -1182,6 +1213,19 @@
         "compare_branch": "origin/main",
         "max_age_seconds": 3600
     },
+    "presence_only_assertion_guard": {
+        "_comment": "check_presence_only_assertions.py — BP-1100b-5 ratchet guard. Reads STAGED HUNKS ONLY (never a whole-file/whole-tree scan) so the 46 pre-existing presence-only violations in unit_tests/workflows/ and unit_tests/commit_guardian/ do not block this hook's own introducing commit. Rejects a newly added test assertion whose entire 'coverage' is a grep for a symbol's presence (substring form or regex-declaration form) over a file matched by scanned_source_globs. A `# presence-only: <reason>` comment (non-empty reason) directly above the assertion is the deliberate-acceptance waiver route. scanned_source_globs is DATA read from this config key — the hook must not carry its own copy.",
+        "enabled": true,
+        "_scanned_source_globs_comment": "All four globs the criteria name. The two scripts/** entries cover the DEPLOYED copies; omitting them meant a presence-only assertion over scripts/commit_guardian/*.py or scripts/workflows/*.js passed silently, which is most of the real surface a consumer install actually has.",
+        "scanned_source_globs": [
+            "templates/workflows-js/*.js",
+            "templates/scripts/commit_guardian/*.py",
+            "scripts/workflows/**/*.js",
+            "scripts/commit_guardian/**/*.py"
+        ],
+        "_removed_fixture_exempt_paths": "REMOVED. A `fixture_exempt_paths` key was added here so this guard would not block its own test file, justified on the grounds that a `# presence-only:` waiver placed inside a fixture would be consumed by the scanner under test. That justification does not hold: the scanner only ever receives the `diff` STRING argument, so a waiver comment in the test module's own Python source is invisible to it and works normally — verified. The exemption was therefore unnecessary, and it was strictly worse than the waiver it replaced: an exempt path skips scan_file_block entirely and emits NO output at all, whereas the waiver route prints the accepted exception and its reason. The AC requires accepted exceptions to be readable in one place precisely so they cannot become a silent suppression list. Use the waiver marker.",
+        "waiver_marker": "presence-only"
+    },
     "done_proof": {
         "_comment": "check_done_proof.py — Mechanical proof-of-done gate (BO-2500b). Pre-commit mode: static covers-tag presence check for staged done ACs (fast, no pytest). CI mode: full verify_done_eligible run over every done AC in the store (authoritative). Hook is bypassable via SKIP=check-done-proof or --no-verify; CI backstop (BO-2500b-1-i) then catches bypassed proofs.",
         "enabled": true
@@ -1207,5 +1251,151 @@
         },
         "excluded_scripts": [],
         "hook_script_patterns": ["check_*.py", "run_hook.py", "regenerate_*.py"]
-    }
+    },
+    "__drift_gate_exemption_registry_doc": [
+        "An exemption declares an artifact that sits inside a directory the",
+        "drift gates inspect but that the build DELIBERATELY does not manage —",
+        "a hand-maintained file with no build-produced counterpart. It is not a",
+        "way to silence a finding the gate got right.",
+        "",
+        "This registry ships to every consumer install via build.py. Only paths",
+        "that exist in EVERY install belong here. A path that exists on one",
+        "developer's disk — anything under an untracked or symlinked build",
+        "output directory — must never be listed: downstream projects would",
+        "inherit an exemption for a path they cannot have.",
+        "",
+        "It previously held four entries whose own ground text read",
+        "'Candidate for manual deletion' — orphaned deployed artifacts with no",
+        "template, i.e. real findings the gate had correctly surfaced and",
+        "which were then exempted rather than cleaned up. That converts a",
+        "one-time cleanup into a permanent blind spot: nothing would ever",
+        "notice a hand-edit to an exempted orphan again. All four were also",
+        "machine-local paths behind a symlink, so they were shipping one",
+        "developer's environment dirt into every downstream install.",
+        "",
+        "If you are about to add an entry, first check that the correct action",
+        "is not simply deleting the file.",
+        "",
+        "BP-100k-5-ii exception to the 'exists in every install' rule above:",
+        "the five .claude/-rooted entries below (CLAUDE.md, docs/vision.md,",
+        "docs/roadmap.json, docs/glossary.md, docs/glossary_blacklist.md) are",
+        "git-TRACKED, committed content specific to the leafcutter-ai package",
+        "repo's own self-hosted .claude/ mirror — not a machine-local build",
+        "output or symlink target, and not silencing a real orphan finding.",
+        "No current build phase writes a '.claude/'-rooted docs/vision/",
+        "roadmap/glossary output for ANY install (docs_root and its siblings",
+        "all default outside .claude/), so a downstream consumer without",
+        "these exact files simply never triggers these entries — inert, not",
+        "a blind spot. Each is a write-if-absent identity scaffold the",
+        "project is expected to own and hand-edit immediately after seeding",
+        "(vision.md/roadmap.json literally carry TODO markers demanding it),",
+        "so a pristine-render registration (see build_helpers.py's",
+        "_register_scaffold_if_unmodified) would only ever survive one commit",
+        "before flipping back into an unregistered gap — permanent exemption",
+        "is the correct instrument, not a registration bug to fix."
+    ],
+    "drift_gate_exemption_registry": [
+        {
+            "path": ".claude/CLAUDE.md",
+            "ground": "Write-if-absent scaffold assembled by TWO independent incremental phases (glossary-section injection + roadmap-phase sentinel injection) with no single template able to express its full expected content; the project is expected to hand-edit CLAUDE.md immediately after seeding, so its content is never build-determined."
+        },
+        {
+            "path": ".claude/docs/vision.md",
+            "ground": "Write-if-absent scaffold seeded with literal '<!-- QUESTION -->'/TODO markers demanding immediate human authorship of the project's purpose; the project is expected to replace its content right after seeding, so it is never build-determined content a hash can be pinned to."
+        },
+        {
+            "path": ".claude/docs/roadmap.json",
+            "ground": "Write-if-absent scaffold seeded with TODO placeholders (current phase, outcome, exit criteria) the project is expected to fill in immediately; content is human-owned from the moment it is created, not build-determined."
+        },
+        {
+            "path": ".claude/docs/glossary.md",
+            "ground": "Write-if-absent seed file the check-glossary-coverage hook and glossary-triage agent append project-specific terms to on an ongoing basis; content is expected to diverge from the seed template starting at the first commit, so it is never build-determined."
+        },
+        {
+            "path": ".claude/docs/glossary_blacklist.md",
+            "ground": "Write-if-absent seed file the glossary-triage agent appends rejected/false-positive terms to on an ongoing basis; content is expected to diverge from the seed template starting at the first commit, so it is never build-determined."
+        }
+    ],
+    "__hook_trigger_reachability_exemption_registry_doc": [
+        "Read by check_hook_trigger_reachability.py (BP-100k-4). An exemption",
+        "declares that a gate's 'files' trigger is CORRECTLY authored but its",
+        "match is context-dependent, in one of two ways:",
+        "",
+        "1. This specific checkout has no current instance of the file family",
+        "   it targets (check-infra-docs, check-mermaid-parent-link): a",
+        "   consumer project may have one even though this package repo",
+        "   currently does not.",
+        "2. The target is one of this package's OWN development-source files",
+        "   (config/*.json, templates/agents/*.md, templates/workflows-js/*.js,",
+        "   scripts/commit_guardian/*). These ARE reachable when committing to",
+        "   the package's own self-hosted checkout (git root == package root),",
+        "   but under the documented consumer deploy layout (README 'Add to",
+        "   .gitignore: .leafcutter/') they are realized only inside the",
+        "   vendored leafcutter-ai/ subtree or the gitignored .leafcutter/",
+        "   deploy mirror — never at a consumer's own tracked repo root, in",
+        "   ANY properly onboarded install. Verified empirically via a",
+        "   synthetic consumer-layout fixture (BP-100k-4-i blast-radius",
+        "   check) before adding each such entry.",
+        "",
+        "It is NOT a way to silence a trigger that names a location no layout",
+        "can ever produce — that is the UNREACHABLE case this registry does",
+        "not touch (the original check-build-drift / check-output-drift /",
+        "check-paths-integrity / check-architecture-scaffolds defect, where",
+        "the trigger named a location that was simply the WRONG prefix).",
+        "",
+        "Entries with no non-blank 'ground' are REJECTED and fall through to",
+        "UNREACHABLE, exactly as drift_gate_exemption_registry requires (BP-",
+        "100k-3, AC-5) — this registry reuses that same vocabulary rather",
+        "than inventing a third one.",
+        "",
+        "BP-100k-4 round-2 hardening: an entry whose 'id' is the literal",
+        "string '<unknown>' is ALSO REJECTED — that string is the DISPLAY",
+        "fallback for a hooks_manifest entry with no 'id' field, never a real",
+        "gate id, so it must never be usable as a lookup key (one such entry",
+        "would otherwise silence every id-less gate in the registry at",
+        "once). Separately, if two hooks_manifest entries ever share one",
+        "'id', that id is reported as a DUPLICATE-ID condition and is never",
+        "eligible for a shared exemption, even if one is genuinely grounded —",
+        "the ground given for one gate is not guaranteed to apply to the",
+        "other. Every id below must be unique among hooks_manifest.hooks and",
+        "must never be the literal '<unknown>'."
+    ],
+    "hook_trigger_reachability_exemption_registry": [
+        {
+            "id": "check-infra-docs",
+            "ground": "Targets docker-compose*.yml/.yaml, docker/Dockerfile.*, init-db.sh, and .env.example — infrastructure files a CONSUMER project may have. This package repository has no Docker infrastructure by design, so zero tracked matches here is expected, not a broken trigger."
+        },
+        {
+            "id": "check-paths-integrity",
+            "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
+        },
+        {
+            "id": "check-architecture-scaffolds",
+            "ground": "Targets templates/docs/architecture/, one of this package's own internal template trees. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?templates/docs/architecture/) is correct for both the self-hosted and the tracked-vendor layout."
+        },
+        {
+            "id": "check-mermaid-parent-link",
+            "ground": "Targets docs/architecture/*.md, a doc family a fresh project scaffold has not created yet (no ADRs or C4 diagrams written). Reachable once a project — package or consumer — actually documents architecture, exactly like check-infra-docs: zero tracked matches today, not a broken trigger."
+        },
+        {
+            "id": "check-agent-spawn-consistency",
+            "ground": "Targets config/agent_registry.json, this package's own registry source file. Verified via a synthetic consumer-layout fixture (BP-100k-4-i blast-radius check): per the documented deploy layout (README 'Add to .gitignore: .leafcutter/'), config/agent_registry.json is realized only inside the vendored leafcutter-ai/ subtree or the gitignored .leafcutter/ deploy mirror, never at a consumer's own tracked repo root, even in a properly onboarded install. Reachable in this package's own self-hosted checkout, where the git root IS the package root."
+        },
+        {
+            "id": "check-agent-verification-consistency",
+            "ground": "Targets templates/agents/*.md, this package's own agent-template source tree. Same consumer-layout finding as check-agent-spawn-consistency: never part of a consumer's own tracked repo root under the documented deploy layout, only reachable in this package's own self-hosted checkout."
+        },
+        {
+            "id": "check-doc-types-agents",
+            "ground": "Targets config/doc_types.json or config/agent_registry.json, this package's own registry source files. Same consumer-layout finding as check-agent-spawn-consistency: never part of a consumer's own tracked repo root under the documented deploy layout, only reachable in this package's own self-hosted checkout."
+        },
+        {
+            "id": "check-workflow-meta",
+            "ground": "Targets templates/workflows-js/*.js, this package's own workflow-source tree. Same consumer-layout finding as check-agent-spawn-consistency: never part of a consumer's own tracked repo root under the documented deploy layout, only reachable in this package's own self-hosted checkout."
+        },
+        {
+            "id": "check-hook-parity",
+            "ground": "Targets scripts/commit_guardian/, templates/scripts/commit_guardian/, and templates/commit-guardian/ — this package's own hook source/deploy trees. In a consumer install scripts/commit_guardian/ is a symlink into the gitignored .leafcutter/ deploy mirror (per the documented deploy layout), so no file under that prefix is ever directly tracked; only reachable in this package's own self-hosted checkout, where these ARE real, separately tracked directories."
+        }
+    ]
 }

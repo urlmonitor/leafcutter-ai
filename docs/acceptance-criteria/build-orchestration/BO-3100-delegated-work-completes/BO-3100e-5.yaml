@@ -1,0 +1,73 @@
+id: BO-3100e-5
+title: "A reference entry states how a step declares its expected result and what declaring nothing costs"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given someone adding a new step to a build,
+  When they read the reference entry for a step's expected result,
+  Then it states how a step declares the result it produces,
+    And it states what happens when a step declares no result at all,
+    And it states what a declaration of no observable result requires — that it is
+      explicit, carries a reason, and is counted and named in the build's record,
+    And it states the three outcomes of looking for a declared result: found, not
+      found, and could not be looked for.
+
+  Given the reference entry,
+  When a step is declared exactly as the entry describes and the build is run,
+  Then the step is judged as the entry says it will be,
+  So the entry is verified against the behaviour rather than against an intention.
+
+  Given the reference entry,
+  When a reader looks for the difference between this judgement and the judgement
+    that a step produced nothing at all,
+  Then the entry states the difference and gives the case that separates them: a
+    step that changed files in the project and still produced none of its own
+    declared result,
+  So the two judgements are not read as one, and neither is taken as coverage of
+    the other.
+depends_on:
+  - BO-3100e
+  - BO-3100e-2
+  - BO-3100e-3
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the reference entry lands."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The page that defines per-step dispatch and the completed-step record; the declaration this entry documents is an addition to that contract."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc half of BO-3100e's documentation_triggers.
+
+  This entry is load-bearing rather than decorative: BO-3100e-2 requires that a step
+  nobody enumerated is still checked, which only holds if whoever writes the next
+  step knows how to declare its result. An undocumented declaration format is a
+  guarantee that steps will arrive undeclared, and BO-3100e-3 then blocks them —
+  correct, but avoidably painful.
+
+  The second scenario is the anti-drift clause: the documented format is exercised
+  against a real build rather than asserted.
+
+  assigned_agent deliberately unset — the reference surface belongs to the IT
+  Product Owner's assignment pass.

@@ -1,0 +1,78 @@
+id: BO-3600e-5
+title: "A how-to walks someone through working the outstanding conflicts down"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given someone facing a list of outstanding conflicts,
+  When they follow the how-to for working them down,
+  Then it takes them from running the reconciliation, through reading one reported
+    conflict, to recording a verdict against it and seeing the outstanding count
+    fall.
+
+  Given the how-to,
+  When someone who has not worked on this before follows it end to end against the
+    real store,
+  Then each step produces the result the how-to says it will,
+    And they finish with one conflict decided and can see the decision recorded,
+  So the guide is verified by being followed rather than by being reviewed.
+
+  Given the how-to,
+  When a reader reaches the point of choosing between the verdicts,
+  Then it states how to tell the three resolutions apart, and states that leaving a
+    conflict not yet decided is a legitimate choice that keeps it outstanding,
+  So nobody records a resolution merely to clear a row.
+
+  Given the how-to,
+  When a reader looks for what to do when the reconciliation reports an incomplete
+    run,
+  Then it says to treat that as a failure to check rather than as a clean store,
+    and what to do about it,
+  So the guide does not teach the habit this goal exists to break.
+depends_on:
+  - BO-3600e
+  - BO-3600e-2
+  - BO-3600e-3
+  - BO-3600e-4
+doc_links:
+  - path: docs/how-to/
+    relationship: describes
+    status: exists
+    relevance: "Where the guide lands."
+  - path: docs/how-to/ac-traceability-store.md
+    relationship: modifies
+    status: exists
+    relevance: "The task-oriented guide for the requirement store; the burn-down guide must be reachable from it and must not contradict its account of how a record's state is changed."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-3600e's documentation_triggers: [how-to].
+
+  The burn-down is a human activity performed against a list, which is the one case
+  where a how-to is load-bearing rather than decorative: BO-3600e requires the
+  starting population to be worked through, and an undocumented procedure over a
+  large list is how a backlog becomes permanent.
+
+  The second scenario is the verification that matters and is deliberately harsh —
+  followed end to end, by someone new, against the real store, with a real decision
+  recorded at the end. A guide reviewed but never walked is the documentation
+  equivalent of a check that never runs.
+
+  assigned_agent deliberately unset — the how-to surface belongs to the IT Product
+  Owner's assignment pass.

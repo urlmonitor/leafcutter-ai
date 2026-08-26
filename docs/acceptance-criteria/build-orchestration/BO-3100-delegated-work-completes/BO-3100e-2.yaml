@@ -1,0 +1,82 @@
+id: BO-3100e-2
+title: "The expected result is taken from the step's own declaration, so a step nobody enumerated is checked like every other"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step newly added to a build, which no rule anywhere in the system names,
+    And it carries its own declaration of the result it produces,
+  When it ends having produced that result,
+  Then it is counted as done.
+
+  Given that same newly added step,
+  When it ends without that result having come into being,
+  Then it is not counted as done,
+    And the reason names the result its own declaration promised,
+  So a step added after the judgement was built is checked on arrival rather than
+    passing unexamined.
+
+  Given a build in which every step that ran carries a declaration,
+  When the build's record of the run is read,
+  Then the number of steps whose result was looked for equals the number of steps
+    that ran,
+    And no step is exempt from the check by virtue of not appearing in any list,
+  So the check cannot be satisfied for the steps somebody remembered while being
+    absent for the rest.
+
+  Given two steps that produce different results,
+  When each is judged,
+  Then each is judged against the result its own declaration names and not against
+    the other's,
+  So the judgement is specific to the step rather than a single condition applied
+    to all of them.
+depends_on:
+  - BO-3100e
+  - BO-3100e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — the entry's own fix direction names the pull-request case, and a checker holding that one case would leave every other step unchecked."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The precedent for a derived rule over every declaration rather than a test of the reported instance: writing that check as a rule found five agents where the report named one."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Where a step's declaration and its dispatch are defined — the surface the expectation must be a property of."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3100e-2-i
+implemented_by: []
+notes: |
+  DERIVE THE EXPECTATION, DO NOT ENUMERATE THE STEPS — BO-3100e's binding
+  instruction, and AR-200a-1's constraint 3 on evidence: the derived rule found five
+  violators where the incident named three. The first two scenarios are the test of
+  that instruction, because they use a step the system has never seen; a checker
+  with a hardcoded case per known step fails them.
+
+  The third scenario is the coverage clause, and it is the one that catches a
+  half-built implementation: a judgement that runs for two of a build's nine steps
+  is indistinguishable from one that runs for all nine unless the counts are
+  compared.
+
+  BP-600d-4 built this same observable check by hand into one workflow's close phase
+  for one lane. That is evidence the check is buildable and evidence that it does
+  not generalise — this record is the generalisation.

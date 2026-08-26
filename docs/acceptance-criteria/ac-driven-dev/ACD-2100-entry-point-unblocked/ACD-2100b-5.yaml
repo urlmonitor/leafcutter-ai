@@ -108,7 +108,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/12_TICKET-20260826-ACD-2100b-5.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -144,3 +145,4 @@ notes: |
   edge with no depends_on mirror would create a contract the build sequencer cannot see
   (KI-ACD-015, open) and that nothing enforces. The interactions are stated in
   it_requirements instead, where the coder will actually read them.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

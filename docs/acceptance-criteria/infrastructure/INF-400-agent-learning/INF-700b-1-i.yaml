@@ -1,0 +1,99 @@
+id: INF-700b-1-i
+components:
+  - infrastructure
+  - knowledge_system
+title: "An agent with nothing to record leaves no record, so silence in the record means silence in the learning"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-1.yaml"
+criteria: |
+  Given a phase agent finishes a piece of work and has learned nothing about
+    this project that a later agent would benefit from knowing,
+  When it executes the shared sign-off knowledge-capture step,
+  Then no knowledge record is produced for that run,
+  And in particular no record is produced whose learning text is empty,
+    whitespace-only, or a restatement of the run's descriptive fields with no
+    learning in it,
+  And the agent's sign-off completes and its primary output is returned
+    unchanged,
+  And a later count of captured learnings over a period containing only such
+    runs reports zero captured and zero failed.
+depends_on:
+  - INF-700b-1
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "INTERFACE CLARIFICATION, load-bearing for INF-700b-3. The prohibition in this AC is on the KNOWLEDGE record only. A run that reached the capture step and had nothing to record must still leave a durable capture-ATTEMPT record on the operational telemetry stream, with an outcome of 'nothing to record'. Without it, INF-700b-3's third case — 'no agent run reached the step at all' — is not derivable from any artefact, and a broken dispatch is indistinguishable from a quiet week. This does not contradict the criteria: an attempt record carries no learning and is never a knowledge record."
+  - "The emptiness test applied to `text` must be whitespace-normalised: absent, null, empty, or whitespace-only are all 'no learning'. It must additionally reject any value that is a template composed from the record's own descriptive fields (agent, component, destination, entry_kind, ticket) — a record that restates its own metadata is contentless however long the string is."
+  - "No default, fallback, placeholder or f-string substitution for `text` may exist anywhere on the emit path. This is the emitter-side twin of the substitution INF-700c-1 deletes on the writer side (harvest_learnings.py line 351); a duplicated default is a defect even when one of the two copies is later removed."
+  - "The agent's primary output and its sign-off must be byte-identical whether the no-learning branch or the record-produced branch was taken. The capture step must not add a sign-off comment, a status change, or a return-value field on the no-learning path."
+  - "Counting must not infer 'nothing to record' from the absence of any record at all. Zero-captured-and-zero-failed over a period is only assertable when attempt records exist for that period; a period with no attempt records at all is the distinct third case owned by INF-700b-3."
+test_spec:
+  - name: test_nothing_to_record_period_reports_zero_captured_and_zero_failed
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    covers:
+      - INF-700b-1-i
+      - INF-700b-3
+    description: "A period whose attempt records are all 'reached, nothing to record' reports zero captured and zero failed, and is not reported as the no-runs-reached case."
+  - name: test_no_learning_branch_emits_no_knowledge_record
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Driving the capture step's no-learning branch appends no knowledge_captured line to the emission sink, and the sink is byte-for-byte unchanged."
+  - name: test_capture_step_declares_no_placeholder_text_fallback
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The shipped signoff section 7 prose and the three v3 S9 blocks contain no instruction to synthesise `text` from the record's descriptive fields when the agent has nothing to say."
+test_rationale: |
+  The first descriptor is deliberately shared with INF-700b-3: this AC's last
+  Then clause IS a statement about that report, and asserting it twice from two
+  test files would let the two drift. The second is behavioural rather than a
+  prose assertion because "no record is produced" is only provable by observing
+  the sink before and after; a template-content test cannot distinguish an
+  instruction not to emit from an instruction that is ignored. The third is a
+  real-artifact prose assertion because the placeholder-fallback prohibition
+  lives in prose on this side of the boundary — its code-side twin is covered
+  by INF-700c-1.
+delivers_to:
+  agent: python-coder
+  contract: "A durable capture-attempt record per run that reached the step, on the operational telemetry stream (never the knowledge-emission sink), carrying at minimum the agent, the piece of work, a timestamp, and an outcome from the closed set { recorded, nothing-to-record, failed }. INF-700b-3's report reads this ledger for its 'reached the step' and 'recorded a learning' counts."
+expects_from:
+  ac_id: INF-700b-1
+  contract: "The knowledge record shape whose `text` field this AC forbids being empty, whitespace-only, or synthesised from descriptive fields"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Named the attempt-ledger requirement that makes INF-700b-3's three-way distinction derivable — the criteria forbid a knowledge record on the no-learning path but say nothing about the heartbeat that proves the path was taken, and without it a quiet week and a dead dispatcher produce identical evidence. Added the outcome enum as an explicit delivers_to contract so INF-700b-3 reads a closed set rather than free text."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the capture-side half of the invariant INF-700c-1 enforces on the
+  write side: a contentless record must not be created here, and must not be
+  expanded into a curated file there. The two are deliberately separate — one
+  governs the emitter, the other the writer, and each must hold on its own.
+change_target: prompt
+risk_surface: contract_boundary

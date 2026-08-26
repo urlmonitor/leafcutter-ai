@@ -109,7 +109,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/24_TICKET-20260826-ACD-2100e-1.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -229,3 +230,4 @@ notes: |
   reports it. Recorded as a delivers_to contract above and mirrored as an expects_from on
   ACD-2100e-2. The recommended edit before approval is to append ACD-2100e-1 to
   ACD-2100e-2's depends_on. Left to the BA rather than applied here.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

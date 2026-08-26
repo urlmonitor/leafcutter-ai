@@ -38,6 +38,14 @@ ARCHITECTURE: Eleven public phase functions, one per output category:
     ``_compute_phase_mappings`` enumerates those pairs for all file-based
     artifact phases so build.py can run detect_deploy_collisions before any
     file write occurs.
+    ``check_command_reachability`` is a post-deploy guard (BP-900g-1 /
+    BP-900g-1-i) that scans every deployed command under
+    ``<output_root>/commands/*.md`` for ``Workflow(...)``/``Skill(...)``
+    handoff targets and resolves each against the TRUE post-deploy layout —
+    name-form targets via the deployed workflow/skill registry, path-form
+    targets as a literal path relative to output_root. It returns one
+    verdict dict per unresolvable target; an empty list means the build may
+    proceed. This is the COMMAND-SIDE analogue of the BP-811 shim guardrail.
 """
 
 from __future__ import annotations
@@ -45,6 +53,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -220,6 +229,373 @@ def detect_deploy_collisions(
         for target, sources in target_to_sources.items()
         if len(sources) >= 2
     ]
+
+
+# ---------------------------------------------------------------------------
+# Command-reference reachability guard (BP-900g-1 / BP-900g-1-i guardrail)
+# ---------------------------------------------------------------------------
+
+#: Matches handoff calls in a deployed command body, capturing the call name
+#: (group 1) and the raw target string (group 2). Every form below is present
+#: in the real deployed command corpus:
+#:
+#:     Workflow("target")                     positional, double quote
+#:     Workflow('target')                     positional, single quote
+#:     Workflow(`target`)                     positional, backtick
+#:     Skill(skill="target", args="...")      keyword, `=`
+#:     Workflow(name: "target", args: {...})  keyword, `:`
+#:
+#: The original pattern required a quote immediately after ``(``, so it saw
+#: only the two positional-quoted forms. A probe carrying three unmistakably
+#: bogus targets in the kwarg, named-arg and backtick forms produced ZERO
+#: verdicts — 5 of the 9 live call sites in the deployed tree were invisible
+#: to the guard, which also meant a "full-tree scan found 0 problems" result
+#: was partly just the scanner failing to look (BP-900g-1).
+#:
+#: Backticks are matched because this repo's own conventions use them for
+#: inline code, and a structural regex that only understands quotes silently
+#: skips them.
+_HANDOFF_TARGET_RE = re.compile(
+    r"""\b(Workflow|Skill)\(\s*                # call name, open paren
+        (?:[A-Za-z_][A-Za-z0-9_]*\s*[:=]\s*)?  # optional keyword: skill= / name:
+        ["'`]([^"'`]+)["'`]                    # quoted target (", ' or `)
+    """,
+    re.VERBOSE,
+)
+
+
+def _handoff_target_resolves(
+    target: str,
+    kind: str,
+    output_root: Path,
+    registered_workflows: set[str],
+    registered_skills: set[str],
+) -> bool:
+    """Return True if a single Workflow()/Skill() handoff target resolves post-deploy.
+
+    Name-form targets (no "/") resolve via deployed-registry membership only
+    (BP-900g-1-i): the target must equal the stem of a ``*.js`` file directly
+    under ``output_root/workflows/`` (kind="workflow") or the name of a
+    directory directly under ``output_root/skills/`` (kind="skill").
+    Path-form targets (containing "/") resolve ONLY as a literal relative
+    path against output_root (BP-900g-1) — a path such as
+    "scripts/workflows/foo.js" is never rewritten or special-cased into the
+    name-form registry lookup, even when "foo" is itself registered.
+
+    This is a pure function — no I/O — per the project Error Handling Policy
+    (Rule 4).
+
+    Args:
+        target: The raw handoff target string extracted from a command body.
+        kind: "workflow" or "skill".
+        output_root: Absolute path to the consolidated, already-deployed
+            build output directory.
+        registered_workflows: Stems of ``*.js`` files directly under
+            ``output_root/workflows/``.
+        registered_skills: Names of directories directly under
+            ``output_root/skills/``.
+
+    Returns:
+        True if the target resolves to a deployed artifact; False otherwise.
+    """
+    if "/" not in target:
+        registry = registered_workflows if kind == "workflow" else registered_skills
+        return target in registry
+    return (output_root / target).exists()
+
+
+def _resolve_declared_workflows_enabled(
+    config: dict[str, Any] | None,
+) -> tuple[bool, bool]:
+    """Read the declared ``config["workflows"]["enabled"]`` value.
+
+    This is the ONLY source ``check_command_reachability`` consults to decide
+    whether a name-form workflow reference should be skipped — never whether
+    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). The
+    default (``config`` absent, or ``config["workflows"]`` absent) is
+    ``False``, matching ``build_workflow_scripts()``'s own documented default
+    so the guard and the producer can never disagree about whether the
+    capability is enabled.
+
+    A declaration that cannot be read (``config["workflows"]`` present but
+    not a dict, or its ``"enabled"`` value present but not a bool) is a
+    distinct, reported condition — it must never silently collapse to "off".
+
+    This is a pure function — no I/O — per the project Error Handling Policy
+    (Rule 4).
+
+    Args:
+        config: The build's merged configuration dict, or ``None`` for
+            legacy callers that have not been updated to pass one (treated
+            as "no declaration available", which defaults to disabled — the
+            same as an absent ``workflows`` key).
+
+    Returns:
+        A ``(enabled, malformed)`` tuple. When ``malformed`` is ``True``,
+        ``enabled`` is meaningless and must not be consulted — the caller
+        must report an "unreadable declaration" condition instead of
+        treating it as either enabled or disabled.
+    """
+    if config is None:
+        return False, False
+    workflows_config = config.get("workflows", {}) if isinstance(config, dict) else {}
+    if not isinstance(workflows_config, dict):
+        return False, True
+    enabled = workflows_config.get("enabled", False)
+    if not isinstance(enabled, bool):
+        return False, True
+    return enabled, False
+
+
+def check_command_reachability(
+    output_root: Path, config: dict[str, Any] | None = None
+) -> list[dict]:
+    """Scan deployed commands for Workflow()/Skill() targets unresolvable post-deploy.
+
+    Extracts every ``Workflow("...")``/``Skill("...")`` handoff target from
+    every ``*.md`` file directly under ``output_root/commands/``, resolves
+    each against the TRUE post-deploy layout, and returns one verdict dict
+    per unresolvable target (BP-900g-1). A target resolves if EITHER it
+    names a registered workflow/skill in the deployed registry (name-form,
+    BP-900g-1-i) OR it is a literal path that exists relative to
+    output_root (path-form). A bare ``.js`` path such as
+    "scripts/workflows/build-feature.js" does NOT resolve, because
+    ``build_workflow_scripts()`` deploys workflow ``.js`` files to
+    ``output_root/workflows/``, never ``output_root/scripts/workflows/``.
+
+    This is the COMMAND-SIDE analogue of the BP-811 ``.claude/workflows``
+    shim guardrail (BP-811 resolves the deployed workflow artifact's own
+    reachability; this function resolves the COMMAND's reference to it). It
+    does not modify or re-parent BP-811.
+
+    Whether a name-form workflow reference is skipped is decided SOLELY from
+    the declared ``config["workflows"]["enabled"]`` value (via
+    ``_resolve_declared_workflows_enabled``), never from whether
+    ``output_root/workflows/`` happens to exist on disk (BP-100k-7). A
+    declaration of "enabled" with no deployed output is exactly the failure
+    this guard exists to catch and is reported, not skipped; a malformed
+    declaration is reported as a distinct "unreadable" condition; every skip
+    the guard performs is logged at WARNING, naming the target and stating
+    that the skip was authorised by the declared configuration value, so a
+    skipped check is never indistinguishable from one that ran and passed.
+
+    Per the project Error Handling Policy (Rule 1 / Rule 3), reading a
+    command file is external I/O: a read failure is logged at WARNING and
+    that file is skipped (best-effort — an unreadable command cannot be
+    scanned, which is a distinct failure mode from an unresolvable target).
+
+    Args:
+        output_root: Absolute path to the consolidated, ALREADY-DEPLOYED
+            build output directory (e.g. ``<target>/.leafcutter``), expected
+            to contain ``commands/*.md``, ``workflows/*.js``, and
+            ``skills/*/`` post-deploy.
+        config: The build's merged configuration dict, read for
+            ``config["workflows"]["enabled"]``. Defaults to ``None`` (treated
+            as "disabled") for legacy callers; new callers should always pass
+            the same configuration object the build itself used to decide
+            whether to produce the workflows output.
+
+    Returns:
+        List of dicts, one per unresolvable target::
+
+            {
+                "command": Path,               # the command .md file
+                "target":  str,                # the raw handoff target string
+                "kind":    "workflow" | "skill",
+                "reason":  str,                 # names the target and states
+                                                 # it does not resolve to a
+                                                 # deployed artifact post-deploy
+            }
+
+        Empty list means every extracted reference resolves (build may
+        proceed) — mirroring the "ok=true iff empty" contract established by
+        ``detect_deploy_collisions()`` (BP-100m) in this same module.
+    """
+    # Every platform surface build_workflows() deploys prose commands to — not
+    # just the Claude one. Scanning only "commands/" left 23 real command files
+    # under gemini/workflows/ unscanned, two of them carrying live Skill()
+    # handoffs, so the guard degraded toward a silent no-op for Antigravity /
+    # cursor / copilot / cline adopters (BP-900g-1).
+    _COMMAND_SURFACES = (
+        "commands",
+        "gemini/workflows",
+        "cursor/rules",
+        "copilot-instructions",
+        "cline/rules",
+    )
+    command_dirs = [
+        d for d in (output_root / sub for sub in _COMMAND_SURFACES) if d.is_dir()
+    ]
+
+    if not command_dirs:
+        # Fail closed, but only where failing closed is meaningful.
+        #
+        # "I found nothing to inspect" must not be reported as "everything
+        # resolves" — that is the defect class this guard belongs to. But two
+        # different situations reach this branch and only one of them is a
+        # problem:
+        #
+        #   (a) Nothing was deployed at all (output_root absent), or the
+        #       package ships no command templates in the first place. There
+        #       is genuinely nothing for this guard to police, and blocking
+        #       here would break legitimate minimal builds.
+        #   (b) The package HAS command templates and a deploy did happen, yet
+        #       no command surface exists under output_root. Commands were
+        #       written somewhere this guard is not looking, so its silence
+        #       would be meaningless.
+        #
+        # Only (b) is a verdict.
+        package_has_commands = any(
+            (TEMPLATES_DIR / sub).is_dir() and any((TEMPLATES_DIR / sub).glob("*.md"))
+            for sub in ("commands", "workflows")
+        )
+        if not output_root.is_dir() or not package_has_commands:
+            return []
+        return [
+            {
+                "command": output_root,
+                "target": "(none)",
+                "kind": "scan",
+                "reason": (
+                    f"no deployed command directory found under {output_root} "
+                    f"(looked for: {', '.join(_COMMAND_SURFACES)}), yet the "
+                    "package does ship command templates. The reachability "
+                    "guard inspected zero commands and cannot confirm any "
+                    "handoff target resolves."
+                ),
+            }
+        ]
+
+    workflows_dir = output_root / "workflows"
+    workflows_deployed = workflows_dir.is_dir()
+    registered_workflows = (
+        {p.stem for p in workflows_dir.glob("*.js")} if workflows_deployed else set()
+    )
+    # The SKIP decision below is taken from the declared configuration value
+    # ONLY (BP-100k-7) — `workflows_deployed` above is used solely to build
+    # the registry `registered_workflows` resolves against, never to decide
+    # whether a name-form reference should be skipped, on ANY call path.
+    #
+    # A caller that omits `config` entirely (e.g. a legacy positional-only
+    # call) is NOT special-cased back onto the filesystem heuristic: that
+    # heuristic is precisely the defect this AC removes, and reintroducing
+    # it on one code path just makes it harder to find, not fixed.
+    # `_resolve_declared_workflows_enabled(None)` deliberately returns
+    # `(False, False)` — "no declaration supplied" is treated as
+    # declared-disabled, matching `build_workflow_scripts()`'s own
+    # documented default, never as "go check the filesystem instead."
+    workflows_declared_enabled, workflows_declaration_malformed = (
+        _resolve_declared_workflows_enabled(config)
+    )
+    skills_dir = output_root / "skills"
+    registered_skills = (
+        {p.name for p in skills_dir.iterdir() if p.is_dir()}
+        if skills_dir.is_dir()
+        else set()
+    )
+
+    verdicts: list[dict] = []
+    command_paths = sorted(
+        {p for d in command_dirs for p in d.rglob("*.md")}
+    )
+    for command_path in command_paths:
+        try:
+            text = command_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning(
+                "check_command_reachability: cannot read %s: %s",
+                command_path,
+                exc,
+            )
+            # Fail closed rather than `continue`. Skipping an unreadable
+            # command silently meant a file the guard could not open counted
+            # as a file with no problems: `chmod 000` on a command holding a
+            # known-broken target produced zero verdicts and an exit-0 build.
+            # A guard whose purpose is fail-closed enforcement must not report
+            # "pass" for input it never read (BP-900g-1).
+            verdicts.append(
+                {
+                    "command": command_path,
+                    "target": "(unreadable)",
+                    "kind": "scan",
+                    "reason": (
+                        f"cannot read deployed command {command_path.name}: "
+                        f"{exc}. The reachability guard could not inspect it, "
+                        "so its handoff targets are unverified."
+                    ),
+                }
+            )
+            continue
+
+        for call, target in _HANDOFF_TARGET_RE.findall(text):
+            kind = "workflow" if call == "Workflow" else "skill"
+
+            # ``workflows.enabled`` is a documented opt-in toggle, and
+            # build_workflow_scripts() writes nothing when it is false — but
+            # the shipped command templates reference workflows by name
+            # unconditionally. Path-form targets are still checked below
+            # unconditionally: those can never resolve regardless of the
+            # toggle, which is the case BP-900g-1 actually exists to catch.
+            #
+            # The skip decision for a name-form workflow reference is taken
+            # from the DECLARED configuration value alone (BP-100k-7) — never
+            # from whether output_root/workflows/ happens to exist. That
+            # conflated two opposite states: deliberately disabled (skip is
+            # correct) versus enabled but undeployed (every reference is now
+            # broken, which is exactly when this guard must fire).
+            if kind == "workflow" and "/" not in target:
+                if workflows_declaration_malformed:
+                    verdicts.append(
+                        {
+                            "command": command_path,
+                            "target": target,
+                            "kind": kind,
+                            "reason": (
+                                "cannot determine whether workflows are "
+                                "enabled: config['workflows'] is malformed "
+                                "(expected a dict with a boolean 'enabled' "
+                                f"key), so workflow target {target!r} "
+                                f"referenced by {command_path.name} is "
+                                "unverified"
+                            ),
+                        }
+                    )
+                    continue
+                elif not workflows_declared_enabled:
+                    _log.warning(
+                        "check_command_reachability: %s references workflow "
+                        "%r, but workflows are declared disabled "
+                        "(config['workflows']['enabled'] is False); skipping "
+                        "name-form resolution for this target because the "
+                        "declared configuration authorises the skip.",
+                        command_path.name,
+                        target,
+                    )
+                    continue
+                # workflows_declared_enabled is True: fall through to the
+                # normal resolution below, which reports the target as
+                # unresolvable when workflows.enabled=True but no matching
+                # workflow was actually deployed — the case this guard
+                # exists to catch.
+
+            if _handoff_target_resolves(
+                target, kind, output_root, registered_workflows, registered_skills
+            ):
+                continue
+            verdicts.append(
+                {
+                    "command": command_path,
+                    "target": target,
+                    "kind": kind,
+                    "reason": (
+                        f"{kind} target {target!r} referenced by "
+                        f"{command_path.name} does not resolve to a "
+                        "deployed artifact post-deploy"
+                    ),
+                }
+            )
+
+    return verdicts
 
 
 def _per_platform_mappings(
@@ -530,7 +906,27 @@ def build_agents(target_root: Path, config: dict[str, Any],
             output_dir = target_root / output_subpath
             output_path = output_dir / template_file.name
 
-            if _write(output_path, compiled, dry_run, force):
+            # A write failure for one active platform must never be silently
+            # absorbed into "the build succeeded" — that is exactly the
+            # silent-success shape BP-100k-8 forbids. Name the platform that
+            # could not be exercised and state it is unverified, rather than
+            # letting a bare OSError (or a clean return) hide which platform
+            # failed.
+            try:
+                wrote = _write(output_path, compiled, dry_run, force)
+            except OSError as exc:
+                _log.warning(
+                    "build_agents: cannot write %s for platform %r: %s",
+                    output_path,
+                    platform,
+                    exc,
+                )
+                raise OSError(
+                    f"platform {platform!r} is unverified: cannot write "
+                    f"deployed agent definition {output_path}: {exc}"
+                ) from exc
+
+            if wrote:
                 written += 1
                 if not dry_run:
                     print(f"  {output_subpath}/{template_file.name}")
@@ -1031,6 +1427,70 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     return written
 
 
+def _skill_is_deprecated(skill_dir: Path) -> bool:
+    """Return True when ``skill_dir``'s SKILL.md declares ``deprecated: true``.
+
+    The single source of truth for "is this skill deployed at all" —
+    ``build_skills()`` (the real deploy phase, which skips deprecated skills
+    entirely per AC BP-700d-1-i) and ``build_helpers._compute_output_mappings()``
+    (the build manifest's Direction B computation) both call this so a skill
+    excluded from one is excluded from the other. Before this function
+    existed, the manifest re-implemented its own skill enumeration with no
+    deprecated check, predicting an ``expected_output_hash`` for content
+    ``build_skills()`` deliberately never writes (BP-100k-3 finding: this
+    made ``frontend-design/SKILL.md`` — deployed once, then deprecated —
+    permanently report as drifted on an otherwise-clean tree).
+
+    A skill directory with no ``SKILL.md``, or a ``SKILL.md`` with no
+    ``deprecated`` key, is treated as not deprecated (deployed normally).
+
+    Args:
+        skill_dir: Absolute path to a single skill's template directory
+            (an immediate child of ``templates/skills/``).
+
+    Returns:
+        True if the skill's SKILL.md frontmatter declares ``deprecated: true``.
+    """
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.is_file():
+        return False
+    fm, _ = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
+    return bool(fm.get("deprecated", False))
+
+
+def _skill_deploy_files(skill_dir: Path) -> list[Path]:
+    """Return every real file build_skills() would copy for one skill.
+
+    Sorted, files only, ``__pycache__`` excluded — a Python bytecode cache
+    is a compiled, non-reproducible artifact, never source content to
+    deploy (mirrors the same exclusion check_build_drift.py's
+    ``_collect_py_template_files()`` already applies to the commit-guardian
+    template tree). Before this exclusion existed, a stray ``__pycache__``
+    committed inside a skill's ``scripts/`` directory (generated by once
+    running the script directly from the template tree) was copied verbatim
+    like any other file — and because a ``.pyc`` re-compiles differently
+    depending on which Python version last imported it, a byte-for-byte
+    comparison against it can never be stable, permanently reporting drift
+    once the deployed copy was imported even once (BP-100k-3 finding).
+
+    Shared by ``build_skills()`` (the real deploy phase) and
+    ``build_helpers._compute_output_mappings()`` (the build manifest) so
+    both iterate the identical file set — the manifest can only ever be
+    correct if it enumerates exactly what the deploy phase copies.
+
+    Args:
+        skill_dir: Absolute path to a single skill's template directory
+            (an immediate child of ``templates/skills/``).
+
+    Returns:
+        Sorted list of absolute file paths under ``skill_dir``.
+    """
+    return sorted(
+        f for f in skill_dir.rglob("*")
+        if f.is_file() and "__pycache__" not in f.parts
+    )
+
+
 def build_skills(target_root: Path, config: dict[str, Any],
                  dry_run: bool, force: bool) -> int:
     """Copy all skill templates to ``<target_root>/.claude/skills/``.
@@ -1075,18 +1535,20 @@ def build_skills(target_root: Path, config: dict[str, Any],
         if not skill_dir.is_dir():
             continue
 
-        # Detect internal and deprecated skills by reading the SKILL.md frontmatter.
+        # Detect internal skills by reading the SKILL.md frontmatter; the
+        # deprecated check delegates to _skill_is_deprecated() — the single
+        # source of truth also called by build_helpers._compute_output_mappings()
+        # so the manifest can never predict a hash for a skill this phase skips.
         skill_md = skill_dir / "SKILL.md"
         is_internal = False
-        is_deprecated = False
         if skill_md.is_file():
             fm, _ = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
             is_internal = bool(fm.get("internal", False))
-            is_deprecated = bool(fm.get("deprecated", False))
             if is_internal:
                 internal_skills.append(skill_dir.name)
-            if is_deprecated:
-                deprecated_skills.append(skill_dir.name)
+        is_deprecated = _skill_is_deprecated(skill_dir)
+        if is_deprecated:
+            deprecated_skills.append(skill_dir.name)
 
         # Skip deprecated skills entirely — their principles have been migrated
         # elsewhere (e.g. embedded in agent templates). Deploying them would
@@ -1094,9 +1556,7 @@ def build_skills(target_root: Path, config: dict[str, Any],
         if is_deprecated:
             continue
 
-        for template_file in sorted(skill_dir.rglob("*")):
-            if not template_file.is_file():
-                continue
+        for template_file in _skill_deploy_files(skill_dir):
             rel = template_file.relative_to(skills_template_dir)
             
             for platform, is_active in platforms.items():
@@ -1304,10 +1764,24 @@ def build_commands(target_root: Path, config: dict[str, Any],
 
 def build_rules(target_root: Path, config: dict[str, Any],
                 dry_run: bool, force: bool) -> int:
-    """Copy rule templates to ``<target_root>/.agents/rules/``.
+    """Copy rule templates to ``<output_root>/.agents/rules/``.
+
+    .. warning::
+       The ``target_root`` parameter name is a misnomer for this function and
+       every other member of build.py's ``internal_phases`` list: that loop
+       passes ``output_root`` (``<target_root>/.leafcutter`` by default), never
+       ``target_root``. Rules land at ``<output_root>/.agents/rules/`` and are
+       NOT shimmed back up to ``<target_root>/.agents/`` — ``shim_map`` has no
+       ``.agents`` entry, by design.
+
+       Trusting this parameter's name is what made ``_compute_output_mappings``
+       record 16 manifest keys under ``<target_root>/.agents/rules/`` — a
+       directory the build never creates — while the 16 files it does write
+       went unrecorded and ungated (BP-100k-2).
 
     Args:
-        target_root: Absolute path to the target project root directory.
+        target_root: Absolute path the outputs are written beneath. Despite the
+            name, callers in ``internal_phases`` pass ``output_root``.
         config: Merged config dictionary used for placeholder injection.
         dry_run: When True, logs intent but writes nothing.
         force: When True, overwrites existing files.
@@ -1928,13 +2402,22 @@ def validate_agent_self_description(
     config: dict[str, Any],
     dry_run: bool,
     enforcement_level: str = "warning",
+    package_root: Path | None = None,
 ) -> tuple[int, int]:
     """Validate all agent templates have required self-description fields.
 
-    Checks each agent template under ``target_root / "templates" / "agents"``
-    for the presence of required frontmatter fields, and each registry entry
-    in ``target_root / "config" / "agent_registry.json"`` for required registry
-    fields.
+    Checks each agent template under ``<package_root>/templates/agents`` for the
+    presence of required frontmatter fields, and each registry entry in
+    ``<package_root>/config/agent_registry.json`` for required registry fields.
+
+    ``package_root`` defaults to the package this module lives in, NOT to
+    ``target_root``. Templates and the agent registry are properties of the
+    leafcutter package being built FROM, never of the project being built INTO,
+    so deriving them from ``target_root`` made the verdict depend on how the
+    build was invoked — which BP-1300a-1's final clause forbids ("the verdict is
+    the same whether the build runs locally or in CI"). Callers that genuinely
+    need to validate a different package tree (tests with a fixture package)
+    pass it explicitly, mirroring ``validate_skill_registry``.
 
     Required frontmatter fields: ``behavioral_patterns``, ``pre_flight_reads``,
     ``inputs``, ``outputs``, ``mutates``.
@@ -1943,9 +2426,17 @@ def validate_agent_self_description(
     ``knowledge_channels``.
 
     ``skills_invoked`` entries are validated by resolving ``skill_id`` against
-    both ``target_root / "templates" / "skills"`` (package) and
-    ``.claude/skills/`` (project-local). An unresolvable skill_id produces a
-    problem entry naming which lookup location was checked.
+    the canonical source: ``<package_root>/templates/skills/<skill_id>/`` OR a
+    matching ``id`` in ``<package_root>/config/skill_registry.json`` (BP-1300a-1's
+    criteria define the canonical source as "templates/skills plus the
+    registry"). The second leg exists because ``skill_registry.schema.json``
+    explicitly permits a ``portable: false`` skill with no ``template_path`` —
+    a domain-specific skill that has no ``templates/skills/<id>/`` directory by
+    design. Without this leg, a legitimate ``skills_invoked`` pointer at such a
+    skill would be misreported as dangling. The deployed ``.claude/skills/``
+    tree is never consulted — a stale or missing local deploy must not change
+    the verdict (BP-1300a-1-ii). An unresolvable skill_id produces a problem
+    entry naming the offending skill_id and the referencing registry entry.
 
     Entries marked ``descriptive_only: true`` document intentional inline
     capabilities that have no deployed skill directory by design. The validator
@@ -1996,11 +2487,51 @@ def validate_agent_self_description(
     #   test prevents accidental skipping when the key holds a string, int, or None.
     #   Unmarked unresolvable entries continue to fail (guardrail preserved).
     #   (#TICKET-20260708-BP-1300a-descriptive-skills)
+    # - 2026-08-18 [python-coder/EPIC-BuildPipelinePhantomRemediation/02_bp1300a1]:
+    #   Dropped the ``in_project`` (deployed ``.claude/skills/``) resolution leg
+    #   per BP-1300a-1 / -1-i / -1-ii. A stale local deploy previously resolved
+    #   ``in_project = True`` for a since-removed skill, masking a genuinely
+    #   dangling pointer in a local checkout while it still failed a fresh CI
+    #   clone — an environment-dependent verdict. Resolution is now against the
+    #   canonical source only (``templates/skills/``); the error message no
+    #   longer names the deployed path. (#02_bp1300a1_canonical_skill_resolution)
+    # - 2026-08-25 [python-coder/EPIC-BuildPipelinePhantomRemediation]:
+    #   Added the ``config/skill_registry.json`` resolution leg per BP-1300a-1's
+    #   literal wording — "canonical source (templates/skills plus the
+    #   registry)". Previously only ``templates/skills/<id>/`` was consulted;
+    #   a registry entry with ``portable: false`` and no ``template_path``
+    #   (a shape ``skill_registry.schema.json`` explicitly permits, for
+    #   domain-specific skills deployed only under ``.claude/skills``) was
+    #   falsely flagged as unresolvable. That gap was latent only because a
+    #   DIFFERENT module (``registry_validator.validate_skill_registry``,
+    #   asserted by ``tests/test_skill_registry.py::test_no_orphaned_entries``)
+    #   happens to enforce full bidirectional parity between the registry and
+    #   ``templates/skills/`` today — an invariant this guard did not name or
+    #   depend on explicitly. Adding the registry leg removes the hidden
+    #   cross-module dependency and matches the AC text exactly.
     """
-    agents_template_dir = target_root / "templates" / "agents"
-    registry_path = target_root / "config" / "agent_registry.json"
-    package_skills_dir = target_root / "templates" / "skills"
-    project_skills_dir = target_root / ".claude" / "skills"
+    # Anchored on the PACKAGE, not on target_root. These three inputs are
+    # properties of the leafcutter package being built FROM, never of the
+    # project being built INTO, so deriving them from target_root made the
+    # whole guard environment-dependent — the one thing BP-1300a-1's final
+    # clause forbids ("the verdict is the same whether the build runs locally
+    # or in CI").
+    #
+    # CI runs `build.py --target-dir .` from the repo root, where
+    # target_root == PACKAGE_ROOT and the guard ran. The documented local
+    # build, ./build-self.sh, execs `build.py --target-dir "$WORKSPACE_DIR"`
+    # — the parent workspace, which has no templates/ — so every path below
+    # missed, the `if agents_template_dir.exists()` guard fell through, and
+    # the validator printed "all agents pass" having examined zero agents.
+    # Same on every consumer install, where target_root/templates never
+    # exists. A dangling skill pointer was therefore unfailable locally and
+    # fatal in CI: precisely the environment-dependent verdict this AC exists
+    # to eliminate, reached through target_root instead of .claude/skills.
+    pkg_root = package_root if package_root is not None else PACKAGE_ROOT
+    agents_template_dir = pkg_root / "templates" / "agents"
+    registry_path = pkg_root / "config" / "agent_registry.json"
+    package_skills_dir = pkg_root / "templates" / "skills"
+    skill_registry_path = pkg_root / "config" / "skill_registry.json"
 
     _REQUIRED_FRONTMATTER = [
         "behavioral_patterns",
@@ -2036,8 +2567,48 @@ def validate_agent_self_description(
                 registry_entries[agent_id] = entry
 
     # ----------------------------------------------------------------
+    # Load the skill registry — the second leg of the canonical source
+    # for skills_invoked resolution (BP-1300a-1: "templates/skills plus
+    # the registry"). A registry entry with portable: false and no
+    # template_path (permitted by skill_registry.schema.json) documents a
+    # domain-specific skill with no templates/skills/<id>/ directory by
+    # design, so its id must resolve here even though the disk-dir leg
+    # below will not find it.
+    # ----------------------------------------------------------------
+    skill_registry_ids: set[str] = set()
+    if skill_registry_path.exists():
+        try:
+            skill_registry_raw = skill_registry_path.read_text(encoding="utf-8")
+            skill_registry_data = json.loads(skill_registry_raw)
+        except (OSError, json.JSONDecodeError) as exc:
+            _log.warning(
+                "validate_agent_self_description: cannot read skill registry %s: %s",
+                skill_registry_path,
+                exc,
+            )
+            skill_registry_data = {}
+        skill_registry_ids = {
+            entry["id"]
+            for entry in skill_registry_data.get("skills", [])
+            if isinstance(entry, dict) and "id" in entry
+        }
+
+    # ----------------------------------------------------------------
     # Validate each agent template file.
     # ----------------------------------------------------------------
+    if not agents_template_dir.exists():
+        # Not a silent pass. Reaching here means the package's own agent
+        # templates are missing, so this validator cannot examine a single
+        # agent — and "examined nothing" must never be reported as
+        # "all agents pass" (BP-1300a-1: the verdict must not depend on the
+        # environment the build runs in).
+        problems.append(
+            f"[ERROR] Agent templates directory not found at "
+            f"{agents_template_dir}. The self-description validator examined "
+            f"zero agents and cannot vouch for any skill pointer. This is a "
+            f"broken package layout, not a passing build."
+        )
+
     if agents_template_dir.exists():
         for template_file in sorted(agents_template_dir.glob("*.md")):
             if template_file.name.startswith("_"):
@@ -2090,14 +2661,16 @@ def validate_agent_self_description(
                             if inv.get("descriptive_only") is True:
                                 continue  # Intentional inline-capability entry (INF-600d-1) — no deployed skill dir required
                             in_package = (package_skills_dir / skill_id).exists()
-                            in_project = (project_skills_dir / skill_id).exists()
-                            if not in_package and not in_project:
+                            in_skill_registry = skill_id in skill_registry_ids
+                            if not in_package and not in_skill_registry:
                                 problems.append(
                                     f"Registry entry '{agent_name}' has unresolvable "
                                     f"skills_invoked skill_id '{skill_id}'.\n"
-                                    f"  Not found in package (templates/skills/{skill_id}/) "
-                                    f"nor project-local (.claude/skills/{skill_id}/).\n"
-                                    f"  Fix hint: Create the skill template or correct the skill_id."
+                                    f"  Not found in the canonical source "
+                                    f"(templates/skills/{skill_id}/ or an id in "
+                                    f"config/skill_registry.json).\n"
+                                    f"  Fix hint: Create the skill template, add a "
+                                    f"skill_registry.json entry, or correct the skill_id."
                                 )
 
                 # knowledge_channels: check channel range 1-11
@@ -3102,6 +3675,21 @@ def clean_stale_artifacts(
 #   layout, so the deployed gate's CLI invocation would crash with
 #   ModuleNotFoundError even though unit tests importing from source stay
 #   green. (#ACD-1900b-5-i)
+# - 2026-08-18 18:30 [python-coder/06_bp900g1_command_reachability_guard]: Added
+#   command-reference reachability guardrail (BP-900g-1 / BP-900g-1-i). Two
+#   new symbols: check_command_reachability() scans every deployed command
+#   under output_root/commands/*.md, extracts Workflow(...)/Skill(...)
+#   handoff targets via _HANDOFF_TARGET_RE, and resolves each against the
+#   real post-deploy layout: name-form targets (no "/") via deployed-registry
+#   membership (workflow .js stems / skill directory names), path-form
+#   targets (containing "/") as a literal relative path against output_root.
+#   _handoff_target_resolves() is the pure per-target resolution helper. This
+#   replaces the previously phantom-done BP-900g-1 finding -- the name-based
+#   Workflow("build-feature") workaround already applied to the real command
+#   templates is now backed by a real guard that would catch a regression
+#   back to the non-resolving path form. COMMAND-SIDE analogue of BP-811 (the
+#   .claude/workflows shim); does not modify or re-parent BP-811.
+#   (#EPIC-BuildPipelinePhantomRemediation/06)
 # - 2026-08-26 [python-coder/TICKET-20260826-BP-1100g-4]: Verified, made NO
 #   functional change. BP-1100g-4 adds a new commit_guardian hook module,
 #   templates/scripts/commit_guardian/check_proof_promise_claim.py, that

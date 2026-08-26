@@ -117,7 +117,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - ACD-2100c-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/15_TICKET-20260826-ACD-2100c-3.md
 change_target: pipeline
 risk_surface: safety
 notes: |
@@ -149,3 +150,4 @@ notes: |
   bindings separately for the same reason ACD-2100a-2 names a candidate set: if resume
   applies whatever answer it was handed to whatever gate it is paused at, the mismatch
   case is not representable and c-3-i cannot be built without re-opening this record.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

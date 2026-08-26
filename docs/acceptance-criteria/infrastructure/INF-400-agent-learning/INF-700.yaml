@@ -25,13 +25,18 @@ doc_links:
     status: exists
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "Added INF-700b and INF-700c as children (4 -> 6 L1s, cap 7, no override needed). Both were authored after empirical review on 2026-08-26 found that ADR-034 section 1's premise — 'the loop has never closed, in any direction, in any install' — is false: 9 of the 10 destinations named by the 28 retained knowledge_captured events exist on disk and hold real, substantial learnings written inline by the agents themselves. INF-700b covers the capture path being live today; INF-700c covers the knowledge record staying truthful, and supersedes INF-400c-5-ii."
+    by: product-owner
+    at: 2026-08-26
 superseded_by: null
 covered_by:
   - INF-400c
   - INF-400g
   - INF-400h
   - INF-700a
+  - INF-700b
+  - INF-700c
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

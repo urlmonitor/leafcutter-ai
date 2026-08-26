@@ -1,0 +1,81 @@
+id: BO-3600e
+title: "The disagreements that already exist are worked through, not only new ones"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every record is reconciled, not just the ones in today's change.
+
+  The comparison covers the whole of both records, so a disagreement that has been
+  sitting there for months is found without anyone having to touch it. The
+  conflicts already present when this starts are worked through rather than
+  written off, and the count of outstanding ones is visible and goes down.
+depends_on:
+  - BO-3600
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — found only because a person read all sixty-five entries across five registers by hand; nothing scoped to a change in flight could have found any of them."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600e-1
+  - BO-3600e-2
+  - BO-3600e-3
+  - BO-3600e-4
+  - BO-3600e-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: |
+  WHY THIS NEEDS SAYING OUT LOUD. The obvious place to hang the check in BO-3600a
+  is on the files being committed. That version would have found NONE of the eight
+  records behind this goal: every one of them had been finished weeks earlier and
+  nothing in any subsequent change touched them. This repo has the failure on
+  record twice already — the AC hooks that read only the commit index and so never
+  see a parent they were written to check (CLAUDE.md, "AC-store commits — stage the
+  parent alongside the child"), and the population-versus-change scoping filed as
+  KI-CG-001 and named in KI-BO-028 as the dominant mechanism in the sibling
+  registers. A change-scoped reconciler is a reconciler whose silence means
+  nothing.
+
+  THE EXISTING BACKLOG IS PART OF THE DELIVERY, not a follow-up. A check switched
+  on over a store with a large standing population of conflicts either blocks
+  everything or is immediately suppressed; neither is the outcome. The starting
+  population must be measured, made visible, and burned down, with the same
+  three-verdict disposition BO-3600d defines.
+
+  ADJACENCY — TQ-400a makes the identical scoping argument for the test-based
+  done-proof sweep, down to the detail that the verdict is already computable but
+  only ever computed over staged files. That is the same lesson on a different
+  evidence source. Cite it, reuse whatever traversal it produces, and do NOT
+  re-specify the done-proof verdict rule here: this L1 owns scope and burn-down,
+  not what counts as proof.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, this L1's full child
+  cap: BO-3600e-1 (every record examined whether or not a change is in flight, with
+  the examined counts as the clause that makes a narrow implementation falsifiable
+  — a change-scoped and a whole-store reconciler produce identical output on a
+  clean store), BO-3600e-2 (a run that could not examine everything reports
+  incomplete; only a full pass reports clean), BO-3600e-3 (the starting population
+  is measured, listed in full, and never grandfathered), BO-3600e-4 (the count
+  falls only by decision, never by exclusion — the clause that stops the burn-down
+  being achieved by narrowing the check), BO-3600e-5 (the how-to, verified by being
+  walked end to end against the real store).
