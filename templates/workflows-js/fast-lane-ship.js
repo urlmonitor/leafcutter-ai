@@ -327,7 +327,27 @@ function classifyContextBundle(bundleResult, marker) {
   // is a property of the real, on-disk assembly function's own layering
   // rule, not a hand-typed re-implementation of it.
   var hasEmptyLayerGap = /\n{4,}/.test(bundleText);
-  if (bundleText.length === 0 || !bundleText.includes(marker) || hasEmptyLayerGap) {
+
+  // A gap only appears BETWEEN two joins, so the rule above cannot see an
+  // empty layer in LAST position — that one leaves a single trailing "\n\n"
+  // and nothing after it. Before BO-2400c-1-vi the last-position case was
+  // unreachable, because "acs" always sat between the marker and
+  // "prior_tests". With "acs" removed, "prior_tests" IS the volatile suffix,
+  // and it is the layer most likely to arrive empty: the bundle prompt tells
+  // the agent a short placeholder is fine when no prior tests exist. So this
+  // check is the last-position half of the same "one of its layers is empty"
+  // rule, added by -vi because -vi is what made it reachable.
+  var markerIndex = bundleText.indexOf(marker);
+  var volatileSuffixEmpty =
+    markerIndex >= 0 &&
+    bundleText.slice(markerIndex + marker.length).trim().length === 0;
+
+  if (
+    bundleText.length === 0 ||
+    !bundleText.includes(marker) ||
+    hasEmptyLayerGap ||
+    volatileSuffixEmpty
+  ) {
     return {
       state: CONTEXT_BUNDLE_STATE_INCOMPLETE,
       message:
@@ -852,18 +872,19 @@ const bundleResult = await agent(
   `AC store: ${acStoreRoot}\n` +
   `Connected build set (dependency order): ${batchIds}\n\n` +
   `Step 1 — Write each layer's content to a real UTF-8 temp file:\n` +
-  `  - architecture: this repo's architecture overview (e.g. ` +
-  `${worktreePath}/docs/architecture/README.md, or the nearest architecture ` +
-  `index if that exact path does not exist)\n` +
-  `  - conventions: ${worktreePath}/CLAUDE.md\n` +
+  `  - architecture: ${worktreePath}/docs/architecture/diagrams/c1-001-command-map.md\n` +
   `  - high_level: the L0/L1 parent AC(s) covering ${targetAc}, read from ${acStoreRoot}\n` +
-  `  - acs: the L2/L3 AC YAML content for the connected build set (${batchIds}), ` +
-  `read from ${acStoreRoot}\n` +
   `  - prior_tests: any existing tests already covering this component/area ` +
   `(a short placeholder note is fine when none exist yet)\n\n` +
+  `The architecture path above is pinned, and it is the only architecture ` +
+  `source this bundle may carry. Use it exactly as written. Should reading ` +
+  `it fail, stop and report that the pinned path could not be opened. ` +
+  `Reaching for some other document instead would let two runs aimed at the ` +
+  `same target compose different bundles, and then no comparison across runs ` +
+  `means anything.\n\n` +
   `Step 2 — Run this single Bash command:\n` +
   `   python3 ${bundleScript} assemble-bundle --architecture <path> ` +
-  `--conventions <path> --high-level <path> --acs <path> --prior-tests <path>\n\n` +
+  `--high-level <path> --prior-tests <path>\n\n` +
   `SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB) ` +
   `of text — small enough to return in full. The ask is to return that text ` +
   `ITSELF, as text, in the "bundle" field below — NOT a path to it, NOT a ` +
@@ -1033,6 +1054,10 @@ const coderResult = await agent(
   `AC store: ${acStoreRoot}\n` +
   `Connected build set (dependency order): ${batchIds}\n\n` +
   `Step 1 — Implement:\n` +
+  `For each AC id above, read its YAML from ${acStoreRoot} — the full record, ` +
+  `including its constraints and notes. The context bundle above does NOT ` +
+  `carry that text; the store is inside this run's own worktree and is the ` +
+  `place to read it from.\n` +
   `The test-writer has written failing stubs. Run the suite to see the failures, ` +
   `then implement the minimum production code to make every scoped test PASS. ` +
   `Build the ACs in the order listed (prerequisites first).\n\n` +
