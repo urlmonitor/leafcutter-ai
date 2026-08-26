@@ -25,6 +25,21 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+try:
+    from check_outcome import OUTCOME_NOTHING_TO_INSPECT, emit_result  # type: ignore[import]
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
+    # this fallback exists only for a working copy that exposes this check
+    # script in isolation (e.g. a test fixture) -- same pattern as
+    # check_ac_parent_covered_by.py. The value here MUST stay in sync with
+    # check_outcome.py.
+    OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
+
 
 # ---------------------------------------------------------------------------
 # Constants — detection patterns
@@ -372,6 +387,26 @@ def _scan_diff(diff: str, weakening_diff: str | None = None) -> ScanResult:
     return result
 
 
+def _report_if_nothing_to_inspect() -> None:
+    """Emit GE-120e-1-i's outcome when the merge author authored nothing here.
+
+    GE-120e-1-i: an empty authored (merge-scoped) change set is a value to
+    report, never a signal to widen the scan back to the whole staged diff —
+    that anti-pattern is already avoided by construction in
+    ``_get_weakening_diff`` (an empty ``_merge_scoped_paths()`` intersection
+    yields ``""``, not a fallback to ``full_diff``). This function only
+    decides whether to ANNOUNCE that empty state on the shared,
+    machine-readable RESULT line, distinguishing "nothing of the author's to
+    inspect" from GE-120a-1's OUTCOME_COULD_NOT_CHECK ("a check that never
+    looked"). Called only from the non-blocking (pass) path in ``main()`` —
+    empty is a PASS, not a skip.
+    """
+    if os.environ.get("HOOK_TEST_DIFF"):
+        return  # unit-test diff-injection path; no real merge state to probe
+    if _merge_scoped_paths() == []:
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
+
+
 def main() -> int:
     """Run the contract-shrinking guard.
 
@@ -388,6 +423,7 @@ def main() -> int:
 
     if not scan.is_contract_shrinking:
         # Either no production changes, or no test weakening, or neither — OK.
+        _report_if_nothing_to_inspect()
         return 0
 
     # --- BLOCKED ---
@@ -420,5 +456,14 @@ if __name__ == "__main__":
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-08-25 [python-coder/GE-120e-1-i]: Added _report_if_nothing_to_inspect(),
+#   called from the non-blocking path in main(). Emits the shared
+#   check_outcome.OUTCOME_NOTHING_TO_INSPECT RESULT line when
+#   _merge_scoped_paths() finds the merge author's own resolution touched
+#   none of the diff this guard scans -- an explicit, non-widening empty
+#   result, distinguishable from GE-120a-1's OUTCOME_COULD_NOT_CHECK. No
+#   change to the pass/block decision itself (the merge-scoped narrowing that
+#   makes AC-1/AC-2 true here was already in place via _merge_scoped_paths /
+#   _get_weakening_diff, added under GE-111f). (#EPIC-TrustThatAGreenCheckActuallyChecked/29)
 # - 2026-06-04 12:00 [EPIC-BuildPathCorrectness/T02]: Created canonical template at templates/scripts/commit_guardian/. Extended _TEST_PATH_RE to exclude commit_guardian/ paths (self-exclusion fix for false-positive when hook scripts are staged). (#EPIC-BuildPathCorrectness/T02)
 # ===========================================================================

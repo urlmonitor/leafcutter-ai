@@ -32,6 +32,19 @@ Ticket checks:
        sibling ``done/`` subfolder, or — when the ticket itself lives in
        ``done/`` — to the parent of ``done/``).
 
+Merge scoping (AC GE-120e-3-ii):
+    When ``MERGE_HEAD`` is present, ``get_staged_md_files`` narrows its result
+    to ``.md`` paths differing from BOTH merge parents — i.e. content the
+    merge author's own resolution introduced or changed — via
+    ``frontmatter_validators.merge_scoped_md_paths``. A merge stages the
+    entire incoming branch, so an unscoped ``git diff --cached`` also names
+    every ``.md`` file the OTHER side ever touched, which the merge author
+    neither wrote nor can fix. This mirrors
+    ``check_contract_shrinking.py``'s ``_merge_scoped_paths`` idiom so both
+    checks share one merge-scoping mechanism. Outside a merge (or when the
+    merge state cannot be determined), the full staged set is used unchanged
+    — the stricter, pre-existing behaviour.
+
 Exit Codes:
     0 - All files pass validation (warnings are printed but do not block)
     1 - One or more files have blocking violations
@@ -104,9 +117,25 @@ from config import (
 )
 
 from frontmatter_validators import (
+    merge_scoped_md_paths,
     validate_doc_file,
     validate_ticket_file,
 )
+
+try:
+    from check_outcome import OUTCOME_NOTHING_TO_INSPECT, emit_result  # type: ignore[import]
+except ImportError:
+    # check_outcome.py is deployed alongside this file in every real layout
+    # (build.py copies the whole templates/scripts/commit_guardian/ tree), so
+    # this fallback exists only for a working copy that exposes this check
+    # script in isolation (e.g. a test fixture) -- same pattern as
+    # check_ac_parent_covered_by.py / check_contract_shrinking.py. The value
+    # here MUST stay in sync with check_outcome.py.
+    OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
+
+    def emit_result(outcome: str) -> None:
+        """Fallback RESULT-line emitter used when check_outcome is absent."""
+        print(f"RESULT: {outcome}", file=sys.stdout)
 
 # ---------------------------------------------------------------------------
 # File processing
@@ -279,6 +308,13 @@ def is_terminal_or_done_subfolder(filepath: str) -> bool:
 def get_staged_md_files() -> dict[str, str]:
     """Get all staged .md files with their git status.
 
+    During a merge (``MERGE_HEAD`` present), the result is narrowed to paths
+    differing from BOTH merge parents — see
+    ``frontmatter_validators.merge_scoped_md_paths`` and the module
+    docstring's "Merge scoping" section. Outside a merge, or when the merge
+    state cannot be determined, every staged ``.md`` file is returned
+    unchanged.
+
     Returns:
         dict[str, str]: Mapping of filepath to git status code.
     """
@@ -300,6 +336,10 @@ def get_staged_md_files() -> dict[str, str]:
             filepath = parts[-1]
             if filepath.lower().endswith(".md") and not status.startswith("D"):
                 staged[filepath] = status
+
+    scoped = merge_scoped_md_paths()
+    if scoped is not None:
+        staged = {p: s for p, s in staged.items() if p in scoped}
 
     return staged
 
@@ -448,6 +488,33 @@ def get_files_to_check(args: argparse.Namespace, project_root: Path) -> dict[str
     return get_staged_md_files()
 
 
+def _report_if_nothing_to_inspect(args: argparse.Namespace) -> None:
+    """Emit GE-120e-1-i's outcome when the merge author authored no .md content.
+
+    GE-120e-1-i: an empty authored (merge-scoped) change set is a value to
+    report, never a signal to widen the scan back to the whole staged tree —
+    that anti-pattern is already avoided by construction in
+    ``get_staged_md_files`` (an empty ``merge_scoped_md_paths()``
+    intersection narrows the staged set to ``{}``, not a fallback to the
+    unscoped diff). This function only decides whether to ANNOUNCE that
+    empty state on the shared, machine-readable RESULT line, distinguishing
+    "nothing of the author's to inspect" from GE-120a-1's
+    OUTCOME_COULD_NOT_CHECK ("a check that never looked"). Only meaningful
+    for the default (no ``--file`` / ``--all`` / positional filenames)
+    invocation, where the staged set actually goes through merge scoping;
+    a manual file selection is never "merge-derived", so it is skipped here.
+    Called only from the non-blocking (pass) path in ``main()`` — empty is a
+    PASS, not a skip.
+
+    Args:
+        args: Parsed command-line arguments.
+    """
+    if args.file or args.all or args.filenames:
+        return
+    if merge_scoped_md_paths() == set():
+        emit_result(OUTCOME_NOTHING_TO_INSPECT)
+
+
 def print_results(all_errors: list[str], all_warnings: list[str], passed_count: int) -> int:
     """Print results and return exit code.
 
@@ -539,6 +606,7 @@ def main() -> int:
     files_to_check = get_files_to_check(args, project_root)
 
     if not files_to_check:
+        _report_if_nothing_to_inspect(args)
         return 0
 
     all_errors: list[str] = []
@@ -573,6 +641,24 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-25 [python-coder/GE-120e-1-i]: Added _report_if_nothing_to_inspect(),
+  called from main()'s empty-files_to_check pass path. Emits the shared
+  check_outcome.OUTCOME_NOTHING_TO_INSPECT RESULT line when
+  frontmatter_validators.merge_scoped_md_paths() finds the merge author's
+  own resolution touched no .md content -- an explicit, non-widening empty
+  result, distinguishable from GE-120a-1's OUTCOME_COULD_NOT_CHECK. No
+  change to the pass/block decision itself (the merge-scoped narrowing that
+  makes AC-1/AC-2 true here was already in place via GE-120e-3-ii, below).
+  (#EPIC-TrustThatAGreenCheckActuallyChecked/29)
+- 2026-08-25 [python-coder/GE-120e-3-ii]: get_staged_md_files() now applies
+  frontmatter_validators.merge_scoped_md_paths() to narrow the staged .md
+  set to paths differing from BOTH merge parents whenever MERGE_HEAD is
+  present, mirroring check_contract_shrinking.py's _merge_scoped_paths
+  idiom. Fixes two false-positive shapes: naming carried-in .md content
+  the merge author never touched, and blocking a merge whose invalid
+  frontmatter arrived unchanged from a parent with no author resolution.
+  The new helpers live in frontmatter_validators.py, not here, to keep
+  this file under the 400-line limit. (AC GE-120e-3-ii)
 - 2026-05-19 11:30 [EPIC-RoadmapStewardship/03]: Added roadmap_staleness check. (#EPIC-RoadmapStewardship/03)
   Adds check_roadmap_staleness() and _load_roadmap_staleness_threshold() to
   fire a warn-only stderr warning when docs/roadmap.json.last_updated exceeds

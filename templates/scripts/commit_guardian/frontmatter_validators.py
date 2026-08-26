@@ -11,6 +11,7 @@ ARCHITECTURE: Not needed.
 
 import fnmatch
 import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -525,10 +526,83 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
     return errors, warnings
 
 
+# Merge scoping (AC GE-120e-3-ii) — see merge_scoped_md_paths below.
+_GIT_TIMEOUT = 30
+
+
+def _name_only(*extra: str) -> list[str] | None:
+    """Return staged path names via ``git diff --cached -z --name-only``.
+
+    Mirrors ``check_contract_shrinking.py``'s helper of the same name so
+    both checks share one merge-scoping idiom. ``-z`` is required, not
+    cosmetic: without it git C-quotes any non-ASCII path and whitespace
+    splitting would tear a spaced path into two tokens, silently emptying
+    the scope.
+
+    Args:
+        *extra: Extra args appended to the command (e.g. ``"MERGE_HEAD"``).
+
+    Returns:
+        list[str] | None: Repo-relative paths, or None on git failure.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--cached", "-z", "--name-only", *extra],
+            capture_output=True, text=True, timeout=_GIT_TIMEOUT, check=True,
+        )
+    except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError) as exc:
+        print(f"WARNING: git diff --name-only {extra} failed: {exc}", file=sys.stderr)
+        return None
+    return [p for p in proc.stdout.split("\0") if p]
+
+
+def merge_scoped_md_paths() -> set[str] | None:
+    """Return staged paths differing from BOTH merge parents, or None.
+
+    Same idiom as ``check_contract_shrinking.py``'s ``_merge_scoped_paths``:
+    a path that differs from ``HEAD`` (the branch merged into) AND from
+    ``MERGE_HEAD`` (the branch merged in) is content the merge author's own
+    resolution introduced or changed. Content matching either parent
+    verbatim was never touched by the author and drops out of scope.
+
+    Returns:
+        set[str] | None: Paths to validate during a merge; None when this
+        is not a merge, or the merge state can't be determined — the
+        caller then uses the full staged set (the stricter behaviour).
+    """
+    try:
+        probe = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True, text=True, timeout=_GIT_TIMEOUT, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"WARNING: MERGE_HEAD probe failed: {exc}", file=sys.stderr)
+        return None
+    if probe.returncode != 0:
+        return None  # not a merge
+
+    ours = _name_only()
+    theirs = _name_only("MERGE_HEAD")
+    if ours is None or theirs is None:
+        return None
+    theirs_set = set(theirs)
+    return {p for p in ours if p in theirs_set}
+
+
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-25 [python-coder/GE-120e-3-ii]: Added merge_scoped_md_paths and
+  its _name_only helper (mirroring check_contract_shrinking.py's
+  _merge_scoped_paths idiom). check_doc_frontmatter.py's
+  get_staged_md_files() now calls merge_scoped_md_paths() to narrow staged
+  .md files to those differing from BOTH merge parents during a merge, so
+  the check no longer names carried-in content the merge author never
+  touched, and no longer blocks a merge whose fault content arrived
+  verbatim with no author resolution. Landed here rather than in
+  check_doc_frontmatter.py to keep that file under the 400-line limit
+  (same reason this module already exists per its own module docstring).
 - 2026-08-18 [business-analyst/GE-118c]: IDENTIFIER CLARIFICATION ONLY -- no
   behaviour change, no code touched. The requirement tracked in the entry below
   as ``GE-120`` was renumbered to ``GE-118c`` (``docs/acceptance-criteria/
