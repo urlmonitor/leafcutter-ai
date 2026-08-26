@@ -71,9 +71,11 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 _IMPORT_OK = False
 _IMPORT_ERR = ""
-_create_fastlane_worktree = None  # type: ignore[assignment]
-_branch_exists = None  # type: ignore[assignment]
 
+# The fallback assignments live in the except branch, not before the try. Binding
+# the names to None first and then importing over them gives each name two
+# definition sites, which mypy reports as no-redef and which then makes every call
+# site look like a call on None.
 try:
     from setup_ticket_worktree import (  # type: ignore[import]
         _branch_exists,
@@ -82,6 +84,8 @@ try:
     _IMPORT_OK = True
 except (ImportError, ModuleNotFoundError) as _exc:
     _IMPORT_ERR = str(_exc)
+    _branch_exists = None  # type: ignore[assignment]
+    _create_fastlane_worktree = None  # type: ignore[assignment]
 
 
 def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
