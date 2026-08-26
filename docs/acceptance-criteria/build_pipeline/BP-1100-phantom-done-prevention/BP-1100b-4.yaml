@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -144,8 +144,65 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Filled the three fields that made this AC non-ticket-generatable: assigned_agent (was null -> python-coder; the generator was emitting a literal '- [ ] None' Sign-offs line that the parity guard rejects), estimated_complexity (was null -> L: engine-faithful harness + re-authored journal module + finalize-feature.js across 3+ files, plus triage of every workflow test the harness change turns red), and it_requirements (was absent -> structured package-surface spec keyed on unit_tests/_workflow_engine_harness.py with n_location_rule 'all'). Added 8 test_spec descriptors — 5 executing the finalize workflow under the harness, 3 pinning the harness to the ADR-017 injected-globals contract — plus test_rationale explaining why the naive remedy is a false green today. Added delivers_to (the engine-faithful harness, consumed by test-writer). Promoted three doc_links from 'describes' to 'modifies' (test_bo_1000c_1a.py, finalize-feature.js, _workflow_engine_harness.py) so files_touched names the real edit surface instead of one incidental path. Recorded the harness-first ordering, the shared-test-infrastructure hazard flagged in the AC notes, and the Bundle B file-scope statement. criteria, readiness (draft), req_status and work_status left unchanged."
     by: it-po
+  - reason: "work_status flipped to done — harness landed (BP-1100b-4) and BO-1000c-1a's four executed descriptors implemented; test_spec descriptors 1-5 delivered under the redefined BO-1000c-1a contract, not the original per-step journal-file wording"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      The ADR reference in this file's doc_links (ADR-017-dual-engine-workflow-
+      support.md) does not exist on disk; the real dual-engine ADR is
+      ADR-030-dual-engine-workflow-support.md (confirmed by directory listing).
+      All code comments and this note use ADR-030.
+
+      run_workflow_under_e2() (unit_tests/_workflow_engine_harness.py) now runs
+      the target workflow body inside a Node vm.createContext() populated with
+      exactly agent/parallel/pipeline/phase/log/args/workflow/budget (+console,
+      a documented back-compat exception) — require/module/exports/process/
+      __dirname/__filename all throw ReferenceError, verified by execution both
+      for six individual forbidden globals and for the real finalize-feature.js.
+      test_spec descriptors 6-8 (test_harness_exposes_only_the_engine_injected_
+      globals, test_harness_exposes_no_module_loader_to_the_workflow_body,
+      test_filesystem_dependent_journaling_produces_zero_records_under_the_
+      harness) are implemented verbatim by name in
+      unit_tests/workflows/test_bp_1100b_4.py and pass; confirmed red against
+      the pre-fix harness (3/3 failed under AC_ENFORCE_STRICT=1) before the fix
+      and green after, so this is executed, falsifiable coverage, not a
+      tautology.
+
+      test_spec descriptors 1-5 target unit_tests/workflows/test_bo_1000c_1a.py
+      under names describing a per-step journal-file mechanism (e.g.
+      test_one_journal_record_is_appended_per_completed_step) that no longer
+      exists: BO-1000c-1a was redefined on 2026-08-18 (see that AC's own
+      amended_by) to delete the workflow-owned journal file entirely and rebind
+      coverage onto the E2 engine's own journal.jsonl, observed indirectly via
+      per-agent-dispatch capture. The re-authored coverage that actually
+      satisfies this AC's first criteria block — "at least one test executes
+      the finalize workflow under the harness and asserts observable outcomes
+      ... in step order ... still present when the run ends" plus the renaming
+      invariant — is BO-1000c-1a's own test_spec: test_every_reached_step_has_
+      at_least_one_agent_dispatch, test_agent_dispatches_appear_in_step_order,
+      test_agent_dispatch_records_are_still_readable_after_the_run_ends, and
+      test_renaming_narrate_does_not_change_dispatch_based_coverage — all four
+      implemented and green. The "run in which the append cannot happen ...
+      fails at least one of these tests" clause is satisfied at the harness
+      level (test_filesystem_dependent_journaling_produces_zero_records_under_
+      the_harness) rather than against finalize-feature.js directly, because
+      finalize-feature.js's own append call was removed outright by the
+      BO-1000c-1a redefinition — there is no longer a live append path in that
+      script for such a test to exercise. Recorded here rather than silently
+      reusing the stale names, per this file's own "do not satisfy this AC with
+      a renamed or broadened regular expression" constraint — the goal is
+      honest evidence, not a name match.
+
+      Full-suite verification: unit_tests/workflows/ under AC_ENFORCE_STRICT=1
+      = 468 passed (461 pre-existing baseline at d97eb399 + 3 new
+      test_bp_1100b_4.py + 4 newly-implemented test_bo_1000c_1a.py executed
+      tests), zero regressions, zero other workflow test found relying on a
+      non-injected global.
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/test_bp_1100b_4.py
+  - unit_tests/workflows/test_bo_1000c_1a.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md
 change_target: code

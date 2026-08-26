@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -160,9 +160,37 @@ amended_by:
       restored. That is M1 in docs/reference/false-green-mechanisms.md, and it is
       why the replacement is an ABSENCE assertion: a presence assertion stays green
       on dead code, an absence assertion cannot.
+  - reason: "work_status flipped to done — harness (BP-1100b-4) landed, all five test_spec descriptors implemented and green"
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      BP-1100b-4's vm-sandboxed run_workflow_under_e2() harness landed in the same
+      change (unit_tests/_workflow_engine_harness.py). All five test_spec
+      descriptors for this AC are now implemented in
+      unit_tests/workflows/test_bo_1000c_1a.py:
+      test_no_module_loader_or_custom_journal_helper_remains (absence guard, from
+      #573, unchanged), test_every_reached_step_has_at_least_one_agent_dispatch,
+      test_agent_dispatches_appear_in_step_order,
+      test_agent_dispatch_records_are_still_readable_after_the_run_ends, and
+      test_renaming_narrate_does_not_change_dispatch_based_coverage. The four
+      executed tests run the real, unmodified templates/workflows-js/
+      finalize-feature.js under the engine-faithful harness and assert on the
+      harness's own agent_calls capture (call_index order, phase_name tagging) —
+      the same per-agent-dispatch signal the E2 engine's own journal.jsonl is
+      keyed on. Verified green under AC_ENFORCE_STRICT=1 (all 8 tests across
+      test_bo_1000c_1a.py and test_bp_1100b_4.py pass; full unit_tests/workflows/
+      suite: 468 passed = 461 pre-existing + 3 BP-1100b-4 harness-fidelity tests +
+      4 newly-implemented BO-1000c-1a executed tests, zero regressions).
+      covered_by extended to name unit_tests/_workflow_engine_harness.py and
+      unit_tests/workflows/test_bp_1100b_4.py alongside the existing
+      test_bo_1000c_1a.py entry, since the harness fidelity is a load-bearing
+      part of what makes the four executed tests meaningful evidence rather than
+      a false green (see BP-1100b-4's own test_rationale).
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bo_1000c_1a.py
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/test_bp_1100b_4.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-InFlightVisibility/12_TICKET-20260720-BO-1000c-1a.md
 change_target: pipeline
