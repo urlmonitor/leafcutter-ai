@@ -61,6 +61,19 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
             │                    └── _find_nodeid_for_test(func, basename, results)
             └── [leaf, ts path] run_vitest_and_parse(ts_files, project_dir=…)
                          _discover_project_dir(ts_files) → project_dir
+
+    BP-1100g-3 — tag-record collection (separate entry point, feeds NO
+    eligibility decision):
+        collect_test_tag_records(test_root) -> list[dict]
+            └── _scan_test_file_for_all_tags(py_file)   [ONE read+scan per file,
+            │       └── _build_lineno_to_function_map(lines)   shared with the
+            │                                                  covers-only view
+            │                                                  _scan_single_test_file
+            │                                                  now derives from]
+            └── _build_function_records(py_file, tags, def_linenos)
+        find_unrecognised_angle_tags(records) -> list[dict]
+            └── _load_permitted_angle_kinds()  [config/ac_store_schema.json,
+                                                 the BP-1100g-1 single source]
 """
 
 from __future__ import annotations
@@ -93,6 +106,24 @@ _PYTEST_RESULT_RE = re.compile(
 
 # Matches a function definition whose name starts with "test_".
 _TEST_DEF_RE = re.compile(r"^\s*def\s+(test_\w+)")
+
+# BP-1100g-3: matches the SECOND tag axis on a test function -- "which kind
+# of proof this test was written to give" -- mirroring COVERS_TAG_RE's own
+# "(?:#|//)\s*<name>:\s*(\S+)" shape exactly (tag syntax convention: the
+# writer learns one grammar, not two). Defined locally rather than added to
+# test_enforcement.COVERS_TAG_RE's shared seam because that seam is scoped to
+# the covers-tag grammar specifically; the angle tag has no cross-module
+# reader yet outside this file.
+_ANGLE_TAG_RE = re.compile(r"(?:#|//)\s*angle:\s*(\S+)")
+
+# BP-1100g-3: the permitted angle-kind set is resolvable from exactly one
+# source per BP-1100g-1 -- config/ac_store_schema.json's
+# properties.test_spec[].angle enum (the same file
+# unit_tests/prompt_assembly/test_bp_1100g_1.py reads). Never restate the set
+# as a hand-typed literal here; see _load_permitted_angle_kinds().
+_PERMITTED_ANGLES_SCHEMA_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "config" / "ac_store_schema.json"
+)
 
 # Directory names excluded from ALL test-file scanning (.py AND .ts/.tsx).
 # Prevents traversing node_modules and other non-test subtrees.
@@ -334,12 +365,143 @@ def _is_excluded_path(path: Path) -> bool:
     return any(part in _EXCLUDED_SCAN_DIRS for part in path.parts)
 
 
+def _build_lineno_to_function_map(lines: list[str]) -> dict[int, str]:
+    """Map every scannable line of a test file to its enclosing test function.
+
+    BP-1100g-3: a tag can legally appear in three positions -- the line(s)
+    directly ABOVE a ``def test_*():``, the first line of the body, or inside
+    the docstring (the same three positions ``check_test_ac_tags.py``
+    accepts). A plain top-to-bottom scan that only tracks the
+    most-recently-seen ``def`` cannot see the "above the def" case: when the
+    scan reaches that comment line, the ``def`` that would explain it has not
+    been reached yet, so the tag is silently dropped. This function fixes
+    that gap with one extra backward pass, still over the same *lines* list
+    (no second file read, no second directory walk):
+
+    1. Every contiguous block of ``#``-comment lines immediately preceding a
+       ``def test_*():`` line is attributed FORWARD to that function.
+    2. Every other line (the def line itself, and everything until the next
+       ``def``) falls back to the nearest PRECEDING ``def test_*():`` line --
+       this is the original behaviour, and it already covers the "first line
+       of body" and "docstring" positions correctly, since both live inside
+       the function's own body.
+
+    Args:
+        lines: All lines of the file, as returned by ``readlines()``
+            (1-indexed by convention when enumerated from 1).
+
+    Returns:
+        Dict mapping 1-indexed line numbers to the enclosing test function's
+        name. Lines before the first ``def test_*():`` (and not part of its
+        own leading comment block) have no entry.
+    """
+    def_line_to_name: dict[int, str] = {}
+    for lineno, line in enumerate(lines, 1):
+        match = _TEST_DEF_RE.match(line)
+        if match:
+            def_line_to_name[lineno] = match.group(1)
+
+    mapping: dict[int, str] = {}
+    for def_lineno, func_name in def_line_to_name.items():
+        above_idx = def_lineno - 2  # 0-based index of the line directly above the def
+        start_idx = above_idx
+        while start_idx >= 0 and lines[start_idx].lstrip().startswith("#"):
+            start_idx -= 1
+        for idx in range(start_idx + 1, above_idx + 1):
+            mapping[idx + 1] = func_name  # back to 1-indexed
+
+    current_function: str | None = None
+    for lineno, _line in enumerate(lines, 1):
+        if lineno in def_line_to_name:
+            current_function = def_line_to_name[lineno]
+        if current_function is not None:
+            mapping.setdefault(lineno, current_function)
+    return mapping
+
+
+def _scan_test_file_for_all_tags(py_file: Path) -> tuple[list[dict], dict[str, int]]:
+    """Single read + single line-scan of *py_file* for BOTH tag axes.
+
+    BP-1100g-3 "ONE SCANNER, TWO AXES": this is the single location that
+    reads the file and walks its lines once, producing both the flat
+    per-occurrence tag list (the existing ``# covers:`` axis and the new
+    ``# angle:`` axis, discriminated by ``tag_type``) and a
+    ``{function_name: def_lineno}`` map. ``_scan_single_test_file`` (the
+    existing covers-only view consumed by ``verify_done_eligible``) and
+    ``collect_test_tag_records`` (the new two-axis per-function view) are
+    both built by filtering/grouping THIS one pass -- neither re-reads the
+    file or re-walks its lines. A parallel reader of the same files would
+    drift, which is the EPIC-ComputedQualityGates layer-3 failure this
+    ticket's constraint exists to prevent.
+
+    Args:
+        py_file: Path to the Python source file to scan.
+
+    Returns:
+        ``(tags, def_linenos)`` where ``tags`` is a list of dicts, one per
+        tag occurrence, each carrying ``tag_type`` (``"covers"`` or
+        ``"angle"``), the tag's own value key (``ac_id`` or ``angle``),
+        ``location``, ``function``, and ``file``; and ``def_linenos`` maps
+        every ``def test_*`` function name found to its 1-indexed def line.
+        Both are empty when the file cannot be read.
+    """
+    try:
+        with open(py_file, encoding="utf-8") as fh:
+            lines = fh.readlines()
+    except OSError as exc:
+        print(
+            f"WARNING: done_proof: cannot read {py_file}: {exc}",
+            file=sys.stderr,
+        )
+        return [], {}
+
+    def_linenos: dict[str, int] = {}
+    for lineno, line in enumerate(lines, 1):
+        match = _TEST_DEF_RE.match(line)
+        if match:
+            def_linenos.setdefault(match.group(1), lineno)
+
+    lineno_to_function = _build_lineno_to_function_map(lines)
+    tags: list[dict] = []
+    for lineno, line in enumerate(lines, 1):
+        function = lineno_to_function.get(lineno)
+        if function is None:
+            continue
+        covers_match = COVERS_TAG_RE.search(line)
+        if covers_match:
+            tags.append(
+                {
+                    "tag_type": "covers",
+                    "ac_id": covers_match.group(1),
+                    "location": f"{py_file}:{lineno}",
+                    "function": function,
+                    "file": py_file,
+                }
+            )
+        angle_match = _ANGLE_TAG_RE.search(line)
+        if angle_match:
+            tags.append(
+                {
+                    "tag_type": "angle",
+                    "angle": angle_match.group(1),
+                    "location": f"{py_file}:{lineno}",
+                    "function": function,
+                    "file": py_file,
+                }
+            )
+    return tags, def_linenos
+
+
 def _scan_single_test_file(py_file: Path) -> list[dict]:
     """Scan one Python file for ``# covers:`` tags and associate each with its function.
 
-    Tracks the most-recently-seen ``def test_*`` definition as the enclosing
-    function for any tag found on subsequent lines.  Tags appearing before any
-    ``def test_`` line are skipped (``current_function`` is None).
+    BP-1100g-3: derives its result by filtering the shared
+    :func:`_scan_test_file_for_all_tags` pass down to ``tag_type == "covers"``
+    entries, so this function's own external behaviour (and therefore
+    ``verify_done_eligible``'s eligibility computation) is unchanged except
+    for one bug fix: a ``# covers:`` tag placed on the line(s) directly above
+    the ``def`` is now attributed to that function instead of being silently
+    dropped (see :func:`_build_lineno_to_function_map`).
 
     Uses the shared :data:`~test_enforcement.COVERS_TAG_RE` seam so both
     Python ``# covers:`` and JavaScript ``// covers:`` syntax are recognised
@@ -353,32 +515,8 @@ def _scan_single_test_file(py_file: Path) -> list[dict]:
         ``function`` (Python function name), ``file`` (Path).  Empty list when
         the file cannot be read or contains no tags in a test function.
     """
-    results: list[dict] = []
-    try:
-        with open(py_file, encoding="utf-8") as fh:
-            lines = fh.readlines()
-    except OSError as exc:
-        print(
-            f"WARNING: done_proof: cannot read {py_file}: {exc}",
-            file=sys.stderr,
-        )
-        return results
-    current_function: str | None = None
-    for lineno, line in enumerate(lines, 1):
-        func_match = _TEST_DEF_RE.match(line)
-        if func_match:
-            current_function = func_match.group(1)
-        tag_match = COVERS_TAG_RE.search(line)
-        if tag_match and current_function is not None:
-            results.append(
-                {
-                    "ac_id": tag_match.group(1),
-                    "location": f"{py_file}:{lineno}",
-                    "function": current_function,
-                    "file": py_file,
-                }
-            )
-    return results
+    tags, _def_linenos = _scan_test_file_for_all_tags(py_file)
+    return [tag for tag in tags if tag["tag_type"] == "covers"]
 
 
 def _scan_single_ts_file(ts_file: Path) -> list[dict]:
@@ -455,6 +593,194 @@ def _scan_test_root_for_covers_tags(test_root: Path) -> list[dict]:
         if not _is_excluded_path(ts_file):
             results.extend(_scan_single_ts_file(ts_file))
     return results
+
+
+# ---------------------------------------------------------------------------
+# BP-1100g-3 — tag-record collection (planning-declaration layer, no I/O
+# beyond the file/schema reads below; feeds NO pass/done/eligibility
+# decision anywhere — see the boundary note on find_unrecognised_angle_tags)
+# ---------------------------------------------------------------------------
+
+
+def _build_function_records(
+    py_file: Path,
+    tags: list[dict],
+    def_linenos: dict[str, int],
+) -> list[dict]:
+    """Pure grouping step: fold one file's flat tag list into per-function records.
+
+    For every ``def test_*`` found in *def_linenos*, produces exactly one
+    record carrying both axes. A function present on only one axis still
+    gets the other axis back as an empty list -- never omitted, never
+    dropped, never defaulted to ``None`` (BP-1100g-3's representability
+    requirement).
+
+    Args:
+        py_file: The file the tags and def linenos were collected from.
+        tags: The flat per-occurrence tag list from
+            :func:`_scan_test_file_for_all_tags` for this same file.
+        def_linenos: ``{function_name: def_lineno}`` for this same file, from
+            the same call to :func:`_scan_test_file_for_all_tags`.
+
+    Returns:
+        List of ``{"file": str, "lineno": int, "function": str,
+        "covers": list[str], "angles": list[str]}`` records, one per
+        function, in ``def_linenos`` order.
+    """
+    covers_by_function: dict[str, list[str]] = {name: [] for name in def_linenos}
+    angles_by_function: dict[str, list[str]] = {name: [] for name in def_linenos}
+    for tag in tags:
+        function = tag["function"]
+        if function not in def_linenos:
+            continue
+        if tag["tag_type"] == "covers":
+            covers_by_function[function].append(tag["ac_id"])
+        else:
+            angles_by_function[function].append(tag["angle"])
+
+    return [
+        {
+            "file": str(py_file),
+            "lineno": lineno,
+            "function": function,
+            "covers": covers_by_function[function],
+            "angles": angles_by_function[function],
+        }
+        for function, lineno in def_linenos.items()
+    ]
+
+
+def collect_test_tag_records(test_root: Path) -> list[dict]:
+    """Collect one record per test function under *test_root*, both axes together.
+
+    BP-1100g-3 "ONE SCANNER, TWO AXES": for each Python test function found
+    anywhere under *test_root*, returns a single record carrying the existing
+    ``# covers: <ac_id>`` axis and the new ``# angle: <kind>`` axis, both
+    produced by the SAME single-pass scan :func:`_scan_test_file_for_all_tags`
+    already performs -- never a second, parallel walk of the test tree. A
+    function present on only one axis still gets a record with the other
+    axis present as an empty list, never omitted and never dropped.
+
+    This is a planning-declaration reader only. Nothing here is consumed by
+    :func:`_classify_outcomes`, :func:`verify_done_eligible`, or any
+    eligibility computation (BP-1100g-3-i boundary) -- the angle axis is a
+    statement of what a test was written for, not a verdict about it.
+
+    Args:
+        test_root: Root directory to scan recursively for Python test files.
+            Only ``*.py`` files are scanned -- the angle-tag authoring
+            convention is Python-only.
+
+    Returns:
+        List of per-function tag records (see :func:`_build_function_records`
+        for the exact shape), in file-then-definition order. Excluded
+        directories (``node_modules``, ``.next``, ``dist``, ``coverage``,
+        ``.git``, ``__pycache__``, ``.venv``) are skipped, matching
+        :func:`_scan_test_root_for_covers_tags`.
+    """
+    records: list[dict] = []
+    try:
+        py_files = sorted(test_root.rglob("*.py"))
+    except OSError as exc:
+        print(
+            f"WARNING: done_proof: cannot scan {test_root}: {exc}",
+            file=sys.stderr,
+        )
+        return records
+    for py_file in py_files:
+        if _is_excluded_path(py_file):
+            continue
+        tags, def_linenos = _scan_test_file_for_all_tags(py_file)
+        records.extend(_build_function_records(py_file, tags, def_linenos))
+    return records
+
+
+def _load_permitted_angle_kinds(
+    schema_path: Path = _PERMITTED_ANGLES_SCHEMA_PATH,
+) -> set[str]:
+    """Load the single-source permitted angle-kind set.
+
+    BP-1100g-1 makes this set single: ``config/ac_store_schema.json``'s
+    ``properties.test_spec[].angle`` enum is the one authoritative source the
+    planning side can emit from and the test-writing side is taught from.
+    This function reads that real source fresh on every call rather than
+    restating or caching a copy of it (a convenience copy is exactly the
+    EPIC-ComputedQualityGates layer-3 defect this ticket's constraints warn
+    against).
+
+    Args:
+        schema_path: Path to ``config/ac_store_schema.json``. Defaults to
+            the module-relative path; overridable for tests.
+
+    Returns:
+        The set of permitted angle-kind strings. Returns an empty set
+        (never raises) when the schema file is missing, unreadable, or does
+        not have the expected shape -- this module's fail-soft-and-log I/O
+        convention (an empty permitted set means every angle value is
+        reported as unrecognised, which is a WARNING-visible signal, not a
+        crash, and per the BP-1100g-3-i boundary it still feeds no pass/done
+        decision anywhere).
+    """
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"WARNING: done_proof: cannot read angle schema {schema_path}: {exc}",
+            file=sys.stderr,
+        )
+        return set()
+    try:
+        test_spec = schema["properties"]["test_spec"]
+        array_branches = [b for b in test_spec["oneOf"] if b.get("type") == "array"]
+        item_schema = array_branches[0]["items"]
+        enum = item_schema.get("properties", {}).get("angle", {}).get("enum") or []
+    except (KeyError, IndexError, TypeError) as exc:
+        print(
+            f"WARNING: done_proof: angle schema shape unexpected in {schema_path}: {exc}",
+            file=sys.stderr,
+        )
+        return set()
+    return set(enum)
+
+
+def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
+    """Report every angle value outside the permitted set, by test and value.
+
+    A reporting pass over data :func:`collect_test_tag_records` already
+    collected -- it never drops, alters, or re-filters the offending record;
+    a test carrying an unrecognised kind stays fully present in
+    ``collect_test_tag_records()``'s own output. Never raises: an unreadable
+    permitted-kind source degrades to "nothing recognised" (see
+    :func:`_load_permitted_angle_kinds`), not a crash.
+
+    BP-1100g-3-i boundary: this function's output is advisory only. It must
+    never be wired into :func:`_classify_outcomes`, :func:`verify_done_eligible`,
+    or any other pass/done/eligibility computation -- the angle axis is a
+    planning declaration, not a verdict about any piece of work.
+
+    Args:
+        records: The per-function records :func:`collect_test_tag_records`
+            already produced.
+
+    Returns:
+        List of ``{"file": str, "function": str, "angle": str}`` dicts, one
+        per unrecognised angle value found (a function tagging the same bad
+        value twice produces two entries, since ``angles`` is not
+        deduplicated upstream).
+    """
+    permitted = _load_permitted_angle_kinds()
+    unrecognised: list[dict] = []
+    for record in records:
+        for angle in record.get("angles", []):
+            if angle not in permitted:
+                unrecognised.append(
+                    {
+                        "file": record["file"],
+                        "function": record["function"],
+                        "angle": angle,
+                    }
+                )
+    return unrecognised
 
 
 def _parse_pytest_verbose_output(output: str) -> dict[str, str]:
@@ -1021,3 +1347,20 @@ def verify_done_eligible(
         "failing_tests": [],
         "dangling_tags": dangling_tags,
     }
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-08-25 23:40 [python-coder]: Added collect_test_tag_records() and
+#   find_unrecognised_angle_tags() -- the second tag axis ("which kind of
+#   proof a test was written to give"), collected by the same single-pass
+#   scan that already collects "# covers:" (_scan_test_file_for_all_tags
+#   extends _scan_single_test_file / _scan_test_root_for_covers_tags in
+#   place, per the "ONE SCANNER, TWO AXES" constraint). Fixed a latent bug
+#   along the way: a tag placed on the line(s) directly above a def was
+#   previously silently dropped by the top-to-bottom scan; both axes now
+#   correctly attribute that position via _build_lineno_to_function_map's
+#   backward lookahead. The new axis reads its permitted-kind set fresh from
+#   config/ac_store_schema.json (BP-1100g-1's single source) and is
+#   deliberately wired into nothing that computes eligibility -- it is a
+#   planning declaration, not a verdict. (#TICKET-20260825-BP-1100g-3)
