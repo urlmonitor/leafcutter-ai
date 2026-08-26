@@ -247,13 +247,21 @@ class TestCoveredByAutofixMechanismDirectoryScope(unittest.TestCase):
             timeout=10,
         )
 
-        # Sanity check confirming the defect is live in THIS run: grep finds
-        # nothing under tests/, because there is nothing there to find.
+        # Fixture sanity check: the covering tag exists ONLY under unit_tests/,
+        # never under tests/. That is what makes the assertion below a real
+        # test of the mechanism's directory scope rather than of grep.
+        #
+        # This was originally written as assertEqual(result.stdout.strip(), "")
+        # — "the documented command finds nothing". That is a property of the
+        # DEFECT, not of the fixture, and it contradicted the assertion below
+        # outright: one string cannot both strip to "" and contain the tag, so
+        # the test was unsatisfiable by any implementation and would have gone
+        # on failing after a correct fix. Assert the fixture directly instead.
         self.assertEqual(
-            result.stdout.strip(),
-            "",
-            "Fixture sanity check: tests/ is empty in this scenario, so the "
-            f"documented command must find nothing there. Got: {result.stdout!r}",
+            sorted(p.name for p in (self.tmp_root / "tests").rglob("*")),
+            [],
+            "Fixture sanity check: tests/ must be empty in this scenario, so "
+            "that a hit can only have come from unit_tests/.",
         )
 
         # The criterion demands the tag be found "from the diff", with no

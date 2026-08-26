@@ -194,7 +194,7 @@ def _atomic_write_text(target_path: Path, text: str) -> None:
             prefix=f".{target_path.name}.",
             suffix=".tmp",
         )
-        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8", newline="") as fh:
             tmp_fd = None  # ownership transferred to the context manager
             fh.write(text)
         os.replace(tmp_name, target_path)
@@ -222,6 +222,34 @@ def _atomic_write_text(target_path: Path, text: str) -> None:
                     target_path,
                     cleanup_exc,
                 )
+
+
+def _line_ending_suffix(line: str) -> str:
+    """Return the exact trailing line-ending bytes of *line*.
+
+    BO-2400e-4 / KI-BO-022: a targeted single-line text edit must reproduce
+    the file's own line-ending convention on the rewritten line, not
+    Python's default ``"\\n"``. A CRLF-encoded record's ``work_status:``
+    line must be rewritten with a trailing ``"\\r\\n"``, not downgraded to a
+    bare ``"\\n"`` — otherwise the "only the value changes" criterion is
+    violated on the byte level even when the read/write pair otherwise
+    preserves every other line untouched.
+
+    Args:
+        line: A single line, possibly including its trailing newline
+            sequence (as produced by ``str.splitlines(keepends=True)``).
+
+    Returns:
+        ``"\\r\\n"``, ``"\\n"``, ``"\\r"``, or ``""`` when *line* has no
+        trailing line-ending sequence at all (e.g. the file's last line).
+    """
+    if line.endswith("\r\n"):
+        return "\r\n"
+    if line.endswith("\n"):
+        return "\n"
+    if line.endswith("\r"):
+        return "\r"
+    return ""
 
 
 def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
@@ -274,7 +302,7 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
     fast lane on 4.7% of the store.
     """
     try:
-        with yaml_path.open(encoding="utf-8") as fh:
+        with yaml_path.open(encoding="utf-8", newline="") as fh:
             original = fh.read()
     except OSError as exc:
         _LOG.warning("_update_ac_work_status: cannot read %s: %s", yaml_path, exc)
@@ -293,7 +321,7 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
 
     if match_indices:
         index = match_indices[0]
-        newline_suffix = "\n" if lines[index].endswith("\n") else ""
+        newline_suffix = _line_ending_suffix(lines[index])
         lines[index] = f"work_status: {new_status}{newline_suffix}"
     else:
         # Key absent: create it. This is not a guess — the function's whole
@@ -304,9 +332,13 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
         # the key silently, so refusing here would crash the lane on 4.7% of
         # the store. Appending keeps the edit minimal — one added line, every
         # existing byte untouched.
-        if lines and not lines[-1].endswith("\n"):
-            lines[-1] = lines[-1] + "\n"
-        lines.append(f"work_status: {new_status}\n")
+        file_ending = next(
+            (_line_ending_suffix(line) for line in lines if _line_ending_suffix(line)),
+            "\n",
+        )
+        if lines and not _line_ending_suffix(lines[-1]):
+            lines[-1] = lines[-1] + file_ending
+        lines.append(f"work_status: {new_status}{file_ending}")
     updated = "".join(lines)
 
     _atomic_write_text(yaml_path, updated)
