@@ -55,6 +55,8 @@ covered_by:
   - BO-3100b
   - BO-3100c
   - BO-3100d
+  - BO-3100e
+  - BO-3100f
 implemented_by: []
 notes: |
   Authored 2026-08-25 from a user (BrainCandy) request, against KI-SS-001
@@ -126,3 +128,12 @@ notes: |
   risk_surface stays `internal` at L0 because the blast radius is this
   repository's own build; individual children that change a cross-agent contract
   (BO-3100a-1, BO-3100c-1, BO-3100c-2) carry `contract_boundary` themselves.
+
+  PO AMENDMENT (2026-08-26, product-owner). Two L1s added against KI-BO-007
+  (high, open): BO-3100e (a step counts as done only when the result it exists
+  to produce actually exists) and BO-3100f (a step that stopped short is
+  reported as stopped, never as finished). They extend this L0's own promise to
+  the shape BO-3100b cannot reach: a step that leaves a POSITIVE verdict having
+  produced none of its own result, which passes a generic did-anything-change
+  test on incidental writes. Six L1 children now, within the seven cap. The
+  criteria of this L0 and of a..d are untouched.

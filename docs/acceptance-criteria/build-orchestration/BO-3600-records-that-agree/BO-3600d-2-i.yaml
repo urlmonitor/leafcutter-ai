@@ -1,0 +1,61 @@
+id: BO-3600d-2-i
+title: "Deferral is visible and ageing — every run states how many conflicts are undecided and for how long"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a set of conflicts of which some are recorded as not yet decided,
+  When the reconciliation runs,
+  Then it states how many conflicts are undecided,
+    And for each, how long it has been outstanding since it was first raised.
+
+  Given a conflict recorded as not yet decided on one run,
+  When the reconciliation runs again a month later and no verdict has been recorded,
+  Then the time it has been outstanding is reported as longer than on the earlier
+    run,
+  So deferral accumulates visibly rather than resetting each time it is reported.
+
+  Given a run in which every conflict has a resolution recorded,
+  When the reconciliation runs,
+  Then the undecided count is zero and no ageing is reported,
+  So the ageing report is a consequence of deferral and not a permanent fixture.
+
+  Given a conflict recorded as not yet decided,
+  When that state is recorded,
+  Then it carries who or what recorded it and when,
+  So a deferral is attributable and is not indistinguishable from a conflict nobody
+    has looked at.
+depends_on:
+  - BO-3600d-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600e.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the outstanding count and its burn-down over the whole store. This record supplies the ageing that stops the count being held flat by deferral rather than by decisions."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NOT-YET-DECIDED IS NECESSARY AND IS ALSO THE OBVIOUS ESCAPE HATCH. Forcing an
+  answer produces bad answers, so the state has to exist; but a state with no cost
+  becomes the default, every conflict is deferred, and the tree delivers a very
+  well-organised way of ignoring things.
+
+  The fourth scenario distinguishes a decision to wait from nobody having looked.
+  Both leave the conflict outstanding; only one of them is a decision, and a reader
+  triaging a hundred conflicts needs to know which is which.

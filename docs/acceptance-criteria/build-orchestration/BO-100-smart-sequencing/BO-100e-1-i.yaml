@@ -1,0 +1,53 @@
+id: BO-100e-1-i
+title: "A prerequisite that did not finish successfully never makes the work behind it eligible"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a chain in which piece B's only prerequisite is piece A,
+    And in the first case A is attempted and ends unsuccessfully,
+    And in the second case A is attempted and ends without any outcome being
+      recorded for it at all,
+    And in the third case A is attempted and finishes successfully,
+  When the run decides again which work is eligible,
+  Then in the first case B is not eligible and is not begun,
+    And in the second case B is not eligible and is not begun, because an outcome
+      the run does not hold is not a successful one,
+    And in the third case B is eligible and is begun,
+    And in the first two cases the run states that B was withheld and names A as
+      the prerequisite that was not satisfied,
+  So the re-decision cannot turn "this piece stopped being in progress" into "this
+    piece is finished".
+depends_on:
+  - BO-100e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the eligibility rule this constrains: 'all prerequisites met' is re-asked during the run, and what counts as met is what this record fixes."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ABSENT EVIDENCE IS NOT SUCCESS — the second case is the one that matters and the
+  one a naive re-plan gets wrong: re-reading state and finding no record for A is
+  indistinguishable, to a loose implementation, from finding A complete. Making
+  eligibility require an affirmative successful outcome is what stops the widened
+  loop from becoming a way to build work whose prerequisites failed.
+
+  This is an eligibility rule, not a reporting rule. What the run SAYS about the
+  withheld work at the end is BO-300d.

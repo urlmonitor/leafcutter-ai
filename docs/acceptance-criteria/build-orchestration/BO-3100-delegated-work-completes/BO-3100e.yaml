@@ -1,0 +1,151 @@
+id: BO-3100e
+title: "A step counts as done only when the thing it was for actually exists"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Each step is checked against the result it exists to produce.
+
+  Every step of a build is there to leave one particular thing behind — a change
+  published where your team can see it, a review opened, a record filed. The
+  build knows what each step is for and looks for that specific result once the
+  step ends. A step that was busy but did not produce its own result is not
+  counted as done, however confident and well-formed its report reads.
+depends_on:
+  - BO-3100
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — the open half. Its own fix direction is this criterion: assert completion against an observable side effect rather than against the step returning cleanly. The pull-request case is the anchor."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100b.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling this refines. BO-3100b asks 'did this step leave anything behind at all'. This asks 'did it leave the one thing it was for'. A step can pass BO-3100b on incidental changes and still have produced nothing of its own."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100f.yaml
+    relationship: related
+    status: exists
+    relevance: "Marked done and stating this same promise at the feature level, but its children only check the instruction going IN and route work to a smoke check that fires on almost nothing. The promise is not met for a build's own steps; see notes."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Where the per-step dispatch and the record of which steps completed are defined."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3100e-1
+  - BO-3100e-2
+  - BO-3100e-3
+  - BO-3100e-4
+  - BO-3100e-5
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+  - reference-doc
+notes: |
+  AUTHORED 2026-08-26 against KI-BO-007 (high, open, 2 occurrences), the half of
+  that entry that PR #557 did NOT close. Read the boundary section before
+  decomposing — most of the surrounding ground is already taken.
+
+  THE TWO SHAPES, AND THIS ONE IS THE SECOND. A step can end without doing its
+  job in two distinguishable ways, and only the first is currently addressed:
+
+    Shape A — the step leaves NO verdict, or leaves nothing behind at all.
+      Covered: BO-2900f-1 (a requested gate that did not run still records a
+      skipped outcome naming the reason) and BO-3100b (a step that produced
+      nothing is judged empty from repository evidence and re-run).
+
+    Shape B — the step leaves a POSITIVE, well-formed verdict having produced
+      none of its own result. THIS is uncovered, and it is what KI-BO-007
+      records. The known issue states it plainly: the read-back adjudication
+      "catches a gate that leaves no sign-off, but not one that leaves a
+      positive sign-off having done nothing observable — isPassingSignoff reads
+      the entry's status field and nothing else."
+
+  WHY BO-3100b DOES NOT ALREADY COVER THIS, in one sentence, because it is the
+  question every reviewer will ask. BO-3100b's evidence surface is "did any
+  non-volatile file in the project change" (its IT-PO decision of 2026-08-26:
+  tracked and untracked, content hashes, minus a declared volatile set). The
+  anchor case passes that test and still failed: the publish step drafted its
+  submission, wrote its own verdict into the work record, halted before
+  publishing anything, and returned cleanly. Files changed. Nothing it existed
+  to produce came into being. A generic did-anything-change test cannot tell
+  those apart; a per-step expected result can.
+
+  THE EXPECTED RESULT MUST BE A PROPERTY OF THE STEP, NOT A LIST IN THE CHECKER.
+  A checker holding a hardcoded case for each known step is one more place to
+  forget a step, and the step added next week is unchecked and reads as passing
+  — the same shape as an enumerated rule that AR-200a-1's constraint 3 already
+  ruled out on evidence (the derived rule found five violators where the
+  incident named three). Derive the expectation from the step's own declaration.
+
+  NOT A RELAXATION — BINDING, AND THE POINT OF THE WHOLE ENTRY. Nothing here may
+  be satisfied by loosening what a step owes. A step whose expected result is
+  declared as "nothing" to get past this check has converted a loud blocker into
+  a silent gap, which is the failure being fixed. Whatever mechanism declares a
+  step's expected result must make "this step produces nothing observable" a
+  rare, deliberate and visible statement rather than a default or an omission —
+  the same negative clause BO-2900g-2 and BP-1100f-5-i already insist on, for
+  exactly the reason BO-2900g-2 records: a rule that marks everything is
+  indistinguishable from one that marks nothing, one gate later.
+
+  BOUNDARIES — five neighbours this must NOT be folded into or duplicate:
+  - BO-3100b — did the step leave ANYTHING (generic emptiness). This — did it
+    leave ITS OWN result (specific). Sequence them; this one is meaningless
+    without a per-step expectation and BO-3100b is meaningless without a
+    volatile-set exclusion. Distinct tests, distinct failures.
+  - BO-2900f-1 — the record of a gate that did not run. That is the absent-entry
+    problem. This is the false-positive-entry problem.
+  - BO-1300 — the QUALITY of work that was done. This — that the work exists.
+  - AR-200a-1 (done, PR #557) — removed one GENERATOR of the symptom: five step
+    templates were obliged to record a verdict with no means of writing one, so
+    they refused and the refusal was miscounted. Do not re-author that. Its
+    lesson carries: the step's conduct was correct and the accounting was wrong.
+  - BP-600d-4 (done) — the same observable check, but hand-written into ONE
+    workflow's close phase for one lane. Evidence the check is buildable and
+    evidence that it does not generalise: build-feature has no equivalent.
+
+  FALSIFIED-DONE FLAGGED FOR THE USER (same class as KI-BO-028). BP-1100f is
+  `work_status: done`, `readiness: approved`, `priority: high`, and its criteria
+  read: "When the pipeline hands a piece of work to an automated helper to make
+  a real change, it confirms the change actually happened -- the real result
+  exists and can be observed -- rather than treating 'a step took place' as
+  proof on its own." KI-BO-007's evidence is a direct counter-example. All six
+  of its children are done, but four of them check the instruction going IN
+  (BP-1100f-1, f-3, f-4) or diagram it (f-6); the only child on the effect side,
+  BP-1100f-5, routes work to the observable-change check based on a declaration
+  that BO-2900g-2 records as set on 0 of 2,888 records — a correct mechanism
+  firing on nothing. The L1's benefit claim is broader than its children
+  deliver. Not this AC's to fix; raised because a done record asserting the
+  guarantee will otherwise be read as coverage.
+
+  ID ALLOCATION. Authored as BO-3100e, not the allocated BO-3500. A new L0 here
+  would have sat beside BO-3100 ("Every step of a build either really runs or
+  visibly fails") saying the same thing in different words. BO-3500 is left
+  unused and free.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, this L1's full
+  child cap: BO-3100e-1 (a positive verdict without the result is not done, with
+  the identical-reports discriminator and the files-changed boundary case),
+  BO-3100e-2 (the expectation is derived from the step's own declaration and every
+  step that ran is checked; + BO-3100e-2-i, an unlookable declared result makes
+  the step undecided rather than done), BO-3100e-3 (the negative clause: an
+  omitted declaration fails, a declared nothing is counted and named, and a
+  downgraded declaration is surfaced), BO-3100e-4 (sequence diagram) and
+  BO-3100e-5 (reference entry) for the two documentation_triggers.

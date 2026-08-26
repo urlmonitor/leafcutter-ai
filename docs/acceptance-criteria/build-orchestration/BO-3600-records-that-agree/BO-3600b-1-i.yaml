@@ -1,0 +1,58 @@
+id: BO-3600b-1-i
+title: "An entry naming several subjects is retired only when every one of them is delivered"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an open fault entry naming four requirements as its subject, of which three
+    read finished with evidence and one reads unfinished,
+  When the register is reconciled,
+  Then the entry is not retired,
+    And the report names the one requirement that is not delivered as the reason the
+      entry stays open.
+
+  Given the same entry once the fourth requirement reads finished with evidence,
+  When the register is reconciled,
+  Then the entry becomes eligible for retirement.
+
+  Given an open fault entry naming four requirements, of which three read finished
+    and the fourth cannot be looked up at all,
+  When the register is reconciled,
+  Then the entry is not retired,
+    And the unlookable reference is reported rather than treated as satisfied,
+  So a reference the reconciliation cannot resolve never counts towards retirement.
+depends_on:
+  - BO-3600b-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-012 names four requirements in one entry; multi-subject entries are the norm in this register, not an edge case."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A partial delivery is the most likely way an entry gets retired while still
+  describing something broken: three of four subjects land, the entry looks handled,
+  and the fourth finding disappears with it. The register's real entries routinely
+  name several requirements, so this is the common shape rather than a corner.
+
+  The third scenario keeps the unresolvable-reference case on the safe side of the
+  asymmetry: unknown is treated as undelivered for the purpose of retiring, which is
+  the opposite of how BO-3600a-1-i treats it for the purpose of raising a conflict,
+  and deliberately so — the costs point in opposite directions.

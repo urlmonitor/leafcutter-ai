@@ -1,0 +1,70 @@
+id: BO-100e-5
+title: "A sequence diagram shows the repeated eligibility look and where the run decides to stop"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand why a run built work that was not eligible
+    when it started,
+  When they open the sequence diagram for the run's eligibility looks,
+  Then it shows, in order: the set of work being fixed at the start, the first look
+    deciding which pieces are eligible, those pieces being built, a piece finishing
+    successfully, a further look being taken against what has finished by then, the
+    newly eligible piece being built, a look that releases nothing, and the run
+    ending,
+    And it shows the point at which the run decides to stop as a distinct decision
+      with its condition stated.
+
+  Given the diagram,
+  When it is compared against a real run over a chain four layers deep,
+  Then every interaction the diagram shows occurred in that run, in the order shown,
+    And the diagram shows no interaction that did not occur,
+    And the stopping condition the diagram states is the condition that ended that
+      run.
+
+  Given the diagram,
+  When a reader looks for what happens to work added to the body of work while the
+    run is going,
+  Then the diagram shows that such work is not drawn into the run's set,
+  So the diagram cannot be read as promising that a run absorbs later additions.
+depends_on:
+  - BO-100e
+  - BO-100e-1
+  - BO-100e-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The delivery-topology page the new diagram must be reachable from, and whose single-planning-pass description this change makes stale."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-100e's documentation_triggers: [sequence-diagram].
+
+  The second scenario is what makes this a testable documentation AC rather than a
+  request for a picture: the diagram is compared against an executed run, so a
+  diagram of an intended design that was never built fails it.
+
+  assigned_agent deliberately unset — the diagram surface belongs to the IT Product
+  Owner's assignment pass; the architecture-diagram-author surface is the obvious
+  candidate.

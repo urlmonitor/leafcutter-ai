@@ -1,0 +1,75 @@
+id: BO-300d-4
+title: "A run that cannot account for its own work still says so, and a run that finished everything reports clean"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run over a body of work of thirty-seven pieces whose own record of what it
+    completed is empty, so it holds no evidence that it built anything,
+  When the run produces its closing report,
+  Then the report is still produced and still states an unbuilt count,
+    And it states that the run's own account of what it did was empty,
+    And it does not report the body of work as finished,
+  So holding no record of having worked is reported as knowing nothing, never as
+    having nothing left to do.
+
+  Given a run whose own record of what it completed covers only some of the pieces
+    it worked on, so its account is partial,
+  When the run produces its closing report,
+  Then the report states that its account of what it did was incomplete and how many
+    pieces it could not account for,
+    And every piece it cannot account for is named and counted among the unbuilt,
+    And it does not report the body of work as finished.
+
+  Given a run that built every piece in the body of work and whose account of what
+    it did covers all of them,
+  When the run produces its closing report,
+  Then the report contains no section about unbuilt work,
+    And it states no unbuilt count, names no piece as unbuilt, and states no action,
+    And it reports the work as finished,
+  So a report that warns on every run fails this criterion just as surely as one
+    that warns on none.
+depends_on:
+  - BO-300d
+  - BO-300d-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — silence about the twenty is the defect. Coverage that only inspects the wording of a report that was emitted cannot see the case where none was."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The established shape for an unconfirmed read: only an affirmative confirmation counts, and a check that never claims it could read the set is treated exactly as one that says it could not. This record applies the same rule to the run's account of its OWN work rather than to the body of work."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BOTH POLES OF ONE PREDICATE, deliberately in one record. The residual section
+  appears exactly when there is residual or unaccounted work, and the cheapest way
+  to pass either pole alone is to fail the other: warn always, or warn never. Split
+  across two records they can be satisfied by two implementations that contradict
+  each other; together they cannot.
+
+  ABSENCE OF EVIDENCE IS NOT SUCCESS. The first two scenarios are the case BO-300d's
+  notes make mandatory — the run's own view of what it did is empty or partial — and
+  they are the ones a report-wording test cannot reach, because in the failing
+  version there is no report to inspect.
+
+  The third scenario is the mandatory control. It is what stops the fix degrading
+  into a permanent warning banner, which trains the operator to ignore it and
+  returns us to the silence being fixed.

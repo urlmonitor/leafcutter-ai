@@ -1,0 +1,90 @@
+id: BO-3600a
+title: "A known fault and a finished claim about the same thing cannot both stand"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  An open fault naming finished work is raised as a conflict, every time.
+
+  When a fault is recorded against a piece of work that the project already counts
+  as finished, that pairing is surfaced as a conflict rather than left for someone
+  to notice. Nobody has to read both records side by side to find out that the
+  system is claiming something it cannot do.
+depends_on:
+  - BO-3600
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — the eight-record instance this criterion exists to make impossible, and the worked evidence per record."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Where the finished claim lives: the work_status field on a requirement record."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600a-1
+  - BO-3600a-2
+  - BO-3600a-3
+  - BO-3600a-4
+  - BO-3600a-5
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - reference-doc
+notes: |
+  THIS IS THE CORE OF THE TREE. The other four L1s exist to make this one usable
+  (BO-3600d), trustworthy (BO-3600c), complete (BO-3600e) and symmetric
+  (BO-3600b). Sequence this first.
+
+  WHAT MAKES IT CHECKABLE, so the BA does not decompose it into an instruction to
+  a person. Both halves of the pair are already structured. A fault entry carries
+  a status line and a body that names requirement ids in a fixed format; a
+  requirement record carries a work_status field. The conflict is the conjunction:
+  an entry whose status is open, naming a requirement id, where that requirement
+  reads done. Nothing beyond string extraction and a store lookup is needed to
+  decide it — which is exactly why its absence is worth an AC.
+
+  LIVE INSTANCES AT AUTHORING TIME (verified 2026-08-26 at a0126851, after the
+  eight from KI-BO-028 had already been reconciled by PR #553): BO-2400d-3 and
+  BO-2400d-1-i both read `done` while KI-BO-012 — status open — discusses them as
+  done records whose Given clauses cannot be falsified. Use these as the fixture;
+  do not hard-code them, since they will be resolved and the check must keep
+  finding new ones.
+
+  DO NOT LET THIS BECOME A JUDGEMENT CALL AT L2. The check decides that two
+  records disagree. It must NOT try to decide which one is right — that is
+  BO-3600d, and it is a human verdict. A criterion that requires the check to
+  adjudicate will either be unimplementable or will silently pick a side.
+
+  ADJACENCY, cite rather than re-derive: BO-3100a performs the identical
+  two-declaration reconciliation on the agent registry / agent template pair and
+  states the principle. TQ-400a widens a different check from staged files to the
+  whole store; its scoping argument applies here and is restated as BO-3600e.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, this L1's full child
+  cap: BO-3600a-1 (the conjunction raises a conflict and neither half alone does,
+  per disagreeing pair rather than per entry; + BO-3600a-1-i, a pairing that could
+  not be decided is reported undecided and never as agreement), BO-3600a-2 (states
+  the disagreement, never which record is wrong, and leaves both files byte-for-byte
+  unchanged), BO-3600a-3 (finds pairs whose identifiers appear nowhere in the check,
+  and reports the store as it is now), BO-3600a-4 (component diagram) and
+  BO-3600a-5 (reference entry) for the two documentation_triggers.
