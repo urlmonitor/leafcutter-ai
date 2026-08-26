@@ -369,6 +369,134 @@ amended_by:
       unit_tests/workflows/test_bp_1100b_4_calibration.py, added to
       covered_by below (2 genuine `# covers: BP-1100b-4` tags). Full suite
       re-verified after the split: unchanged at 484 passed.
+  - reason: "PR #577 finishing pass — the immediately preceding entry's claim ('each confirmed RED without the fix (direct execution, not a comment) and GREEN with it') was FALSE for 3 of the 5 TestSandboxEscapeIsClosed tests, and a further round-2 fix (constructing every mock global inside the vm context, not the driver realm) landed afterward without any per-test red-baseline re-derivation against it. work_status was treated as provisionally in_progress for the duration of this correction — not earned until re-derived — and is written back as done in this same pass only because the re-derivation below held; it was never persisted as in_progress on disk since this correction resolved within a single pass."
+    by: python-coder
+    at: 2026-08-26
+    note: >-
+      PER-TEST RE-DERIVATION (the false-claim correction this entry exists
+      to make): reverting ONLY the round-2 fix (commit ae3c9d81, in-context
+      mock-global construction — i.e. testing against the round-1-only
+      harness at commit ea3ea0435) and running each of the 7
+      test_bp_1100b_4_sandbox_fidelity.py tests INDIVIDUALLY, not as a group,
+      gave:
+
+        test_globalThis_constructor_constructor_is_blocked: PASSES against
+        round-1-only (round 1's null-prototype fix already blocks this
+        route; round 2 added nothing for it). Confirmed genuinely RED
+        against the harness from BEFORE round 1 existed (commit d60a65b53,
+        the original vm-sandbox landing, zero escape-closing fix at all) —
+        real regression coverage of round 1, not tautological.
+
+        test_globalThis_dunder_proto_route_is_blocked: same as above —
+        PASSES against round-1-only, genuinely RED against the pre-round-1
+        harness. Real round-1 coverage.
+
+        test_object_literal_constructor_route_is_blocked,
+        test_async_function_constructor_route_is_blocked,
+        test_generator_function_constructor_route_is_blocked: PASS against
+        round-1-only AND against the pre-round-1 harness (confirmed by
+        direct execution against d60a65b53). An object/async-function/
+        generator-function LITERAL evaluated inside the sandboxed body is a
+        sandbox-realm value under `vm.runInContext` regardless of any fix
+        ever applied here — these 3 could never fail via this technique and
+        were not coverage of anything. DELETED and replaced with 3 tests
+        through injected MOCK GLOBALS instead
+        (test_budget_constructor_constructor_is_blocked,
+        test_args_constructor_constructor_is_blocked,
+        test_console_log_constructor_route_is_blocked) — confirmed by
+        direct execution to escape (returned a live process.pid) against
+        the round-1-only harness and blocked only once round 2 landed, i.e.
+        genuine round-2 coverage, the class of route round 2 exists to
+        close.
+
+        test_escaped_process_cannot_reach_the_filesystem
+        (TestSandboxEscapeCannotWriteAFile) and
+        test_undeclared_assignment_throws_a_reference_error
+        (TestWorkflowBodyRunsInStrictMode): PASS against round-1-only,
+        confirmed genuinely RED against the pre-round-1 harness (direct
+        execution: the escape-mediated file write actually wrote the file;
+        the undeclared assignment did not throw). Real round-1 coverage,
+        not round-2-specific, kept as-is.
+
+      Net: of the original 5 escape tests, 2 (not the previously-claimed
+      "3 of 5 inert / 2 of 5 real") turned out to be real-but-round-1-only,
+      and 3 were unconditionally inert regardless of either round. All 7
+      tests in the file are now either genuine round-1 regression coverage
+      or genuine round-2 regression coverage, each individually confirmed
+      RED-before / GREEN-after by direct execution, never by argument.
+
+      REGRESSION FOUND AND FIXED (round 2 introduced this, undetected until
+      this pass): round 2's bootstrap declared `__capturedCalls__` /
+      `__contractViolations__` / `__labelResponses__` as top-level `var`s so
+      the driver could read them back after the run. A top-level `var`
+      inside `vm.runInContext()` attaches as an own, non-configurable,
+      STRING-keyed property of the context's global object — exactly like
+      the 8 intentional mock globals — so all three became reachable from
+      the WORKFLOW BODY ITSELF via `Object.getOwnPropertyNames(globalThis)`.
+      This made `test_harness_exposes_only_the_engine_injected_globals`
+      (test_bp_1100b_4.py) fail on a fresh checkout of round 2 — confirmed
+      by direct execution, not by re-reading the diff. A `delete
+      globalThis.__capturedCalls__` cannot fix it (top-level `var`
+      properties are non-configurable; `delete` throws `TypeError` in strict
+      mode, confirmed by direct execution). A Symbol-keyed global property
+      was tried next and also confirmed BROKEN by direct execution: Node's
+      `vm` module does not reliably surface symbol-keyed own properties of a
+      contextified global object back to the driver realm. Fixed by moving
+      all bootstrap state inside a wrapping IIFE that RETURNS the state
+      object as its completion value — `vm.runInContext()` hands that value
+      back to the driver directly (the same mechanism `eval()` uses), never
+      as any property, visible or not, of the sandbox object. Only the 8
+      ADR-030 names plus `console` are still explicitly published onto
+      `globalThis` by name (required so the target script's own, SEPARATE
+      `vm.runInContext()` call can see them). See
+      `unit_tests/_workflow_engine_harness.py`'s own "R2 CORRECTION" module
+      docstring note and `_bootstrap_source_js()` for the mechanism.
+
+      OPTIONAL ITEM ALSO FIXED: the `console` back-compat assertion in
+      `test_harness_exposes_only_the_engine_injected_globals`
+      (test_bp_1100b_4.py) was vacuous — `console` is already a Node vm
+      intrinsic present on a bare, un-augmented `vm.createContext()`, so
+      asserting it is IN the enumerated names could never fail regardless of
+      whether the harness's own console stub existed. Tightened by adding a
+      behavioral probe: a workflow body calling `console.log(marker)` must
+      not leak that text into the driver's own JSON stdout channel and must
+      not corrupt `dispatch_count`. Confirmed by direct execution: RED
+      against the round-1-only harness (where `console` was the DRIVER's
+      own live console proxied in — the marker leaked into `result.stdout`
+      ahead of the JSON payload and `dispatch_count` silently read back 0
+      for a script that dispatched exactly one `agent()` call) and GREEN
+      against the current harness.
+
+      REGRESSION SUITE (after all fixes above): unit_tests/workflows/ = 484
+      passed (unchanged from the prior entry's count — the namespace-leak
+      fix restored the TRUE 484, which had been silently broken since round
+      2 landed; the enumeration test was failing on a pristine checkout of
+      round 2 before this pass touched anything). The 6 harness importers
+      (5 named in the prior entry PLUS
+      unit_tests/_plan_feature_e2_runner.py, missed by earlier rounds): the
+      5 files importing unit_tests/_plan_feature_e2_runner.py = 85 passed;
+      test_workflow_dual_engine.py, test_bp_1100f_4.py,
+      test_bp_300e_parse_agent_json.py, test_fail_closed_agent_results.py =
+      57 passed, 1 xfailed (pre-existing). Zero regressions from any fix in
+      this entry.
+
+      work_status: RESTORED to done on this basis — the sandbox-fidelity
+      Given/When/Then block (the AC's own second scenario: "no module
+      loader is reachable from it") now has honest, individually-verified,
+      non-inert test coverage for the first time, and the one real
+      regression the prior round introduced is fixed rather than argued
+      around. The first scenario's test_spec descriptors (the 8 run-progress
+      /dispatch-coverage tests) were NOT re-derived in this pass — that was
+      outside this round's assigned scope (test_bp_1100b_4_sandbox_
+      fidelity.py only) — but were re-run and confirmed still green, and
+      nothing in this pass's changes touches their mechanism beyond the
+      harness's internal state-handoff plumbing, which the unchanged 484-
+      passed count corroborates.
+
+      covered_by unchanged: test_bp_1100b_4_sandbox_fidelity.py's 3 replaced
+      test functions carry the same `# covers: BP-1100b-4` tag convention as
+      the ones they replaced, so the file-level entry already below remains
+      accurate without modification.
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bp_1100b_4.py

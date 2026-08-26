@@ -269,6 +269,58 @@ class TestHarnessExposesOnlyEngineInjectedGlobals(unittest.TestCase):
             ),
         )
 
+        # VACUOUS-ASSERTION FIX (2026-08-26): the `missing_back_compat` check
+        # above can never fail — `console` is already present on a bare,
+        # un-augmented `vm.createContext()` (this test's own docstring says
+        # so), so `console` being IN sandbox_names is true whether or not the
+        # harness's own console entry exists at all. The property that
+        # actually matters, and that the round-1 harness got wrong, is
+        # BEHAVIORAL: `console.log()` must be a true no-op that never writes
+        # to the SAME stdout stream the driver uses to serialise
+        # `HarnessResult` as JSON. Round 1 assigned the DRIVER's own live
+        # `console` object into the sandbox (`console: console`); calling
+        # `console.log()` from the sandboxed body therefore wrote real text
+        # to the driver's stdout ahead of the JSON payload, which did not
+        # raise a parse error but silently corrupted `dispatch_count` (a
+        # script that dispatched exactly one `agent()` call read back as
+        # zero). Round 2 replaced it with a sandbox-realm no-op stub (see
+        # `_MOCK_GLOBAL_JS_SNIPPETS["console"]` in `_workflow_engine_harness.
+        # py`). Confirmed by direct execution: RED against the round-1-only
+        # harness (the marker text leaked into `result.stdout` and
+        # `dispatch_count` read 0), GREEN against the current one.
+        console_probe_body = (
+            "console.log('BP_1100B_4_CONSOLE_NOOP_MARKER');\n"
+            "await agent('probe2', { label: 'probe2' });\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp2:
+            probe_script = _write_script(Path(tmp2), console_probe_body)
+            probe_result = run_workflow_under_e2(probe_script, timeout=_TIMEOUT)
+
+        self.assertEqual(
+            probe_result.error,
+            "",
+            msg=f"Harness errored on console no-op probe: {probe_result.error}",
+        )
+        self.assertNotIn(
+            "BP_1100B_4_CONSOLE_NOOP_MARKER",
+            probe_result.stdout,
+            msg=(
+                "console.log() output leaked into the driver's own JSON "
+                "stdout channel — the sandboxed console is not a true "
+                f"no-op. stdout: {probe_result.stdout!r}"
+            ),
+        )
+        self.assertEqual(
+            probe_result.dispatch_count,
+            1,
+            msg=(
+                "console.log() output corrupted parsing of the captured "
+                f"agent() dispatch (got {probe_result.dispatch_count}, "
+                "expected 1) — the exact silent-corruption failure mode a "
+                "leaking console causes."
+            ),
+        )
+
     def test_harness_exposes_no_module_loader_to_the_workflow_body(self):
         # covers: BP-1100b-4
         """A workflow body that attempts to reach a module loader or a

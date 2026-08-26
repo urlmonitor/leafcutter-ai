@@ -97,6 +97,42 @@ ENGINE FIDELITY, ROUND 2 (BP-1100b-4, in-context mock construction): the first
     (still-live) context global object — reading FROM a foreign realm is
     always safe; only the sandboxed body reaching INTO the driver realm was
     ever the concern.
+
+R2 CORRECTION (2026-08-26, namespace leak): round 2's bootstrap declared its
+    own `__capturedCalls__` / `__contractViolations__` / `__labelResponses__`
+    bookkeeping as top-level `var`s so the driver could read them back after
+    the run — but a top-level `var` inside a `vm.runInContext()` call
+    attaches as an own, STRING-keyed, NON-CONFIGURABLE property of the
+    context's global object, exactly like the 8 intentional mock globals.
+    That made all three reachable from the WORKFLOW BODY itself via
+    `Object.getOwnPropertyNames(globalThis)` — confirmed by direct execution
+    to make `test_harness_exposes_only_the_engine_injected_globals`
+    (test_bp_1100b_4.py) fail immediately after round 2 landed, reporting
+    exactly those three names as an unexpected "namespace leak". A `delete
+    globalThis.__capturedCalls__` afterward cannot fix this either
+    (confirmed by direct execution: top-level `var` properties are
+    non-configurable, so `delete` throws `TypeError` in strict mode). A
+    Symbol-keyed global property was tried next and also confirmed BROKEN by
+    direct execution: a vm context's contextified global object does not
+    reliably expose symbol-keyed own properties back to the driver realm
+    (`Object.getOwnPropertySymbols()` on the shell object returned empty even
+    immediately after the sandboxed code assigned one) — an undocumented
+    limitation of Node's `vm` module, not a viable channel. The fix that
+    actually works: all bootstrap state and mock-global construction now
+    lives inside a wrapping IIFE (see `_bootstrap_source_js()`) that ENDS
+    with a `return { capturedCalls, contractViolations }` expression, so
+    `vm.runInContext()` hands that object back to the driver as its ordinary
+    JS *completion value* — never as a property of the sandbox's global
+    object at all, visible or not. Only the 8 ADR-030 names plus `console`
+    are explicitly published onto `globalThis` by name (so the SEPARATE,
+    later `vm.runInContext()` call for the target script body can still see
+    them); `agent()` and friends keep closing over the SAME
+    `__capturedCalls__` / `__contractViolations__` array objects by
+    reference, so calls made during that later run still land in the object
+    the driver is already holding. Confirmed by direct execution: zero own
+    property names AND zero own symbols on the sandbox object after running
+    the bootstrap, and the driver still correctly observes every captured
+    call after the target script runs.
 """
 
 from __future__ import annotations
@@ -420,6 +456,39 @@ var console = {
 }
 
 
+# R2 CORRECTION (namespace-leak fix): a Node global-symbol-registry key, not
+# a string name, for the harness's OWN internal bookkeeping (captured calls /
+# contract violations). Top-level `var __capturedCalls__ = [];` inside the
+# bootstrap used to attach as a NON-CONFIGURABLE, ENUMERABLE, STRING-keyed
+# property directly on the sandbox's global object — reachable from the
+# WORKFLOW BODY itself via `Object.getOwnPropertyNames(globalThis)`, which is
+# exactly what `test_harness_exposes_only_the_engine_injected_globals`
+# (test_bp_1100b_4.py) enumerates and asserts equals EXACTLY
+# ADR_030_INJECTED_GLOBALS. That test started failing the moment round 2
+# landed (`__capturedCalls__`, `__contractViolations__`, `__labelResponses__`
+# all showed up as unexpected extra names) — confirmed by direct execution
+# against a pristine checkout of this fix, not by argument. A later `delete
+# globalThis.__capturedCalls__` cannot fix it either: top-level `var`
+# properties on a vm context's global object are non-configurable, so
+# `delete` throws `TypeError` in strict mode (verified by direct execution).
+# A Symbol-keyed global property (`globalThis[Symbol.for(...)] = state`) was
+# tried next and also confirmed BROKEN by direct execution: a vm context's
+# contextified global object does not reliably expose symbol-keyed own
+# properties back to the driver realm at all — `Object.getOwnPropertySymbols()`
+# on the shell object came back empty even immediately after the sandboxed
+# bootstrap assigned one, so the driver's own `Symbol.for(...)` lookup read
+# back `undefined` and crashed every test. The fix that actually works: the
+# bootstrap's wrapping IIFE (below) ENDS with a `return {...}` expression, so
+# `vm.runInContext()` hands the state object back to the driver as its
+# ordinary JS *completion value* (same mechanism `eval()` uses) — never as a
+# property of the sandbox's global object at all, visible or not.
+# `agent()`/`parallel()`/etc. (published onto `globalThis` by name below, so
+# the SEPARATE, later `vm.runInContext()` call for the target script body can
+# still see them) keep closing over the exact same `__capturedCalls__` /
+# `__contractViolations__` array objects by reference, so calls made during
+# that later run still land in the object the driver already holds.
+
+
 def _bootstrap_source_js() -> str:
     """Assemble the JS source that constructs every mock global INSIDE the
     sandbox context, in the order given by ADR_030_INJECTED_GLOBALS then
@@ -431,21 +500,39 @@ def _bootstrap_source_js() -> str:
     missing global. `{LABEL_RESPONSES}` and `{ARGS_OBJECT}` placeholders in
     the assembled text are substituted later, by `_build_shim()`.
 
+    Everything (the `__capturedCalls__` / `__contractViolations__` /
+    `__labelResponses__` state and every mock-global snippet) is defined
+    inside a wrapping IIFE, so none of the internal state ever becomes a
+    top-level, string-keyed global property (the namespace-leak this
+    module's own "R2 CORRECTION" docstring note explains). Only the actual
+    public names (ADR_030_INJECTED_GLOBALS + SANDBOX_BACK_COMPAT_GLOBALS) are
+    explicitly published onto `globalThis` afterward, by name; the
+    bookkeeping state is instead RETURNED as the IIFE's (and therefore this
+    whole bootstrap script's) completion value, for `_JS_SHIM_TEMPLATE` to
+    capture directly from its `vm.runInContext()` call — never written to
+    any property of the sandbox object at all.
+
     Returns:
-        Complete JS source text (not yet JSON-encoded) for the bootstrap,
-        including the `__capturedCalls__` / `__contractViolations__` /
-        `__labelResponses__` state every mock global closes over.
+        Complete JS source text (not yet JSON-encoded) for the bootstrap.
+        Evaluating it via `vm.runInContext()` returns
+        `{ capturedCalls: [...], contractViolations: [...] }`.
     """
-    snippets = "\n".join(
-        _MOCK_GLOBAL_JS_SNIPPETS[_name]
-        for _name in (*ADR_030_INJECTED_GLOBALS, *SANDBOX_BACK_COMPAT_GLOBALS)
+    public_names = (*ADR_030_INJECTED_GLOBALS, *SANDBOX_BACK_COMPAT_GLOBALS)
+    snippets = "\n".join(_MOCK_GLOBAL_JS_SNIPPETS[_name] for _name in public_names)
+    publish_globals = "\n".join(
+        f"globalThis.{_name} = {_name};" for _name in public_names
     )
     return (
         "'use strict';\n"
+        "(function () {\n"
         "var __capturedCalls__ = [];\n"
         "var __contractViolations__ = [];\n"
         "var __labelResponses__ = {LABEL_RESPONSES};\n"
-        f"{snippets}"
+        f"{snippets}\n"
+        f"{publish_globals}\n"
+        "return { capturedCalls: __capturedCalls__, "
+        "contractViolations: __contractViolations__ };\n"
+        "})()\n"
     )
 
 
@@ -611,12 +698,25 @@ class E1CheckResult:
 #     target script runs, in the SAME context the target script later runs
 #     in. Every function/object/array those definitions create is therefore
 #     a SANDBOX-REALM value.
-#   - `__capturedCalls__` / `__contractViolations__` are now `var` (not
-#     `const`) declarations INSIDE the bootstrap, specifically so they attach
-#     as own properties of the context's global object and remain readable
-#     from the driver via plain property access after the run — reading a
-#     foreign-realm plain array/object from the driver is always safe; only
-#     the sandboxed body reaching OUT was ever the risk this closes.
+#   - `__capturedCalls__` / `__contractViolations__` live inside a wrapping
+#     IIFE closure and are handed back to the driver as that IIFE's (and the
+#     whole bootstrap script's) ordinary JS *completion value* — read
+#     directly off the `vm.runInContext()` call below as `__harnessState__`
+#     — never as any property, visible or not, of the sandbox's global
+#     object (R2 CORRECTION — see `_bootstrap_source_js()`). The original
+#     `var` approach attached them as own STRING-keyed properties of the
+#     sandbox's global object, reachable from the WORKFLOW BODY itself via
+#     `Object.getOwnPropertyNames(globalThis)` — confirmed by direct
+#     execution to make `test_harness_exposes_only_the_engine_injected_
+#     globals` (test_bp_1100b_4.py) fail the moment round 2 landed. A
+#     Symbol-keyed property was tried next and confirmed BROKEN by direct
+#     execution (Node's vm module does not reliably surface symbol-keyed own
+#     properties of a contextified global object back to the driver realm).
+#     Reading the completion value sidesteps the whole class of "which
+#     property mechanism" question — nothing is ever written to the sandbox
+#     object for this purpose at all. Reaching OUT to the driver realm was
+#     always the only real risk either fix closes; reading a foreign-realm
+#     plain array/object value FROM the driver, via any channel, is safe.
 
 _JS_SHIM_TEMPLATE = r"""
 'use strict';
@@ -645,7 +745,7 @@ vm.createContext(__sandbox__);
 // — same technique as {INNER_SOURCE_JSON} below, for the same reason: no
 // raw JS text is ever spliced directly into this outer file.
 const __bootstrapSource__ = {BOOTSTRAP_SOURCE_JSON};
-vm.runInContext(__bootstrapSource__, __sandbox__, {
+const __harnessState__ = vm.runInContext(__bootstrapSource__, __sandbox__, {
   filename: 'e2-mock-globals.js',
 });
 
@@ -677,8 +777,8 @@ try {
   // fallback for the async-function machinery itself failing to construct).
   process.stderr.write('harness: script threw (sync): ' + String(__syncErr__) + '\n');
   process.stdout.write(JSON.stringify({
-    calls: __sandbox__.__capturedCalls__,
-    violations: __sandbox__.__contractViolations__,
+    calls: __harnessState__.capturedCalls,
+    violations: __harnessState__.contractViolations,
     result: null,
   }));
   process.exit(0);
@@ -694,8 +794,8 @@ Promise.resolve(__resultPromise__).then(function(__scriptResult__) {
   // consts — they were constructed inside the sandbox by the bootstrap, and
   // reading a foreign-realm plain array from driver scope is always safe.
   process.stdout.write(JSON.stringify({
-    calls: __sandbox__.__capturedCalls__,
-    violations: __sandbox__.__contractViolations__,
+    calls: __harnessState__.capturedCalls,
+    violations: __harnessState__.contractViolations,
     result: (typeof __scriptResult__ === 'undefined' ? null : __scriptResult__),
   }));
 }).catch(function(__topErr__) {
@@ -707,8 +807,8 @@ Promise.resolve(__resultPromise__).then(function(__scriptResult__) {
   // dispatches rather than a harness crash.
   process.stderr.write('harness: top-level error: ' + String(__topErr__) + '\n');
   process.stdout.write(JSON.stringify({
-    calls: __sandbox__.__capturedCalls__,
-    violations: __sandbox__.__contractViolations__,
+    calls: __harnessState__.capturedCalls,
+    violations: __harnessState__.contractViolations,
     result: null,
   }));
 });

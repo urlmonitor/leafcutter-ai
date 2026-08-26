@@ -23,10 +23,33 @@ BUSINESS CONTEXT: Both defects were found by direct execution, not by
     demonstrated by diffing strict-mode behavior between the pre-vm harness
     and this one on the same undeclared-assignment probe. Fixed in
     `_workflow_engine_harness.py` by `Object.setPrototypeOf(__sandbox__,
-    null)` before `vm.createContext()` (F3) and by prefixing the compiled
-    inner source with `'use strict';` in `_build_shim()` (F4). Every test
-    below EXECUTES the fixed behavior and asserts it holds — none merely
+    null)` before `vm.createContext()` (F3, round 1) and by prefixing the
+    compiled inner source with `'use strict';` in `_build_shim()` (F4). Every
+    test below EXECUTES the fixed behavior and asserts it holds — none merely
     assert a comment or docstring claim.
+
+    R2 CORRECTION (2026-08-26): a per-test red/green re-derivation (reverting
+    only the round-2 fix — constructing every mock global INSIDE the vm
+    context, see `_workflow_engine_harness.py`'s "ENGINE FIDELITY, ROUND 2"
+    docstring — and re-running each test individually) found that of the
+    original 5 `TestSandboxEscapeIsClosed` tests, the 3 that reached the
+    driver-realm `Function` via an object/async-function/generator-function
+    LITERAL evaluated inside the sandboxed body were structurally inert:
+    confirmed by direct execution against the harness from BEFORE any
+    escape-closing fix existed (commit d60a65b53, the original vm-sandbox
+    landing) that they passed there too. A literal's own `.constructor`
+    chain is a sandbox-realm value under `vm.runInContext` regardless of
+    prototype-nulling or in-context global construction — neither fix this
+    file exists to regression-test was ever what made that route safe. They
+    are replaced below by 3 tests through injected MOCK GLOBALS (`budget`,
+    `args`, `console.log`) — confirmed by direct execution to escape
+    (returning a live `process.pid`) against the round-1-only harness and
+    blocked only once round 2 landed. The 2 `globalThis`-based tests and the
+    file-write / strict-mode tests are retained: each was confirmed to
+    genuinely fail (RED) against the fully-unfixed original harness, so they
+    are real regression coverage of round 1's fix — round 2 did not need to
+    change their outcome, and that is a true fact about round 1, not a
+    reason to discard them.
 ARCHITECTURE: Same technique as test_bp_1100b_4.py — small synthetic
     workflow-script bodies driven through the REAL `run_workflow_under_e2()`,
     reporting outcomes back via a single `agent()` call's `opts` dict.
@@ -60,10 +83,12 @@ def _write_script(tmp_dir: Path, body: str) -> Path:
 class TestSandboxEscapeIsClosed(unittest.TestCase):
     """F3: each test below EXECUTES one cross-realm escape route end to end
     and asserts it fails, per the review's explicit ask ("this must not be a
-    comment claiming it's fixed"). Covers the primary route the review
-    demonstrated plus every sibling route it named: `globalThis.__proto__`,
-    `({}).constructor.constructor`, and the AsyncFunction/GeneratorFunction
-    constructors reached the same way.
+    comment claiming it's fixed"). Covers the `globalThis`-rooted route the
+    review demonstrated (round 1's fix) plus the mock-global-rooted routes a
+    later round-2 review found still open through `budget`, `args`, and
+    `console.log` (round 2's fix — see the module docstring's "R2
+    CORRECTION" note for why the original object-literal / async-function /
+    generator-function tests were removed rather than kept alongside these).
     """
 
     def _assert_route_blocked(self, body: str, route_name: str) -> None:
@@ -130,16 +155,33 @@ class TestSandboxEscapeIsClosed(unittest.TestCase):
             body, "globalThis.__proto__.constructor.constructor"
         )
 
-    def test_object_literal_constructor_route_is_blocked(self):
+    def test_budget_constructor_constructor_is_blocked(self):
         # covers: BP-1100b-4
-        """`({}).constructor.constructor(...)` — an object literal evaluated
-        inside the sandbox reaching the same class of constructor via its
-        own `.constructor` property.
+        """`budget.constructor.constructor('return process')()` — an
+        injected MOCK GLOBAL's own constructor chain, reached without ever
+        touching `globalThis`. Round 1's `Object.setPrototypeOf(sandbox,
+        null)` does nothing for this route: `budget` was still built as a
+        DRIVER-REALM object before being placed into the sandbox, so its
+        `.constructor` pointed at the driver's own `Function` regardless of
+        the shell object's own prototype. Confirmed by direct execution to
+        escape (returned a live `process.pid`) against the round-1-only
+        harness, and blocked only once every mock global was constructed
+        INSIDE the vm context (round 2 — see `_bootstrap_source_js()` /
+        `_MOCK_GLOBAL_JS_SNIPPETS` in `_workflow_engine_harness.py`).
+
+        Replaces the former `test_object_literal_constructor_route_is_
+        blocked`, deleted because `({}).constructor.constructor` is a
+        literal evaluated INSIDE the sandboxed body itself and so always
+        resolves against the vm context's own intrinsics under
+        `vm.runInContext` — confirmed by direct execution to pass even
+        against the harness from BEFORE any escape-closing fix existed
+        (commit d60a65b53), i.e. it could never have failed and was not
+        coverage of either round's fix.
         """
         body = (
             "let escaped;\n"
             "try {\n"
-            "  const Fn = ({}).constructor.constructor;\n"
+            "  const Fn = budget.constructor.constructor;\n"
             "  const p = Fn('return process')();\n"
             "  escaped = 'pid=' + p.pid;\n"
             "} catch (e) {\n"
@@ -147,47 +189,62 @@ class TestSandboxEscapeIsClosed(unittest.TestCase):
             "}\n"
             "await agent('p', { label: 'p', escaped: escaped });\n"
         )
-        self._assert_route_blocked(body, "({}).constructor.constructor")
+        self._assert_route_blocked(body, "budget.constructor.constructor")
 
-    def test_async_function_constructor_route_is_blocked(self):
+    def test_args_constructor_constructor_is_blocked(self):
         # covers: BP-1100b-4
-        """The `AsyncFunction` constructor, reached from an async function
-        literal's own `.constructor`, is a sibling route to the plain
-        `Function` constructor escape and must be equally blocked.
+        """`args.constructor.constructor(...)` — the same mock-global-rooted
+        route as `budget` above, through a second injected global, proving
+        round 2's fix is not a one-off patch for a single name but closes
+        the whole class (every mock global is now constructed the same way).
+
+        Replaces the former `test_async_function_constructor_route_is_
+        blocked`, deleted for the same structural-inertness reason: an async
+        function literal's own `.constructor` chain never depended on either
+        round's fix — confirmed by direct execution against the
+        before-any-fix harness.
         """
         body = (
             "let escaped;\n"
             "try {\n"
-            "  async function af() {}\n"
-            "  const AsyncFunction = af.constructor;\n"
-            "  const p = await AsyncFunction('return process')();\n"
+            "  const Fn = args.constructor.constructor;\n"
+            "  const p = Fn('return process')();\n"
             "  escaped = 'pid=' + p.pid;\n"
             "} catch (e) {\n"
             "  escaped = 'blocked: ' + e.constructor.name + ': ' + e.message;\n"
             "}\n"
             "await agent('p', { label: 'p', escaped: escaped });\n"
         )
-        self._assert_route_blocked(body, "AsyncFunction constructor")
+        self._assert_route_blocked(body, "args.constructor.constructor")
 
-    def test_generator_function_constructor_route_is_blocked(self):
+    def test_console_log_constructor_route_is_blocked(self):
         # covers: BP-1100b-4
-        """The `GeneratorFunction` constructor, reached from a generator
-        function literal's own `.constructor`, is a sibling route and must
-        be equally blocked.
+        """`console.log.constructor(...)` — a third injected mock global's
+        route, distinct in shape from `budget`/`args` above because
+        `console.log` is itself already a function (one `.constructor` hop
+        reaches `Function` directly, not two). Confirmed by direct execution
+        to escape against the round-1-only harness (where `console` was the
+        DRIVER's own live `console` object proxied in) and blocked once
+        round 2 replaced it with a sandbox-realm no-op stub.
+
+        Replaces the former `test_generator_function_constructor_route_is_
+        blocked`, deleted for the same structural-inertness reason: a
+        generator function literal's own `.constructor` chain never
+        depended on either round's fix — confirmed by direct execution
+        against the before-any-fix harness.
         """
         body = (
             "let escaped;\n"
             "try {\n"
-            "  function* gf() {}\n"
-            "  const GeneratorFunction = gf.constructor;\n"
-            "  const p = GeneratorFunction('return process')().next().value;\n"
+            "  const Fn = console.log.constructor;\n"
+            "  const p = Fn('return process')();\n"
             "  escaped = 'pid=' + p.pid;\n"
             "} catch (e) {\n"
             "  escaped = 'blocked: ' + e.constructor.name + ': ' + e.message;\n"
             "}\n"
             "await agent('p', { label: 'p', escaped: escaped });\n"
         )
-        self._assert_route_blocked(body, "GeneratorFunction constructor")
+        self._assert_route_blocked(body, "console.log.constructor")
 
 
 class TestSandboxEscapeCannotWriteAFile(unittest.TestCase):
