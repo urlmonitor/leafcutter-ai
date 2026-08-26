@@ -90,7 +90,8 @@ amended_by:
   date: '2026-08-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/07_TICKET-20260825-GE-122d-5.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -113,3 +114,4 @@ notes: |
   PostToolUse hook that crashes, times out or cannot resolve its import emits nothing at all,
   and nothing is exactly what a clean write produces. That is the honest statement for that
   stage's row, and it belongs in the same table.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

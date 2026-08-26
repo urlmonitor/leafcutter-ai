@@ -377,20 +377,39 @@ class TestBuildFeatureFlattenWiring(unittest.TestCase):
     def test_null_phase_result_halts_not_completes(self):
         # covers: code-review M-3 (hardens BO-2000f-1 / BO-2000f-2)
         """
-        A phase agent returning null (agent died / was skipped) or an empty status
-        must HALT the driver, not be silently recorded as a completed phase — which
-        would let the driver proceed to commit / pull-request on incomplete work.
+        A phase agent returning null (agent died / was skipped), an empty status,
+        or an UNRECOGNISED status must HALT the driver, not be silently recorded
+        as a completed phase — which would let the driver proceed to commit /
+        pull-request on incomplete work.
 
-        Asserts driveTicketPhases guards the phase result before the blocker/failed
-        check (the `if (!phaseResult || !resultStatus)` guard).
+        Asserts driveTicketPhases guards the phase result before the
+        blocker/failed check.
+
+        The guard was originally `if (!phaseResult || !resultStatus)`, and this
+        assertion matched that literal text. Truthiness turned out to be weaker
+        than the guard's own docstring claimed: a hallucinated-but-truthy status
+        ("complete", "done") passed it and then matched neither the
+        blocker/failed nor the handoff branch, landing back in the silent-success
+        hole the guard exists to close (KI-SS-001). The guard now tests
+        membership in PHASE_STATUS_VALUES, so this assertion tracks the stronger
+        form.
+
+        NOTE: this remains a source-level assertion, which per CLAUDE.md
+        ("Gate / Workflow ACs — Verify Behaviorally, Not by Grep") cannot prove
+        the guard actually runs. Behavioral coverage of the same failure mode —
+        executing the workflow under the E2 harness with a dead agent and
+        asserting the terminal payload — lives in
+        unit_tests/test_fail_closed_agent_results.py.
         """
         self.assertRegex(
             self.source,
-            r"if\s*\(\s*!phaseResult\s*\|\|\s*!resultStatus\s*\)",
-            "build-feature.js does not guard against a null / empty phase result. "
-            "driveTicketPhases must halt (not record as completed) when a phase "
-            "agent returns null or an empty status, so the driver never proceeds "
-            "to commit on incomplete work (code-review M-3).",
+            r"if\s*\(\s*!phaseResult\s*\|\|\s*"
+            r"!PHASE_STATUS_VALUES\.includes\(\s*resultStatus\s*\)",
+            "build-feature.js does not guard against a null / empty / "
+            "unrecognised phase result. driveTicketPhases must halt (not record "
+            "as completed) when a phase agent returns null or a status outside "
+            "PHASE_STATUS_VALUES, so the driver never proceeds to commit on "
+            "incomplete work (code-review M-3).",
         )
 
 

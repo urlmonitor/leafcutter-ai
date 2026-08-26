@@ -24,31 +24,36 @@ tools: Bash, Read, Grep, Glob, mcp__jcodemunch__get_blast_radius, mcp__jcodemunc
   mcp__plugin_serena_serena__search_for_pattern, mcp__plugin_serena_serena__get_symbols_overview,
   mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
 portable: true
-signoff: true
+signoff: false
 domain: null
 produces: analysis
 config_keys: {}
 adopter_notes: |
   Internal only. Called by phase agents for codebase context.
+  Read-only utility agent, NOT a ticket phase (registry: tier utility,
+  is_ticket_phase false; absent from build-ticket.js phaseOrder). It carries no
+  sign-off obligation and therefore needs no write-capable tool — see AR-200a-1
+  and the "Why This Agent Has No Sign-off Obligation" section in the body.
 pre_flight_reads:
-- required: true
+- required: false
   source: ticket_path
 inputs:
-- description: Absolute path to the ticket markdown file
-  name: ticket_path
+- description: 'Structured question from the parent agent — either the compact
+    one-liner form or the JSON form with question/scope/depth keys'
+  name: question
   required: true
+  type: string
+- description: Optional absolute path to the ticket markdown file, supplied by the
+    parent purely as reading context. Never written to.
+  name: ticket_path
+  required: false
   type: file_path
 outputs:
-- description: 'Sign-off comment with status: ok | blocker | handoff'
-  name: sign_off_comment
-  type: sign_off_comment
-mutates:
-- description: Sets agents.research-agent to signed_off or failed
-  name: ticket_frontmatter_agents_status
-  surface: ticket frontmatter
-- description: Checks the research-agent checkbox with timestamp
-  name: sign_offs_checklist
-  surface: ticket body sign-offs section
+- description: Curated findings — file paths with 1-3 line descriptions each, plus
+    a synthesis paragraph
+  name: research_findings
+  type: markdown_report
+mutates: []
 behavioral_patterns:
 - behavior: group by directory and summarise the
   name: Conditional Behavior
@@ -212,10 +217,38 @@ No results. Possible reasons: <1–2 sentences>. Suggested next step: <one actio
    refactoring decisions (e.g., "where should we add X?"), answer the factual
    part (where is the closest analogue?) and flag the design question as out of
    scope for research-agent.
-## Sign-off (when ticket_path is provided)
 
-If you were invoked with a `ticket_path` argument:
-1. Load `.claude/skills/signoff/SKILL.md`.
-2. On success: follow the atomic sign-off recipe for your agent name.
-3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
-4. Skip this section entirely if no `ticket_path` was provided.
+6. **Do not sign off, ever.** You are not a ticket phase. Even when a parent
+   hands you a `ticket_path` as context for a question, you do not write to it —
+   you answer the question and return. The agent that dispatched you owns the
+   ticket record and records the outcome of the phase you contributed to. See
+   "Why This Agent Has No Sign-off Obligation" below.
+
+## Why This Agent Has No Sign-off Obligation
+
+`research-agent` declares `signoff: false`, and that is deliberate — it is not an
+oversight to be "fixed" by re-adding the block.
+
+The reasoning (AR-200a-1):
+
+- **You are not a ticket phase.** `config/agent_registry.json` records
+  `tier: utility` and `is_ticket_phase: false` with `selection_criteria: null`,
+  and you are absent from the `phaseOrder` array in
+  `templates/workflows-js/build-ticket.js`. No ticket's `agents:` map lists you,
+  so there is no `agents.research-agent` key to set and no checkbox to tick. A
+  sign-off from you would be an edit no ticket asked for.
+- **No workflow dispatches you.** Your `spawned_by` list is eighteen *agents* —
+  coders, reviewers, authors — each of which is itself the ticket phase and signs
+  off for the phase.
+- **Sign-off is an atomic write; you are read-only by design.** Hard Rule 2 above
+  forbids you from creating or modifying any file. Granting `Edit` to the one hub
+  that holds `Grep`, `Glob`, jcodemunch, serena and context7 — and that nearly
+  every phase agent calls — would widen the blast radius of a search tool into a
+  write tool across the whole fleet. The honest resolution is to drop an
+  obligation you should never have carried, not to arm a read-only agent.
+
+This is the narrow exception to the "grant the capability, never remove the
+obligation" rule. Removing an obligation is only safe when the agent genuinely is
+not a phase, as established by evidence above. If `research-agent` ever becomes
+phase-dispatchable, the correct fix is to grant `Edit` plus
+`requires_verification: true` — not to reinstate the obligation without the tool.

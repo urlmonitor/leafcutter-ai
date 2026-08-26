@@ -32,7 +32,7 @@ created: 2026-06-05
 amended_by:
   - "split: INF-400 -> INF-400 + INF-700, 2026-06-05 — reparented from INF-400 to INF-700"
 superseded_by: null
-covered_by: [INF-400c-1, INF-400c-2, INF-400c-3]
+covered_by: [INF-400c-1, INF-400c-2, INF-400c-3, INF-400c-4, INF-400c-5]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

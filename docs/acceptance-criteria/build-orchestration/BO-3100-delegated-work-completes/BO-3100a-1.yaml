@@ -1,0 +1,161 @@
+id: BO-3100a-1
+title: "An agent holding the means to hand off work with no cleared recipient fails assembly"
+component: build-orchestration
+components:
+  - agent_registry
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the system holds two separate declarations about hand-off: each agent's own
+    definition, which either grants or withholds the means to hand work to another agent,
+    and that agent's registry record, which lists the recipients it is cleared to hand
+    work to,
+    And one agent whose definition grants the means while its registry record lists no
+    cleared recipient,
+  When the system is assembled,
+  Then assembly stops with a failure that names that agent and states that its definition
+    grants a hand-off its record does not clear,
+    And no assembled output is produced.
+
+  Given an agent whose definition grants the means to hand off work and whose registry
+    record lists at least one cleared recipient,
+  When the system is assembled,
+  Then that agent is not reported and assembly completes.
+
+  Given an agent whose definition grants no means to hand off work and whose registry
+    record lists no cleared recipient,
+  When the system is assembled,
+  Then that agent is not reported, so an agent that never delegates is never made to
+    declare anything.
+depends_on:
+  - BO-3100a
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry record declaration (spawn_allowlist) — one of the two the reconciliation reads."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — why unbounded hand-off authority is the precondition for the silent stall."
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+    relevance: "The isolation topology the two declarations jointly express."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "The reconciliation must read BOTH declarations in the same pass and compare them: the registry record's cleared-recipient list and the agent definition's granted means. A check that reads one and infers the other cannot see the drift, because the drift is the disagreement."
+  - "The failure must stop assembly and leave no assembled output. A run that prints a warning and continues, or that writes a partial deploy tree before failing, does not satisfy the criterion — 'does not ship' is the requirement, not 'is reported'."
+  - "The check must run inside the existing assembly entry point (the one a consumer and CI actually invoke), not as a separate opt-in script. A gate that has to be remembered is the prompt-level fix this tree rejects."
+  - "DEPLOY-MANIFEST RULE (CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'): if the reconciliation is factored into a new module, that module MUST be added to the corresponding build deploy list in the same change. The gate runs from the DEPLOYED layout; an undeployed dependency raises ModuleNotFoundError at gate runtime and, once the gate is required, blocks every merge. Verify by running the gate from a built target directory, not only from the source tree."
+  - "The two declarations' locations must be resolved the same way the rest of the assembly resolves the repo root, so the check behaves identically when invoked from a worktree, a consumer install, or a parent directory. Do not add a new upward-walk."
+  - "Must complete within the assembly's existing budget: under 2 seconds for the current roster (order 60 agents) and linear in the number of agents."
+  - "Existing correct agents must stay silent. The third scenario is what keeps the gate switched on; a run over the corrected roster must emit no per-agent lines."
+  - "This AC must not re-derive INF-600g (agent-card/registry coherence) or INF-600k (non-agent external callers). A workflow named as a caller is not an agent holding a hand-off means and must not be reported here."
+delivers_to:
+  - agent: python-coder
+    contract: "A reconciliation step inside the assembly entry point that, given the two declaration sources, returns an ordered list of mismatch records {agent_id: str, direction: 'means_without_clearance' | 'clearance_without_means', message: str} and causes assembly to exit non-zero with no output written when the list is non-empty. BO-3100a-1-i consumes the `direction` discriminator and the distinct `message` text; BO-3100a-2 consumes the same step's observed-population counts."
+  - agent: architecture-diagram-author
+    contract: "The named set of inputs the reconciliation reads (registry record field, agent-definition field) and its position within assembly, so BO-3100a-3's diagram can be checked against the reconciliation's real inputs rather than against intent."
+  - agent: reference-author
+    contract: "The two mismatch messages verbatim and the repair each one indicates, so BO-3100a-4's reference documentation can state which declaration to change for each failure."
+expects_from: null
+test_spec:
+  - name: test_bo_3100a_1_means_without_clearance_stops_assembly
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the real assembly entry point as a subprocess over a fixture tree containing one agent definition that grants the hand-off means and a registry record listing no cleared recipient; assert non-zero exit, the agent named in stderr, and that the target directory contains no assembled output."
+  - name: test_bo_3100a_1_granted_and_cleared_agent_assembles_clean
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Same fixture with one cleared recipient added to the registry record: assembly exits zero, the agent is not named anywhere in the output, and the assembled tree is written."
+  - name: test_bo_3100a_1_agent_that_never_delegates_is_silent
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An agent whose definition grants no hand-off means and whose record clears nobody produces no line at all — asserted on the full captured output, not just the exit code, so a 'reported but tolerated' implementation fails."
+  - name: test_bo_3100a_1_gate_runs_from_deployed_layout
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "PRODUCTION ENTRY POINT + DEPLOYED LAYOUT: build into a temporary target directory, then invoke the reconciliation exactly as the deployed assembly invokes it, with cwd outside the source tree. Asserts no ModuleNotFoundError and the same verdict as the source-tree run. This is the CLAUDE.md deploy-manifest trap; a source-tree-only test masks it."
+  - name: test_bo_3100a_1_real_roster_is_reconciled_not_skipped
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the reconciliation over the repository's ACTUAL config/agent_registry.json and templates/agents/*.md and assert it reports a non-zero number of agents examined. Guards the KI-ACS-001 shape: a gate that resolves to zero inputs and exits clean."
+test_rationale: |
+  A unit test that calls the reconciliation function directly cannot distinguish "the check
+  exists" from "the check runs during assembly and stops it" — which is the entire content of
+  this AC ("does not ship"). So the covering tests invoke the real assembly entry point as a
+  subprocess and assert on its exit status and on whether output was written.
+  The deployed-layout test is separately necessary: this repository has already shipped a gate
+  that crashed with ModuleNotFoundError from the deployed tree while every source-tree unit
+  test passed (done_proof.py, 2026-07-22). The real-roster test exists because a fixture-only
+  suite passes on a check that silently resolves to zero agents.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to, doc_links,
+    test_spec/test_rationale, change_target/risk_surface, declares_side_effect. criteria
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3100a-1-i
+implemented_by: []
+notes: |
+  THE RECONCILIATION IS THE POINT — a check that reads only one declaration cannot see the
+  drift, because the drift IS the disagreement between them. The parent L1 records the
+  starting state the user surveyed on 2026-08-25: roughly 25 registry entries declare a
+  non-empty set of cleared recipients, roughly 30 agent definitions are granted the means
+  to hand off, and 9 hold that means with nothing cleared. Those 9 are exactly the first
+  scenario. Do not encode the counts — see BO-3100a-2.
+
+  MECHANICAL, NOT ADVISORY. "Does not ship" is expressed here as assembly stopping and
+  producing no output, so the criterion cannot be satisfied by a check that prints a
+  warning and lets the build continue. Per CLAUDE.md "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep", the covering test must run the real assembly over a fixture
+  set in all three states and assert on the assembly's outcome, not on the presence of the
+  check's source text.
+
+  THE THIRD SCENARIO KEEPS THE GUARD ON. An agent that neither holds nor is cleared for
+  hand-off must be silent. Without it, the check reports most of the roster on every run
+  and gets switched off — the fate BO-2900d exists to avoid.
+
+  BOUNDARY: INF-600g already covers agent-card / registry coherence in general and
+  INF-600k covers tolerating non-agent external callers such as workflows in the
+  "who may call me" direction. This AC is specifically the hand-off AUTHORITY axis and
+  must not re-derive either; a workflow named as a caller is not an agent holding a
+  hand-off means and is out of scope here.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The two declarations resolve, today, to
+  `spawn_allowlist` in config/agent_registry.json and the `tools:` frontmatter of
+  templates/agents/*.md (the means being the Agent/Task tool). The implementer must confirm
+  those against the repository rather than take this note as the specification — the
+  criterion is written about the declarations, not about those two field names, so it
+  survives a rename. `declares_side_effect: true` because the observable is an assembled
+  tree written (or, on failure, deliberately NOT written) to a target directory.

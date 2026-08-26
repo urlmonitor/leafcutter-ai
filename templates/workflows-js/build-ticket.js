@@ -74,10 +74,31 @@ const PLANNER_SCHEMA = {
   },
 }
 
+/**
+ * Every status a phase result may legally carry.
+ *
+ * 'undetermined' is the boundary-failure value: it means "I could not perform
+ * my task", as distinct from "I performed it and the answer is no". Without it
+ * an agent that cannot do its job has no truthful value to return, so its
+ * failure gets forced onto a status meaning something else — the shape behind
+ * KI-SS-001. Any status outside this list is treated as unrecognised and
+ * therefore NOT a success.
+ *
+ * TWIN: mirrors build-feature.js PHASE_STATUS_VALUES. Keep in sync.
+ */
+const PHASE_STATUS_VALUES = [
+  'ok',
+  'blocker',
+  'failed',
+  'question',
+  'handoff',
+  'undetermined',
+]
+
 const PHASE_RESULT_SCHEMA = {
   type: 'object',
   properties: {
-    status: { type: 'string', enum: ['ok', 'blocker', 'failed', 'question', 'handoff'] },
+    status: { type: 'string', enum: PHASE_STATUS_VALUES },
     result_status: { type: 'string' },
     message: { type: 'string' },
     // Test-evidence fields (BO-2000e-2 second satisfaction route). Populated by
@@ -1358,14 +1379,25 @@ for (const currentPhase of neededPhases) {
     // the whole drive. Treat an absent result or unrecognized status as a halt
     // so the ticket stops rather than shipping half-done.
     //
+    // Recognition, not truthiness: the comment above promises "or unrecognized
+    // status", but a truthiness test cannot deliver it. A hallucinated status
+    // ("complete", "done") is truthy, so it passed this guard and then matched
+    // neither the blocker/failed nor the handoff branch below — landing back in
+    // the silent-success hole the guard exists to close. Checking membership in
+    // PHASE_STATUS_VALUES closes it, and also catches an explicit
+    // 'undetermined' (the agent saying it could not perform its task).
+    //
     // TWIN: mirrors build-feature.js. Keep in sync with that file.
-    if (!phaseResult || !resultStatus) {
+    if (!phaseResult || !PHASE_STATUS_VALUES.includes(resultStatus) ||
+        resultStatus === "undetermined") {
       return {
         status: "blocked",
         message:
           `Phase '${phaseName}' returned no usable result (agent died, was ` +
-          `skipped, or returned an empty status). Halting to avoid proceeding ` +
-          `on incomplete work.`,
+          `skipped, or returned an empty, unrecognised, or undetermined ` +
+          `status: ${JSON.stringify(resultStatus)}). Halting to avoid ` +
+          `proceeding on incomplete work — treat the phase as NOT run and ` +
+          `verify the repository, not this payload.`,
         ticket_path: ticketPath,
         failing_phase: phaseName,
         classification: "halt",

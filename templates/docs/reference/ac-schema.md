@@ -247,4 +247,4 @@ component IDs to their prefix and description.
 - `docs/how-to/ac-traceability-store.md` — task-oriented guide for creating, amending, and deprecating ACs.
 - `docs/acceptance-criteria/README.md` — directory structure and quick-start.
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07) for the AC YAML format.
-- `docs/README.md` — full documentation index.
+- `docs/INDEX.md` — full documentation index.

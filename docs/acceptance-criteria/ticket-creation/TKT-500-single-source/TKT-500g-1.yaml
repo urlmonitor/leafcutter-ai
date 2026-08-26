@@ -1,0 +1,145 @@
+id: TKT-500g-1
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "An authored proof demand reaches the work item whole, and names who owes it"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an approved requirement that authors its own proof demand of two named
+    statements — one answering "the stated behaviour holds" and one answering
+    "the behaviour is reachable from the real entry point" — each carrying the
+    descriptive sentence it was authored with,
+  And the worker named on that requirement is not one of the workers classified
+    as producing production code (for example a prompt specialist, a
+    documentation author, a proof author, or no worker named at all),
+  When a work item is generated from that requirement,
+  Then the generated work item carries a proof section listing both authored
+    statements,
+  And each listed statement keeps the descriptive sentence and the
+    kind-of-proof label it was authored with,
+  And the work item's phase list records the proof writer and the proof runner
+    as phases still owed,
+  And the classification of the named worker changes none of the above,
+  And the same holds for every approved requirement in the real store that
+    authors a proof demand, not only for a constructed example.
+depends_on: [TKT-500g]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+    relevance: "The surface. This is where the whole proof section used to be gated on whether some worker in the computed map declares it produces production code; f3ac950c / PR #536 removed that gate for the authored route. Read the authored-versus-derived split before changing anything here."
+  - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
+    relationship: verifies
+    status: exists
+    relevance: "The evidence this AC already has. Four of its seven tests belong to this criterion and currently carry a stray '# covers: BP-1100g-1' tag; re-point those four at TKT-500g-1. The module-level _ANCHOR_AC constant is a legitimate reference to a real-store fixture record and must NOT be changed."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Normative definition of the authored proof demand and its per-statement fields (the descriptive sentence and the kind-of-proof label that must survive)."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the kind-of-proof labels whose survival the second Then clause is about. A fix that emits the statement names but flattens their labels satisfies the letter of 'nothing was dropped' and still loses the contract — this taxonomy is what makes that distinguishable."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The component this criterion sits in: the AC store as authoritative backlog and the generation step that turns one record into one work item. Read for the boundary before changing the generation surface."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The authored route must not consult any agent classification at all. Adding, removing, or renaming a `produces: production_code` declaration in the agent registry must not change whether an authored demand reaches the work item. This is a policy about which inputs the decision may read, not about how the branch is written."
+  - "The store-wide clause is a population obligation, not a fixture obligation: its proof must discover its subjects by scanning the real store rather than naming them, and must stay inside the unit suite's time budget — a per-record subprocess across a ~65-record sweep does not."
+  - "The generator's command-line contract (--ac, --ac-root, --dry-run, --verify) must stay stable. The covering proofs and downstream tooling invoke it as a subprocess, so a change to flag names or exit semantics breaks the evidence as well as the callers."
+  - "Reporting on a record must not modify it: dry-run generation and verification are read-only with respect to the AC store."
+test_spec:
+  - name: test_authored_test_spec_survives_a_non_coder_assigned_agent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/ac_store/generate_ticket_from_ac.py --ac <id> --ac-root <store> --dry-run (subprocess)"
+    description: "Drives the generator's real command-line entry point as a subprocess against a real on-disk record and asserts every authored statement name appears in the emitted proof section."
+  - name: test_authored_angles_survive_with_the_descriptors
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Asserts each authored statement's kind-of-proof label reaches the work item unchanged, rather than the names surviving while the labels are flattened."
+  - name: test_test_writer_is_dispatched_when_a_contract_is_emitted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Asserts that when a proof section is emitted the phase list records the proof writer as owed, so the section is not a demand with nobody on the hook for it."
+  - name: test_test_runner_is_recorded_as_owed_alongside_the_writer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The clause names two phases, not one. Asserts the proof runner is also recorded as owed — a work item that writes a proof nobody runs still ends with nothing executed."
+  - name: test_every_approved_authored_spec_reaches_its_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Population sweep: discovers every approved record carrying an authored demand by scanning the real store from disk and asserts none generates a work item without a proof section."
+test_rationale: |
+  Four of these five already exist in
+  unit_tests/ac_store/test_authored_test_spec_survives_generation.py and are named here
+  verbatim, so the contract and the covering tests describe the same thing rather than
+  two different things. The angles are read off the test bodies, not off the names: the
+  first drives the real CLI as a subprocess (reachability), the sweep discovers real
+  on-disk records rather than naming them (real_artifact), and the two middle ones assert
+  the AC-literal Then clauses on the emitted work item (criterion).
+
+  The fifth, test_test_runner_is_recorded_as_owed_alongside_the_writer, does NOT yet
+  exist. The shipped behaviour injects the proof runner as well as the proof writer, but
+  no test asserts it, so half of the phase-list clause is built-and-unproven. It is
+  recorded as owed rather than quietly assumed — which is the same failure this AC
+  exists to prevent, one level up.
+delivers_to:
+  agent: ticket-supervisor
+  contract: "A generated work item whose proof section is present whenever the source requirement authored a demand — independent of who is assigned. This presence is the single input TKT-500g-2's skip decision is allowed to read."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500g-1-i, TKT-500g-1-ii]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ALREADY BUILT — DO NOT RE-IMPLEMENT. Shipped in f3ac950c / PR #536 without an
+  AC to cite; this criterion is the retro-fit. work_status is left at todo only
+  because its four covering tests still carry the stray BP-1100g-1 tag. Flip it
+  to done in the same commit that re-points those tags, not before — a done
+  claim whose covering tests cite a different AC is exactly the phantom-done
+  shape this tree exists to prevent.
+
+  MEASURED POPULATION AT 06ce1c43 (from the parent L1): 85 records with an
+  authored demand and a non-code assignee, 308 discarded descriptors, 65
+  approved, 37 approved-and-todo. By assignee: llm-expert 43, test-writer 13,
+  documentation-expert 12, unassigned 9, business-analyst 4,
+  test-failure-triage 2, architecture-diagram-author 2. The last Then clause
+  ("every approved requirement in the real store") is a population sweep, not a
+  fixture: a fixture-only proof reproduces the bias that hid this defect.
+
+  WHY THE PHASE-LIST CLAUSE LIVES HERE AND NOT WITH THE DISPATCH AC. Naming the
+  proof writer as owed is an act of the generation step and is built. Whether
+  the named phase actually runs is TKT-500g-2 and is NOT built. Keeping them in
+  one AC would hide the half that is missing.
+
+  IT-PO NOTE 2026-08-25 — THE FIFTH DESCRIPTOR IS NOT ONE OF THE SEVEN. Four
+  existing tests are named verbatim in test_spec so the re-tagging commit and the
+  contract agree. test_test_runner_is_recorded_as_owed_alongside_the_writer is a
+  new obligation: the generator does inject the proof runner, but nothing asserts
+  it, so the phase-list clause is half-proven. Do not read the four re-tagged
+  tests as discharging the fifth.

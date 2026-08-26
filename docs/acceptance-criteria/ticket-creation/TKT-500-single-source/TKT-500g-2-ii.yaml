@@ -1,0 +1,121 @@
+id: TKT-500g-2-ii
+components:
+  - ticket_creation_pipeline
+  - supervisor_system
+  - testing_quality
+readiness: draft
+priority: medium
+title: "The skip question is stated once, and a route that answers a different question is reported by name"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the rule that decides whether the proof-writing phase may be skipped is
+    stated once, in a single place, as the one question every route must ask,
+  When each route's own description of that decision is compared against that
+    single statement,
+  Then each route's description matches it,
+  And when one route's description is changed so that it would skip on an input
+    the single statement says must not be skipped, the comparison reports a
+    disagreement naming that route and the input it disagrees on,
+  And a route that decides by asking which kind of worker is needed, rather than
+    by asking whether a proof was demanded, is reported as a disagreement even
+    when it happens to reach the same answer on the example at hand.
+depends_on: [TKT-500g-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Where the single statement of the skip question belongs, alongside the neighbouring path-shape rule that TKT-500f-6-iii-a already publishes there for the same spec-parity reason."
+  - path: templates/agents/ticket-supervisor.md
+    relationship: constrains
+    status: exists
+    relevance: "One of the three descriptions to be compared. It is prose, not code, so parity is checked against the written statement rather than by a shared import."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: constrains
+    status: exists
+    relevance: "The second description, and the one carrying the residual disagreement: a proof section present with an empty statement list is still resolved by consulting worker classification."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "Where a cross-source parity comparison has to run to be load-bearing. A comparison that exists only as a unit test is advisory; the neighbouring vocabulary-parity rules are enforced at commit time, and this one has to reach the gate that actually gates."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The seam angle's definition and the recorded incident behind it — two sources sharing a vocabulary, each tested against its own copy, with no cross-source set-equality contract. That is precisely this comparison's job."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The comparison must read the three real sources at their real paths. A check that reads a convenience copy, a fixture, or a re-stated summary can report agreement while the shipped descriptions disagree — the recorded shape of EPIC-ComputedQualityGates FP-1."
+  - "The comparison must fail closed. If a source is missing, unreadable, or its skip rule cannot be located, the result is a reported disagreement naming that source, never a silent pass — an unlocatable rule is indistinguishable from an absent one."
+  - "Name every enforcement point this comparison is wired into, and identify which one actually gates. A parity check added only to an advisory surface while the load-bearing gate runs a different path is a no-op that reports success."
+  - "The reported disagreement must name the route and the input it disagrees on. 'Parity check failed' does not let the next reader act, and this defect survived because nothing reported which of three surfaces was the odd one out."
+  - "The route enumeration must be derived from the documented dispatch topology rather than hard-coded to today's three, so a route added later is compared automatically instead of being exempt by omission."
+test_spec:
+  - name: test_each_route_description_matches_the_single_statement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Runs the comparison over the three real route sources and asserts all three agree with the single published statement of the skip question."
+  - name: test_a_drifted_route_is_reported_by_name_and_by_the_input_it_disagrees_on
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Must-block control: one route's description is mutated to skip on an input the single statement forbids, and the comparison reports a disagreement that names that route and that input."
+  - name: test_a_route_deciding_by_worker_classification_is_reported_even_when_the_answer_agrees
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The right answer for the wrong reason is still a disagreement: a route phrased in terms of which worker is needed is reported even on an example where it happens to reach the correct outcome."
+  - name: test_the_comparison_reads_the_real_sources_not_a_convenience_copy
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Mutating the real on-disk source changes the comparison's verdict, and removing a source makes it fail closed — proving the check reads the shipped files rather than an internal copy of them."
+test_rationale: |
+  A parity comparison is the one mechanism available for surfaces that are prose and
+  cannot import each other, and it has two characteristic ways of being worthless: it can
+  read a copy, and it can be unable to fail. Descriptors 2 and 4 exist to kill both —
+  without a mutation control the check is a Neverfail test, and without the real-source
+  control it can report agreement while the shipped descriptions disagree. Descriptor 3
+  is the AC's own last clause and is the one that distinguishes a route that asks the
+  right question from a route that merely gets the right answer today.
+delivers_to:
+  agent: llm-expert
+  contract: "A comparison that fails loudly and by name when any one route's written skip rule drifts from the single statement — so the three surfaces cannot silently diverge again after they are aligned."
+expects_from:
+  ac_id: TKT-500g-2
+  contract: "One question, stated once, that all three routes are required to ask."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  WHY A COMPARISON AND NOT THREE EDITS. Three surfaces answering the same
+  question by three independently maintained descriptions is the state that
+  produced this defect: two of them were changed and one was not, and nothing
+  reported it. Aligning them once without a comparison leaves the same failure
+  available tomorrow.
+
+  THE COMPARISON MUST READ THE REAL SOURCES. A check that reads a convenience
+  copy of any of the three descriptions can report agreement while the real ones
+  disagree — the shape of EPIC-ComputedQualityGates FP-1, and the reason
+  BP-1100g-1's last clause exists.
+
+  THE LAST THEN CLAUSE IS THE POINT. A route may reach the right answer on a
+  given example for the wrong reason; the requirement is that it asks the right
+  question, because the wrong question is what silently produces the wrong
+  answer on the next input.

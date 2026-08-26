@@ -141,8 +141,9 @@ Related reference doc: <path or "none">
      shape. Links to Troubleshooting when applicable.
    - `## Troubleshooting` — only when known failure modes exist. Numbered
      cause → fix pairs.
-   - `## See Also` — cross-links to sibling explanation/reference docs and
-     `docs/README.md`.
+   - `## See Also` — cross-links to sibling explanation/reference docs, and to
+     `docs/INDEX.md` when a navigation entry point is useful. Do NOT link
+     `docs/README.md`: it does not exist and never has.
 
 4. **Verify your own output** — walk the checklist from §Verification of the
    how-to before returning. If any item fails, fix it.

@@ -99,6 +99,54 @@ run the full test suite (that is `test-runner`'s job); you run only the new
 test files you just wrote to confirm they are red (non-zero exit) and have no
 import or syntax errors.
 
+## Test Angles — The Taught Set
+
+Every `angle` value the planning side can emit onto a `## Test Requirements`
+entry (`config/ac_store_schema.json`'s `test_spec[].angle` enum) is a kind of
+proof you must recognize and know how to write. The anchored block below is
+the machine-extractable statement of that same set — it is read directly by
+the cross-source comparison in `unit_tests/prompt_assembly/test_bp_1100g_1.py`
+(BP-1100g-1) and by BP-1100g-3's tag validation. Do not add a name here
+without also adding it to the schema enum, and do not remove a name here
+while the schema still emits it — that mismatch is exactly what the
+comparison exists to catch. See `docs/testing/test-angles.md` for the full
+rationale, evidence base, and literature behind each entry; the value below
+is deliberately a one-sentence, decidable rule you can apply without further
+interpretation, not a restatement of that document's prose.
+
+<!-- TAUGHT-TEST-ANGLES:START -->
+```yaml
+criterion: 'Asserts the unit directly implements the AC''s Gherkin Then-clause
+  on the unit itself; this is the floor angle, charged on every test, mocking
+  collaborators freely — it is the "proof of the behaviour alone" every other
+  angle below is checked against.'
+reachability: 'Invokes the real production entry point (CLI via subprocess,
+  hook via its real runner, slash command, workflow dispatch, or main() with
+  real argv) and asserts both that the behaviour occurred and that its result
+  is consumed in control flow; importing the module, asserting a symbol
+  exists, or asserting a value was merely passed as an argument does not
+  satisfy it.'
+seam: 'Pipes the REAL producer''s actual output into the REAL consumer and
+  asserts the consumer''s observable behaviour; calling an extended function
+  directly with the new argument does not satisfy it, because every real
+  caller may still use the old signature.'
+real_artifact: 'Fixture bytes come from the real serializer (e.g.
+  yaml.safe_dump) or a verbatim on-disk file, never a hand-typed literal, and
+  any module-load claim is verified in a genuinely fresh subprocess rather
+  than via importlib.reload(), which re-executes in an already-populated
+  namespace and masks cold-import errors.'
+deployed: 'Runs build.py into a temporary target directory and exercises the
+  DEPLOYED copy of the file, because a source-tree read is structurally blind
+  to a deploy-manifest gap.'
+boundary: 'Exercises the empty / one / many / limit / malformed-but-parseable
+  edge of a range, count, or shape the AC names, rather than only the
+  populated middle case the criterion angle already covers.'
+failure: 'Feeds a known-bad input through the same entry point or gate and
+  asserts it blocks (non-zero exit, or the blocker string in the payload) or
+  degrades fail-closed, rather than only asserting the happy path succeeds.'
+```
+<!-- TAUGHT-TEST-ANGLES:END -->
+
 ## Contract-Aware Mode (v2 tickets)
 
 When the ticket body contains a `## Agent Contracts` section with one or more
@@ -570,6 +618,50 @@ def test_multi_ac_scenario():
     # covers: FIN-002
     ...
 ```
+
+### 2i.1 — `# angle: <kind>` tag placement (mandatory for every test function, BP-1100g-3)
+
+In addition to the `# covers:` tag above, every test function you write MUST
+also carry a `# angle: <kind>` comment naming which kind of proof — from the
+taught set in "Test Angles — The Taught Set" above — the test was written to
+give. This is a **planning declaration, not a verdict**: it lives on the same
+record the `# covers:` tag lives on, but it feeds no pass, done, or
+eligibility decision anywhere. Writing it does not change how a failing test
+is treated.
+
+**Sourcing rule (in priority order):**
+
+1. **`## Test Requirements` hit:** use the `angle` field already present on
+   the matching test entry (sourced from `test_spec[].angle` in the AC
+   store) — do not re-derive or guess it.
+2. **AC-derived fallback (Step 1.5 §5, no `test_spec` available):** tag each
+   Then-clause-derived test `# angle: criterion` (the floor angle every test
+   satisfies) and tag the mandatory reachability test this fallback adds
+   with `# angle: reachability`.
+3. **Never invent a value.** The tag must be spelled exactly as one of the
+   names in the `<!-- TAUGHT-TEST-ANGLES:START/END -->` block above. A kind
+   outside that set is not silently accepted — `done_proof.py`'s scanner
+   reports it, naming the test and the unrecognised value.
+
+**Placement mirrors `# covers:` exactly — one convention, not two.** Use the
+same three positions `check_test_ac_tags.py` already accepts: the line above
+the `def`, the first line of the function body, or inside the docstring.
+Place `# angle: <kind>` on its own line, adjacent to that function's
+`# covers: <AC-ID>` line(s):
+
+```python
+def test_merge_executes_before_test_runner():
+    # covers: FIN-001
+    # angle: reachability
+    # Verify that git merge origin/main runs before test-runner dispatch.
+    ...
+```
+
+The tag MUST be on a single line, exactly as `# angle: <kind>`, with no
+trailing whitespace and no additional text on the same line. Exactly one
+`# angle:` line per test function — a test proves one kind at a time; if a
+test genuinely earns two kinds, split it into two tests rather than stacking
+two `# angle:` lines on one function.
 
 ## Step 3 — Delegate Codebase Questions
 

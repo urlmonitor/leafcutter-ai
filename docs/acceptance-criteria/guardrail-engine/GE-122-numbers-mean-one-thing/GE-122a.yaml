@@ -36,6 +36,7 @@ covered_by:
   - GE-122a-1
   - GE-122a-2
   - GE-122a-3
+  - GE-122a-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -77,3 +78,16 @@ notes: |
   L2s together discharge this L1's four-namespace scope; neither alone does.
   GE-122a-1-i (L3) pins the whole-collection inspection scope against a
   changed-files implementation.
+
+  BA ADDENDUM (2026-08-25) — the allocation side was missing entirely.
+  Every child above is a DETECTOR. None placed an obligation on the component that
+  CHOOSES a new identifier, even though this L1's own criteria are written in the
+  allocation voice ("the number you give it is yours alone"). GE-122a-4 adds it:
+  a minting component must enumerate every identifier already taken — at any depth
+  beneath the namespace root, and counting identifiers that are cited but no longer
+  declared — and must return one that is in neither set. GE-122a-4-i pins the
+  condition under which a correct-looking allocator still mints a duplicate: an
+  enumeration that could not be completed must yield no identifier at all.
+  Prompted by two live incidents sixteen and twenty-four hours apart (KI-ACD-008
+  and the GE-120 collision recorded in the component PROJECT_CONTEXT.md), both from
+  a root-only scan that could not see identifiers owned by feature folders.

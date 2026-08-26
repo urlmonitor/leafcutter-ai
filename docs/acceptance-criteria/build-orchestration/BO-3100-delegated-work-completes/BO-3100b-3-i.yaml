@@ -1,0 +1,119 @@
+id: BO-3100b-3-i
+title: "A specialist cannot declare its own step a no-op in the reply that ends it"
+component: build-orchestration
+components:
+  - supervisor_system
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose contract makes no no-op declaration,
+    And whose specialist returns a reply stating that there was nothing to do and that the
+    step should be treated as a legitimate no-op,
+    And the project's working state is unchanged,
+  When it attempts to finish,
+  Then it is prevented from finishing and re-run, and the reply's claim is not accepted as
+    a declaration.
+
+  Given the same step after a no-op declaration is added to its contract before the step
+    runs,
+    And the project's working state is unchanged,
+  When it attempts to finish,
+  Then it finishes and is recorded as a step that legitimately produced no change.
+depends_on:
+  - BO-3100b-3
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — 'there was nothing for me to do' is the shape of reply a parked specialist actually produces; this AC closes the door it would otherwise walk through."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE DECLARATION MUST BE READ FROM A RECORD FIXED AT DISPATCH, and its provenance must be verifiable at exit — not merely conventional. The reader must obtain it from the dispatch-time contract snapshot, so a value written after the step began cannot be seen. An implementation that reads a mutable object the running step can also write is the same hole with an extra step."
+  - "THE REPLY MUST NOT BE PARSED FOR A DECLARATION AT ALL. No key, no phrase, no structured field inside the returned text may confer the exemption, and no 'if the contract is silent, fall back to the reply' branch may exist. This is BO-3100b-1's prohibition re-entering through the exemption rather than through the judgement, and it is the single line through which the whole guard is defeated."
+  - "If the dispatch-time contract snapshot is unavailable, the outcome is `undetermined` (BO-3200e vocabulary) — never 'assume declared' and never 'assume undeclared and consult the reply'."
+  - "Adds no separate entry point: this constrains how BO-3100b-3's declaration is read within the same exit-time judgement, so the deploy-manifest obligation is discharged there."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100b-3
+    contract: "The no-op declaration {may_produce_no_change: bool, no_change_reason: str} carried on the step dispatch contract, plus a dispatch-time snapshot of that contract that the exit-time judgement reads. This AC requires the snapshot to be the ONLY source consulted."
+test_spec:
+  - name: test_bo_3100b_3_i_reply_claiming_no_op_is_not_a_declaration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Step dispatched with no declaration; specialist returns a well-formed reply asserting there was nothing to do and asking to be treated as a legitimate no-op; nothing changes on disk. Assert the finish is prevented, the step re-runs, and the outcome is NOT legitimate_no_op."
+  - name: test_bo_3100b_3_i_declaration_present_before_the_run_permits_the_pass
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE PROVENANCE PAIR. Same step, same unchanged project state, same reply — but the declaration is present on the dispatch contract before the step runs. Assert it finishes and is recorded as legitimate_no_op. Run alongside the previous test; the only variable is where the declaration came from."
+  - name: test_bo_3100b_3_i_declaration_written_after_dispatch_is_ignored
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Dispatch with no declaration, then mutate the live contract object to add one while the step is running. Assert the exit-time judgement still vetoes, proving it reads the dispatch-time snapshot and not the current value."
+  - name: test_bo_3100b_3_i_missing_snapshot_is_undetermined
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the dispatch-time contract snapshot absent, assert the outcome is `undetermined` — not a pass, not a veto inferred from the reply."
+test_rationale: |
+  The two provenance tests only mean something as a PAIR: the project state and the reply are
+  held identical across both, and the single variable is where the declaration came from. Run
+  alone, either one passes on an implementation that also accepts a declaration from the reply.
+  A test that inspects how a declaration is parsed is explicitly insufficient here — the BA
+  said so and it is right: a correct parser sitting next to a reply-reading fallback passes
+  every parser test and fails this AC.
+  The after-dispatch mutation test is what makes "before the step runs" mechanically true
+  rather than conventionally true.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the gap through which the entire guard is defeated in one line. If the finishing
+  specialist can declare its own step a no-op, a parked specialist declares itself one — and
+  it will, because "there was nothing for me to do" is exactly the shape of reply a parked
+  specialist produces. The verdict would then be read from the reply again, which is the
+  precise failure BO-3100b-1 exists to end, re-entering through the exemption instead of
+  through the judgement.
+
+  THE DECLARATION MUST PRE-DATE THE RUN. The second scenario says "before the step runs" for
+  that reason: a declaration that can be added at exit time is the same hole with an extra
+  step. Whatever medium the IT PO chooses under BO-3100b-3, it must be fixed at the point the
+  step is dispatched.
+
+  Verification must run the real step lifecycle twice with the same unchanged project state
+  and different declaration provenance, and compare the outcomes. A test that inspects how a
+  declaration is parsed passes on an implementation that also accepts one from the reply.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). "Fixed at the point the step is dispatched" is made
+  mechanical by requiring the judgement to read a dispatch-time SNAPSHOT of the contract rather
+  than the live object. Without that, the medium chosen under BO-3100b-3 satisfies the letter
+  of "declared on the contract" while remaining writable by the running step — the same hole
+  the BA identified, one indirection further in.

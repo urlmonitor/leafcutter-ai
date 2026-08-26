@@ -1,0 +1,69 @@
+id: INF-400c-5
+components:
+  - infrastructure
+title: "One declared entry_kind vocabulary is shared by the classifier and the harvester and enforced where the event is emitted"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c.yaml"
+criteria: |
+  Given the classifier that labels a learning offers 16 target-surface values
+    (memory-user, memory-project, memory-reference, CLAUDE.md-inline,
+    CLAUDE.md-toc, per-folder-readme, agent-frontmatter, adr,
+    architecture-doc, how-to, reference, explanation, glossary,
+    settings-json, ticket-body, skills-config),
+  And the harvester recognises 11 entry_kind values (memory-project,
+    per-folder-readme, agent-frontmatter, code-comment, adr, skill-context,
+    per-agent-memory, explanation-doc, reference-doc, claude-md,
+    retrospective),
+  And those two sets overlap on only four values, so a label the classifier
+    produces is more often unroutable than routable,
+  When the entry_kind vocabulary is defined,
+  Then a single declared vocabulary exists in one named location, and both
+    the classifier's label set and the harvester's routable set are read from
+    it rather than restated,
+  And every value the classifier can return is a member of that vocabulary,
+  And every member of that vocabulary has a routing rule in the harvester, so
+    the set of labels the classifier can produce and the set of kinds the
+    harvester can route are the same set,
+  And an emitted knowledge_captured event is produced through an emission
+    helper that accepts an entry_kind only when it is a member of that
+    vocabulary,
+  And an event whose entry_kind is outside the vocabulary is never written to
+    the knowledge-emission sink.
+depends_on: [INF-400c, INF-400c-4]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: templates/skills/route-knowledge/SKILL.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "The vocabulary must be declared once and read by both the classifier surface and the harvester — a second hand-maintained copy re-creates the drift this AC exists to close"
+  - "Enforcement belongs at the emission helper, not only at the harvester: a free-hand JSON append by an agent is how the 15 uncontrolled values arose"
+  - "A vocabulary member with no routing rule must fail the check, not fall through to a default surface"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: llm-expert
+  contract: "An emission helper with a closed entry_kind vocabulary that the four shipped emit sites call instead of instructing an agent to hand-write a JSON line"
+expects_from:
+  ac_id: INF-400c-4
+  contract: "The declared knowledge-emission sink the validated event is appended to"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [INF-400c-5-i, INF-400c-5-ii, INF-400c-5-iii]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

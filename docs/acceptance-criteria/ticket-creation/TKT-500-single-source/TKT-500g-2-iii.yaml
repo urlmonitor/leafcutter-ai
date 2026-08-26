@@ -1,0 +1,103 @@
+id: TKT-500g-2-iii
+components:
+  - documentation_system
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A sequence diagram shows the demand, the two places it can be dropped, and which of them is guarded"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a reader wants to know where an authored proof demand can be lost
+    between the requirement that states it and the worker who answers it,
+  When that reader consults the architecture documentation for this pipeline,
+  Then a sequence diagram shows, in order: the requirement carrying its authored
+    demand, the generation step placing that demand into the work item and
+    naming the proof writer as owed, the route deciding whether the
+    proof-writing phase runs, and the proof writer producing the proof,
+  And the diagram marks the two points at which the demand has been dropped —
+    the generation step and the route's skip decision — and shows which of the
+    two is guarded and which is not,
+  And it shows the downstream refusal of a promise that was never claimed as a
+    participant beyond an explicitly drawn boundary, with no message crossing
+    back into this pipeline,
+  And a reader can tell from the diagram alone that a demand surviving
+    generation does not by itself mean a proof was written.
+depends_on: [TKT-500g-2]
+doc_links:
+  - path: docs/architecture/components/ticket-creation.md
+    relationship: describes
+    status: planned
+    relevance: "The component page the diagram is linked from; confirm the real path for this component before writing, and satisfy the parent-link check."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The participant beyond the boundary: the check that refuses a promised proof which was never claimed. It belongs on the diagram precisely so a reader sees that it is worthless when the promise never arrived — and sees that no message flows from it back into this pipeline."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-7.yaml
+    relationship: related
+    status: exists
+    relevance: "The neighbouring sequence diagram (promise versus claim, on the proof-writing side). Different span, different participants — do not merge them; link them, and reuse its vocabulary rather than minting a third set of words."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The nearest EXISTING component page for this pipeline. docs/architecture/components/ticket-creation.md does not exist in the tree today, so the parent link must resolve to a page that is actually there — either this one, or ticket-creation.md created as part of the same change."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "The route participant's real behaviour, and the reason the skip decision is the unguarded drop point at authoring time. Read before deciding which of the two points the diagram marks as guarded."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "The parent link must resolve to a page that exists. docs/architecture/components/ticket-creation.md is not in the tree today, so either it is created as part of this change or the diagram is parented to an existing component page — a diagram whose parent link dangles fails the commit-time parent-link check and ships unreachable."
+  - "Four in-pipeline participants plus one beyond the boundary is the budget. A fifth in-pipeline participant means the span was chosen wrongly, not that the budget should rise."
+  - "The boundary must be drawn, not implied. A reader who cannot see where this pipeline ends will read the downstream refusal as a guard this pipeline has — which is the exact false comfort the diagram exists to remove."
+  - "Reuse the participant and message vocabulary of the neighbouring diagram rather than minting a third set of words for the same objects. Two diagrams naming one participant differently is the prose form of the defect this tree is about."
+  - "The guarded-versus-unguarded marking must describe the state as of the change this diagram ships with. Drawn before TKT-500g-2 lands, it would document the intended state as if it were current — a documentation instance of the same phantom-done shape."
+test_required: false
+test_rationale: |
+  Genuinely proof-free as executable behaviour: the observable is one sequence diagram
+  and the AC's central content — that a reader can see which of two drop points is
+  guarded, and that no message crosses an explicitly drawn boundary — is a comprehension
+  property no unit test evaluates. The mechanical properties (naming convention, parent
+  link, participant budget) are already enforced by dedicated commit-time checks and must
+  not be duplicated here.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-2
+  contract: "The reconciled skip decision, so the diagram documents the rule that will hold rather than the one that is currently broken."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the sequence-diagram entry in TKT-500g's documentation_triggers.
+
+  DELIBERATE DEVIATION — AUTHORED AT L3, NOT L2. The documentation-AC convention
+  places a triggered diagram at L2. TKT-500g is at the hard cap of five L2
+  children and all five slots carry load-bearing behaviour (the demand arriving,
+  the phase running, the negative control, the explicit waiver, and the honest
+  readiness report). Displacing one of those to make room for a diagram would
+  hide a behaviour to document a picture. The trigger is satisfied in substance:
+  a single owned criterion, its own agent, its own observable. Raising the cap
+  was rejected — the parent L1 was created precisely to avoid another override.
+
+  WHY A SEQUENCE DIAGRAM IS THE RIGHT FORM. This defect existed because two
+  independent steps can each discard the same demand and neither reports it. A
+  sequence of four participants with the two drop points marked states that in a
+  glance; prose has to enumerate it and will fall out of date at the next route.
+
+  IT-PO NOTE 2026-08-25 — test_required: false ACCEPTED AS AUTHORED. The rationale
+  is sound and the mechanical properties really are enforced elsewhere; duplicating
+  them here would be a second gate that reports on the first. The one addition is an
+  it_requirement about the dangling parent link: the component page named in the
+  first doc_link does not exist in the tree, and a diagram nobody can reach from a
+  component page is the documentation form of unreachable code.

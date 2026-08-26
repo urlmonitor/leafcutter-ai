@@ -1929,7 +1929,23 @@ if (route === "covered" && !force) {
       ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_covGateResult.status)) {
     return _covGateResult;
   }
-  const userChoice = _covGateResult || { choice: "cancel" };
+  // Fail CLOSED, not destructively. A null result here means the gate could not
+  // be answered at all — the agent died, refused the role it was handed, or
+  // returned unparseable text (KI-ACD-005). Defaulting that to "cancel" made a
+  // transport failure indistinguishable from the user genuinely choosing to
+  // cancel, and silently discarded the request. Surface it instead.
+  if (!_covGateResult) {
+    return {
+      status: "undetermined",
+      message:
+        "The covered-route confirmation gate returned no usable answer, so no " +
+        "decision was recorded and nothing was changed. This is a gate failure, " +
+        "NOT a user cancellation — re-run /plan-feature and answer the gate.",
+      stage: "covered-route-gate",
+      covered_by: existing_acs,
+    };
+  }
+  const userChoice = _covGateResult;
   const choice = (userChoice.choice || userChoice.action || "cancel").toLowerCase();
 
   if (choice === "cancel") {
@@ -2083,7 +2099,23 @@ if (ptRunSet.skip) {
             ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_ptGateResult.status)) {
           return _ptGateResult;
         }
-        const ptGate = _ptGateResult || { action: "cancel" };
+        // Fail CLOSED, not destructively — see the covered-route gate above.
+        // A null reply is a gate failure, not the user asking to cancel, and
+        // cancelling here throws away the drafted product-truth work.
+        if (!_ptGateResult) {
+          return {
+            status: "undetermined",
+            message:
+              `The product-truth gate (${ptStep.agent}, stage ${ptStep.stage}) ` +
+              `returned no usable answer, so no decision was recorded. This is a ` +
+              `gate failure, NOT a user cancellation. Prior committed ` +
+              `product-truth stages are preserved and the current ${ptStep.stage} ` +
+              `draft is left uncommitted on disk — re-run /plan-feature and ` +
+              `answer the gate.`,
+            stage: `pt-gate-${ptStep.stage}`,
+          };
+        }
+        const ptGate = _ptGateResult;
         const ptAction = ptGate.action.toLowerCase();
 
         if (ptAction === "cancel") {
@@ -2377,7 +2409,25 @@ for (const step of pipeline) {
           ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_midGateResult.status)) {
         return _midGateResult;
       }
-      const gateDecision = _midGateResult || { action: "cancel" };
+      // Fail CLOSED, not destructively — see the covered-route gate above.
+      // This is the most costly of the three: cancelling here discards ACs that
+      // have already been authored. A null reply means the gate could not be
+      // answered (KI-ACD-005), which is not the user asking to throw that work
+      // away, so it must never be routed into the cancel branch.
+      if (!_midGateResult) {
+        return {
+          status: "undetermined",
+          message:
+            `The confirmation gate after ${step.agent} returned no usable ` +
+            `answer, so no decision was recorded. This is a gate failure, NOT a ` +
+            `user cancellation. Committed ACs are preserved and drafted ACs are ` +
+            `left on disk — re-run /plan-feature and answer the gate.`,
+          stage: `gate-${step.stage}`,
+          committed_acs: committedAcs,
+          acs_as_drafts: written,
+        };
+      }
+      const gateDecision = _midGateResult;
 
       const action = gateDecision.action.toLowerCase();
 

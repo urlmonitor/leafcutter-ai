@@ -1,0 +1,115 @@
+id: TKT-500g-1-i
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A documentation-only requirement that asked for proof still gets it — an authored demand outranks a path-shape inference"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an approved requirement whose every changed path is documentation or
+    configuration and no changed path is an implementation source file,
+  And that same requirement nonetheless authors a proof demand of one statement,
+  When a work item is generated from that requirement,
+  Then the generated work item carries a proof section containing that
+    statement,
+  And the shape of the changed paths does not suppress it,
+  And where a rule reading the shape of the changed paths would omit the section
+    while an authored demand would emit it, the authored demand decides.
+depends_on: [TKT-500g-1]
+doc_links:
+  - path: docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-7.yaml
+    relationship: constrains
+    status: exists
+    relevance: "The approved AC this criterion narrows. TKT-500f-7 says docs/config-only changed paths produce no proof section and no warning; read literally it forbids what this criterion requires. Its scope is hereby narrowed to the no-authored-demand case — see the ruling in notes and the amended_by entry recorded on that file."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+    relevance: "Where the two rules meet. The path-shape branch must be the fallback that runs only when no demand was authored, never a filter applied after one was."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The component boundary for the generation step where the precedence is applied."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Precedence is a policy, not an implementation detail: where an authored proof demand and the path-shape inference disagree, the authored demand decides. An implementation in which the path-shape rule can suppress a demand that was read is non-conforming, however the internal checks happen to be arranged."
+  - "The precedence must hold for both generators that produce work items from a record, not only the one this criterion was found on. A rule enforced in one generator and absent from the other is a partial gate, and the population lands on whichever generator ran."
+  - "The 14 measured docs-or-config-only records that author a demand (12 documentation author, 2 diagram author, at 06ce1c43) are the proof population. A proof built only on a constructed record does not establish that the records actually in the store keep their section."
+  - "If a reviewer later decides a documentation record must never carry a proof obligation, the conforming response is a named refusal at authoring time — never a silent discard at generation time, because a silent discard is indistinguishable from the defect."
+test_spec:
+  - name: test_docs_only_paths_do_not_suppress_an_authored_demand
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    covers: [TKT-500g-1-i, TKT-500f-7]
+    description: "A record whose changed paths are documentation and configuration only, and which authors one statement, generates a work item carrying that statement — the path shape does not suppress it."
+  - name: test_the_docs_only_records_that_author_a_demand_all_keep_their_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Discovers from the real store every record whose changed paths are docs-or-config only AND which authors a demand (14 at 06ce1c43), and asserts none loses its proof section. Subjects are discovered by scanning, never named."
+  - name: test_the_path_shape_omission_still_applies_when_no_demand_was_authored
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    covers: [TKT-500g-1-i, TKT-500f-7]
+    description: "The other side of the narrowing: with no authored demand present, a docs-or-config-only record still gets no proof section. Without this, 'the authored demand decides' could be satisfied by emitting a section for everyone."
+test_rationale: |
+  The criterion is a precedence rule between two inputs, so the contract needs both sides
+  of the disagreement (descriptors 1 and 3) or the rule is provable by over-emitting.
+  Descriptor 2 is the population: 14 real records sit on exactly this input, and a
+  constructed-record-only proof would show that the generator CAN emit the section for
+  such a record, not that the records in the store now receive one — the bias that hid
+  the original defect. Descriptors 1 and 3 also cover TKT-500f-7, which governs the same
+  two inputs from the other direction; one test, two ACs, so the two records cannot drift
+  into describing different behaviour.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-1
+  contract: "The authored-demand survival rule this criterion pins at its hardest input — a requirement whose paths say 'no proof owed' and whose author said 'this proof is owed'."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE CONTRADICTION THIS RESOLVES, STATED PLAINLY. TKT-500f-7 (approved) requires
+  that a requirement touching only docs/config paths produce no proof section and
+  no warning. Fourteen of the 85 affected records are exactly that shape and DO
+  author a demand — 12 assigned to documentation-expert, 2 to
+  architecture-diagram-author. The behaviour that shipped in f3ac950c emits a
+  proof section for them. Read literally, the shipped behaviour violates an
+  approved AC.
+
+  RULING: the shipped behaviour is right and TKT-500f-7 is under-specified. It
+  was authored on 2026-06-22, before an authored proof demand was a first-class
+  field on a requirement, so its only available input was the shape of the
+  changed paths. Precedence is therefore: an explicitly authored demand outranks
+  an inference drawn from path shape. Path shape answers "was a proof owed?" only
+  when nobody said. TKT-500f-7's scope is narrowed to the no-authored-demand case
+  and an amended_by entry to that effect is recorded on its file.
+
+  WHAT WOULD CHANGE THE RULING. If a reviewer holds that a documentation record
+  must never carry a proof obligation whatever its author wrote, then the fix is
+  to reject the authored demand at authoring time with a named error — not to
+  discard it silently at generation time. Silent discard is the one option
+  excluded, because it is indistinguishable from the defect.
+
+  IT-PO NOTE 2026-08-25 — BUILT BUT UNPROVEN. The behaviour ships today, but none
+  of the seven tests in the authored-demand suite exercises the docs-only-AND-authored
+  input, so the precedence rests on reading the code rather than on a red-then-green
+  proof. Two of the three descriptors are shared with TKT-500f-7 deliberately: that AC
+  is approved and unbuilt, and the pair must be implemented together or the narrowing
+  is inert.

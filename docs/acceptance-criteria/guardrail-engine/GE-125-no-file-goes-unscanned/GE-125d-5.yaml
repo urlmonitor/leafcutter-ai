@@ -1,0 +1,171 @@
+id: GE-125d-5
+components:
+  - security_scanner
+  - commit_guardian
+title: "One description of when this check looks less, and it agrees with the check"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project's reference material currently describes this check's
+    reduced scrutiny as applying to four prose directories, and says nothing
+    about what an author is told when it applies,
+  When the reference material is next published,
+  Then exactly one section of it describes reduced scrutiny for this check, and
+    that section states, for every reduction: which detection rule is removed,
+    where the reduction applies, which detection rules still apply there, and
+    what the author is told when it withholds something,
+  And no other document in the project describes the same behaviour,
+  Because all four features of this goal change that one description, and four
+    separately-written accounts of a single behaviour disagree with each other
+    within a release — the reference-doc trigger carried by each of the four
+    features is discharged once, by this section, and not four times.
+
+  Given that section and the answer the check gives when it is asked what it
+    declines to examine,
+  When the two are compared,
+  Then the section describes the same set of reductions the check reports, under
+    the same names,
+  Because a reference page free to drift from the behaviour it documents
+    recreates in prose exactly the invisibility this goal removes from the
+    output, and the reader has no way to tell which of the two is lying.
+
+  Given a narrowing of the reduction that has been specified but not yet built,
+  When the reference material is published,
+  Then the section describes the behaviour in force and does not present the
+    planned narrowing as though it had landed,
+  Because a reference that overstates the protection is the failure this whole
+    goal exists to correct, and it does more harm on a security surface than
+    saying nothing: it converts a gap into a false assurance.
+depends_on:
+  - GE-125d
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The canonical location of the section this record requires — and, MEASURED ON 2026-08-24, it currently contains NO description of the location-based reduction at all. The reference is wrong by omission, so there is no passage to amend and the first of the four documentation records to be built must CREATE it. The deployed .claude/skills/security-scanner/SKILL.md is a build.py output."
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "Supplies the content the section must state and the confidence to state it at: the reduction gates ENTROPY_HIGH only, the four regex rules survive in reduced locations, and the match is a substring test rather than root-anchored, so the four intended prefixes behave as four directory names at any depth."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/skills/security-scanner/SKILL.md is the canonical copy; .claude/skills/security-scanner/SKILL.md is a build.py output. Edit the template and run the build."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: "A candidate second home for this description. The single-section arm requires it to be checked and, if it describes the same behaviour, to link to the section rather than restate it."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "SEQUENCING, EXPRESSED AS A CONSTRAINT AND DELIBERATELY NOT AS depends_on EDGES. MEASURED ON 2026-08-24: templates/skills/security-scanner/SKILL.md contains no description of the location-based reduction at all. The reference is wrong by OMISSION, so there is no passage to amend. Whichever of the four documentation records — GE-125a-3, GE-125b-4, GE-125c-4, GE-125d-5 — is built FIRST must CREATE the section; the other three amend what it created. Before writing, check whether the section already exists and amend it if so rather than adding a second one. Do NOT add depends_on edges between the four documentation records: the coupling disappears the moment the passage exists, and an edge would tie four L1s to each other's delivery order permanently for a reason that is temporary."
+  - "EXACTLY ONE SECTION, IN EXACTLY ONE DOCUMENT. Before publishing, search the project for any other passage describing this reduction — docs/how-to/managing-pre-commit-hooks.md and docs/architecture/components/security-scanner.md are the likely second homes — and fold any second account into this section, leaving a link rather than a restatement. Four separately-written accounts of one behaviour disagree with each other within a release, which is the outcome the goal forbids."
+  - "The section must be MECHANICALLY COMPARABLE to the check's own answer from GE-125d-4: the same set of reductions, under the same stable names from the same closed vocabulary, so a test can compare the two rather than a reviewer comparing them by eye. Prose that conveys the same meaning in different words does not satisfy this — the names must match term for term."
+  - "DESCRIBE THE BEHAVIOUR IN FORCE. A narrowing that is specified but not yet built gets no mention at all — not as a caveat, not as a 'planned', not as a 'coming soon'. On a security boundary a roadmap line is read as a description of the boundary by everyone in a hurry, and a reference that overstates protection converts a gap into a false assurance. If the section is written before a sibling lands, it describes today's behaviour including the substring match and the whole-file scope, however unflattering."
+  - "The section must state which detection rules SURVIVE in reduced locations, not only which is removed. Measured today the reduction gates ENTROPY_HIGH only, and AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET still fire — a section naming only the removal overstates the gap in the other direction, and a reader who concludes reduced locations are unscanned will draw the wrong operational conclusion."
+  - "The section must reproduce no credential-shaped value and no matched line, and it must NOT include an illustrative notice example that shows a withheld value being printed. The documentation must not model the very thing GE-125d-1 forbids: a copied example is the most durable way a prohibited output shape gets reintroduced."
+  - "Carry KI-SEC-001's measurements at the confidence it records them at and do not upgrade them. In particular the substring match and the not-root-anchored consequence are measured facts about today's code, and the section must present them as the current behaviour rather than as a defect narrative or as an already-corrected one."
+  - "ADR-001 parity: templates/skills/security-scanner/SKILL.md is the canonical copy and .claude/skills/security-scanner/SKILL.md is a build.py output. Edit the template, then run `python scripts/build.py --target-dir .`; a change made only to the deployed skill is reverted by the next build."
+  - "ASSIGNMENT NOTE, recorded because the surface and the trigger point at different owners. The parent L1 carries documentation_triggers: [reference-doc], which routes to a documentation agent, but the artefact is a SKILL.md body and the agent registry's own DSL rule assigns templates/skills/*/SKILL.md to llm-expert. The registry rule wins because it is the mechanical one and the file is a skill body. If the section is later relocated to docs/reference/, reassign to reference-author at that point."
+delivers_to: null
+expects_from:
+  ac_id: GE-125d-4
+  contract: "The check's own answer about what it declines to examine, which this section is written against and compared to. Without that answer the second arm has nothing to agree with and the section is unverifiable prose."
+test_required: true
+test_spec:
+  - name: test_section_names_every_reduction_the_check_reports_under_the_same_names
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The set of stable reduction names in the check's own answer (GE-125d-4) and the set named in the SKILL.md section are equal — neither a name in the answer missing from the section nor a name in the section the check does not report"
+  - name: test_exactly_one_section_in_the_project_describes_the_reduction
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A repository-wide search finds the reduction described in exactly one section of one document; any other file mentioning it links to that section rather than restating the behaviour — the arm that fails the four-documents outcome the goal forbids"
+  - name: test_section_states_the_surviving_detection_rules_for_reduced_locations
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The section names the removed rule and every rule that still fires in reduced locations, and the surviving set matches what the check's answer reports — so a reader cannot conclude that reduced locations are unscanned"
+  - name: test_section_contains_no_credential_shaped_value_or_withheld_value_example
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The section trips no detection rule when scanned, and contains no example notice showing a withheld value — the documentation must not model the output shape GE-125d-1 prohibits"
+  - name: test_section_is_present_in_the_deployed_skill_after_the_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After `python scripts/build.py --target-dir .`, the deployed .claude/skills/security-scanner/SKILL.md carries the same single section as the canonical templates/ copy, so a deployed-only or template-only edit cannot pass"
+test_rationale: "This is a documentation record whose second arm is mechanically checkable, which is exactly why it must not be given test_required: false — the AC's own claim is that the section and the check agree, and agreement between two artefacts is a set comparison a test can make. The parity entry is a seam test rather than a criterion test because the producer is the check's answer and the consumer is the published section: comparing name sets term for term is the only evidence that the section will not drift, and a human review pass is the failure mode this record exists to replace. The single-section entry is a repository-wide search, which is the correct instrument here rather than a smell: the claim IS about which files contain a description, so presence and absence across the tree is the property, not a proxy for behaviour. The no-example entry runs the detection rules over the section itself, because a documentation example is the most durable route by which a prohibited output shape is reintroduced — someone copies the example into the implementation. The deployed entry exists because SKILL.md ships through build.py and an edit to the deployed copy alone is reverted by the next build. The tests live in unit_tests/commit_guardian/ alongside the check whose answer they compare against, so the parity assertion has both artefacts in reach."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned llm-expert at M and the assignment reasoning recorded as an it_requirement, because the parent's reference-doc trigger routes to a documentation agent while the artefact is a SKILL.md body that the agent registry's DSL rule assigns to llm-expert; the registry rule wins as the mechanical one, and the note says when to reassign if the section moves to docs/reference/. Authored nine it_requirements. The sequencing constraint the L0's adjudication left to the IT PO is expressed here: templates/skills/security-scanner/SKILL.md was checked on 2026-08-24 and contains no description of the reduction at all, so the reference is wrong by omission, the first of the four documentation records built must CREATE the section and the other three amend it — expressed as a constraint and explicitly NOT as depends_on edges between GE-125a-3, GE-125b-4, GE-125c-4 and this record. Added the requirement that the section state which detection rules SURVIVE in reduced locations, since naming only the removal overstates the gap in the opposite direction, and a prohibition on any illustrative example showing a withheld value, because a copied example is the most durable route by which a forbidden output shape returns. Authored a five-entry test_spec plus test_rationale rather than setting test_required: false: the second arm is a set comparison between the section and the check's own answer and is mechanically checkable. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  THIS RECORD DISCHARGES THE reference-doc TRIGGER FOR THE WHOLE GOAL, NOT JUST
+  FOR GE-125d. All four L1s under GE-125 carry the trigger and each genuinely
+  needs it, because the written description of when this check looks less is
+  wrong after any one of them lands. The goal's own instruction is that they be
+  satisfied by a SINGLE consolidated rewrite rather than four documents, and
+  that this be said at L2 — which is what this record is.
+
+  CONCURRENCY WARNING FOR WHOEVER READS THIS NEXT. GE-125a, GE-125b and GE-125c
+  were decomposed at the same time as GE-125d by separate authors who could not
+  see each other's output. If any of them also authored a documentation AC for
+  the same reference material, that is the four-documents outcome the goal
+  forbids, and the correct repair is to keep ONE record and supersede the others
+  rather than to write one section per AC. This record is deliberately written
+  so that it can be the survivor: its first arm asserts a property of the whole
+  reference material ("exactly one section", "no other document"), not a
+  property of GE-125d's slice of it.
+
+  THE SECOND ARM IS WHY THIS IS NOT AN ORDINARY DOCUMENTATION AC. Comparing the
+  section against the check's own answer makes the documentation mechanically
+  checkable rather than reviewed by eye, and it is only possible because
+  GE-125d-4 requires the check to be able to state its reductions at all. The
+  pair is the point: the answer keeps the section honest, and the section makes
+  the answer findable by someone who does not yet know the check can be asked.
+
+  DO NOT WRITE THE THIRD ARM'S CAVEAT AS A ROADMAP NOTE. The section describes
+  behaviour in force. If a narrowing is specified and unbuilt, the section says
+  nothing about it; a "coming soon" line in reference material about a security
+  boundary is read as a description of the boundary by everyone in a hurry.
+
+  IT-PO NOTE, 2026-08-24 — THE ADJUDICATION RECORDED IN THE L0 IS SETTLED, AND
+  THE PREMISE CORRECTION IS CONFIRMED. All four documentation records are kept;
+  none is superseded. They are four content requirements for one passage, not
+  four claims on one artifact. The premise correction holds:
+  templates/skills/security-scanner/SKILL.md was read on 2026-08-24 and contains
+  no description of the reduced scrutiny at all, so the reference is wrong by
+  OMISSION and the first record built must create the passage. That is carried
+  above as a sequencing it_requirement and deliberately NOT as depends_on edges
+  between the four, because the coupling is temporary and an edge would be
+  permanent.

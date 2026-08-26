@@ -1,0 +1,168 @@
+id: GE-125c-4
+components:
+  - security_scanner
+  - commit_guardian
+title: "The reference says the reduced check is decided one result at a time, and says it in one place for the whole goal"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reference material that describes when the secrets check gives
+    something less scrutiny than usual,
+  When a reader wants to know what a reduced check applies to,
+  Then the reference states that the reduction is decided one result at a time and
+    that no file is ever set aside as a whole,
+  And it names the closed list of explanations that can account for a value and
+    states that anything the list does not describe is reported,
+  Because the reference today describes the reduction as belonging to whole files
+    in named locations, which is the behaviour this L1 removes — a reader left with
+    that text will keep expecting a file to be quiet and will not notice when it
+    stops being.
+
+  Given the same reference,
+  When a reader wants to know whether where a value sits inside its line affects
+    what happens to it,
+  Then the reference states that the judgement is made on the value itself rather
+    than on the shortened copy kept to show where it was found, so an explanation
+    appearing late in a long line counts exactly as one appearing at the start,
+  Because the shortened copy is the defect the parent L1 exists to name, and a
+    maintainer who cannot see this stated will reintroduce it the first time the
+    reduction is extended.
+
+  Given the same reference and the sibling L1s of this goal, each of which also
+    asks for the reference to be corrected,
+  When the reference is rewritten,
+  Then the corrected description of when the check looks less exists in exactly one
+    place, covering all four L1s of this goal together, with no second home opened
+    for any part of the same statement,
+  And every behaviour the reference attributes to the reduced check is one the
+    check actually has, and every behaviour the check has around the reduction is
+    one the reference does not omit,
+  And where the two disagree the implementation is authoritative and the
+    disagreement is raised as a defect against the code criterion that owns it
+    rather than written down as fact,
+  Because the L0 asks for a single consolidated rewrite rather than four documents,
+    and because a reference that overstates the checking reproduces the exact false
+    confidence this goal exists to remove.
+depends_on:
+  - GE-125c
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "THE REFERENCE IS MISSING BY OMISSION, NOT WRONG — SO THE FIRST OF THE FOUR SIBLINGS TO BE BUILT CREATES THE PASSAGE AND THE OTHER THREE AMEND WHAT IT CREATED. `templates/skills/security-scanner/SKILL.md` carries NO description of the reduced scrutiny at all (measured during decomposition and recorded in the L0's adjudication and in GE-125a-3's notes). There is no passage to amend. Before writing, check whether GE-125a-3, GE-125b-4 or GE-125d-5 has already created it; if so, ADD only the part this L1 changes and do not open a second home. This is a sequencing constraint, deliberately NOT expressed as depends_on edges between the four L1s, because the coupling disappears the moment the passage exists."
+  - "THE TARGET FILE IS A TEMPLATE, AND A DEPLOYED-COPY-ONLY EDIT IS REVERTED BY THE NEXT BUILD. Write to `templates/skills/security-scanner/SKILL.md`; the copy under `.claude/skills/security-scanner/` is a build output per ADR-001. Run `python scripts/build.py --target-dir .` after editing and confirm the deployed copy carries the new passage. An edit made only to the deployed skill disappears silently."
+  - "THIS FILE IS ALSO A PROMPT SURFACE, NOT ONLY A DOCUMENT. `SKILL.md` is loaded as instructions to an agent, so a sentence describing what the check does is also a sentence telling an agent what to expect. Keep the passage descriptive and factual; do not phrase it as an instruction that would change how the security-scanner skill behaves. If the wording starts to read as guidance rather than description, hand that portion to `llm-expert` rather than resolving it as prose."
+  - "WRITE IT AGAINST THE SHIPPED RESULT, OR MARK IT EXPLICITLY PENDING. The behaviour described here is introduced by GE-125c-1, GE-125c-2 and GE-125c-3. Written before they land, the text documents an intention — which is the exact failure the third arm forbids. Either build this after those three, or land it with an explicit pending marker and re-verify every sentence once they are done. A pending marker is not optional cover: it must be removed by a re-check, not by time passing."
+  - "THE PARITY REVIEW RUNS IN BOTH DIRECTIONS AND IS THIS RECORD'S SUBSTITUTE FOR A TEST. Nothing may be claimed that the check does not do, and nothing the check does around the reduction may be omitted. Perform it by reading the SHIPPED `templates/scripts/commit_guardian/check_secrets.py` and `templates/skills/security-scanner/scripts/scan_secrets.py`, not the acceptance criteria — the criteria describe the intent and the code describes the behaviour, and where they disagree the code is authoritative and the disagreement is raised as a defect against the code criterion that owns it."
+  - "THE STATEMENT MOST AT RISK IS THE WHOLE-VALUE ONE, AND IT MUST NAME THE HAZARD IT PREVENTS. State plainly that the judgement is made on the matched value itself — and on the whole line where surrounding context is needed — rather than on the shortened copy kept to show the author where the value was found, and that an explanation appearing late in a long line counts exactly as one appearing at the start. A reader cannot verify this from the document alone, and it is the statement a future maintainer is most likely to invalidate without noticing, which is precisely why omitting it is not an option."
+  - "NAME THE CLOSED LIST AS A CLOSED LIST, WITH REPORT-BY-DEFAULT STATED. Enumerate the recognised explanations and say explicitly that anything the list does not describe is reported. Describe the list by reference to where it is defined rather than transcribing a regex, so the document cannot drift into being a second, stale definition of the recognition."
+  - "EXAMPLES MUST NOT CONTAIN CREDENTIAL-SHAPED LITERALS. This material is scanned on every commit, so a realistic-looking example would either trip the check or need a suppression of its own. Describe the value shapes in words, as the neighbouring documentation criteria in the GE-123 tree do, and do not add a `.security-allowlist` entry to make an example committable."
+  - "NO EXAMPLE MAY BE WRITTEN AS A LONG LINE WHOSE INTERESTING PART SITS PAST THE 120TH CHARACTER. That would be a live instance of the defect being documented. Keep every line of the new passage well under 120 characters, and verify it rather than assuming it."
+  - "DO NOT DESCRIBE A PLANNED NARROWING AS THOUGH IT HAD LANDED. GE-125d-5 asserts this rule for the whole goal; it binds this passage too. Any part of the reduction that is still only proposed — including anything from the sibling L1s not yet built — is either omitted or marked as not yet in effect, never written in the present tense."
+  - "NO SECOND HOME FOR ANY PART OF THE STATEMENT. Do not restate the reduction in `docs/how-to/managing-pre-commit-hooks.md`, in a component architecture document, or in a new file. If another surface already says something about the reduction that now contradicts the consolidated passage, correct it by pointing at the consolidated passage rather than by re-explaining — two homes for one statement drift, and the drifted copy is the one someone reads."
+test_required: false
+test_rationale: |
+  This criterion changes prose only, so it carries no executable behaviour and
+  test_required is false rather than test_spec being left empty. What stands in
+  place of a test is a review against the shipped check, in both directions:
+  nothing claimed that the check does not do, nothing omitted that it does. The
+  claim most at risk is the second one — a reader cannot verify from the document
+  alone that the judgement uses the whole value, and it is the statement a future
+  maintainer is most likely to invalidate without noticing. Mechanising the parity
+  review would mean reading the check's own description of its reductions and
+  comparing it against the document, which is a code criterion of its own and is
+  out of scope here.
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The reference material this criterion corrects. Measured during decomposition: it carries NO description of the reduced scrutiny at all, so the first of the four sibling documentation criteria to be built CREATES the passage and the rest amend it."
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 is the measured record of the behaviour being described, including the truncation defect the second arm requires be stated."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "SKILL.md is a template; the copy under .claude/skills/ is a build output and an edit made only there is reverted by the next build."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: "A surface that must NOT acquire a second copy of the statement; if it already contradicts the consolidated passage, correct it by pointing at that passage."
+delivers_to: null
+expects_from:
+  ac_id: GE-125c-3
+  contract: "The shipped behaviour of GE-125c-1, GE-125c-2 and GE-125c-3 taken together — a per-result decision, a closed recognised-explanation list with report-by-default, and a judgement made on the whole matched value rather than on the truncated display excerpt. This record documents that shipped result and is written against the code, not against the criteria; where the two disagree the code is authoritative and the disagreement is raised as a defect against the code criterion that owns it."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent documentation-expert, estimated_complexity M, eleven
+      it_requirements and six doc_links; set readiness reviewed. test_required false and
+      the BA-authored test_rationale are preserved verbatim — this criterion changes
+      prose only and carries no executable behaviour, so no test_spec was added. The
+      it_requirements carry the L0 adjudication forward as a sequencing constraint (the
+      reference is missing by OMISSION, so the first of GE-125a-3 / GE-125b-4 / GE-125c-4
+      / GE-125d-5 to be built CREATES the passage and the rest amend it, deliberately not
+      expressed as depends_on edges); name templates/skills/security-scanner/SKILL.md as
+      the template whose .claude/skills/ copy is a build output under ADR-001; flag that
+      the file is also a prompt surface, so wording that reads as instruction rather than
+      description is handed to llm-expert; require the parity review to be performed
+      against the shipped check_secrets.py and scan_secrets.py rather than against the
+      criteria; require the whole-value statement to be present and to name the hazard;
+      forbid credential-shaped literals and any example line whose interesting part sits
+      past the 120th character; and forbid a second home for any part of the statement.
+      criteria, title, level, work_status, test_required and test_rationale unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  THIS DISCHARGES GE-125c's documentation_triggers OF [reference-doc]. The other
+  three children of this L1 are code criteria, so without this record the trigger
+  has no owner. Folding the wording into a code criterion's technical requirements
+  is not a discharge: that criterion signs off on a passing test suite, and nothing
+  fails if the sentence is never written.
+
+  ONE REWRITE FOR THE WHOLE GOAL — THE L0 SAYS SO EXPLICITLY AND THIS IS WHERE IT
+  IS SAID AT L2. All four L1s (GE-125a, GE-125b, GE-125c, GE-125d) carry
+  reference-doc, and each independently invalidates the currently written
+  description of when this check looks less. They are to be satisfied by a SINGLE
+  consolidated rewrite of that material, not by four documents and not by four
+  sections that each restate part of it.
+
+  COORDINATION HAZARD, NAMED BECAUSE IT IS LIVE. The sibling L1s are being
+  decomposed in parallel, so more than one documentation criterion may exist for
+  one rewrite. That is not a duplicate to be deleted and it is not licence to write
+  four texts: whichever of them lands first writes the consolidated description,
+  and the rest are discharged by pointing at it and adding only the part their own
+  L1 changes. If a sibling record has already claimed the same text when this is
+  picked up, satisfy this one by review of that text against the three questions
+  above rather than by writing a second version. Two homes for one statement drift,
+  and the drifted copy is the one someone reads.
+
+  SEQUENCING. This text describes behaviour that GE-125c-1, GE-125c-2 and
+  GE-125c-3 introduce. Written before they land it documents an intention, which
+  is the failure the third arm forbids. Write it against the shipped result, or
+  mark it explicitly as pending and re-check it once those three are done.
+
+  EXAMPLES MUST NOT CONTAIN CREDENTIAL-SHAPED LITERALS. This material is scanned on
+  every commit, so a realistic-looking example would either trip the check or need
+  a suppression of its own — describe the value shapes in words, as the neighbouring
+  documentation criteria in the GE-123 tree do. Nor may an example be written as a
+  long line whose interesting part sits past the 120th character: it would be a
+  live instance of the defect being documented.

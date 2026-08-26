@@ -1,0 +1,155 @@
+id: ACD-2100c-2
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "A run that cannot reach a person waits with a durable record instead of proceeding or discarding"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run started with no channel by which a person can answer -- an unattended
+    invocation with no interactive session attached,
+  And the run is started with its process working directory set to a git worktree
+    of the project,
+  And drafted work from the steps before the decision point is present on disk,
+  When the run reaches a decision point,
+  Then no step after that decision point runs,
+  And a record naming the run and that decision point is present on disk after the
+    process has exited,
+  And the run reports that it is waiting for an answer,
+  And the drafted work is still present on disk unchanged.
+depends_on: [ACD-2100c, ACD-2100a-4]
+doc_links:
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "The sequence diagram authored by ACD-2100e-1 -- the unattended branch that ends in a pause is one of the paths it depicts."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 -- 'A gate that cannot reach a user should pause and persist a resumable state.'"
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: implements
+    status: exists
+    relevance: "The pause and resume contract, including re-entry via a supplied answer."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. resolveGate at 1571-1582 already pauses on a null or unparseable answer; the residual destructive default is line 2086."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the pause substrate this behaviour writes into."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "The pause record must be durable before the process exits and must be written to the project's own store, not beside the caller. Both properties come from ACD-2100a-4; until it lands this behaviour degrades to a persist failure when run from a worktree, which is where the original loss was observed."
+  - "'Waiting' must be established by the record on disk, not by the reported outcome. A run that reports waiting while having written nothing is not paused, it is lost, and it satisfies every assertion made against the return value."
+  - "No step after the decision point may run on any path out of an unreachable channel -- including a timeout path. A timeout that proceeds is the same loss with a delay."
+  - "The drafted work must be left byte-identical. The pause must not normalise, rewrite or relocate anything the earlier steps produced."
+  - "Must satisfy the repository error-handling policy: the record write is external I/O; a failed write must be logged at WARNING or higher and must not be reported as a successful pause."
+  - "Must be idempotent: reaching the same decision point twice for the same run leaves one record."
+test_spec:
+  - name: test_unattended_run_from_a_worktree_pauses_with_a_record_on_disk
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      An unattended invocation with no interactive session, driven from a real git
+      worktree of the project with drafted work already on disk; after the process
+      exits a record naming the run and the decision point is present in the project's
+      store and the run reported that it is waiting.
+  - name: test_no_step_after_the_decision_point_runs_when_no_person_can_answer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner as an unattended invocation, with the run's own step record read back afterwards"
+    description: >-
+      The run's record of the steps it executed ends at the decision point -- no later
+      step appears, and no authoring output from a later step exists on disk.
+  - name: test_drafted_work_is_byte_identical_after_the_pause
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The drafted artifacts on disk before the run are compared byte-for-byte with the
+      same files after the process exits; nothing was rewritten, relocated or removed.
+  - name: test_pause_written_from_the_worktree_is_readable_from_the_project_root
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      A second fresh process started with the project root as its working directory
+      lists the run as waiting -- the worktree-written record read by a reader that
+      starts somewhere else.
+test_rationale: >-
+  The worktree Given is not decoration. Pausing is only durable if the record can
+  actually be written, and the pause store is reached through three cwd-relative paths
+  that ACD-2100a-4 fixes; until then, "pause instead of discard" degrades to a persist
+  failure from exactly the working directory where the original loss was observed.
+  Evidence gathered from the workspace root only does not close this record, which is
+  why the worktree is in the Given rather than in a note. The on-disk assertion after
+  process exit is the anti-phantom clause: a run that reports waiting while having
+  written nothing passes any assertion made against the return value. The byte-identical
+  comparison is stronger than "the files still exist" because the failure that matters
+  here is losing reviewed content, not losing filenames.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100c-3
+    contract: "A durable pause record naming the run and the decision point it stopped at, present in the project's own store after the process exits and readable by a later process started from any working directory -- the state ACD-2100c-3 resumes from."
+  - agent: python-coder
+    ac_id: ACD-2100c-5
+    contract: "An unreachable-channel outcome that is a pause: the drafted work remains on disk and the run's recorded outcome is 'waiting', never a stop attributed to a person."
+expects_from:
+  - ac_id: ACD-2100a-4
+    contract: "A pause store whose read, write and read-back all resolve to the project's own store rather than to a location relative to the caller's working directory, with the write durable before process exit and its reported success matching what is on disk."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THE WORKTREE GIVEN IS NOT DECORATION. Pausing is only durable if the record can
+  actually be written, and the pause store is reached at three cwd-relative paths
+  (plan-feature.js 1552, 1625, 1642) covered by ACD-2100a-4. Until that lands,
+  "pause instead of discard" degrades to a persist failure when run from a worktree
+  -- which is exactly where the original failure was observed. Evidence for this
+  behaviour gathered from the workspace root only does not close it, which is why
+  the worktree is in the Given rather than in a note.
+
+  THE ON-DISK CLAUSE IS AN ANTI-PHANTOM CLAUSE. A run that reports "waiting" while
+  having written nothing is not paused, it is lost, and it passes any assertion made
+  against the return value. Assert the record's presence after the process has
+  exited.
+
+  THE UNATTENDED INVOCATION IS THE REALISTIC CASE, not a contrived one. It is how
+  the route is reached from another workflow, and it is the condition under which
+  the observed run was discarded.
+
+  ALREADY IN FLIGHT ELSEWHERE, DO NOT AUTHOR OVER IT: two commits on
+  worktrees/pf-gate-fix (c6087fae, 5a3eae6d) add pause-persist verification and fix
+  dropped `edit` feedback. They harden the write; they do not decide who may answer
+  a gate, which is this L1's subject. Assume they land.
+
+  OUT OF SCOPE: the vocabulary of the returned status when a run is cancelled
+  (KI-ACD-006). This record asserts only that the run reports waiting, not what a
+  cancelled run reports.
+
+  2026-08-25 (it-po): this is the one cross-L1 ordering in the tree that the build
+  sequencer can see -- ACD-2100a-4 is already in depends_on, so the expects_from edge
+  written here has its mirror and will be honoured despite KI-ACD-015. Do not build
+  this record before ACD-2100a-4; its own Given makes it unfalsifiable if you do,
+  because a pause that fails to persist from a worktree cannot be told from one that
+  was never attempted.

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - commit_guardian
 related_docs:
@@ -799,6 +799,25 @@ whether it moves the other two.
 
 ### KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
 
+> **ID COLLISION — this entry and the one at `KI-CG-012` above share a number.** Two sessions
+> minted `KI-CG-012` independently on 2026-08-25; the other entry ("the hooks' test seams
+> disagree on both variable name and separator") was itself renumbered from `KI-CG-008` at
+> merge, which is how the collision arose. Deliberately **not** renumbered here, because the
+> inbound references do not disambiguate cleanly and a wrong renumber is worse than a flagged
+> duplicate:
+>
+> - `commit-guardian.md:953` and `build-pipeline.md:1095` cite `KI-CG-012` for an
+>   "invisible until touched" property — fits neither entry unambiguously.
+> - `BP-600d-3.yaml:186` cites it as "a third" occurrence of index-scoping — that reads as
+>   *this* entry.
+> - The 2026-08-25 10:26 changelog describes `KI-CG-012` as the `_is_leaf_ac()` / leaf-definition
+>   disagreement, which is the text now filed as **`KI-CG-013`** — so at least one inbound
+>   reference is already pointing at the wrong entry independently of this collision.
+>
+> Whoever owns this file should pick the renumber and fix all four references in one commit.
+> Next free id at time of writing is `KI-CG-018` (`016` and `017` were both claimed on
+> 2026-08-25 by two concurrent sessions — see the note on `KI-CG-017` below).
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 3
@@ -906,8 +925,8 @@ piece of work across the hook family rather than one hook at a time.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 3 records in one family, all on 2026-08-25
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 14 records in three families (3 × `BO-2400e`, 4 × `BP-1500d` on 2026-08-25; 7 × `BO-3100`/`BO-3200` on 2026-08-26 — see the third-family note below)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `derive_declares_side_effect` and `_DURABLE_EFFECT_RE` in `scripts/commit_guardian/_ac_schema_validators.py:560-607`; enforced by `validate_declares_side_effect`; rule is BO-2900g-2
 
 **Symptom.** `check-ac-schema` requires the authored `declares_side_effect` to equal a value
@@ -989,6 +1008,70 @@ authoring a derived field, and correct the nine records. Widening `_DURABLE_EFFE
 more invasive change and the sweep does not support it — no record is failing because the pattern
 was too strict about a value someone tried to set to `false`.
 
+---
+
+**AMENDED 2026-08-25 — a second family hit this the same day and resolved it the opposite way.
+Occurrences 3 → 7.** `BP-1500d-1` through `BP-1500d-4` were enriched independently that day, all
+four authored `declares_side_effect: true`, all four rejected. Same defect, same hook, different
+resolution: instead of flipping to `false`, the BA amended the Then clauses to name the artifact
+concretely, and the derivation then agreed. Both families are now in the store with **opposite**
+values on the same question — `BO-2400e` says `false` on records whose subject is bytes surviving
+on disk, `BP-1500d` says `true`. That inconsistency is now the most urgent thing here.
+
+**The one-directional argument above does not support reading 2, and this is load-bearing.** The
+inference is that "only an over-eager author produces them all in the same direction." That is not
+so. A too-narrow pattern **also** produces exclusively `authored true / derives false`, because
+under-matching can only ever fail to fire — it is structurally incapable of producing
+`authored false / derives true`. The observed 9-0 split is therefore equally consistent with both
+readings and discriminates between them not at all. The zero is a property of the failure mode,
+not evidence about its cause.
+
+`BP-1500d-1` is the decisive counterexample. Its Then clause read *"that project holds its own
+record of what the build put there ... a copy of the project taken without the producing package
+still carries it"* — a durable file by any ordinary reading — and derived `false`. Verified with a
+negative control isolating vocabulary as the only variable:
+
+| Then-clause phrasing | Derives |
+|---|---|
+| `Then a record file is written into that project` | `True` |
+| `Then that project holds its own record of what the build put there` | `False` |
+
+Identical claim, opposite verdict. The pattern **was** under-matching a real durable effect, so
+reading 1 is not hypothetical, and "correct the nine records" would have written `false` onto four
+records that genuinely do write files.
+
+**Sweep numbers reconcile.** An independent read-only sweep the same day counted **12**
+disagreements against this entry's **9**. Not a contradiction: that sweep ran on a tree predating
+the `BO-2400e-3 / -3-i / -4` repair, and 9 + 3 = 12. Both counts are correct at their own commit.
+
+**The structural fix neither entry names: there is no code-side reconciliation.** The sibling field
+`package_surface` has exactly the two-sided design this one lacks — `check_package_surface_declaration.py`
+(ACS-100i-8, commit-msg stage, confirmed installed) reconciles the registry entries a change
+*actually adds* against the declarations of the ACs it cites. Its own registration comment states
+the reason: *"the declaration is under the author's control and can simply be omitted, but the
+registration cannot be."* `declares_side_effect` has only the prose side, which is why reading 2 is
+dangerous on its own — telling authors to stop setting the field, with nothing checking what the
+code does, makes omission both correct-by-policy and free. Omission derives `false` and passes
+**silently**, switching off `user-surface-smoker`, described in this repo as the one automatic guard
+against code that is built but not wired into anything.
+
+Detection is admittedly harder here than for `package_surface`: "a registry key appeared" is a JSON
+diff, whereas "this change writes a durable artifact" means recognising `open(...,'w')`,
+`write_text`, `shutil.copy` and friends. And ACS-100i-8's own config records CONCESSION 3 — its
+watched-registry enumeration goes stale unless extended in the same change. A side-effect
+equivalent inherits that weakness.
+
+**Revised recommendation.** Reading 1 and reading 2 are both real and neither alone is sufficient.
+Keep the field author-set but make it a deliberate BA decision rather than an IT-PO reflex; demote
+the regex from decider to cross-check that reports disagreement, which is the one thing it already
+does well; and add the landing-time reconciliation so omission is not free. Reconcile the
+`BO-2400e` / `BP-1500d` split deliberately in one pass rather than one blocked commit at a time —
+and note that a standing "name durable artifacts concretely in Then clauses" authoring rule is a
+poor substitute, because it asks every author to write for a matcher and collides directly with the
+customer register the PO/BA are required to use.
+
+---
+
 **Read alongside KI-CG-014, which the sweep above structurally could not see.** That entry is
 the mirror image of this one: the derivation returning `true` where it should return `false`,
 because it matches a write phrase inside a *negated* clause. The sweep counted disagreements
@@ -998,6 +1081,38 @@ derivation. KI-CG-014 is what happens when someone does: the attempt is rejected
 value the author can honestly write. So the sweep's conclusion that the pattern is not too strict
 holds; it says nothing about the pattern being too *loose*, which is a different axis and is also
 broken. Whichever reading wins here, negation handling is needed regardless.
+
+**Third family, 2026-08-26 — `BO-3100` / `BO-3200`, and the first evidence that the derivation
+is too LOOSE on a whole class it was not previously tested against.** The IT-PO enrichment pass
+authored `declares_side_effect: true` on seven records; the gate rejected all seven with
+`derives False`. On three the gate was plainly right and the authored value was implementation
+reasoning rather than a reading of the Then clause — `BO-3100a-1` (assembly stops with a
+failure), `BO-3200d-1` and `BO-3200d-2` (what a step *reads*, what verdict it *forms*). Those
+are exactly the "authored by opinion" case BO-2900g-2 forbids, and removing the field was the
+correct resolution.
+
+On the other four the derivation looks wrong, and they share a shape the earlier two families
+did not have — **a durable change to a store, expressed without any of the writing verbs the
+pattern matches**:
+
+| Record | Then clause | Why it is durable |
+|---|---|---|
+| `BO-3200b-1` | "every item it claimed is **back in its unclaimed state in that same store**" | mutates a store explicitly described as outliving the run |
+| `BO-3200b-1-i` | "every item it had already claimed is **back in its unclaimed state**" | same |
+| `BO-3100b-2` | "**no completed step is recorded**" / "**exactly one completed step is recorded**" | a sign-off persisted to the ticket record |
+| `BO-3200c-1` | the run **pauses resumably** awaiting a person | a pause record that survives the run |
+
+`_DURABLE_EFFECT_RE` looks for writing verbs. "Is back in its unclaimed state", "is recorded"
+and "pauses resumably" describe the *resulting state* rather than the act, so the pattern misses
+them. That is a third axis, distinct from both the too-strict reading of the first two families
+and from KI-CG-014's negation blindness: **state-described-as-outcome rather than as an action.**
+
+Resolved by removing the field on all seven rather than authoring a value the gate rejects — the
+schema is explicit that this value is derived, not authored, so a conflicting authored value is
+not a legitimate way to record the disagreement. The observation is recorded here instead, which
+is the point of this register. Four records therefore now carry a derived `false` that is
+arguably wrong; when the deriver learns outcome-state phrasing they should flip to `true` with
+no criteria change, and that is the regression test for the fix.
 
 ---
 
@@ -1058,3 +1173,471 @@ matcher reads English correctly.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8 (a check measuring a proxy and
 reporting it as a verdict) — the proxy is "does the Then clause contain a write phrase", the
 verdict claimed is "this AC has a durable side effect", and negation is the gap between them.
+
+---
+
+### KI-CG-016 — `enforce_commit_delegation` matches the phrase anywhere in the command string, so read-only commands that merely mention committing are blocked
+
+- **Severity:** low
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the `enforce_commit_delegation` PreToolUse hook, matching against the whole Bash command string rather than the resolved program and its subcommand
+
+**Symptom.** Any Bash command whose text contains the phrase is refused with the full
+delegation error, regardless of what the command actually does. Searching for the phrase,
+printing it, or reading a file about it are all blocked.
+
+**Evidence.** Two pure reads, both refused on 2026-08-25 with
+*"direct git commit is not allowed … COMMIT_AGENT_MODE is not set to '1'"*:
+
+```
+grep -c "git commit" CLAUDE.md
+grep -n "git add\|add -A\|stageAll\|git commit" templates/workflows-js/fast-lane-ship.js
+```
+
+Neither invokes git. The first counts lines in a Markdown file. The second was an audit of the
+fast lane's staging behaviour — the work that produced `KI-BO-029` — and the block is what
+forced that audit to be re-run with the phrase removed from the pattern.
+
+**Why it is low.** It is loud, immediate and trivially worked around by rephrasing the search.
+Nothing is silently wrong; the cost is a wasted call and a detour.
+
+**Why it is worth filing anyway.** The affected commands are disproportionately the ones that
+*audit commit behaviour* — greps over hook code, workflow staging steps, and this register's own
+prose. A guardrail that obstructs inspection of itself raises the cost of the reviews most
+likely to find its own defects. `CLAUDE.md` and several agent templates contain the phrase in
+prose, so any grep across them is affected.
+
+**The converse is the open question, and is NOT claimed here.** A matcher keyed on a substring
+of the raw command is in principle both over-inclusive (this entry) and potentially
+under-inclusive against spellings that do not contain the literal phrase. Only the
+over-inclusive half was observed. Deliberately not probed — attempting to slip a real commit
+past a safety hook is not an appropriate way to characterise it. Flagged for the owner to
+settle by reading the matcher, not by experiment.
+
+**Fix direction.** Match on the parsed invocation — program resolves to `git` and the
+subcommand is `commit` — rather than on a substring of the command text. Failing that, exclude
+commands whose program is a known read-only tool (`grep`, `rg`, `cat`, `less`, `echo`).
+
+**Numbering.** A concurrent session minted `KI-CG-016` for a different defect on the same
+day and renumbered its own entry to `KI-CG-017` before merge, leaving `016` to this one — see
+that entry's own note. This is `KI-BO-024`'s id-collision shape again, resolved cooperatively
+rather than by any check.
+
+---
+
+### KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_governance.py:631-642` — `main()`
+
+**Symptom.** The hook returns `0` having read no file, with no output on stdout or stderr,
+and is indistinguishable at the call site from a run that checked every staged record and
+found nothing wrong.
+
+**Root cause — the diagnostic is downstream of the silent exits.** `main()` has two early
+returns, and the introspection counter that exists to prove the hook did work sits *after*
+both of them:
+
+```python
+631    if not ac_store.is_dir():
+632        # No AC store — exit 0 immediately without creating any directories
+633        return 0
+634
+635    # Get staged AC YAML files
+636    staged_paths = _get_staged_ac_paths()
+637    if not staged_paths:
+638        return 0  # No AC files staged — nothing to check
+639
+640    # Emit parsed file count to stderr for test introspection (AC-13)
+641    if os.environ.get("HOOK_COUNT_PARSED"):
+642        print(f"{_HOOK_PREFIX} parsed_files: {len(staged_paths)}", file=sys.stderr)
+```
+
+`HOOK_COUNT_PARSED` was added so a caller could confirm the hook saw its files. It is
+unreachable on precisely the two paths where it saw none. Setting it and getting silence is
+therefore ambiguous between "the variable is unset", "the hook is old", and "the hook
+checked nothing" — and only the third is true.
+
+Line 631 is reached with `ac_store` wrong whenever `_find_project_root()` resolves above the
+AC store. In the ADR-001 self-hosting layout the workspace parent carries a `CLAUDE.md` but
+no `docs/acceptance-criteria/`, so a run whose working directory is the workspace parent
+takes the 633 exit every time. Not intermittent.
+
+**Evidence.** Both observed on 2026-08-25 while authoring `ACD-2100`, by two agents
+independently, on a worktree that did contain 31 staged AC records:
+
+```
+$ HOOK_COUNT_PARSED=1 HOOK_TEST_FILES=<relative path to a real staged AC> \
+    python <worktree>/.leafcutter/scripts/commit_guardian/check_ac_governance.py
+(no output at all)
+exit: 0
+
+$ env --chdir=<worktree> HOOK_COUNT_PARSED=1 HOOK_TEST_FILES=<same path> \
+    python <worktree>/.leafcutter/scripts/commit_guardian/check_ac_governance.py
+[check-ac-governance] parsed_files: 1
+exit: 0
+```
+
+Same hook, same file, same exit code; only the working directory differs, and only the
+second run inspected anything.
+
+**Compounding: `argv` is ignored.** `_get_staged_ac_paths()` (`:285`) reads `git diff
+--cached` or `HOOK_TEST_FILES`. Passing paths on the command line does not make the hook
+check them, so a caller who verifies the hook by invoking it with a path gets a pass that
+means nothing. This is the same shape already recorded for the other AC hooks — silence is
+not a pass, and neither is exit 0 with an argument the hook never read.
+
+**Why this is worse than a crash.** In pre-commit the working directory is the repository
+root, so the gate does run there — its practical blast radius is ad-hoc verification, agent
+self-checks, and any CI step that invokes it from elsewhere. Those are exactly the callers
+who would report "governance passes" on the strength of an exit code.
+
+**Fix direction.** Three separable changes, in order of value:
+
+- Emit the `HOOK_COUNT_PARSED` diagnostic (or an unconditional one-line summary naming the
+  resolved root and the file count) **before** the early returns, so a run that checked
+  nothing says so. A check that cannot report what it looked at should not be able to
+  report success.
+- Distinguish "no AC store found at `<resolved root>`" from "AC store found, nothing
+  staged". Both are legitimately exit 0; they are not the same fact.
+- Resolve the root the way the guardian hooks that already handle this layout do —
+  `_resolve_root.py` exists for it. Falling back to a bare relative `_AC_STORE_DIR` when
+  `_find_project_root()` returns `None` (`:627`) is what makes the failure depend on cwd.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8, and a variant worth naming
+separately: the *instrumentation* meant to defeat M8 placed where the M8 path cannot reach
+it.
+
+---
+
+### KI-CG-019 — the `templates/` copy of `check_ac_parent_covered_by` fail-opens on an import it can never satisfy, so verifying from `templates/` always passes
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py` — the
+  `derive_parent_id` import guard
+
+**Symptom.** Run from `templates/`, the hook prints a warning and exits 0 without checking
+anything:
+
+```
+$ HOOK_ROOT=<worktree> HOOK_TEST_FILES=<a real AC record> \
+    python <worktree>/templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+[check-ac-parent-covered-by] WARNING: cannot import derive_parent_id: ac_parent_id.py not
+found via package import, script-relative, or project-root walk.; skipping check (fail-open)
+exit: 0
+```
+
+The deployed copy under `.leafcutter/scripts/commit_guardian/` imports cleanly and runs.
+
+**Root cause.** `ac_parent_id.py` lives in `scripts/ac_store/` and is placed next to the
+hook only by `build.py`. In `templates/` that sibling does not exist, and none of the three
+resolution strategies can find it — so the condition is not an environment accident but a
+permanent property of that copy. The failure is guaranteed, and the response to a guaranteed
+failure is to pass.
+
+**Why it matters.** It is louder than `KI-CG-018` — it does print a warning — but it lands in
+the same trap: anyone verifying AC parent back-links by running the hook out of `templates/`
+gets exit 0 and a clean-looking result. That is a natural thing to do, because `templates/`
+is where the source of truth for the hook lives and where an author editing it is already
+working. The hook that exists to catch a stale `covered_by` is the one that silently
+abstains.
+
+Found while verifying `ACD-2100e`: a business-analyst hit the fail-open, noticed the warning,
+re-ran the deployed copy, and additionally corroborated the invariant by reading the parent's
+`covered_by` directly rather than trusting either exit code.
+
+**Fix direction.** Fail **closed** when the import cannot be satisfied and the hook was given
+files to check — the check exists to be blocking, and a blocking check that cannot load its
+own dependency has not passed. If the `templates/` copy is genuinely not meant to be
+executable in place, make it say that explicitly ("this copy is a build source; run the
+deployed hook") and exit non-zero, rather than emitting a warning shaped like a skip.
+
+Related: the deployed hook has no `parsed_files`-style diagnostic at all, so even a correct
+run cannot state what it inspected. Adding one alongside the `KI-CG-018` fix would make both
+hooks answerable to the same question.
+
+---
+
+### KI-CG-020 — hook registration has a fourth leg nobody documents: a hook absent from `blocking_hook_ids` is skipped by the autofix loop
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/precommit-autofix.json` `blocking_hook_ids`;
+  `templates/skills/precommit-autofix/SKILL.md` Step 4; `templates/skills/create-hook/SKILL.md`
+
+**Symptom.** A hook can be correctly registered by every documented step — script written,
+config key added, `hooks_manifest` entry added, row added to the hook documentation index —
+and still be ignored by the autofix loop, because a **fourth** registration surface exists
+that the `create-hook` procedure does not mention.
+
+`templates/scripts/precommit-autofix.json` carries a closed allowlist:
+
+```json
+"blocking_hook_ids": [
+  "check-complexity",
+  "check-docstrings",
+  "check-exception-handling",
+  "check-file-size",
+  "check-ac-schema",
+  "check-ac-limits",
+  "check-contract-shrinking"
+]
+```
+
+`precommit-autofix/SKILL.md` Step 4 is explicit about the consequence: if a failing hook
+does not appear in `blocking_hook_ids`, *"the hook is non-gating — skip it entirely, do not
+dispatch any fixer."*
+
+**Why this is a registration gap rather than a configuration choice.** The allowlist is a
+reasonable design — not every hook should have a fixer dispatched at it. The defect is that
+it is a **fourth leg of registration documented nowhere in the procedure that exists to
+enumerate the legs.** `create-hook` codifies three-way registration (script + guardian
+config + doc index) and `check_hook_parity` enforces consistency across those three. Neither
+knows this file exists. So the natural failure is silent: an author follows the documented
+procedure completely, `check_hook_parity` passes, and the hook lands outside the loop with
+nothing reporting the omission.
+
+**Evidence.** Found on 2026-08-25 while reviewing `BP-1100b-5`, an approved AC specifying a
+new staged-hunk commit-guardian hook (`check_presence_only_assertions.py`). Its
+`it_requirements` spell out three-way registration in detail — including an explicit
+`n_location_rule: "2"` constraint warning that a config key without a `hooks_manifest` entry
+"is a no-op that reads as shipped". Neither that record's `it_requirements`, `constraints`
+nor `doc_links` mentions `precommit-autofix.json`. As specified, the AC ships a gate the
+autofix loop is configured to ignore — and the record's own coverage would not catch it,
+because all twelve of its test descriptors exercise the hook directly.
+
+The irony is worth recording: `BP-1100b-5` exists to stop tests that look like proof but
+are not, and it carries a registration spec that looks complete but is not, for the same
+structural reason — an enumeration everyone trusts that is missing an item.
+
+**Scope.** The 7 hooks on the allowlist are unaffected. The exposure is every hook added
+since the allowlist was closed and every hook added from here, and the symptom is not a
+failure but a *reduced* one: the hook still blocks the commit, it simply gets no autofix
+attempt, so the effect is friction rather than a false pass. That is why this is `medium`
+and not `high` — but it is the kind of gap that is only ever noticed by someone reading the
+autofix config for an unrelated reason.
+
+**Fix direction.**
+
+- Add the fourth leg to `create-hook`'s procedure, with the decision made explicit: every
+  new hook is either added to `blocking_hook_ids` or is deliberately non-gating, and the
+  author records which. An omission by default is the current behaviour and is the thing to
+  remove.
+- Extend `check_hook_parity` to cover it, so a hook present in `hooks_manifest` and absent
+  from `blocking_hook_ids` is reported — as a warning naming the deliberate-exclusion route,
+  not as a hard failure, since exclusion is legitimate.
+- Amend `BP-1100b-5` when it is built, or accept the gap knowingly for that hook.
+
+---
+
+### KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes
+
+> **Minted as `KI-CG-016`, renumbered to `017` before merge.** A concurrent session claimed
+> `KI-CG-016` for a different defect (the delegation hook substring-matching command text) in a
+> PR authored at the same time. Renumbered here rather than there because that PR's description
+> was already written around `016`, and because filing a duplicate in the same commit that flags
+> the `KI-CG-012` duplicate would be self-defeating. Both numbers are free on `origin/main` at
+> the time of writing; if the other PR lands as something else, this entry keeps `017` regardless
+> — the number is arbitrary, the collision is not.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the generated `.pre-commit-config.yaml`, `check-build-drift` entry — `files: ^leafcutter/templates/`
+
+**Symptom.** The hook exists to catch a template edited without a rebuild. Its file filter is
+`^leafcutter/templates/`, which is where templates live in a **consumer** install, where the
+package is vendored under `leafcutter/`. In this repository — the package itself — templates
+live at `templates/`. The pattern therefore matches nothing here, the hook has `pass_filenames:
+false` and no `always_run`, and pre-commit skips it. The one repository where every template
+change originates is the one repository where the drift gate does not run.
+
+**Evidence.** Observed in two consecutive commits on `fix/signoff-tool-allowlist`, which is
+what makes it unambiguous rather than inferred:
+
+```text
+commit 1 — staged five files under templates/agents/
+  Check Build Drift (leafcutter)........................(no files to check)Skipped
+
+commit 2 — staged only changelogs/ and docs/acceptance-criteria/
+  Check Build Drift (leafcutter)........................Failed
+```
+
+Skipped on the commit that changed five agent templates; ran on the commit that changed no
+template at all. The second run failed for an unrelated reason (KI-BP-011 — a manifest with no
+`output_mappings`), and only because the worktree was mid-bootstrap and briefly held an older
+config in which the entry carried `always_run: true`. Once the canonical build regenerated the
+config, the `^leafcutter/templates/` filter came back and the hook skipped again.
+
+**Why the severity is high rather than medium.** This is the gate whose absence lets every
+other deploy-staleness issue in the build-pipeline register survive. KI-BP-004 (worktree hooks
+frozen at build time) and KI-BP-008 (a skipped workflow-install phase leaving a deployed
+workflow 1497 lines stale) both propose extending `check_build_drift` as the natural home for
+the fix. Both proposals are unreachable while the hook never fires in the package repo.
+
+**A DETECTOR ALREADY EXISTS, AND IT IS RED — found while committing this entry.**
+`check-hook-trigger-reachability` (BP-100k-4) does exactly this analysis and fires on it. It
+ran on the commit that added this section and failed, naming **five** unreachable hooks, not
+one:
+
+```text
+UNREACHABLE: check-build-drift            files pattern '^leafcutter/templates/'
+UNREACHABLE: check-infra-docs             files pattern '(docker-compose.*\.ya?ml|...)'
+UNREACHABLE: check-paths-integrity        files pattern '^leafcutter/config/paths\.json$'
+UNREACHABLE: check-architecture-scaffolds files pattern '^leafcutter/templates/docs/architecture/'
+UNREACHABLE: check-output-drift           files pattern '^(\.claude/agents/|\.claude/skills/|...)'
+check-hook-trigger-reachability: RESULT total=50 unreachable=5 exempt=0
+```
+
+So the correction to this entry's original framing: the gap is **not** that nothing detects the
+condition. It is that the condition is unresolved across five hooks, and the gate that reports
+it blocks commits touching unrelated files, which makes it likely to be skipped rather than
+acted on. Three of the five (`check-build-drift`, `check-paths-integrity`,
+`check-architecture-scaffolds`) are the `^leafcutter/`-anchored consumer-path class this entry
+describes. `check-output-drift` is the same class pointing at `.claude/`, which is gitignored
+here. `check-infra-docs` is different in kind — this repo genuinely has no docker-compose or
+`.env.example`, so that one may be legitimately inapplicable rather than misconfigured, and an
+`exempt` mechanism exists (`exempt=0`) that nobody has used.
+
+That distinction is the real work: the reachability gate currently cannot tell "this filter is
+written against the wrong layout" from "this hook does not apply to this repository". Until it
+can, its verdict is unactionable in bulk and gets skipped, which is how five accumulated.
+
+**Fix direction.** Derive the filter from the layout rather than hardcoding one of the two, or
+match both — `(^|/)templates/`. Do it for all three consumer-path hooks at once, mark
+`check-infra-docs` exempt if it is genuinely inapplicable, and decide what `check-output-drift`
+should point at given `.claude/` is gitignored. Verify by staging a template change in the
+package repo and observing `check-build-drift` actually run — the skip line is quiet and reads
+like a pass.
+
+**Trap.** `(no files to check) Skipped` is visually indistinguishable from a hook that ran and
+had nothing to say, and it appears in the middle of a long green hook list. Nothing in a normal
+commit surfaces the fact that the drift gate has been inert for the life of the repository.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2's filter form: source and deployed
+layouts differ, and the gate is configured against the layout it is not running in.
+
+---
+
+### KI-CG-016 — The uniqueness pass's YAML fast path fabricates an id claim for records a full parse rejects
+
+- **Severity:** medium
+- **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
+  `feat/ge-122-integrity-guard`. Recorded here so it is not lost when that branch is picked up.
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/commit_guardian/_uniqueness_scanners.py:396-487` —
+  `_fast_scan_top_level_id()`, against `_read_yaml_id()`'s contract
+
+**Symptom.** `_read_yaml_id`'s contract is that an unparsable record yields **no** claim. The
+fast path validates only the `id:` line and its immediate successor, and the caller falls back
+to the full parse **only when the fast path returns `None`** — so a wrong non-`None` answer is
+never corrected. Any YAML syntax error *after* the `id:` line produces a fabricated claim.
+
+**Reproduced end-to-end** with the most realistic shape, an unquoted value containing a colon:
+
+```yaml
+id: GE-500
+title: Fix: the parser      # -> yaml.ScannerError
+```
+
+`scan_acceptance_criteria` returns `passed=False` with the finding
+`GE-500 claimed by [a_malformed.yaml, b_legit.yaml]`. Under the contract there is exactly one
+claimant and no collision at all. **The author is blocked with a duplicate-id message when the
+real fault is a YAML syntax error somewhere else** — so the diagnostic points at the wrong file
+and the wrong problem. A fuzz comparison of the two paths diverged on 6 of 24 inputs; the others
+were `- foo` after a mapping, tab indentation, an unclosed flow sequence, an undefined alias,
+and `...\t` / `....` as a last line.
+
+**Latent today, and the reason it is latent is itself the concern.** Audited against all 3,097
+real AC files: **zero divergences**. But 3,096 of the 3,097 are answered by the fast path — the
+full-parse safety net runs exactly once across the entire store. The fallback is not a
+meaningful second opinion; it is unreachable in practice.
+
+**Do not fix this with another token special-case.** Rounds 4, 5 and 6 of this PR's review each
+added one, and rounds 4-6 each introduced the defect the next round found. The two durable
+options are: have the fast path bail whenever any non-blank line it did not positively classify
+appears after the `id:` line, or accept the divergence deliberately and re-scope the documented
+contract so callers stop being promised a guarantee the fast path does not provide.
+
+**Confirmed NOT broken, so nobody re-opens it:** the document-end token `...` is handled
+correctly — lone trailing, with a trailing space, with a trailing comment, and with no trailing
+newline all agree with the full parse. That round-6 fix is sound.
+
+*Minor, same file:* `_is_document_boundary_token:311` hardcodes `raw_line[3]` and
+`len(raw_line) > 3` rather than deriving from `len(token)`. Correct only because both tokens
+happen to be three characters.
+
+**Pattern:** an optimisation whose fallback is the correctness guarantee, and which answers
+often enough that the fallback never runs.
+
+---
+
+### KI-CG-017 — Placeholder marker detection flags markdown emphasis as a list bullet, and its false-positive cost was measured on one marker and claimed for all six
+
+- **Severity:** medium
+- **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
+  `feat/ge-122-integrity-guard`. `main` still has only the narrow `\bFIXME\s*:` form and none
+  of the widening described below.
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build_placeholder_detection.py:114` (`_LEADING_BULLET_REQUIRED`) and
+  `:87` (`_LEADING_MARKER_PREFIX`), plus the claims in the comments at `:98` and `:231`
+
+**Two defects. The second is worse than the first.**
+
+**(a) The bullet requirement accepts a bullet *character*, not a list bullet.** The pattern
+`r"^\s*(?:[-*+]|\d+[.)])\s*"` matches markdown emphasis and ordered prose:
+
+| Line | Result |
+|---|---|
+| `*Placeholder* text is shown when empty.` | **flagged** — false positive |
+| `**Placeholder** text is shown when empty.` | not flagged — the `\s*` cannot span the second `*` |
+| `3. Placeholder naming follows the house style.` | **flagged** — false positive |
+
+Note the italic/bold inconsistency: the same sentence is flagged or not depending on emphasis
+style, which is the tell that the rule is matching punctuation rather than structure.
+
+**(b) The recorded claim that these markers carry no false-positive cost is wrong, and wrong in
+a specific way worth naming.** The comments state there is "no repo-wide evidence of a
+false-positive cost" for `TODO` / `FIXME` / `Replace with`. A repo-wide scan of 5,063 md/yaml
+files returns **55 hits**, of which **14** survive purely on the optional-bullet rule
+(indentation only, no bullet). Nearly all are plainly false:
+
+```
+docs/ticket-lifecycle.md:11,15,19              todo --> in_progress: ...   (Mermaid state transitions)
+templates/skills/roadmap-query/SKILL.md:54,58  todo: 1 / todo: 2           (a count field)
+templates/skills/signoff/SKILL.md:110,119      Replace with:
+ACD-400a-4.yaml:15, BP-900h-4-i.yaml:238,      wrapped prose: "todo -> in_progress -> done"
+TKT-500c-6.yaml:16, UXP-411.yaml:28
+```
+
+Marker distribution across those 55: **`todo` 42, `<!-- question:` 8, `replace with` 3,
+`placeholder` 2.**
+
+**The measurement error, stated plainly, because it is the reusable lesson.** The false-positive
+cost was measured for `PLACEHOLDER` only and then asserted for all six markers. `PLACEHOLDER`
+accounts for 2 of the 55 hits. So the tightening landed on the marker responsible for 2 and left
+untouched the marker responsible for 42. A prior round of the same work made the same shape of
+error — a widening measured with a grep that shared the widening's blind spot, reported as "one
+instance" when the true cost was 23 false positives across 4,815 files.
+
+**Fix direction.** Require a bullet **followed by whitespace** so emphasis cannot satisfy it, and
+decide the ordered-list case deliberately rather than by regex accident. Then re-run the
+repo-wide measurement per marker — not in aggregate — before restating any zero-cost claim, and
+record the per-marker counts next to the rule so the next person tightening it can see which
+marker actually costs anything.
+
+**Pattern:** a claim generalised from the one case that was measured, in a change whose whole
+purpose was to bound false positives.

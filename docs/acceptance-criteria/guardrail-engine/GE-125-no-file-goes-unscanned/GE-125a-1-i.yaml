@@ -1,0 +1,188 @@
+id: GE-125a-1-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "One file gets one answer however its path is written"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  FIXTURE ROOT USED BY EVERY SCENARIO BELOW. Each scenario builds a throwaway
+  project root, written <root>, that is a directory of its own and contains no
+  part of this repository, and no fixture is written anywhere inside this
+  repository's own working tree — a fixture under this repository's tickets/,
+  docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ would take
+  its verdict from this repository's reduced-scrutiny list rather than from the
+  scenario's. Every scenario is exercised the way a commit exercises the check:
+  the file is staged in <root> and the credential check runs over the staged set,
+  with the path presented in the spelling named by the scenario.
+
+  Given <root> contains three files, each holding one line with the same
+    thirty-two-character opaque token of measured Shannon entropy 5.17:
+      tickets/00_inbox/note.md          (a location the project chose)
+      src/vendor/tickets/handler.py     (a folder reusing a chosen name)
+      src/app.py                        (an ordinary source path)
+  And no suppression entries are in force,
+  When each file is put through the check once per spelling of its path — as an
+    absolute path from the filesystem root, as a path relative to the top of the
+    project, as that same relative path written with a leading current-directory
+    marker, and as that same relative path written with the separator the host
+    platform uses,
+  Then each file receives the same verdict under every spelling: the chosen
+    location's token is not reported in any of them, and the other two files'
+    tokens are reported in all of them,
+  Because the check is handed paths by the commit machinery in whatever spelling
+    that machinery produces, and a comparison that recognises one spelling and
+    not another reopens the hole for every path presented the other way — silently,
+    since the author sees a clean result either way.
+
+  Given <root> contains tickets/00_inbox/note.md and src/app.py, both holding the
+    same token,
+  And no suppression entries are in force,
+  When the two files are presented by paths that reach them indirectly —
+    docs/../tickets/00_inbox/note.md for the first, and
+    tickets/../src/app.py for the second,
+  Then the first file's token is still not reported and the second file's token
+    is still reported,
+  Because the location that decides the verdict is the one the path arrives at,
+    not the segments it passes through on the way; a path that merely mentions a
+    chosen name while resolving elsewhere must not collect the entitlement, and a
+    path that mentions another folder while resolving into a chosen location must
+    not lose it.
+
+  Given <root> contains src/vendor/tickets/handler.py holding the same token,
+  And no suppression entries are in force,
+  When it is staged and presented to the check twice in the same run, once by its
+    absolute path and once by its path relative to the top of the project,
+  Then the token is reported both times,
+  And the two presentations do not disagree with each other,
+  Because a single file that is exempt under one of its own names and reported
+    under another leaves the outcome to whichever spelling the caller happened to
+    use, which is the same undetectable loss this L1 exists to remove.
+depends_on:
+  - GE-125a-1
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records the substring test being replaced. Its fix direction names segment comparison from the repository root, which is precisely the change that introduces the path-spelling assumption this record fixes."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is canonical; the deployed copies are build outputs."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies the angle vocabulary. The boundary angle is the right classification for the spelling-variant arms."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: GE-125a-1
+  contract: "The location comparison that is anchored at the top of the project — this record fixes the input side of it, requiring the anchor to hold for every spelling in which a path can arrive."
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. Normalisation belongs in templates/scripts/commit_guardian/check_secrets.py alongside _is_prose_exempt, not in a deployed copy. Run `python scripts/build.py --target-dir .` after editing the template and before any test that asserts deployed behaviour; check_hook_parity enforces agreement across all four locations and will fail on divergence."
+  - "THE FIXTURE TRAP. Every fixture lives in a throwaway tempfile-backed root that is the scenario's own project root; no fixture may be written anywhere inside this repository's working tree. A fixture whose real path contains tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ as a segment of THIS repository takes its verdict from this repository's list and measures the entitlement rather than the change. unit_tests/commit_guardian/ deliberately matches none of the four prose names, which is why the tests may live there while their fixtures may not."
+  - "CREDENTIAL FIXTURES ARE ASSEMBLED AT RUNTIME FROM FRAGMENTS, following unit_tests/commit_guardian/test_scan_secrets_suppression.py. No credential-shaped source literal, and no .security-allowlist entry added so that a literal can be committed — this tree must need none."
+  - "THE SPELLINGS MUST BE PRODUCED THE WAY THE COMMIT MACHINERY PRODUCES THEM wherever that is achievable, not assembled by the test. This is the BA's constraint and it is load-bearing: a hand-built string can differ from what the staging machinery actually emits, so a test that fabricates its own spellings can pass while the real input shape still fails."
+  - "THE PLATFORM-SEPARATOR ARM MUST USE THE FORM THE HOST ACTUALLY YIELDS — os.sep, pathlib, or the staged-path output — never a hand-substituted separator inside a string literal. On a POSIX host that arm may be a no-op against the forward-slash arm; if so, record that explicitly as a platform-conditional result rather than reporting it as an independent pass."
+  - "NORMALISE ONCE, AT A SINGLE POINT, before the segment comparison — do not sprinkle per-spelling special cases through the comparison. Resolution must convert an absolute path, a root-relative path, a leading-current-directory path and a host-separator path to the same root-relative segment list. Multiple normalisation sites are how the two spellings come to disagree in the third arm."
+  - "THE INDIRECT-PATH ARM IS ABOUT AGREEMENT BETWEEN TWO NAMES FOR ONE FILE, not about traversal security. Resolve the path to the location it arrives at before comparing segments. Do not add traversal rejection, escape detection, or any refusal of paths that leave the root — that is not this record's subject and would change behaviour no criterion here asks for."
+  - "RESOLUTION MUST NOT REQUIRE THE FILE TO EXIST ON DISK, and must not follow symbolic links to a different location for the purpose of deciding the verdict. The check is handed staged paths; a resolution strategy that stats the filesystem couples the verdict to working-tree state and will diverge between a staged-set run and a working-tree run."
+  - "EXECUTE THE CHECK. Drive the real multi-file entry point over real files; a test that inspects the check's source or calls the path-normalisation helper in isolation does not discharge any arm. The whole subject of this record is what the check does with an input it was given."
+  - "SCOPE FENCE. Do not change the membership of the four chosen locations and do not change what the exemption removes; the exemption must still gate ENTROPY_HIGH only. This record fixes the INPUT side of the comparison delivered by GE-125a-1 and nothing else."
+  - "A PATH THAT CANNOT BE RESOLVED TO A ROOT-RELATIVE SEGMENT LIST MUST FAIL CLOSED — report rather than exempt. Error-handling policy per CLAUDE.md: specific exception types, no bare except, no silently swallowed error, and no try/except wrapped around the pure normalisation function itself."
+test_spec:
+  - name: test_verdict_is_identical_across_four_path_spellings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In a throwaway root, tickets/00_inbox/note.md, src/vendor/tickets/handler.py and src/app.py each holding a runtime-assembled 5.17-entropy token are run through the check once per spelling (absolute, root-relative, leading ./, host separator). Per file the verdict set collapses to one value across all four spellings: the chosen-location file is never reported, the other two always are."
+  - name: test_indirect_paths_are_judged_by_where_they_arrive
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "docs/../tickets/00_inbox/note.md is still unreported and tickets/../src/app.py is still reported — the verdict follows the resolved location, not the segments the path passes through. Guards both failure directions: a mentioned-but-not-reached chosen name must not grant the entitlement, and a mentioned-other-folder must not remove it."
+  - name: test_two_spellings_of_one_file_in_one_run_do_not_disagree
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "src/vendor/tickets/handler.py presented twice in the same run, once absolute and once root-relative, is reported both times and the two presentations return the same verdict. The seam is the caller-to-check path handoff: this is the assertion that the outcome does not depend on which spelling the caller happened to use."
+test_rationale: |
+  This record's subject is an INPUT ASSUMPTION, so the contract is built around
+  inputs the test does not get to choose freely. The spelling variants must be
+  produced the way the commit machinery produces them rather than fabricated by
+  the test; a suite that invents its own spellings measures a normalisation
+  function against strings the real caller never emits, which is the failure this
+  record exists to prevent one level down. Every descriptor therefore drives the
+  real entry point over real files rather than calling the normaliser directly —
+  and calling the normaliser directly would be especially misleading here, because
+  the whole question is whether the normaliser sits on the path the caller
+  actually travels.
+  BOTH FAILURE DIRECTIONS ARE COVERED DELIBERATELY, per the BA's note that both are
+  live. An unrecognised spelling that reaches a chosen location turns a quiet
+  location loud, and the reaction to a store-wide false-positive event is to widen
+  the entitlement again; a spelling that mentions a chosen name while resolving
+  elsewhere turns a loud location quiet, which is the original defect in a new
+  costume. The first two descriptors carry one direction each and the second
+  descriptor carries both in a single arm.
+  RED-VS-GREEN HONESTY. All three descriptors are UNTESTABLE-AS-INTENDED today
+  rather than cleanly red. Today's substring test has no notion of a root, so the
+  chosen-location arms pass by accident — the chosen names appear in the path
+  string under every spelling. They begin doing real work only once GE-125a-1's
+  anchoring lands, which is exactly when spelling becomes able to change the
+  answer. Do not read a green run of this record on today's code as evidence of
+  anything, and do not cite it in a red-baseline check for GE-125a-1.
+  PLATFORM CAVEAT: on a POSIX host the host-separator spelling is identical to the
+  forward-slash spelling, so that quarter of the first descriptor is a no-op there.
+  Record it as platform-conditional rather than counting it as an independent pass.
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24): assigned python-coder, complexity M (a small normalisation change, but it must be placed on the real caller path and proved against machinery-produced spellings rather than fabricated ones, which is the bulk of the work). Authored it_requirements honouring the BA's FOR THE IT PO paragraph — machinery-produced spellings, host-yielded separator, no source inspection — plus the ADR-001 canonical-source and build rule, the throwaway-root fixture trap as a hard instruction, runtime-assembled credential fragments, normalise-once-at-a-single-point, the explicit non-goal of traversal rejection, no-filesystem-stat resolution, the scope fence, and fail-closed with the CLAUDE.md error-handling policy. Added four doc_links. Authored a 3-entry test_spec plus test_rationale recording that all three arms are untestable-as-intended today rather than red, and flagging the POSIX no-op on the separator arm. criteria, depends_on, expects_from, priority, work_status and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS AN EDGE CASE OF THE PARENT AND NOT A NEW DIRECTION. Anchoring the
+  comparison at the top of the project only means anything if the check can tell
+  where in the project a path lands, and that requires the path to be understood
+  rather than matched as text. The defect being removed is a text match; the
+  cheapest replacement — comparing a fixed list of segment sequences against the
+  segments of whatever string arrived — inherits an input assumption that the
+  original text match also had and that nothing in the parent's scenarios tests.
+  Every one of the parent's arms happens to use one spelling.
+
+  THE TWO FAILURE DIRECTIONS ARE BOTH LIVE, which is why both appear above. A
+  spelling the comparison does not recognise as reaching a chosen location turns
+  a quiet location loud — every acceptance-criterion file in this store would
+  start reporting a credential, and the reaction to that is to widen the
+  entitlement again. A spelling that resolves outside a chosen location but
+  mentions one turns a loud location quiet, which is the original defect wearing
+  a different costume.
+
+  THE INDIRECT-PATH ARM IS NOT A SECURITY CLAIM ABOUT TRAVERSAL. It is about
+  agreement between two names for one file. Nothing here asserts anything about
+  what a path may reach outside the project; that question is not this L1's and
+  is not raised by these scenarios.
+
+  FOR THE IT PO. The spellings must be produced the way the commit machinery
+  produces them wherever that is possible, rather than assembled by the test, and
+  the platform-separator arm should be exercised in the form the host actually
+  yields rather than by hand-substituting separators into a string. The token is
+  assembled at runtime from fragments, as recorded on the parent. This record
+  cannot be discharged by a test that inspects the check's source; the whole
+  subject is what the check does with an input it was given.

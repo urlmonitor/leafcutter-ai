@@ -28,9 +28,13 @@ Options
 
 Exit codes
 ----------
-0   Success (including the "nothing to do" case).
+0   Success — drained cleanly (no unroutable events left behind).
 1   Sink file not found or unreadable.
 2   State file exists but cannot be parsed (corrupted).
+3   Drained with unroutable events left behind (see summary for the
+    per-entry_kind breakdown). Distinct from 0 so a caller cannot mistake a
+    run that routed nothing because there was unroutable input for a run
+    that had nothing to route.
 """
 
 from __future__ import annotations
@@ -60,17 +64,27 @@ class HarvestResult:
     previously_processed: int = 0
     skipped_unknown: int = 0
     by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
+    unroutable_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
 
     def summary(self) -> str:
         """Return the human-readable one-line summary.
 
-        Format: ``"N learnings routed: K1 kind1, K2 kind2 (M previously processed)"``
+        Format: ``"N learnings routed: K1 kind1, K2 kind2 (M previously
+        processed); P unroutable: K3 kind3, K4 kind4"``. The unroutable
+        segment is present only when ``skipped_unknown`` is nonzero, and
+        names each distinct unroutable ``entry_kind`` with its count so the
+        backlog is visible on every run (INF-400c-2-ii).
         """
         parts = [f"{count} {kind}" for kind, count in sorted(self.by_kind.items())]
         breakdown = ", ".join(parts) if parts else "none"
         base = f"{self.routed} learnings routed: {breakdown}"
         if self.previously_processed:
             base += f" ({self.previously_processed} previously processed)"
+        if self.skipped_unknown:
+            unroutable_parts = [
+                f"{count} {kind}" for kind, count in sorted(self.unroutable_by_kind.items())
+            ]
+            base += f"; {self.skipped_unknown} unroutable: {', '.join(unroutable_parts)}"
         return base
 
 
@@ -141,8 +155,11 @@ def _save_state(state_path: Path, hashes: set[str]) -> None:
 
 # The _known_entry_kinds set enumerates the entry_kind values that the
 # harvester can route.  Any value not in this set triggers a WARNING log and
-# the event is marked processed (so it is not retried on every run) but
-# capture_fn is NOT called.  See AC-4.
+# capture_fn is NOT called.  Per INF-400c-2-ii, the event is NOT marked
+# processed — it is left out of the idempotency record so a later run (after
+# the routing rules are extended) reads and retries it. The backlog stays
+# visible via HarvestResult.unroutable_by_kind / skipped_unknown rather than
+# growing an unbounded reprocessing loop silently: every run reports it.
 _KNOWN_ENTRY_KINDS: frozenset[str] = frozenset(
     {
         "memory-project",
@@ -287,13 +304,18 @@ def harvest(
         if entry_kind not in _KNOWN_ENTRY_KINDS:
             logger.warning(
                 "Unrecognised entry_kind %r in event from ticket %r (destination: %r). "
-                "Event will be marked processed and not retried.",
+                "Event stays unprocessed and will be retried on a later run.",
                 entry_kind,
                 ticket,
                 destination,
             )
             result.skipped_unknown += 1
-            new_hashes.add(h)
+            result.unroutable_by_kind[entry_kind] = (
+                result.unroutable_by_kind.get(entry_kind, 0) + 1
+            )
+            # Intentionally NOT added to new_hashes / seen: per INF-400c-2-ii
+            # an unroutable event must remain retryable, not be silently
+            # discarded via the idempotency record.
             continue
 
         # Build the learning text (minimal — harvester writes destination text)
@@ -360,8 +382,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> None:
-    """CLI entry point for the knowledge harvester."""
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for the knowledge harvester.
+
+    Returns
+    -------
+    int
+        ``0`` if the run drained cleanly (no unroutable events left behind),
+        ``3`` if unroutable events remain in the sink (see the printed
+        summary for the per-entry_kind breakdown). ``harvest()`` itself may
+        also ``sys.exit(1)``/``sys.exit(2)`` for sink/state I/O failures
+        before this function returns.
+    """
     args = _parse_args(argv)
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -376,6 +408,8 @@ def main(argv: list[str] | None = None) -> None:
 
     print(result.summary())
 
+    return 3 if result.skipped_unknown else 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

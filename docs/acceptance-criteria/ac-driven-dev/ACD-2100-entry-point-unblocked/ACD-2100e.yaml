@@ -1,0 +1,152 @@
+id: ACD-2100e
+components:
+  - ac_driven_dev
+  - documentation_system
+readiness: draft
+priority: medium
+title: "You can pick up a waiting run without reading the program"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Where the route stops to ask you and how to answer it are both written down.
+
+  The points at which the route waits for a decision are set out in one place,
+  together with what becomes of the run when nobody answers. Someone who finds a
+  run waiting can see what it is waiting for and get it moving again from the
+  documentation rather than by working it out from the program itself.
+depends_on: [ACD-2100, ACD-2100c, ACD-2100a-4]
+doc_links:
+  - docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+  - docs/known-issues/ac-driven-dev.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100e-1
+  - ACD-2100e-2
+implemented_by: []
+change_target: docs
+risk_surface: internal
+documentation_triggers:
+  - sequence-diagram
+  - how-to
+notes: |
+  WHY THIS L1 EXISTS. ACD-2100c declares two documentation triggers --
+  sequence-diagram and how-to -- and is FULL at five L2 children, every one of
+  them a blocker behaviour on the critical path. The business-analyst and the
+  it-po each declined to displace a blocker or to raise the cap with
+  child_limit_override, and both recommended a sibling L1 instead. The user
+  approved authoring it on 2026-08-25. This record is therefore a HOME FOR
+  ACD-2100c's UNSERVED TRIGGERS, not a new requirement: the value it delivers is
+  the one ACD-2100c could not house, and nothing here changes what the route
+  must do. The L1 cap under an L0 is 7; this is the fifth, so the tree stays
+  within limits.
+
+  THE TWO CHILDREN ARE ALREADY WIRED FROM THE OTHER SIDE -- author them under
+  these exact ids and target paths, because six sibling records already link
+  them as planned and a different name silently dangles every one of those links
+  (check-doc-links cannot catch a target that never appears):
+    - ACD-2100e-1, architecture-diagram-author, target
+      docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md.
+      Linked as planned from ACD-2100c-1, c-2, c-4 and c-5. ACD-2100c-1 also
+      carries a delivers_to contract naming ACD-2100e-1 and the
+      architecture-diagram-author agent: "the final set of decision points and
+      the channel each is put on, which the sequence diagram depicts rather than
+      re-derives from the source."
+    - ACD-2100e-2, documentation-expert, target
+      docs/how-to/resume-a-paused-plan-feature-run.md. Linked as planned from
+      ACD-2100c-3 and ACD-2100c-3-i. ACD-2100c-3 carries a delivers_to contract
+      naming ACD-2100e-2: "the resume invocation and its observable outcomes --
+      resumed, nothing to resume, mismatched answer -- which the how-to walks an
+      operator through."
+
+  THE SUBJECT IS THE GATE FLOW. The five decision points, how a run pauses when
+  nobody can answer, and how a person answers or resumes one. Verified by the PO
+  on 2026-08-25 in templates/workflows-js/plan-feature.js, the five sites are
+  2067 (product-truth), 2361 (mid-pipeline), 2458 (final approval), 1913
+  (covered-route) and 841 (resolve-orphans, which is destructive -- it can delete
+  drafts). The last two appear in no known issue, which is exactly why the
+  diagram must depict the closed set rather than the three KI-ACD-005 lists.
+
+  BOUNDARY WITH ACD-2100d-4 -- DO NOT MERGE THEM. ACD-2100d-4 is the reference
+  page for a DIFFERENT reader: which copy of each route file runs where, and what
+  the startup checks report. The it-po fenced it explicitly ("DO NOT ABSORB
+  ACD-2100c's SUBJECT ... folding them in here would produce a page with two
+  subjects while leaving those triggers formally unserved anyway"). Keep the
+  fence in both directions: nothing here restates the layout or the startup
+  checks, and neither child may be retargeted at
+  docs/reference/plan-feature-layout-and-startup-checks.md. One reader arrives
+  holding a message about a file that could not be found; the reader here is
+  holding a run that is waiting for them.
+
+  DEPENDS_ON IS DELIBERATE AND IT IS THE WHOLE ORDERING MECHANISM. Documentation
+  of a mechanism cannot honestly be written before the mechanism exists, and the
+  build sequencer reads depends_on ONLY -- expects_from edges are invisible to it
+  (KI-ACD-015, open). The it-po hit this on ACD-2100d-4 and had to recommend
+  explicit edges after the fact. So:
+    - ACD-2100c  -- the composite that owns the gate flow. Depending on the whole
+      of it rather than on individual leaves is not laziness and it does not
+      over-constrain: e-1 needs c-1, c-2, c-4 and c-5, and e-2 needs c-3 and
+      c-3-i, which is every child c has.
+    - ACD-2100a-4 -- durable pause records written from inside a worktree. This
+      lives under a DIFFERENT L1, so the edge to ACD-2100c does not reach it. It
+      is load-bearing rather than tidy: until a-4 lands, pausing degrades to
+      `pause_persist_failed` when run from a worktree, and a how-to that tells an
+      operator their waiting run can be picked up later would be documenting
+      something that does not happen. ACD-2100c-2 already carries the same edge,
+      which is the precedent for the cross-family form.
+    - ACD-2100a as a whole is deliberately NOT depended on -- only a-4 is
+      load-bearing here, and the wider path-resolution family would order this
+      later than the material requires.
+
+  FOR THE BA -- MIRROR THE LEAF EDGES ONTO THE CHILDREN. A composite edge on this
+  record does not tell the sequencer which leaf each child needs. Set
+  ACD-2100e-1's depends_on to [ACD-2100e, ACD-2100c-1, ACD-2100c-2, ACD-2100c-4,
+  ACD-2100c-5] and ACD-2100e-2's to [ACD-2100e, ACD-2100c-3, ACD-2100c-3-i,
+  ACD-2100a-4], and record the corresponding expects_from contracts as well --
+  but do not rely on expects_from for ordering. Two children is the right size;
+  the cap is 5 and there is no third subject here. If a third is proposed, check
+  first that it is not ACD-2100d-4's material arriving through the side door.
+
+  BOTH CHILDREN MUST DESCRIBE DELIVERED BEHAVIOUR, NEVER INTENT. The same rule
+  the it-po put on ACD-2100d-4 applies with more force here, because the whole
+  gate flow is being changed underneath these pages: every path the diagram
+  depicts and every step the how-to gives must name the record that delivers it,
+  and neither may be written from the fix direction in KI-ACD-005. That known
+  issue's stated root cause AND its stated fix are both out of date -- see
+  ACD-2100c's notes -- so a page written from it would be wrong on the day it
+  was published.
+
+  TEST EXPECTATION FOR THE IT PO: both children are prose or diagram deliverables
+  with no executable surface, so test_required: false with an explicit
+  test_rationale is the likely correct call -- permitted because change_target is
+  docs. ACD-2100d-4 is the precedent in this same tree. Do not let that become a
+  grep-for-words test instead; a test asserting that certain strings appear in a
+  page is the presence-shaped proof this whole tree exists to discredit.
+
+  DO NOT AUTHOR OVER: two commits on worktrees/pf-gate-fix (c6087fae, 5a3eae6d)
+  fix adjacent gate defects -- pause-persist verification and dropped `edit`
+  feedback. They touch the same gate machinery these pages depict. Assume they
+  land, and take the final shape of the flow from the delivered behaviour rather
+  than from either branch.
+
+  2026-08-25 (business-analyst): decomposed into exactly the two children named
+  above, at the two pinned ids and target paths, with the leaf-level depends_on
+  edges as specified. No L3 authored -- the one edge case in this material, a
+  resume answer naming the wrong decision, is already ACD-2100c-3-i's behaviour
+  and appears here only as a documented outcome. Two boundaries found while
+  decomposing that are in no note above, both recorded on the children and both
+  handled by linking rather than merging: c3-002-interactive-pause-resume-sequence
+  already documents the ADR-024 substrate at message level under
+  build_orchestration, and docs/how-to/approval-gate.md already documents the
+  unrelated goal-to-epic readiness gate.

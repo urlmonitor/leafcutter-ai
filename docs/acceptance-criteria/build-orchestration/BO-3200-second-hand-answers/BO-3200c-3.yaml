@@ -1,0 +1,145 @@
+id: BO-3200c-3
+title: "At every decision point, no answer available and the person answering no are different outcomes with different consequences"
+component: build-orchestration
+components:
+  - ac_driven_dev
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every point in a run at which only the person can decide,
+  When each is driven to the state where no answer can be obtained,
+  Then each reports an outcome that means no answer was obtained.
+
+  Given the same points,
+  When each is driven with the person answering that they decline,
+  Then each reports an outcome that means the person declined, and that outcome differs from
+    the no-answer outcome at the same point.
+
+  Given any one of those points,
+  When the two outcomes are compared by what follows them,
+  Then after the no-answer outcome the authored work is present and the run can be resumed at
+    that question, and after the declined outcome the run follows the person's instruction —
+    so the two are not interchangeable.
+depends_on:
+  - BO-3200c
+  - BO-3200c-1
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — the two outcomes collapsed into one, resolving to the answer that throws work away."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the decision points live and where their outcome vocabulary is defined."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
+it_requirements:
+  - "THE SET OF DECISION POINTS MUST BE DERIVED, NOT LISTED. PR #565 patched three; a criterion satisfied by those three would say nothing about the fourth, which is exactly the partial-coverage shape that let building-epics §2.1-R1 rot. Enumerate the points from the run's own structure so a point added later is covered without editing anything."
+  - "TWO DISTINCT OUTCOME VALUES, not two spellings of one. The values must differ AND the behaviour that follows them must differ; two names leading to identical behaviour is one outcome with two labels and would leave the original defect untouched."
+  - "THE NO-ANSWER OUTCOME MUST LEAD TO THE RESUMABLE PAUSE (BO-3200c-1) and the declined outcome must lead to following the person's instruction. Asserting the values without asserting what follows is the labelling exercise the third criterion exists to forbid."
+  - "REUSE ONE VOCABULARY ACROSS ALL POINTS. A per-gate spelling of 'no answer' re-creates the collapse gate by gate, and BO-3200c-3-i's check would then be comparing values that are incomparable."
+  - "The no-answer outcome must be the same concept BO-3200e names for an inspection that could not be performed — the same word, one spelling, applied at a different site. Do not invent a second."
+  - "Neither outcome may be a default reached by falling through. Both must be produced deliberately by the path that observed the corresponding state."
+delivers_to:
+  - agent: python-coder
+    contract: "A per-decision-point outcome vocabulary with two distinct values — no_answer_obtained and person_declined — plus the derived enumeration of decision points that BO-3200c-3-i's check walks and that BO-3200c-4's how-to describes to a person."
+  - agent: how-to-author
+    contract: "The two outcomes, their names as a person will see them, and what follows each — which one preserves the work and which one follows the instruction — so BO-3200c-4's third scenario can state the difference accurately."
+expects_from:
+  - ac_id: BO-3200c-1
+    contract: "The resumable pause and its awaiting-answer outcome. This AC requires the no-answer outcome at every decision point to lead to that pause, and the declined outcome to lead somewhere else."
+test_spec:
+  - name: test_bo_3200c_3_every_derived_point_reports_no_answer_when_none_is_obtainable
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Enumerate the decision points from the run's structure and drive EACH into the state where no answer can be obtained; assert every one reports the no-answer outcome and that the enumeration covered a non-zero number of points."
+  - name: test_bo_3200c_3_every_derived_point_reports_declined_distinctly
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive each point with the person declining; assert each reports the declined outcome and that it differs from the no-answer outcome at that same point."
+  - name: test_bo_3200c_3_the_two_outcomes_lead_to_different_behaviour
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: e2e
+    angle: seam
+    description: "THE ANTI-LABELLING TEST. For one point, compare what FOLLOWS each outcome: after no-answer the authored work is present and the run resumes at that question; after declined the run follows the instruction. Two names with identical consequences fail here."
+  - name: test_bo_3200c_3_one_vocabulary_across_all_points
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Assert every decision point emits the SAME two values rather than per-gate spellings — a per-gate vocabulary re-creates the collapse one gate at a time and makes the durability check incomparable."
+  - name: test_bo_3200c_3_zero_points_enumerated_fails
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "An enumeration resolving to zero decision points fails rather than reporting all-points-correct (KI-ACS-001 shape)."
+test_rationale: |
+  "At every gate" is the load-bearing phrase, so every test drives the DERIVED set rather than a
+  named one. A test written against the three gates PR #565 patched would have been green on the
+  day it landed and silent about the fourth — the same partial coverage that let the prompt-level
+  fix rot.
+  The anti-labelling test is the discriminating one. Two outcome values are trivially easy to
+  add and prove nothing: what makes them different outcomes is that different things follow them.
+  Asserting the consequences ties the distinction to the damage KI-ACD-005 caused — a refusal
+  resolving to the one answer that throws work away.
+  A test that reads a gate's outcome vocabulary is explicitly insufficient, as the BA noted: it
+  passes on a gate that defines both values and never emits one of them.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface (auth). criteria
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200c-3-i
+implemented_by: []
+notes: |
+  The parent L1 states this as the distinction the BA must make explicit: "'no answer
+  available' and 'the user answered no' are different outcomes with different consequences,
+  and they were collapsed into one. They must remain distinguishable at every gate, not just
+  the three that were patched."
+
+  "AT EVERY GATE" IS THE LOAD-BEARING PART, and it is why the criterion enumerates the points
+  rather than naming any. PR #565 patched three of them. A criterion written against those
+  three would be satisfied on the day it landed and would say nothing about the fourth, which
+  is the same partial-coverage shape that let the prompt-level fix rot: building-epics §2.1-R1
+  was in force for the agent that loaded it and had nothing to say about the one that stalled.
+
+  THE THIRD SCENARIO IS WHAT STOPS THIS BEING A LABELLING EXERCISE. Two outcome names that lead
+  to identical behaviour are one outcome with two spellings, and the original defect — a
+  refusal resolving to the one answer that throws work away — would survive it untouched.
+  Asserting the different consequences ties the distinction to the damage.
+
+  Verification must drive each real gate into both states. A test that reads a gate's outcome
+  vocabulary passes on a gate that never produces one of the values.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The one-vocabulary requirement is added because the
+  criteria permit per-gate outcome values as long as the two differ AT that gate. That would
+  satisfy every scenario here and would defeat BO-3200c-3-i, whose check has to compare a newly
+  added gate's outcomes against the established pair; incomparable per-gate spellings make the
+  durability check vacuous. The no-answer value is also the same concept BO-3200e names, and must
+  be the same word — a third spelling of "could not tell" in this tree would be self-defeating.

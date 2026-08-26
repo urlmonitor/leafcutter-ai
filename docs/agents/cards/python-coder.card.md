@@ -326,6 +326,28 @@ flowchart TD
 - ACD-2000b-2-i: A set of requirements that cannot be taken whole leaves none of them taken
 - ACD-2000b-3: A requirement abandoned by a vanished effort becomes available again without that effort's help
 - ACD-2000b-4: Requirements whose change footprints overlap never build at the same time, and an unknown footprint conflicts with everything
+- ACD-2100a-1: The worktree step runs the copy of the setup script that belongs to the repository being worked on
+- ACD-2100a-2: The setup step finds the repository it operates on even when the script itself lives outside it
+- ACD-2100a-2-i: An ambiguous repository location stops the setup step instead of being guessed
+- ACD-2100a-3: The startup charter check finds the agent registry when the run starts inside a worktree
+- ACD-2100a-4: A pause record written from inside a worktree is found again by the run that resumes
+- ACD-2100a-5: A run reaches its first question to the user from any working directory
+- ACD-2100b-1: A registry the startup check cannot read is reported as unreadable and names what it tried to read
+- ACD-2100b-2: A registry whose contents cannot be understood is reported as unusable and not as a permission verdict
+- ACD-2100b-3: An agent missing from the registry and an agent denied permission produce different reports
+- ACD-2100b-3-i: A registry that holds no agent entries is reported as unusable rather than as a missing agent
+- ACD-2100b-4: Every unresolved outcome of the startup check still stops the run before any authoring work begins
+- ACD-2100b-5: The startup check reads the registry itself instead of asking an agent to read it
+- ACD-2100c-1: Every decision the route records as the user's is put to the user and to no agent
+- ACD-2100c-2: A run that cannot reach a person waits with a durable record instead of proceeding or discarding
+- ACD-2100c-3: A paused run picks up at the decision it was waiting on when the answer arrives
+- ACD-2100c-3-i: An answer naming a different decision than the one being waited on is not applied
+- ACD-2100c-4: An answer that did not come from the person is refused even when it is well formed
+- ACD-2100c-5: Work is thrown away only when the person chooses to throw it away
+- ACD-2100d-1: The installed copy of the route reaches the first user question exactly as the source copy does
+- ACD-2100d-2: A repair that is missing from the source an installed file is generated from is reported as not delivered
+- ACD-2100d-2-i: An install that replaces a locally changed generated file says so rather than replacing it silently
+- ACD-2100d-3: Installing into a project where the route starts leaves the route still able to start
 - ACD-300b: A workflow script orchestrates the authoring agents in sequence based on the triage decision
 - ACD-300b-1: The strategic route dispatches PO v3, then BA v3, then IT PO v3 in strict sequence
 - ACD-300b-2: The behavioral and technical routes skip upstream agents and start at the correct stage
@@ -445,6 +467,9 @@ flowchart TD
 - ACS-100h-7a: A shared AC-tree-limit check is callable at scaffold time and returns the violation set
 - ACS-100i: Cross-field constraints and relational references are enforced together
 - ACS-100i-1: Parent ID is derived from child ID by stripping the last segment
+- ACS-100i-10: A record that declares no producer is a state you can ask the store about, not a silence you discover one ticket at a time
+- ACS-100i-10-i: Setting the producer to null lands on the same default as leaving it out, instead of putting a nameless phase into a ticket
+- ACS-100i-11: The 24 records the new rule would refuse are corrected in the same change that introduces the rule, and before it
 - ACS-100i-2: Pre-commit hook blocks a child AC whose parent covered_by omits it
 - ACS-100i-2-i: Hook fails open when a staged YAML file contains non-UTF-8 binary content
 - ACS-100i-6: The structured-spec obligation is triggered by an explicit declaration on the record, not inferred from who is assigned or which namespace it sits in
@@ -454,6 +479,9 @@ flowchart TD
 - ACS-100i-7-i: A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check
 - ACS-100i-8: A package surface cannot come into existence without a record that declared it
 - ACS-100i-8-i: Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration
+- ACS-100i-9: A record naming a producer that is not a registered agent is refused, and both the commit-time gate and the store-wide pass reach the same rule
+- ACS-100i-9-i: Both readers of the store yield the same producer name, whatever quoting the record was written with
+- ACS-100i-9-ii: When the agent registry cannot be read, the check says it did not run instead of passing quietly
 - ACS-1200a-1: A parked tree is marked by a field its author sets on purpose, never by an empty child list
 - ACS-1200a-2: The commit-time back-link check passes a parked tree with nothing skipped
 - ACS-1200a-2-i: A parked marker exempts only the record it is set on, never the records beneath it
@@ -842,9 +870,13 @@ flowchart TD
 - BO-2400c-1-iii: The prompt a dispatched fast-lane agent receives is the assembled bundle
 - BO-2400c-1-iv: Across one run's successive dispatches the cacheable prefix is byte-identical
 - BO-2400c-1-v: The orphaned second runner is removed once the live lane is wired, and the grep test guarding it goes with it
+- BO-2400c-1-vi: The bundle carries only what the receiving agent does not already have
 - BO-2400c-2: A drive's own record states whether the stable prefix held across its invocations
 - BO-2400c-2-i: A prefix that changes mid-drive shows in the record as a break, never as a clean anchor
 - BO-2400c-3: Prior-phase distilled outputs are threaded forward rather than re-derived
+- BO-2400c-6: Resolving a connected build set reads the store once, and resolves the same set it did before
+- BO-2400c-6-i: A cycle-adjacent subtree resolves identically before and after, proved on a constructed store
+- BO-2400c-6-ii: A caller that supplies no record set still walks the tree correctly
 - BO-2400d-1: Each agent invocation records duration and token counts to the telemetry sink
 - BO-2400d-1-i: An unreachable telemetry sink is surfaced loudly, never silently
 - BO-2400d-2: Each telemetry record is tagged with its lane and agent identity
@@ -852,7 +884,17 @@ flowchart TD
 - BO-2400e-3: An interrupted update never destroys the work record it was updating
 - BO-2400e-3-i: A store that cannot be written is announced, and the build does not carry on as if it had been
 - BO-2400e-4: Recording progress on a requirement changes the progress and nothing else
+- BO-2400f-10-i: The release actually releases, on every path that halts after the claim
+- BO-2400f-10-ii: A release that did not release is read, and named in the halt beside the failure that triggered it
 - BO-2400f-11: The green change is reviewed before it is committed, and the reviewer's own high-confidence findings stop the run
+- BO-2400f-12: Refuse an unbuildable resolved set up front, naming what cannot be made and why
+- BO-2400f-12-i: A refusal leaves the store exactly as it found it, and holds no claim to release
+- BO-2400f-12-ii: The refusal is not a second readiness filter — a producible set is never refused
+- BO-2400f-13: An occupied build workspace ends the run in a named refusal, not a first-phase collapse
+- BO-2400f-13-i: Refusing on the lane's own leftover workspace says what is in it and whether that attempt shipped
+- BO-2400f-13-ii: A workspace the lane did not open for this criterion is named as foreign and left alone
+- BO-2400f-13-iii: The occupied-workspace refusal costs one check, holds no claim, and touches neither store nor occupant
+- BO-2400f-13-iv: A free location is never refused, and the run that proceeds says its workspace is new
 - BO-2400f-4-i: Whether the run owes a changelog entry is decided by the merge check's own rule, not a copied list
 - BO-2400f-4-ii: A run whose whole change is exempt writes no changelog entry
 - BO-2400f-4-iii: The run writes the required changelog entry itself, from what it already knows
@@ -1129,6 +1171,10 @@ flowchart TD
 - BP-1400c-1: A blocking route-render check headlessly loads every web-app route and fails on a non-200 or a console/render error
 - BP-1400c-1-i: The /about route is loaded headlessly and a non-200 or render error on it blocks the pull request
 - BP-1401: next_diagram_seq.py scans docs/architecture/ recursively so it sees diagrams in the diagrams/ subdirectory
+- BP-1500d-1: The record of what was installed is written into the project that received it, and accounts for that project
+- BP-1500d-2: The record still reads after the project is moved, copied or opened somewhere else
+- BP-1500d-3: A build that cannot produce the record stops and says so, instead of warning once and reporting success
+- BP-1500d-4: A check that finds no readable record says so, instead of returning the all-clear it returns when nothing is wrong
 - BP-300a-1: debug.js dispatches three parallel Explore agents in Phase 1
 - BP-300a-1-i: debug.js returns structured error when userInput is empty
 - BP-300a-2: Synthesis proceeds without prompt when all investigators agree with high confidence
@@ -1255,8 +1301,11 @@ flowchart TD
 - BP-900h-2: Two consecutive builds into the same project produce zero difference
 - BP-900h-3: A broken consumer install blocks the merge, it does not just report
 - BP-900h-4: The install under test is a vendoring consumer, so a guardrail's data file cannot pass by borrowing the package's own tree
+- BP-900h-4-i: The declaring-file proof runs against every install layout an adopter produces, so a file that resolves in one layout is not accepted as proof for the rest
 - BP-900h-5: Every guardrail the package ships reaches a verdict in the consumer install, and one that cannot run is reported as such
 - BP-900h-5-i: A guardrail whose comparison source exists only in the package repository still reaches a verdict in a vendoring consumer
+- BP-900h-5-ii: Every executable the package deploys is started in the consumer install, not only the ones a registry names
+- BP-900h-6: The simulation uses the install, not just builds it — a first commit is attempted
 - BP-901: goal_to_epic.py main() only resolves the worktree root when a default path is actually needed
 - CR-100a-1: Structural bucket names exactly its six Modern smells
 - CR-100a-2: Design bucket names exactly its six Modern smells
@@ -1421,6 +1470,8 @@ flowchart TD
 - GE-122a-1: A whole-collection pass reports every number claimed by two artifacts
 - GE-122a-1-i: A collision is found even when only one claimant is in the current change set
 - GE-122a-2: One work item cannot exist as two copies free to disagree about its state
+- GE-122a-4: A component minting a new identifier enumerates every identifier already taken, and returns one that is not
+- GE-122a-4-i: An enumeration that could not be completed yields no identifier at all
 - GE-122b-1: A new artifact added where numbers are expected is reported when it takes none
 - GE-122b-1-i: A name that carries the prefix but no sequence number counts as unnumbered
 - GE-122b-2: The artifacts that were never numbered do not block unrelated work
@@ -1430,6 +1481,9 @@ flowchart TD
 - GE-122d-2: A clash that slipped past the commit check is still stopped before it reaches everyone
 - GE-122d-3: A pass that could not see the whole collection never reports success
 - GE-122d-3-i: A defect in the guard itself is announced but does not hold an unrelated commit hostage
+- GE-122d-3-ii: A new project's first commit works because the roots are there, not because absence is excused
+- GE-122d-6: The commit-time numbering check is wired into the live registry and fires on a real commit
+- GE-122d-6-i: A pass states what it inspected, so a pass is distinguishable from a hook that never ran
 - GE-122e-1: The one contested requirement number is resolved without breaking what cites it
 - GE-122e-2: Each work item that exists twice is reduced to the one copy that is right
 - GE-122e-3: The repaired collection passes the guard itself, with nothing excused
@@ -1455,6 +1509,70 @@ flowchart TD
 - GE-123d-4: Source, configuration and any location not on the list never inherit the exemption
 - GE-123d-4-i: An executable script inside a prose location does not inherit the exemption
 - GE-123d-5: Every exemption granted is announced, and the announcement never echoes the value
+- GE-124a-1: A component-level declaration block names the criteria the file serves
+- GE-124a-1-i: A file with no declaration block declares nothing and is recorded as missing the floor
+- GE-124a-1-ii: An element attribute never populates the file's declared criteria
+- GE-124a-2: The same declaration is expressible in each supported front-end file shape
+- GE-124a-2-i: A declaration written below the leading comment region does not satisfy the floor
+- GE-124a-3: Only a file that renders markup counts as a screen component
+- GE-124a-3-i: A barrel file that only re-exports other components is out of scope
+- GE-124a-3-ii: Stories, tests and generated files are excluded by a named rule, not by directory guesswork
+- GE-124b-1: An element pin is read from the data-ac attribute and is optional
+- GE-124b-1-i: A CSS class is never read as a pin
+- GE-124b-1-ii: An empty or whitespace-only data-ac value is malformed, not absent
+- GE-124b-2: A pin says a thing is on screen and can never stand in for the component declaration
+- GE-124c-1: A changed screen component with no declaration blocks the commit by default
+- GE-124c-1-i: A file that lacks the floor while carrying element pins yields exactly one finding
+- GE-124c-2: An id that resolves to nothing is reported as its own verdict, not as a missing declaration
+- GE-124c-2-i: One shared resolver answers 'is this a real criterion id' for all three traceability checks
+- GE-124c-2-ii: A check that cannot read the criteria store says so instead of passing
+- GE-124c-3: An unstaged file is not examined at all, and a fully declared change passes
+- GE-124c-3-i: One unreadable file does not block the rest of the commit, and is named
+- GE-124d-1: A named path can be put on the warn tier, and every path that is not stays blocking
+- GE-124d-1-i: No setting can put every path on the warn tier at once
+- GE-124d-2: One file is excused by a written reason that lives in the file and shows up in the diff
+- GE-124d-2-i: An empty reason is refused and the file stays blocked
+- GE-124d-3: An escape replaces a file's verdict — it never sits beside it
+- GE-124e-1: The reverse gate fires only on screen criteria that are already finished
+- GE-124e-2: Either declaration surface satisfies the reverse gate
+- GE-124e-3: A finished screen criterion that nothing claims is reported against the criterion, not a file
+- GE-124e-3-i: The declaration gate and the test-proof gate fail independently on the same criterion
+- GE-124e-4: The gate evaluates only the criteria the change touched
+- GE-124f-1: A page root names the design it realises and that name resolves
+- GE-124f-1-i: Only the page root names a design — a leaf that names one is a defect
+- GE-124f-1-ii: A page with no design modelled for it is outside the chain, not a finding
+- GE-124f-2: Built page against approved design becomes a mechanical comparison, not a self-declared label
+- GE-124f-3: A test's selector and the criterion it claims to cover are checked against each other
+- GE-124g-1: A declaration is never written into a criterion's covered_by
+- GE-124g-1-i: No configuration anywhere can turn a declaration into coverage
+- GE-124g-2: Passing the declaration gate never finishes a criterion, and never says it did
+- GE-124g-3: Declarations are counted on their own axis and never added into a coverage figure
+- GE-124g-4: A test that only finds the element does not cover the criterion
+- GE-125a-1: A folder that merely reuses a chosen name keeps full credential detection
+- GE-125a-1-i: One file gets one answer however its path is written
+- GE-125a-1-ii: A name that merely resembles a chosen one does not collect the entitlement
+- GE-125a-2: The four locations the project chose still receive their reduced scrutiny, and still only for the opaque-token rule
+- GE-125a-2-i: The top of the project is the working copy being committed from, and an undetermined top entitles nothing
+- GE-125b-1: An executable script in a reduced-scrutiny location is fully checked while the prose beside it is not
+- GE-125b-1-i: The kind gate is applied at every reduced-scrutiny location, not only the one known to hold code
+- GE-125b-1-ii: Gating by kind moves no verdict except the shapeless-value rule's
+- GE-125b-2: A credential written into the secrets scanner's own script is reported by the secrets scanner
+- GE-125b-3: What counts as prose is a closed list of file kinds, and an unlisted kind is fully checked
+- GE-125b-3-i: Admission is decided from the file's own final extension, read without regard to letter case
+- GE-125c-1: One explained value set aside and one live credential in the same file report exactly one finding and block the commit
+- GE-125c-1-i: Every value in the file is judged on its own — neither the first value met nor the file's overall composition decides any other
+- GE-125c-2: A value is set aside only when something recognised explains it, and anything unexplained is reported wherever it sits
+- GE-125c-2-i: A value that merely resembles a recognised explanation is reported — near-misses fail towards being seen
+- GE-125c-2-ii: The allowance reaches only the shapeless-value rule — every other credential rule keeps full strength in the same file
+- GE-125c-3: The same content reaches the same verdict on a long line as on a short one — how far along a line a value sits never decides it
+- GE-125c-3-i: The verdict is the same on either side of the point where the line is shortened, and for a value longer than that point
+- GE-125d-1: A run that withheld a finding says how many and in which files, and never prints the value it withheld
+- GE-125d-1-i: The notice goes to the error stream and leaves the findings report on the output stream untouched
+- GE-125d-1-ii: The number announced counts only what the location-based reduction withheld, not what any other mechanism removed
+- GE-125d-2: A caller can tell a reduced run from a clean one without reading the message or the exit code
+- GE-125d-3: Silence means nothing was withheld, and a run that withheld a great deal still speaks only once
+- GE-125d-4: You can ask the check what it declines to look at, and the answer describes what it does rather than what it meant to do
+- GE-125d-4-i: The self-description follows the decision, so a reduction cannot be widened or narrowed without the answer changing
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1481,8 +1599,15 @@ flowchart TD
 - INF-200b-1: [Phase 2] Convention detector scans customer codebase and presents findings
 - INF-200b-2: [Phase 2] Hook generator produces project-specific pre-commit template
 - INF-400c-2: A harvester agent reads learning emissions and routes each to the correct knowledge surface
-- INF-400c-2-i: Harvester skips events with an unrecognized entry_kind without crashing
+- INF-400c-2-ii: An event the harvester cannot route stays unprocessed and is surfaced, never marked done
 - INF-400c-3: The harvester is idempotent: re-running it does not duplicate persisted learnings
+- INF-400c-4: Emitters and the harvester resolve the same knowledge-emission sink from one declared location
+- INF-400c-4-ii: Knowledge events already stranded in the telemetry sink are recovered, not abandoned
+- INF-400c-4-iii: Phase telemetry and knowledge emissions are separate streams, and the harvester drains only its own
+- INF-400c-5: One declared entry_kind vocabulary is shared by the classifier and the harvester and enforced where the event is emitted
+- INF-400c-5-i: Separator and case variants of one entry_kind normalise to a single canonical value
+- INF-400c-5-ii: Every entry_kind already in flight has a declared mapping into the canonical vocabulary
+- INF-400c-5-iii: A rejected entry_kind is reported to the agent and does not fail the agent's run
 - INF-400d-1: Each component's AC directory has a README.md that accumulates domain conventions
 - INF-400d-2: Skill-scoped PROJECT_CONTEXT.md files grow with each agent run that discovers skill-relevant learnings
 - INF-400d-3: Context files remain readable and useful as they accumulate entries over many runs
@@ -1659,6 +1784,14 @@ flowchart TD
 - TKT-500f-8: Generated ticket's files_touched includes the AC's real edit surface, unioned with doc_links
 - TKT-500f-8-i: List-form it_requirements: the named source surface is extracted into files_touched too
 - TKT-500f-9: Generated ticket frontmatter carries an ac_traceability entry (AC id + store path)
+- TKT-500g-1: An authored proof demand reaches the work item whole, and names who owes it
+- TKT-500g-1-i: A documentation-only requirement that asked for proof still gets it — an authored demand outranks a path-shape inference
+- TKT-500g-1-ii: An authored demand is taken as authored — nothing trimmed, nothing topped up
+- TKT-500g-2-ii: The skip question is stated once, and a route that answers a different question is reported by name
+- TKT-500g-3: A requirement that asked for nothing receives nothing — no proof is invented on the author's behalf
+- TKT-500g-4: A declared "no proof needed" stays a choice, and is recorded as the reason
+- TKT-500g-4-i: An empty demand is not a way to say "no proof needed" — it is refused by name
+- TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
 - TQ-100a-1: The suite runs every loadable test even when one file fails to load
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
