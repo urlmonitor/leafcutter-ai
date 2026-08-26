@@ -1,0 +1,36 @@
+---
+title: "A promised kind of proof that was never claimed is now refused by name — and the gate blocked its own commit first"
+date: "2026-08-26"
+time: "15:54"
+type: manual
+components:
+  - build_pipeline
+  - testing_quality
+  - ticket_lifecycle
+summary: "BP-1100g-4 closes the chain: g-1 taught the seven proof kinds, g-3 made each test state which it gives, g-3-i proved that statement feeds no verdict, and this refuses a kind that was promised and never claimed. Its very first run blocked its own commit, correctly, because its own tests had not declared their kinds."
+description: "BP-1100g-4, the forcing function without which the whole tag axis decays. A new pre-commit hook, templates/scripts/commit_guardian/check_proof_promise_claim.py, compares two AUTHORED declarations and nothing else: the promise side is the ## Test Requirements descriptors' angle values that generate_ticket_from_ac.py already emits, and the claim side is done_proof.collect_test_tag_records, imported unchanged from BP-1100g-3 (2f740cc4) rather than reimplemented -- a parallel reader of one source is the EPIC-ComputedQualityGates layer-3 failure. When a promise has no matching claim the hook exits non-zero and names the AC id, the stated behaviour, and the missing kind, because 'proof requirements not met' is unactionable and is the message an implementer writes first. THE HARD BOUNDARY: no test body is opened, parsed, tokenized, imported for inspection or regexed on any path to the outcome (BO-2900a-2) -- reading a file to COLLECT its tag is the scanner's permitted job, reading a body to JUDGE what a test does is forbidden, because a source scan inside a phantom-done guard is itself phantom-done. THE DENOMINATOR RULE: the promise set is the denominator; a kind absent from it never appears in a refusal, and a plan promising nothing produces no refusal at all -- without this the check degenerates into demanding all seven kinds of every piece of work, buries its own signal, and gets switched off. Registration is part of the work and was verified, not assumed: the hook is registered in templates/scripts/commit_guardian/commit_guardian.json (the tracked source, NOT the untracked scripts/commit_guardian symlink -- KI-ACS-014) and its module added to build_ac_store's deploy_map in scripts/build_phases.py, the 2026-07-22 done_proof.py ModuleNotFoundError incident verbatim. THE FIRST RUN REFUSED ITS OWN COMMIT. check-proof-promise-claim fired on the commit that introduced it and blocked all four of BP-1100g-4's promised kinds as unclaimed. It was right: the tests carried # covers: BP-1100g-4 but no # angle: tags at all, so they had never declared which kind of proof they give -- test-writer had not applied the convention g-1 and g-3 established. Adding the four tags (criterion, boundary, reachability, seam) cleared it. That is the strongest possible evidence the gate is registered, deployed, reachable and non-inert, which is exactly what the fast-lane incident (a runner that never executed its own gates) and this AC's own test_rationale demand be proven rather than asserted. TWO FIXES AFTER pr-reviewer BLOCKED: an unused import textwrap tripping ruff F401 -- ruff is a required CI gate, so one dead import made the branch unmergeable AND cascaded five phases into cross_agent skips; and an order-dependent failure that would have turned CI red the moment this AC flipped to done, where the test read the permitted-angle vocabulary through done_proof's module-level _PERMITTED_ANGLES_SCHEMA_PATH and got an empty set whenever an earlier-collected sibling had already cached the deployed copy via the scripts/commit_guardian symlink (KI-TQ-004's sys.modules shadowing). Fixed by passing the schema path explicitly, preserving the anti-drift intent while making the read import-order independent: unit_tests/commit_guardian/ went from 1 failed / 1189 passed to 1190 passed, still 4/4 in isolation. A REAL DEFECT IS RECORDED AND NOT FIXED HERE: done_proof.py's _PERMITTED_ANGLES_SCHEMA_PATH uses hand-counted parents, so from the deployed copy it resolves to .leafcutter/config/ac_store_schema.json, which is not in the deploy map. Verified directly -- the permitted set loads as [] and a VALID criterion tag is reported as unrecognised, so find_unrecognised_angle_tags is inverted in the layout where the hook and CI gate actually run. Nothing consumes that function in production yet, so there are no live false positives, but it makes BP-1100g-3's third Then clause true in the source tree and false in the deployed one. This ticket's out_of_scope forbids touching done_proof.py and it was not touched; the defect is filed for its own AC. The BP-1100g-3-i regression gate was re-run and is green: g-4 makes the angle axis feed a REFUSAL while g-3-i asserts it feeds no pass/done/eligibility decision, and those coexist only because g-4 blocks on a MISSING test at commit time and never changes which FAILING tests block."
+breaking: false
+---
+
+## Entry
+
+The chain now closes. `g-1` taught the seven kinds, `g-3` made each test state which one it gives, `g-3-i` proved that statement feeds no verdict — and this refuses a kind that was **promised and never claimed**.
+
+**Two authored declarations, nothing else.** The promise is the `## Test Requirements` `angle` values the generator already emits. The claim is `done_proof.collect_test_tag_records`, **imported unchanged** rather than reimplemented. No test body is read on any path to the outcome — collecting a tag is permitted, judging a body is not. A source scan inside a phantom-done guard is itself phantom-done.
+
+**The refusal names the missing kind**, not just the failure:
+
+```
+BP-1100g-4: promised 'reachability' proof for "<behaviour>" was never claimed
+by any test — write a test tagged '# covers: BP-1100g-4' and '# angle: reachability'
+```
+
+**It blocked its own commit.** On its first run, `check-proof-promise-claim` refused the commit that introduced it — all four promised kinds unclaimed. It was right: the tests carried `# covers:` and **no `# angle:` tags at all**. They had never declared what they prove. Adding the four tags cleared it.
+
+That is the proof the gate is real. The fast-lane incident shipped a runner that never executed its own gates; this one refused its own author, which no inert hook can do.
+
+**The denominator rule** is what keeps it usable: a kind that was never promised never appears in a refusal, and a plan promising nothing produces none. Without it the check demands all seven kinds of everything and gets switched off.
+
+**Fixed on the way through** — one unused import (ruff is required, so a dead import both blocked the merge and cascaded five phases into skips), and an order-dependent failure that would have gone red the instant this AC flipped to done. Directory run: **1 failed → 1190 passed**.
+
+**Recorded, not fixed.** `done_proof.py`'s `_PERMITTED_ANGLES_SCHEMA_PATH` uses hand-counted parents, so from the deployed copy it resolves to a path that isn't deployed. Measured: permitted set `[]`, and a **valid** `criterion` tag reported as unrecognised. `find_unrecognised_angle_tags` is inverted in the layout where the hook actually runs. Nothing consumes it yet. `out_of_scope` forbade touching it here, and it wasn't touched — it gets its own AC.
