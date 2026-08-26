@@ -99,9 +99,26 @@ concurrent author, since it appears in a tree you did not knowingly edit.
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 3
+- **Occurrences:** 4
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `scripts/build.py` — the agent-card generation phase; output at `docs/agents/cards/*.md`
+
+**Earlier occurrence, 2026-08-19 — recovered from an unmerged branch.** PR #495's parallel
+known-issues register recorded this independently as `KI-BO-2` while driving
+`EPIC-GE122UniquenessPassAndRepair`. That register was discarded during reconciliation; the
+occurrence is folded in here rather than duplicated, per this file's own rule. `build.py --force`
+regenerated **eight** cards with AC-store content absent from the committed versions — entries
+such as `ACD-1600g-*` and `ACD-1800a-*`, belonging to components unrelated to the work in hand.
+The committed cards were simply older than the store.
+
+It adds two things to the three occurrences below. First, it is the **earliest** recorded
+instance and it is already purely AC-store drift, which dates the drift source to at least a
+week before the 2026-08-25 occurrence that first isolated it. Second, it names the operational
+cost precisely: eight modified files in `git status` during unrelated work, each of which must be
+excluded from every commit by hand — and which makes a genuinely-related card change easy to miss
+in the noise. The workaround used was `git restore docs/agents/cards/` for the unrelated ones
+before staging, keeping any card that reflects a change actually made in the commit. That is the
+same workaround `build-pipeline.md:162` prescribes, arrived at independently.
 
 **Third occurrence, 2026-08-25.** Reproduced again on a clean worktree cut from `origin/main`,
 this time rewriting **four** cards with 68 insertions and zero deletions:
