@@ -117,7 +117,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/14_TICKET-20260826-ACD-2100c-2.md
 change_target: pipeline
 risk_surface: safety
 notes: |
@@ -153,3 +154,4 @@ notes: |
   this record before ACD-2100a-4; its own Given makes it unfalsifiable if you do,
   because a pause that fails to persist from a worktree cannot be told from one that
   was never attempted.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

@@ -109,7 +109,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/01_TICKET-20260826-ACD-2100a-1.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -148,3 +149,4 @@ notes: |
   what puts templates/workflows-js/plan-feature.js into the generated ticket's
   files_touched; the `describes` entries are informational and deliberately stay out
   of it.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

@@ -117,7 +117,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - ACD-2100b-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/09_TICKET-20260826-ACD-2100b-3.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -146,3 +147,4 @@ notes: |
   a-2 / a-2-i candidate-set contract. The constructible-registry requirement exists
   because a test that edits the project's own config/agent_registry.json to build the
   denial case mutates a real package surface and will not survive review.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

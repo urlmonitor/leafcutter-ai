@@ -117,7 +117,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/13_TICKET-20260826-ACD-2100c-1.md
 change_target: pipeline
 risk_surface: safety
 notes: |
@@ -151,3 +152,4 @@ notes: |
   is that the channel an answer arrived on survives to the point of evaluation,
   because c-4's proof is a pair of answers identical in content and differing only in
   origin, and that pair is unrepresentable if provenance is discarded at parse time.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

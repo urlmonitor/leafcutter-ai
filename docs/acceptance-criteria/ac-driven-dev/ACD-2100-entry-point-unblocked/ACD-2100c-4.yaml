@@ -113,7 +113,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/17_TICKET-20260826-ACD-2100c-4.md
 change_target: pipeline
 risk_surface: safety
 notes: |
@@ -159,3 +160,4 @@ notes: |
   in the content the gate reads, with the token supplied by the channel rather than by
   the answer's author. If the token is part of what the author writes, the comparison
   is back to inspecting content and the record is not proved.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

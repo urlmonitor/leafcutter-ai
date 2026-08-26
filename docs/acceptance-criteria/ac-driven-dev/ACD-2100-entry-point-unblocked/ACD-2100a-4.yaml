@@ -112,7 +112,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/05_TICKET-20260826-ACD-2100a-4.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -153,3 +154,4 @@ notes: |
   and the remaining work is the resolution underneath it. That does not make this
   record smaller -- the verification is only honest once it is verifying the right
   location.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

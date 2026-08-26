@@ -95,7 +95,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/23_TICKET-20260826-ACD-2100d-4.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -154,3 +155,4 @@ notes: |
   ACD-2100d-2 and ACD-2100d-3, all three of which already carry build_pipeline. Tagging
   this record too would put a page into the build component view for a reader who cannot
   act on it, and would not add a fact the graph does not already have.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways
