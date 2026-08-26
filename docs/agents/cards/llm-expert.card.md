@@ -226,6 +226,7 @@ flowchart TD
 - ACS-800f-1-i: Guidance documents the child-limit override as removable once tooling reads metadata
 - ACS-800f-2: The authoring agent instructions describe the UID-and-metadata model
 - ACS-800f-3: The schema reference prose describes stable UIDs and metadata hierarchy
+- AR-200a-1: An agent template carrying a sign-off obligation declares a tool that can perform the write
 - BO-1000c-1b: The /finalize-feature launcher polls the run-progress journal and relays it into the main conversation
 - BO-1000c-2: Surfaced progress reflects the in-flight step, arriving over time rather than only at the end
 - BO-1000c-2-i: On a mid-flight halt the last conversation line reflects the halting step, live
@@ -449,6 +450,12 @@ flowchart TD
 - BP-700d-2: Onboard wizard no longer offers frontend-design as a separate optional skill
 - GE-104a-2: Planning-time trigger flips documentation-expert to needed when a ticket adds a new page without its reference doc
 - GE-104a-2-i: DSL trigger expresses a new-page-without-matching-doc condition (negation feasibility open question)
+- GE-123c-5: The document that lists the accepted suppression forms also says what is rejected and why
+- GE-123d-4-ii: The reference states where the exemption applies, in one place, as a closed list
+- GE-125a-3: The reference names the four places that get less scrutiny and says they are read from the top of the project down
+- GE-125b-4: The written description of when this check looks less says that a script is never prose
+- GE-125c-4: The reference says the reduced check is decided one result at a time, and says it in one place for the whole goal
+- GE-125d-5: One description of when this check looks less, and it agrees with the check
 - INF-100a-1: Pull-request template contains Pre-Flight section that loads PROJECT_CONTEXT.md
 - INF-100a-1-i: Agent continues with template-only behavior when PROJECT_CONTEXT.md is absent
 - INF-100a-2: PROJECT_CONTEXT.md contains EMU identity guard that switches GitHub account before PR creation
@@ -473,6 +480,7 @@ flowchart TD
 - INF-400b-1-ii: Duplicate learnings are not persisted twice across consecutive runs
 - INF-400b-2: Knowledge emissions from v3 agents use the same JSONL event schema as signoff section 7
 - INF-400b-3: V3 agent knowledge-capture prompt is domain-appropriate for specification work
+- INF-400c-4-i: No shipped template directs a knowledge_captured event at the telemetry sink
 - INF-400e-1: Second-run BA produces L2 ACs that reference standing rules without being told
 - INF-400e-2: Second-run PO uses previously-learned user framing preferences in L0/L1 language
 - INF-400e-3: Second-run IT PO assigns agents correctly based on previously-learned component-agent mappings
@@ -566,6 +574,8 @@ flowchart TD
 - TKT-500e-3-i: Agent spawned for goal-B has no memory leakage from goal-A
 - TKT-500e-4: Agent retains memory of files it modified in prior ACs within the goal
 - TKT-500f-6-iii-b: ticket-supervisor halts (not silently skips) when Test Requirements is absent but an implementation .py is in scope
+- TKT-500g-2: Every route that can drive the work asks one question before skipping the proof phase
+- TKT-500g-2-i: The route that loses the phase is the route the fix must be proven on — a work item built inside a batch keeps its proof phase
 - UXP-100a-1: Prototype composition reads the component library catalog before assembly
 - UXP-100a-1-i: Empty or missing component library catalog halts prototype assembly with a diagnostic
 - UXP-100a-2: Prototype output preserves visual and structural consistency with existing pages
