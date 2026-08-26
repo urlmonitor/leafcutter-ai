@@ -121,7 +121,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/22_TICKET-20260826-ACD-2100d-3.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
@@ -164,3 +165,4 @@ notes: |
   above does not order anything. The it-po does not own depends_on and has not edited it;
   the recommended edit is to add ACD-2100a-5 to ACD-2100d-1's depends_on before the tree
   is approved, which orders this record correctly by transitivity.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

@@ -109,7 +109,8 @@ created: 2026-08-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/07_TICKET-20260826-ACD-2100b-1.md
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -150,3 +151,4 @@ notes: |
   silently goes stale the first time the resolution changes -- and a stale location in
   a diagnostic is the same class of defect as the permission verdict this record
   removes: a specific claim the check did not establish.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

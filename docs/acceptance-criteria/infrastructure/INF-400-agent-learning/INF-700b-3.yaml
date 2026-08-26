@@ -1,0 +1,136 @@
+id: INF-700b-3
+components:
+  - infrastructure
+  - knowledge_system
+  - agent_telemetry
+title: "A period with no captured learnings tells a reader which kind of quiet it was"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
+criteria: |
+  Given a reporting period during which phase agents completed work and no
+    knowledge record was produced,
+  When a person asks whether the capture step is working,
+  Then a report is available that states, for that period and separately: how
+    many agent runs reached the knowledge-capture step, how many recorded a
+    learning, and how many attempted to record one and could not,
+  And a period in which runs reached the step, none recorded a learning and
+    none failed is reported as agents having had nothing to record,
+  And a period in which runs reached the step and one or more failed to record
+    is reported as the capture path being broken, naming what was missing,
+  And those two periods are distinguishable from each other by reading the
+    report alone, without opening a template or a source file,
+  And the report is derived from durable records rather than from the console
+    output of runs that have already ended,
+  And a period in which no agent run reached the step at all is reported as a
+    third, distinct case rather than being merged into either of the other two.
+depends_on:
+  - INF-700b
+  - INF-700b-1-ii
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "NON-COLLISION WITH INF-700a — the BA's escalation, resolved. The two counters do NOT collide, and may share a reporting surface, provided three rules hold. (1) DIFFERENT INPUTS: this report reads the capture-attempt ledger (per-run records written at sign-off time by INF-700b-1-i and INF-700b-1-ii); INF-700a's backlog reads the knowledge-emission sink minus the harvest watermark. (2) DIFFERENT DENOMINATORS: this report counts AGENT RUNS, INF-700a counts EMITTED RECORDS, and one run may emit zero or more records — so the two numbers must never be summed, equated, or cross-validated against each other. (3) SHARED SURFACE ALLOWED, SHARED NUMBER FORBIDDEN: presenting both in one command with two labelled sections is desirable, because 'is the loop working' needs both; deriving either figure from the other is not."
+  - "The discriminating case, and the one to test: on 2026-08-26 the backlog INF-700a reports is unaffected by capture health, while capture health is broken. A period of 5 runs that all recorded and were all harvested gives this report 5 reached / 5 recorded / 0 failed and gives INF-700a a backlog of 0. A period of 5 runs that all failed gives this report 5 reached / 0 recorded / 5 failed and ALSO gives INF-700a a backlog of 0. Identical backlogs, opposite health — a report that could not tell them apart would be the defect this AC exists to close."
+  - "MUST NOT read the harvester's counters. skipped_unknown, unroutable_by_kind, write_failures and state_persist_failed in scripts/knowledge/harvest_learnings.py describe the ROUTING side and would mislabel a healthy capture as a broken one — all 28 records on disk are currently unroutable while capture itself is merely silent."
+  - "The three cases must be a partition, decided by data and not by presentation: (a) attempt records exist for the period, none with outcome 'recorded', none with outcome 'failed' → agents had nothing to record; (b) attempt records exist and at least one has outcome 'failed' → capture path broken, naming each distinct missing target; (c) NO attempt record exists for the period → third case, reported as 'no run reached the step', never collapsed into (a). Case (c) is only derivable because INF-700b-1-i requires an attempt record even on the nothing-to-record path."
+  - "Period selection must be by the records' own timestamps, not by file position or by the time the report runs, so a period can be re-reported later and produce the same numbers. Timestamps are ISO-8601; a record with an unparseable or absent timestamp must be reported in a separate malformed count and excluded from every period, never silently attributed to the current one."
+  - "Derived from durable records only. The report must be reproducible in a fresh process with no access to any run's console output, and must not read a log file that is rotated or truncated by any other process during a normal drive."
+  - "Resilient to a mixed stream. The operational telemetry sink is shared: it currently holds 28 knowledge_captured records, 4 pre-drive probe lines with no `event` key, and 1 line that is not JSON at all. The report must skip records it does not recognise without aborting, and must count skipped lines separately rather than treating them as zero-activity."
+  - "The report must name what was missing for case (b) — the literal missing target from the failure record — not a count of failures. A number alone reproduces the condition this AC closes: a decline from 25 to 2 to 1 events was itself a number, and nobody read it."
+test_spec:
+  - name: test_period_with_runs_and_no_learnings_reports_nothing_to_record
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Attempt records all outcome 'nothing-to-record' yield reached=N, recorded=0, failed=0 and the nothing-to-record verdict."
+  - name: test_period_with_a_failed_capture_reports_broken_and_names_the_missing_target
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "One failure record yields failed=1, the broken verdict, and the literal missing-target string in the report body."
+  - name: test_period_with_no_attempt_records_is_a_third_distinct_case
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An empty period reports 'no run reached the step' and is not equal to the nothing-to-record verdict."
+  - name: test_capture_health_and_routing_backlog_do_not_share_a_number
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "A fixture with 5 failed captures and an empty emission sink reports failed=5 and backlog=0 simultaneously, proving the two counters are independent."
+  - name: test_report_is_reproducible_from_the_real_mixed_telemetry_stream
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run over the real on-disk stream shape — 28 knowledge records, 4 probe lines, 1 non-JSON line — the report completes, counts the unrecognised lines separately, and returns identical numbers on a second run in a fresh process."
+  - name: test_records_with_unparseable_timestamps_are_excluded_from_every_period
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A record with a malformed timestamp appears in the malformed count and in no period's reached/recorded/failed figures."
+test_rationale: |
+  The fourth descriptor is the whole point of the BA's escalation made
+  executable: the only way to prove the two counters do not collide is to place
+  them in a state where they must disagree and assert both. The fifth uses the
+  real stream shape rather than a clean fixture because the live sink is mixed
+  — a report built and tested against knowledge records only would abort on
+  line 19 and report a confidently wrong zero, which is the failure mode
+  INF-700c-1-i documents on the writer side. The sixth exists because
+  timestamp-keyed period selection has a silent-misattribution failure mode
+  that no happy-path test reaches.
+delivers_to:
+  agent: documentation-expert
+  contract: "A capture-health report with three mutually exclusive verdicts per period — nothing-to-record, capture-path-broken (naming each missing target), and no-run-reached-the-step — plus reached / recorded / failed counts and a separate count of unrecognised lines. INF-700b-5's reference documentation describes where this report lives and how to read it."
+expects_from:
+  - ac_id: INF-700b-1-ii
+    contract: "The durable per-attempt failure record supplying the 'attempted and could not' count and the missing-target name"
+  - ac_id: INF-700b-1-i
+    contract: "The durable capture-attempt record written even when the agent had nothing to record, supplying the 'reached the step' count without which the third case is not derivable"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Resolved the BA's second escalation: the INF-700b-3 and INF-700a counters do not collide and may share a reporting surface, subject to three stated rules (different inputs, different denominators, no derivation of one from the other). Added the second expects_from entry — the criteria's third case needs the nothing-to-record attempt record from INF-700b-1-i, not only the failure record from INF-700b-1-ii, and that dependency was unstated. Forbade sourcing any figure from the harvester's routing counters, which currently report all 28 records unroutable and would mislabel silence as breakage."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Scope boundary against INF-700a. INF-700a asks for the count of learnings
+  that have been captured but not yet routed to a surface — a backlog on the
+  routing side, visible when the routing step has not run. This AC asks for the
+  health of the capture side itself: how many runs tried, succeeded, failed.
+  A project can have a zero backlog and a broken capture step simultaneously,
+  which is exactly the state observed on 2026-08-26, so the two counts are not
+  substitutes for one another.
+
+  The motivating shape: 25 events in 2026-06, 2 in 2026-07, 1 in 2026-08. The
+  decline was legible only to somebody who went looking for it eight weeks
+  later.
+change_target: pipeline
+risk_surface: contract_boundary

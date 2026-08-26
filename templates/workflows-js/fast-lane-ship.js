@@ -171,6 +171,21 @@ const CHANGELOG_SCHEMA = {
   },
 };
 
+// BO-2400f-10-ii: the release dispatches MUST carry a schema. Without one the
+// engine returns the agent's final text as a STRING, so `reply.released` is
+// undefined and buildReleaseOutcomeFields can never reach its success branch —
+// every release, including a wholly successful one, reports as failed. That is
+// how this shipped: the covering tests stubbed the reply as an object, which
+// the engine only ever produces when a schema is declared.
+const RELEASE_SCHEMA = {
+  type: "object",
+  required: ["released"],
+  properties: {
+    released: { type: "array", items: { type: "string" } },
+    message: { type: "string" },
+  },
+};
+
 // ---------------------------------------------------------------------------
 // KI-BO-001 / BO-2400f-4-i: mirror of the CI changelog-presence gate module's
 // EXEMPT_PREFIXES (check_changelog_presence.py, under scripts). The SINGLE
@@ -263,11 +278,31 @@ const RELEASE_EXECUTOR_AGENT_TYPE = "python-coder";
  * @param {string} executorAgentType - The agentType actually dispatched.
  * @returns {{fields: object, note: string}}
  */
+function coerceReleaseReply(releaseReply) {
+  // The release dispatches declare RELEASE_SCHEMA, so the engine normally hands
+  // back a validated object. Accept a JSON string too: a schema-less dispatch
+  // (or any future caller that forgets the schema) returns the agent's final
+  // text verbatim, and reading a real, successful release as a failure is the
+  // worse error — it tells the operator to go unstick criteria that are already
+  // todo, and it hides the fact that the release worked.
+  if (typeof releaseReply !== "string") return releaseReply;
+  var text = releaseReply.trim();
+  var start = text.indexOf("{");
+  var end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return releaseReply;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch (err) {
+    return releaseReply;
+  }
+}
+
 function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) {
   var claimed = claimedIds || [];
+  var reply = coerceReleaseReply(releaseReply);
   var releasedIds =
-    releaseReply && Array.isArray(releaseReply.released)
-      ? releaseReply.released
+    reply && Array.isArray(reply.released)
+      ? reply.released
       : null;
 
   if (releasedIds !== null) {
@@ -672,7 +707,7 @@ if (!contextBundleUsable) {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-context-bundle-fail", phase: "Resolve" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-context-bundle-fail", phase: "Resolve" }
   );
   const releaseOutcomeContextBundle = buildReleaseOutcomeFields(
     releaseReplyContextBundle, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -745,7 +780,7 @@ if (!testWriterResult || testWriterResult.status !== "ok") {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-test-writer-fail", phase: "Test Writer" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-test-writer-fail", phase: "Test Writer" }
   );
   const releaseOutcomeTestWriter = buildReleaseOutcomeFields(
     releaseReplyTestWriter, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -772,7 +807,7 @@ if (!testWriterResult.gate_passed) {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-red-baseline-fail", phase: "Test Writer" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-red-baseline-fail", phase: "Test Writer" }
   );
   const releaseOutcomeRedBaseline = buildReleaseOutcomeFields(
     releaseReplyRedBaseline, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -829,7 +864,7 @@ if (!coderResult || coderResult.status !== "ok") {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-coder-fail", phase: "Coder" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-coder-fail", phase: "Coder" }
   );
   const releaseOutcomeCoder = buildReleaseOutcomeFields(
     releaseReplyCoder, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -854,7 +889,7 @@ if (!coderResult.green || !coderResult.coverage_ok) {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-coverage-fail", phase: "Coder" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-coverage-fail", phase: "Coder" }
   );
   const releaseOutcomeCoverage = buildReleaseOutcomeFields(
     releaseReplyCoverage, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -942,7 +977,7 @@ if (!reviewVerdictUsable) {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-review-no-verdict-fail", phase: "Review" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-review-no-verdict-fail", phase: "Review" }
   );
   const releaseOutcomeReviewNoVerdict = buildReleaseOutcomeFields(
     releaseReplyReviewNoVerdict, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -969,7 +1004,7 @@ if (reviewHighFindings.length > 0) {
     `Release all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-review-high-findings-fail", phase: "Review" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-review-high-findings-fail", phase: "Review" }
   );
   const releaseOutcomeReviewHighFindings = buildReleaseOutcomeFields(
     releaseReplyReviewHighFindings, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -1073,7 +1108,7 @@ if (changelogRequired) {
       `Release all claimed ACs back to todo by running this single Bash command:\n` +
       `   ${releaseInvocation}\n\n` +
       `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-      { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-changelog-fail", phase: "Changelog" }
+      { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-changelog-fail", phase: "Changelog" }
     );
     const releaseOutcomeChangelog = buildReleaseOutcomeFields(
       releaseReplyChangelog, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE
@@ -1150,7 +1185,7 @@ if (!commitResult || commitResult.status !== "ok") {
     `Roll all claimed ACs back to todo by running this single Bash command:\n` +
     `   ${releaseInvocation}\n\n` +
     `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
-    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, label: "release-on-commit-fail", phase: "Commit" }
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label:"release-on-commit-fail", phase: "Commit" }
   );
   const releaseOutcomeCommit = buildReleaseOutcomeFields(
     releaseReplyCommit, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE

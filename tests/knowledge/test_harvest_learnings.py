@@ -429,6 +429,21 @@ class TestFullCorpusAllUnroutable(unittest.TestCase):
     exact scenario named in the AC criteria (a 2026-08-25 dry-run over the
     real sink found all 28 in-flight events unroutable).
 
+    The fixture (tests/fixtures/harvest_learnings/unroutable_corpus_28.json)
+    is a VERBATIM capture of the real sink as of 2026-08-26: it is the exact
+    set of 28 ``knowledge_captured`` lines extracted from
+    ``debugging/logs/agent_telemetry.jsonl`` (filter: ``event ==
+    "knowledge_captured"``), preserving their exact key set
+    (``event, timestamp, agent, component, destination, entry_kind`` — note
+    there is no ``ticket`` key on any real event) and exact values, including
+    the messy real ``entry_kind`` taxonomy (15 distinct values, with
+    hyphen/underscore near-duplicate pairs such as ``agent-memory`` /
+    ``agent_memory``, ``component-convention`` / ``component_convention``,
+    and ``framing-note`` / ``framing_note`` — exactly the normalisation
+    problem a future routing-rule extension has to handle). To re-derive
+    this fixture: re-run the same filter over
+    ``debugging/logs/agent_telemetry.jsonl`` and diff against this file.
+
     Real-artifact behavioral test: the fixture corpus is written to a real
     sink file, `harvest()` runs unmocked against real temp-directory paths,
     and the on-disk state.json is read back directly.
@@ -460,13 +475,36 @@ class TestFullCorpusAllUnroutable(unittest.TestCase):
             self.assertEqual(result.previously_processed, 0)
             self.assertEqual(result.skipped_unknown, 28)
             self.assertEqual(call_count[0], 0, "nothing should ever be written")
+            # Real entry_kind distribution from the 2026-08-26 sink capture —
+            # 15 distinct messy real-world kinds, including the
+            # hyphen/underscore near-duplicate pairs a future normalisation
+            # step must handle (agent-memory/agent_memory,
+            # component-convention/component_convention,
+            # framing-note/framing_note).
             self.assertEqual(
                 result.unroutable_by_kind,
                 {
-                    "future-agent-behavior": 10,
-                    "unrouted-metric": 10,
-                    "speculative-surface": 8,
+                    "agent-assignment-pattern": 2,
+                    "agent-learning": 5,
+                    "agent-memory": 5,
+                    "agent_memory": 1,
+                    "component-convention": 4,
+                    "component-decomposition-and-operational-note": 1,
+                    "component-framing-note": 1,
+                    "component_context": 1,
+                    "component_convention": 2,
+                    "component_framing_note": 1,
+                    "framing-convention": 1,
+                    "framing-note": 1,
+                    "framing_decomposition": 1,
+                    "framing_decomposition_note": 1,
+                    "framing_note": 1,
                 },
+            )
+            self.assertEqual(
+                len(result.unroutable_by_kind),
+                15,
+                "expected 15 distinct real entry_kind values",
             )
 
             # Nothing may be persisted to the idempotency record: read the
@@ -621,6 +659,291 @@ class TestExitStatusDistinguishesCleanVsUnroutable(unittest.TestCase):
                 f"(distinct from 0/1/2); stdout={proc.stdout} stderr={proc.stderr}",
             )
             self.assertIn("unroutable", proc.stdout + proc.stderr)
+
+
+class TestWriteFailureIsNotReportedAsCleanRun(unittest.TestCase):
+    """A run in which destination writes fail must not look like a quiet run.
+
+    Before this fix, `harvest()` caught the OSError raised by `capture_fn`
+    and `continue`d without touching any counter. A run where every single
+    write failed therefore printed the exact same summary as a run with
+    nothing to do -- "0 learnings routed: none" -- and exited 0. The
+    operator documentation tells the reader that 0 means "drained cleanly",
+    so the failure was not merely unreported: the documented contract
+    actively asserted success.
+    """
+
+    def test_failed_writes_are_counted_and_named(self) -> None:
+        def always_fails(_text: str, _dest: str) -> None:
+            raise OSError("simulated ENOSPC")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            sink = tmp / "knowledge_emissions.jsonl"
+            _write_sink(
+                sink,
+                [
+                    _make_event(entry_kind="adr", destination=str(tmp / "a.md")),
+                    _make_event(
+                        entry_kind="claude-md",
+                        destination=str(tmp / "b.md"),
+                        timestamp="2026-06-05T15:00:00Z",
+                    ),
+                ],
+            )
+
+            result = harvest(
+                sink_path=sink,
+                state_path=tmp / "harvest_state.json",
+                capture_fn=always_fails,
+            )
+
+            self.assertEqual(result.routed, 0, "nothing was written, so nothing was routed")
+            self.assertEqual(result.write_failures, 2)
+            self.assertEqual(result.failed_by_kind, {"adr": 1, "claude-md": 1})
+            self.assertIn("write failures", result.summary())
+
+    def test_failed_write_leaves_the_event_retryable(self) -> None:
+        """A write that failed must not be recorded as processed.
+
+        Otherwise the transient failure is upgraded to permanent loss on the
+        next run, which is the same defect INF-400c-2-ii fixed for
+        unroutable events.
+        """
+
+        def always_fails(_text: str, _dest: str) -> None:
+            raise OSError("simulated EACCES")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            sink = tmp / "knowledge_emissions.jsonl"
+            state = tmp / "harvest_state.json"
+            _write_sink(
+                sink, [_make_event(entry_kind="adr", destination=str(tmp / "a.md"))]
+            )
+
+            harvest(sink_path=sink, state_path=state, capture_fn=always_fails)
+
+            # Assert the OUTCOME (the event is still retryable), not the
+            # mechanism. With every write failed there is no new hash to
+            # record, so the harvester skips the no-op save entirely and the
+            # state file may legitimately not exist at all -- which is
+            # equivalent to an empty one, since _load_state treats a missing
+            # file as "nothing processed yet".
+            recorded = (
+                json.loads(state.read_text(encoding="utf-8")) if state.exists() else []
+            )
+            self.assertEqual(
+                recorded,
+                [],
+                "a failed write must not be recorded as processed",
+            )
+
+            # The retry proves it: a later run with a working capture_fn
+            # routes the event that previously failed.
+            written: list[tuple[str, str]] = []
+            retry = harvest(
+                sink_path=sink,
+                state_path=state,
+                capture_fn=lambda t, d: written.append((t, d)),
+            )
+            self.assertEqual(retry.routed, 1)
+            self.assertEqual(len(written), 1)
+
+    def test_write_failure_exits_four_at_the_cli(self) -> None:
+        """Reachability test through the real entry point and real capture_fn.
+
+        The destination's parent is a regular file, so `_default_capture`'s
+        `mkdir` raises NotADirectoryError (an OSError subclass).
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            blocker = tmp / "blocked"
+            blocker.write_text("regular file, not a directory", encoding="utf-8")
+            sink = tmp / "knowledge_emissions.jsonl"
+            _write_sink(
+                sink,
+                [_make_event(entry_kind="adr", destination=str(blocker / "sub" / "x.md"))],
+            )
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(_HARVEST_PATH),
+                    "--sink",
+                    str(sink),
+                    "--state",
+                    str(tmp / "harvest_state.json"),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+
+            self.assertEqual(
+                proc.returncode,
+                4,
+                f"a run with failed writes must exit 4, not 0; "
+                f"stdout={proc.stdout} stderr={proc.stderr}",
+            )
+            self.assertIn("write failures", proc.stdout)
+
+
+class TestStatePersistFailureIsSurfaced(unittest.TestCase):
+    """A run that could not save its state is a duplicating run, not a clean one.
+
+    Before this fix the `_save_state` OSError was swallowed with a bare
+    `pass`. The learnings were written but no hash was recorded, so the next
+    run re-routed every one of them and appended each learning to its
+    destination a second time -- silently, and with a 0 exit code claiming
+    the run drained cleanly.
+    """
+
+    def _run(self, tmp: Path):
+        sink = tmp / "knowledge_emissions.jsonl"
+        _write_sink(
+            sink, [_make_event(entry_kind="adr", destination=str(tmp / "a.md"))]
+        )
+        blocker = tmp / "blocked"
+        blocker.write_text("regular file, not a directory", encoding="utf-8")
+        return sink, blocker / "sub" / "state.json"
+
+    def test_state_failure_is_flagged_and_explained_in_the_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            sink, state = self._run(tmp)
+
+            result = harvest(
+                sink_path=sink,
+                state_path=state,
+                capture_fn=lambda _t, _d: None,
+            )
+
+            self.assertEqual(result.routed, 1, "the write itself succeeded")
+            self.assertTrue(result.state_persist_failed)
+            self.assertIn("state NOT persisted", result.summary())
+            self.assertIn("re-applied on the next run", result.summary())
+
+    def test_state_failure_exits_four_at_the_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            sink, state = self._run(tmp)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(_HARVEST_PATH),
+                    "--sink",
+                    str(sink),
+                    "--state",
+                    str(state),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+
+            self.assertEqual(
+                proc.returncode,
+                4,
+                f"a run that could not persist state must exit 4, not 0; "
+                f"stdout={proc.stdout} stderr={proc.stderr}",
+            )
+
+    def test_noop_state_write_is_not_a_failure_and_does_not_mask_the_backlog(
+        self,
+    ) -> None:
+        """An unwritable state path is harmless when nothing needed recording.
+
+        With no new hashes the save is a no-op, so a failure there costs
+        nothing -- nothing was routed, so nothing can be re-routed. Treating
+        it as a failed run would raise the exit code to 4 and hide the
+        exit-3 backlog on exactly the run that most needs it: an
+        all-unroutable sink, which is the shape of the real corpus today.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            blocker = tmp / "blocked"
+            blocker.write_text("regular file, not a directory", encoding="utf-8")
+            sink = tmp / "knowledge_emissions.jsonl"
+            _write_sink(
+                sink,
+                [
+                    _make_event(
+                        entry_kind="a-kind-nobody-routes",
+                        destination=str(tmp / "y.md"),
+                    )
+                ],
+            )
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(_HARVEST_PATH),
+                    "--sink",
+                    str(sink),
+                    "--state",
+                    str(blocker / "sub" / "state.json"),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+
+            self.assertEqual(
+                proc.returncode,
+                3,
+                f"a no-op state write must not mask the unroutable backlog; "
+                f"stdout={proc.stdout} stderr={proc.stderr}",
+            )
+            self.assertIn("unroutable", proc.stdout)
+            self.assertNotIn("state NOT persisted", proc.stdout)
+
+    def test_failure_code_outranks_the_unroutable_code(self) -> None:
+        """Exit 4 must win over exit 3 when both conditions hold.
+
+        A broken run needs attention before a merely-retained backlog does.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            blocker = tmp / "blocked"
+            blocker.write_text("regular file, not a directory", encoding="utf-8")
+            sink = tmp / "knowledge_emissions.jsonl"
+            _write_sink(
+                sink,
+                [
+                    _make_event(
+                        entry_kind="adr", destination=str(blocker / "sub" / "x.md")
+                    ),
+                    _make_event(
+                        entry_kind="a-kind-nobody-routes",
+                        destination=str(tmp / "y.md"),
+                        timestamp="2026-06-05T16:00:00Z",
+                    ),
+                ],
+            )
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(_HARVEST_PATH),
+                    "--sink",
+                    str(sink),
+                    "--state",
+                    str(tmp / "harvest_state.json"),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+
+            self.assertEqual(proc.returncode, 4, f"stdout={proc.stdout}")
+            self.assertIn("write failures", proc.stdout)
+            self.assertIn("unroutable", proc.stdout)
 
 
 if __name__ == "__main__":

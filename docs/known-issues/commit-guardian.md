@@ -815,14 +815,59 @@ whether it moves the other two.
 >   reference is already pointing at the wrong entry independently of this collision.
 >
 > Whoever owns this file should pick the renumber and fix all four references in one commit.
-> Next free id at time of writing is `KI-CG-018` (`016` and `017` were both claimed on
-> 2026-08-25 by two concurrent sessions — see the note on `KI-CG-017` below).
+>
+> **Citation audit, 2026-08-26 — still not renumbered, and the reason is now stronger.** A
+> repo-wide sweep done while resolving a different collision in this register found the
+> inbound set has grown from four to **nine**, and it splits across *both* entries:
+>
+> | Citation | Resolves to |
+> |---|---|
+> | `GE-126a-3.yaml:43`, `:63`, `:96`, `:128` · `GE-126a.yaml:26`, `:85` · `GE-126.yaml:209` | the **test seams** entry (above) |
+> | `GE-126.yaml:160` ("re-run with a deliberately invalid file") · `build-pipeline.md:1234` | **this** entry |
+> | `GE-126e.yaml:28` ("all the same family") · `BP-600d-3.yaml:186` | ambiguous |
+>
+> So a renumber is now a nine-site change spanning six acceptance-criteria records, two of
+> which cannot be resolved from their text alone. That is a deliberate, owner-sized piece of
+> work and not a drive-by fix — attempting it as a side effect of unrelated work is how the
+> `016`/`017` collision below was created in the first place.
+>
+> **Next free id is `KI-CG-034`.** The earlier note here said `018`; that was true on
+> 2026-08-25 and has been overtaken three times since. Do not allocate by reading this line —
+> read the file, on a fresh `origin/main`, immediately before you land.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 3
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 4
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`, `:673`), `_get_staged_ac_paths()` (`:307`, fail-open documented in its own docstring), the `if not staged_files:` branch (`:685`), and `_find_project_root()` (`:99`)
+
+**Fourth occurrence, 2026-08-26 — and it came wearing a disguise worth knowing about.** A run
+against 16 staged AC records in a worktree exited 0 while printing:
+
+```text
+WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutter;
+         falling back to manual field validation.
+exit: 0
+```
+
+This was initially filed as a **separate** defect — a missing schema causing a downgrade to a
+weaker check. That diagnosis is wrong and was withdrawn; see the retracted
+`KI-CG-20260826-1334` at the end of this file for the A/B that disproves it (with the schema
+*removed* the hook is **stricter**, catching an extra id-format error).
+
+The WARNING is a red herring that appears at exactly the moment of the false pass. The actual
+mechanism is this entry's: `_get_staged_ac_paths` shells `git diff --cached` with **no
+`cwd=root`**, so the resolved root and the staged set can come from different repositories.
+The root here — `/home/henzeh/projects/leafcutter` — holds a `CLAUDE.md` but no `.git`, so the
+root resolution settled on the workspace directory, the staged set came back empty, and
+Phase 1 was skipped.
+
+**Why this occurrence is the most valuable of the four:** it is the first with a demonstrated
+cost. The 16 staged records included two that `validate_declares_side_effect` errors on when
+called directly (`KI-CG-014`). The hook passed them; CI, which builds fresh, would have failed
+the required `AC store valid` check. So this is not "the hook checked nothing" in the abstract
+— it is the hook returning a green that was **wrong about the specific change in front of it**,
+on a change that would have gone red in CI minutes later.
 
 **Symptom.** The hook exits 0 having validated nothing, and its output is indistinguishable
 from a run that validated everything and found it clean. There is no "checked 0 files"
@@ -1118,10 +1163,10 @@ no criteria change, and that is the regression test for the fix.
 
 ### KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is
 
-- **Severity:** medium
+- **Severity:** medium → **high** (see "Second and third sightings" below)
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE` (`:567`) and `derive_declares_side_effect()` (`:581`)
 
 **Symptom.** `derive_declares_side_effect()` searches the Gherkin `Then` clause for
@@ -1158,6 +1203,65 @@ rather than assuming it is zero.
 Whatever the fix, `validate_declares_side_effect()` should not be able to leave an author
 with no acceptable value. A disagreement between an authored `false` and a derived `true` is
 currently reported as the author's error; sometimes, as here, it is the derivation's.
+
+**Second and third sightings, hours later, same AC family — and the reason this is now high.**
+An IT-PO enrichment pass over the 22-record `ACS-1100` tree hit the identical wall twice more:
+
+- **`ACS-1100a-2`** — *"a record whose identifier **is written** with surrounding quotes"*.
+  A description of YAML syntax. Nothing is written by anything.
+- **`ACS-1100b-2`** — *"no second traversal of the AC tree **is written** to produce a total"*.
+  A clause whose entire content is that a thing is not written.
+
+Confirmed by calling the functions directly against both records: `derived=True`,
+`authored=None`, and a real error from `validate_declares_side_effect` — with **no readiness
+gate**, so `draft` records are blocked too. Both were left `draft` and staged out rather than
+reworded.
+
+**The workaround should stop, but not for the reason first given.** Rewording `is written` →
+`is recorded` fixed `ACS-1100d-5-i` and was reasonable once. Applied repeatedly it becomes a
+policy of bending specification prose around a regex, and that is reason enough to stop.
+
+An earlier draft added a second argument — that rewording *erases the evidence*, because every
+reworded record is one the calibration will never count. That premise is false. The population
+is re-derivable in about 25 lines by re-running the matcher over the store, so nothing is
+destroyed by rewording: the evidence is a property of the corpus, not of any file's current
+wording. The recommendation survives; the justification offered for it did not.
+
+The measurement that replaces it is stronger than the argument it displaces: **33 of 139
+store-wide matches are fully negated, and 31 of those are currently unfixable as written on
+`origin/main`.** That is the case for high severity, and it is an order of magnitude beyond the
+"three instances in one day" this entry was first escalated on. Two caveats a fixer needs:
+"fully negated" is proxy-dependent — a 60-character tail-anchored window yields 33, a
+120-character window yields **51** — and the 31 are blocked only *when touched*, since
+validation is staged-only. Re-measure with a stated window rather than inheriting the number.
+
+**A note for whoever fixes this — the original note here was wrong, and dangerously so.**
+It named `ACS-1100a-3` as a genuine true positive to be used as the **negative control**,
+asserting its `Then` clause really persists an exemption record and that it must keep deriving
+`True` after any negation fix.
+
+`ACS-1100a-3` is a **false positive**. Its only `_DURABLE_EFFECT_RE` match is:
+
+```text
+And no second traversal of the AC tree is written to produce a total for that
+```
+
+— the identical negated construction `ACS-1100b-2` is filed for above. A correct negation fix
+must flip `ACS-1100a-3` to `False`. Anyone following the original instruction would have
+treated the correct behaviour as a regression and preserved the defect they were sent to
+remove.
+
+How the error was made, since it is instructive: the AC *does* describe a persisted exemption
+record elsewhere in its criteria, and that prose was taken at face value without checking
+**which clause the regex actually fired on**. (A further correction: an earlier draft of this
+paragraph said the record had `declares_side_effect: true` authored on the strength of that
+rationale. It does not — the field is absent, and has been since the record's only commit.
+The mistake was reading the criteria, not the field.) A true positive and a false positive in
+the same record look identical unless you ask the matcher what it matched.
+
+**There is therefore no verified negative control in this batch.** Whoever fixes the negation
+handling should establish one deliberately — find a record whose *matched clause* is genuinely
+affirmative — rather than inheriting a candidate from this entry.
 
 **Relationship to KI-CG-015.** Same function, opposite direction, filed the same day by two
 sessions that each hit one half. KI-CG-015 is the derivation returning `false` on records whose
@@ -1530,7 +1634,18 @@ layouts differ, and the gate is configured against the layout it is not running 
 
 ---
 
-### KI-CG-016 — The uniqueness pass's YAML fast path fabricates an id claim for records a full parse rejects
+### KI-CG-032 — The uniqueness pass's YAML fast path fabricates an id claim for records a full parse rejects
+
+> **Renumbered 2026-08-26: filed as `KI-CG-016` in PR #575, now `KI-CG-032`.** That number was
+> already taken on `origin/main` by the `enforce_commit_delegation` entry above. The id was
+> allocated by grepping a stale checkout and taking the max, and that copy stopped at
+> `KI-CG-014` — `015`-`020` were already landed. The original `KI-CG-016` keeps its number: it
+> was there first and is cited from `changelogs/2026-08-25-2312-*.md`. This entry is hours old
+> and had exactly one inbound citation, repointed in the same commit.
+>
+> This is the fourth id collision in this register in two days and the second caused by
+> allocating against a snapshot — the defect `KI-BO-028` describes, committed in the register
+> that documents it.
 
 - **Severity:** medium
 - **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
@@ -1584,7 +1699,14 @@ often enough that the fallback never runs.
 
 ---
 
-### KI-CG-017 — Placeholder marker detection flags markdown emphasis as a list bullet, and its false-positive cost was measured on one marker and claimed for all six
+### KI-CG-033 — Placeholder marker detection flags markdown emphasis as a list bullet, and its false-positive cost was measured on one marker and claimed for all six
+
+> **Renumbered 2026-08-26: filed as `KI-CG-017` in PR #575, now `KI-CG-033`.** Same cause as
+> `KI-CG-032` above — allocated against a stale snapshot that stopped at `KI-CG-014`. The
+> original `KI-CG-017` (`check-build-drift` filtered on the consumer layout path) keeps its
+> number: it was there first and is cited from three `GE-126` acceptance criteria
+> (`GE-126d-1`, `GE-126e-2-i`, `GE-126e`), all of which mean the `check-build-drift` entry and
+> are correct as written. This entry's one inbound citation is repointed in the same commit.
 
 - **Severity:** medium
 - **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
@@ -2096,3 +2218,107 @@ hitting this sees a non-zero exit with one namespace named and two staying quiet
 **Fix direction.** Give the silent scanners the same WARNING the work-items scanner already
 emits. The `unresolvable_namespaces` field added for `KI-CG-007` already carries the
 information; this is only about surfacing it at the point of failure.
+
+---
+
+### KI-CG-20260826-1334 — RETRACTED: "a missing schema makes `check-ac-schema` fail open" — tested and disproved; the real cause is the `KI-CG-012` at line 800
+
+> **Timestamped id** — `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time. Authored
+> as `KI-CG-016`, renumbered to `KI-CG-021` when 016 was taken mid-review, then 021 was taken
+> too. Sequential numbering has been abandoned for new entries in this register; see the
+> convention note on `KI-BP-20260826-1331` in `build-pipeline.md`.
+>
+> This register is the worst affected: `KI-CG-012`, `KI-CG-016` and `KI-CG-017` each currently
+> resolve to **two unrelated defects** on `main`. Those are not renumbered here — they are
+> cited elsewhere and picking a winner is the owner's call — but they are the reason a
+> retracted entry landing on a live id would have been actively harmful. Before this change,
+> `KI-CG-021` on `main` is an open defect ("the whole-collection uniqueness pass is registered
+> in no hook config and has never run"); merging a **RETRACTED** entry onto that number would
+> have told every reader the real defect had been withdrawn.
+
+- **Severity:** n/a — retracted before merge
+- **Status:** **closed — hypothesis disproved by experiment.** Kept as a record so the same
+  wrong diagnosis is not filed again; the observation that prompted it is real and is logged
+  as an occurrence on `KI-CG-012` (line 800).
+- **First seen:** 2026-08-25 · **Retracted:** 2026-08-26
+
+**What was originally claimed.** That `check-ac-schema`, unable to locate
+`config/ac_store_schema.json`, printed a WARNING, silently downgraded to "manual field
+validation", and exited 0 — a weaker check reporting as a passing one (M5).
+
+**Why it is wrong.** A controlled A/B with `ACS-1100b-2` staged, run by an independent
+reviewer:
+
+```text
+schema present  -> exit 1, catches the declares_side_effect error
+schema REMOVED  -> exit 1, catches that error PLUS an id-format error
+```
+
+**The degraded mode is stricter, not weaker.** It cannot be the cause of a false pass, and the
+central claim of the retracted entry is the opposite of the measured behaviour.
+
+Two supporting claims were also wrong. The **Where** field cited root resolution via
+`_resolve_root.py`; `check_ac_schema.py` never imports that module. And the fallback
+explanation offered — that stale deployed validators were missing `declares_side_effect` —
+cannot produce this outcome either, because the import of `validate_declares_side_effect` is
+unguarded and a missing symbol would raise `ImportError` rather than skip a rule.
+
+**The real mechanism, already filed.** `_get_staged_ac_paths` shells out `git diff --cached`
+with **no `cwd=root`**, so the resolved root and the staged set can come from different
+repositories. The root in the observed run, `/home/henzeh/projects/leafcutter`, contains a
+`CLAUDE.md` but no `.git` — so the staged set came back empty, Phase 1 was skipped, and the
+hook exited 0 having examined nothing. That is exactly `KI-CG-012` at line 800 ("reports a
+clean pass on a file it never validated, because Phase 1 fails open on an empty staged set"),
+and the sighting is recorded there.
+
+**Worth keeping rather than deleting.** The WARNING line is a genuine red herring: it appears
+at the moment of the false pass, names a real missing file, and points at the wrong cause. The
+next person to see it will reach for the same explanation. The A/B above is the two-minute
+experiment that rules it out.
+
+**How this got filed wrong.** The WARNING and the `exit: 0` were observed in the same output
+and a causal link between them was assumed rather than tested — while the actual discriminating
+experiment (remove the schema, re-run) takes about a minute. The entry then asserted a `Where`
+field naming a module the script does not import, which a single `grep` would have caught. It
+is the same failure mode this register documents: a plausible mechanism, written up with real
+evidence attached to it, where the evidence supports the *observation* and not the *diagnosis*.
+
+**Pattern:** a correlation in one output stream promoted to a mechanism without the
+experiment that would separate them.
+
+<!-- Superseded body removed on retraction; the original text is in PR #568's history. -->
+
+**Symptom (retained for searchability).** Running the deployed hook against 16 staged AC
+records in a worktree:
+
+```text
+WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutter;
+         falling back to manual field validation.
+exit: 0
+```
+
+The `exit: 0` is real and so is the missing file. What does not follow is that the second
+caused the first — see the A/B above.
+
+**Still true, and worth keeping from the retracted analysis.** The observed run's staged set
+contained two records that `validate_declares_side_effect` errors on when called directly
+(see `KI-CG-014`), and the hook passed them. CI, which builds fresh, would have failed the
+required `AC store valid` check. So the local green was not merely weak — it was **wrong about
+the specific change in front of it**. That remains the strongest available demonstration of
+`KI-CG-012`@800's real-world cost, which is why the sighting is logged there.
+
+Also still true: `KI-CG-018` (`check_ac_governance` exiting 0 without inspecting anything)
+landed on `main` independently. With `KI-CG-012`@800 and `KI-CG-012`@380 that makes three
+distinct routes to "exit 0 having checked nothing" in one hook family — which suggests the
+family needs one audited "I did not actually check anything" path rather than several ad-hoc
+ones. That recommendation survives the retraction; only the fourth route claimed here does not.
+
+**Register hygiene note.** `KI-CG-012` is used twice in this file, at lines 380 and 800, for
+two unrelated defects; PR #575 has since duplicated `KI-CG-016` and `KI-CG-017` the same way.
+That is the collision `KI-BO-024` predicts for append-the-next-free-number under concurrent
+agents, landed here three times over. Not renumbered in this change because the ids are cited
+elsewhere and picking a winner is the owner's call — flagged so it is fixed deliberately rather
+than by whoever notices next.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
+nothing and reports success).

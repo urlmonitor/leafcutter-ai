@@ -1,0 +1,145 @@
+id: INF-700c-2
+components:
+  - infrastructure
+  - knowledge_system
+title: "Knowledge history that has already been honoured stops being reported as work outstanding"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
+criteria: |
+  Given a body of retained knowledge records that carry no learning text and
+    whose named destinations already hold the learnings their agents wrote at
+    the time — 28 such records exist today, naming 10 destinations of which 9
+    are present and substantial,
+  When the count of knowledge still waiting to be written is produced,
+  Then those records contribute zero to that count,
+  And they contribute zero on every subsequent run, with nobody re-applying a
+    manual step between runs,
+  And resolving them writes no learning to any knowledge surface and modifies
+    no curated file,
+  And a run whose whole input is records of this body reports "nothing
+    outstanding" rather than "nothing could be routed", and its outcome is the
+    same outcome a run over an empty input would report,
+  And this holds however the resting state is reached, so a mechanism that
+    leaves the body permanently unroutable and therefore permanently counted
+    does not satisfy this criterion.
+depends_on:
+  - INF-700c
+  - INF-700c-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "MECHANISM CHOSEN (IT PO decision, 2026-08-26) — a data-driven eligibility rule, with the corpus left byte-for-byte in place and the disposition recorded once in a tracked document. The resting state is reached by INF-700c-1's rule alone: a knowledge record carrying no learning text is ineligible to be written, and an ineligible record is not outstanding. Nothing is moved, marked, archived, watermarked or deleted. The 28 records reach zero because the definition of 'outstanding' is corrected, not because the records were disposed of."
+  - "NO CORPUS MAY BE NAMED IN CODE OR CONFIG. No timestamp range, destination path, entry_kind value, event hash, agent name or the number 28 may appear anywhere as an exemption key. The exemption derives from a property of the data (absence of `text`), so a textless corpus that appears in a consumer install tomorrow inherits the same treatment with no edit. A named exemption fixes one corpus and leaves the next one to be discovered the same way this one was."
+  - "NO RUNTIME STATE MAY CARRY THE RESTING STATE. The classification must be re-derived from each record on every run. Specifically: do not seed debugging/logs/harvest_state.json with the 28 hashes, and do not record the disposition in any file under debugging/logs/. That directory is gitignored (.gitignore:60), so a resting state stored there is absent from a fresh clone and from every consumer install — the manual re-application the criteria explicitly forbid, in a form that would look like it worked on the machine where it was applied."
+  - "THE SHARED STREAM MUST NOT BE MUTATED. debugging/logs/agent_telemetry.jsonl is not a knowledge-only file: it also carries 4 pre-drive writability probes and 1 non-JSON fragment, and ADR-011 records retrospective-agent and feedback-analyst as consumers of the operational stream. Do not rotate it, archive it, filter it, rewrite it or split it as part of reaching this resting state. The file must be byte-identical before and after."
+  - "EXIT-CODE EQUALITY IS THE TESTABLE FORM OF 'the same outcome a run over an empty input would report'. A run whose entire input is the 28 must return 0, exactly as an empty input does. It must not return 3 (unroutable events remain) and must not return 4 (write failure or state not persisted). The ineligible count must still be PRINTED in the summary so the corpus stays visible as a fact — visible is not the same as outstanding."
+  - "ORDERING DEPENDENCY ON INF-700c-1, restated because this AC fails silently without it: all 28 records carry an entry_kind outside _KNOWN_ENTRY_KINDS as well as no `text`. If the entry_kind test runs first they land in skipped_unknown and main() returns 3 on every run forever, which is precisely the state this AC exists to end. Verify the ordering with a record that is both textless and unknown-kinded, not with one that is only textless."
+  - "REVERSIBILITY IS A CONSEQUENCE, NOT A FEATURE TO BUILD. Because no record is moved and no per-record exemption is stored, a corrected rule — or a future backfill that supplies `text` for some of these records — re-includes them automatically on the next run, with no un-marking step and no state to reset. Any implementation that requires an un-marking step to revisit the corpus has chosen a different mechanism and does not satisfy INF-700c-2-i."
+  - "SINK-AGNOSTIC. Do not assume the harvester currently reads the file the records are in: its default sink is debugging/logs/knowledge_emissions.jsonl, which has never existed, while the 28 live in agent_telemetry.jsonl. The repoint is INF-400c-4's. The eligibility rule is per record and must produce the same classification whichever path is configured, so this AC neither waits on that repoint nor pre-empts it."
+  - "MUST NOT BE SATISFIED BY CEASING TO COUNT. The outstanding count must remain a function of records carrying non-empty `text` that have not yet been written to a surface. INF-700c-2-ii is the discriminator and must pass against the same implementation."
+  - "DISPOSITION RECORD (tracked, in docs/, delivered to INF-700c-3). It must name: the body (28 knowledge_captured records emitted 2026-06-16 to 2026-08, naming 10 destinations of which 9 exist at 3.6-23 KB and 1, memory/feedback_itpo_bo1700_worktree_gate_parity.md, has never existed in git history); the rule that exempts them; the fact that resolving them wrote nothing to any surface; and that the records remain in place and re-enter the count if the rule changes. A reader must be able to establish all of this without running anything."
+  - "REJECTED ALTERNATIVES, recorded so they are not re-proposed. (a) Seeding the harvest state file with the 28 hashes: mislabels never-routed receipts as 'previously processed', stores the resting state in a gitignored runtime file, and keys on a hash whose `ticket` component is empty for all 28. (b) Archiving or rotating the sink: mutates a shared stream for the benefit of one consumer, and relocates the records rather than resolving them — a harvester later pointed at the archive reports the same 28. (c) A one-off disposition manifest listing the 28: correct in spirit but hard-codes one corpus, so every later textless corpus needs a manual addition forever. (d) Deleting the records: excluded outright by INF-700c-2-i."
+test_spec:
+  - name: test_full_corpus_of_28_contributes_zero_to_the_outstanding_count
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "A run over tests/fixtures/harvest_learnings/unroutable_corpus_28.json reports zero outstanding and 28 ineligible."
+  - name: test_run_over_the_corpus_exits_with_the_same_code_as_an_empty_input
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "main() returns the same value for the 28-record sink and for an empty sink, and that value is 0 — not 3 and not 4."
+  - name: test_corpus_contributes_zero_on_a_second_run_with_no_intervening_step
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two consecutive runs with no manual action between them both report zero outstanding, and the second does not depend on state written by the first."
+  - name: test_resting_state_holds_with_no_state_file_present
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "With debugging/logs/harvest_state.json absent — the fresh-clone and consumer-install case, since the directory is gitignored — the run still reports zero outstanding."
+  - name: test_resolving_the_corpus_modifies_no_destination_and_no_sink
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "All nine existing destinations and the sink file itself are byte-identical after the run; the tenth destination is still absent."
+  - name: test_no_corpus_identifier_appears_in_the_implementation
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "A record that is textless but carries a timestamp, destination and entry_kind never seen before is treated identically to the 28, proving the exemption is by data property and not by an enumerated corpus."
+test_rationale: |
+  The fourth and sixth descriptors are the two that separate the chosen
+  mechanism from the ones rejected, and neither is implied by the criteria's
+  wording. Deleting the state file proves the resting state is not stored in a
+  gitignored runtime artefact — the failure mode of the seed-the-state-file
+  mechanism, which would pass every other test on the machine where it was
+  seeded and fail on every fresh clone. Feeding an unseen textless record proves
+  the exemption is a rule rather than a list — the failure mode of the
+  disposition-manifest mechanism, which would pass the 28-record fixture
+  perfectly. The second descriptor asserts exit-code equality against an empty
+  input rather than asserting `== 0` alone, because the criteria's wording is
+  about equality with the empty case and a future change to the empty-input code
+  should move both together.
+delivers_to:
+  - agent: python-coder
+    contract: "A corpus at rest by rule rather than by disposal: the 28 records remain in debugging/logs/agent_telemetry.jsonl byte-for-byte, classified ineligible on every run, contributing zero to the outstanding count, with the run exiting 0. The waiting count INF-700a surfaces therefore carries signal rather than a fixed offset of 28."
+  - agent: documentation-expert
+    contract: "The disposition to be recorded in tracked documentation by INF-700c-3: the body, the rule that exempts it, the fact that nothing was written, and the reversibility that follows from nothing having been moved."
+expects_from:
+  ac_id: INF-700c-1
+  contract: "The rule that a record with no learning text is never written, AND its evaluation BEFORE the entry_kind routing test — without the ordering, all 28 fall into skipped_unknown and the run returns 3 on every future invocation"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Chose the mechanism the PO deliberately left open and the BA preserved: a data-driven eligibility rule (no learning text implies not outstanding), corpus left byte-for-byte in place, disposition recorded once in tracked documentation. Chosen over seeding the harvest state file, archiving the sink, and a one-off disposition manifest — all three recorded with their specific failure modes in it_requirements so they are not re-proposed. The decisive facts were that debugging/logs/ is gitignored, so any runtime-stored resting state is absent from a fresh clone or consumer install and would silently require the manual step the criteria forbid; and that agent_telemetry.jsonl is a shared stream with non-knowledge consumers and non-knowledge lines, so rotating or filtering it to fix one consumer's counter is disproportionate and reversible only by rewriting an audit file."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by:
+  - INF-700c-2-i
+  - INF-700c-2-ii
+implemented_by: []
+notes: |
+  Mechanism is deliberately not chosen here — marking the records terminally
+  honoured, archiving the file they live in, or excluding them by a declared
+  rule would each satisfy this AC. That choice belongs to the IT PO. The final
+  clause is the PO's hard constraint made testable: whichever route is taken,
+  the resting state must produce a zero, because a permanent non-zero destroys
+  the signal INF-700a exists to provide.
+
+  This AC is the successor to INF-400c-4-ii, which proposed carrying the same
+  28 records into a second file. That would relocate the problem rather than
+  resolve it: the records would remain unroutable, and the count would remain
+  permanently non-zero, in the new location.
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
