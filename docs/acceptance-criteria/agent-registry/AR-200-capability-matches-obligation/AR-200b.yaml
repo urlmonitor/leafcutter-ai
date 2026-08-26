@@ -1,0 +1,104 @@
+id: AR-200b
+title: "A specialist told to use a particular tool is given that tool"
+component: agent-registry
+components:
+  - agent_registry
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  When your instructions name the safe way to do something, the specialist can
+  actually do it that way.
+
+  A specialist's instructions sometimes name a specific tool as the way to carry
+  out a mandatory step, because that tool is the safe one for that step. Every
+  such instruction is matched by the specialist actually having that tool. The
+  contradiction is caught when the specialist is defined, not discovered by the
+  specialist mid-task.
+
+  The benefit is that a named safe route is a real one. A specialist that cannot
+  follow the safe instruction does not simply stop — it improvises with whatever
+  it does have, and the riskier route it falls back to is the one your
+  instructions were written to avoid.
+depends_on:
+  - AR-200
+doc_links:
+  - path: templates/agents/product-owner.md
+    relationship: modifies
+    status: exists
+    relevance: "Section S6b is marked mandatory and names an Edit call as the way to update a parent's covered_by; the frontmatter granted no Edit."
+  - path: templates/agents/business-analyst.md
+    relationship: modifies
+    status: exists
+    relevance: "Same S6b instruction, same omission."
+  - path: templates/agents/it-po.md
+    relationship: modifies
+    status: exists
+    relevance: "Same instruction in its covered_by update protocol, same omission."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The parent covered_by update protocol these three templates implement, and the source of the obligation."
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-200b-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "No new user-facing surface — a configuration contradiction stops occurring. The affected instructions already exist and are unchanged."
+notes: |
+  WHY THIS IS A SIBLING OF AR-200a AND NOT THE SAME AC.
+
+  AR-200a derives the obligation from the SIGN-OFF protocol: an agent required to
+  record a verdict must hold a write-capable tool. Its three instances all carry
+  `signoff: true`.
+
+  This L1's obligation source is different and more literal: the template BODY
+  names a specific tool as the way to perform a mandatory step. The three
+  instances -- product-owner, business-analyst, it-po -- all carry
+  `signoff: false`, so AR-200a's rule does not reach them and never would have.
+  They are outside its derivation by construction, not by oversight.
+
+  THE INSTANCE. Each of the three carries a "parent covered_by update" section
+  marked mandatory, implementing ac-schema S6b, and each says in so many words to
+  use an `Edit` call that modifies only the `covered_by` field. None of the three
+  listed `Edit` in `tools:`. Four authoring agents run consecutively on
+  2026-08-26 hit this; all four fell back to rewriting the whole parent file with
+  `Write`.
+
+  WHY THE FALLBACK IS NOT EQUIVALENT, which is the whole reason this is worth an
+  AC rather than a tidy-up:
+
+    - `Edit` requires an exact match on the text it replaces, so it fails closed.
+      `Write` replaces the file wholesale and cannot fail that way.
+    - AC YAML files are untracked until committed. A truncating `Write` on a file
+      that has never been committed is unrecoverable -- there is no `git checkout`
+      to fall back to.
+    - It nearly happened: one of the four leaked stray markup into a file tail on
+      its first `Write` and caught it only on a manual inspection it was not
+      obliged to perform.
+    - The usual proof that a rewrite was surgical, `git diff --stat`, is VACUOUS
+      for an untracked file. It reports nothing whether the file survived intact
+      or was emptied. So the natural check does not cover the natural risk.
+
+  BINDING CONSTRAINT ON ANY FIX, inherited from AR-200a-1's constraint 1 and
+  restated because it is easy to get backwards here: GRANT THE CAPABILITY, DO NOT
+  DELETE THE INSTRUCTION. Removing the "use an Edit call" line from the three
+  templates would make the rule pass while leaving the agents doing whole-file
+  rewrites on unrecoverable files -- trading a caught contradiction for an
+  uncaught hazard. The instruction encodes the safe route; it is the thing to
+  preserve.
+
+  DERIVE BOTH SIDES. The rule must be derived from the templates themselves, not
+  written against these three names. AR-200a-1's evidence is the precedent: a
+  derived rule found five violators where the incident report named three. The
+  value here is the fourth instance nobody has noticed.
