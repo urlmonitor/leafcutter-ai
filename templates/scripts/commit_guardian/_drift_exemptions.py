@@ -73,6 +73,32 @@ class ScanResult(NamedTuple):
         violations: Drifted-artifact records (shape is caller-defined — a
             plain key for template drift, a (key, template) pair for output
             drift).
+        unreadable: Count of artifacts that ARE recorded in the manifest and
+            ARE present on disk (so ``missing`` does not apply) but could not
+            be hash-compared — an OSError while reading (e.g. permission
+            denied / ``chmod 000``), or the recorded path now resolves to
+            something other than a regular file (a directory, a symlink to a
+            directory, a FIFO, etc.). Adversarial review (2026-08-26, B-2)
+            found that an unreadable artifact was counted in NOTHING —
+            landing in a caught-``OSError``-then-``continue`` branch that ran
+            BEFORE ``verified`` was incremented, so the RESULT line for a
+            ``chmod 000``'d drifted file was indistinguishable from a clean
+            run: the identical "a check that cannot perform its check must
+            not report a pass" defect this whole gate exists to remove, and
+            the sibling ``check_command_reachability`` gate in this SAME diff
+            had already been fixed to fail closed on an unreadable input.
+            Reported as its own ``UNCOMPARABLE: UNREADABLE <key>
+            reason=<detail>`` line and its own ``unreadable=<X>`` RESULT
+            field (appended, per the "prefer appending to the RESULT line"
+            convention so existing positional regex parsers are unaffected);
+            never folded into ``verified`` (it plainly was not verified) and
+            never folded into ``uncomparable`` (that count's own invariant —
+            ``uncomparable == gaps + exempt`` — must hold for every existing
+            consumer that computes ``exempt = uncomparable - gaps``). Always
+            drives a non-clean, non-zero exit, exactly like ``missing``: the
+            purest form of "could not compare" there is must never be
+            silently absorbed by whichever OTHER artifact in the same run
+            happened to verify cleanly.
     """
 
     verified: int
@@ -80,6 +106,7 @@ class ScanResult(NamedTuple):
     gaps: int
     missing: int
     violations: list
+    unreadable: int = 0
 
 
 def load_exemption_registry(gate_name: str) -> list:
@@ -164,6 +191,20 @@ def validate_exemption_registry(entries: list) -> dict[str, str]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
+#   review round 2, B-2]: Added ``unreadable`` (default 0, appended last so no
+#   existing keyword construction breaks). check_output_drift.py's
+#   ``_scan_output_files`` and check_build_drift.py's ``_scan_templates`` were
+#   both rewritten around a reconciliation invariant: every manifest-recorded
+#   key is now resolved DIRECTLY against disk (existence + is_file() + hash)
+#   rather than relying on membership in whatever ``rglob()`` happened to
+#   enumerate under the scan directories, so a key that resolves to something
+#   OTHER than a readable regular file (permission-denied, replaced by a
+#   directory, a FIFO, a broken symlink) can no longer fall through every
+#   bucket and be indistinguishable from a file that was never scanned at
+#   all. ``rglob()``-driven enumeration is now used ONLY to find real,
+#   on-disk files ABSENT from the manifest (gap/exempt detection) — its
+#   original, narrower purpose.
 # - 2026-08-19 [python-coder/EPIC-BuildPipelinePhantomRemediation/08]: Created
 #   module. Split out of check_build_drift.py / check_output_drift.py so
 #   BP-100k-3's AC-5 ("both gates honour the same exemption registry") is

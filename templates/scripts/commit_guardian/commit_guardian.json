@@ -1316,7 +1316,19 @@
         "Entries with no non-blank 'ground' are REJECTED and fall through to",
         "UNREACHABLE, exactly as drift_gate_exemption_registry requires (BP-",
         "100k-3, AC-5) — this registry reuses that same vocabulary rather",
-        "than inventing a third one."
+        "than inventing a third one.",
+        "",
+        "BP-100k-4 round-2 hardening: an entry whose 'id' is the literal",
+        "string '<unknown>' is ALSO REJECTED — that string is the DISPLAY",
+        "fallback for a hooks_manifest entry with no 'id' field, never a real",
+        "gate id, so it must never be usable as a lookup key (one such entry",
+        "would otherwise silence every id-less gate in the registry at",
+        "once). Separately, if two hooks_manifest entries ever share one",
+        "'id', that id is reported as a DUPLICATE-ID condition and is never",
+        "eligible for a shared exemption, even if one is genuinely grounded —",
+        "the ground given for one gate is not guaranteed to apply to the",
+        "other. Every id below must be unique among hooks_manifest.hooks and",
+        "must never be the literal '<unknown>'."
     ],
     "hook_trigger_reachability_exemption_registry": [
         {

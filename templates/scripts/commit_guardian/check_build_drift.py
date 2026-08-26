@@ -59,6 +59,17 @@ ARCHITECTURE: Reads .build_manifest.json written by build.py
     shape for a deleted deployed output — the two gates must agree, or an
     absence caught by one and ignored by the other reproduces the ambiguity
     BP-100k-3 removed.
+
+    UNREADABLE-TEMPLATE REPORTING (adversarial review round 2, B-2): a
+    manifest key present on disk but not hash-comparable — a permission
+    error or a path resolved to something other than a regular file — is a
+    fourth, distinct case, reported as ``UNCOMPARABLE: UNREADABLE <key>
+    reason=<detail>``, counted in its own ``unreadable=<Y>`` RESULT field,
+    and always a BLOCKED, non-clean exit with the same severity as MISSING.
+    The RESULT line is ``RESULT verified=<N> uncomparable=<M> exempt=<E>
+    gaps=<G> drifted=<D> missing=<X> unreadable=<Y>`` (``unreadable``
+    appended last so existing positional parsers of the earlier fields are
+    unaffected).
 """
 
 from __future__ import annotations
@@ -105,6 +116,7 @@ except ImportError:
         gaps: int
         missing: int
         violations: list
+        unreadable: int = 0
 
     def _load_exemption_registry(_gate_name: str) -> list:  # type: ignore[misc]
         return []
@@ -331,6 +343,15 @@ def _scan_templates(
 ) -> _ScanResult:
     """Compare template hashes against the manifest, reporting uncomparables.
 
+    RECONCILIATION INVARIANT (adversarial review round 2, B-2 + the
+    reconciliation finding it was unified with): every manifest key
+    belonging to ``family_prefix`` must land in EXACTLY ONE of
+    verified / drifted (a violation) / missing / unreadable, resolved
+    DIRECTLY against disk (Pass 2 below) rather than via membership in
+    whatever ``rglob()``-driven ``template_files`` happened to enumerate.
+    ``template_files`` now drives ONLY gap/exempt detection (Pass 1) — real,
+    on-disk templates absent from the manifest.
+
     Args:
         template_files: Absolute paths to the template files to check.
         manifest: The loaded build manifest (key -> recorded sha256 hex).
@@ -339,28 +360,28 @@ def _scan_templates(
             ``_validate_exemption_registry``.
         family_prefix: Repo-root-relative directory prefix (e.g.
             ``"templates/agents"``) identifying which manifest keys belong
-            to THIS family, so a manifest key whose file was deleted (and
-            therefore never appears in ``template_files`` — ``rglob()``
-            cannot return a path that no longer exists) can still be swept
-            and reported as MISSING (BP-100k-6). ``None`` skips the
-            missing-artifact sweep entirely (e.g. a caller with no natural
-            family boundary).
+            to THIS family, so a manifest key whose file was deleted, made
+            unreadable, or replaced by a non-file can still be swept and
+            reported (MISSING / UNREADABLE) without relying on
+            ``rglob()`` having enumerated it. ``None`` skips the
+            reconciliation sweep entirely (e.g. a caller with no natural
+            family boundary) and falls back to the pre-reconciliation,
+            rglob-driven comparison — no known real caller uses this path.
 
     Returns:
         The scan outcome (see ``_ScanResult``). Prints one ``UNCOMPARABLE:``
-        line per artifact absent from the manifest, and one
+        line per artifact absent from the manifest, one
         ``UNCOMPARABLE: MISSING`` line per manifest key (within
-        ``family_prefix``) recorded but absent from disk.
+        ``family_prefix``) recorded but absent from disk, and one
+        ``UNCOMPARABLE: UNREADABLE`` line per manifest key present on disk
+        but not hash-comparable (B-2).
     """
-    verified = 0
+    # --- Pass 1: gap / exempt detection over real files found on disk ------
     uncomparable = 0
     gaps = 0
-    violations: list[str] = []
-    seen_keys: set[str] = set()
 
     for tpl_path in template_files:
         key = _make_manifest_key(tpl_path, repo_root)
-        seen_keys.add(key)
         if key not in manifest:
             uncomparable += 1
             ground = exemptions.get(key)
@@ -372,40 +393,77 @@ def _scan_templates(
                     f"UNCOMPARABLE: GAP {key} action=run build.py to register it",
                     file=sys.stderr,
                 )
-            continue
 
-        current_hash = _sha256_of_file(tpl_path)
-        recorded_hash = manifest[key]
-        verified += 1
-        if current_hash != recorded_hash:
-            violations.append(key)
-
-    # BP-100k-6: a manifest-recorded template whose file was deleted never
-    # appears in template_files at all — _collect_template_files() /
-    # _collect_py_template_files() use rglob(), which cannot return a path
-    # that no longer exists, so the loop above never even sees it. Sweep
-    # every manifest key belonging to this family (identified by
-    # family_prefix, since the manifest is a single flat dict shared across
-    # both template families plus non-hash metadata keys like
-    # "output_mappings" and "package_root") that was never seen above and
-    # is genuinely absent from disk.
+    # --- Pass 2: reconcile EVERY recorded key in this family against disk --
+    verified = 0
+    unreadable = 0
     missing = 0
+    violations: list[str] = []
+
     if family_prefix is not None:
         prefix = family_prefix.rstrip("/") + "/"
         for key, value in manifest.items():
             if not isinstance(value, str) or not key.startswith(prefix):
                 continue
-            if key in seen_keys:
-                continue
-            if not (repo_root / key).exists():
+            tpl_path = repo_root / key
+
+            if not tpl_path.exists():
+                # BP-100k-6: deletion is the most complete form of drift.
                 missing += 1
                 print(
                     f"UNCOMPARABLE: MISSING {key} reason=recorded but not found on disk",
                     file=sys.stderr,
                 )
+                continue
+
+            if not tpl_path.is_file():
+                # Recorded as a file but now a directory/FIFO/symlink to a
+                # directory — "exists" but has no content to hash.
+                unreadable += 1
+                print(
+                    f"UNCOMPARABLE: UNREADABLE {key} "
+                    "reason=path exists but is not a regular file",
+                    file=sys.stderr,
+                )
+                continue
+
+            try:
+                current_hash = _sha256_of_file(tpl_path)
+            except OSError as exc:
+                # B-2: an unreadable-but-present template (e.g. chmod 000)
+                # must land in a counted, verdict-affecting bucket.
+                unreadable += 1
+                print(f"UNCOMPARABLE: UNREADABLE {key} reason={exc}", file=sys.stderr)
+                continue
+
+            verified += 1
+            if current_hash != value:
+                violations.append(key)
+    else:
+        # No family scope to reconcile against — fall back to the
+        # pre-reconciliation, rglob-driven comparison. No known real caller
+        # (both production call sites in main() always pass family_prefix).
+        for tpl_path in template_files:
+            key = _make_manifest_key(tpl_path, repo_root)
+            if key not in manifest:
+                continue
+            try:
+                current_hash = _sha256_of_file(tpl_path)
+            except OSError as exc:
+                unreadable += 1
+                print(f"UNCOMPARABLE: UNREADABLE {key} reason={exc}", file=sys.stderr)
+                continue
+            verified += 1
+            if current_hash != manifest[key]:
+                violations.append(key)
 
     return _ScanResult(
-        verified=verified, uncomparable=uncomparable, gaps=gaps, missing=missing, violations=violations
+        verified=verified,
+        uncomparable=uncomparable,
+        gaps=gaps,
+        missing=missing,
+        violations=violations,
+        unreadable=unreadable,
     )
 
 
@@ -448,24 +506,31 @@ def main() -> int:
     2. Commit-guardian templates (``templates/scripts/commit_guardian/``,
        ``.py`` files) —
     against the SAME exemption registry, then prints exactly one aggregate
-    ``RESULT verified=<N> uncomparable=<M> drifted=<D> missing=<X>`` summary
-    line combining both families (BP-100k-3; ``missing`` added BP-100k-6).
+    ``RESULT verified=<N> uncomparable=<M> drifted=<D> missing=<X>
+    unreadable=<Y>`` summary line combining both families (BP-100k-3;
+    ``missing`` added BP-100k-6; ``unreadable`` added by adversarial review
+    round 2's B-2).
 
     Returns:
-        0 when gaps == 0, drifted == 0, and missing == 0 (clean — a
-        declared, grounded exemption does NOT block: BP-100k-3's three-way
-        distinction of gap / declared exemption / clean pass collapses to
-        two if stating a ground still gets the commit blocked, per
-        BP-100k-3-i.yaml's own criterion, which permits any exempt count on
-        a freshly built tree); 1 when drifted > 0 or missing > 0 (BLOCKED —
-        a deleted, still-recorded template is drift, BP-100k-6); 2 when
-        drifted == 0, missing == 0, and gaps > 0 (an undeclared, uncomparable
-        artifact — the run skipped something with no stated ground and must
-        not report as clean — AC-4), or when the manifest records a non-empty
-        ``output_mappings_skipped_sections`` (a sibling section's Direction B
-        enumeration is known to be incomplete). The RESULT line's
-        ``uncomparable`` count still reports exempt + gap transparently; it
-        does not by itself drive the verdict.
+        0 when gaps == 0, drifted == 0, missing == 0, and unreadable == 0
+        (clean — a declared, grounded exemption does NOT block: BP-100k-3's
+        three-way distinction of gap / declared exemption / clean pass
+        collapses to two if stating a ground still gets the commit blocked,
+        per BP-100k-3-i.yaml's own criterion, which permits any exempt count
+        on a freshly built tree); 1 when drifted > 0, missing > 0, or
+        unreadable > 0 (BLOCKED — a deleted, still-recorded template is
+        drift (BP-100k-6), and an unreadable, still-recorded template is
+        drift too (B-2)); 2 in every other non-clean case — gaps > 0 (an
+        undeclared, uncomparable artifact — the run skipped something with
+        no stated ground and must not report as clean — AC-4), the manifest
+        records a non-empty ``output_mappings_skipped_sections`` or a
+        non-blank ``output_mappings_error`` (a sibling section's Direction B
+        computation is known to be incomplete or to have failed outright —
+        H-5), the scan verified zero templates (B-1's floor, applied here
+        too), or the manifest exists but could not be parsed (H-1,
+        INDETERMINATE). The RESULT line's ``uncomparable`` count still
+        reports exempt + gap transparently; it does not by itself drive the
+        verdict.
     """
     manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
     if manifest_path is None:
@@ -474,26 +539,50 @@ def main() -> int:
 
     manifest = _load_manifest(manifest_path)
     if manifest is None:
+        # H-1: manifest_path.exists() was already confirmed True by
+        # _resolve_manifest_path() (it only returns a path that passed
+        # .exists()), so reaching here means the file could not be parsed —
+        # a broken build artifact, never the fresh-clone absence case, which
+        # is handled entirely by the branch above. _load_manifest() already
+        # printed the "cannot read manifest" WARNING with the parse error.
         print(
-            "check-build-drift: WARNING — .build_manifest.json not found. "
-            "Run build.py to generate it. Skipping drift check.",
+            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
+            "exists but could not be parsed as JSON. This gate cannot "
+            "verify anything against a build artifact it cannot read, so "
+            "this run is not clean.",
             file=sys.stderr,
         )
-        return 0
+        return 2
 
-    # build.py records a PARTIAL output_mappings enumeration failure — one
-    # section (e.g. agents/commands/workflows/hooks) could not be enumerated
-    # while the rest of the manifest, including this hook's own Direction A
+    # build.py records a whole-computation output_mappings failure
+    # (output_mappings_error) OR a PARTIAL, per-section enumeration failure
+    # (output_mappings_skipped_sections) — one section (e.g.
+    # agents/commands/workflows/hooks) could not be enumerated while the
+    # rest of the manifest, including this hook's own Direction A
     # template_hashes, computed normally. This hook does not read
     # output_mappings itself (that is check_output_drift.py's job), but a
-    # manifest recording an incomplete Direction B computation is evidence
-    # the SAME build run may not be trustworthy, and reporting a clean
-    # Direction A result while staying silent about a known-incomplete
+    # manifest recording an incomplete or failed Direction B computation is
+    # evidence the SAME build run may not be trustworthy, and reporting a
+    # clean Direction A result while staying silent about a known-broken
     # sibling section is the identical "gate that cannot check everything
     # must not act as though it did" failure BP-100k-3/-5 exist to remove —
     # just surfacing through the sibling gate instead of the one that
-    # actually owns the incomplete section. Honour it here too, exactly as
-    # check_output_drift.py does.
+    # actually owns the incomplete section. Honour BOTH fields here too,
+    # exactly as check_output_drift.py does (H-5: this gate previously
+    # checked only skipped_sections, contradicting write_build_manifest()'s
+    # own docstring, which claims both gates honour both fields).
+    mappings_error = manifest.get("output_mappings_error") or ""
+    if mappings_error:
+        print(
+            f"{_GATE_NAME}: BLOCKED - the build could not compute "
+            f"output_mappings, so a sibling section of this same manifest is "
+            f"known to be broken. Recorded cause: {mappings_error}. Re-run "
+            f"build.py and address the cause; this gate will not report a "
+            f"clean run while a known part of the manifest is broken.",
+            file=sys.stderr,
+        )
+        return 2
+
     skipped_sections = manifest.get("output_mappings_skipped_sections") or []
     if skipped_sections:
         print(
@@ -550,6 +639,7 @@ def main() -> int:
     uncomparable = agents_result.uncomparable + cg_result.uncomparable
     gaps = agents_result.gaps + cg_result.gaps
     missing = agents_result.missing + cg_result.missing
+    unreadable = agents_result.unreadable + cg_result.unreadable
     violations = agents_result.violations + cg_result.violations
 
     if violations:
@@ -570,23 +660,28 @@ def main() -> int:
     print(
         f"{_GATE_NAME}: RESULT verified={verified} uncomparable={uncomparable} "
         f"exempt={exempt_count} gaps={gaps} drifted={drifted_total} "
-        f"missing={missing}",
+        f"missing={missing} unreadable={unreadable}",
         file=sys.stderr,
     )
 
-    if violations or missing:
-        # A deleted, still-recorded template is the most complete form of
-        # drift there is (BP-100k-6) — BLOCKED, same severity as a
-        # hash-mismatch violation, never merely an uncomparable gap.
+    if violations or missing or unreadable:
+        # A deleted, still-recorded template (BP-100k-6) and an unreadable,
+        # still-recorded template (B-2) are both the most complete forms of
+        # "could not vouch for this content" there is — BLOCKED, same
+        # severity as a hash-mismatch violation, never merely an
+        # uncomparable gap.
         return 1
     if gaps:
         return 2
 
     # A run that compared nothing must not exit as if it had compared
-    # everything (BP-100k-3 it_requirements). verified == 0 with templates
-    # present means the gate resolved no template to any manifest entry and is
-    # structurally unable to detect drift.
-    if manifest and verified == 0:
+    # everything (BP-100k-3 it_requirements; sharpened by B-1 in round 2, see
+    # check_output_drift.py's identical floor for the full rationale).
+    # verified == 0 means the gate resolved no template to any manifest
+    # entry and is structurally unable to detect drift — true whether the
+    # manifest is a non-empty dict none of whose entries resolved, or
+    # (degenerate but no longer exempted) an empty one.
+    if verified == 0:
         print(
             f"{_GATE_NAME}: BLOCKED - compared 0 templates against a manifest "
             f"holding {len(manifest)} entr(ies). The gate could not verify "
@@ -611,6 +706,30 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
+#   review round 2, B-2/H-1/H-5]: Three fixes, mirroring check_output_drift.py.
+#   B-2: ``_scan_templates`` rewritten around the reconciliation invariant —
+#   every manifest key in ``family_prefix`` is resolved DIRECTLY against
+#   disk (exists / is_file / hash) instead of via membership in whatever
+#   rglob()-driven ``template_files`` enumerated, closing the same
+#   "unreadable or non-file path lands in no bucket" hole B-2 found in
+#   check_output_drift.py (this gate had no try/except around its own
+#   ``_sha256_of_file`` call at all — an unreadable template would have
+#   crashed the hook with an uncaught OSError rather than passed silently,
+#   but that is still a Rule-1 violation and still not the deliberate,
+#   named, counted verdict this fix requires). New ``unreadable`` ScanResult
+#   field and RESULT column (appended last).
+#   H-1: this hook's ``main()`` already resolved manifest_path.exists() via
+#   ``_resolve_manifest_path()`` before ever calling ``_load_manifest()``, so
+#   a ``manifest is None`` result at that point ALWAYS meant "exists but
+#   failed to parse" — never "absent". It was nonetheless reported with the
+#   generic "not found... Skipping" WARNING and exit 0, identical to the
+#   true-absent case one branch up. Now reported as INDETERMINATE (2).
+#   H-5: added the ``output_mappings_error`` check beside the pre-existing
+#   ``output_mappings_skipped_sections`` check — write_build_manifest()'s own
+#   docstring and DECISION HISTORY both claimed this hook already read both
+#   fields; it read only one. The code is the side that was wrong; fixed to
+#   match the documented (and correct) contract.
 # - 2026-08-25 [python-coder/EPIC-BuildPipelinePhantomRemediation, post-merge
 #   defect fix]: build_helpers._compute_output_mappings() could silently drop
 #   an entire output_mappings section (e.g. agents/commands/workflows/hooks)

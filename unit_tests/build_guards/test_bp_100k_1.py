@@ -94,6 +94,10 @@ _MANIFEST_METADATA_KEYS = frozenset(
         "package_root",
         "output_mappings_error",
         "output_mappings_skipped_sections",
+        # adversarial review round 2, B-1(b): visibility-only diagnostic
+        # DATA recording every per-file existence-gate skip in
+        # _compute_output_mappings() — never itself a template-hash entry.
+        "output_mappings_unwritten",
     }
 )
 _RESOLVE_ROOT_SRC = _CG_TEMPLATES_SRC / "_resolve_root.py"

@@ -201,6 +201,7 @@ def _compute_output_mappings(
     target_root: Path,
     config: dict[str, Any],
     skipped_sections: list[str] | None = None,
+    unwritten: list[str] | None = None,
 ) -> dict[str, dict[str, str]]:
     """Compute expected output hashes for all template to output file mappings.
 
@@ -260,14 +261,43 @@ def _compute_output_mappings(
             uncaught exception from ``_load_build_phases_module`` can. ``None``
             (the default) preserves the pre-existing warn-only behaviour for
             any caller that does not pass it.
+        unwritten: Optional output list (appended to, never read) recording
+            every per-file existence-gate ``continue`` below as a short
+            description (family + relative path) — adversarial review round
+            2's B-1(b): "the phase did not write it" must reach the manifest
+            as DATA, not vanish as a silent ``continue``. IMPORTANT LIMIT
+            (documented rather than guessed away, per the ticket's own
+            instruction): every one of these existence gates is, BY THE
+            ORIGINAL DESIGN documented at each call site, expected to
+            legitimately fire in two situations this function cannot tell
+            apart from here — (a) a real, unmodified ``build.py`` run, where
+            the check is provably always-true (the phase's own write always
+            already happened before this computation runs) and this list
+            stays empty, and (b) a deliberately narrow test fixture that
+            calls this function after deploying only a subset of phases
+            directly. It is also expected to fire for a THIRD, legitimate
+            reason no call site currently distinguishes: a family disabled
+            by config (e.g. a platform turned off) never gets its output
+            written at all, by design. Because none of these three cases can
+            be told apart from a fourth — "the phase should have run in a
+            real build and silently did not" (e.g. a ``--target-dir``
+            mismatch between the deploy phases and this computation) —
+            ``unwritten`` is recorded as VISIBILITY DATA ONLY. Neither
+            drift gate reads it or blocks on it; wiring it into the verdict
+            without being able to make that distinction would false-block
+            every narrow fixture and every legitimately-disabled platform
+            combination. The ``verified == 0`` floor added to both gates by
+            B-1(a) is what actually closes the exploitable case (a build
+            that silently produced nothing at all); this field exists so a
+            future, more precise gate has the raw material to do better.
 
     Returns:
         Dict mapping canonical output-relative-path strings to dicts with
         keys ``template`` (template rel-path) and ``expected_output_hash``
         (sha256). May be missing an entire section's entries when
-        ``skipped_sections`` records that section as skipped — callers that
-        care must check ``skipped_sections``, not just inspect the returned
-        dict for absence.
+        ``skipped_sections`` records that section as skipped, or individual
+        per-file entries recorded in ``unwritten`` — callers that care must
+        check both, not just inspect the returned dict for absence.
     """
     scripts_dir = package_root / "scripts"
     if str(scripts_dir) not in sys.path:
@@ -396,6 +426,13 @@ def _compute_output_mappings(
         # missing-artifact verdict would then correctly, but unhelpfully,
         # BLOCK on a file that specific fixture never asked to deploy.
         if not target.exists():
+            if unwritten is not None:
+                unwritten.append(
+                    "agents/commands/workflows/hooks: "
+                    f"{target.relative_to(output_root).as_posix()} not found "
+                    "(pre-shim; expected if this build/fixture did not "
+                    "deploy this phase)"
+                )
             continue
 
         canonical_output = _canonicalize_output_path(target, output_root, target_root)
@@ -462,6 +499,12 @@ def _compute_output_mappings(
                 )
                 for canonical_dir, output_rel in skill_canonical_dirs:
                     if not (output_root / output_rel / rel).exists():
+                        if unwritten is not None:
+                            unwritten.append(
+                                f"skills ({output_rel}): {rel.as_posix()} not "
+                                "found (pre-shim; expected if this build/"
+                                "fixture did not deploy this platform)"
+                            )
                         continue
                     output = target_root / canonical_dir / rel
                     _add(tpl, output, content)
@@ -533,6 +576,12 @@ def _compute_output_mappings(
             rel = tpl.relative_to(src_dir)
             output_root_path = output_root / output_rel / rel
             if not output_root_path.exists():
+                if unwritten is not None:
+                    unwritten.append(
+                        f"{output_rel}: {rel.as_posix()} not found "
+                        "(pre-shim; expected if this build/fixture did not "
+                        "deploy this family)"
+                    )
                 continue
             canonical_output = _canonicalize_output_path(output_root_path, output_root, target_root)
             if canonical_output is None:
@@ -637,6 +686,15 @@ def _compute_output_mappings(
             content: The fresh scaffold content the phase would render today.
         """
         if not output_path.exists():
+            if unwritten is not None:
+                try:
+                    rel_out = output_path.relative_to(target_root).as_posix()
+                except ValueError:
+                    rel_out = str(output_path)
+                unwritten.append(
+                    f"scaffolds: {rel_out} not found (expected if this "
+                    "build/fixture did not run the scaffold phase)"
+                )
             return
         try:
             on_disk = output_path.read_text(encoding="utf-8")
@@ -804,6 +862,11 @@ def _compute_output_mappings(
             # never calls build_rules() from getting a phantom MISSING
             # verdict for a family it never asked to deploy.
             if not output.exists():
+                if unwritten is not None:
+                    unwritten.append(
+                        f"rules: {tpl.name} not found (expected if this "
+                        "build/fixture did not run build_rules())"
+                    )
                 continue
             text = inject_config(tpl.read_text(encoding="utf-8"), config)
             _add(tpl, output, text)
@@ -845,6 +908,12 @@ def _compute_output_mappings(
             # created until install_shims() runs, after the manifest is
             # written, even on a real, fully-deployed build.
             if not (output_root / "workflows" / tpl.name).exists():
+                if unwritten is not None:
+                    unwritten.append(
+                        f"workflows-js: {tpl.name} not found (pre-shim; "
+                        "expected if this build/fixture did not run "
+                        "build_workflow_scripts())"
+                    )
                 continue
             output = target_root / ".claude" / "workflows" / tpl.name
             if build_phases_mod is None:
@@ -889,10 +958,25 @@ def write_build_manifest(
     and ``output_mappings_skipped_sections`` (partial, per-section failure —
     e.g. the agents/commands/workflows/hooks family could not be enumerated
     because ``package_root`` lacks a full ``scripts/`` tree). Both drift gates
-    (check_output_drift.py, check_build_drift.py) read both fields and refuse
+    (check_output_drift.py, check_build_drift.py) read BOTH fields and refuse
     to report a clean run while either is non-empty — a manifest that cannot
     fully describe the tree must say so, not degrade silently to "nothing to
-    report".
+    report" (adversarial review round 2, H-5: check_build_drift.py previously
+    read only ``output_mappings_skipped_sections``, contradicting this exact
+    claim; the code has been fixed to match it).
+
+    Also always writes ``output_mappings_unwritten`` — a per-file, human-
+    readable diagnostic list recording every family whose PRE-shim output did
+    not exist at manifest-write time (adversarial review round 2, B-1(b)).
+    Unlike the two fields above, this one is VISIBILITY DATA ONLY: NEITHER
+    drift gate reads it or blocks on it, because a per-file existence gate
+    firing is, by design, expected on a narrow test fixture or a
+    config-disabled family, and this module cannot tell those apart from "a
+    real build silently wrote nothing for a family it should have deployed"
+    at this call site — see ``_compute_output_mappings()``'s ``unwritten``
+    parameter docstring for the full reasoning. The ``verified == 0`` floor
+    in both gates (B-1(a)) is what actually closes the exploitable case (a
+    build whose Direction B computation produced nothing comparable at all).
 
     Args:
         package_root: Root of the leafcutter package (the directory
@@ -957,6 +1041,7 @@ def write_build_manifest(
     output_mappings: dict[str, dict[str, str]] = {}
     output_mappings_error: str = ""
     output_mappings_skipped_sections: list[str] = []
+    output_mappings_unwritten: list[str] = []
     if target_root is not None and config is not None:
         try:
             output_mappings = _compute_output_mappings(
@@ -964,6 +1049,7 @@ def write_build_manifest(
                 target_root,
                 config,
                 skipped_sections=output_mappings_skipped_sections,
+                unwritten=output_mappings_unwritten,
             )
         except Exception as exc:  # noqa: BLE001
             output_mappings_error = f"{type(exc).__name__}: {exc}"
@@ -1008,6 +1094,21 @@ def write_build_manifest(
     # the whole-manifest case, one level down. Empty list means every section
     # of ``_compute_output_mappings`` completed without incident.
     manifest["output_mappings_skipped_sections"] = output_mappings_skipped_sections
+
+    # Record every per-file existence-gate skip as DATA too (adversarial
+    # review round 2, B-1(b)): "the phase did not write it" must reach the
+    # manifest, not vanish as a silent ``continue``. VISIBILITY ONLY —
+    # deliberately NOT read by either drift gate. Every one of these
+    # existence gates is, by design, expected to fire legitimately for a
+    # narrow test fixture or a config-disabled family, and this function has
+    # no way to distinguish those from "a real build silently wrote nothing
+    # for a family it should have deployed" — see _compute_output_mappings()'s
+    # own ``unwritten`` parameter docstring for the full reasoning. The
+    # ``verified == 0`` floor added to both gates (B-1(a)) is what actually
+    # closes the exploitable case (a build whose Direction B computation
+    # produced nothing at all); this field is raw material for a future,
+    # more precise gate, not itself gate-blocking.
+    manifest["output_mappings_unwritten"] = output_mappings_unwritten
 
     # Record where the package sits relative to the manifest's own directory, as
     # DATA rather than something a reader has to infer (BP-100k-3).
@@ -1427,6 +1528,24 @@ def install_hooks(target_root, dry_run=False):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
+#   review round 2, B-1(b)]: Every per-file existence gate this round added to
+#   _compute_output_mappings() (phase_mappings, skills, direct-output
+#   families, the scaffold registrar, rules, workflows-js) recorded NOTHING
+#   when it fired — not a mapping, not an error, not a skipped-section entry,
+#   just a bare `continue`. Combined with B-1(a)'s finding that an empty
+#   output_mappings used to skip the `verified == 0` floor entirely, this made
+#   "the build silently produced nothing to compare" structurally invisible.
+#   Fix: each existence gate now appends a short description to an optional
+#   `unwritten` list threaded through to `write_build_manifest()`, which
+#   records it as `output_mappings_unwritten` manifest DATA. Deliberately NOT
+#   wired into either gate's verdict — every one of these existence checks is
+#   ALSO the expected, legitimate path for a narrow test fixture or a
+#   config-disabled platform/family, and this function has no way to
+#   distinguish that from a genuine build failure at this call site (see the
+#   `unwritten` parameter's own docstring). B-1(a)'s tightened `verified == 0`
+#   floor is what actually closes the exploitable case; this field is
+#   diagnostic material for a future, more precise gate.
 # - 2026-08-25 [python-coder/EPIC-BuildPipelinePhantomRemediation, post-merge
 #   defect fix]: _compute_output_mappings()'s try/except around
 #   _load_build_phases_module()/_compute_phase_mappings() warned and

@@ -108,10 +108,24 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
+
+# No ImportError fallback here (contrast check_build_drift.py's
+# _drift_exemptions import): build_commit_guardian deploys the ENTIRE
+# templates/scripts/commit_guardian/ directory verbatim (never a per-file
+# allowlist), and every test fixture in this file family deploys the whole
+# directory too (see _deploy_commit_guardian_dir in test_bp_100k_4.py) — so
+# this sibling module is always present alongside this one.
+from _hook_trigger_reachability_helpers import (
+    UNKNOWN_GATE_ID_SENTINEL,
+    RegexTimeoutError,
+    evaluate_gate,
+    regex_match_timeout_seconds,
+    validate_exemptions,
+)
 
 _GATE_NAME = "check-hook-trigger-reachability"
 _HOOK_FILE = Path(__file__).resolve()
@@ -144,18 +158,34 @@ def _read_json_file(path: Path) -> dict | None:
         return None
 
 
-def _load_registry() -> dict | None:
+def _load_registry() -> tuple[dict | None, str | None]:
     """Resolve and load the hooks_manifest registry per the BP-100k-4 order.
 
+    BP-100k-4 round-2 hardening (F6): "absent" and "corrupt" are DIFFERENT
+    conditions and must not be treated alike. A candidate that does not
+    exist is skipped in favour of the next one (the documented fresh-clone
+    fallback). A candidate that EXISTS but cannot be parsed as JSON is a
+    broken build artifact — the file pre-commit would actually consume is
+    broken, so this stops immediately rather than silently verifying a
+    DIFFERENT registry (the colocated source copy) and reporting a clean
+    pass against a tree it never examined.
+
     Returns:
-        The parsed registry dict (expected to contain a "hooks_manifest"
-        key), or None if no candidate could be read and parsed as JSON.
-        When HOOK_TEST_CONFIG is set, it is used INSTEAD of the real
-        registry and no fallback candidate is tried.
+        A ``(registry, reason)`` pair. On success, ``registry`` is the
+        parsed dict and ``reason`` is None. On failure, ``registry`` is None
+        and ``reason`` is a diagnostic string suitable for the
+        ``INDETERMINATE: reason=<...>`` line — distinguishing "no candidate
+        exists" from "a candidate exists but could not be parsed".
     """
     test_config_path = os.environ.get("HOOK_TEST_CONFIG")
     if test_config_path:
-        return _read_json_file(Path(test_config_path))
+        candidate = Path(test_config_path)
+        registry = _read_json_file(candidate)
+        if registry is None:
+            return None, (
+                f"HOOK_TEST_CONFIG={candidate} could not be read or parsed as JSON"
+            )
+        return registry, None
 
     candidates = [
         Path.cwd() / "scripts" / "commit_guardian" / "commit_guardian.json",
@@ -165,9 +195,17 @@ def _load_registry() -> dict | None:
         if not candidate.exists():
             continue
         registry = _read_json_file(candidate)
-        if registry is not None:
-            return registry
-    return None
+        if registry is None:
+            return None, (
+                f"{candidate} exists but could not be parsed as JSON — this is "
+                "the registry pre-commit would actually run, so the check is "
+                "not falling through to try a different copy"
+            )
+        return registry, None
+    return None, (
+        "no hooks_manifest registry candidate exists (HOOK_TEST_CONFIG unset; "
+        "deployed and source commit_guardian.json are both absent)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -211,101 +249,190 @@ def _get_tracked_paths(cwd: Path) -> list[str] | None:
 
 
 # ---------------------------------------------------------------------------
-# Exemption registry (BP-100k-4: reuses the BP-100k-3 vocabulary)
+# Exemption registry validation and the per-gate reachability rule now live
+# in _hook_trigger_reachability_helpers.py (imported above as
+# validate_exemptions / evaluate_gate) — split out purely to stay under the
+# 400-line file-size limit. See that module's docstring for the contract.
 # ---------------------------------------------------------------------------
 
 
-def _validate_exemptions(entries: object) -> dict[str, str]:
-    """Split raw hook_trigger_reachability_exemption_registry entries.
+def _resolve_hooks_or_reason(registry: dict) -> tuple[list[dict] | None, str | None]:
+    """Extract and floor-check ``hooks_manifest.hooks`` from a loaded registry.
 
-    Mirrors ``_drift_exemptions.validate_exemption_registry`` (BP-100k-3):
-    an entry whose ``ground`` is missing, empty, or whitespace-only is
-    REJECTED rather than silently honoured, so its gate falls through to
-    the un-exempted UNREACHABLE verdict.
+    BP-100k-4 round-2 hardening (F7): a run that inspected zero gates has
+    established nothing — mirrors the ``verified == 0`` floor the sibling
+    drift gates already enforce. An absent/wrong-typed list, an empty list,
+    or a list whose every entry is disabled/non-dict are all INDETERMINATE,
+    never a clean pass.
 
     Args:
-        entries: The raw value of the registry's
-            ``hook_trigger_reachability_exemption_registry`` key (expected
-            to be a list of ``{"id": <gate-id>, "ground": <text>}`` dicts;
-            any other shape yields an empty exemption map).
+        registry: The loaded registry dict.
 
     Returns:
-        Mapping of gate id to non-blank ground text, for valid entries only.
+        A ``(hooks, reason)`` pair: ``(hooks_list, None)`` on success, or
+        ``(None, reason)`` with a diagnostic suitable for the
+        ``INDETERMINATE: reason=<...>`` line.
     """
-    valid: dict[str, str] = {}
-    if not isinstance(entries, list):
-        return valid
-    for entry in entries:
-        if not isinstance(entry, dict):
+    hooks_manifest = registry.get("hooks_manifest")
+    hooks = hooks_manifest.get("hooks") if isinstance(hooks_manifest, dict) else None
+    if not isinstance(hooks, list):
+        return None, "registry is missing a valid hooks_manifest.hooks list"
+
+    eligible_entries = [
+        entry
+        for entry in hooks
+        if isinstance(entry, dict) and entry.get("enabled") is not False
+    ]
+    if not eligible_entries:
+        return None, (
+            "hooks_manifest.hooks contains no evaluable entries (empty "
+            "list, or every entry is disabled/non-dict) — a run that "
+            "inspected zero gates has established nothing"
+        )
+    return hooks, None
+
+
+def _resolve_tracked_paths_or_reason(cwd: Path) -> tuple[list[str] | None, str | None]:
+    """Obtain the tracked-path set and floor-check it against emptiness.
+
+    BP-100k-4 round-2 hardening (M / zero-tracked-path finding): a
+    SUCCESSFUL empty result (``git ls-files`` exited 0 with no output — a
+    fresh clone/submodule/shallow checkout before the first ``git add``) is
+    the same epistemic state as the lookup failing outright: no evidence
+    either way. It must never be treated as proof that every
+    files-triggered gate is unreachable.
+
+    Args:
+        cwd: Working directory to run ``git ls-files`` in.
+
+    Returns:
+        A ``(tracked_paths, reason)`` pair: ``(paths, None)`` on success, or
+        ``(None, reason)`` with a diagnostic suitable for the
+        ``INDETERMINATE: reason=<...>`` line.
+    """
+    tracked_paths = _get_tracked_paths(cwd)
+    if tracked_paths is None:
+        return None, "could not obtain the repository's tracked-path set via 'git ls-files'"
+    if not tracked_paths:
+        return None, (
+            "the repository tracks zero paths ('git ls-files' succeeded "
+            "but returned no paths) — reachability cannot be established "
+            "from no evidence"
+        )
+    return tracked_paths, None
+
+
+def _evaluate_all_gates(
+    hooks: list[dict], tracked_paths: list[str], exemptions: dict[str, str]
+) -> tuple[int, int, int] | None:
+    """Evaluate every hooks_manifest entry, printing per-gate diagnostics.
+
+    BP-100k-4 round-2 hardening (F5, duplicate ids): a hooks-manifest id
+    that appears more than once can never safely share one exemption entry
+    — the ground given for one gate is not guaranteed to apply to the
+    other. Detected up front so every occurrence is handled uniformly.
+
+    Args:
+        hooks: The full ``hooks_manifest.hooks`` list (non-dict and
+            disabled entries are skipped internally).
+        tracked_paths: The repository's tracked paths.
+        exemptions: Valid gate-id -> ground map.
+
+    Returns:
+        ``(total, unreachable, exempt)`` on completion, or None if a regex
+        evaluation exceeded its wall-clock bound — in which case this
+        function has already printed the ``INDETERMINATE`` line itself.
+    """
+    id_counts = Counter(
+        entry.get("id")
+        for entry in hooks
+        if isinstance(entry, dict) and entry.get("enabled") is not False and entry.get("id")
+    )
+    duplicate_ids = {gate_id for gate_id, count in id_counts.items() if count > 1}
+    reported_duplicate_ids: set[str] = set()
+
+    total = 0
+    unreachable = 0
+    exempt = 0
+    for entry in hooks:
+        if not isinstance(entry, dict) or entry.get("enabled") is False:
             continue
+        total += 1
         gate_id = entry.get("id")
-        if not gate_id:
-            continue
-        ground = entry.get("ground", "")
-        if isinstance(ground, str) and ground.strip():
-            valid[gate_id] = ground.strip()
-        else:
+        display_id = gate_id if gate_id else UNKNOWN_GATE_ID_SENTINEL
+
+        try:
+            verdict, detail = evaluate_gate(entry, tracked_paths, exemptions)
+        except RegexTimeoutError:
             print(
-                f"REJECTED EXEMPTION ENTRY: {gate_id} reason=no ground stated",
+                f"INDETERMINATE: reason=evaluating gate {display_id!r}'s "
+                f"files pattern {entry.get('files')!r} against "
+                f"{len(tracked_paths)} tracked path(s) exceeded its "
+                f"{regex_match_timeout_seconds()}s wall-clock budget — "
+                "reachability cannot be determined in bounded time",
                 file=sys.stderr,
             )
-    return valid
+            return None
+
+        verdict, detail = _apply_duplicate_id_override(
+            gate_id, verdict, detail, duplicate_ids, id_counts, reported_duplicate_ids
+        )
+
+        if verdict == "unreachable":
+            unreachable += 1
+            print(f"UNREACHABLE: {display_id} reason={detail}", file=sys.stderr)
+        elif verdict == "exempt":
+            exempt += 1
+            print(f"EXEMPT: {display_id} ground={detail}", file=sys.stderr)
+
+    return total, unreachable, exempt
 
 
-# ---------------------------------------------------------------------------
-# Per-gate reachability rule
-# ---------------------------------------------------------------------------
-
-
-def _evaluate_gate(
-    entry: dict, tracked_paths: list[str], exemptions: dict[str, str]
+def _apply_duplicate_id_override(
+    gate_id: str | None,
+    verdict: str,
+    detail: str | None,
+    duplicate_ids: set[str],
+    id_counts: Counter,
+    reported_duplicate_ids: set[str],
 ) -> tuple[str, str | None]:
-    """Evaluate one hooks_manifest entry's reachability.
+    """Force a duplicated-id gate's "exempt" verdict to "unreachable".
+
+    Also prints the ``DUPLICATE-ID: ...`` diagnostic once per duplicated id
+    (BP-100k-4 round-2 hardening, F5) — a duplicate id is itself a reported
+    condition, never a silent shared exemption key.
 
     Args:
-        entry: One entry from ``hooks_manifest.hooks``.
-        tracked_paths: The repository's tracked paths (``git ls-files``
-            output).
-        exemptions: Valid gate-id -> ground map from
-            ``_validate_exemptions``.
+        gate_id: The entry's raw id (may be None).
+        verdict: The verdict from ``evaluate_gate``.
+        detail: The detail text from ``evaluate_gate``.
+        duplicate_ids: Set of ids that appear more than once.
+        id_counts: Occurrence count per id.
+        reported_duplicate_ids: Mutated in place — ids already diagnosed.
 
     Returns:
-        A ``(verdict, detail)`` pair. ``verdict`` is one of "reachable"
-        (detail is None), "exempt" (detail is the ground text), or
-        "unreachable" (detail is the free-text reason).
+        The (possibly overridden) ``(verdict, detail)`` pair.
     """
-    always_run = bool(entry.get("always_run"))
-    files_pattern = entry.get("files")
-    gate_id = entry.get("id", "<unknown>")
+    if gate_id not in duplicate_ids:
+        return verdict, detail
 
-    if always_run and files_pattern:
-        return (
-            "unreachable",
-            "whole-tree gate (always_run: true, never consults the staged "
-            f"file list) also carries a files filter it never consults: "
-            f"{files_pattern!r}",
+    if gate_id not in reported_duplicate_ids:
+        print(
+            f"DUPLICATE-ID: {gate_id} reason=id appears "
+            f"{id_counts[gate_id]} times in hooks_manifest.hooks; a "
+            "duplicate id can never share one exemption entry across "
+            "distinct gates",
+            file=sys.stderr,
         )
-    if always_run:
-        return ("reachable", None)
-    if not files_pattern:
-        return ("reachable", None)
+        reported_duplicate_ids.add(gate_id)
 
-    try:
-        compiled = re.compile(files_pattern)
-    except re.error as exc:
-        return ("unreachable", f"files pattern {files_pattern!r} is not a valid regex: {exc}")
-
-    if any(compiled.search(p) for p in tracked_paths):
-        return ("reachable", None)
-
-    ground = exemptions.get(gate_id)
-    if ground:
-        return ("exempt", ground)
-    return (
-        "unreachable",
-        f"files pattern {files_pattern!r} matches none of the "
-        f"{len(tracked_paths)} path(s) this repository tracks",
-    )
+    if verdict == "exempt":
+        return "unreachable", (
+            f"id {gate_id!r} is duplicated in hooks_manifest.hooks; "
+            "duplicate ids are never eligible for a shared exemption "
+            f"(the ground text was: {detail!r})"
+        )
+    return verdict, detail
 
 
 # ---------------------------------------------------------------------------
@@ -319,59 +446,34 @@ def main() -> int:
     Returns:
         0 when every non-skipped gate is reachable (determinate run); 1
         when one or more gates are unreachable; 2 when reachability could
-        not be determined at all (registry unreadable or tracked-path set
-        unobtainable) — never a silent pass in that case (BP-100k-4-i).
+        not be determined at all (registry unreadable, no evaluable gates,
+        an unobtainable or empty tracked-path set, or a regex evaluation
+        exceeding its wall-clock bound) — never a silent pass in any of
+        those cases (BP-100k-4-i).
     """
-    registry = _load_registry()
+    registry, load_failure_reason = _load_registry()
     if registry is None:
-        print(
-            "INDETERMINATE: reason=could not load a hooks_manifest registry "
-            "(HOOK_TEST_CONFIG / deployed / source commit_guardian.json were "
-            "all unreadable or not valid JSON)",
-            file=sys.stderr,
-        )
+        print(f"INDETERMINATE: reason={load_failure_reason}", file=sys.stderr)
         return 2
 
-    hooks_manifest = registry.get("hooks_manifest")
-    hooks = hooks_manifest.get("hooks") if isinstance(hooks_manifest, dict) else None
-    if not isinstance(hooks, list):
-        print(
-            "INDETERMINATE: reason=registry is missing a valid "
-            "hooks_manifest.hooks list",
-            file=sys.stderr,
-        )
+    hooks, hooks_failure_reason = _resolve_hooks_or_reason(registry)
+    if hooks is None:
+        print(f"INDETERMINATE: reason={hooks_failure_reason}", file=sys.stderr)
         return 2
 
-    tracked_paths = _get_tracked_paths(Path.cwd())
+    tracked_paths, tracked_failure_reason = _resolve_tracked_paths_or_reason(Path.cwd())
     if tracked_paths is None:
-        print(
-            "INDETERMINATE: reason=could not obtain the repository's "
-            "tracked-path set via 'git ls-files'",
-            file=sys.stderr,
-        )
+        print(f"INDETERMINATE: reason={tracked_failure_reason}", file=sys.stderr)
         return 2
 
-    exemptions = _validate_exemptions(
+    exemptions = validate_exemptions(
         registry.get("hook_trigger_reachability_exemption_registry", [])
     )
 
-    total = 0
-    unreachable = 0
-    exempt = 0
-    for entry in hooks:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("enabled") is False:
-            continue
-        total += 1
-        gate_id = entry.get("id", "<unknown>")
-        verdict, detail = _evaluate_gate(entry, tracked_paths, exemptions)
-        if verdict == "unreachable":
-            unreachable += 1
-            print(f"UNREACHABLE: {gate_id} reason={detail}", file=sys.stderr)
-        elif verdict == "exempt":
-            exempt += 1
-            print(f"EXEMPT: {gate_id} ground={detail}", file=sys.stderr)
+    counts = _evaluate_all_gates(hooks, tracked_paths, exemptions)
+    if counts is None:
+        return 2
+    total, unreachable, exempt = counts
 
     print(
         f"{_GATE_NAME}: RESULT total={total} unreachable={unreachable} exempt={exempt}",
@@ -421,4 +523,43 @@ if __name__ == "__main__":
 #   Structure"), and declared both gates exempt with a stated ground for
 #   the same reason as check-infra-docs, so a correct-but-context-
 #   dependent trigger can never become a universal commit-blocker.
+# - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, r2
+#   hardening]: An adversarial logic review that EXECUTED this gate (not
+#   just read it) found five defects — the charter defect ("a check that
+#   cannot perform its check reporting a pass") recurring inside the check
+#   written to police it:
+#   (F5) an exemption entry keyed on the "<unknown>" display sentinel
+#   silenced EVERY id-less gate at once, and a duplicated hooks-manifest id
+#   let one exemption entry cover two distinct gates. Fixed by never
+#   defaulting a missing id to the sentinel for LOOKUP purposes (only for
+#   display), rejecting sentinel-keyed exemption entries outright, and
+#   detecting duplicate ids up front so a duplicate can never resolve to
+#   "exempt" — it is reported (`DUPLICATE-ID: ...`) and forced unreachable
+#   instead.
+#   (F6) a deployed registry that EXISTS but fails to parse fell through to
+#   the colocated source copy and reported a clean pass against a registry
+#   that was not the one pre-commit would actually run. `_load_registry` now
+#   distinguishes "no candidate exists" (try the next one) from "a candidate
+#   exists but is corrupt" (stop, INDETERMINATE) — mirrors the F2 finding
+#   already known for the sibling drift gates.
+#   (F7) an empty (or all-disabled/non-dict) `hooks_manifest.hooks` list
+#   exited 0 with `total=0` — a run that inspected zero gates reported
+#   clean. Added the same `verified == 0`-shaped floor BP-100k-3 uses for
+#   the drift gates: zero evaluable entries is now INDETERMINATE.
+#   (M) a repository with a successfully-empty tracked-path set (fresh
+#   clone/submodule/shallow checkout before the first `git add`) was
+#   evaluated as if the empty set were proof every files-triggered gate is
+#   unreachable, rather than as "no evidence either way". Now INDETERMINATE.
+#   (M) an unbounded `re.search` let a catastrophic-backtracking `files`
+#   pattern hang the process forever with no verdict. Bounded with a
+#   SIGALRM-based wall-clock guard (`search_any_with_timeout`, default 2s,
+#   overridable via HOOK_TRIGGER_REGEX_TIMEOUT_SECONDS for tests only);
+#   exceeding the bound is INDETERMINATE, never a pass.
+#   Exemption validation, the per-gate rule, and the timeout guard were
+#   split into the new sibling module _hook_trigger_reachability_helpers.py
+#   to stay under the 400-line file-size limit after this round's additions.
+#   F8 (an empty-but-present `commands/` directory passing
+#   `check_command_reachability`) is a DIFFERENT gate in
+#   scripts/build_phases.py, out of this module's scope — not addressed
+#   here. See /tmp/review_logic_round2.md and /tmp/review_code_round2.md.
 # ====================================================================

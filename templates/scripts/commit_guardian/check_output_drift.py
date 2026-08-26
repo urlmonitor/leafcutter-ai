@@ -68,6 +68,25 @@ ARCHITECTURE: Reads the ``output_mappings`` section of the
     counted in its own ``missing=<X>`` RESULT field (never folded into
     ``verified`` or ``uncomparable``), and always drives a non-clean,
     non-zero exit — deletion is the most complete form of drift there is.
+
+    UNREADABLE-OUTPUT REPORTING (adversarial review round 2, B-2): an
+    output_mappings key that IS present on disk but cannot be hash-compared
+    — a permission error (e.g. ``chmod 000``) or the path resolving to
+    something other than a regular file — is a FOURTH, distinct case: not
+    deleted (so not MISSING), not unregistered (so not a GAP/EXEMPT
+    question), just uncomparable in the purest sense. Reported as
+    ``UNCOMPARABLE: UNREADABLE <key> reason=<detail>``, counted in its own
+    ``unreadable=<Y>`` RESULT field, and always drives a non-clean, non-zero
+    exit with the same severity as MISSING — a check that cannot read an
+    artifact must not report a pass for it. The RESULT line is
+    ``RESULT verified=<N> uncomparable=<M> exempt=<E> gaps=<G> drifted=<D>
+    missing=<X> unreadable=<Y>`` (``unreadable`` appended last so existing
+    positional parsers of the earlier fields are unaffected).
+
+    An empty ``output_mappings`` section is NOT itself treated as a clean
+    run (B-1): the ``verified == 0`` floor in ``check_output_drift()`` fires
+    whether the manifest recorded zero mappings outright or recorded some
+    that all failed to resolve — see that function's docstring.
 """
 
 from __future__ import annotations
@@ -114,6 +133,7 @@ except ImportError:
         gaps: int
         missing: int
         violations: list
+        unreadable: int = 0
 
     def _load_exemption_registry(_gate_name: str) -> list:  # type: ignore[misc]
         return []
@@ -385,6 +405,24 @@ def _scan_output_files(
 ) -> _ScanResult:
     """Compare output hashes against output_mappings, reporting uncomparables.
 
+    RECONCILIATION INVARIANT (adversarial review round 2, B-2 + the
+    reconciliation finding it was unified with): every key in
+    ``output_mappings`` must land in EXACTLY ONE of verified / drifted
+    (a violation) / missing / unreadable. This function resolves each
+    manifest key DIRECTLY against disk (Pass 2 below) rather than relying on
+    whether ``output_files`` — built from ``rglob()`` over the scan
+    directories — happened to enumerate it. Before this fix, "seen by
+    rglob() and comparable" was the only path into ``verified``/violations,
+    so any manifest key that existed-but-was-unreadable (``chmod 000``),
+    or whose path had been replaced by a directory/FIFO/symlink-to-directory,
+    fell through EVERY bucket: not verified, not a gap, not exempt, and
+    ``.exists()`` still returned True for a directory so it was not "missing"
+    either — the run reported clean because nothing OTHER than "verified"
+    could describe what happened to it. Pass 1 below keeps its original,
+    narrower job: finding real on-disk files ABSENT from the manifest
+    (gap/exempt detection) — it no longer has anything to do with whether a
+    RECORDED key is comparable.
+
     Args:
         output_files: Absolute paths to the output files to check.
         output_mappings: The manifest's output_mappings section.
@@ -394,23 +432,33 @@ def _scan_output_files(
 
     Returns:
         The scan outcome (see ``_ScanResult``). Prints one ``UNCOMPARABLE:``
-        line per output absent from output_mappings, and one
+        line per output absent from output_mappings, one
         ``UNCOMPARABLE: MISSING`` line per output_mappings key recorded but
-        absent from disk (BP-100k-6).
+        absent from disk (BP-100k-6), and one ``UNCOMPARABLE: UNREADABLE``
+        line per recorded key present on disk but not hash-comparable (B-2).
     """
-    verified = 0
+    # --- Pass 1: gap / exempt detection over real files found on disk ------
+    # Unchanged in spirit from before this fix — this is the ONLY thing
+    # rglob()-derived ``output_files`` still drives: naming a real,
+    # deployed file the manifest never recorded.
     uncomparable = 0
     gaps = 0
-    violations: list[tuple[str, str]] = []
-    seen_keys: set[str] = set()
 
     for out_path in output_files:
         try:
             out_key = _make_output_key(out_path, repo_root)
         except ValueError:
-            # File outside repo root — skip silently.
+            # A scanned path outside repo_root cannot happen via the derived
+            # scan dirs (always repo_root-relative), but a caller-supplied
+            # output_dirs could in principle produce one. Previously skipped
+            # silently — now named and counted so "could not identify this
+            # artifact" is never invisible (B-2's "never skipped silently").
+            print(
+                f"UNCOMPARABLE: UNREADABLE {out_path} "
+                f"reason=path is outside repo_root {repo_root}",
+                file=sys.stderr,
+            )
             continue
-        seen_keys.add(out_key)
 
         if out_key not in output_mappings:
             uncomparable += 1
@@ -423,22 +471,42 @@ def _scan_output_files(
                     f"UNCOMPARABLE: GAP {out_key} action=run build.py to register it",
                     file=sys.stderr,
                 )
-            continue
 
-        entry = output_mappings[out_key]
-        expected_hash = entry.get("expected_output_hash", "")
-        template_key = entry.get("template", "<unknown>")
+    # --- Pass 2: reconcile EVERY recorded key directly against disk --------
+    # Deliberately independent of output_files/rglob(): a manifest key is
+    # resolved by stat-ing repo_root/key itself, so a key that is present but
+    # unreadable, or present as something other than a regular file, cannot
+    # silently avoid every bucket the way it could when membership in
+    # "verified" depended on having first been enumerated by rglob().
+    verified = 0
+    unreadable = 0
+    missing = 0
+    violations: list[tuple[str, str]] = []
+
+    for out_key, entry in output_mappings.items():
+        out_path = repo_root / out_key
 
         if not out_path.exists():
-            # Defensive only: output_files is built from a real rglob() over
-            # on-disk files, so a path collected there normally still exists
-            # a moment later. The deletion case BP-100k-6 exists for — a
-            # manifest-recorded key whose file is gone — never reaches this
-            # loop at all, because rglob() simply never returns a deleted
-            # file; that case is handled by the missing-key sweep below.
+            # BP-100k-6: deletion is the most complete form of drift there is.
+            missing += 1
             print(
-                f"check-output-drift: INFO — {out_key} listed in manifest but "
-                "missing on disk; skipping.",
+                f"UNCOMPARABLE: MISSING {out_key} reason=recorded but not found on disk",
+                file=sys.stderr,
+            )
+            continue
+
+        if not out_path.is_file():
+            # Recorded as a file, but the path now resolves to a directory,
+            # a FIFO, a symlink to a directory, etc. — not deleted (so not
+            # MISSING) and not a permission error (so not caught below), but
+            # just as uncomparable as either: there is no file content here
+            # to hash. This is exactly the "replaced by a directory" gap a
+            # bare ``.exists()`` check on the missing-sweep alone could not
+            # see (a directory "exists" too).
+            unreadable += 1
+            print(
+                f"UNCOMPARABLE: UNREADABLE {out_key} "
+                "reason=path exists but is not a regular file",
                 file=sys.stderr,
             )
             continue
@@ -446,36 +514,26 @@ def _scan_output_files(
         try:
             current_hash = _sha256_of_file(out_path)
         except OSError as exc:
-            print(
-                f"check-output-drift: WARNING — cannot read {out_key}: {exc}; skipping.",
-                file=sys.stderr,
-            )
+            # B-2: an unreadable-but-present file (e.g. chmod 000) is the
+            # purest "could not compare" case there is. It must land in a
+            # counted, verdict-affecting bucket — never in neither.
+            unreadable += 1
+            print(f"UNCOMPARABLE: UNREADABLE {out_key} reason={exc}", file=sys.stderr)
             continue
 
         verified += 1
+        expected_hash = entry.get("expected_output_hash", "") if isinstance(entry, dict) else ""
+        template_key = entry.get("template", "<unknown>") if isinstance(entry, dict) else "<unknown>"
         if current_hash != expected_hash:
             violations.append((out_key, template_key))
 
-    # BP-100k-6: a manifest-recorded key whose file was deleted never appears
-    # in output_files at all (rglob() cannot return a path that no longer
-    # exists), so it is invisible to the loop above no matter what it does.
-    # Sweep every output_mappings key that was never seen there and report it
-    # as its own MISSING verdict — never folded into "verified" (it plainly
-    # was not) or "uncomparable"/"gaps" (a declared-and-deleted artifact
-    # demands restoring the file or removing the record, not registering it).
-    missing = 0
-    for key in output_mappings:
-        if key in seen_keys:
-            continue
-        if not (repo_root / key).exists():
-            missing += 1
-            print(
-                f"UNCOMPARABLE: MISSING {key} reason=recorded but not found on disk",
-                file=sys.stderr,
-            )
-
     return _ScanResult(
-        verified=verified, uncomparable=uncomparable, gaps=gaps, missing=missing, violations=violations
+        verified=verified,
+        uncomparable=uncomparable,
+        gaps=gaps,
+        missing=missing,
+        violations=violations,
+        unreadable=unreadable,
     )
 
 
@@ -584,15 +642,30 @@ def check_output_drift(
     restore the file or remove the record).
 
     Edge-case handling:
-    - Absent manifest or output_mappings section: warn and return 0 (no
-      false-block on a fresh clone / old manifest format) — see
-      ``_load_output_mappings``.
+    - Manifest genuinely absent from disk (fresh clone, never built): warn
+      and return 0 — no false-block on first-time setup.
+    - Manifest present but unparseable, or present with no valid
+      ``output_mappings`` section: INDETERMINATE, return 2 (adversarial
+      review round 2, H-1). A present-but-corrupt manifest is a broken build
+      artifact, not a fresh-clone absence, and this gate cannot vouch for a
+      tree it could not compare against ground truth — mirrors the posture
+      ``check_hook_trigger_reachability.py`` already uses for the identical
+      condition.
     - Output file in output_mappings but missing on disk: reported as
       ``UNCOMPARABLE: MISSING`` and counted in ``missing`` (BP-100k-6); never
       described as clean, never counted as verified.
-    - A run that compared zero artifacts while the manifest records at least
-      one mapping is treated as "could not verify anything" (BLOCKED, return
-      2), not as clean — see the ``verified == 0`` floor below.
+    - Output file in output_mappings, present on disk, but unreadable
+      (permission error) or not a regular file (directory/FIFO/symlink to a
+      directory): reported as ``UNCOMPARABLE: UNREADABLE`` and counted in
+      ``unreadable`` (B-2); never described as clean, never counted as
+      verified.
+    - A run that compared zero artifacts is treated as "could not verify
+      anything" (BLOCKED, return 2), not as clean — see the
+      ``verified == 0`` floor below. This now fires even when
+      ``output_mappings`` itself is the empty dict ``{}`` (B-1): an empty
+      output_mappings from a build that had templates to deploy is itself
+      the loudest possible signal that Direction B detection is blind this
+      run, not evidence the tree is clean.
 
     Args:
         output_dirs: Directories to scan for output files.
@@ -600,17 +673,50 @@ def check_output_drift(
         repo_root: Repository root used to form relative manifest keys.
 
     Returns:
-        0 when gaps == 0, drifted == 0, and missing == 0 (clean — a
-        declared, grounded exemption does NOT block; see module docstring);
-        1 when drifted > 0 or missing > 0 (BLOCKED — a recorded-but-absent
-        output is drift, BP-100k-6); 2 when drifted == 0, missing == 0, and
-        gaps > 0 (an undeclared uncomparable artifact — AC-4), or when the
-        scan verified zero artifacts against a non-empty manifest (see
-        DECISION HISTORY).
+        0 when gaps == 0, drifted == 0, missing == 0, and unreadable == 0
+        (clean — a declared, grounded exemption does NOT block; see module
+        docstring); 1 when drifted > 0, missing > 0, or unreadable > 0
+        (BLOCKED — a recorded-but-absent output is drift (BP-100k-6), and a
+        recorded-but-uncomparable output is treated with the same severity
+        (B-2)); 2 when none of the above and gaps > 0 (an undeclared
+        uncomparable artifact — AC-4), or when the scan verified zero
+        artifacts (see DECISION HISTORY), or when the manifest exists but is
+        corrupt / has no valid output_mappings section (H-1, INDETERMINATE).
     """
-    output_mappings = _load_output_mappings(manifest_path)
-    if output_mappings is None:
+    if not manifest_path.exists():
+        print(
+            f"{_GATE_NAME}: WARNING — .build_manifest.json not found at "
+            f"{manifest_path}. Run build.py to generate it. Skipping output "
+            "drift check.",
+            file=sys.stderr,
+        )
         return 0
+
+    manifest = _load_manifest(manifest_path)
+    if manifest is None:
+        # _load_manifest() already printed the "cannot read manifest" WARNING
+        # with the parse error. H-1: the manifest EXISTS (checked above) but
+        # could not be parsed — a broken build artifact, never treated the
+        # same as the absent-manifest fresh-clone case.
+        print(
+            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
+            "exists but could not be parsed as JSON. This gate cannot "
+            "verify anything against a build artifact it cannot read, so "
+            "this run is not clean.",
+            file=sys.stderr,
+        )
+        return 2
+
+    output_mappings = manifest.get("output_mappings")
+    if not isinstance(output_mappings, dict):
+        print(
+            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
+            "exists but has no valid output_mappings section. Re-run "
+            "build.py to regenerate the manifest with Direction B support; "
+            "this gate cannot verify anything until it does.",
+            file=sys.stderr,
+        )
+        return 2
 
     output_files = _collect_output_files(output_dirs)
 
@@ -643,36 +749,51 @@ def check_output_drift(
         f"{_GATE_NAME}: RESULT verified={result.verified} "
         f"uncomparable={result.uncomparable} exempt={exempt_count} "
         f"gaps={result.gaps} drifted={drifted_total} "
-        f"missing={result.missing}",
+        f"missing={result.missing} unreadable={result.unreadable}",
         file=sys.stderr,
     )
 
-    if result.violations or result.missing:
-        # A deleted, still-recorded output is the most complete form of
-        # drift there is (BP-100k-6) — reported with the same BLOCKED
-        # severity as a hash-mismatch violation, never merely as an
-        # uncomparable gap (which is a coverage question, not a content
-        # question).
+    if result.violations or result.missing or result.unreadable:
+        # A deleted, still-recorded output (BP-100k-6) and an unreadable,
+        # still-recorded output (B-2) are both the most complete forms of
+        # "could not vouch for this content" there is — reported with the
+        # same BLOCKED severity as a hash-mismatch violation, never merely
+        # as an uncomparable gap (which is a coverage question, not a
+        # content question).
         return 1
     if result.gaps:
         return 2
 
     # A run that compared nothing must not exit as if it had compared
-    # everything (BP-100k-3 it_requirements). Reaching here with verified == 0
-    # while the manifest DOES record outputs means every recorded mapping
-    # failed to resolve to a file on disk — the gate is structurally unable to
-    # detect drift, and saying "clean" would be a lie of exactly the kind this
-    # gate exists to catch. Observed live at verified=0 against 275 recorded
-    # mappings before this floor existed. This floor is safe for a direct
+    # everything (BP-100k-3 it_requirements; sharpened by B-1 in round 2).
+    # Reaching here with verified == 0 means either every recorded mapping
+    # failed to resolve to a file on disk, OR output_mappings was itself the
+    # empty dict {} — the latter is now INCLUDED, not exempted: an empty
+    # output_mappings is not evidence of a clean tree, it is evidence
+    # Direction B detection produced nothing to compare, which is exactly as
+    # blind as "compared 0 of N". Observed live at verified=0 against 275
+    # recorded mappings before this floor existed, and reproduced again at
+    # verified=0 against an EMPTY output_mappings once build_helpers.py
+    # started existence-gating every section of _compute_output_mappings()
+    # (adversarial review round 2, B-1). This floor is safe for a direct
     # caller scanning a deliberately narrow ``output_dirs`` subset too: every
     # existing direct caller's fixture manifest only records mappings for the
     # files it places under that same subset, so verified is never 0 there
     # unless the scan is genuinely unable to compare anything.
-    if output_mappings and result.verified == 0:
+    if result.verified == 0:
+        if output_mappings:
+            detail = (
+                f"the build manifest records {len(output_mappings)} output "
+                "mapping(s)"
+            )
+        else:
+            detail = (
+                "the build manifest records ZERO output mappings — "
+                "Direction B detection produced nothing to compare this run"
+            )
         print(
-            f"{_GATE_NAME}: BLOCKED - compared 0 artifacts while the build "
-            f"manifest records {len(output_mappings)} output mapping(s). The "
-            f"gate could not verify anything, so this run is not clean. "
+            f"{_GATE_NAME}: BLOCKED - compared 0 artifacts while {detail}. "
+            f"The gate could not verify anything, so this run is not clean. "
             f"Re-run build.py, or check that the manifest at {manifest_path} "
             f"describes the tree being scanned.",
             file=sys.stderr,
@@ -698,14 +819,19 @@ def main() -> int:
     docstring for why this delegation is the fix, not an optimisation).
 
     Returns:
-        0 when gaps == 0, drifted == 0, and missing == 0 (clean — a
-        declared, grounded exemption does NOT block; see module docstring);
-        1 when drifted > 0 or missing > 0 (BLOCKED — a recorded-but-absent
-        output is drift, BP-100k-6); 2 when drifted == 0, missing == 0, and
-        gaps > 0 (an undeclared uncomparable artifact — AC-4), or when
-        build.py recorded an ``output_mappings_error`` or a non-empty
-        ``output_mappings_skipped_sections``. ``uncomparable`` in the RESULT
-        line is still exempt + gap, reported but not verdict-driving.
+        0 when gaps == 0, drifted == 0, missing == 0, and unreadable == 0
+        (clean — a declared, grounded exemption does NOT block; see module
+        docstring); 1 when drifted > 0, missing > 0, or unreadable > 0
+        (BLOCKED — a recorded-but-absent output is drift (BP-100k-6), and a
+        recorded-but-uncomparable output is drift too (B-2)); 2 in every
+        other non-clean case — gaps > 0 (an undeclared uncomparable artifact
+        — AC-4), the scan verified zero artifacts (B-1), build.py recorded
+        an ``output_mappings_error`` or a non-empty
+        ``output_mappings_skipped_sections``, or the manifest exists but is
+        corrupt / has no valid ``output_mappings`` section (H-1,
+        INDETERMINATE — see ``check_output_drift()``'s own docstring).
+        ``uncomparable`` in the RESULT line is still exempt + gap, reported
+        but not verdict-driving.
     """
     manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
     if manifest_path is None:
@@ -803,6 +929,34 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
+#   review round 2, B-1/B-2/H-1]: Three fixes to the same defect class.
+#   B-1: the ``verified == 0`` floor was gated on ``output_mappings`` being
+#   truthy, so an EMPTY output_mappings ({}) — now reachable in practice
+#   because build_helpers.py's per-section existence gates all ``continue``
+#   rather than raise — skipped the floor entirely and exited 0. Fix: the
+#   floor now fires on ``verified == 0`` unconditionally, whether
+#   output_mappings is empty or non-empty-but-fully-unresolvable.
+#   B-2: ``_scan_output_files`` was rewritten around a reconciliation
+#   invariant — every output_mappings key is resolved DIRECTLY against disk
+#   (exists / is_file / hash) rather than via membership in whatever
+#   rglob()-driven ``output_files`` happened to enumerate, so a key that is
+#   unreadable (chmod 000) or replaced by a directory/FIFO can no longer
+#   land in NEITHER bucket (previously: not verified, not a gap, not
+#   missing since ``.exists()`` is True for a directory too). A new
+#   ``unreadable`` ScanResult field and RESULT column (appended last) counts
+#   this and drives the verdict with the same severity as MISSING. This is
+#   the identical fix ``check_command_reachability`` already received
+#   earlier in this same round; the lesson had not been carried across.
+#   H-1: ``check_output_drift()`` used to call ``_load_output_mappings()``,
+#   which collapsed "manifest absent" and "manifest present but corrupt /
+#   missing its output_mappings section" into the same ``None`` return,
+#   both treated as a silent, clean 0. The function now checks
+#   ``manifest_path.exists()`` itself first (absent -> warn, 0 — the
+#   fresh-clone case) and, only once that is confirmed False, treats a
+#   failed parse or a malformed section as INDETERMINATE (2) — mirroring
+#   ``check_hook_trigger_reachability.py``'s posture for the identical
+#   condition.
 # - 2026-08-25 [python-coder/EPIC-BuildPipelinePhantomRemediation, post-merge
 #   defect fix]: build_helpers._compute_output_mappings() could silently drop
 #   an entire section (e.g. agents/commands/workflows/hooks, when
