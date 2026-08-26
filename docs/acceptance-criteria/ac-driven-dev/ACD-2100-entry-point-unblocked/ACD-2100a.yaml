@@ -20,8 +20,14 @@ criteria: |
   step because it looked for one of its own files in the wrong place.
 depends_on: [ACD-2100]
 doc_links:
-  - docs/known-issues/ac-driven-dev.md
-  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004 in full, plus the first cause of KI-ACD-009. Both name two resolution sites; this L1 covers five -- setup_ticket_worktree.py at 1800, agent_registry.json at 1749, and pause_store.py at 1552, 1625 and 1642."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The layout that makes the defect deterministic rather than intermittent: the workspace parent carries a CLAUDE.md but no git repository, so a cwd-relative path resolves against a directory that is not the repo."
 assigned_agent: null
 delivers_to: null
 expects_from: null

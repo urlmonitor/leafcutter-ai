@@ -20,10 +20,22 @@ criteria: |
   documentation rather than by working it out from the program itself.
 depends_on: [ACD-2100, ACD-2100c, ACD-2100a-4]
 doc_links:
-  - docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
-  - docs/how-to/resume-a-paused-plan-feature-run.md
-  - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
-  - docs/known-issues/ac-driven-dev.md
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: creates
+    status: planned
+    relevance: "ACD-2100e-1's deliverable. DOES NOT EXIST YET. Five records under ACD-2100c link this exact path, so the diagram author must publish here and nowhere else -- no hook validates a markdown-to-markdown link, so a renamed target dangles silently on both sides."
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: creates
+    status: planned
+    relevance: "ACD-2100e-2's deliverable. DOES NOT EXIST YET. Same pinning as above -- ACD-2100c-3 and c-3-i link this exact path."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause-resume mechanism both deliverables document. The substrate itself is already covered at message level by c3-002; e-1 must link that diagram rather than restate it."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 -- the gate defect whose flow these two pages make legible. Note its stated root cause is out of date; see ACD-2100c-4's notes."
 assigned_agent: null
 delivers_to: null
 expects_from: null

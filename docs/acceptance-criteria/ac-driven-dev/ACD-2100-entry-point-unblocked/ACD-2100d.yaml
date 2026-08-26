@@ -20,8 +20,14 @@ criteria: |
   broken behaviour or has it introduced by the next install.
 depends_on: [ACD-2100]
 doc_links:
-  - docs/known-issues/ac-driven-dev.md
-  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Context rather than a covered entry -- this L1 is in no known issue. It exists because the 2026-08-18 KI-ACD-004 workaround was applied to the deployed copy and evaporated on the next build, which is the failure mode this L1 generalises."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the source-versus-installed boundary that is this L1's whole subject: what build.py deploys, and why a repair landing only in templates/ leaves every installed project unchanged."
 assigned_agent: null
 delivers_to: null
 expects_from: null
