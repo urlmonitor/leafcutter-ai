@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -104,9 +104,21 @@ amended_by:
     entry: "Corrected the H-1 evidence, which overcounted. The original notes claimed roughly 512 deployed files had to move from invisible to covered; that double-counted the symlinked agent-platform directories, which are already covered under their canonical keys. Accurate figure: 253 of 528 deployed files unrecorded, of which only 2 produce a gap line today and 251 are silent, the largest group being all 181 deployed script files — every commit-guardian hook, both drift gates included. Rewrote notes; retargeted the hand-edit leg from any newly covered file to a deployed commit-guardian gate script specifically, and renamed that descriptor accordingly; added three it_requirements constraints (gate-script hand-edit target, corrected 528/253 denominator with the symlink single-count rule, and the visible-is-not-covered rule requiring both the not-compared and gap counts to be zero); added one test_spec descriptor asserting no file was merely moved from silent to reported; added the third shortcut (widen-the-scan-set-without-covering) to test_rationale. criteria, id, title, level, assigned_agent, estimated_complexity, priority, readiness, work_status, depends_on, delivers_to and expects_from unchanged."
     by: business-analyst
     date: 2026-08-25
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. A test carrying
+      "# covers: BP-100k-5-i" exists in
+      unit_tests/commit_guardian/test_bp_100k_5_i.py and passes under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_5_i.py
+implemented_by:
+  - scripts/build_helpers.py
+  - scripts/build_phases.py
+  - templates/scripts/commit_guardian/check_output_drift.py
 change_target: pipeline
 risk_surface: internal
 notes: "Paired negative case for BP-100k-5, with the measurement corrected on 2026-08-25 after the first figure was found to double-count symlinked directories. 253 of 528 deployed files must move from unrecorded to covered — not the ~512 first reported — and the shape matters more than the count: only 2 of the 253 are reported as gaps today, while 251 are silent, and the largest silent group is all 181 deployed script files, which include every commit-guardian hook and both drift gates. Three shortcuts must fail here. A blanket exemption over the deploy tree would satisfy the count while restoring the silent suppression list BP-100k-3 was written to remove. Records the gate never consults would satisfy the manifest while changing no verdict. And simply widening the scan set would convert 251 silent files into 251 reported gaps — visible, but still unchecked. Only a whole-tree end-to-end run, plus a drift verdict on a deployed commit-guardian gate script, separates registration from suppression and from mere visibility."

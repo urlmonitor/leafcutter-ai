@@ -1,6 +1,6 @@
 ---
 title: "Build manifest records every managed template and every deployed output, so the drift gates have something to compare"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-08-17
@@ -26,6 +26,7 @@ files_touched:
   - scripts/build_helpers.py
   - unit_tests/build_guards/test_bp_100k_1.py
   - unit_tests/build_guards/test_bp_100k_2.py
+  - unit_tests/test_build_workflow_output_paths.py
 agents:
   architect-review: signed_off
   test-writer: signed_off

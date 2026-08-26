@@ -1,6 +1,6 @@
 ---
 title: "Drift gates report an uncomparable artifact as a gap or a declared exemption, never as a clean pass"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-08-17
@@ -31,6 +31,24 @@ files_touched:
   - templates/scripts/commit_guardian/commit_guardian.json
   - unit_tests/commit_guardian/test_bp_100k_3.py
   - unit_tests/commit_guardian/test_bp_100k_3_i.py
+  - templates/scripts/commit_guardian/_drift_exemptions.py
+  - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+  - templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py
+  - tests/test_build_artifact_parity.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_b1.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_b2.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_h1_h5.py
+  - unit_tests/commit_guardian/test_bp_100k_4.py
+  - unit_tests/commit_guardian/test_bp_100k_4_i.py
+  - unit_tests/commit_guardian/test_bp_100k_4_hardening.py
+  - unit_tests/commit_guardian/test_bp_100k_5.py
+  - unit_tests/commit_guardian/test_bp_100k_5_i.py
+  - unit_tests/commit_guardian/test_bp_100k_5_ii.py
+  - unit_tests/commit_guardian/test_bp_100k_6.py
+  - unit_tests/commit_guardian/test_ge_118b_drift_manifest_resolution.py
+  - unit_tests/build_guards/test_bp_100k_5_partial_output_mappings.py
+  - unit_tests/build_guards/test_bp_100k_7.py
+  - unit_tests/build_guards/test_bp_100k_8.py
 agents:
   architect-review: needed
   test-writer: signed_off

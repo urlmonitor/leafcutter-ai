@@ -1,6 +1,6 @@
 ---
 title: "Build a real command-reference reachability guard (path-form fails, name-form via registry passes)"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-07-14
@@ -8,6 +8,8 @@ depends_on: []
 priority: high
 requires_diagram: false
 requires_adr: false
+change_target: pipeline
+risk_surface: contract_boundary
 source_ac: BP-900g-1
 ac_coverage:
   - BP-900g-1

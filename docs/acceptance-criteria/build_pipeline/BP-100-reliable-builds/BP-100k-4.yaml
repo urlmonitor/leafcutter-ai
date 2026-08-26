@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -117,11 +117,26 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. A test carrying
+      "# covers: BP-100k-4" exists in
+      unit_tests/commit_guardian/test_bp_100k_4.py and passes under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26: 55 passed across this AC
+      family; full unit_tests run: 1 failed / 3764 passed, the single failure
+      being unit_tests/commit_guardian/test_ge_122e_1.py, an unrelated
+      guardrail-engine test from another branch). implemented_by and covered_by
+      recorded from the real files, not from the ticket's ac_coverage field.
 superseded_by: null
 covered_by:
   - BP-100k-4-i
-implemented_by: []
+  - unit_tests/commit_guardian/test_bp_100k_4.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+  - templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py
+  - templates/scripts/commit_guardian/commit_guardian.json
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-25, found by adversarial review of this epic's own work. check-build-drift is registered with an activation condition rooted at a templates location that exists only in a CONSUMER install layout; in this package's self-host layout templates live elsewhere, and the consumer-layout prefix matches no tracked file at all — the gate has therefore NEVER fired here. check-output-drift names six locations: five are gitignored, and the sixth does not exist at the repository root (this epic's own BP-100k-2 work proved the build writes those rules under the output root, never to the repository root). Both gates declare that they do not consume the staged file list and scan the whole tree by hash, so a path filter was the wrong activation mechanism for either of them in the first place; their siblings in the same manifest use the always-run form. Consequence: roughly 3,000 lines of drift-gate hardening, including everything this epic built, sit behind two gates that cannot fire — and the review confirmed check-build-drift would have blocked the very commit that introduced this finding, had it been able to run. This AC is deliberately written for the DEFECT CLASS rather than the two gates: a registered gate whose trigger cannot match any path the repository can ever stage is a gate that reports a pass it never earned."

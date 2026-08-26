@@ -1,6 +1,6 @@
 ---
 title: "Presence-only assertions stop counting as coverage: re-author the journal test, then gate the shape"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-08-17
@@ -26,6 +26,7 @@ advances_current_outcome: true
 documentation_required: true
 files_touched:
   - templates/scripts/commit_guardian/check_presence_only_assertions.py
+  - templates/scripts/commit_guardian/_presence_only_scanner.py
   - templates/scripts/commit_guardian/commit_guardian.json
   - docs/pre-commit-hooks.md
   - unit_tests/_workflow_engine_harness.py

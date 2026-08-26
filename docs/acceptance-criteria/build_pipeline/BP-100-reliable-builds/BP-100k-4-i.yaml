@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -85,10 +85,24 @@ expects_from:
   contract: "The registry-wide reachability verdict and its exit-status contract, whose zero-unreachable case and whose indeterminate case this edge case pins down."
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. Tests carrying
+      "# covers: BP-100k-4-i" exist in
+      unit_tests/commit_guardian/test_bp_100k_4_hardening.py and
+      unit_tests/commit_guardian/test_bp_100k_4_i.py, and both pass under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_4_hardening.py
+  - unit_tests/commit_guardian/test_bp_100k_4_i.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+  - templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py
+  - templates/scripts/commit_guardian/commit_guardian.json
 change_target: pipeline
 risk_surface: internal
 notes: "Paired negative case for BP-100k-4. Reviving two long-dead gate triggers is a change with repository-wide blast radius: an over-strict reachability check blocks every commit, and a fail-open one reproduces the original silence. Only running the check end to end over the real registry, and separately under a broken precondition, distinguishes a correct implementation from either shortcut."

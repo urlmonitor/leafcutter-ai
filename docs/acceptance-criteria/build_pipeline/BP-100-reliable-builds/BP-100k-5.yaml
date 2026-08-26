@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -133,10 +133,31 @@ amended_by:
     entry: "Corrected the H-1 evidence, which overcounted. The original notes claimed ~512 unrecorded deployed files under the runtime deploy tree (97%); that double-counted the agent-platform directories, which are symlinks into the runtime tree and are already covered under their canonical keys. Accurate measurement (manifest keys vs files on disk, __pycache__ excluded): 253 of 528 deployed files unrecorded (48%), broken down as 2 skills, 56 gemini, 181 scripts, 5 config, 5 deployed-claude, 4 miscellaneous. The sharper finding now recorded in notes: only 2 of the 253 produce a GAP line; the other 251 are silent, and all 181 deployed script files — every commit-guardian hook, including both drift gates — are policed by nothing. Rewrote notes; corrected the scope-warning constraint from 'several hundred' to ~253; added four it_requirements constraints (the _canonicalize_output_path/_OUTPUT_REL_TO_CANONICAL root cause, the record-a-failed-translation-as-manifest-data rule, the 251-silent-vs-2-reported shape, the gates-must-police-the-gates requirement, and a symlink double-counting warning); sharpened the check_output_drift.py and build_helpers.py doc_link relevance; added three test_spec descriptors (unresolvable-mapping recorded not dropped, multi-segment mapped directory not excluded, deployed gate scripts in the examined population); softened one criteria phrase from 'several hundred deployed files' to 'a substantial share of the deployed files' so no criterion carries the retracted number. criteria substance, id, title, level, assigned_agent, estimated_complexity, priority, readiness, work_status, delivers_to's core contract and expects_from otherwise unchanged."
     by: business-analyst
     date: 2026-08-25
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. Tests carrying
+      "# covers: BP-100k-5" exist in
+      unit_tests/commit_guardian/test_bp_100k_5.py,
+      unit_tests/commit_guardian/test_bp_100k_5_ii.py,
+      unit_tests/commit_guardian/test_bp_100k_3_hardening_b1.py,
+      unit_tests/commit_guardian/test_bp_100k_3_hardening_h1_h5.py and
+      unit_tests/build_guards/test_bp_100k_5_partial_output_mappings.py, and all
+      pass under AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests
+      run clean apart from the unrelated test_ge_122e_1.py failure from another
+      branch). implemented_by and covered_by recorded from the real files.
 superseded_by: null
 covered_by:
   - BP-100k-5-i
-implemented_by: []
+  - unit_tests/commit_guardian/test_bp_100k_5.py
+  - unit_tests/commit_guardian/test_bp_100k_5_ii.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_b1.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_h1_h5.py
+  - unit_tests/build_guards/test_bp_100k_5_partial_output_mappings.py
+implemented_by:
+  - scripts/build_helpers.py
+  - scripts/build_phases.py
+  - templates/scripts/commit_guardian/check_output_drift.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-25, measured against this epic's own worktree; measurement corrected the same day after the first figure was found to double-count symlinked directories. The output-drift gate's own result line reads verified=275, uncomparable=2, exempt=0, gaps=2, drifted=27. Accurate coverage, manifest key counts against files on disk with __pycache__ excluded: agents 59/59, commands 33/33, hooks 12/12, workflows 9/9 and the deployed rules directory 16/16 are all covered; skills 52/54 leaves 2 unrecorded; gemini 94/150 leaves 56; scripts 0/181 leaves ALL 181; config 0/5; the deployed claude directory 0/5; and debugging, paused_runs, the pre-commit config and the settings file contribute 4 more. Total 253 of 528 deployed files unrecorded — 48%, not the 97% first reported. The agent-platform directories are symlinks into the runtime deploy tree, so their files are already covered under their canonical keys and must not be counted twice. THE SHARPER FINDING: only 2 of those 253 produce a GAP line — they happen to sit in a directory the gate already visits. The other 251 sit in directories the scan-set derivation never visits, so they produce no gap, no exemption, and appear in no count at all. The silent-versus-reported split is the phantom shape, not the raw unrecorded number. THE HEADLINE: all 181 deployed script files are policed by nothing, and that directory holds every commit-guardian hook, including the two drift gates themselves. The drift gates do not police the drift gates — a hand-edit to a deployed gate is invisible to every gate, including itself. ROOT CAUSE, in scripts/build_helpers.py: _canonicalize_output_path() returns None when a deployed path's top-level directory has no canonical shim_map entry, and the output is then dropped from output_mappings with no record that it was dropped. A directory misses either by having no shim_map entry (config, debugging, paused_runs) or by having a multi-segment one — the reverse-lookup table is built under a filter excluding any entry containing a path separator, which discards scripts/commit_guardian, scripts/doc_compliance and scripts/feedback despite their being present in shim_map, and that is why all 181 script files vanish. This is the epic's thesis one level up: a mapping step that cannot map something drops it without recording that it could not map it. A verified count with no denominator is the phantom pass in numeric form."

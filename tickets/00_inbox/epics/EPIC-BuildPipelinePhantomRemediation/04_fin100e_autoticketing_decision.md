@@ -1,6 +1,6 @@
 ---
 title: "DECISION+ACTION: finalize Step 6a auto-ticketing — re-enable to satisfy FIN-100e-1/e-2 or formally supersede them"
-status: todo
+status: done
 components:
   - finalize
 created: 2026-07-14

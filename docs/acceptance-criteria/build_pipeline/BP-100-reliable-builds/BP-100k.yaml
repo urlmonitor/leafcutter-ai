@@ -18,9 +18,12 @@ depends_on:
 doc_links: []
 origin_agent: BrainCandy
 created: 2026-06-08
+child_limit_override: 9
 amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
   - "covered_by: added BP-100k-4..BP-100k-8 (five verified defects from the adversarial review of EPIC-BuildPipelinePhantomRemediation), 2026-08-25"
+  - "2026-08-26: added child_limit_override: 9. BP-100k now has 8 L2 children (BP-100k-1..-8) against a default cap of 5, because the adversarial review of this L1's own drift-gate work found five further defects and each was authored as a sibling rather than folded into an existing criterion. This is a TEMPORARY waiver, not a judgement that 8 is right: the honest fix is Pattern C (split BP-100k into sibling L1s — plausibly one for manifest completeness and one for gate-verdict honesty), which was not attempted mid-ship because restructuring an L1 while its children are being marked done is how covered_by drift gets introduced. Mirrors the existing BP-100 override precedent."
+  - "children BP-100k-4..-8 verified done from evidence (covers-tagged test present AND passing under AC_ENFORCE_STRICT=1) and flipped to work_status: done. This L1 stays todo: BP-100k-1/-2/-3 and the -i constraint siblings were confirmed, but no evidence pass was run over children outside this epic. Staged deliberately unchanged-in-substance so the AC parent hooks, which read the commit index rather than the store, actually inspect this file — 2026-08-26"
 superseded_by: null
 covered_by:
   - BP-100b-5

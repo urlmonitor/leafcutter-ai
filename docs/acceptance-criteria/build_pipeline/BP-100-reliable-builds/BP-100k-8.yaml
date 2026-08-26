@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -100,10 +100,21 @@ expects_from:
   contract: "The build's record of every deployed output and its source, which the equality guard asserts equal to what the build actually wrote — for every emittable platform rather than a chosen subset."
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. A test carrying
+      "# covers: BP-100k-8" exists in
+      unit_tests/build_guards/test_bp_100k_8.py and passes under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_bp_100k_8.py
+implemented_by:
+  - scripts/build_phases.py
+  - scripts/build_helpers.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-25. The bidirectional manifest/output equality guard added by this epic sets the antigravity platform to false in two places, so the whole gemini workflows output family is excluded from the equality assertion — the same family that separately turned out to contain unscanned command surfaces carrying live Skill() handoff targets. A guard that proves equality only for the platforms it chose to enable does not prove equality; the exclusion is invisible in the guard's green result. Restoring full coverage is expected to surface real inequalities in the previously excluded family."

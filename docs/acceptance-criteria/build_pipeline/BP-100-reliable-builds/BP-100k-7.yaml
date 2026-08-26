@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -96,10 +96,20 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. A test carrying
+      "# covers: BP-100k-7" exists in
+      unit_tests/build_guards/test_bp_100k_7.py and passes under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_bp_100k_7.py
+implemented_by:
+  - scripts/build_phases.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-25. The command-reachability guard determines whether the workflows capability is 'on' by testing whether the workflows output directory exists, then skips every name-form workflow target when it does not, stating that workflows are disabled as the justification. It never reads the declared enabled value. The two states it conflates are opposite in meaning: deliberately disabled (skipping correct) versus enabled but not deployed (every command referencing a workflow by name is now unreachable — precisely when the guard must fire). The guard is silent in exactly the failure case it exists for, and the skip is indistinguishable in the build output from a check that passed."

@@ -1,6 +1,6 @@
 ---
 title: "Skill-pointer check must resolve against canonical source only, not the deployed .claude/skills tree"
-status: todo
+status: done
 components:
   - build_pipeline
 created: 2026-07-14
@@ -18,6 +18,7 @@ ac_coverage:
 files_touched:
   - scripts/build_phases.py
   - unit_tests/build_guards/test_self_description_descriptive_only.py
+  - unit_tests/test_agent_self_description_validation.py
 agents:
   architect-review: needed
   test-writer: signed_off

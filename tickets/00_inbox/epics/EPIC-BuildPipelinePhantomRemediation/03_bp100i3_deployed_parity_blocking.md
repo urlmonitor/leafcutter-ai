@@ -1,6 +1,6 @@
 ---
 title: "Hook parity: a manifest-referenced script missing from the deployed tree must BLOCK the commit (exit 1)"
-status: todo
+status: done
 components:
   - commit_guardian
 created: 2026-07-14
@@ -8,6 +8,8 @@ depends_on: []
 priority: high
 requires_diagram: false
 requires_adr: false
+change_target: pipeline
+risk_surface: contract_boundary
 source_ac: BP-100i-3
 ac_coverage:
   - BP-100i-3

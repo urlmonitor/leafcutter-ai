@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -102,10 +102,21 @@ expects_from:
   contract: "The per-artifact verdict vocabulary and run-summary counting model this AC extends with a fifth, deletion-specific verdict."
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. A test carrying
+      "# covers: BP-100k-6" exists in
+      unit_tests/commit_guardian/test_bp_100k_6.py and passes under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_6.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_output_drift.py
+  - templates/scripts/commit_guardian/check_build_drift.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: "Verified defect, 2026-08-25. In the output-drift gate's file-scanning step, a key that IS present in the build's output records but whose file is missing on disk produces an informational line and a continue: not counted as verified, not counted as uncomparable, not counted as a gap, and with no effect on the exit status. Deleting a deployed artifact entirely therefore passes the gate silently. It is the most complete form of drift there is and the only one the gate ignores — another instance of this epic's thesis, a check that cannot perform its check reporting a pass."
