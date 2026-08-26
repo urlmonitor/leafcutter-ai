@@ -59,7 +59,7 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The reference document ships through build.py. templates/skills/security-scanner/SKILL.md is the canonical source; the deployed skill copies are build outputs and must not be edited directly."
-assigned_agent: documentation-expert
+assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "Edit the canonical source at templates/skills/security-scanner/SKILL.md and let build.py propagate it. The deployed skill copies are build outputs; editing one of those leaves the shipped reference unchanged (ADR-001)."
@@ -88,12 +88,51 @@ expects_from:
   contract: "The complete, settled list of entry shapes classified as unmatchable across all three fields, and the decision that the never-matched-this-run signal is deliberately not reported."
 origin_agent: business-analyst
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: gating-correction
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'THREE ROUTING FIELDS CHANGED. NO REQUIREMENT CHANGED. criteria, title, level,
+      depends_on, it_requirements, test_spec, work_status, readiness and priority are all
+      untouched — this record still asks for exactly what it asked for.
+      change_target docs -> prompt, risk_surface safety -> contract_boundary,
+      assigned_agent documentation-expert -> llm-expert.
+
+      WHY THE RISK SURFACE MOVED, AND IT IS NOT THE DIRECTION IT LOOKS. config/guardrail_gates.yaml
+      maps docs.safety to an EMPTY mandatory-agent list, while docs.contract_boundary maps to
+      [documentation-expert, pr-reviewer]. This record was therefore UNGATED: no reviewer was
+      required on a document describing a security control whose only defence is review.
+      Choosing the more alarming-sounding risk surface is what removed the gating. Verified in
+      the file, not inferred. prompt.contract_boundary is stronger still —
+      [llm-expert, architect-review, pr-reviewer] — and documentation_gates.risk_surface_triggers
+      adds documentation-expert and documentation-verifier independently of change_target, so the
+      genre owner is retained as a REVIEWER while the surface owner becomes the author. No gate
+      is lost by this change; three are gained.
+
+      WHY THE AGENT CHANGED, REVERSING A DELIBERATE EARLIER CALL. The IT PO chose
+      documentation-expert on purpose, reasoning that the content is reference documentation about
+      a scanner behaviour rather than agent-behaviour prompt text. That reasoning is about GENRE and
+      it is sound; the problem is CAPABILITY. documentation-expert never authors files — "all
+      authoring is delegated to specialists", stated twice in its template — and every genre in
+      config/doc_types.json has a default_path under docs/. Handed
+      templates/skills/security-scanner/SKILL.md it can only classify the work `reference` and emit
+      docs/reference/<topic>.md, which is a SECOND HOME for a passage this record explicitly
+      requires to have exactly one ("Keep the grammar and the rejection list here and the task
+      guidance in the sibling how-to. Two copies of a grammar drift."). The assigned agent''s only
+      available route turns this record''s own it_requirement red. Store precedent agrees: of 25 ACs
+      whose implemented_by names a SKILL.md, eight chose llm-expert and zero chose
+      documentation-expert.
+
+      CROSS-TREE CONSISTENCY IS THE OTHER HALF. GE-125b-4, GE-125c-4, GE-125d-5 and GE-125a-3 target
+      the SAME passage in the SAME file and were set to llm-expert / prompt / contract_boundary on
+      2026-08-25. GE-125b-4''s enrichment note had cited "the precedent set on GE-123d-4-ii" for
+      documentation-expert, so the two trees would otherwise have named different owners for one
+      file. Both sides now agree.'
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: docs
-risk_surface: safety
+change_target: prompt
+risk_surface: contract_boundary
 notes: |
   THIS IS THE RECORD OF A DESIGN DECISION, not only a list. The second criterion
   matters more than the first: the choice to act on the shape of an entry and not

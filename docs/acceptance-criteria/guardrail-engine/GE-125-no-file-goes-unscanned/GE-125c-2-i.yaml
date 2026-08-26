@@ -1,0 +1,194 @@
+id: GE-125c-2-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "A value that merely resembles a recognised explanation is reported — near-misses fail towards being seen"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose ticket area holds one Markdown file staged for
+    commit,
+  And that file contains a high-entropy value of at least thirty characters that
+    begins with the word used by the ticket identifier convention but whose
+    remainder does not follow that convention — an opaque random run of characters
+    where the convention requires a date and a name,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the value is reported, named with its 1-based line number, and the commit is
+    blocked,
+  Because an explanation must account for the WHOLE value it excuses: a check that
+    accepts anything carrying a familiar-looking opening turns the recognised list
+    into a password that anyone can type in front of a credential.
+
+  Given the same throwaway project,
+  And a second staged Markdown file in the same ticket area containing a
+    well-formed project identifier of the ticket form immediately followed, with no
+    separating space, by an opaque credential of at least thirty characters,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the value is reported and the commit is blocked,
+  Because a value that merely CONTAINS something recognised is not a value the
+    recognised thing explains, and appending a credential to an identifier is the
+    cheapest way to defeat a match that is not anchored to the whole value.
+
+  Given the same throwaway project,
+  And a third staged Markdown file in the same ticket area containing a well-formed
+    project identifier of the ticket form on its own,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then no finding is reported for that file,
+  Because the two scenarios above must be satisfied by a stricter match and not by
+    abandoning the recognition altogether — a rule that reports everything passes
+    both of them and fails the purpose.
+depends_on:
+  - GE-125c-2
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The recognition patterns live in `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and `check_hook_parity` enforces all four locations. Run `python scripts/build.py --target-dir .` after editing the template and re-run the commit_guardian suite before claiming the change."
+  - "THE SECOND SCENARIO'S DEFECT IS PRESENT TODAY, INDEPENDENTLY OF THE FILE-LEVEL BRANCH, AND HERE IS WHERE. `_TICKET_ID_RE` at `templates/scripts/commit_guardian/check_secrets.py:120` ends in an unbounded greedy word-character run, so a credential appended to a well-formed identifier with no separator is ABSORBED INTO THE IDENTIFIER MATCH and then removed wholesale by the scrub at line 195 — leaving no residual token for the entropy re-test at lines 197-200 to fail on. Fixing the file-level branch alone leaves this open. Both enforcement points must be addressed: the pattern that decides what counts as recognised, and the scrub-then-retest step that consumes it."
+  - "AN EXPLANATION MUST ACCOUNT FOR THE WHOLE VALUE, AND THE ACCOUNT MUST BE FALSIFIABLE. It is not sufficient that a pattern matches the whole value if the pattern's own wildcard can absorb arbitrary content — that is a substring match wearing a whole-value match's clothes. Each entry of the closed list must be specified tightly enough that a credential appended to, prepended to, or embedded within a well-formed instance is NOT absorbed by the match. State the constraint as a property, not as a regex: for every entry of the list, a well-formed instance concatenated with arbitrary high-entropy content must be reported."
+  - "THE TIGHTENING MUST BE DERIVED FROM THE CONVENTION, NOT FROM A DENY-LIST. Do not special-case any observed near-miss value, prefix or filename by name. The recognition must state positively what the convention is (a date part and a name part, for the ticket form) so that every future near-miss inherits the rule automatically. A fix that reports the two specific fixture values here and nothing else has not been made."
+  - "THE THIRD SCENARIO IS THE CONTROL AND IT MUST STAY GREEN. A rule that reports everything satisfies the first two scenarios and defeats the purpose. Every tightening must be paired with the well-formed-identifier arm in the same run, and the recognition must not be weakened to the point where an ordinary ticket identifier written in an ordinary sentence starts blocking commits."
+  - "THE RECOGNITION MUST NOT BE FED `Finding.excerpt`. GE-125c-3 owns that constraint; it is named here because a match anchored to the whole value is meaningless if the value it is anchored to has already been cut at 120 characters. Keep every fixture line in THIS record comfortably under 120 characters so the arms measure anchoring alone, and leave the boundary behaviour to GE-125c-3 and GE-125c-3-i."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file inside a `tempfile`-backed throwaway project root with the ticket area constructed INSIDE it and the check pointed at that root. No fixture under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. Assert as a precondition that the root path ABOVE the constructed prose directory contains none of the four segment names."
+  - "THE NEAR-MISS VALUES MUST BE CONSTRUCTED FROM THE STATED CONVENTION, NOT TYPED BY EYE, and assembled at runtime from concatenated fragments like every other credential-shaped fixture string in this tree. Build them by taking the convention's parts and deliberately violating exactly one of them, and assert which part was violated as a fixture precondition — a near-miss that accidentally still conforms is a green test proving nothing, and a hand-typed one is unreviewable."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY DIRECT CALL. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers. Asserting what the recognition returns when called directly does not discharge any arm."
+  - "ERROR HANDLING PER CLAUDE.md: the recognition is a pure function over a string and must NOT be wrapped in try/except (Rule 4). An error in the recognition path must fail towards REPORTING the value, never towards setting it aside — a near-miss that is set aside because a match raised is the same disclosure as one set aside because a match succeeded."
+  - "PERFORMANCE — THIS RUNS ON EVERY COMMIT. A tighter pattern must not be built by scanning a value more than a constant number of times, must stay a module-level compiled constant, and must not introduce catastrophic backtracking on a long value: assert the recognition completes in bounded time against a 4,000-character adversarial value made of the convention's opening repeated."
+test_spec:
+  - name: test_familiar_opening_with_nonconforming_remainder_is_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file holding a value that opens with the ticket convention's word but whose remainder is a runtime-assembled opaque run where the convention requires a date and a name yields exactly one finding and a non-zero exit — a familiar-looking opening is not a password."
+  - name: test_wellformed_identifier_with_credential_appended_is_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file holding a well-formed ticket identifier immediately followed, with no separating character, by a runtime-assembled opaque credential yields exactly one finding and a non-zero exit. This is the arm today's greedy trailing wildcard fails: the credential is absorbed into the identifier match and scrubbed away, leaving nothing for the residual-entropy re-test."
+  - name: test_wellformed_identifier_alone_is_still_set_aside
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The control. A staged file holding a well-formed ticket identifier on its own yields zero findings and does not block the commit — the two arms above must be satisfied by a stricter match, not by abandoning the recognition."
+  - name: test_every_closed_list_entry_rejects_a_concatenated_credential
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Generated over EVERY entry of the closed recognised-explanation list, not only the ticket form: a well-formed instance of each entry concatenated with a runtime-assembled credential is reported, and each well-formed instance alone is not. Fails an implementation that tightens only the pattern the fixture happened to use, and fails automatically if a future entry is added loosely."
+  - name: test_near_miss_fixtures_violate_exactly_the_intended_convention_part
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: each near-miss value is built from the convention's parts with exactly one part deliberately violated, that violation is asserted, every value exceeds the entropy threshold, every line is under 120 characters, and the throwaway root above the constructed prose directory contains none of the four exempt segment names."
+test_rationale: |
+  Five descriptors for three scenarios, and the two extra ones are the reason this
+  record is worth writing separately from its parent.
+
+  The fourth descriptor generalises the second arm across every entry of the closed
+  list. The measured defect is specific — the ticket pattern's trailing wildcard
+  absorbs an appended credential — but the defect class is not, and a fix that
+  tightens the one pattern the fixture used leaves the next entry loose and leaves a
+  future entry loose by default. Generating the arm from the list makes the
+  constraint inherit automatically, which is the same reason the parent requires the
+  list to be data-driven rather than special-cased by name.
+
+  The fifth descriptor exists because a near-miss is the one fixture shape that can
+  silently stop being a near-miss. A value hand-typed to "not conform" may conform
+  after all, or may fail for a reason other than the one under test — entropy below
+  threshold, say — and either way the arm goes green while proving nothing. Building
+  each value from the convention's parts and asserting which part was violated makes
+  that drift loud.
+
+  A weaker shape — asserting the recognition function's return value over a list of
+  strings — was rejected for the reason the BA records: it is a test of the pattern,
+  not of the verdict, and it passes on a pattern that nothing consults.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 names the benign-token machinery this record tightens and records that the module already computes an entropy-explained-by-a-benign-token verdict for TICKET- / EPIC- identifiers."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125c-2
+  contract: "A closed, enumerable recognised-explanation list with report-by-default, consulted per value. This record constrains how tightly a value must match an entry of that list to count as recognised, and generates its fourth arm over every entry of the list rather than over the ticket form alone."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity M, eleven
+      it_requirements, five test_spec descriptors, test_rationale, four doc_links and an
+      expects_from contract on GE-125c-2; set readiness reviewed. The it_requirements
+      record a measured fact the BA could not see: _TICKET_ID_RE at check_secrets.py:120
+      ends in an unbounded greedy word-character run, so an appended credential is
+      absorbed into the identifier match and removed by the scrub at line 195, leaving
+      no residual token for the entropy re-test at 197-200 — so the second scenario is
+      red today independently of the file-level branch, and both the pattern and the
+      scrub-then-retest step are enforcement points. Further requirements state the
+      whole-value account as a falsifiable property rather than a regex, forbid a
+      deny-list tightening, protect the third scenario as a control, require near-miss
+      fixtures to be constructed from the convention with the violated part asserted,
+      forbid feeding the recognition Finding.excerpt, and add a catastrophic-backtracking
+      bound. criteria, title, level and work_status unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS ITS OWN RECORD. The parent settles that the list of explanations is
+  closed and that anything unrecognised is reported. It does not settle how tightly
+  a value must match an entry on that list to count as recognised, and that is where
+  the closure is actually won or lost: a match that fires on a prefix, or on a
+  substring anywhere in the value, is an open list wearing a closed list's clothes.
+  The third scenario is the control that stops the first two being satisfied by
+  removing the recognition entirely.
+
+  THIS IS THE SAME LESSON THE ADJACENT RULE ALREADY LEARNED. GE-123d-3's fourth
+  scenario exists because "contains whitespace" as a literal test was defeatable by
+  one keystroke. The shape here is identical: a recognition that is not anchored to
+  the whole value is defeatable by typing something familiar in front of a
+  credential. Reuse that reasoning rather than re-deriving it, and do not close
+  either record as a duplicate of the other — that one is about a proposed exemption
+  for the keyword rule, this one about the existing exemption for the shapeless-value
+  rule.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED. Every fixture must be a real file
+  created inside a tempfile-backed throwaway project root, with the ticket area
+  constructed INSIDE that root and the check run against that root. No fixture may
+  be created under this repository's own `tickets/`, `docs/retrospectives/`,
+  `docs/acceptance-criteria/` or `templates/skills/` trees.
+
+  A CAUTION ON THE FIXTURE VALUES THEMSELVES: the near-miss values here are
+  deliberately shaped to look like this project's own identifiers, so they must be
+  assembled at runtime from concatenated fragments like every other credential-shaped
+  fixture string in this tree — both to keep the module free of literals and so that
+  the near-miss is constructed from a stated convention rather than typed by eye.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Every arm runs the real
+  pre-commit secrets check over real staged files and asserts the process exit
+  status and the reported findings. Asserting what the recognition returns when
+  called directly does not discharge any arm.

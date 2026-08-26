@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -114,3 +114,25 @@ notes: |
   requires that the gate PAUSE and persist a pending-question record keyed to
   the run id, via an agent() dispatch (the E2 body has no fs access), resumable
   via the harness resumeFromRunId replay -- rather than terminating the run.
+
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-ACD-005. The criterion is false:
+  "headless" was implemented as "the agent returned null", not as "no human answered".
+
+  templates/workflows-js/plan-feature.js:2067 dispatches the product-truth gate with
+  { agentType: "status-checker" }, so no human is ever attached to it. resolveGate at :1577
+  accepts any object carrying a string `action` as a decision, so status-checker's own
+  refusal -- which is well-formed and reads {"action":"cancel","feedback":"...outside
+  status-checker's scope..."} -- is taken as the user choosing to cancel. pauseAtGate at
+  :1582 is reachable ONLY when the reply is null or not an object, which a refusal never is.
+  This AC's own constraint requires that "no gate silently retains the cancel-on-headless
+  bug"; the gate retains it.
+
+  Its covering test models headless as label_responses={} -- no gate response at all -- so
+  it exercises the one shape that does reach pauseAtGate and never feeds a well-formed
+  refusal. Any re-fix must add that fixture or it will pass on the bug again.
+
+  FIX WITH BO-2300a-2, NOT SEPARATELY. Both records are falsified by one decision in the
+  same 40-line block, and both were marked done in the same ticket. Repairing the
+  gate-answerer here without correcting the cancel-path return status leaves BO-2300a-2
+  false, and vice versa. See KI-ACD-019 and the handover ticket
+  tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md.

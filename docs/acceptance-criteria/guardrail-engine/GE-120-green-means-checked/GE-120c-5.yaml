@@ -63,7 +63,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/21_TICKET-20260825-GE-120c-5.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -84,3 +85,4 @@ notes: |
   change are in it_requirements. The two test paths to contrast are unit_tests/portability/
   (out of process, deployed layout) and unit_tests/commit_guardian/ (in process, source-tree
   import) — name them by directory so the contrast is checkable.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

@@ -485,10 +485,24 @@ class TestFailedClaimBehavior(unittest.TestCase):
         subdir.mkdir(parents=True, exist_ok=True)
         _write_ac(self.ac_root, "BO-F7-I-001", work_status="todo")
 
-        # Make the store directory read-only so the write fails.
+        # Make the store directory (not just the target file) read-only so the
+        # write fails. GENUINE-DEFECT FIX (found while implementing
+        # BO-2400e-3, 2026-08-25): this originally chmod'd only the target
+        # YAML file, despite the comment above already stating the intent was
+        # to make the STORE DIRECTORY read-only. That mismatch was invisible
+        # while _update_ac_work_status used a truncating open("w") -- which
+        # does require write permission on the file itself, so the test
+        # passed for the wrong reason. Now that BO-2400e-3 replaces that with
+        # a write-temp-then-os.replace atomic write, POSIX rename(2) only
+        # requires write+execute on the CONTAINING DIRECTORY, not on the
+        # destination file -- chmod'ing only the file no longer blocks the
+        # write at all, so the scenario this test claims to cover (an
+        # unwritable store) must chmod the directory too, matching the
+        # comment's original stated intent.
         import stat
         yaml_path = self.ac_root / "test-component" / "BO-F7-I-001.yaml"
         yaml_path.chmod(stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        subdir.chmod(stat.S_IREAD | stat.S_IEXEC)
 
         try:
             result = claim_build_set(["BO-F7-I-001"], ac_root=self.ac_root)
@@ -511,6 +525,7 @@ class TestFailedClaimBehavior(unittest.TestCase):
             )
         finally:
             # Restore permissions for cleanup.
+            subdir.chmod(stat.S_IRWXU)
             yaml_path.chmod(
                 stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP | stat.S_IROTH
             )

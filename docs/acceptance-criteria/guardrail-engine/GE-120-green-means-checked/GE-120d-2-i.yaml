@@ -81,7 +81,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/24_TICKET-20260825-GE-120d-2-i.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -95,3 +96,4 @@ notes: |
 
   IT-PO (2026-08-14): the classifier is SHARED with GE-120b-1-i — build it once. Discriminate
   on the presence of the deployed LAYOUT, not on the absence of the first file looked up.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

@@ -1,0 +1,80 @@
+id: GE-124a-3-i
+readiness: approved
+priority: high
+title: "A barrel file that only re-exports other components is out of scope"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given the staged set contains `components/coverage/index.tsx`, whose entire
+    body is `export { CoverageExplorer } from "./coverage-explorer";` and two
+    further re-export lines
+  When the frontend declaration reader decides which staged files are screen
+    components
+  Then `components/coverage/index.tsx` is out of scope
+  And no declaration verdict of any kind is recorded for it
+  And the recorded reason names re-export-only, not a missing extension
+depends_on:
+  - GE-124a-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-3.yaml"
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE RULE IS RE-EXPORT-ONLY, NOT FILENAME. A file named index.tsx that renders markup is IN scope; a file named anything at all whose every non-comment, non-import statement is a re-export is out. Keying on the filename `index` is the shortcut that exempts a real page component that happens to be a route index."
+  - "The recorded reason must be the enumerated code 're-export-only' — distinct from 'no-markup' and from 'extension-not-in-scope'. The three collapse trivially in an implementation that returns a bare boolean, and the PO's clustered-opt-out review cannot tell them apart afterwards."
+  - "Do not treat an uppercase identifier in an export statement as evidence of a component. `export { CoverageExplorer }` is component-shaped to a naive scan and is exactly the false positive this AC pins; the deciding property is markup, and a barrel contains none."
+delivers_to: null
+expects_from:
+  ac_id: GE-124a-3
+  contract: "The in-scope decision and its enumerated reason code, which this edge case exercises on a markup-free re-export file (expected reason: 're-export-only')"
+test_spec:
+  - name: test_ge_124a_3_i_barrel_of_re_exports_is_out_of_scope_with_the_re_export_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A three-line re-export index.tsx is out of scope, records reason 're-export-only' (not 'no-markup', not 'extension-not-in-scope'), and produces no declaration verdict record."
+  - name: test_ge_124a_3_i_index_tsx_that_renders_markup_stays_in_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A file also named index.tsx that returns a JSX element IS in scope. This is the guard against keying the rule on the filename, which would exempt every route index in a Next.js app."
+test_rationale: |
+  Two cheap unit tests are the right instrument here because the whole content of this AC is a
+  classification decision on file text; the entry-point wiring is already charged at GE-124c-1.
+  What the tests must NOT do is assert only `in_scope is False` — that passes on an
+  implementation keyed to the filename `index`, which is the shortcut a hurried implementation
+  reaches for and which would silently exempt real route components. Asserting the specific
+  reason code, plus a positive case for a markup-bearing index.tsx, is what distinguishes the
+  correct rule from the convenient one.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Pinned the rule to re-export-only rather than the filename `index` (a route index that renders markup must stay in scope), required the distinct reason code, and named the uppercase-identifier false positive. Added the positive index.tsx counter-case to the test contract. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  A barrel already passes the markup test in the wrong direction for a naive
+  implementation that looks for an uppercase identifier in an export statement:
+  `export { CoverageExplorer }` looks component-shaped. The rule that decides it
+  is markup, and a barrel contains none. Demanding a declaration here would ask
+  the author to restate the declarations of every file it re-exports, which is
+  the duplication that guarantees drift.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). The second shortcut — keying on the
+  filename `index` rather than on re-export-only content — is not visible from
+  the criteria as written, because the worked example happens to be called
+  index.tsx. It is pinned in it_requirements and given its own test case.

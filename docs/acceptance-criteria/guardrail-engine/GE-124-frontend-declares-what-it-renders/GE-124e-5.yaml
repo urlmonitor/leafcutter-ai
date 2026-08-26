@@ -1,0 +1,130 @@
+id: GE-124e-5
+readiness: approved
+priority: high
+title: "A how-to separates 'nothing claims this' from 'nothing proves this' for the person who hit the gate"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+criteria: |
+  Given a person's build has just failed the reverse-direction gate on a
+    criterion id
+  When they open the how-to named in the failure
+  Then it states the two ways to satisfy the gate — name the criterion in a
+    component-level declaration, or pin it on a rendered element — and shows
+    both
+  And it states that satisfying this gate does not mean the criterion is proven,
+    and names the separate obligation that a test still has to assert it
+  And it shows how this failure differs on the page from a test-proof failure,
+    which the reader may be looking at the same day
+  And it states that a criterion still in progress is skipped rather than
+    checked, so the reader does not mark work done to clear the gate
+
+  Given a reader asks why a criterion that has been undeclared for months has
+    only now failed the gate
+  When they open the same how-to
+  Then it states that the gate evaluates only the criteria a change touched —
+    the criterion's own record, or a front-end file that declares or pins it
+  And it states that an untouched criterion is not evaluated rather than passed,
+    so its silence on earlier runs was never a clean bill
+depends_on:
+  - GE-124e
+  - GE-124e-1
+  - GE-124e-2
+  - GE-124e-3
+  - GE-124e-4
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/how-to/clearing-the-ui-declaration-gate.md"
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components, description) and stay within the check_doc_length budget."
+  - "THE PAGE MUST BE NAMED IN THE GATE'S FAILURE MESSAGE, and the test contract asserts that routing from the real check's output. A remediation page nobody is sent to might as well not exist."
+  - "SHOW THE TEST-PROOF FAILURE SIDE BY SIDE, using the real text check_done_proof emits, not a paraphrase. The two failures look superficially identical on a CI page and appear on the same criterion; a reader who cannot tell them apart will 'fix' the wrong one. Reproducing both real messages next to each other is the only form of this that works."
+  - "STATE BOTH DIFF-SCOPING FACTS, not just the first: the gate evaluates the criteria a change touched via EITHER route (the criterion's own record, or a changed front-end file that declares or pins it), AND an untouched criterion was never evaluated rather than passed. The second is what turns an apparent regression into the backfill it actually is — without it the likeliest reaction is to hunt for a recent change that caused it, and the next likeliest is to ask for the gate to be turned off."
+  - "STATE THE IN-PROGRESS RULE AND WHY IT IS NOT AN ESCAPE: a UI criterion that is not done is skipped, and it comes straight back the moment it is finished (GE-124e-1). Stating it removes the incentive to mark work done to silence the gate, and naming its expiry removes the incentive to leave work unfinished to avoid it."
+  - "CARRY GE-124g'S LANGUAGE UNCHANGED — declared, never verified, covered or proven. This page is where a reader most wants the two obligations to be one thing."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the how-to document."
+delivers_to:
+  agent: frontend-coder
+  contract: "The remediation path out of a reverse-direction failure, written so that clearing it is not mistaken for finishing the criterion and so a first failure on old work is not mistaken for a regression. Reproduces both real gate messages — declaration and test-proof — side by side, and is reachable from the declaration gate's own failure output."
+expects_from:
+  ac_id: GE-124e-3
+  contract: "The failure message and its criterion-id subject that this how-to is reached from, plus the banned-vocabulary constraint its wording must respect"
+test_spec:
+  - name: test_ge_124e_5_gate_failure_message_routes_to_this_page
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the real reverse-direction gate over an undeclared done UI fixture and assert its failure output names this how-to's path. Routing lives in the check, not in the document, so it must be asserted from the check's real output."
+  - name: test_ge_124e_5_page_reproduces_both_real_gate_messages_and_they_differ
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Capture the real messages from check_ui_ac_declared and from check_done_proof for the same criterion and assert both appear in the page, and that they are not identical. If the two real messages ever converge, this test fails and the page's whole purpose is void — which is information worth having."
+  - name: test_ge_124e_5_page_states_both_diff_scoping_facts
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The page states both routes into the evaluated set (own record changed; changed front-end file declares or pins it) and states that an untouched criterion was not evaluated rather than passed. The second clause is the one that turns an apparent regression into a backfill."
+  - name: test_ge_124e_5_page_states_the_in_progress_skip_and_uses_no_proof_vocabulary
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The page states that an in-progress UI criterion is skipped and returns when finished, and contains no sentence describing the gate's pass as verified, covered, proven or tested. Same banned-word set as GE-124g-2, applied to the reader-facing page."
+test_rationale: |
+  This page exists because two CI failures on the same criterion look alike, so the only test
+  that proves it does its job is one that captures BOTH real messages and confirms the page
+  carries both and that they differ. Paraphrases drift, and a drifted paraphrase is worse than
+  nothing here — it sends the reader looking for wording that no longer appears. The routing
+  test asserts from the check's side, because a remediation page nobody is routed to is not a
+  remediation path. The two content tests cover the clauses with no executable counterpart, and
+  both target documented reader reactions: hunting for the recent change that "broke" a legacy
+  criterion, and marking work done to silence the gate.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [business-analyst]: added the diff-scoping scenario after GE-124e-4 was rebuilt from a dated cutoff onto diff-scoping. Diff-scoping makes a legacy criterion fail for the first time on the day someone touches its screen, which reads as a regression unless the how-to says otherwise."
+  - "2026-08-25 [it-po]: technical enrichment. Required both real gate messages (declaration and test-proof) to be reproduced side by side from captured output rather than paraphrased, asserted the routing from the check's own failure text, and required both diff-scoping facts including the untouched-is-not-passed half. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for GE-124e's `documentation_triggers: [how-to]`. The PO's reason is
+  precise: this failure and a test-coverage failure look superficially
+  identical, so the reader has to be told plainly that satisfying this one is
+  not the same as proving the criterion.
+
+  The in-progress clause guards the perverse incentive this gate creates in the
+  opposite direction from the usual one. A reader who learns that in-progress
+  criteria are skipped might reach for that as an escape; a reader who does NOT
+  know it might mark something done to make a message go away. Stating the rule
+  removes the second, and GE-124e-1 makes the first useless because the
+  criterion comes straight back the moment it is finished.
+
+  THE SECOND SCENARIO IS THE COST OF DIFF-SCOPING, paid in documentation. Under
+  GE-124e-4 a legacy criterion fails on the day someone first touches its
+  screen, which to that person looks like their change broke something. Telling
+  them the gate had never examined it — and that its earlier silence was not a
+  pass — turns an apparent regression into the backfill it actually is. Without
+  this clause the most likely reaction is to look for the "recent change" that
+  caused it, and the second most likely is to ask for the gate to be turned off.

@@ -7,9 +7,10 @@ description: 'Conditional phase agent that starts a development server, issues H
   AND live_surface_testing.enabled: true in skills_config.json. Priority 11.8 — after
   user-surface-smoker (11.5), before commit (12). Reads the ## Live Test Fixtures
   block from the ticket body. Port allocation is managed via scripts/port_registry.py.
-  Agent is read-only: no Edit or Write tools. Emits (status: ok), (status: blocker),
-  or (status: skipped) accordingly. Use when: ticket-supervisor dispatches this agent
-  at priority 11.8 for a ticket whose live_surface_test field is true.'
+  The agent does not modify the code under test: its only permitted write is the atomic
+  sign-off edit to the ticket .md. Emits (status: ok), (status: blocker), or (status:
+  skipped) accordingly. Use when: ticket-supervisor dispatches this agent at priority
+  11.8 for a ticket whose live_surface_test field is true.'
 type: card
 status: active
 created: 2026-08-13
@@ -18,7 +19,7 @@ last_updated: '2026-08-13'
 ---
 # live-surface-tester
 
-**Conditional phase agent that starts a development server, issues HTTP requests against declared fixtures, asserts response status + body + headers, then tears down the server. Only dispatched when live_surface_test: true in ticket frontmatter AND live_surface_testing.enabled: true in skills_config.json. Priority 11.8 — after user-surface-smoker (11.5), before commit (12). Reads the ## Live Test Fixtures block from the ticket body. Port allocation is managed via scripts/port_registry.py. Agent is read-only: no Edit or Write tools. Emits (status: ok), (status: blocker), or (status: skipped) accordingly. Use when: ticket-supervisor dispatches this agent at priority 11.8 for a ticket whose live_surface_test field is true.**
+**Conditional phase agent that starts a development server, issues HTTP requests against declared fixtures, asserts response status + body + headers, then tears down the server. Only dispatched when live_surface_test: true in ticket frontmatter AND live_surface_testing.enabled: true in skills_config.json. Priority 11.8 — after user-surface-smoker (11.5), before commit (12). Reads the ## Live Test Fixtures block from the ticket body. Port allocation is managed via scripts/port_registry.py. The agent does not modify the code under test: its only permitted write is the atomic sign-off edit to the ticket .md. Emits (status: ok), (status: blocker), or (status: skipped) accordingly. Use when: ticket-supervisor dispatches this agent at priority 11.8 for a ticket whose live_surface_test field is true.**
 
 | Field | Value |
 |-------|-------|
@@ -92,6 +93,7 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
+| `Edit` |
 ---
 
 ## Skills Used

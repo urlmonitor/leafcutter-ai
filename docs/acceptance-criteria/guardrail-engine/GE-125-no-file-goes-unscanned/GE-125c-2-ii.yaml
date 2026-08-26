@@ -1,0 +1,188 @@
+id: GE-125c-2-ii
+components:
+  - security_scanner
+  - commit_guardian
+title: "The allowance reaches only the shapeless-value rule — every other credential rule keeps full strength in the same file"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose ticket area holds one Markdown file staged for
+    commit,
+  And that file contains four lines: a project identifier of the ticket form whose
+    high entropy is explained, a private-key header line, a cloud access key in the
+    recognised prefixed form, and a quoted twelve-character value assigned to a
+    field named password,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then exactly three findings are reported for that file — one for each of the
+    three shape-based and keyword-based rules — and the commit is blocked,
+  And the project identifier's line is not reported,
+  Because this L1 changes the unit of ONE allowance, the one covering values with
+    no recognisable shape; no other rule gains an allowance from it, and a
+    per-result decision applied to rules that never had one is a widening nobody
+    asked for.
+
+  Given the same throwaway project,
+  And a second staged Markdown file in the same ticket area containing only the
+    private-key header line,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the private-key finding is reported and the commit is blocked,
+  Because those rules already fire in these locations today, and this L1 must leave
+    that untouched — a change to the shapeless-value allowance that quietened a
+    rule which currently works would be a regression dressed as a fix.
+depends_on:
+  - GE-125c-2
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. Any production change lands in `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and `check_hook_parity` enforces all four locations. Run `python scripts/build.py --target-dir .` after editing the template and re-run the commit_guardian suite before claiming the change."
+  - "THE RULE-ID GUARD IS THE ENFORCEMENT POINT AND IT ALREADY EXISTS — PRESERVE IT, DO NOT REBUILD IT. `_filter_prose_findings` at `templates/scripts/commit_guardian/check_secrets.py:219` filters only when `finding.rule_id == \"ENTROPY_HIGH\"`, and the `_is_prose_exempt` docstring at lines 171-173 states the same scope. Once a per-value allowance exists and is being wired into the reporting path, applying it to every finding that passes through is the natural next line of code. Keep the guard, and keep it at the point the filter is applied rather than moving it inside the recognition, where a future caller can bypass it."
+  - "THE CONTAINMENT MUST BE ASSERTED OVER EVERY NON-ENTROPY RULE, NOT ONLY THE THREE IN THE FIXTURE. The rule set is `AWS_KEY`, `PRIVATE_KEY`, `EXCHANGE_API_KEY` and `GENERIC_SECRET` alongside `ENTROPY_HIGH`; the criterion's file exercises three of the four. Derive the assertion from the rule set itself so that a rule added later inherits the containment automatically — a check that names three rules by hand leaves the fourth, and every future one, unprotected."
+  - "EXACT COUNTS: THREE, NOT AT LEAST ONE. An implementation that widened the allowance to the keyword rule reports two, which any at-least-one assertion accepts. The count assertion must be an equality, and the three findings must be identified by rule id and 1-based line number rather than by count alone."
+  - "EACH OF THE FOUR LINES MUST PRODUCE EXACTLY ONE FINDING, AND THAT IS A FIXTURE PRECONDITION TO ASSERT, NOT AN ASSUMPTION. In particular the quoted password value must be long enough for the keyword rule to fire and short enough not to reach the entropy path: `_ENTROPY_MIN_LEN` is 20 at `templates/scripts/commit_guardian/check_secrets.py:136`, so a twelve-character value is below the entropy token floor by construction — assert that rather than relying on it. Assert equally that neither the private-key header nor the cloud access key cross-triggers a second rule."
+  - "THE SECOND SCENARIO IS GREEN ON ARRIVAL AND MUST BE LABELLED AS A REGRESSION GUARD wherever the red baseline for this tree is recorded. Do not cite it as coverage for this L1's behaviour, and do not let its passing be read as the first scenario passing. A TDD-order check that sees it green before the coder runs must be able to tell from the label that this is intended, not a violation."
+  - "THIS RECORD SHOULD REQUIRE NO PRODUCTION CHANGE OF ITS OWN. If satisfying it needs code beyond what GE-125c-1 and GE-125c-2 introduce, the containment was already broken by one of them — treat that as the finding, name which change widened the scope, and fix it there rather than adding a compensating guard here."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER, AND IT MATTERS MORE HERE THAN ANYWHERE ELSE IN THIS SUBTREE. The rules being asserted are the ones that fire everywhere, so a badly placed fixture passes whatever the change did to them. Every fixture is a real file inside a `tempfile`-backed throwaway project root with the ticket area constructed INSIDE it and the check pointed at that root; no fixture under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. Assert as a precondition that the root path ABOVE the constructed prose directory contains none of the four segment names."
+  - "THE PRIVATE-KEY HEADER AND THE CLOUD ACCESS KEY MUST BE ASSEMBLED AT RUNTIME FROM CONCATENATED FRAGMENTS. This is the record that deliberately contains the shapes the scanner exists to catch, so a source literal here would trip the check on the very commit that adds the test — and the fix for that must be fragments, never a `.security-allowlist` entry. `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does this; follow it."
+  - "NEITHER SCENARIO MAY BE FED `Finding.excerpt` AS THE INPUT TO A VERDICT. GE-125c-3 owns that constraint. Keep every fixture line in THIS record comfortably under 120 characters so the arms measure containment alone."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY DIRECT CALL. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings, their rule ids and their 1-based line numbers. Greping for the rule-id guard passes on a guard that nothing reaches."
+  - "ERROR HANDLING PER CLAUDE.md: no try/except is added around the pure filtering path (Rule 4); any file or subprocess access in the tests is wrapped in a typed except that logs at WARNING or re-raises (Rules 1-3)."
+test_spec:
+  - name: test_four_line_file_reports_exactly_three_non_entropy_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The four-line staged file — explained ticket identifier, private-key header, prefixed cloud access key, quoted twelve-character password assignment — yields EXACTLY THREE findings, identified by rule id and 1-based line number, with the identifier's line absent, and a non-zero exit. Two findings means the allowance was widened to a rule that never had one."
+  - name: test_private_key_alone_in_a_prose_location_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "REGRESSION GUARD, GREEN ON ARRIVAL — label it as such in the red baseline. A staged file containing only the runtime-assembled private-key header yields the private-key finding and a non-zero exit, as it does today. Not coverage for this L1's behaviour."
+  - name: test_every_non_entropy_rule_is_unaffected_by_the_allowance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Derived from the rule set rather than hand-listed: for each non-ENTROPY_HIGH rule, a staged file in the throwaway prose location containing a runtime-assembled trigger for that rule is reported. Covers EXCHANGE_API_KEY, which the criterion's four-line file does not exercise, and makes a future rule inherit the containment automatically."
+  - name: test_each_fixture_line_triggers_exactly_one_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: the quoted password value is long enough for the keyword rule and shorter than the twenty-character entropy token floor, neither the private-key header nor the cloud access key cross-triggers a second rule, the ticket identifier is matched by the recognised form and exceeds the entropy threshold, every line is under 120 characters, and the throwaway root above the constructed prose directory contains none of the four exempt segment names."
+test_rationale: |
+  Four descriptors for two scenarios, and the extra two are the difference between a
+  containment claim and a containment proof.
+
+  The third descriptor generalises over the rule set. The criterion's file exercises
+  three of the four non-entropy rules, and EXCHANGE_API_KEY is simply absent — a
+  widening that reached only that rule would pass every arm the criterion states.
+  Deriving the assertion from the rule set closes that gap and, more usefully, means
+  a rule added after this work inherits the containment rather than arriving
+  unprotected. The parent record asks for the closed list to be data-driven for the
+  same reason; the containment assertion is the mirror of it.
+
+  The fourth descriptor is what makes "exactly three" a claim rather than a
+  coincidence. Three is exact only if no line produces two findings, and the quoted
+  password value is the delicate one: too short and the keyword rule does not fire,
+  long enough and it crosses the twenty-character entropy token floor and produces a
+  second finding on the same line. Asserting both bounds before the verdict means a
+  future edit to the fixture fails loudly rather than silently converting an equality
+  into a lucky number.
+
+  The second descriptor is deliberately a green-on-arrival regression guard, recorded
+  as such. Its value is entirely in what it would catch later — a change to the
+  shapeless-value allowance that quietened a rule which currently works — and citing
+  it as evidence the fix landed would be exactly the false-coverage failure this
+  component keeps rediscovering.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 states the scope of the existing exemption precisely — it gates ENTROPY_HIGH only, and AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET still fire in these paths. That is the one part of today's behaviour this record forbids changing."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125c-2
+  contract: "A per-value recognised-explanation decision consulted for ENTROPY_HIGH findings only. This record constrains the blast radius of that decision: the rule-id guard at check_secrets.py:219 must survive the rework, so no shape-based or keyword-based rule acquires an allowance it never had."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity S, twelve
+      it_requirements, four test_spec descriptors, test_rationale, four doc_links and an
+      expects_from contract on GE-125c-2; set readiness reviewed. The it_requirements
+      name the existing rule-id guard at check_secrets.py:219 (and the _is_prose_exempt
+      docstring at 171-173) as the enforcement point to PRESERVE rather than rebuild,
+      require the containment to be derived from the rule set so EXCHANGE_API_KEY and any
+      future rule inherit it, cite _ENTROPY_MIN_LEN = 20 at check_secrets.py:136 as the
+      measured reason a twelve-character password value cannot cross-trigger the entropy
+      path, require the green-on-arrival second scenario to be labelled as a regression
+      guard in the red baseline, state that this record should need no production change
+      of its own (and that needing one is itself the finding), and require the
+      private-key and cloud-key fixtures to be runtime fragments rather than an allowlist
+      entry. criteria, title, level and work_status unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS ITS OWN RECORD, AND WHY IT IS AN EDGE CASE RATHER THAN A NEW
+  DIRECTION. KI-SEC-001 states the scope of the existing exemption precisely: it
+  gates the high-entropy rule only, and the shape-based and keyword-based rules
+  still fire in these locations. That is the one part of today's behaviour this L1
+  must NOT change. The risk is specific to the fix being asked for here: once a
+  per-result allowance exists and is being wired into the reporting path, applying
+  it to every finding that passes through is the natural next line of code and
+  nobody would notice, because the second scenario is currently green and no
+  existing record asserts it.
+
+  THE SECOND SCENARIO IS GREEN ON ARRIVAL, AND THAT IS ITS POINT. It is a
+  regression guard, not evidence that the fix landed. Do not cite it as coverage
+  for this L1's behaviour, and do not let its passing be read as the first scenario
+  passing. Label it as such wherever the red baseline for this tree is recorded.
+
+  EXACT COUNTS MATTER HERE TOO: three findings, not at least one. An implementation
+  that widened the allowance to the keyword rule would report two, which any
+  at-least-one assertion accepts.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED. Every fixture must be a real file
+  created inside a tempfile-backed throwaway project root, with the ticket area
+  constructed INSIDE that root and the check run against that root. No fixture may
+  be created under this repository's own `tickets/`, `docs/retrospectives/`,
+  `docs/acceptance-criteria/` or `templates/skills/` trees. This matters more than
+  usual for this record: the rules being asserted are the ones that fire everywhere,
+  so a badly placed fixture would pass whatever the change did to them.
+
+  EACH OF THE FOUR LINES MUST PRODUCE EXACTLY ONE FINDING so that three is an exact
+  expectation: verify the chosen values do not cross-trigger a second rule — in
+  particular that the quoted password value is long enough for the keyword rule and
+  short enough not to reach the entropy threshold.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Every arm runs the real
+  pre-commit secrets check over real staged files and asserts the process exit
+  status and the reported findings. Credential-shaped fixture strings are assembled
+  at runtime from concatenated fragments rather than written as source literals, so
+  this repository continues to need no suppression for the module that holds them —
+  which matters here because this record is the one that deliberately contains a
+  private-key header and a cloud access key.

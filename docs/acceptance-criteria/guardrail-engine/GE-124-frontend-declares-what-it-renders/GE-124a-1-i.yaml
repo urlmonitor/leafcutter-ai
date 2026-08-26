@@ -1,0 +1,91 @@
+id: GE-124a-1-i
+readiness: approved
+priority: high
+title: "A file with no declaration block declares nothing and is recorded as missing the floor"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given a staged screen component file that has no leading comment block
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the empty list
+  And the file's declaration verdict is "missing", not "declared"
+
+  Given a staged screen component file whose leading comment block contains
+    descriptive prose but no "@ac" line
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the empty list
+  And the file's declaration verdict is "missing", not "declared"
+depends_on:
+  - GE-124a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE VERDICT IS DRIVEN BY THE @ac LINE, NOT BY THE PRESENCE OF A COMMENT. declaration_block must be recorded as null whenever no @ac line is found in the leading comment region, so the mock-data if-and-only-if holds exactly: declares == [] iff declaration_block == null. A reader that stores a prose header in declaration_block while leaving declares empty breaks that invariant and makes every downstream consumer's null-check unreliable."
+  - "'missing' is a first-class verdict value in the shared reader's enum, distinct from the absence of a record. An in-scope staged file always yields a record; only an out-of-scope file (GE-124a-3) yields none."
+  - "No inference from filename, export name, or directory. A file with no @ac line declares nothing, whatever it is called — inferring a criterion would manufacture the false traceability GE-124g exists to prevent."
+delivers_to: null
+expects_from:
+  ac_id: GE-124a-1
+  contract: "The per-file declaration record whose empty-declares branch this edge case exercises: declares == [] with declaration_block null and verdict 'missing'"
+test_spec:
+  - name: test_ge_124a_1_i_file_with_no_leading_comment_records_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A staged in-scope file whose first tokens are code yields declares == [], declaration_block is None, and verdict == 'missing'. Assert all three together: the invariant is the conjunction, not any one field."
+  - name: test_ge_124a_1_i_prose_header_without_an_ac_line_records_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A file whose leading comment is a descriptive header with no '@ac' anywhere in it yields verdict 'missing' and declaration_block None. This is the near-miss a reader that only asks 'is there a leading comment?' gets wrong."
+  - name: test_ge_124a_1_i_missing_verdict_survives_the_real_hook_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run the commit-tier hook via subprocess against a temp git repo staging both an undeclared file and a prose-header-only file, and assert the process exits non-zero naming both. A gate that computes 'missing' but never blocks is inert; the must-block path is only observable at the entry point."
+test_rationale: |
+  Both scenarios are cheap to assert in isolation, and that is the trap: a unit test that
+  checks verdict == 'missing' passes on a reader whose result nothing consumes. The
+  must-block modifier applies here because this is the verdict the whole commit tier is
+  built on — so one entry-point test feeds known-bad input (an undeclared file) through the
+  real hook and asserts it actually blocks. The prose-header case stays a unit test because
+  it is a pure parse boundary and the failing implementation ("is there a leading comment?")
+  is distinguishable at the parse layer alone.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Pinned declaration_block to null (not the prose header) so the mock-data if-and-only-if holds, forbade inferring criteria from filename or export name, and added an entry-point must-block test — a 'missing' verdict that never blocks is inert. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The empty half of the mock-data "if and only if": declares == [] exactly when
+  declaration_block == null. The second scenario is the near-miss that a naive
+  implementation gets wrong — a file with a nice descriptive header comment
+  looks declared to a reader that only checks "is there a leading comment".
+  A header without an "@ac" line declares nothing.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). The subtle implementation slip is storing
+  the prose header in declaration_block "because it is a leading comment" while
+  leaving declares empty. That passes both scenarios as written and silently
+  breaks the invariant every downstream null-check relies on, so it is pinned in
+  it_requirements and asserted as a conjunction in the test contract.

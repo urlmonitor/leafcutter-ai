@@ -1,0 +1,102 @@
+id: ACD-1200a-3-iv
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The epic name ends on a word that means something, not on an article or preposition"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200a-3.yaml"
+criteria: |
+  This AC complements ACD-1200a-3-iii, which requires the derived epic name to be cut only at a
+  word boundary. That requirement is met by a name ending "...InThe" — it is a complete word,
+  correctly bounded. This AC adds the requirement that the final word carry meaning on its own.
+
+  Given the concise-title summariser is unavailable, so the epic name is derived by truncating
+    the goal AC's title,
+  And a goal AC whose title produces the PascalCase form
+    "WiringReconciliationActuallyLandsInTheStore", which exceeds the length cap,
+  When the epic folder name is derived,
+  Then the derived name does not end on a function word — no article, preposition, conjunction
+    or auxiliary verb is its final word,
+  And it ends instead on the last meaning-carrying word that fits under the cap, giving
+    EPIC-WiringReconciliationActuallyLands rather than EPIC-WiringReconciliationActuallyLandsInThe,
+  And the length cap is still respected,
+  And the cut is still at a PascalCase word boundary with no partial word, no dangling separator
+    and no empty segment, so ACD-1200a-3-iii is not regressed.
+
+  And Given a goal AC whose title produces a PascalCase form in which no meaning-carrying word
+    fits under the cap at all,
+  When the epic folder name is derived,
+  Then the derived name is still non-empty and is still a usable folder name — dropping trailing
+    function words never yields a bare prefix with no name after it.
+
+  And Given every acceptance-criterion title currently held in this repository's own store,
+  When each one is put through the same derivation with the summariser unavailable,
+  Then no derived name ends on a function word.
+
+  Coverage note: covered only by a test that exercises the derivation with the summariser
+  UNAVAILABLE. When the summariser answers, the name it returns is used instead and this defect
+  cannot appear, so a test that lets the summariser run passes on the broken fallback and proves
+  nothing. The store-wide sweep is a no-regression leg and cannot stand alone either — it is
+  vacuous on any day when no title in the store happens to truncate onto a function word. The
+  reported case must be exercised as an explicit input.
+depends_on: [ACD-1200a-3, ACD-1200a-3-iii]
+doc_links:
+  - path: scripts/goal_to_epic.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: context
+    status: exists
+    relevance: "KI-ACD-011 records the observed name EPIC-WiringReconciliationActuallyLandsInThe and establishes that this is a behaviour gap rather than a regression — ACD-1200a-3-iii's word-boundary promise was kept. It also records that the truncation path is the offline/fallback path, which is the path CI takes, the path a key-less environment takes, and the path any run takes when the summariser errors. The degraded path is the common one."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: ACD-1200a-3
+  contract: "The goal AC title fed into the epic folder-name derivation, and the length cap applied to it. This criterion constrains where the cut may land; it does not change that a cut happens or how long the result may be."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THIS IS A SIBLING OF ACD-1200a-3-iii AND NOT AN AMENDMENT TO IT. ACD-1200a-3-iii is
+  work_status: done and its promise was kept — "...InThe" ends on a complete word and passes its
+  trailing-character assertion. Reopening a kept promise to make it mean something stricter would
+  destroy the record of what was actually delivered. The new requirement is a distinct property
+  of the same derivation: not WHERE the boundary is, but WHICH boundary to stop at.
+
+  THE FIX IS NOT SPECIFIED HERE, DELIBERATELY. KI-ACD-011 offers two directions — drop trailing
+  function words after truncating, or cut at the last content-word boundary in the first place.
+  Both satisfy this criterion, they differ in where the cap is applied, and choosing between them
+  is an implementation decision. What the criterion pins is the observable property of the name,
+  which is what a test can assert either way.
+
+  KEEP THE CAP. The defect is where the cut lands, not that a cut happens. An implementation that
+  satisfies the function-word clause by abandoning the length limit fails the third clause and
+  regresses ACD-1200a-3-iii.
+
+  THE DEGENERATE CASE IS FOLDED IN RATHER THAN SPLIT OUT because the hierarchy stops at L3 and
+  this record is already L3 — it can have no child. It is a real case, not a hypothetical: a
+  title that opens with several short function words can put the cap inside the opening phrase,
+  and an implementation that unconditionally strips trailing function words would then return
+  nothing at all.
+
+  WHERE THIS BEHAVIOUR WAS SUPPOSED TO LIVE. scripts/goal_to_epic.py cites ACD-1200a-6 six times
+  as the governing criterion for concise epic naming, and no record with that id exists in the
+  store. This AC is deliberately NOT authored at that id — see the sign-off note on
+  ACD-1200a-8-i, which carries the same finding. Reclaiming ACD-1200a-6 for a new promise would
+  silently rewrite what those six live citations mean.

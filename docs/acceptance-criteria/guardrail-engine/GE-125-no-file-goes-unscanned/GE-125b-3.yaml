@@ -1,0 +1,301 @@
+id: GE-125b-3
+components:
+  - security_scanner
+  - commit_guardian
+title: "What counts as prose is a closed list of file kinds, and an unlisted kind is fully checked"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reduced scrutiny is granted only when both conditions hold together —
+    the file is at one of the four listed locations, AND its kind is one of two
+    admitted non-executing kinds: Markdown (.md) and plain text (.txt),
+  And five files are staged for commit in the skill-prompt area of a throwaway
+    git repository, at the repository-relative paths
+    "templates/skills/some-skill/scripts/deploy.sh",
+    "templates/skills/some-skill/data/fixture.json",
+    "templates/skills/some-skill/scripts/entrypoint" — a file with no extension,
+    "templates/skills/some-skill/config.yaml",
+    "templates/skills/some-skill/README.md",
+  And each carries one identical line holding the twenty-four-character opaque
+    token used throughout this tree,
+  And no suppression entries are in force,
+  When the staged set is checked by the pre-commit secrets check,
+  Then exactly four shapeless-value findings are reported — one each for the
+    shell script, the JSON data file, the extensionless file and the YAML file,
+  And no finding is reported for "templates/skills/some-skill/README.md",
+  And the check exits reporting findings present, so the commit is blocked,
+  Because admission is by presence on the list. A kind that is not on it is fully
+    checked, and having no extension to match is not a way onto the list. YAML is
+    on no list any more: the product owner decided on 2026-08-25 that the
+    acceptance-criteria store shall be scanned, so a .yaml file at a listed
+    location is checked like any other unadmitted kind.
+
+  Given a file of a kind this project does not currently use is staged in the
+    same area at "templates/skills/some-skill/notes.adoc", carrying the same
+    token,
+  When the staged file is checked by the pre-commit secrets check,
+  Then it IS reported and the commit is blocked,
+  Because a file kind arrives fully checked and becomes admitted only by someone
+    deliberately adding it to the list. Resembling prose is not admission — if it
+    were, the next kind anyone invents would arrive already exempt and nobody
+    would have decided that.
+
+  Given a sixth file at "scripts/build_probe.py", whose path contains none of the
+    four listed names, is staged in the same run carrying the same token,
+  When the staged set is checked by the pre-commit secrets check,
+  Then it IS reported,
+  Because the one silent file in these scenarios is only evidence of an exemption
+    if a file the exemption cannot reach is reported in the same run.
+depends_on:
+  - GE-125b
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The admitted-kind constant and the gate that reads it land in `templates/scripts/commit_guardian/check_secrets.py`, beside `_PROSE_FILE_PREFIXES`, `_is_prose_exempt` and `_filter_prose_findings`. `scripts/commit_guardian/check_secrets.py` and `.leafcutter/scripts/commit_guardian/check_secrets.py` are build outputs per ADR-001, and `templates/commit-guardian/` holds the legacy manifest; `check_hook_parity` enforces all four locations. Run `python scripts/build.py --target-dir .` and re-run the commit_guardian suite before claiming this."
+  - "PRODUCT DECISION MADE 2026-08-25 — THE ADMITTED LIST IS `.md` AND `.txt`, AND A CODER MAY NOT SILENTLY RE-WIDEN IT. Build the list exactly as this AC specifies: `.md` and `.txt`, and nothing else. This was an OPEN product decision until 2026-08-25, when THE PRODUCT OWNER DECIDED THAT THIS REPOSITORY'S OWN ACCEPTANCE-CRITERIA STORE SHALL BE SCANNED for opaque credentials — a `.yaml` or `.yml` file no longer inherits the location exemption, so `docs/acceptance-criteria/**.yaml` is scanned by `ENTROPY_HIGH` from now on. THE EVIDENCE THE DECISION WAS TAKEN ON, measured against the real scanner over all 3,260 store records with the location exemption disabled and the `TICKET-`/`EPIC-` residual-entropy filter still applying: 58 findings across 48 files, 1.4% of the store; 7 distinct strings and every one of them a file path, the top three being a `created_by` value naming an acceptance-criteria YAML record (20 occurrences), a `doc_links` path naming a component `PROJECT_CONTEXT.md` (14) and a `doc_links` path naming an agent `PROJECT_CONTEXT.md` (10); they clear the 4.5 threshold at 4.51-4.56 only because a long slash-separated path has high character diversity; a sweep of the same 3,260 files for real credential markers — AWS, PEM, GitHub, Stripe, Slack, Google, JWT, connection strings, Anthropic, OpenAI — returned ZERO hits; and `.security-allowlist` already carries an `ENTROPY_HIGH:docs/build-dataflow.json:*` glob as precedent for suppressing exactly this path-slug false-positive class. TWO THINGS THE DECISION DID NOT CHANGE. The LOCATION list is untouched — `docs/acceptance-criteria/` remains one of the four reduced-scrutiny locations and only the kind gate narrowed. And the `TICKET-`/`EPIC-` residual-entropy filter survives everywhere, regardless of location and regardless of kind; it is not path-gated, it is why the measured number is 58 and not 625, and nothing here may be read as saying that store lines carrying ticket identifiers now report. THE FENCE STAYS AND ONLY ITS SUBJECT CHANGES, FROM UNRESOLVED TO RESOLVED-DO-NOT-REOPEN. A coder, reviewer or test-writer must NOT add a kind back to the list, must NOT remove one, and must NOT edit the list to make a test pass — including re-admitting `.yaml` because the AC store has started producing path-slug findings, which is the expected and already-measured outcome and is handled by a `.security-allowlist` glob rather than by widening the gate. This decision is CLOSED and may be reopened only by the product owner, on the same authority and with the same kind of measurement. If implementation surfaces a reason to change the list, STOP and raise it as a product question."
+  - "ONE CLOSED CONSTANT, READ EVERYWHERE, DEFAULTING TO REPORTED. The two kinds are a single named module-level constant that the gate reads; no second copy, and no per-location kind list (a YAML-only rule for the store and a Markdown-only rule for the ticket tree was rejected by GE-123d-2 as over-fitting to today's layout, and that rejection still stands — the store is now closed to YAML everywhere, not closed by a location-specific rule). Admission is membership: absence from the list is exclusion, and there is no third state. An implementation carrying a DENY list of known-executable kinds such as `.py`, `.sh` and `.js` satisfies the first arm and fails the second — that inversion is the whole point of the shape, because the kinds nobody enumerated must arrive fully checked."
+  - "THE LOCATION LIST IS NOT TOUCHED BY THIS AC, AND THE 2026-08-25 DECISION DID NOT TOUCH IT EITHER. GE-123d-2's five locations include the changelog area, which it added deliberately. This record governs the EXISTING exemption and its four existing locations — the ticket tree, the retrospectives area, the acceptance-criteria store and the skill-prompt area. Adopting a kind list is not adopting a location list; adding a fifth location on this side would be an unasked-for widening; and REMOVING `docs/acceptance-criteria/` from the location list because its YAML is now scanned would be an equally unasked-for narrowing. The store keeps its place on the location list — its `.md` and `.txt` files are still admitted there."
+  - "COORDINATION WITH GE-123d-4-i, NOT A MERGE — AND THE TWO KIND LISTS NOW DIVERGE, WHICH RAISES THE BAR RATHER THAN LOWERING IT. GE-123d-4-i requires that if the location data is ever shared between the existing `ENTROPY_HIGH` exemption and the proposed `GENERIC_SECRET` one, the kind gate must be applied on BOTH sides or the sharing must not happen. This AC originally chose the same four kinds as GE-123d-2 so that a later sharing would be safe. After the 2026-08-25 decision the two lists DIFFER — `.md`/`.txt` here, `.md`/`.yaml`/`.yml`/`.txt` in GE-123d-2 — so sharing the location data now additionally requires reconciling the two kind lists first, as an explicit decision by whoever proposes the sharing. Do NOT reconcile them by quietly re-widening this list, and do NOT reconcile them by editing GE-123d-2: that tree is fenced. If this implementation introduces any structure the other rule could reuse — a shared kind constant, a shared location list, a shared predicate — that requirement binds here too and every call site must go through the gate. Do NOT edit any GE-123 file and do NOT add a depends_on edge into the GE-123 tree."
+  - "COORDINATE WITH THE SIBLING L1s RATHER THAN REVERTING THEM. GE-125a re-anchors the same path predicate to a root-anchored segment match and GE-125c moves the decision from the file to the individual finding, both against these same members, concurrently. Reconcile with whatever is in the file at implementation time; do not restore a substring match and do not restore the file as the unit of the decision as a side effect of adding the kind list."
+  - "THROWAWAY ROOT, AND ASSERT IT IS NOT ITSELF EXEMPT. All fixtures are real files inside a `tempfile`-backed throwaway git repository with the skill-prompt area constructed INSIDE that root; none may be written under this repository's own `templates/skills/` tree. Because the location match is a substring test (KI-SEC-001), assert as a precondition that the root path ABOVE the constructed directory contains none of the four segment names — otherwise the `scripts/build_probe.py` control falls silent and looks like a broken fixture rather than a re-armed exemption. If the check cannot be pointed at a throwaway root, raise that as a defect against this goal and stop."
+  - "VERIFY BY EXECUTION AND BY EXACT COUNT. Stage the files in the throwaway repository, run the pre-commit secrets check as a process, and assert the exit status together with the parsed findings and their 1-based line numbers. The first arm's assertion is an equality — exactly four across five files staged together, with the four named — because an at-least-one assertion is satisfied by an implementation that reports the README as well, which is the deleted-exemption failure. That count is not expressible by calling the exemption logic with path strings."
+  - "FIXTURE TOKENS ASSEMBLED AT RUNTIME from concatenated fragments, per `unit_tests/commit_guardian/test_scan_secrets_suppression.py`. No `.security-allowlist` entry may be added for this tree; needing one is the signal the fragments were collapsed into literals. This is distinct from the store-wide `ENTROPY_HIGH` path-slug residue the 2026-08-25 decision knowingly admits — that residue is real store content and is suppressed by a glob on the affected paths, not by an entry for this test tree."
+  - "ERROR HANDLING PER CLAUDE.md. Extension extraction and list membership are pure over a path string and must NOT be wrapped in try/except (Rule 4); any file or subprocess access added by the check or its tests is wrapped in a typed `except` that logs at WARNING or re-raises (Rules 1-3)."
+  - "PERFORMANCE — THIS RUNS ON EVERY COMMIT. Membership is tested against a module-level frozen set, not a list rebuilt per call, and the extension is derived from the path string with no filesystem access — no `stat`, no read, no subprocess. The check must remain within its current commit-time budget for a staged set of 200 files."
+test_spec:
+  - name: test_unadmitted_kinds_at_a_listed_location_report_exactly_four
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Five files in the skill-prompt area of a throwaway root — deploy.sh, fixture.json, an extensionless entrypoint, config.yaml and README.md — carrying the identical runtime-assembled token and staged together yield EXACTLY FOUR findings, one each for the shell script, the JSON file, the extensionless file and the YAML file, none for the README, with a non-zero exit. Location held constant so the kind is the only variable; the equality count is what makes it discriminating. The config.yaml finding is the arm the 2026-08-25 product decision added — it was silent under the original four-kind list."
+  - name: test_an_unknown_kind_arrives_fully_checked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A .adoc file this project does not use, staged in the same area with the same token, IS reported and blocks. This is the arm that separates a closed ADMIT list from a deny list of known-executable kinds: an implementation hard-coding .py/.sh/.js as excluded satisfies the previous descriptor and fails this one."
+  - name: test_admitted_kinds_are_one_closed_constant_of_exactly_two
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Behavioural drift guard: staged files of kinds .md and .txt at a listed location are silent while a representative sample of other kinds — including .yaml and .yml — is all reported, in one run, so the admitted set is observably exactly those two. Pins the product decision of 2026-08-25 at test level: if this descriptor ever needs editing to pass, the admitted list has changed and that requires a product decision by the product owner, not a test fix."
+  - name: test_live_path_control_reported_in_the_same_invocation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "scripts/build_probe.py in the throwaway root, containing none of the four listed names and holding the identical token, IS reported in the SAME run as the silent README. Without it the one silent file is an absence rather than evidence, and a fixture whose token never reached the entropy threshold looks identical to a working exemption."
+  - name: test_closed_kind_list_is_present_in_the_deployed_check_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After running the build, the first descriptor's four-finding outcome is produced by the DEPLOYED scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py, not only by the canonical template — the ADR-001 revert hazard, asserted by executing the deployed copy rather than by comparing bytes."
+test_rationale: |
+  Five descriptors, and the first two are a matched pair aimed at two implementations
+  that are indistinguishable from a single assertion. A hard-coded deny list of .py,
+  .sh and .js produces exactly the findings the first arm demands and lets the next
+  file kind anyone invents arrive already exempt; only the .adoc arm separates them.
+  That is why the second descriptor exists as a peer rather than as an edge case
+  — default-to-reported is the shape being bought here, not a detail of it.
+
+  The first descriptor holds location and content constant across five files staged in
+  one commit so the kind is the only variable, and asserts an equality rather than a
+  floor: an at-least-one assertion is satisfied by an implementation that reports the
+  README too, which is the deleted-exemption failure the whole subtree guards against.
+  Its config.yaml member is the one the 2026-08-25 product decision moved — under the
+  original four-kind list it was silent, and it is now the fourth reported file.
+
+  The third descriptor is deliberately a fence rather than a behaviour. The admitted
+  list was an OPEN product decision until 2026-08-25, when the product owner closed
+  the acceptance-criteria store to opaque tokens and the list shrank to .md and .txt.
+  The set must therefore stay observable at test level and expensive to change quietly
+  — in either direction, and re-admitting .yaml because the store has started producing
+  path-slug findings is the specific quiet change this descriptor exists to catch. It
+  is written behaviourally rather than by importing the constant, so it cannot be
+  satisfied by a source-level grep and so it also proves the constant is actually wired.
+
+  The fourth is the standing live-path control without which every silent assertion
+  here is vacuous, and the fifth covers the ADR-001 revert: a fix in the canonical
+  template alone leaves the hook a real commit runs unchanged until the next build.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001, second fix direction — gate the exemption by file kind, not only by path, because templates/skills/ genuinely is on the list and holds executable Python. Also records the substring-match measurement that makes a badly placed fixture pass for the wrong reason."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why templates/scripts/commit_guardian/ is canonical and the deployed copies are build outputs the next build.py overwrites."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "The closed admitted-kind list as a single named module-level constant in templates/scripts/commit_guardian/check_secrets.py — exactly .md and .txt — matched against the staged file's final extension with letter case folded, membership meaning admitted and absence meaning fully checked. Read by GE-125b-1's kind gate, refined by GE-125b-3-i's extraction rule, and enumerated verbatim by GE-125b-4's reference passage. The list is a product decision taken by the product owner on 2026-08-25 (the acceptance-criteria store SHALL be scanned): it is delivered as specified and may not be altered by a consumer."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-25'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity M, eleven it_requirements,
+      five test_spec descriptors, test_rationale, five doc_links and a delivers_to contract;
+      set readiness reviewed. The second it_requirement is the fence for the OPEN product
+      decision recorded in GE-125 notes — it names the choice to admit .yaml, states that
+      this keeps the repository AC store exempt from opaque-token scanning, states exactly
+      what changes if the decision goes the other way (list shrinks to .md/.txt, this AC
+      first arm gains a fourth finding, GE-125b-1-i acceptance-criteria arm inverts), and
+      forbids a coder, reviewer or test-writer resolving it unilaterally or editing the list
+      to make a test pass. Other requirements pin one closed constant with default-to-
+      reported and reject the deny-list inversion; hold the location list untouched; record
+      the GE-123d-4-i coordination point with the prohibition on editing GE-123 files or
+      adding a depends_on edge into that tree; and make the throwaway root plus the
+      build_probe live-path control mandatory. criteria, title, level, work_status and
+      priority unchanged.'
+  - reason: product-decision
+    date: '2026-08-25'
+    by: product-owner
+    entry: 'THE OPEN DECISION FENCED BY THE SECOND it_requirement IS NOW MADE: the product
+      owner decided on 2026-08-25 that the acceptance-criteria store SHALL be scanned for
+      opaque credentials. The admitted kinds shrink from .md/.yaml/.yml/.txt to .md and .txt,
+      so docs/acceptance-criteria/**.yaml no longer inherits the location exemption. Applied
+      exactly the three consequences this record predicted in advance. (1) criteria: the
+      admitted-kind sentence now names two kinds; the first arm gains a fifth staged file,
+      templates/skills/some-skill/config.yaml, and a fourth finding, and its Because clause
+      records the decision; the live-path control is renumbered from fifth to sixth file.
+      (2) it_requirement 2 rewritten from OPEN to MADE — it records the decision, its date,
+      its authority (product owner) and the measured evidence (58 findings across 48 files,
+      1.4% of 3,260 records; 7 distinct strings all of them file paths scoring 4.51-4.56;
+      zero real credential markers in the same sweep; existing .security-allowlist
+      ENTROPY_HIGH:docs/build-dataflow.json:* precedent), states the two things the decision
+      did NOT change (the location list, and the not-path-gated TICKET-/EPIC- residual-entropy
+      filter that keeps the number at 58 rather than 625), and KEEPS the prohibition on a
+      coder silently re-widening the list, now as resolved-do-not-reopen-without-the-same-
+      authority. (3) it_requirements 3, 4, 5, 8 and 9, the delivers_to contract, three
+      test_spec descriptors (the first arm count, the drift guard renamed from
+      exactly_four to exactly_two, the deployed-build descriptor), test_rationale and notes
+      updated to the two-kind list. The GE-123d-2 DIVERGENCE is recorded explicitly in
+      it_requirement 5 and in notes: the two kind lists now differ and sharing the location
+      data requires reconciling them first. No GE-123 file was edited. title, level,
+      component, components, depends_on, readiness, work_status and priority unchanged.'
+superseded_by: null
+covered_by:
+  - GE-125b-3-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE CLOSED-LIST DECISION GE-125b ASKED FOR, MADE AND STATED — AND THEN NARROWED
+  BY A PRODUCT DECISION ON 2026-08-25. The admitted kinds are .md and .txt, and
+  everything else at a listed location is fully checked. This record originally
+  admitted four kinds — .md, .yaml, .yml and .txt, deliberately the SAME four
+  GE-123d-2 chose, as GE-125b directed — and flagged the .yaml member as an OPEN
+  product decision because admitting it kept this repository's own
+  acceptance-criteria store unscanned for opaque tokens. That decision has now
+  been taken the other way. Both states are recorded below, because the reasoning
+  is the record.
+
+  THE DECISION, AND THE EVIDENCE IT WAS TAKEN ON. On 2026-08-25 the product owner
+  decided that the acceptance-criteria store SHALL be scanned. The scanner was run
+  over all 3,260 store records with the location exemption disabled and the
+  TICKET-/EPIC- residual-entropy filter still applying, and it produced 58 findings
+  across 48 files — 1.4% of the store — from 7 distinct strings, every one of them
+  a file path. The top three are a created_by value naming an acceptance-criteria
+  YAML record (20 occurrences), a doc_links path naming a component
+  PROJECT_CONTEXT.md (14) and a doc_links path naming an agent PROJECT_CONTEXT.md
+  (10). They clear the 4.5 threshold at 4.51-4.56 only because a long
+  slash-separated path has high character diversity. A sweep of the same 3,260
+  files for real credential markers — AWS, PEM, GitHub, Stripe, Slack, Google, JWT,
+  connection strings, Anthropic, OpenAI — returned zero hits. Precedent for
+  suppressing the residue already exists: .security-allowlist carries an
+  ENTROPY_HIGH:docs/build-dataflow.json:* glob for this exact path-slug
+  false-positive class. So the cost is one bounded, well-understood false-positive
+  shape with an established remedy, and the benefit is that the store stops being a
+  place a real opaque token can be committed unexamined.
+
+  WHY .yaml WAS ADMITTED ORIGINALLY, AND WHY THAT ARGUMENT DID NOT SURVIVE THE
+  MEASUREMENT. The argument was that the acceptance-criteria store is one of the
+  four listed locations and is written in YAML, so excluding .yaml would strip the
+  reduced scrutiny from that whole location as a side effect of a decision about
+  executable code. The measurement answered it: the exemption that would be lost is
+  worth 58 path-slug findings, not a wall of noise, and it is the only thing
+  standing between the store and an unexamined opaque token. Note what the counter
+  did NOT depend on — the location gate still answers the original worry about
+  configuration secrets, because a configuration file outside the four listed
+  locations was never exempt and still is not.
+
+  THE LOCATION LIST IS NOT TOUCHED HERE, AND THE DECISION DID NOT TOUCH IT EITHER.
+  GE-123d-2's five locations include the changelog area, which it added
+  deliberately. This record governs the EXISTING exemption and its four existing
+  locations — the ticket tree, the retrospectives area, the acceptance-criteria
+  store and the skill-prompt area. Adopting a kind list is not adopting a location
+  list, adding a fifth location to this side would be an unasked-for widening, and
+  removing docs/acceptance-criteria/ from the list because its YAML is now scanned
+  would be an equally unasked-for narrowing. The store keeps its place: its .md and
+  .txt files are still admitted there.
+
+  RULE 2 SURVIVES, AND IT IS WHY THE NUMBER IS 58 AND NOT 625. A line carrying a
+  TICKET- or EPIC- token whose residual entropy is below the threshold remains
+  exempt everywhere, regardless of location and regardless of kind. That filter is
+  not path-gated and this change does not touch it. Nothing in this tree may be
+  read as saying that acceptance-criteria lines carrying ticket identifiers now
+  report.
+
+  THE DIVERGENCE WITH GE-123d-2, RECORDED RATHER THAN TIDIED — READ THIS BEFORE
+  SHARING ANYTHING BETWEEN THE TWO EXEMPTIONS.
+    - The two lists are now DIFFERENT. This record (the EXISTING ENTROPY_HIGH
+      exemption) admits .md and .txt. GE-123d-2 (the PROPOSED GENERIC_SECRET
+      exemption) admits .md, .yaml, .yml and .txt.
+    - WHY THEY DIFFER. This record originally matched GE-123d-2's four kinds on
+      purpose, so that a later sharing of the location data would be a decision
+      someone could take safely. The 2026-08-25 product decision closed the
+      acceptance-criteria store to opaque tokens on THIS side only. GE-123d-2
+      governs a different rule that has not been built and whose own product
+      decision has not been revisited, and its tree is fenced — so the two lists
+      diverged rather than moving together.
+    - WHAT THAT MEANS MECHANICALLY. GE-123d-4-i requires that if the location data
+      is ever shared between the two exemptions, the kind gate must be applied on
+      BOTH sides or the sharing must not happen. That requirement still binds, and
+      it now carries a second obligation: sharing the location data ALSO requires
+      reconciling the two kind lists first, as an explicit decision by whoever
+      proposes the sharing. A shared location list under two different ideas of
+      what prose is, is the configuration GE-123d-4-i exists to prevent.
+    - HOW IT MAY NOT BE RECONCILED. Not by quietly re-widening this list back to
+      four kinds, and not by editing GE-123d-2 or anything else in the GE-123 tree
+      — those records are fenced and this note is on our side only. No GE-123 file
+      was edited to record this divergence and none may be.
+
+  DEFAULT-TO-REPORTED IS THE WHOLE POINT OF THE SHAPE. An open list, or a deny
+  list of known-executable kinds, both fail in the unsafe direction: the kinds
+  nobody enumerated arrive exempt. The second arm exists to make that difference
+  observable, and an implementation carrying a hard-coded deny list of .py, .sh
+  and .js satisfies the first arm and fails the second.
+
+  FIXTURE PLACEMENT, STATED AND JUSTIFIED. The five fixtures in the first arm all
+  sit inside the skill-prompt area because being at a listed location is the
+  precondition of the scenario — the question under test is whether the kind
+  alone changes the verdict, so the location must be held constant and must be
+  one that is entitled. config.yaml is the member added by the 2026-08-25
+  decision: it was silent under the original list and is reported now.
+  "scripts/build_probe.py" is the control that keeps the silent README
+  meaningful. All files are real files in a throwaway git repository; the token is
+  assembled at runtime from fragments; every arm runs through the pre-commit
+  secrets check over a staged set rather than through the exemption logic
+  directly, and the exact counts in the first arm are not expressible any other
+  way.

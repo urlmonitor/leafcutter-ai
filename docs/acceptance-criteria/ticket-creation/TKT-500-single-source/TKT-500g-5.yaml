@@ -1,0 +1,107 @@
+id: TKT-500g-5
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "The readiness report never calls a demanded proof unnecessary"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an approved requirement that authors a proof demand of one statement,
+  And the worker named on it is not classified as producing production code,
+  When the readiness check reports on that requirement,
+  Then the report does not state that the requirement needs no proof,
+  And the report states whether the authored demand reached the generated work
+    item,
+  And a requirement whose authored demand did not reach its work item is
+    reported as not ready, naming the demand that was lost.
+depends_on: [TKT-500g, TKT-500g-1]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+    relevance: "The readiness check runs from the same surface as the generation it reports on. Its verdict for a non-code assignee used to be a pass reading 'no proof contract required' — the sentence that made 308 discarded descriptors invisible."
+  - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
+    relationship: verifies
+    status: exists
+    relevance: "Carries this criterion's test, currently mis-tagged to BP-1100g-1; re-point it at TKT-500g-5."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Downstream boundary. That check refuses a promised proof that was never claimed, at commit time. This report is the earlier and weaker signal: it says whether the promise even arrived. Neither substitutes for the other."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The catalogue this report belongs to. A success-shaped message over a silent loss is the named mechanism, and this surface is where it fired 85 times."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The report must fail closed. When it cannot determine whether the demand reached the work item, the verdict is not-ready with the reason given — never a pass by default, because a pass by default is exactly how this loss survived."
+  - "A not-ready verdict must be consumed, not merely printed: it has to be visible in the exit status the callers of this check read. A verdict nobody can act on is the report continuing to certify the loss in a quieter voice."
+  - "The report compares the demand as authored against the demand as it arrived. Re-deriving either side inside the report lets the report and the generation step drift into agreeing with each other while both disagree with the record."
+  - "Every distinct verdict must have its own message. A shared 'no proof contract required' across a waiver, an absent demand, and a lost demand is the single sentence that made 85 records look fine."
+  - "This report is the surface a retrospective sweep of already-done records would run on. Do not build the sweep beside it with its own copy of the comparison."
+test_spec:
+  - name: test_verify_does_not_call_an_authored_contract_unnecessary
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/ac_store/generate_ticket_from_ac.py --ac <id> --ac-root <store> --verify (subprocess)"
+    description: "Runs the readiness check at its real entry point against a real store record that authors a demand under a non-code worker, and asserts the report neither says no proof is required nor stays silent about the authored demand."
+  - name: test_the_report_states_whether_the_authored_demand_reached_the_work_item
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The second clause, unbuilt: the report says explicitly whether the demand arrived in the generated work item, rather than reporting only that one was authored."
+  - name: test_a_lost_demand_is_reported_not_ready_and_names_what_was_lost
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Must-block control: with a record whose authored demand does not reach its work item, the report returns not-ready and names the lost statements. Feeding a genuinely lost demand through is the only way to tell a working report from one that always passes."
+test_rationale: |
+  One of the three clauses ships and has a covering test; the other two are the reason
+  this AC exists and neither has ever been asserted. The decisive descriptor is the third:
+  until a genuinely lost demand is fed through this report and the report refuses, there
+  is no evidence it can refuse at all — and a report that cannot refuse is what certified
+  85 losses as passes. It is tagged failure and carries the must-block obligation for
+  that reason. The first descriptor is tagged reachability because its substance is that
+  the real command-line verification path produces the message, not that a helper returns
+  a string.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-1
+  contract: "The generated work item and its proof section, so the report compares what was demanded against what arrived rather than re-deriving either."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  PARTLY BUILT. The report no longer calls an authored demand unnecessary — that
+  clause shipped with f3ac950c / PR #536 and has a covering test. The second and
+  third clauses (say whether the demand ARRIVED, and report a lost demand as not
+  ready) are specified here for the first time and are NOT built. This is the
+  only AC in the store that governs the readiness-reporting surface at all; a
+  search of the whole store found no other.
+
+  WHY A REPORT THAT LIES IS WORSE THAN NO REPORT. The loss was survivable for
+  weeks because the readiness check actively certified it: every one of the 85
+  records was reported as passing, with the loss itself given as the reason. A
+  silent report would have prompted somebody to look.
+
+  NOT IN SCOPE, AND WORTH SAYING. Forty-three records were already marked done
+  after being built through the defective path; 42 carry a covering proof by some
+  other route and FIN-100c-7 does not. Retro-sweeping those is remediation, not
+  this criterion — but the third Then clause is the surface that would surface
+  them, so a sweep should be built on this rather than beside it.

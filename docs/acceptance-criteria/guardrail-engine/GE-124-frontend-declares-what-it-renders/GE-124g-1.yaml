@@ -1,0 +1,140 @@
+id: GE-124g-1
+readiness: approved
+priority: high
+title: "A declaration is never written into a criterion's covered_by"
+component: guardrail-engine
+components:
+  - ac_store
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+criteria: |
+  Given a front-end file names the criterion KM-ADM-004 in its component-level
+    declaration
+  When any tool or agent records that declaration against the criterion
+  Then the criterion's `covered_by` list is unchanged
+  And the declaring file path is recorded in `declared_by`, a field that holds
+    component-level declarations only
+
+  Given a rendered element pins the criterion KM-ADM-004
+  When any tool or agent records that pin against the criterion
+  Then the criterion's `covered_by` list is unchanged
+  And the pin is recorded in `pinned_by`, a field that holds element pins only
+  And it is not recorded in `implemented_by`
+
+  Given a tool attempts to add a front-end file path or an element pin
+    identifier to a criterion's `covered_by`
+  When the write is evaluated
+  Then the write is rejected and the report names the criterion, the value, and
+    the field the value belongs in
+  And the rejection holds for every criterion, with no warn tier, no per-item
+    exception, and no configuration key that permits it
+depends_on:
+  - GE-124g
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ADD `declared_by` AND `pinned_by` TO config/ac_store_schema.json. Both are arrays of strings, both optional, both defaulting to []. `declared_by` holds FrontendComponent paths; `pinned_by` holds AcDeclaration pin slugs (GE-124b-1's deterministic slug — this is why that slug must be stable). Document both in docs/reference/ac-schema.md alongside covered_by and implemented_by, stating explicitly what each does and does NOT establish. This schema change is real work that must land before anything can write the fields; scripts/ac_store/validate_ac_schema.py and scripts/commit_guardian/check_ac_schema.py validate against that one file, so both validators pick it up together."
+  - "THE REJECTION MUST BE ENFORCED ON THE GATE THAT ACTUALLY RUNS. Adding the fields to the JSON schema does NOT by itself reject a bad covered_by entry — a front-end path is a valid string and passes a type check. The rejection needs an explicit rule in the AC-schema validation path (the _ac_schema_validators surface that check_ac_schema.py already calls per file, and which validate_ac_schema.py shares), so it fires on the staged commit. A rule added only to the JSON schema is a no-op here."
+  - "THE DETECTION RULE MUST BE STATED, NOT LEFT TO INTUITION. A covered_by entry that names a front-end source path (an in-scope extension per GE-124a-2's map) or matches a pin-slug shape is rejected. Note the honest limit: covered_by legitimately holds test references, and a front-end TEST file also has an in-scope extension — so the rule must exclude the named test/story exclusions (GE-124a-3-ii) before rejecting, or every legitimate front-end test reference is refused. Get this boundary right or the rule is unusable."
+  - "THE REJECTION MESSAGE NAMES THE FIELD THE VALUE BELONGS IN — declared_by for a component-level declaration, pinned_by for a pin — so the fix is one move rather than a puzzle."
+  - "NO OPT-OUT, AND NO CONFIGURATION KEY THAT PERMITS ONE. GE-124d's escapes govern whether a FILE MUST DECLARE; they have no application here. A configurable version of this rule is not a rule. The configuration surface itself is GE-124g-1-i."
+  - "WRITING declared_by / pinned_by IS THIS AC'S BUSINESS; READING THEM AS EVIDENCE IS NOT ANYONE'S. GE-124e-2 must scan front-end source rather than consult these fields — they are the recorded projection of that scan, and a gate reading them would check the store against itself."
+  - "`implemented_by` IS EXPLICITLY RULED OUT AND THE REASON MUST SURVIVE IN THE SCHEMA DOCUMENTATION: it records a link established by completed work, whereas a declaration is an unverified claim a file makes about itself. Folding them would make implemented_by mean two things."
+delivers_to:
+  agent: python-coder
+  contract: "Two new AC-record fields — `declared_by` (array of front-end file paths, component-level declarations only) and `pinned_by` (array of GE-124b-1 pin slugs, element pins only) — added to config/ac_store_schema.json and documented in docs/reference/ac-schema.md; plus a rejected write path in the AC-schema validation surface (not merely the JSON schema, which cannot see the difference) for any attempt to route a front-end declaration or pin into covered_by, with the message naming the field the value belongs in. No opt-out, no configuration key."
+expects_from: null
+test_spec:
+  - name: test_ge_124g_1_declaration_and_pin_populate_their_own_fields_and_leave_covered_by_untouched
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Recording a component-level declaration populates declared_by only; recording a pin populates pinned_by only. In both cases covered_by is byte-identical to its prior value and implemented_by is unchanged. Assert all four fields — asserting only that the right one was written passes on an implementation that also writes covered_by."
+  - name: test_ge_124g_1_covered_by_write_of_a_frontend_path_is_rejected_naming_the_correct_field
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "MUST-BLOCK. Stage an AC record whose covered_by contains a front-end component path and run the real AC-schema check the way the commit hook runs it: non-zero exit, and the message names the criterion, the value, and declared_by as where it belongs. Run the entry point, not the validator function — a rule that computes a rejection nothing enforces is inert."
+  - name: test_ge_124g_1_a_legitimate_frontend_test_reference_in_covered_by_is_still_accepted
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "covered_by containing a real front-end TEST reference (a .test.tsx or __tests__/ path with a test name) is accepted. This is the boundary that makes the rule usable: front-end test files share the in-scope extensions, and a rule that rejects them refuses every legitimate front-end coverage entry."
+  - name: test_ge_124g_1_new_fields_are_accepted_by_both_schema_validators
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "An AC record carrying declared_by and pinned_by, written with the project's real serializer, validates cleanly under BOTH scripts/ac_store/validate_ac_schema.py and the commit-hook path in check_ac_schema.py. Adding a field to one validator's view and not the other is a known shape of drift in this store."
+test_rationale: |
+  Two things make this AC easy to ship broken. First, the enforcement point: adding declared_by
+  and pinned_by to the JSON schema feels like the work, but a front-end path in covered_by is a
+  perfectly valid string and passes every type check — the rejection has to live in the
+  validation path the commit hook actually calls, so the must-block test runs the entry point
+  rather than the validator function. Second, the boundary: front-end test files share the
+  in-scope extensions with front-end components, so the obvious detection rule ('covered_by
+  contains a .tsx path') refuses every legitimate front-end test reference and makes the rule
+  unusable. That negative case is therefore a first-class test, not an afterthought. The
+  four-field assertion in the first test exists because writing the right field while also
+  writing the wrong one passes any single-field check.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Named the real work — adding declared_by and pinned_by to config/ac_store_schema.json and documenting them in docs/reference/ac-schema.md — and separated it from the enforcement, which must live in the validation path the commit hook calls because the JSON schema cannot distinguish a front-end path from any other string. Stated the detection boundary explicitly (front-end TEST files share the extensions, so the named test/story exclusions must be applied first or every legitimate front-end coverage entry is refused). criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124g-1-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLACE 1 OF FOUR where the substitution must be blocked. `covered_by` means
+  "something asserts this", and a declaration asserts nothing.
+
+  THE FIELD DECISION THE PO ASKED FOR, made explicitly rather than by default.
+  A declaration goes into NEITHER `covered_by` NOR `implemented_by`; it goes
+  into two new fields, `declared_by` for the component-level surface and
+  `pinned_by` for the element surface. Reasoning:
+    - `covered_by` is ruled out by this AC's whole purpose.
+    - `implemented_by` is ruled out because it records a link established by
+      completed work, whereas a declaration is a claim a file makes about
+      itself, unverified at the moment it is written. Folding the two would make
+      `implemented_by` a field that sometimes means "built" and sometimes means
+      "says it is built" — the same ambiguity one level along.
+    - TWO fields rather than one because the two surfaces are not
+      interchangeable anywhere else in this tree (GE-124b-2, GE-124c-1-i), and a
+      single merged field would make them indistinguishable to every reader.
+  This matches the mock-data `Ac` entity, which already models `declared_by`
+  and `pinned_by` alongside an unrelated `covered_by`.
+
+  NO OPT-OUT, DELIBERATELY — the last clause. GE-124d's escapes govern whether a
+  file must declare; they have no application here. A configurable version of
+  this rule is not a rule. The configuration surface itself is GE-124g-1-i.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). Two schema-layer facts. First, the two
+  fields do not exist in config/ac_store_schema.json today; adding them is
+  prerequisite work for anything in this tree that writes them, and both
+  validators read that one file so they pick the change up together. Second,
+  the JSON schema cannot enforce the rejection — a front-end path is a valid
+  string — so the rule belongs in the shared _ac_schema_validators surface that
+  the commit hook calls. A rule added only to the JSON schema is a no-op.

@@ -7,7 +7,7 @@ level: L2
 status: active
 readiness: reviewed
 priority: medium
-work_status: done
+work_status: todo
 criteria: |
   Given the test-writer has produced a test based on the diagnosis,
   When the red-phase test fails but the failure message indicates a
@@ -49,3 +49,34 @@ implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600e-2.md
 change_target: pipeline
 risk_surface: internal
+notes: |
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-BO-010 and KI-BO-028. Both halves of
+  the Then clause are false, and this record's own it_requirements are unmet on their face.
+
+  The criterion is about a failure whose message "indicates a different root cause than what
+  was diagnosed (the test fails at a different assertion point or with an unexpected exception
+  type)". The implementation, templates/workflows-js/quick-fix.js:568-569:
+
+      const divergenceCheck = failureMsg.length > 0 &&
+        !failureMsg.toLowerCase().includes(root_cause.toLowerCase().split(' ')[0])
+
+  That takes the FIRST WHITESPACE TOKEN of the prose root cause and asks whether it appears
+  anywhere in pytest output. It has no notion of assertion point or exception type, and it
+  fires or stays silent on the accident of one word. The AC's own it_requirements say the
+  comparison "should use LLM-based comparison"; it is a substring test.
+
+  The second half is worse. The criterion says the workflow "pauses ... and waits for user
+  confirmation before proceeding to the fix phase", and the it_requirements say it "must PAUSE
+  ... not halt permanently". :571-581 returns { status: 'blocked', ... } and the run
+  terminates. There is no confirmation parameter, no persisted pending-question record, and no
+  resume path -- so the remedy the message offers loops back into the same halt.
+
+  Why it read done: all four covering tests at unit_tests/.../test_quick_fix_workflow.py:877-915
+  are source greps -- assert "divergence" in js.lower(), assert "divergence_warning" in js,
+  assert "Diagnosed" in js and "Observed" in js, plus one grep of SKILL.md. Every one passes on
+  the code above, and every one would pass on a divergence check that did nothing at all.
+
+  This is one of three ACs in this family held up by presence-only assertions over JS source.
+  BP-1100b-5 (work_status: todo) already specifies the guard that would reject them and its
+  scanned-source globs already include templates/workflows-js/**/*.js -- build that first and
+  this class stops recurring. See tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md.

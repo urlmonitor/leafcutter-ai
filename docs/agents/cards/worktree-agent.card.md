@@ -29,7 +29,7 @@ ticket; asks to remove or close a worktree after a PR merges.**
 | Tier | utility |
 | Priority | — |
 | Portable | Yes |
-| Sign-off capable | Yes |
+| Sign-off capable | No |
 
 ---
 
@@ -79,20 +79,20 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+| `action` | string | The action to perform — "create <branch-or-ticket-path>" or "remove <branch-or-worktree-path>" |
+| `ticket_path` | file_path | Optional absolute path to the ticket markdown file, used only to derive the branch and worktree name. Never written to. |
 
 ### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
-| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+| `worktree_result` | json | JSON object with worktree_path, branch, status/created/removed and an anomalies array, per the Machine-Parsed Dispatch Output Contract |
 
 ### Mutates (Side Effects)
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ticket_frontmatter_agents_status` | — | Sets agents.worktree-agent to signed_off or failed |
-| `sign_offs_checklist` | — | Checks the worktree-agent checkbox with timestamp |
+| `git_worktree_and_branch` | — | Creates or removes the worktree directory, its branch, and (on remove) the matching remote branch |
 ---
 
 ## Tools Available

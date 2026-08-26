@@ -1,0 +1,204 @@
+id: GE-125a-1
+components:
+  - security_scanner
+  - commit_guardian
+title: "A folder that merely reuses a chosen name keeps full credential detection"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  FIXTURE ROOT USED BY EVERY SCENARIO BELOW. Each scenario builds a throwaway
+  project root, written <root>, that is a directory of its own and contains no
+  part of this repository. Every path in these scenarios is relative to <root>.
+  No fixture may be written anywhere inside this repository's own working tree:
+  a file placed under this repository's tickets/, docs/retrospectives/,
+  docs/acceptance-criteria/ or templates/skills/ would have its verdict decided
+  by this repository's reduced-scrutiny list rather than by the scenario's, so it
+  would measure the entitlement instead of the check and would pass for the wrong
+  reason. Every scenario is exercised the way a commit exercises the check — the
+  files are staged in <root> and the credential check runs over that staged set —
+  not by asking the location rule for a verdict on a path, and not by reading the
+  check's own source for the four chosen names.
+
+  Given <root> contains these four files, each holding one line with a
+    thirty-two-character opaque token whose measured Shannon entropy is 5.17,
+    above the 4.5 threshold, carrying no keyword the keyword rule recognises and
+    no fixed prefix the prefix rules recognise:
+      leafcutter-web/tickets/app.py
+      src/vendor/tickets/handler.py
+      some/deep/nested/docs/retrospectives/x.py
+      unrelated/templates/skills/evil.py
+  And no suppression entries are in force,
+  When the four files are staged in <root> and the credential check runs over the
+    staged set,
+  Then the token is reported for all four files,
+  Because not one of those four locations is a location this project chose to
+    scrutinise less — each is reached only by a folder somewhere below the top of
+    the project reusing one of the four chosen names, and all four are measured
+    unreported today.
+
+  Given <root> contains src/app.py holding the same token,
+  And no suppression entries are in force,
+  When it is staged and the check runs over the staged set,
+  Then the token is reported,
+  Because an ordinary source path is reported today and must still be reported
+    afterwards; this criterion changes which paths lose the reduced scrutiny and
+    changes nothing about paths that never had it.
+
+  Given <root> contains leafcutter-web/tickets/release-notes.md holding the same
+    token,
+  And no suppression entries are in force,
+  When it is staged and the check runs over the staged set,
+  Then the token is reported,
+  Because the loss measured today is identical for a written file and an
+    executable one, so removing it for executable files only would leave half the
+    measured exposure in place. What a location this project DID choose covers by
+    file kind is a different question and is not settled here.
+
+  Given <root> contains all six files named above — the four reused-name paths,
+    the ordinary source path and the written file at the reused-name path,
+  And no suppression entries are in force,
+  When they are staged together and the check runs over the staged set once,
+  Then the run reports the token for every one of the six files,
+  And the run's exit status reports findings present,
+  Because a per-file verdict that never reaches the author protects nobody, and
+    the author sees an exit status and a report rather than a returned list.
+depends_on:
+  - GE-125a
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 is the measured baseline for this record. Its second table is the source of the four reused-name rows and the src/app.py reported row, and its fix-direction section names root-anchoring as the change. Carry its confidence labels; do not upgrade them."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+    relevance: "Component boundary for the scanner and its pre-commit consumer, including the known-constraints section that records the prose exemption as a live defect."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is the canonical source; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build.py outputs. A fix applied to a deployed copy alone is reverted by the next build."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies the angle vocabulary used in this record's test_spec. The reachability angle is the formal name for the execute-the-check standard this whole tree carries."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A root-anchored location comparison inside _is_prose_exempt in templates/scripts/commit_guardian/check_secrets.py. The four entries of _PROSE_FILE_PREFIXES are compared as SEGMENT SEQUENCES measured from the repository root: a path is exempt only when its root-relative segment list begins with a chosen location's segment list. The substring test ('/' + prefix) in path_str is removed, not supplemented. Reused names below the root no longer match, identically for executable and written files. The membership of the chosen set and the ENTROPY_HIGH-only scope of what the exemption removes are both unchanged by this record. Downstream records GE-125a-1-i, GE-125a-1-ii, GE-125a-2-i and GE-125a-3 all build on this comparison."
+expects_from: null
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. The edit belongs in templates/scripts/commit_guardian/check_secrets.py — _PROSE_FILE_PREFIXES, _is_prose_exempt and _filter_prose_findings all live there. scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py are build outputs regenerated by build.py; a fix applied to a deployed copy alone is reverted by the next build and check_hook_parity will fail on the divergence. Run `python scripts/build.py --target-dir .` after editing the template and before running any test that asserts deployed behaviour — that build step is not optional."
+  - "THE FIXTURE TRAP, AND IT IS A HARD INSTRUCTION HERE, NOT ADVICE. Every fixture must be created inside a throwaway tempfile-backed directory that is the scenario's own project root, and no fixture may be written anywhere inside this repository's working tree. A fixture whose path contains tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ as a real segment of THIS repository takes its verdict from this repository's reduced-scrutiny list, so it measures the entitlement rather than the change and passes for the wrong reason. Note that unit_tests/commit_guardian/ deliberately matches none of the four prose names — that is why the tests may live there while their fixtures may not."
+  - "CREDENTIAL FIXTURES ARE ASSEMBLED AT RUNTIME FROM FRAGMENTS, never written as a source literal, following the deliberate pattern already used in unit_tests/commit_guardian/test_scan_secrets_suppression.py. A credential-shaped literal in a test file would itself trip the check and would need an allowlist entry; this tree must need none. Do not collapse the fragments back into literals and do not add a .security-allowlist entry so that literals can be committed."
+  - "EVERY ARM MUST EXECUTE THE CHECK, per this repository's standing rule for gate and hook criteria. Drive the multi-file entry point (scan_files in templates/skills/security-scanner/scripts/scan_secrets.py) with the prose post-filter applied as the pre-commit consumer applies it, over real files on disk. A test that greps check_secrets.py for the four prose names, or that asserts on the contents of _PROSE_FILE_PREFIXES, passes on dead code and cannot tell an anchored comparison from an unanchored one."
+  - "THE EXIT-STATUS ARM MUST RUN A PROCESS, not read a returned list. Invoke the check's command-line entry point in a fresh subprocess with the throwaway root as its working directory and assert the process exit code. Asserting on a list of findings returned in-process does not discharge that arm."
+  - "THE ENTROPY FIXTURE MUST ACTUALLY REACH THE RULE UNDER TEST. Each token must exceed the 4.5 Shannon-entropy threshold, be long enough to be considered at all, and must not cross-trigger AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY or GENERIC_SECRET — otherwise the arm goes green on a finding from a rule the exemption never gated, and proves nothing about ENTROPY_HIGH."
+  - "SCOPE FENCE — DO NOT CHANGE WHAT THE EXEMPTION REMOVES OR WHO IS ENTITLED TO IT. This record changes only WHERE the entitlement reaches. The membership of the four chosen locations must be unchanged, and the exemption must still gate ENTROPY_HIGH only, leaving the keyword and fixed-prefix rules firing at those paths exactly as before. Widening the exemption to further rules, or gating it by file kind, is out of scope here and belongs to GE-125b."
+  - "PAIR RULE — THIS RECORD IS NOT CLOSEABLE ALONE. Read on its own this criterion is satisfiable by deleting the prose exemption outright, which passes every arm here and reintroduces the false positives GE-123d exists to remove. GE-125a-2 is the control that forbids that reading. Do not mark this record done while GE-125a-2 is unfinished, and do not cite a green GE-125a-2 as evidence that this record landed — see the honesty note in GE-125a-2's test_rationale."
+  - "RED-BASELINE HONESTY. Of the four arms, only the src/app.py arm is green on arrival; it is a regression guard, not evidence. The other three are red today against the measured KI-SEC-001 baseline. A red-baseline gate for this record must be satisfied by one of those three, never by the src/app.py arm alone."
+  - "Error-handling policy per CLAUDE.md applies to any new code: specific exception types, never a bare except, and no silently swallowed error. Root resolution and path normalisation are pure internal operations and must NOT be wrapped in try/except by default; let an unexpected failure propagate to the I/O boundary rather than degrade silently into an exemption."
+  - "A path the comparison cannot classify must FAIL CLOSED — report rather than exempt. An exemption granted by accident is invisible to the author, which is the exact failure mode this whole goal exists to remove."
+test_spec:
+  - name: test_reused_name_paths_report_the_opaque_token
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a throwaway tempfile-backed root, the four KI-SEC-001 reused-name paths (leafcutter-web/tickets/app.py, src/vendor/tickets/handler.py, some/deep/nested/docs/retrospectives/x.py, unrelated/templates/skills/evil.py) each holding a runtime-assembled 5.17-entropy token are staged and scanned through the real entry point with the prose post-filter applied; an ENTROPY_HIGH finding is returned for all four. RED today — all four are measured EXEMPT."
+  - name: test_ordinary_source_path_still_reports_the_opaque_token
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "src/app.py in the same throwaway root, holding the same token, is still reported. GREEN ON ARRIVAL — a regression guard proving the change did not disturb paths that never held the entitlement, not evidence that anchoring landed."
+  - name: test_written_file_at_reused_name_path_reports_the_opaque_token
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "leafcutter-web/tickets/release-notes.md, a .md file at a reused-name path, is reported. Stops an implementation that anchors only for executable files and leaves half the measured exposure in place. RED today."
+  - name: test_six_file_run_reports_all_six_and_exits_nonzero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    description: "All six fixtures staged together, the check invoked once via its command-line entry point in a fresh subprocess with the throwaway root as working directory: the report accounts for the token in all six files and the process exit code reports findings present. RED today on the six-file count; the exit code alone is green on arrival because src/app.py already reports, so assert both halves."
+test_rationale: |
+  The shape of this contract is decided by the two ways a green suite here could
+  mean nothing. The first is the fixture trap: the subject of every arm is a PATH,
+  so a fixture written inside this repository would be judged by this repository's
+  own reduced-scrutiny list rather than by the change under test, and would pass
+  whatever the implementation did. Every descriptor therefore builds its own
+  throwaway root. The second is source inspection: the difference between an
+  anchored and an unanchored comparison is invisible to a test that greps
+  check_secrets.py for the four prose names, and such a test stays green on dead
+  code, so every descriptor drives the real entry point over real files instead.
+  RED-VS-GREEN HONESTY, so a later TDD-order or red-baseline check does not misread
+  the baseline. test_reused_name_paths_report_the_opaque_token and
+  test_written_file_at_reused_name_path_reports_the_opaque_token are RED today
+  against the KI-SEC-001 measurement. test_six_file_run_reports_all_six_and_exits_nonzero
+  is SPLIT — its six-file report assertion is RED, but its exit-code assertion alone
+  is GREEN on arrival, since src/app.py already produces a finding and the run
+  already exits non-zero; do not cite the exit code alone as evidence the fix landed.
+  test_ordinary_source_path_still_reports_the_opaque_token is wholly GREEN on
+  arrival and is a regression guard by design. Finally, this suite ON ITS OWN is
+  satisfied by deleting the prose exemption entirely. It is only evidence when read
+  with GE-125a-2's control suite, and the two must be closed as a pair.
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24): assigned python-coder, complexity M (a small behavioural change to one function, but it carries a build.py round-trip across four parity-enforced locations and an entirely new multi-fixture end-to-end test surface). Authored it_requirements pinning the ADR-001 templates-is-canonical rule and the mandatory build step, the throwaway-root fixture construction as a hard instruction (honouring the BA's FOR THE IT PO paragraph), the runtime-assembled credential-fragment rule, the execute-the-check verification standard, the subprocess exit-status rule, the entropy-fixture non-cross-trigger constraint, the scope fence against touching membership or rule scope, the GE-125a-2 pair rule, red-baseline honesty and the fail-closed direction. Added four doc_links; set delivers_to to the anchored-comparison contract the three downstream records build on. Authored a 4-entry test_spec plus test_rationale flagging which arms are green on arrival. criteria, depends_on, covered_by, priority, work_status and notes unchanged."
+superseded_by: null
+covered_by:
+  - GE-125a-1-i
+  - GE-125a-1-ii
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE ARM THAT REMOVES THE MEASURED DEFECT. Its four reused-name paths
+  are the four measured-exempt-but-not-intended rows of KI-SEC-001's second
+  table, and src/app.py is that table's reported row, carried over unchanged so
+  the pair the L1 demands is visible inside one criterion rather than only across
+  siblings. The fifth file, the written file at a reused-name path, is not in the
+  measured table; it is added because KI-SEC-001 states the exposure is the same
+  "for .py as readily as for .md", and without it a change that anchors only for
+  executable files passes every measured row.
+
+  ON ITS OWN THIS CRITERION IS SATISFIABLE BY DELETING THE ENTITLEMENT
+  ENTIRELY, which would reintroduce the false positives GE-123d exists to remove
+  and would be indistinguishable from the change actually wanted. GE-125a-2 is
+  the control that forbids that reading and is not optional hardening — neither
+  record is evidence of anything without the other. Do not close this one while
+  GE-125a-2 is unfinished.
+
+  BOUNDARY WITH GE-125b, held deliberately. This criterion is about WHERE the
+  entitlement reaches. Every file it names sits at a location the project did NOT
+  choose, so file kind cannot be the discriminator in any of these scenarios and
+  nothing here anticipates or pre-empts what a chosen location covers. The .md
+  scenario is here to stop an executable-only anchoring, not to make a claim
+  about prose.
+
+  FOR THE IT PO. Two constraints this record cannot carry itself but that decide
+  whether a green suite means anything. First, the token must be assembled at
+  runtime from fragments rather than written as a source literal, as the existing
+  suppression test module in this repository already does deliberately — a
+  credential-shaped literal in a test file either trips the check or needs a
+  suppression, and a suppression there would be a real blind spot in the file
+  most likely to accumulate credential-shaped data. Second, per this repository's
+  standing rule for gate and hook criteria, every scenario must EXECUTE the
+  check; a test that greps the check's source for the four names passes on dead
+  code and cannot tell an anchored comparison from an unanchored one.
+
+  MEASURED BASELINE, carried at the confidence KI-SEC-001 records it: all four
+  reused-name paths are EXEMPT today and src/app.py is reported, run through the
+  real location logic with a 5.17-entropy token. Every arm above except the
+  src/app.py arm is red today. The src/app.py arm is green on arrival and is a
+  regression guard, not evidence the change landed — read it that way.

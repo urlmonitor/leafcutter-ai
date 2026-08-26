@@ -1,0 +1,124 @@
+id: GE-124d-2
+readiness: approved
+priority: high
+title: "One file is excused by a written reason that lives in the file and shows up in the diff"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+criteria: |
+  Given the staged set contains `components/ui/kit.tsx`, an in-scope screen
+    component with no component-level declaration
+  And its file header records the opt-out reason "Presentational primitives only
+    (Card / Badge / Row). They render no criterion of their own — the consuming
+    component declares."
+  When the commit-tier declaration check runs
+  Then the commit proceeds
+  And the file's verdict is "pass-with-reason"
+  And the check's report lists the file together with the reason text, rather
+    than omitting the file
+
+  Given the same file and the same reason
+  When a reviewer reads the change that introduced the opt-out
+  Then the reason text appears in the diff of that file
+depends_on:
+  - GE-124d
+  - GE-124c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE OPT-OUT MARKER LIVES IN THE SAME LEADING COMMENT REGION AS THE @ac DECLARATION and is read by the same shared reader in the same pass, in both comment dialects (GE-124a-2). A separate scan, or a separate marker location, gives the two surfaces different placement rules for no reason and doubles the parse cost."
+  - "THE REASON IS IN THE FILE, NEVER IN A CENTRAL LIST. Do NOT add an ignore-list key to commit_guardian.json for per-item opt-outs — that is the mechanism the PO explicitly rejected, because a reason parked centrally is invisible at review time and rots. It being in the file is what makes it appear in the diff, and appearing in the diff is the entire accountability mechanism. (The warn list in GE-124d-1 IS central, deliberately, because it excuses an AREA and not an item.)"
+  - "THE FILE IS LISTED, NOT DISAPPEARED. The report must carry the path AND the verbatim reason text. An opted-out file that vanishes from the report is indistinguishable from a file the check never saw, and the whole point is that a reviewer can challenge the reason."
+  - "THE REASON TEXT IS REPRODUCED VERBATIM, NOT SUMMARISED OR TRUNCATED to a fixed width. A truncated reason in the report is a reason nobody can evaluate; if length is a concern, wrap rather than cut."
+  - "PASS-WITH-REASON IS A DISTINCT VERDICT VALUE, not a pass with a comment attached — GE-124d-3 fixes it as the single recorded verdict for the file, replacing block. The mock record gf-commit-ui-kit-optout is the worked shape, including suppression_reason being populated exactly when the verdict is pass-with-reason."
+  - "THE DIFF-VISIBILITY CLAUSE IS A PROPERTY OF THE DESIGN, NOT A RUNTIME CHECK. The check must not attempt to inspect the diff to verify the reason is visible; storing the reason in the file makes it visible by construction. Do not implement scenario 2 as a git operation — implement it by not having a central list."
+  - "Must handle errors gracefully per the project error handling policy; a malformed or empty reason is GE-124d-2-i's contract and leaves the file blocked."
+delivers_to:
+  agent: python-coder
+  contract: "The per-file opt-out reader (same leading-comment region, same shared reader pass, both dialects) plus the 'pass-with-reason' verdict and the report line carrying the path and the verbatim reason. suppression_reason is populated exactly when the verdict is pass-with-reason, and there is deliberately NO central opt-out list — the reason lives in the file so it appears in the diff."
+expects_from:
+  ac_id: GE-124c-1
+  contract: "The block verdict this escape downgrades and the finding record it attaches the reason to — one record, verdict replaced, suppression_reason populated"
+test_spec:
+  - name: test_ge_124d_2_accepted_reason_downgrades_to_pass_with_reason_and_the_commit_proceeds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The ui/kit.tsx worked case run through the real hook: exit 0, one finding for that subject with verdict 'pass-with-reason' and suppression_reason equal to the authored text. Assert the verdict value, not just exit 0 — a plain 'pass' would also exit 0 and would lose the reason."
+  - name: test_ge_124d_2_report_lists_the_opted_out_file_with_its_reason_verbatim
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The hook's output contains the file path and the full reason text, character for character, not truncated. An opted-out file absent from the report is indistinguishable from one the check never saw."
+  - name: test_ge_124d_2_opt_out_is_read_in_both_comment_dialects_from_the_leading_region
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The same reason expressed in a .tsx JS block comment and in a .vue HTML comment both produce pass-with-reason; the same marker placed BELOW the leading region in either dialect does not. Same region rule as the declaration (GE-124a-2), asserted from both sides."
+  - name: test_ge_124d_2_no_central_opt_out_list_exists_in_the_config_surface
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Adding a per-file ignore/opt-out key to the frontend_ac_declaration config section does NOT excuse that file — it still blocks. This is the behavioural form of 'the reason lives in the file': a central list is the mechanism the PO rejected, and asserting its absence by grep would pass on a list read from somewhere else."
+test_rationale: |
+  The accountability this AC buys comes entirely from WHERE the reason lives, and that is not
+  observable in a verdict assertion — an implementation reading reasons from a central ignore
+  list produces identical verdicts and destroys the whole point. So the fourth test asserts the
+  central route does not work, behaviourally, rather than asserting a config key is absent from
+  a file. The verbatim-reason test exists because truncation is the natural implementation of a
+  tidy report and it silently removes the reviewer's ability to judge the reason. The
+  diff-visibility scenario is deliberately not given a test: it is true by construction once the
+  reason is in the file, and implementing it as a git inspection would be a runtime check of a
+  design property — noted in it_requirements so an implementer does not build one.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Put the opt-out marker in the same leading-comment region and the same reader pass as the declaration, forbade a central per-item opt-out list (and made its absence a behavioural test rather than a grep), required the reason verbatim in the report, and recorded that scenario 2's diff visibility is a design property to be satisfied by construction, not a git operation to implement. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124d-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ESCAPE 2 of two. Two properties make it an accountable exception rather than
+  a bypass, and both are scenarios here:
+
+  1. THE REASON LIVES WITH THE FILE. A reason parked in a central ignore list is
+     invisible at review time and rots; a reason in the file header appears in
+     the change a reviewer reads and can be argued with there.
+  2. THE FILE IS LISTED, NOT DISAPPEARED. An opted-out file that vanishes from
+     the report is indistinguishable from a file the check never saw.
+
+  The worked case is the mock-data record `gf-commit-ui-kit-optout` — a
+  presentational primitives file whose consuming components declare instead.
+  Note this is the same file shape GE-124a-3's markup rule would pull IN, which
+  is exactly the pressure the PO designed this escape to absorb.
+
+  What counts as a usable reason is GE-124d-2-i; that an opt-out replaces the
+  block rather than sitting beside it is GE-124d-3.
+
+  IT-PO NOTE (2026-08-25). The two escapes have deliberately OPPOSITE storage:
+  GE-124d-1's warn list is central because it excuses an area, and GE-124d-2's
+  reason is in-file because it excuses an item and must be reviewable in the
+  diff. An implementer who unifies them for tidiness destroys this AC.

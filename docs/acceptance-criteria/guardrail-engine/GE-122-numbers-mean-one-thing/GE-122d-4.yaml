@@ -91,7 +91,8 @@ amended_by:
   date: '2026-08-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/06_TICKET-20260825-GE-122d-4.md
 change_target: docs
 risk_surface: internal
 notes: |
@@ -110,3 +111,4 @@ notes: |
   BA could not see — the three stages run from TWO deployed layouts (.claude/hooks/ and
   .leafcutter/scripts/commit_guardian/). That is what makes GE-122d-1's single shared element
   non-trivial, and a diagram that omits it shows a simpler system than the one being built.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

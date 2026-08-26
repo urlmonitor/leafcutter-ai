@@ -98,7 +98,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-120b-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/09_TICKET-20260825-GE-120b-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -127,3 +128,4 @@ notes: |
   estimate stays L: 19 files is a large migration even though nothing is being invented.
   The OBSERVED "18 checks" figure measures at 19 files today; the manifest set is 54
   entries. Neither number is an acceptance threshold.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

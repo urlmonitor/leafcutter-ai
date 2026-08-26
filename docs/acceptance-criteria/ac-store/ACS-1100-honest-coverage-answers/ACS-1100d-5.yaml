@@ -1,0 +1,134 @@
+id: ACS-1100d-5
+components:
+  - ac_store
+  - testing_quality
+title: "A requirement is not closed on a verdict narrower than the requirement's own claim"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100d.yaml
+criteria: |
+  Given a requirement whose wording claims a property of every entry in a 45-entry
+    registry,
+  And the only evidence offered for finishing it is a verdict from a validator that
+    examined the 1 entry present in the change and found no violation,
+  When that requirement is put forward as finished,
+  Then finishing it is refused, and the refusal states the population the
+    requirement claims (45), the count the evidence covered (1), and the 44 entries
+    no evidence speaks for,
+  And the refusal names the two routes that would close it — evidence whose covered
+    count equals the 45 the requirement claims, or the requirement reworded to the
+    narrower claim the evidence actually supports — and the closed record states
+    which of the two routes was taken,
+  And a verdict that examined 1 of 45, found no violation and returned success does
+    not close the requirement, whatever exit status that verdict carried,
+  And a requirement whose wording claims a property of one named record closes on
+    evidence covering that one record, so the comparison bites only where the
+    requirement itself claims a property of a population,
+  And a requirement already standing as finished, whose evidence is later measured
+    as narrower than its claim, is reported in the same terms rather than left
+    standing: ACS-300h-1 and ACS-300i-2 each claim a property of every entry in
+    docs/components.json, each is covered by a test of a validator that examines
+    only the entries appearing in the change, and 36 of the 45 entries break the
+    claimed property, counted directly against the file on 2026-08-25,
+  And the bug symptom this criterion forbids is a requirement standing as finished
+    for weeks because the validator it cites was truthful about the change and
+    silent about the registry.
+
+  Coverage note: exercise this by putting forward a requirement whose wording claims
+  a population, together with a verdict carrying a covered count smaller than that
+  population, and asserting on the refusal text — the claimed population, the
+  covered count, the shortfall, and the two named routes. Assert separately that a
+  single-record requirement closes unchanged, or the fix makes every requirement
+  in the store unclosable.
+depends_on:
+  - ACS-1100d
+  - ACS-1100d-1
+  - ACS-1100d-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300h-1.yaml
+    relationship: related
+    status: exists
+    relevance: "BINDING in-component worked example. Its criteria claim every component entry carries agent_affinity; 9 of 45 do. It stood as finished until it was reopened on 2026-08-25, and its own notes name the cause as KI-CG-001 rather than an independent defect."
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300i-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling instance, same shape and same count: its criteria say the validator rejects ANY entry with exposed_interfaces absent or null, and 36 absent entries are accepted."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "The surface that today answers whether a record may be recorded as finished. It asks whether a covering test exists and passes; it does not compare that test's scope against what the record claims."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: related
+    status: exists
+    relevance: "KI-CG-001 is the mechanism that produces the narrow verdict; this criterion governs what may be concluded from one."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400.yaml
+    relationship: related
+    status: exists
+    relevance: "Adjacent, not overlapping — TQ-400 asks whether evidence that once held still holds today. This asks whether it ever covered what the record claimed. A record can fail this on the day it is written and pass TQ-400 forever."
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The nearest neighbour and deliberately not duplicated: it flags a finished record with zero covering tests. This one flags a finished record whose covering test exists, passes, and is narrower than the record's claim."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100d-5-i
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE CLAUSE THAT CATCHES THE PHANTOMS, and it is the one thing in this
+  area the store did not have. A store-wide search for any record comparing a
+  claim's population against the scope of the evidence closing it returned nothing
+  but ACS-300h-1's own reopening note. Every neighbouring record governs a step
+  earlier or later in the chain:
+    - ACS-1100a / ACS-1100b make the ANSWER state its coverage.
+    - ACS-1100d-1 makes the figure SURVIVE each hop that consumes it.
+    - ACS-1100d-2 caps what a VERDICT built on that figure may claim.
+    - This record caps what a RECORD may be marked on the strength of that verdict.
+  Without the last step the chain stops one hop short of the place the damage
+  actually lands, which is a requirement reading "done" while the property it names
+  is false for 36 of 45 records.
+
+  WHY IT SITS UNDER ACS-1100d AND NOT SOMEWHERE ELSE. Marking a requirement
+  finished is a consuming hop in exactly d-1's sense: an agent or a person reads a
+  verdict earned over a fraction of a population and writes an unqualified
+  conclusion about the whole of it. d-1's own 2026-08-18 amendment already
+  established that a hop is not only a machine payload and that the single
+  laundering incident this repository has repaired happened in a reader's head. The
+  done flip is that same hop with a durable write at the end of it. d-2 caps the
+  verdict; this caps the write.
+
+  BOTH ROUTES ARE HONEST, AND THE CHOICE IS THE POINT. Widening the evidence
+  preserves the guarantee; narrowing the wording admits the weaker one. What is
+  forbidden is taking neither and recording the strong claim on the weak evidence.
+  ACS-300h-1's and ACS-300i-2's reopening notes independently reached the same two
+  routes and the same instruction — "do not close it by re-running the existing
+  validator and observing silence" — which is this criterion stated once, per
+  record, by hand. Stating it once for the store is the work.
+
+  DIFF-SCOPING SURVIVES THIS UNTOUCHED. Nothing here asks a per-change gate to
+  widen. It asks that a requirement claiming a population not be closed by one. A
+  requirement written about the change under review closes on a change-scoped
+  verdict exactly as it does today.
+
+  SCALE, MEASURED NOT ASSUMED. Two instances are named in the criteria because both
+  were verified against the file on 2026-08-25. The known-issue register lists four
+  records under KI-CG-001 with this shape and the class is plainly wider, but the
+  wider count has not been measured and is deliberately not asserted here.
+  Establishing it is a sweep, and a sweep belongs to ACS-200h and TQ-400a, not to
+  this record.

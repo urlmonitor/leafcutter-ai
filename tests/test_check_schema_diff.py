@@ -24,6 +24,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _MODULE_PATH = _REPO_ROOT / "scripts" / "release" / "check_schema_diff.py"
 
 spec = importlib.util.spec_from_file_location("check_schema_diff", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["check_schema_diff"] = _mod
 spec.loader.exec_module(_mod)

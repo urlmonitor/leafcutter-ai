@@ -1,0 +1,127 @@
+id: GE-124d-3
+readiness: approved
+priority: high
+title: "An escape replaces a file's verdict — it never sits beside it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+criteria: |
+  Given the staged set contains an in-scope screen component with no
+    component-level declaration
+  And its file header records an accepted opt-out reason
+  When the commit-tier declaration check runs
+  Then exactly one verdict is recorded for that file and that code, and it is
+    "pass-with-reason"
+  And no "block" verdict is recorded for the same file and the same code
+
+  Given a file that is both on the warn list and carries an accepted opt-out
+    reason
+  When the commit-tier declaration check runs
+  Then exactly one verdict is recorded for that file and that code
+  And the recorded verdict is "pass-with-reason", because a stated reason is a
+    stronger claim than an area-wide postponement
+  And the report names the reason, so the file does not read as merely
+    postponed
+
+  Given a file that is on neither the warn list nor excused by a reason
+  When the commit-tier declaration check runs and finds no declaration
+  Then the recorded verdict is "block"
+depends_on:
+  - GE-124d
+  - GE-124d-1
+  - GE-124d-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-1-i.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "RESOLVE THE VERDICT ONCE, IN ONE PLACE, BEFORE ANY FINDING IS EMITTED. Implement the escapes as a single verdict-resolution step that takes (base verdict, warn-listed?, accepted reason?) and returns ONE verdict, rather than as two independent downgrade passes over an emitted finding. Two passes can each write, and the mock-data invariant is absolute: verdict == 'block' implies suppression_reason == null."
+  - "PRECEDENCE IS OPT-OUT > WARN > BLOCK, encoded as an explicit ordered rule with the reason recorded next to it, not as the incidental result of the order two if-statements happen to appear in. USER CONFIRMATION NEEDED: the BA chose opt-out over warn on the grounds that a stated reason is more specific and more accountable than an area-wide postponement, and that resolving to warn would discard something a reviewer could challenge. The alternative (warn wins) is defensible. This is not stated in the PO note or in the mock data — confirm at the final gate rather than absorbing it."
+  - "A REFUSED OPT-OUT (GE-124d-2-i) IS NOT AN OPT-OUT for precedence purposes. The input to the precedence rule is 'accepted reason?', not 'marker present?', so a file with a refused marker on a warn-listed path resolves to warn, and one on an unlisted path resolves to block."
+  - "suppression_reason IS POPULATED EXACTLY WHEN THE RESOLVED VERDICT IS pass-with-reason and is null for every other verdict. That biconditional is the mechanical form of 'never sits beside it' and is the cheapest thing to assert in a test."
+  - "THIS AC AND GE-124c-1-i ARE DIFFERENT RULES: that one fixes the COUNT of findings at one per (subject, code); this one fixes which single VERDICT that finding carries. An implementation can satisfy either while breaking the other — one finding with a contradictory verdict, or two findings each with a defensible one."
+delivers_to:
+  agent: python-coder
+  contract: "A single resolved verdict per (file, code) produced by one verdict-resolution step from (base verdict, warn-listed?, accepted reason?), with the explicit precedence order opt-out > warn > block and suppression_reason populated if and only if the resolved verdict is pass-with-reason. Consumed by the commit report and by GE-124c-1-i's cardinality rule."
+expects_from:
+  ac_id: GE-124d-2
+  contract: "The accepted-reason signal (accepted, not merely present) and the pass-with-reason verdict whose exclusivity against block this AC fixes"
+test_spec:
+  - name: test_ge_124d_3_accepted_reason_yields_pass_with_reason_and_no_block_for_the_same_pair
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Exactly one verdict for the (subject, code) pair, equal to 'pass-with-reason', and no block verdict recorded anywhere for that pair. Assert the absence of the block explicitly — the invariant is about coexistence, which a single-verdict assertion does not cover."
+  - name: test_ge_124d_3_warn_listed_and_reasoned_file_resolves_to_pass_with_reason_naming_the_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A file both warn-listed and carrying an accepted reason resolves to a single 'pass-with-reason' verdict whose report line names the reason. This encodes the precedence decision that is flagged for user confirmation; if the user chooses warn-wins, this test is the one line that changes."
+  - name: test_ge_124d_3_suppression_reason_is_populated_iff_the_verdict_is_pass_with_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Across all four verdict values produced over a mixed staged set, suppression_reason is non-null exactly for pass-with-reason and null otherwise. A biconditional over the whole finding set catches the coexistence bug from both directions in one assertion."
+  - name: test_ge_124d_3_a_refused_reason_on_a_warn_listed_path_resolves_to_warn_not_pass_with_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A file with a placeholder ('N/A') opt-out marker on a warn-listed path resolves to 'warn'. The precedence input is an ACCEPTED reason, not a present marker; an implementation keyed on marker presence turns a refused opt-out into the strongest escape in the system."
+test_rationale: |
+  The invariant is about coexistence and precedence, so single-verdict assertions are the wrong
+  instrument — each test asserts either the absence of the competing verdict or the biconditional
+  over the whole finding set. The fourth test is the one the criteria do not reach: precedence
+  takes an ACCEPTED reason as its input, and an implementation keyed on marker presence would
+  make a refused, empty opt-out outrank a warn listing, turning GE-124d-2-i's refusal into the
+  strongest escape in the tree. That is a composition bug between two ACs and it is only visible
+  when both are exercised together, which is why it lives here rather than under either parent.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required one verdict-resolution step over (base, warn-listed?, accepted reason?) rather than two independent downgrade passes, made the precedence input an ACCEPTED reason (adding the refused-marker composition case), stated the suppression_reason biconditional as the mechanical form of the invariant, and carried the BA's precedence flag forward for user confirmation. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Mock-data invariant, stated as behaviour: "verdict == 'block' implies
+  suppression_reason == null (a per-item opt-out downgrades to
+  'pass-with-reason'; it can never coexist with a block)."
+
+  Why its own L2 rather than a clause inside GE-124d-1 and GE-124d-2: the
+  invariant is about the INTERACTION of the two escapes with the default, and
+  an interaction cannot be tested from inside either participant. It is also
+  the natural home for the precedence question neither escape answers on its
+  own.
+
+  THE PRECEDENCE ORDER IS A DECISION, NOT AN INHERITANCE — a file that is both
+  warn-listed and reasoned resolves to pass-with-reason. Rationale: the reason
+  is the more specific and more accountable statement, and resolving to warn
+  would discard a reason someone wrote and a reviewer could challenge. Flagged
+  for the user because it is not stated in the PO note or the mock data; the
+  alternative (warn wins) is defensible and the choice should be confirmed
+  rather than absorbed silently.
+
+  IT-PO NOTE (2026-08-25). The precedence flag is carried forward unresolved —
+  it is a product decision, not a technical one. Note only that whichever way it
+  goes, it is one line of the resolution step and one test, so it is cheap to
+  change after the fact; it does not need to block implementation.

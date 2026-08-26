@@ -104,7 +104,8 @@ superseded_by: null
 covered_by:
   - GE-120e-3-i
   - GE-120e-3-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/32_TICKET-20260825-GE-120e-3.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -124,3 +125,4 @@ notes: |
   reasons, which is exactly the state the observed merge was in: contract-shrinking would
   have blocked the ordinary arm too if the author had really deleted a test, and a
   status-only pair would have called that agreement.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

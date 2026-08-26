@@ -33,6 +33,7 @@ _REAL_CATEGORIES = _REPO_ROOT / "config" / "feedback_categories.yaml"
 def _load_module_from_path(script_path: Path, module_name: str = "submit_feedback"):
     """Load a Python module from an arbitrary filesystem path."""
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
+    assert spec is not None and spec.loader is not None, f"could not load spec for {script_path}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod

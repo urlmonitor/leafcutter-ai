@@ -1,0 +1,58 @@
+id: INF-400c-4-ii
+components:
+  - infrastructure
+title: "Knowledge events already stranded in the telemetry sink are recovered, not abandoned"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
+criteria: |
+  Given 28 knowledge_captured events have accumulated in
+    debugging/logs/agent_telemetry.jsonl because the emitters and the
+    harvester never agreed on a sink,
+  And each carries a timestamp, agent, component, destination and entry_kind
+    that no harvester run has ever seen,
+  When the sink repoint from INF-400c-4 is applied,
+  Then every knowledge_captured event present in the telemetry sink is
+    carried across into the knowledge-emission sink, preserving each event's
+    original timestamp, agent, component, destination and entry_kind values,
+  And the recovery reports the number of events carried across and the number
+    already present, and those two numbers sum to the number of
+    knowledge_captured events found in the telemetry sink,
+  And re-running the recovery carries across zero further events,
+  And the recovery is performed before the harvester is first pointed at the
+    knowledge-emission sink, so that no historical event is drained under the
+    pre-reconciliation entry_kind rules,
+  And the telemetry sink's non-knowledge records are left byte-for-byte
+    unchanged.
+depends_on: [INF-400c-4, INF-400c-5-ii]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Ordering is load-bearing: the entry_kind mapping (INF-400c-5-ii) must be in place before the recovered events are drained, or the drain discards them"
+  - "Must be idempotent — a second run carries across nothing and appends nothing"
+  - "Must not delete or rewrite records in the telemetry sink; recovery is a copy, not a move"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-4
+  contract: "The declared knowledge-emission sink path to recover the stranded events into"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

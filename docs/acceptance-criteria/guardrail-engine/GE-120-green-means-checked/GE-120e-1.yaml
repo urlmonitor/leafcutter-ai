@@ -102,7 +102,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-120e-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/28_TICKET-20260825-GE-120e-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -124,3 +125,4 @@ notes: |
   one check blocking a merge the other passed — which reads to the author exactly like the
   defect this AC removes. The PO did not prescribe the mechanism and neither does this AC;
   it prescribes that there is one of it.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

@@ -43,6 +43,33 @@ FIXTURE-AUTHENTICITY MANDATE: the base fixtures are copied byte-for-byte from
     and edit only the single work_status line under test, never fabricating
     the surrounding document.
 
+STATUS (2026-08-25): these tests are GREEN. The round-trip described above was
+    replaced by a targeted line edit; the paragraphs above are kept because they
+    record why the contract is written as a literal diff rather than a parsed
+    comparison, which is still the reason these assertions are shaped this way.
+
+DUAL COVERS TAG: every test below carries BOTH `# covers: KI-BO-003` and
+    `# covers: BO-2400e-4`. The same defect was tracked twice, one day apart, in
+    two registries that did not know about each other: as known-issue KI-BO-003,
+    which these tests were written against, and as acceptance criterion
+    BO-2400e-4 ("Recording progress on a requirement changes the progress and
+    nothing else"), which nothing was ever written against. The behaviour these
+    tests pin IS that AC's behaviour, so the AC tag is added rather than the
+    KI tag replaced -- dropping the KI tag would erase the provenance of the
+    fixtures and of the diff-shaped assertions. Note that KI-BO-003 has no entry
+    in docs/known-issues/build-orchestration.md, so on its own it resolved to
+    nothing and `done_proof` read it as a dangling tag; the AC tag is what makes
+    this suite count as coverage.
+
+NOT YET COVERED HERE: BO-2400e-4's test_spec names four tests; these supply two
+    of them. Still missing are the eleven-record real-artifact case and, more
+    importantly, the `reachability` case that drives the production entry points
+    (claim_build_set / release_claim / mark_done_built_acs) rather than the
+    private helper. Every test below calls _update_ac_work_status directly, so
+    a change that repoints those three call sites at a NEW writer would leave
+    this suite green while testing an orphaned function. See the TODO filed in
+    docs/known-issues/build-orchestration.md.
+
 Run with AC_ENFORCE_STRICT=1 to see the true (unmasked) result -- this repo's
 pytest_ac_enforcement plugin otherwise xfails not-yet-done ACs:
 
@@ -183,6 +210,7 @@ class TestUpdateAcWorkStatusPreservesFormatting(unittest.TestCase):
 
     def test_work_status_value_is_updated(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """After the call, work_status parses to the new value on disk."""
         _require_impl(self)
 
@@ -197,6 +225,7 @@ class TestUpdateAcWorkStatusPreservesFormatting(unittest.TestCase):
 
     def test_diff_is_exactly_one_changed_line(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """The strong assertion: before/after content differs on EXACTLY the
         work_status line -- not "the values still parse equal" but a literal
         one-line diff, the way a human reviewer would see it in `git diff`.
@@ -231,6 +260,7 @@ class TestUpdateAcWorkStatusPreservesFormatting(unittest.TestCase):
 
     def test_authored_key_order_preserved(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """Top-level key order in the file must match the authored order --
         never alphabetised by yaml.safe_dump.
         """
@@ -253,6 +283,7 @@ class TestUpdateAcWorkStatusPreservesFormatting(unittest.TestCase):
 
     def test_block_scalars_survive_byte_identically(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """The `criteria: |` and `notes: |` block scalars -- including their
         indentation and internal blank lines -- must be byte-identical after
         the update, never reflowed into a folded or quoted scalar.
@@ -288,6 +319,7 @@ class TestUpdateAcWorkStatusPreservesFormatting(unittest.TestCase):
 
     def test_amended_by_list_survives_byte_identically(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """The amended_by list (a list of dicts holding a long, hand-authored
         `reason` string) must be byte-identical after the update.
         """
@@ -314,6 +346,7 @@ class TestUpdateAcWorkStatusPreservesFormatting(unittest.TestCase):
 
     def test_round_trip_twice_still_one_line_diff(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """Round-tripping twice (todo -> in_progress -> done, mirroring
         claim_build_set then mark_done_built_acs -- both of which route
         through _update_ac_work_status) must still leave the file only a
@@ -386,6 +419,7 @@ class TestUpdateAcWorkStatusPreservesComments(unittest.TestCase):
 
     def test_inline_comment_survives(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """The inline trailing comment on child_limit_override must survive
         verbatim after a work_status-only update (KI-BO-003 -- yaml.safe_dump
         drops comments entirely, since PyYAML's safe_load/safe_dump round-trip
@@ -467,6 +501,7 @@ class TestUpdateAcWorkStatusHandlesEdgeCaseFormatting(unittest.TestCase):
 
     def test_unusual_spacing_around_colon_still_updates_correctly(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """A work_status line with extra spaces after the colon (still valid
         YAML) must still be found and updated correctly, without corrupting
         the rest of the file.
@@ -496,6 +531,7 @@ class TestUpdateAcWorkStatusHandlesEdgeCaseFormatting(unittest.TestCase):
 
     def test_quoted_work_status_value_still_updates_correctly(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """A work_status line whose value is quoted (e.g. work_status: "done")
         must still be found and updated correctly.
         """
@@ -578,6 +614,7 @@ class TestWorkStatusKeyAbsent(unittest.TestCase):
 
     def test_absent_work_status_is_added_not_raised(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """The key is created, and the call does not raise."""
         fixture = self._fixture_without_work_status()
 
@@ -594,6 +631,7 @@ class TestWorkStatusKeyAbsent(unittest.TestCase):
 
     def test_adding_the_key_changes_exactly_one_line(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """Creating the key is still a minimal, formatting-preserving edit."""
         fixture = self._fixture_without_work_status()
         before = fixture.read_text(encoding="utf-8")
@@ -612,6 +650,7 @@ class TestWorkStatusKeyAbsent(unittest.TestCase):
 
     def test_every_other_byte_survives_when_the_key_is_added(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """The rest of the real record is untouched by the insertion."""
         fixture = self._fixture_without_work_status()
         before = fixture.read_text(encoding="utf-8")
@@ -629,6 +668,7 @@ class TestWorkStatusKeyAbsent(unittest.TestCase):
 
     def test_ambiguous_multiple_matches_still_raise(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """Two column-0 work_status lines remain a hard error.
 
         Adding a missing key is unambiguous; choosing between two existing
@@ -659,6 +699,7 @@ class TestDocstringHonesty(unittest.TestCase):
 
     def test_docstring_claims_the_tested_preservation_guarantee(self) -> None:
         # covers: KI-BO-003
+        # covers: BO-2400e-4
         """Whatever the final implementation, the docstring's preservation
         claim must be the ACTUALLY tested one.
 

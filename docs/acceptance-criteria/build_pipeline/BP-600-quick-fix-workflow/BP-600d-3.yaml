@@ -17,10 +17,16 @@ criteria: |
   And the commit stages at least four files: the new child AC YAML, the parent
     AC YAML whose covered_by was back-linked to that child, the test file, and
     the fixed source file,
-  And the parent AC YAML is in that same commit rather than a later one, because
-    the AC guardian hooks validate only the files present in that commit's index
-    and never read the store — an unstaged parent is never checked at all, so a
-    stale covered_by rots silently and the hooks' silence is not a pass,
+  And the parent AC YAML is in that same commit rather than a later one, so the
+    parent's covered_by is correct in the very commit that changes the tree and a
+    reviewer reads parent and child together,
+  And that staging requirement holds whatever the guardian hooks can see, so it
+    does not lapse when their scope changes: as observed on 2026-08-25 the AC
+    guardian hooks derive their file set from the commit's index and do not read the
+    store, so an unstaged parent is never examined and their silence is not a pass —
+    and were a hook later to resolve the parent from the store regardless of staging,
+    staging it would remain required, because that hook would then BLOCK this commit
+    on a covered_by the workflow had left stale rather than passing it,
   And before staging, the child AC's work_status is flipped from todo to done
     and the green test is recorded in its covered_by, in that same commit rather
     than as a follow-up,
@@ -46,6 +52,13 @@ doc_links:
       criterion enforces, and records the ACD-400a drift that motivated it:
       20 composites store-wide marked done with unfinished children, every
       commit in the window passing every AC hook.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: related
+    status: exists
+    relevance: >-
+      KI-CG-001 is the index-scoping defect this criterion works around, recorded
+      as open with its own evidence. Read it before concluding that the observed
+      behaviour named in the criteria has changed.
   - path: templates/skills/quick-fix/SKILL.md
     relationship: implements
     status: exists
@@ -59,9 +72,12 @@ it_requirements:
   - "Must dispatch the commit agent via the Agent tool — never call git commit directly (per CLAUDE.md commit delegation policy)"
   - "Must pass the AC ID to the commit agent so it appears in the commit message"
   - >-
-    Must name the parent AC file explicitly in the staging instruction. Relying
-    on the hooks to notice a missing back-link cannot work: they read the commit
-    index, so an unstaged parent is unreachable to them.
+    Must name the parent AC file explicitly in the staging instruction. Do not
+    delegate the back-link to the hooks. As observed on 2026-08-25 they read the
+    commit index, so an unstaged parent is unreachable to them; and if that ever
+    changes, a hook reading the store would block this commit on the stale
+    back-link rather than repair it. Explicit staging is the correct instruction
+    under both regimes.
   - >-
     When the AC creation phase produced a Roman-suffix L3 child, the immediate
     parent to stage is that child's L2, not the L1 grandparent.
@@ -98,6 +114,22 @@ amended_by:
       BP-600c-3's delivers_to, so the two records named the same seam with
       different vocabulary — the disjoint-vocabulary failure that lets each
       side look correct in isolation. Both now carry the identical field list.
+  - reason: durability-restatement
+    by: business-analyst
+    at: '2026-08-25'
+    note: >-
+      The staging clause asserted the index-scoping defect as a bare, undated
+      fact and made the staging requirement depend on it, so the record would
+      have become false the day the hooks are repaired and the requirement would
+      have appeared to lapse with it. Split into two clauses: the requirement
+      (stage the parent so covered_by is correct in the commit that changes the
+      tree) now stands on its own, and the defect is stated as observed on a
+      named date with the counterfactual attached — a hook that read the store
+      would BLOCK this commit on a stale back-link, so explicit staging is right
+      under both regimes. The same split was applied to the corresponding
+      it_requirements bullet. Nothing was deleted: the workaround is still the
+      correct instruction, KI-CG-001 is still open, and work_status stays done
+      because the behaviour the criteria require is unchanged.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
@@ -128,3 +160,47 @@ notes: |
   Note also that the workflow now produces a SECOND commit after this one, for
   the changelog entry (a required status check). That commit is out of scope
   here; this criterion governs the fix commit only.
+
+  ==========================================================================
+  WHY THE 2026-08-25 RESTATEMENT WAS NEEDED, AND WHAT IS STILL TRUE.
+  ==========================================================================
+  This record is work_status: done, so its criteria are a committed assertion
+  about the system. One clause asserted a DEFECT as settled fact — that the AC
+  guardian hooks never read the store — and hung the staging requirement off it
+  with a "because". Two problems follow from that shape, and only the second is
+  hypothetical:
+
+    1. A done record now carries a bug report inside its acceptance criteria.
+       The moment the hooks are repaired, this record is false and someone has to
+       decide whether the requirement it states survives. Written as it was, the
+       obvious reading is that it does not — the reason for staging the parent
+       having gone away.
+    2. The requirement DOES survive, and for the opposite reason. A hook that
+       resolved the parent from the store would find the stale covered_by this
+       workflow would otherwise leave behind, and would block the commit. Under
+       the current hooks, not staging the parent is invisible; under repaired
+       hooks it is fatal. Staging the parent is correct either way, and now says
+       so without depending on which regime is in force.
+
+  STILL TRUE AS OF 2026-08-25, VERIFIED, NOT ASSUMED: the hooks are not repaired.
+  KI-CG-001 is open with two recorded occurrences, and KI-CG-012 records a third
+  mechanism by which check-ac-schema exits 0 having validated nothing. The
+  CLAUDE.md workaround ("AC-store commits — stage the parent alongside the child")
+  is still the correct instruction and must not be removed.
+
+  WHAT THE 2026-08-25 AC WORK DOES AND DOES NOT COVER — read this before assuming
+  the defect is being fixed. ACS-1100b-4 and ACS-1100d-5 were authored the same
+  day against the same known issue, but neither makes a hook read the store:
+    - ACS-1100b-4 says a scoped check may not exclude the records it did not
+      examine on the ground that they pre-date the rule; it must declare its scope
+      and report both totals. That constrains what a diff-scoped hook may CLAIM.
+    - ACS-1100d-5 says a requirement claiming a population may not be closed on a
+      verdict narrower than the claim. That constrains what may be CONCLUDED.
+    - ACS-200h owns a whole-store re-check on the protected branch and is honestly
+      open (work_status todo, covered_by empty), deliberately unbuilt until the
+      store is reconciled.
+  NO RECORD ANYWHERE REQUIRES AN AC HOOK TO RESOLVE A PARENT FROM THE STORE WHEN
+  THE PARENT IS UNSTAGED. That is the half of KI-CG-001's fix direction with no
+  acceptance criterion behind it, and it is unowned as of 2026-08-25. Until one
+  exists and is built, this criterion's staging requirement is the only thing
+  standing between /quick-fix and a stale back-link.

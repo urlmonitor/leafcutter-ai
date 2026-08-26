@@ -40,12 +40,14 @@ origin_agent: BrainCandy
 created: 2026-08-17
 amended_by: []
 superseded_by: null
+child_limit_override: 6
 covered_by:
   - GE-122d-1
   - GE-122d-2
   - GE-122d-3
   - GE-122d-4
   - GE-122d-5
+  - GE-122d-6
 implemented_by: []
 change_target:
   - code

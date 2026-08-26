@@ -146,7 +146,10 @@ const TICKET_RESULT_SCHEMA = {
   properties: {
     status: {
       type: "string",
-      enum: ["ok", "blocked", "failed", "error", "halt"],
+      // 'undetermined' lets a supervisor say "I could not drive this ticket",
+      // as distinct from "I drove it and it failed". Without that value a
+      // boundary failure has to borrow a status meaning something else.
+      enum: ["ok", "blocked", "failed", "error", "halt", "undetermined"],
     },
     message: { type: "string" },
     ticket_path: { type: "string" },
@@ -300,8 +303,35 @@ const plannerResult = await agent(
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'epic-planner', phase: 'Planner' }
 )
 
-const plan = plannerResult || {};
-const batches = plan.batches || [];
+// Fail CLOSED on a planner reply the drive cannot use.
+//
+// `plannerResult || {}` followed by `plan.batches || []` is a two-step
+// reduction, and the two steps together manufacture a completion claim out of
+// an agent that never answered: a dead planner becomes a blank plan, a blank
+// plan becomes a blank batch list, and the guard below then reports
+// `status: "ok"` — "Epic complete. All tickets are done." Each substitution
+// looks like defensive programming on its own; in sequence they are the
+// KI-SS-001 shape at epic scale, and nothing throws because every step did
+// exactly what it was written to do.
+//
+// The reply must AFFIRMATIVELY carry a batches array. An empty array is a
+// legitimate "everything is already done"; a missing one is not an answer.
+// (build-feature.js hardened the same shape as BO-1900a-4-ii.)
+if (!plannerResult || !Array.isArray(plannerResult.batches)) {
+  return {
+    status: "undetermined",
+    message:
+      `The epic planner for "${epicPath}" returned no usable plan ` +
+      `(no batches array). This is a planner failure, NOT an empty or ` +
+      `completed epic — no ticket was dispatched and nothing was verified. ` +
+      `Re-run /build-feature; do not read this as the epic being done.`,
+    epic_path: epicPath,
+    planner_reply: plannerResult,
+  };
+}
+
+const plan = plannerResult;
+const batches = plan.batches;
 const epicTitle = plan.title || epicPath;
 
 // -------------------------------------------------------------------------
@@ -359,15 +389,33 @@ for (const batch of batches) {
         );
         return {
           ticket_path: ticket.path,
-          status: result && result.status ? result.status : "ok",
+          // Fail CLOSED. This previously defaulted to "ok", which actively
+          // converted a dead or parked ticket-supervisor into a completed
+          // ticket: agent() resolves to null when the agent dies or is stopped,
+          // and a parked agent (KI-SS-001) returns prose carrying no status at
+          // all. The batch halt filter below then had nothing to catch, so the
+          // epic reported tickets_completed with no work done.
+          status: result && result.status ? result.status : "undetermined",
           result,
         };
       })
     );
 
-    for (const r of chunkResults) {
+    for (let idx = 0; idx < chunkResults.length; idx += 1) {
+      const r = chunkResults[idx];
       if (r) {
         batchResults.push(r);
+      } else {
+        // parallel() resolves a thunk that threw to null. Silently dropping it
+        // would remove the ticket from the batch record altogether — the run
+        // would report a smaller batch rather than a failure, which is the same
+        // success-shaped silence the guards above exist to close. Record it as
+        // undetermined so the halt filter below sees it.
+        batchResults.push({
+          ticket_path: chunk[idx] && chunk[idx].path,
+          status: "undetermined",
+          result: null,
+        });
       }
     }
   }
@@ -380,7 +428,10 @@ for (const batch of batches) {
       r.status === "failed" ||
       r.status === "blocked" ||
       r.status === "halt" ||
-      r.status === "error"
+      r.status === "error" ||
+      // A ticket whose supervisor returned nothing usable has NOT completed.
+      // It halts the batch like any other failure rather than being counted.
+      r.status === "undetermined"
   );
 
   if (haltedTickets.length > 0) {

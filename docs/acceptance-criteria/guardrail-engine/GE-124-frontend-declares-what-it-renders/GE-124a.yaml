@@ -1,0 +1,86 @@
+id: GE-124a
+title: "Each screen component states the requirement it was built for"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Open any screen component and it names the requirement it serves.
+
+  Every file that builds part of a screen carries, in its own words, the
+  acceptance criterion or criteria it exists to satisfy — so a reviewer opening
+  it knows immediately what it was supposed to prove, whichever front-end
+  technology it happens to be written in.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124a-1
+  - GE-124a-2
+  - GE-124a-3
+  - GE-124a-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA).
+
+  THIS IS THE REQUIRED FLOOR. Everything else in GE-124 is layered on top of it.
+  The component-level declaration is the ONLY source of a file's declared
+  criteria — an element-level attribute (GE-124b) never populates it and never
+  satisfies it. The mock-data artifact states this as an "if and only if":
+  a component declares nothing exactly when it has no declaration block.
+
+  FOUR FILE SHAPES, ONE REQUIREMENT. The declaration must be expressible in
+  `.tsx`, `.jsx`, `.vue` and `.svelte` — a JS-style leading doc comment in the
+  first two, an HTML-style leading comment in the latter two. Do NOT cut one L2
+  per file type as a matter of course; cut by what actually differs (comment
+  syntax and where "the top of the file" is in a single-file component), and say
+  so. The mock-data artifact carries a worked record of all four.
+
+  A file may legitimately declare MORE THAN ONE criterion — the shape is a list,
+  not a single value.
+
+  SCOPE IS DIFF-ONLY, mirroring GE-117: new and changed screen components are in
+  scope; the existing untouched frontend is not retrofitted. An unchanged file
+  that merely lacks a declaration must never be reported (see GE-124c).
+
+  OPEN QUESTION FOR THE BA/IT-PO — do not assume: what exactly counts as "a
+  screen component" for enforcement purposes. Extension alone over-reaches
+  (helpers, hooks, type-only modules, generated files and stories all share the
+  extensions). Decide the rule explicitly at L2 rather than letting the file
+  glob decide it silently. GE-124d exists so that the answer can be wrong at the
+  edges without blocking anyone permanently.
+
+  documentation_triggers [how-to] — an author needs to be told where the
+  declaration goes and what it looks like in each of the four file shapes.
+  There is no equivalent house convention to copy: GE-117's docstring guidance
+  is Python-only.
+
+  BA decomposition note (2026-08-25). Four L2s: GE-124a-1 (the declaration
+  parse and the list shape), GE-124a-2 (comment syntax and placement per file
+  shape), GE-124a-3 (the open question, answered — in-scope extension PLUS
+  rendered markup), GE-124a-4 (the how-to). The PO's open question is answered
+  in GE-124a-3's criteria and its two L3s, with the named exclusions kept out of
+  the main rule so each can be argued with separately. HTML is treated as a
+  fifth file shape in GE-124a-2, per the L0 scope; the mock-data framework enum
+  carries only the four it had records for, and that discrepancy is flagged in
+  GE-124a-2's notes rather than silently resolved.

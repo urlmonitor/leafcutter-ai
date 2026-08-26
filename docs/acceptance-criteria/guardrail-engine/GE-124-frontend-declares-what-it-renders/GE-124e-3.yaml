@@ -1,0 +1,117 @@
+id: GE-124e-3
+readiness: approved
+priority: high
+title: "A finished screen criterion that nothing claims is reported against the criterion, not a file"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+criteria: |
+  Given UXP-607-2 is a finished user-interface criterion
+  And no front-end file names it in a component-level declaration and no
+    rendered element pins it
+  When the reverse-direction gate runs
+  Then the gate fails
+  And exactly one finding is reported whose subject is the criterion id
+    UXP-607-2, not a file path
+  And the finding states that both ways of satisfying it were absent — no
+    component-level declaration and no element pin
+
+  Given the same run also produced commit-tier findings about file paths
+  When the reverse-direction findings are reported
+  Then the reverse-direction findings are identified by criterion id and the
+    commit-tier findings by file path, so a reader can tell which direction each
+    failure came from
+depends_on:
+  - GE-124e
+  - GE-124e-1
+  - GE-124e-2
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE FINDING CARRIES subject_type: 'ac' AND tier: 'ci', AND ITS SUBJECT IS THE CRITERION ID. The mock-data artifact states this as an invariant: commit-tier subjects are FrontendComponent paths, CI-tier subjects are Ac ids. A finding keyed by the wrong subject type is not cosmetic — it collapses the distinction the two-L1 split is built on, and a reviewer who cannot tell the direction will try to fix a criterion by editing a file."
+  - "THE CODE IS 'undeclared-done-ui-ac' (mock record gf-ci-uxp-607-2-undeclared), distinct from the commit tier's codes. One finding per criterion — the at-most-one-per-(subject, code) rule from GE-124c-1-i applies at this tier too, with the criterion id as subject."
+  - "THE MESSAGE MUST STATE THAT BOTH ROUTES WERE ABSENT — no '@ac <id>' in any component-level declaration and no data-ac occurrence — so the reader knows the gate looked for both and does not assume only the floor was checked."
+  - "THE MESSAGE MUST NOT USE PROOF LANGUAGE IN EITHER DIRECTION, per GE-124g-2: failing says nothing claims it, never that it is unproven or untested; the corresponding pass says declared, never verified or covered. This gate and check_done_proof report on the same criterion and their language is what stops a reader merging them."
+  - "SHARED OUTPUT SURFACE, DISTINGUISHABLE ROWS. When both tiers report in one run, the subject_type/tier fields must be rendered, not just stored — a reviewer reading the output has to see which direction each row came from. Do not rely on the id format alone to imply the direction."
+  - "MIRROR check_done_proof's REPORTING SHAPE rather than inventing one; that gate already reports per-criterion failures for the test obligation and the two will appear side by side (GE-124e-3-i)."
+delivers_to:
+  agent: python-coder
+  contract: "The reverse-direction finding {subject: <criterion id>, subject_type: 'ac', tier: 'ci', code: 'undeclared-done-ui-ac', verdict: 'block'} — one per criterion — reported alongside but visibly distinguishable from the commit tier's file-keyed findings, and worded so it can never be read as a statement about testing (GE-124g-2)."
+expects_from:
+  ac_id: GE-124e-2
+  contract: "The per-criterion declaration status whose 'undeclared' value this AC turns into a failing finding, together with the evidence scan that established it"
+test_spec:
+  - name: test_ge_124e_3_undeclared_done_ui_criterion_fails_the_gate_with_a_criterion_keyed_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "MUST-BLOCK. Run check_ui_ac_declared.py as the CI job runs it against a store containing the UXP-607-2 shape and a front-end tree that claims it nowhere: non-zero exit, exactly one finding, subject == 'UXP-607-2', subject_type == 'ac'. Assert the subject is the id and NOT a file path — a gate that reports the right failure against the wrong subject type collapses the tree's central distinction."
+  - name: test_ge_124e_3_finding_states_both_routes_were_absent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The rendered message names both the missing component-level declaration and the missing element pin, so the reader knows both were looked for."
+  - name: test_ge_124e_3_ci_and_commit_findings_are_distinguishable_in_one_combined_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Produce both tiers' findings over one fixture and assert each rendered row exposes its tier and subject_type. Assert on the RENDERED output, not the records — a reviewer reads the output, and a field that is stored but not printed does not help them."
+  - name: test_ge_124e_3_failure_message_contains_no_proof_vocabulary
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Neither the failure nor the corresponding pass message contains 'verified', 'covered', 'proven', 'tested' or 'satisfied'. Enumerated so the constraint is testable rather than a matter of taste; the local half of GE-124g-2's guarantee, asserted here because this is where the strings are produced."
+test_rationale: |
+  This is the CI tier's blocking verdict, so it carries the must-block modifier: known-bad input
+  through the real CI entry point, asserting non-zero exit. The subject-type assertion is
+  written as an explicit negative (NOT a file path) because a gate that reports the right
+  failure against a file path would pass a looser assertion while collapsing the very
+  distinction that makes GE-124c and GE-124e two separate L1s. The distinguishability test
+  asserts rendered output rather than record fields, because the promise is to a human reader.
+  The vocabulary test lives here rather than only in GE-124g-2 because this is where the strings
+  are constructed, and a banned-word list is only enforceable at the point of construction.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Fixed the finding to subject_type 'ac' / tier 'ci' / code 'undeclared-done-ui-ac' per the mock-data invariant, extended GE-124c-1-i's one-per-(subject, code) rule to this tier, required tier and subject_type to be RENDERED rather than merely stored, and placed GE-124g-2's banned-vocabulary assertion here where the strings are built. Charged the must-block modifier at the CI entry point. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124e-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Mirrors what the existing done-proof gate does for tests — the PO's
+  instruction is to use that model and not invent a parallel idiom.
+
+  THE SUBJECT IS THE CRITERION ID, and the mock-data artifact states this as an
+  invariant: commit-tier subjects are file paths, CI-tier subjects are criterion
+  ids. That difference is what makes GE-124c and GE-124e two L1s rather than
+  one, so a finding keyed by the wrong subject type is not a cosmetic defect —
+  it collapses the distinction the tree is built on.
+
+  The second scenario is the reader-facing consequence: the two directions
+  surface in the same place, and a reviewer who cannot tell them apart will try
+  to fix a criterion by editing a file, or the reverse.
+
+  Worked case: mock-data record `gf-ci-uxp-607-2-undeclared`.

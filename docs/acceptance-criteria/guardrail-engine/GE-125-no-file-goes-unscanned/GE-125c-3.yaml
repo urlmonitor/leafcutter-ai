@@ -1,0 +1,251 @@
+id: GE-125c-3
+components:
+  - security_scanner
+  - commit_guardian
+title: "The same content reaches the same verdict on a long line as on a short one — how far along a line a value sits never decides it"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose ticket area holds two Markdown files staged for
+    commit,
+  And the first file's only content line begins with a project identifier of the
+    ticket form at the first character, followed by a short note,
+  And the second file's only content line is the same identifier and the same note
+    preceded by 160 characters of ordinary prose, so the identifier begins beyond
+    the 120th character of the line — past the point at which the check currently
+    shortens the line it judges,
+  And no suppression entries are in force,
+  When both staged files are checked by the pre-commit secrets check,
+  Then both files reach the same verdict: the identifier is set aside in each and
+    neither file is reported,
+  And the commit is not blocked by either,
+  Because where a value sits within its line is not a property of the value: a
+    judgement made on a shortened copy of the line cannot see an explanation that
+    starts late, so the verdict becomes a function of line length — the same class
+    of accident this goal exists to remove.
+
+  Given the same throwaway project,
+  And a third staged Markdown file in the same ticket area whose only content line
+    is 160 characters of ordinary prose followed by an opaque credential of at
+    least thirty characters that matches no recognised explanation,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the credential is reported, named with its 1-based line number, and the
+    commit is blocked,
+  Because a judgement that sees only the first 120 characters of that line sees
+    neither an explanation nor a credential, and whichever way it then defaults is
+    a verdict decided by line length rather than by content.
+
+  Given the same throwaway project,
+  And a fourth staged Markdown file in the same ticket area whose only content line
+    carries the project identifier at the first character AND, beyond the 120th
+    character of that same line, the opaque credential,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then exactly one finding is reported for that file, naming that line, and the
+    commit is blocked,
+  Because an explanation covers the value it explains and nothing else — it does
+    not carry the rest of the line any more than it carries the rest of the file,
+  And an implementation that judges a shortened copy would see only the identifier
+    on this line and would report nothing at all.
+depends_on:
+  - GE-125c
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "`Finding.excerpt` IS A DISPLAY FIELD AND MUST NEVER BE THE INPUT TO A VERDICT. It is set to `line.strip()[:120]` at `templates/skills/security-scanner/scripts/scan_secrets.py:248` and `:254`, and `_filter_prose_findings` passes `finding.excerpt` into `_is_prose_exempt` at `templates/scripts/commit_guardian/check_secrets.py:220` — so the exemption today judges a TRUNCATED line, a benign explanatory token past column 120 is invisible to it, and the verdict can turn on line length alone. The per-finding judgement MUST be computed from the full matched value and, where surrounding context is needed, from the whole untruncated source line — never from the excerpt. `excerpt` may continue to exist and to be printed to show the author where a value was found; it must not reach any code path that decides whether a value is set aside."
+  - "THE FULL MATCHED VALUE HAS TO BE PLUMBED, BECAUSE IT IS NOT CARRIED TODAY. The `Finding` record at `templates/skills/security-scanner/scripts/scan_secrets.py:69` holds only `excerpt`; `scan_file` computes the truncation at lines 248 and 254 and the untruncated line is discarded at that point, so by the time `_filter_prose_findings` runs the information needed for a correct verdict no longer exists. The change therefore spans TWO scripts, and a fix confined to `check_secrets.py` cannot be correct — it can only pick a different wrong string. Carry the matched value, and the context the verdict needs, from the point of the match."
+  - "BOTH SCRIPTS ARE TEMPLATES WITH DEPLOYED COPIES, AND A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The canonical files are `templates/skills/security-scanner/scripts/scan_secrets.py` and `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/`, `.leafcutter/scripts/commit_guardian/` and the deployed skill copies are build outputs per ADR-001, and `check_hook_parity` enforces all four commit-guardian locations. Run `python scripts/build.py --target-dir .` after editing the templates and re-run the commit_guardian suite before claiming the change."
+  - "THE TWO SCRIPTS MIRROR EACH OTHER'S ENTROPY CONSTANTS AND THE MIRROR IS MANUAL. `check_secrets.py:135-138` carries `_ENTROPY_MIN_LEN`, `_ENTROPY_THRESHOLD` and `_TOKEN_RE` under the comment `Mirror of scan_secrets entropy constants (kept in sync with the skill)`. Any change to how a value is extracted or measured must be applied on both sides in the same change, and the drift must be assertable — otherwise the commit hook and the skill disagree about what a value even is, and the verdict depends on which one ran."
+  - "THE SUBTREE MUST EXERCISE THE FOUR BOUNDARY CASES AGAINST THE REAL CHECK, NOT AGAINST A HELPER: a value ENDING at the 120th character, a value BEGINNING at the 121st, a value STRADDLING the 120th by beginning at the 118th, and a value LONGER than 120 characters in total. GE-125c-3-i owns the four as scenarios; this record's clear-cut long-prefix cases do not reach the cut itself, and an off-by-one that slices before matching rather than after satisfies every arm here while mangling a value that lies across the cut. Neither record is discharged without the other."
+  - "PADDING IS PART OF THE FIXTURE CONTRACT: BUILD IT PROGRAMMATICALLY AND ASSERT THE COLUMN OFFSETS BEFORE THE VERDICTS. Construct each line by composing a computed run of padding with the value, then assert the resulting 0-based or 1-based column at which the value starts and ends — stating which convention is used — as a precondition of the arm. Only then assert the verdict. A fixture that quietly drifts back inside the first 120 characters must fail loudly on the offset assertion rather than pass on a verdict reached for the wrong reason, and eyeballing a 200-character line is not verification."
+  - "THE PADDING MUST NOT ITSELF BE HIGH-ENTROPY, AND THAT MUST BE ASSERTED, NOT ASSUMED. Build it from ordinary prose words with separators, and assert as a precondition that no token the entropy rule would extract from the padding reaches the threshold — `_TOKEN_RE` collects runs of at least 20 characters from `[A-Za-z0-9+/=_-]` and `_ENTROPY_THRESHOLD` is 4.5 (`check_secrets.py:136-138`). Padding built from a random or base64-ish filler would produce findings of its own and turn every count in this record into an accident."
+  - "THE EXPLANATION COVERS THE VALUE IT EXPLAINS AND NOTHING ELSE ON ITS LINE. The third scenario is the one that fails an implementation which lets an early recognised identifier vouch for the remainder of its line — the line-level equivalent of the file-level defect this L1 removes. Whatever context the verdict consults, the SCOPE of a set-aside decision is one matched value."
+  - "THE THREE SCENARIOS FAIL THREE DIFFERENT WRONG IMPLEMENTATIONS AND ALL THREE MUST BE RUN. One fails an implementation that keeps judging the shortened copy and reports a late explanation as a credential; two fails one that reacts to an unreadable tail by staying silent; three fails one that lets an early explanation vouch for the rest of its line. Passing any subset proves nothing about the others."
+  - "THE REPORT MUST NOT GROW A FULL-VALUE ECHO AS A SIDE EFFECT. Carrying the untruncated line for the VERDICT must not cause the untruncated line or the full matched value to be printed or persisted in the check's output. The display path keeps its truncation. GE-125c-3-i asserts this for the finding itself; it does not decide GE-125d's notice format and neither does this record."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER — AND THE LONG LINES HERE MAKE THE TRAP EASIER TO FALL INTO, NOT HARDER. A 200-character line in a real ticket file would be exempt for its location and would prove nothing about column positions. Every fixture is a real file inside a `tempfile`-backed throwaway project root with the ticket area constructed INSIDE it (`<tmp_root>/tickets/00_inbox/<name>.md`) and the check pointed at that root; no fixture under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. Assert as a precondition that the root path ABOVE the constructed prose directory contains none of the four segment names."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY WIRING ASSERTION. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers. A test that asserts WHICH STRING is passed into the per-result judgement is a test of the wiring, not of the verdict, and a test that greps for the absence of a shortening step passes on dead code."
+  - "CREDENTIAL-SHAPED FIXTURE STRINGS ARE ASSEMBLED AT RUNTIME from concatenated fragments, as `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does, and no `.security-allowlist` entry may be added so that literals can be committed."
+  - "ERROR HANDLING PER CLAUDE.md: the verdict path stays a pure function over strings and must NOT be wrapped in try/except (Rule 4); file and subprocess access is wrapped in a typed except that logs at WARNING or re-raises (Rules 1-3). A failure to obtain the untruncated line must fail towards REPORTING the value — never towards silently falling back to the excerpt, which would reintroduce the defect behind an exception handler."
+  - "PERFORMANCE AND MEMORY — THIS RUNS ON EVERY COMMIT. Carrying the untruncated line for the verdict must not require holding a whole file in memory per finding, must add no additional read of the file, and must not degrade on pathological input: assert the check completes in bounded time over a staged file containing a single 100,000-character line."
+test_spec:
+  - name: test_identical_content_at_column_one_and_past_column_120_reach_one_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two staged files whose only difference is 160 characters of programmatically built ordinary-prose padding before the same ticket identifier and note: both yield zero findings and neither blocks the commit. The paired assertion is the invariant — one difference, one verdict — and it fails any implementation whose verdict is computed from the 120-character excerpt."
+  - name: test_credential_past_column_120_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file whose only content line is 160 characters of prose padding followed by a runtime-assembled opaque credential yields exactly one finding, named with its 1-based line number, and a non-zero exit. Fails an implementation that reacts to an unreadable tail by staying silent."
+  - name: test_early_explanation_does_not_vouch_for_a_late_credential_on_the_same_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file whose only content line carries the ticket identifier at the first character AND the opaque credential beyond the 120th yields EXACTLY ONE finding naming that line, and a non-zero exit. An excerpt-judging implementation sees only the identifier and reports nothing at all; an implementation that lets an early explanation cover its whole line also reports nothing."
+  - name: test_fixture_column_offsets_are_asserted_before_every_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: each constructed line is built by composing computed padding with the value, and the start and end columns of the value are asserted against the intended positions — under a stated 0- or 1-based convention — before any verdict is asserted. A fixture that drifts back inside the first 120 characters fails here loudly instead of passing for the wrong reason."
+  - name: test_padding_is_not_itself_high_entropy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: no token the entropy rule would extract from the padding reaches the threshold, so the padding cannot contribute a finding of its own. Asserted against the same constants the check uses rather than by inspection."
+  - name: test_scan_and_check_agree_on_the_value_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After running the build, the DEPLOYED commit-guardian copies and the security-scanner script agree about what a matched value is — the mirrored entropy constants have not drifted — and the long-line arms reproduce their verdicts when driven through the deployed hook rather than the canonical template."
+test_rationale: |
+  Six descriptors. Three are the criterion's arms, two are the fixture contract, and
+  one is the deployed-parity arm the two-script change makes necessary.
+
+  The first three are deliberately not interchangeable. Each fails a different wrong
+  implementation — keeps judging the shortened copy; goes silent on an unreadable
+  tail; lets an early explanation vouch for the rest of its line — and none of the
+  three is visible from a short-line case. Running a subset is how this defect
+  survives a green suite.
+
+  The two fixture descriptors are load-bearing rather than hygienic, and they are
+  the reason this record can be trusted at all. Every arm here depends on a value
+  sitting at a particular column, and a column is exactly the property that drifts
+  silently when someone edits a fixture string. Building the padding programmatically
+  and asserting the resulting offsets BEFORE the verdicts means such an edit fails on
+  the offset rather than passing on a verdict reached inside the first 120
+  characters — which would look identical to success. The padding-entropy descriptor
+  closes the mirror hazard: filler that is itself high-entropy adds findings and
+  turns every count into an accident.
+
+  A wiring assertion — checking which string is handed to the judgement — was
+  rejected explicitly. It tests the plumbing rather than the verdict, it goes stale
+  the moment the plumbing is refactored, and it passes on code no commit ever reaches.
+  The deployed descriptor exists because this change spans two template scripts with
+  separately deployed copies and a manually mirrored set of constants, so the risk of
+  a correct template and a stale runtime is higher here than anywhere else in the
+  subtree.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001's closing paragraph — the fix must not trip over the fact that _filter_prose_findings passes finding.excerpt, so the exemption judges a truncated line and a benign explanation past the truncation point is invisible to it."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Both scripts changed here are templates with separately deployed copies; the ADR is why a deployed-copy-only fix is reverted by the next build."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "A finding record that carries the FULL matched value, and the whole untruncated source line where surrounding context is needed, from the point of the match in scan_file through to the per-value verdict in check_secrets.py — with Finding.excerpt demoted to a display-only field that no verdict path reads. Consumed by GE-125c-3-i, which exercises the boundary itself: a value ending at the 120th character, one beginning at the 121st, one straddling from the 118th, and a value longer than 120 characters."
+expects_from:
+  ac_id: GE-125c-1
+  contract: "A per-finding exemption decision point in templates/scripts/commit_guardian/check_secrets.py, where each ENTROPY_HIGH finding is evaluated individually. GE-125c-1 establishes that the unit of the decision is one result; this record establishes that the decision is made on the whole of that result rather than on a truncated copy of its line. Neither implies the other."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity L, fifteen
+      it_requirements, six test_spec descriptors, test_rationale, six doc_links, an
+      expects_from contract on GE-125c-1 and a delivers_to contract to GE-125c-3-i; set
+      readiness reviewed. The first it_requirement names Finding.excerpt as a DISPLAY
+      field and forbids it as the input to any verdict, citing the truncation at
+      scan_secrets.py:248 and :254 and the pass-through at check_secrets.py:220. Further
+      requirements record that the full matched value is not carried at all today (the
+      Finding record at scan_secrets.py:69 holds only excerpt and the untruncated line is
+      discarded at the point of the match), so the change spans TWO template scripts and
+      a check_secrets-only fix can only pick a different wrong string; that the entropy
+      constants are manually mirrored at check_secrets.py:135-138 and must not drift;
+      that the four boundary cases (ending at 120, beginning at 121, straddling from 118,
+      longer than 120) must be exercised against the real check, with GE-125c-3-i owning
+      them as scenarios; that padding must be built programmatically with the column
+      offsets asserted BEFORE the verdicts so a drifting fixture fails loudly; that the
+      padding must not itself be high-entropy, asserted against the same constants the
+      check uses; that carrying the untruncated line must not grow a full-value echo in
+      the output; and that a failure to obtain the untruncated line fails towards
+      reporting rather than falling back to the excerpt behind an exception handler.
+      criteria, title, level and work_status unchanged.'
+superseded_by: null
+covered_by:
+  - GE-125c-3-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE HAZARD THE PARENT L1 REQUIRES BE NAMED AT L2 RATHER THAN LEFT FOR A
+  CODER TO DISCOVER, and it is the reason a per-result rule that is correct in
+  principle can still be wrong on real files. The existing per-result path is handed
+  a SHORTENED copy of the line — the same shortened copy the check keeps to show the
+  author where the value was found — and it judges that. KI-SEC-001 records the
+  measurement and the parent L1 carries it forward: the shortened copy stops at the
+  120th character, so an explanation sitting past that point is invisible to the
+  judgement and the verdict turns on how long the line happens to be.
+
+  THE INVARIANT THIS CRITERION IS ASKING FOR, stated so it can be checked without
+  reading the implementation: the judgement is made on the matched value itself
+  (and, where surrounding text is needed, on the whole line), never on the copy
+  kept for display. Any implementation for which moving the same content further
+  along a line changes the verdict fails this criterion whatever it returns for the
+  short-line case. That is what the paired first scenario asserts — two files, one
+  difference, one verdict.
+
+  THE THREE SCENARIOS FAIL THREE DIFFERENT WRONG IMPLEMENTATIONS, deliberately.
+  Scenario one fails an implementation that keeps judging the shortened copy and
+  therefore reports a late explanation as a credential. Scenario two fails one that
+  reacts to an unreadable tail by staying silent. Scenario three fails one that lets
+  an early explanation vouch for the remainder of its line. All three are cheap
+  mistakes and none of them is visible from the short-line case alone.
+
+  RELATIONSHIP TO GE-125c-1. That criterion establishes that the unit of the
+  decision is one result; this one establishes that the decision is made on the
+  whole of that result. Neither implies the other: a per-result rule can be exact
+  about scope and still be reading a truncated string.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED. Every fixture must be a real file
+  created inside a tempfile-backed throwaway project root, with the ticket area
+  constructed INSIDE that root (for example `<tmp_root>/tickets/00_inbox/<name>.md`)
+  and the check run against that root. No fixture may be created under this
+  repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/`
+  or `templates/skills/` trees — a fixture under one of those measures the exemption
+  rather than the scanner and passes for the wrong reason. The long lines here make
+  that trap easier to fall into, not harder: a 200-character line in a real ticket
+  file would be exempt for its location and prove nothing about column positions.
+  The test module belongs under `unit_tests/commit_guardian/`.
+
+  LINE LENGTHS ARE PART OF THE FIXTURE CONTRACT and must be constructed rather than
+  typed: build the padding programmatically and assert the resulting column
+  positions in the test before asserting the verdicts, so a fixture that quietly
+  drifts back inside the first 120 characters fails loudly instead of passing for
+  the wrong reason. The prose padding must not itself be high-entropy.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Per CLAUDE.md, every arm runs
+  the real pre-commit secrets check over real staged files and asserts the process
+  exit status and the reported findings. A test that asserts which string is passed
+  into the per-result judgement is a test of the wiring, not of the verdict, and a
+  test that greps for the absence of a shortening step passes on dead code.
+
+  CREDENTIAL-SHAPED FIXTURE STRINGS must be assembled at runtime from concatenated
+  fragments rather than written as source literals.

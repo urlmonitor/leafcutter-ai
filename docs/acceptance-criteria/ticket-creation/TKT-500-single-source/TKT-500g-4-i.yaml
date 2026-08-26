@@ -1,0 +1,110 @@
+id: TKT-500g-4-i
+components:
+  - ticket_creation_pipeline
+  - ac_store
+  - testing_quality
+readiness: draft
+priority: medium
+title: "An empty demand is not a way to say \"no proof needed\" — it is refused by name"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement whose proof demand is present but lists no statements at
+    all,
+  When that requirement is validated, or a work item is generated from it,
+  Then the requirement is refused with an error stating that an empty demand is
+    not a way to declare that no proof is needed,
+  And the error names the declaration the author must use instead,
+  And no work item is produced that silently carries no proof section.
+depends_on: [TKT-500g-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "States the rule directly: an absent demand means 'not authored yet' and an empty list is not permitted — the explicit waiver is the way to declare a genuinely proof-free requirement."
+  - path: config/ac_store_schema.json
+    relationship: constrains
+    status: exists
+    relevance: "The machine-readable side of the same rule; a refusal that exists in only one of the two enforcement points is a partial gate."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The gate that actually runs at commit time, and where the enforcement points have to be enumerated. A rule added to a validator that is bypassed when its dependency is unavailable is a no-op in exactly the environment where the fallback branch is what gates."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Enumerate every enforcement point that can accept or reject this field, and identify which one actually gates a commit. A refusal added only to a validation path that is skipped when its dependency is unavailable passes in precisely the environments where the fallback branch is what runs."
+  - "The refusal must be identical in outcome wherever it fires. Two enforcement points that disagree about an empty demand mean the record's validity depends on which one ran, which is the same class of defect as the three disagreeing routes in TKT-500g-2."
+  - "The error must be actionable without reading the schema: it names what was wrong and the declaration to use instead. An error that only says the value is invalid moves the author from a silent loss to a silent guess."
+  - "Refusal must be the outcome on the generation path too, not only at validation. If validation can be bypassed and generation accepts the record, the empty demand still produces a work item with no proof section and nothing recorded."
+test_spec:
+  - name: test_an_empty_demand_is_refused_by_the_declared_schema
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A record whose proof demand is present but lists nothing is rejected by the machine-readable schema rather than accepted as a well-formed empty list."
+  - name: test_an_empty_demand_is_refused_on_the_enforcement_path_that_actually_gates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the commit-time AC schema check, run as its real entry point with the schema library unavailable so the fallback validation branch is the one exercised"
+    description: "The refusal fires on the branch that really gates a commit, not only on the declarative one that may be skipped when its dependency is missing."
+  - name: test_the_refusal_names_the_declaration_to_use_instead
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The error path itself: the message states that an empty demand is not a way to declare no proof is needed, and names the explicit waiver as the author's alternative."
+  - name: test_generation_refuses_rather_than_emitting_a_work_item_with_no_proof_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "On the generation path, an empty demand produces a refusal — not a quietly section-less work item, which would move the loss upstream into the record instead of removing it."
+test_rationale: |
+  This AC's own notes name the trap: enforcement is not single-sourced here, and a rule
+  added to one enforcement point can be inert in exactly the environment where the other
+  one gates. Descriptor 2 therefore names the load-bearing path explicitly and exercises
+  it with the declarative validator's dependency absent — a check that runs only against
+  the declarative path would report a pass while commits go through unchecked. Descriptor
+  4 exists because validation and generation are separately reachable: if only validation
+  refuses, an empty demand still yields a section-less work item by the generation route.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-4
+  contract: "The explicit waiver as the single sanctioned way to owe no proof — this criterion closes the look-alike that would let a demand be emptied instead of waived."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: internal
+notes: |
+  WHY THIS EDGE IS WORTH A CRITERION. An empty demand and a waiver produce the
+  same work item, and only one of them is a decision. If emptying the list were
+  accepted, the loss this whole L1 exists to prevent would simply move upstream
+  from the generator into the record itself — same silence, one layer earlier,
+  and with the author's name on it.
+
+  ENFORCEMENT IS NOT SINGLE-SOURCED IN THIS REPO. The schema reference notes that
+  field validation runs in more than one place and that a rule added to only one
+  of them is sometimes a no-op. A refusal added to the machine-readable schema
+  alone would pass in exactly the environments where the fallback validator is
+  what actually gates.
+
+  IT-PO NOTE 2026-08-25 — THE DECLARATIVE HALF MAY ALREADY BE IN PLACE. The
+  machine-readable schema already declares a minimum of one statement for an
+  authored demand, so descriptor 1 may be green from the outset. That is a
+  regression pin, not a discharge of this AC: the red baseline for this work is
+  descriptors 2 and 4, on the enforcement path that gates and on the generation
+  path that can be reached without validating at all.

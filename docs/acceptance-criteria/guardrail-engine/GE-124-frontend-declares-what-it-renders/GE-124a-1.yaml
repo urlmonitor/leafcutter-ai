@@ -1,0 +1,130 @@
+id: GE-124a-1
+readiness: approved
+priority: high
+title: "A component-level declaration block names the criteria the file serves"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given a staged screen component file whose leading comment block contains the
+    line "@ac UXP-607, UXP-607-1"
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the ordered list
+    ["UXP-607", "UXP-607-1"]
+  And the file's declaration verdict is "declared"
+  And the literal comment text is recorded alongside the parsed list so a
+    reviewer sees what was written, not only what was parsed
+
+  Given a staged screen component file whose leading comment block contains the
+    line "@ac UXP-100d-2"
+  When the frontend declaration reader evaluates the file
+  Then the file's declared criteria are recorded as the single-item list
+    ["UXP-100d-2"]
+  And the file's declaration verdict is "declared"
+
+  Given three staged screen component files whose declaration lines read
+    "@ac UXP-607, UXP-607-1", "@ac UXP-607 UXP-607-1" and
+    "@ac UXP-607,UXP-607-1" respectively
+  When the frontend declaration reader evaluates each file
+  Then all three files record the identical ordered list
+    ["UXP-607", "UXP-607-1"]
+depends_on:
+  - GE-124a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ONE READER, TWO TIERS. The declaration parse lives in a single new module — canonical source templates/scripts/commit_guardian/_frontend_declaration_reader.py, deployed twin scripts/commit_guardian/_frontend_declaration_reader.py. Both the commit-tier check (GE-124c) and the CI-tier gate (GE-124e) import it; neither may re-parse declarations privately. Two parsers of one comment grammar drift, and the user-visible symptom is one tier accepting what the other rejects."
+  - "DEPLOY-MANIFEST OBLIGATION. Add the new reader module to the commit-guardian deploy_map in scripts/build_phases.py in the SAME change that creates it, and edit the templates/ source and scripts/ deployed copy together (ADR-001 round-trip). A hook dependency absent from the deploy manifest raises ModuleNotFoundError in the deployed layout while every source-tree test stays green — done_proof.py shipped exactly that way on 2026-07-22."
+  - "Parse the STAGED blob, not the working-tree file. The commit tier must read content through git's index (as check_ac_schema Phase 2 does), so a declaration typed in the editor but not staged does not clear the check."
+  - "SEPARATOR GRAMMAR IS PERMISSIVE, ORDER IS NOT. Accept any run of commas and/or whitespace between ids on the @ac line; preserve the authored order in declares[]; never sort and never de-duplicate distinct ids. A reader accepting only one separator form emits a false 'missing' verdict, which teaches authors the check is wrong."
+  - "Ids are opaque strings at parse time. This AC must NOT consult the acceptance-criteria store — whether an id resolves is GE-124c-2's question, answered by the shared resolver. A parser that resolves inline makes the missing-versus-unresolved verdict split impossible to keep apart."
+  - "Emit a stable record {path, framework, role, declaration_block, declares[], verdict} and keep it structurally parallel to GE-124b-1's pin record, so one reporter formats both surfaces and GE-124c-1-i can deduplicate per (subject, code)."
+  - "Pure text scan — no JavaScript/TypeScript AST dependency. A Python pre-commit hook has no JS toolchain, and the whole staged set must be read within the pre-commit latency budget (target under 2s for a typical staged set)."
+  - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-4); a single unreadable file is GE-124c-3-i's contract, never a crash."
+delivers_to:
+  agent: python-coder
+  contract: "Per-file declaration record {path, framework, role, declaration_block, declares[], verdict}, emitted by the shared reader module scripts/commit_guardian/_frontend_declaration_reader.py and consumed by the commit-tier check (GE-124c), the reverse-direction CI gate (GE-124e) and the escape mechanisms (GE-124d). declares[] preserves authored order and carries unresolved ids verbatim — resolution happens downstream in GE-124c-2, never here."
+expects_from: null
+test_spec:
+  - name: test_ge_124a_1_declaration_block_parses_to_ordered_id_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A leading comment carrying '@ac UXP-607, UXP-607-1' yields declares == ['UXP-607', 'UXP-607-1'] in that order, verdict 'declared', and declaration_block equal to the literal comment text as written. Assert list order, not set equality — a sorted or de-duplicated list passes set equality while losing the order the reviewer reads."
+  - name: test_ge_124a_1_all_three_separator_forms_yield_the_identical_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "'@ac UXP-607, UXP-607-1', '@ac UXP-607 UXP-607-1' and '@ac UXP-607,UXP-607-1' all produce ['UXP-607', 'UXP-607-1']; a single id produces a one-item list, never a bare string."
+  - name: test_ge_124a_1_reader_is_reached_from_the_hook_entry_point_over_real_staged_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Run the commit-tier hook the way its real runner does (subprocess, real argv) against a temp git repo whose files are genuinely git-added, and assert the emitted record matches the staged bytes. Then overwrite the working-tree file with a different @ac line WITHOUT staging it and assert the record still reflects the staged version — that distinction is invisible to a direct in-process call."
+  - name: test_ge_124a_1_declaration_record_shape_is_consumed_by_its_real_downstream
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Pipe the record the real reader emits into the real commit-tier consumer and assert the consumer's observable verdict, rather than asserting key names against a hand-built dict. A consumer written against a hand-built dict passes while the real producer emits a different shape."
+test_rationale: |
+  The cheap green here is a regex unit test over a hand-typed comment string. It proves a
+  pattern matches a literal and nothing more: it passes identically when the reader is never
+  called by the hook, when it reads the working tree instead of the index, and when the record
+  it emits carries keys no downstream consumer reads. Those are the three ways this AC actually
+  fails in production, so the contract adds a subprocess run of the real hook entry point over
+  a real staged git repo — which is the only place the staged-versus-worktree distinction is
+  observable — and a seam test that pipes the real record into its real consumer. The separator
+  test stays a cheap unit test deliberately: it is a pure grammar question and the three forms
+  are precisely the boundary the BA identified.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Named the shared reader module and its deploy-manifest obligation, pinned staged-blob reading, forbade inline id resolution (that split is GE-124c's), and fixed the record shape as the spine both tiers consume. test_spec adds a subprocess reachability run over a real staged repo because a regex unit test cannot tell a wired reader from an unwired one. criteria untouched."
+  - "2026-08-25 [BrainCandy]: reworded one Given from \"whose declaration lines are written\" to \"whose declaration lines read\". Wording only — the scenario, its When and its Then are unchanged. The Given describes pre-existing authored source, and \"read\" says that more accurately. It also stops the BO-2900g-2 declares_side_effect derivation matching \"are written\" here: that derivation scans from the FIRST Then to the end of the criteria, so in a multi-scenario record it swallows every later Given and When and marked this AC as asserting a durable effect it does not assert. The derivation bug is real and recorded separately; this record does not work around it beyond saying what it meant."
+superseded_by: null
+covered_by:
+  - GE-124a-1-i
+  - GE-124a-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE REQUIRED FLOOR, parse side. This AC owns the shape of `declares` and
+  nothing else: it does not decide which files are in scope (GE-124a-3), which
+  comment syntax a given file type uses (GE-124a-2), or what happens when a
+  declared id resolves to nothing (GE-124c-2).
+
+  The list shape is deliberate — the PO note states a file may legitimately
+  declare more than one criterion. The three-separator scenario exists because
+  authors write all three forms and a reader that accepts only one produces a
+  false "missing" verdict, which is the most corrosive failure this guardrail
+  can have (it teaches authors the check is wrong).
+
+  Mock-data invariant this satisfies: "FrontendComponent.declares == [] iff
+  FrontendComponent.declaration_block == null" — the empty half is
+  GE-124a-1-i, the non-empty half is here.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). The reader is a NEW module; nothing in
+  scripts/commit_guardian/ parses frontend comments today. It is named here
+  rather than left to the implementer because GE-124c and GE-124e both consume
+  it, and the whole tree's coherence depends on there being exactly one of it.

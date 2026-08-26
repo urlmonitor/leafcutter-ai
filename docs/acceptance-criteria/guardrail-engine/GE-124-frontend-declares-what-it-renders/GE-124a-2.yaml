@@ -1,0 +1,128 @@
+id: GE-124a-2
+readiness: approved
+priority: high
+title: "The same declaration is expressible in each supported front-end file shape"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given the staged set contains five screen component files that each declare
+    the criterion UXP-100d-2, written in the comment syntax native to the file:
+    - a `.tsx` file whose first tokens are a `/** ... @ac UXP-100d-2 ... */`
+      block comment
+    - a `.jsx` file whose first tokens are a `/** ... @ac UXP-100d-2 ... */`
+      block comment
+    - a `.vue` file whose first tokens are an `<!-- ... @ac UXP-100d-2 ... -->`
+      comment placed above its first `<template>`, `<script>` or `<style>` block
+    - a `.svelte` file whose first tokens are an
+      `<!-- ... @ac UXP-100d-2 ... -->` comment placed above its first markup or
+      `<script>` block
+    - an `.html` file whose first tokens are an
+      `<!-- ... @ac UXP-100d-2 ... -->` comment placed above its first element
+  When the frontend declaration reader evaluates the staged set
+  Then all five files record the declared list ["UXP-100d-2"]
+  And all five files record the declaration verdict "declared"
+  And each file records the framework derived from its extension —
+    .tsx as react-tsx, .jsx as react-jsx, .vue as vue-sfc, .svelte as svelte,
+    .html as html
+depends_on:
+  - GE-124a
+  - GE-124a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "TWO COMMENT DIALECTS, ONE MARKER. Implement exactly two leading-comment extractors — a JS block-comment extractor for .tsx/.jsx and an HTML comment extractor for .vue/.svelte/.html — both feeding GE-124a-1's single @ac grammar. Do not write five per-extension parsers; the marker, the list shape and the separators are identical across all five and duplicating them is how the five drift apart."
+  - "THE EXTENSION-TO-FRAMEWORK MAP IS A SINGLE DATA STRUCTURE, not a chain of if-statements, and it is the same structure GE-124a-3 consults for the in-scope extension test. One map, two readers: a second copy would let a file be in scope with no framework, or carry a framework while being out of scope."
+  - "THE `html` FRAMEWORK VALUE IS NEW AND HAS NO WORKED RECORD. docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json declares framework as the five-value enum including `html`, but its FrontendComponent records cover only react-tsx, react-jsx, vue-sfc and svelte — there is no .html record in the dataset. The .html path must therefore be built and tested from a purpose-written fixture, and the implementer must not assume a mock record exists to copy. If the user removes .html from scope, this AC and GE-124a-4's five-shape how-to are the two places to change."
+  - "SFC LEADING REGION IS 'ABOVE THE FIRST BLOCK TAG'. For .vue and .svelte the region ends at the first `<template>`, `<script>` or `<style>` tag; for .html it ends at the first element; for .tsx/.jsx it ends at the first non-comment, non-blank token (typically the first import). Encode the region boundary once per dialect and expose it to GE-124a-2-i, which asserts the negative from outside it."
+  - "Byte-order marks, shebangs, blank lines and consecutive comment blocks must not push a valid declaration out of the leading region. A single leading blank line is the most common real-world form and must pass."
+  - "Must handle errors gracefully per the project error handling policy; an unparseable file is GE-124c-3-i's named-and-skipped path, not a crash and not a silent pass."
+delivers_to:
+  agent: python-coder
+  contract: "Two leading-comment extractors (JS block, HTML comment) plus one extension-to-framework map, exposed by the shared reader module and consumed by GE-124a-1's declaration record and by GE-124a-3's in-scope extension test. The map is the single source of the five-value framework enum react-tsx | react-jsx | vue-sfc | svelte | html."
+expects_from:
+  ac_id: GE-124a-1
+  contract: "The declaration record shape (declares[], declaration_block, verdict) this AC populates for each file shape, and the @ac line grammar both dialects feed into"
+test_spec:
+  - name: test_ge_124a_2_all_five_file_shapes_record_the_same_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Five fixture files — .tsx, .jsx, .vue, .svelte, .html — each declaring UXP-100d-2 in its native comment syntax, all yield declares == ['UXP-100d-2'] and verdict 'declared'. Parameterise over the five so a new extension cannot be added without a case."
+  - name: test_ge_124a_2_framework_is_derived_from_the_extension_for_all_five
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Each of the five files records the framework its extension maps to (.tsx->react-tsx, .jsx->react-jsx, .vue->vue-sfc, .svelte->svelte, .html->html). Assert the mapping is read from the shared map by also asserting GE-124a-3's in-scope extension set equals that map's key set — one map, not two."
+  - name: test_ge_124a_2_leading_region_tolerates_blank_lines_bom_and_stacked_comments
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A declaration preceded by a blank line, by a UTF-8 BOM, or by a second unrelated comment block still parses as 'declared' in both dialects. These are the forms real files take and the ones a strict first-byte matcher rejects."
+  - name: test_ge_124a_2_five_shapes_parse_from_real_on_disk_files_through_the_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Stage all five shapes as real files in a temp git repo, run the hook via subprocess, and assert it reports five passes and blocks nothing. Fixture bytes must be written as whole files, not as indented literals inside the test — the PhantomDoneFilesTouched lesson: a hand-typed fixture reproduces the exact whitespace bias that hides the parse bug."
+test_rationale: |
+  The risk in this AC is not the happy path — it is a per-extension parser family that passes
+  five hand-typed strings and then fails on real files whose declaration is preceded by a blank
+  line, a BOM, or a licence header. So the contract pairs cheap parameterised unit tests (which
+  make the five shapes non-optional) with one real_artifact run over whole files staged in a git
+  repo. The framework-map test deliberately asserts an agreement with GE-124a-3's in-scope
+  extension set rather than asserting a literal dict: that is the form that catches a second
+  copy of the map, which is the drift this AC is most exposed to. Note that .html has no record
+  in the mock dataset, so its fixtures are purpose-written and cannot be copied from there.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Reduced five file shapes to two comment dialects plus one shared extension-to-framework map (also consumed by GE-124a-3), pinned the leading-region boundary per dialect, and recorded explicitly that the mock dataset contains NO .html record — the html path is purpose-written, not copied. test_spec adds a real_artifact run over whole staged files. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Cut by WHAT ACTUALLY DIFFERS, per the PO's instruction not to write one L2
+  per file type as a matter of course. Two things differ and only two: the
+  comment syntax (JS block vs HTML comment) and where "the top of the file" is
+  in a single-file component. Everything else — the "@ac" marker, the list
+  shape, the separators — is GE-124a-1 and is identical across all five.
+
+  `.html` is included because the L0 scope names HTML alongside the four
+  frameworks. The mock-data artifact's `framework` enum carries only the four
+  it had records for (react-tsx / react-jsx / vue-sfc / svelte); `html` is a
+  fifth value this AC adds. Flagged rather than silently assumed — if the IT PO
+  or the user wants HTML out of scope, this is the one place to remove it.
+
+  The SFC placement rule ("above the first block tag") is the answer to the
+  PO's "where is the top of the file in a single-file component" question. Its
+  negative — a declaration written lower down — is GE-124a-2-i.
+
+  IT-PO NOTE (2026-08-25) — HTML CONFIRMED AS A GAP, NOT AN ASSUMPTION. The
+  mock artifact's `framework` field description now lists html as a fifth enum
+  value, but its ten FrontendComponent records contain no .html file. The
+  implementer therefore has a declared enum value with no worked example. That
+  is recorded in it_requirements rather than papered over; the .html fixtures
+  are purpose-written for the test contract.

@@ -30,6 +30,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _HARVEST_PATH = _REPO_ROOT / "scripts" / "knowledge" / "harvest_learnings.py"
 
 spec = importlib.util.spec_from_file_location("harvest_learnings", _HARVEST_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_HARVEST_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["harvest_learnings"] = _mod
 spec.loader.exec_module(_mod)
