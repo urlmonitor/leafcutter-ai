@@ -1795,11 +1795,29 @@ branch state).
 ### KI-BO-031 — An entire test file, all ten tests, asserted only that strings were present in the source it covered — so the AC looked comprehensively covered because coverage was measured by count
 
 - **Severity:** high
-- **Status:** **closed** — fixed and merged 2026-08-26, PR #573 (squash `d97eb399`)
+- **Status:** **closed in source** — fixed and merged 2026-08-26, PR #573 (squash `d97eb399`).
+  **Not yet closed at the point of use** — see the deployment caveat below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `unit_tests/workflows/test_bo_1000c_1a.py` (all ten tests, pre-#573) against
   `templates/workflows-js/finalize-feature.js` · AC `BO-1000c-1a`
+
+**Deployment caveat — "closed" means closed on `main`, and that is not the same thing.**
+Hours after `d97eb399` merged, the deployed copy still contained the deleted mechanism:
+
+```text
+grep -c "appendJournal\|require(" .leafcutter/workflows/finalize-feature.js  ->  4
+```
+
+The source is fixed; the tree that actually runs is not. Any finalize run launched from this
+workspace still executes the `require('fs')` version.
+
+This is `KI-BP-021` demonstrating itself on the very fix that closed this entry, filed in the
+same pull request — which is a sharper illustration than either entry could give alone. It
+also sets a precedent worth adopting: in this repository, **"fixed and merged" is not
+sufficient grounds to call a defect closed**, because the deployed surface is not derived from
+`main`. A status line saying `closed` without naming which tree it refers to is the same
+category of claim as an AC marked `done` on a test that never executed.
 
 **Symptom.** `BO-1000c-1a` ("background finalize appends each progress line to a durable,
 pollable run-progress journal as it happens") read `work_status: done` while its mechanism had

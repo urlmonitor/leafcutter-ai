@@ -820,9 +820,37 @@ whether it moves the other two.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 3
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 4
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — `main()` (`root = Path(os.environ.get("HOOK_ROOT", str(Path.cwd())))`, `:673`), `_get_staged_ac_paths()` (`:307`, fail-open documented in its own docstring), the `if not staged_files:` branch (`:685`), and `_find_project_root()` (`:99`)
+
+**Fourth occurrence, 2026-08-26 — and it came wearing a disguise worth knowing about.** A run
+against 16 staged AC records in a worktree exited 0 while printing:
+
+```text
+WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutter;
+         falling back to manual field validation.
+exit: 0
+```
+
+This was initially filed as a **separate** defect — a missing schema causing a downgrade to a
+weaker check. That diagnosis is wrong and was withdrawn; see the retracted `KI-CG-021` at the
+end of this file for the A/B that disproves it (with the schema *removed* the hook is
+**stricter**, catching an extra id-format error).
+
+The WARNING is a red herring that appears at exactly the moment of the false pass. The actual
+mechanism is this entry's: `_get_staged_ac_paths` shells `git diff --cached` with **no
+`cwd=root`**, so the resolved root and the staged set can come from different repositories.
+The root here — `/home/henzeh/projects/leafcutter` — holds a `CLAUDE.md` but no `.git`, so
+`_find_project_root()` settled on the workspace directory, the staged set came back empty, and
+Phase 1 was skipped.
+
+**Why this occurrence is the most valuable of the four:** it is the first with a demonstrated
+cost. The 16 staged records included two that `validate_declares_side_effect` errors on when
+called directly (`KI-CG-014`). The hook passed them; CI, which builds fresh, would have failed
+the required `AC store valid` check. So this is not "the hook checked nothing" in the abstract
+— it is the hook returning a green that was **wrong about the specific change in front of it**,
+on a change that would have gone red in CI minutes later.
 
 **Symptom.** The hook exits 0 having validated nothing, and its output is indistinguishable
 from a run that validated everything and found it clean. There is no "checked 0 files"
@@ -1148,19 +1176,48 @@ necessarily about what does and does not get written. So the false-positive rate
 records that discuss writes is far higher than the store-wide rate suggests, and it is worst
 precisely in the specifications most worth getting right.
 
-**The workaround is now actively harmful and should stop.** Rewording `is written` →
-`is recorded` fixed `ACS-1100d-5-i` and was reasonable once. Applied a second and third time it
-becomes a policy of bending specification prose around a regex, and — worse — it *erases the
-evidence*: every reworded record is one the calibration will never count, so the measured
-false-positive rate falls as the real one holds steady. The two records above are deliberately
-left unreworded and blocked so the defect stays visible and countable. They are the reason the
-occurrence count above is 3 rather than 1.
+**The workaround should stop, but not for the reason first given.** Rewording `is written` →
+`is recorded` fixed `ACS-1100d-5-i` and was reasonable once. Applied repeatedly it becomes a
+policy of bending specification prose around a regex, and that is reason enough to stop.
 
-**A note for whoever fixes this.** `ACS-1100a-3` is a genuine true positive in the same batch
-and should be used as the negative control: its `Then` clause really does persist an exemption
-record, `declares_side_effect: true` is honest there, and it must keep deriving `True` after
-any negation handling lands. A fix that silences a-2 and b-2 by weakening the phrase list
-would take a-3 with it.
+**Correction, 2026-08-26.** This entry originally added a second argument: that rewording
+*erases the evidence*, because every reworded record is one the calibration will never count.
+That premise is false and was corrected after measurement. The population is re-derivable in
+about 25 lines by re-running the matcher over the store, so nothing is destroyed by rewording
+a record — the evidence is a property of the corpus, not of any individual file's current
+wording. The recommendation survives; the justification offered for it did not.
+
+The measurement that replaces it is stronger than the argument it displaces: **33 of 139
+store-wide matches are fully negated, and 31 of those are currently blocked on `origin/main`.**
+That is the case for high severity, and it is an order of magnitude beyond the "three instances
+in one day" this entry was first escalated on.
+
+**A note for whoever fixes this — the original note here was wrong, and dangerously so.**
+It named `ACS-1100a-3` as a genuine true positive to be used as the **negative control**,
+asserting its `Then` clause really persists an exemption record and must keep deriving `True`
+after any negation fix.
+
+`ACS-1100a-3` is a **false positive**. Its only `_DURABLE_EFFECT_RE` match is:
+
+```text
+And no second traversal of the AC tree is written to produce a total for that
+```
+
+— the identical negated construction `ACS-1100b-2` is filed for above. A correct negation fix
+must flip `ACS-1100a-3` to `False`. Anyone following the original instruction would have
+treated the correct behaviour as a regression and preserved the defect they were sent to
+remove.
+
+How the error was made, since it is instructive: the record's `declares_side_effect: true` was
+authored on the strength of a prose rationale about persisting an exemption record, and that
+rationale was taken at face value without checking **which clause the regex actually matched**.
+The AC does describe a persisted record elsewhere in its criteria — but that is not the text
+`_DURABLE_EFFECT_RE` fired on. A true positive and a false positive in the same record look
+identical unless you ask the matcher what it matched.
+
+**There is therefore no verified negative control in this batch.** Whoever fixes the negation
+handling should establish one deliberately — find a record whose *matched clause* is genuinely
+affirmative — rather than inheriting a candidate from this entry.
 
 **Relationship to KI-CG-015.** Same function, opposite direction, filed the same day by two
 sessions that each hit one half. KI-CG-015 is the derivation returning `false` on records whose
@@ -1647,27 +1704,62 @@ purpose was to bound false positives.
 
 ---
 
-### KI-CG-021 — `check-ac-schema` cannot find its schema, prints a WARNING, downgrades to "manual field validation" and exits 0 — so a weaker check reports as a passing one
+### KI-CG-021 — RETRACTED: "a missing schema makes `check-ac-schema` fail open" — tested and disproved; the real cause is the `KI-CG-012` at line 800
 
-> **Numbered 021, not 016.** This entry was authored as `KI-CG-016` against an `origin/main`
-> that had no 016, and collided while PR #568 was open with the `enforce_commit_delegation`
-> entry another session landed at that number. Renumbered here along with its inbound
-> references. Counted as `KI-BO-024`'s collision shape, not filed separately.
->
-> **This register is now worse than that, and it happened during this rebase.** `main` already
-> carried two `KI-CG-012` (lines 380 and 800). PR #575 then added a second `KI-CG-016` and a
-> second `KI-CG-017` — so three ids in this one file now resolve to two unrelated defects each.
-> 021 was verified free against `origin/main` immediately before this entry was written.
+- **Severity:** n/a — retracted before merge
+- **Status:** **closed — hypothesis disproved by experiment.** Kept as a record so the same
+  wrong diagnosis is not filed again; the observation that prompted it is real and is logged
+  as an occurrence on `KI-CG-012` (line 800).
+- **First seen:** 2026-08-25 · **Retracted:** 2026-08-26
 
-- **Severity:** high
-- **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py` — the
-  `config/ac_store_schema.json` load and its fallback path · root resolution via
-  `_resolve_root.py`
+**What was originally claimed.** That `check-ac-schema`, unable to locate
+`config/ac_store_schema.json`, printed a WARNING, silently downgraded to "manual field
+validation", and exited 0 — a weaker check reporting as a passing one (M5).
 
-**Symptom.** Running the deployed hook against 16 staged AC records in a worktree:
+**Why it is wrong.** A controlled A/B with `ACS-1100b-2` staged, run by an independent
+reviewer:
+
+```text
+schema present  -> exit 1, catches the declares_side_effect error
+schema REMOVED  -> exit 1, catches that error PLUS an id-format error
+```
+
+**The degraded mode is stricter, not weaker.** It cannot be the cause of a false pass, and the
+central claim of the retracted entry is the opposite of the measured behaviour.
+
+Two supporting claims were also wrong. The **Where** field cited root resolution via
+`_resolve_root.py`; `check_ac_schema.py` never imports that module. And the fallback
+explanation offered — that stale deployed validators were missing `declares_side_effect` —
+cannot produce this outcome either, because the import of `validate_declares_side_effect` is
+unguarded and a missing symbol would raise `ImportError` rather than skip a rule.
+
+**The real mechanism, already filed.** `_get_staged_ac_paths` shells out `git diff --cached`
+with **no `cwd=root`**, so the resolved root and the staged set can come from different
+repositories. The root in the observed run, `/home/henzeh/projects/leafcutter`, contains a
+`CLAUDE.md` but no `.git` — so the staged set came back empty, Phase 1 was skipped, and the
+hook exited 0 having examined nothing. That is exactly `KI-CG-012` at line 800 ("reports a
+clean pass on a file it never validated, because Phase 1 fails open on an empty staged set"),
+and the sighting is recorded there.
+
+**Worth keeping rather than deleting.** The WARNING line is a genuine red herring: it appears
+at the moment of the false pass, names a real missing file, and points at the wrong cause. The
+next person to see it will reach for the same explanation. The A/B above is the two-minute
+experiment that rules it out.
+
+**How this got filed wrong.** The WARNING and the `exit: 0` were observed in the same output
+and a causal link between them was assumed rather than tested — while the actual discriminating
+experiment (remove the schema, re-run) takes about a minute. The entry then asserted a `Where`
+field naming a module the script does not import, which a single `grep` would have caught. It
+is the same failure mode this register documents: a plausible mechanism, written up with real
+evidence attached to it, where the evidence supports the *observation* and not the *diagnosis*.
+
+**Pattern:** a correlation in one output stream promoted to a mechanism without the
+experiment that would separate them.
+
+<!-- Superseded body removed on retraction; the original text is in PR #568's history. -->
+
+**Symptom (retained for searchability).** Running the deployed hook against 16 staged AC
+records in a worktree:
 
 ```text
 WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutter;
@@ -1675,53 +1767,21 @@ WARNING: config/ac_store_schema.json not found at /home/henzeh/projects/leafcutt
 exit: 0
 ```
 
-Two failures in three lines. The hook resolved its root to the **workspace root** rather than
-the worktree whose index it was validating — the same mis-resolution KI-CG-009 records for
-`check-components-integrity`. Then, not finding the schema there, it did not fail: it
-substituted a weaker check and reported success.
+The `exit: 0` is real and so is the missing file. What does not follow is that the second
+caused the first — see the A/B above.
 
-**Why the exit 0 is the serious half.** A hook that cannot load the contract it enforces has
-not validated anything it was asked to validate — but the only trace is one `WARNING` line on
-stderr, in a pre-commit run that prints dozens. The exit code, which is the part anything
-downstream consumes, is indistinguishable from a genuine pass. An operator reading "all hooks
-passed" is reading a claim the hook did not make.
+**Still true, and worth keeping from the retracted analysis.** The observed run's staged set
+contained two records that `validate_declares_side_effect` errors on when called directly
+(see `KI-CG-014`), and the hook passed them. CI, which builds fresh, would have failed the
+required `AC store valid` check. So the local green was not merely weak — it was **wrong about
+the specific change in front of it**. That remains the strongest available demonstration of
+`KI-CG-012`@800's real-world cost, which is why the sighting is logged there.
 
-It is not hypothetical here. The same staged set that this run passed contained two records
-that `validate_declares_side_effect` errors on when called directly (see KI-CG-014). The gate
-said clean; CI, which builds fresh, would have failed the required `AC store valid` check.
-The local green was not merely weak, it was **wrong about the specific change in front of it**.
-
-**Two independent defects, and both need fixing.** They are filed together because they were
-observed together and either alone still yields a false pass:
-
-1. **Root resolution.** The hook must resolve to the git toplevel of the invocation, not to an
-   ancestor workspace directory. KI-CG-009 already documents this for another hook; this is a
-   second instance, which makes it a shared-helper problem rather than a per-hook slip.
-2. **Fail-open on a missing contract.** A schema the hook is built around is not optional. If
-   it is absent, that is a broken installation and the correct behaviour is a non-zero exit
-   naming what could not be loaded. "Manual field validation" as a silent substitute is the
-   worst option: strong enough to look like it worked, weak enough to miss real errors.
-
-Note the fallback is defensible *as a fallback* — a consumer install genuinely might lack the
-schema. What is not defensible is that the caller cannot tell which mode ran. If the degraded
-mode must exist, it should exit with a distinct non-zero code, or at minimum print its verdict
-as `PASS (degraded: schema unavailable)` so the string a human greps for is not the same one a
-real pass prints.
-
-**Relationship to the deployment defect.** The reason the schema was unreachable is
-KI-BP-021 — the deployed guardian directory in this workspace is a per-file collage, and the
-same corrective build that fixed six workflows left `_ac_schema_validators.py` with **0**
-occurrences of `declares_side_effect` against 12 in the source. So the deployment bug supplied
-the broken input and this hook converted it into a green. Fixing KI-BP-021 removes this
-trigger but not the defect: any consumer install missing the config reproduces it.
-
-**Related.** KI-CG-002 (a guardrail silently swapping its enum source when the declaring file
-is unreachable — the identical shape in the diagram-type guard). The `KI-CG-012` at line 800
-(the schema hook reporting a clean pass on a file it never validated, via an empty staged set)
-— this is a third route to the same false green. KI-CG-018 (`check_ac_governance` exiting 0
-without inspecting anything) is a fourth, landed on `main` independently. Four routes to
-"exit 0 having checked nothing" in one hook family suggests it needs one audited "I did not
-actually check anything" path rather than several ad-hoc ones.
+Also still true: `KI-CG-018` (`check_ac_governance` exiting 0 without inspecting anything)
+landed on `main` independently. With `KI-CG-012`@800 and `KI-CG-012`@380 that makes three
+distinct routes to "exit 0 having checked nothing" in one hook family — which suggests the
+family needs one audited "I did not actually check anything" path rather than several ad-hoc
+ones. That recommendation survives the retraction; only the fourth route claimed here does not.
 
 **Register hygiene note.** `KI-CG-012` is used twice in this file, at lines 380 and 800, for
 two unrelated defects; PR #575 has since duplicated `KI-CG-016` and `KI-CG-017` the same way.

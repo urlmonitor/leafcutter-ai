@@ -1733,7 +1733,7 @@ written. Do **not** fix this by adding to `deploy_map`.
 **Pattern:** a build whose report is a count of what it wrote, in a system where the failure
 mode is not writing something.
 
-**Related.** KI-BP-021 is a different defect with the same consequence: 58 worktrees write one
+**Related.** KI-BP-021 is a different defect with the same consequence: many worktrees write a
 shared `.leafcutter/` output root last-writer-wins, so a deployed file may carry any worktree's
 revision. This entry explains why an *absent* artifact is never noticed; that one explains why a
 *present* artifact cannot be attributed to a commit. Together they mean the deployed tree does
@@ -1784,7 +1784,7 @@ the changelog gap is `KI-CL-001`.*
 
 ---
 
-### KI-BP-021 — 58 worktrees share one deployed `.leafcutter/`, so it is a per-file collage of whatever each last wrote — no single commit produces the tree the gates actually run
+### KI-BP-021 — a shared deployed `.leafcutter/` is a per-file collage of whatever each writing worktree last wrote — no single commit produces the tree the gates actually run
 
 > **Numbered 021, not 018.** This entry was authored as `KI-BP-018` against an `origin/main`
 > that had no 018, and collided on rebase with the 018/019/020 other sessions landed while
@@ -1827,14 +1827,48 @@ expansion could not be mistaken for drift — found **six of nine workflows regr
 | `plan-feature.js` | 64 |
 | `finalize-feature.js` | 61 |
 
-**Root cause — one mutable global surface with 58 writers and no ownership.**
-`git worktree list` reports **58 worktrees**, all resolving `.leafcutter` to the same
-workspace-root directory. `build.py --target-dir` is last-writer-wins: it compares deployed
-content against *its own* templates and rewrites whatever differs, in either direction. It
-has no notion of which revision the deployed tree came from, so it cannot tell "this file is
-older than mine" from "this file is newer than mine" — it only sees "different", and makes
-it match. A build run from any worktree behind `origin/main` therefore *downgrades* the
-shared surface for all 58.
+**Root cause — a mutable shared surface with many writers and no ownership.**
+`build.py --target-dir` is last-writer-wins: it compares deployed content against *its own*
+templates and rewrites whatever differs, in either direction. It has no notion of which
+revision the deployed tree came from, so it cannot tell "this file is older than mine" from
+"this file is newer than mine" — it only sees "different", and makes it match. A build run
+from a worktree behind `origin/main` therefore *downgrades* the shared surface for every
+worktree pointing at it.
+
+**Correction, 2026-08-26 — the first draft of this entry said "58 worktrees, all resolving
+`.leafcutter` to the same workspace-root directory". That is false, and the entry contradicted
+itself three paragraphs later.** Measured:
+
+```text
+git worktree list                                            ->  67 worktrees
+.leafcutter symlink -> leafcutter/.leafcutter                ->  12
+.leafcutter symlink -> leafcutter/leafcutter-ai/.leafcutter  ->   4
+.leafcutter is a private real directory                      ->  48
+```
+
+Three of the symlinks are transient, created by one session on 2026-08-26 and pointing at a
+scratch build under `/tmp`.
+
+The real topology is worse than the one originally claimed, in a way that matters for the fix:
+
+- There is not one shared root but **two** — `leafcutter/.leafcutter` and
+  `leafcutter-ai/.leafcutter` — so "rebuild the shared tree" is ambiguous before it is
+  attempted, and fixing one leaves the other's dozen consumers untouched.
+- The **majority (48) are private frozen directories**, not shares. Those cannot be corrected
+  by any rebuild of a shared root; each holds whatever the build wrote when that worktree was
+  created, indefinitely. That is KI-BP-004, and it is the dominant case rather than the
+  exception this entry originally implied.
+
+So the population splits three ways with nothing distinguishing them from inside a worktree,
+and a remedy aimed at any one of the three silently misses the other two. The collage claim
+below is unaffected — it concerns what happens *within* a shared root, and was verified
+directly against one.
+
+**How the error happened, since it is the same failure this register documents.** The "58"
+came from a `git worktree list` count, and the "all resolving to the same directory" was
+assumed rather than measured — while the very next section of this entry described a worktree
+with a private frozen copy that the author had found by hand. A counter-example was written
+down three paragraphs from a claim it falsifies, and neither was checked against the other.
 
 The install accounting confirms the write happened rather than being skipped. Today's
 corrective build reported `6 installed (3 unchanged)` — exactly matching the observed mtime
@@ -1905,9 +1939,9 @@ regardless of why it was skipped"*. A source-revision stamp is the one fix that 
 
 **Consequence, had the pre-flight check not run.** The fast-lane launch that prompted this
 would have executed the pre-#485 lane, which has **no changelog phase**. Its PR would then
-have failed the required `Changelog entry present` CI check — `KI-BO-001`, the exact defect
-#485 was written to fix, reappearing not through a regression in the source but through the
-deployment layer serving an older copy of the fix. It would also have run without
+have failed the required `Changelog entry present` CI check — the exact defect #485 was written
+to fix, reappearing not through a regression in the source but through the deployment layer
+serving an older copy of the fix. It would also have run without
 `--exclude-structural-parent` (#510), resolving a larger build set than the operator aimed
 at, and without the pr-reviewer gate — committing unreviewed. Three separate protections,
 all present in `main`, all absent at the point of use.
@@ -1954,7 +1988,7 @@ successfully rather than one that was skipped.
 **Related.** KI-BP-018 — a different defect with the same consequence, and the two should be
 read together. That entry is about what the build *never verifies*: no phase can fail the
 build, the deploy set is hand-listed in ~26 places, and nothing checks the deployed tree is
-complete. This entry is about what the build *overwrites*: 58 worktrees write the same output
+complete. This entry is about what the build *overwrites*: many worktrees write a shared output
 root last-writer-wins. Between them the deployed tree cannot be trusted to correspond to any
 revision — 018 explains why a missing file is never noticed, 021 explains why a present file
 may be from anywhere. The fixes are complementary: BP-900g-8/9 make the deploy set derived and
@@ -1965,4 +1999,12 @@ Also KI-BP-008 (same symptom, skip-side cause). KI-BP-004 (a worktree's deployed
 at build time — the same shared-surface staleness for hooks rather than workflows).
 KI-BP-011 (`.build_manifest.json` written to the package that ran the build rather than the
 target it describes — which is precisely why the deployed tree carries no usable provenance
-today). KI-BO-001 (the changelog gate this would have re-broken).
+today).
+
+**A dangling id, noted in passing.** Earlier drafts of this entry cited **`KI-BO-001`** for the
+changelog-presence gate. That id has **no definition anywhere in the registers** — it is cited
+seven times across the repo, including in `fast-lane-ship.js`'s own source comments and in two
+other register entries, and defined zero times. The citations here have been replaced with
+plain description. Whoever owns `build-orchestration.md` should either write the entry or
+retire the id; a reference that resolves to nothing is indistinguishable from one whose target
+was deleted, and readers cannot tell which they are looking at.
