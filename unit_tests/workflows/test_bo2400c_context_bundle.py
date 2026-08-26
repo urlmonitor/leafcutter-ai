@@ -425,7 +425,7 @@ class TestPriorPhaseOutputThreading(unittest.TestCase):
             "When prior_outputs=None, no prior-outputs content should appear.",
         )
 
-    def test_ac3_prior_outputs_after_acs_in_variable_suffix(self) -> None:
+    def test_ac3_prior_outputs_after_prior_tests_in_variable_suffix(self) -> None:
         # covers: BO-2400c-3
         """prior_outputs must appear after acs in the variable suffix.
 
@@ -566,7 +566,7 @@ class TestLayeredContextBundleOrdering(unittest.TestCase):
             "Architecture layer must appear before the high-level (L0/L1) layer.",
         )
 
-    def test_ac5_acs_comes_before_prior_tests(self) -> None:
+    def test_ac5_prior_tests_comes_before_prior_outputs(self) -> None:
         # covers: BO-2400c-5
         """Batch ACs (per-batch L2/L3) must precede prior tests in the variable suffix.
 
