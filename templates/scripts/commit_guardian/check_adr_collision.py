@@ -115,16 +115,23 @@ def _run_git(*args: str, cwd: str | None = None) -> tuple[int, str, str]:
     return result.returncode, result.stdout, result.stderr
 
 
-def get_staged_adr_numbers() -> list[int]:
-    """Return the ADR integers staged in the current commit.
+def get_staged_adr_entries() -> list[tuple[int, str]]:
+    """Return the (ADR integer, path) pairs staged in the current commit.
 
     Scans staged files (added or renamed) for paths matching
-    docs/architecture/adrs/ADR-NNN-*.md and returns the integer list
-    (duplicates preserved -- two staged files claiming the same number both
-    appear).
+    docs/architecture/adrs/ADR-NNN-*.md and returns one entry per FILE, so a
+    number claimed by two staged files yields two entries carrying that number
+    and their two distinct paths.
+
+    Pairing the number with its own path is load-bearing rather than
+    convenient: every per-file question this module asks later -- above all
+    "was this file merged in, or authored here?" -- needs the path of the file
+    being judged. A bare integer cannot answer it, and resolving an integer
+    back to a path can only ever return one of its claimants.
 
     Returns:
-        list[int]: ADR integers from staged files. Empty if none are staged.
+        list[tuple[int, str]]: (number, path) per staged ADR file. Empty if
+            none are staged.
 
     Raises:
         ReadFailure: When the staged-file listing itself could not be read.
@@ -137,12 +144,28 @@ def get_staged_adr_numbers() -> list[int]:
             f"could not list staged files (git diff exited {rc}): {stderr.strip()}"
         )
     staged_adrs = []
-    for path in stdout.splitlines():
-        path = path.strip()
+    for line in stdout.splitlines():
+        path = line.strip()
         match = _ADR_INT_RE.search(Path(path).name)
         if match and "docs/architecture/adrs/" in path:
-            staged_adrs.append(int(match.group(1)))
+            staged_adrs.append((int(match.group(1)), path))
     return staged_adrs
+
+
+def get_staged_adr_numbers() -> list[int]:
+    """Return the ADR integers staged in the current commit.
+
+    Duplicates are preserved -- two staged files claiming the same number both
+    appear. This is the integer view of get_staged_adr_entries(); use the
+    entries form whenever the path of a specific claimant matters.
+
+    Returns:
+        list[int]: ADR integers from staged files. Empty if none are staged.
+
+    Raises:
+        ReadFailure: When the staged-file listing itself could not be read.
+    """
+    return [num for num, _ in get_staged_adr_entries()]
 
 
 def get_committed_adr_numbers(ref: str = "origin/main") -> set[int]:
@@ -267,52 +290,45 @@ def _find_self_collisions(numbers: list[int]) -> set[int]:
     return {number for number, count in counts.items() if count > 1}
 
 
-def _adr_num_to_path(num: int) -> str | None:
-    """Return the staged path for an ADR integer, or None if not found.
+def _is_merge_in(num: int, path: str, committed: set[int]) -> bool:
+    """Return True when THIS staged file was merged in from origin/main.
+
+    The exemption is a property of a file, never of a number. Judging it per
+    number and then dropping every staged claimant of that number discards the
+    author's own file alongside the upstream one -- and when both are staged
+    together, that empties the very list the collision detectors read, so the
+    guard exits 0 on the exact double-claim it exists to catch (GE-122a-1-ii).
+    Each caller therefore asks this question once per staged file, naming that
+    file's own path.
+
+    Both probes are on THIS PATH. "Absent from HEAD" alone does not identify a
+    merged-in file -- a file the author just wrote is equally absent from HEAD
+    -- so it only distinguishes anything once paired with "present upstream".
+    Asking whether the NUMBER is upstream instead of whether the FILE is
+    upstream is precisely the collapse that produced the defect.
 
     Args:
-        num: ADR integer to look up.
+        num: ADR integer claimed by the staged file.
+        path: Path of the staged file being judged.
+        committed: Set of ADR integers already committed on origin/main. Used
+            only as a cheap early-out: a number absent upstream cannot have an
+            upstream file, so no git call is needed for it.
 
     Returns:
-        Path string of the staged file, or None.
-
-    Raises:
-        ReadFailure: When the staged-file listing itself could not be read.
-    """
-    rc, stdout, stderr = _run_git(
-        "diff", "--cached", "--name-only", "--diff-filter=AR"
-    )
-    if rc != 0:
-        raise ReadFailure(  # noqa: TRY003
-            f"could not list staged files (git diff exited {rc}): {stderr.strip()}"
-        )
-    for line in stdout.splitlines():
-        line = line.strip()
-        match = _ADR_INT_RE.search(Path(line).name)
-        if match and int(match.group(1)) == num and "docs/architecture/adrs/" in line:
-            return line
-    return None
-
-
-def _is_merge_in(num: int, committed: set[int]) -> bool:
-    """Return True when a staged ADR was merged in from origin/main, not authored here.
-
-    Args:
-        num: ADR integer to check.
-        committed: Set of ADR integers already committed on origin/main.
-
-    Returns:
-        bool: True if the ADR exists on origin/main and was not in HEAD
-            before staging.
+        bool: True if this exact file exists on origin/main and was not in HEAD
+            before staging -- i.e. staging is what brought it in.
     """
     if num not in committed:
         return False
-    path = _adr_num_to_path(num)
-    if path is None:
+    rc_upstream, _, _ = _run_git("cat-file", "-e", f"origin/main:{path}")
+    if rc_upstream != 0:
+        # This file does not exist upstream, so it was authored here --
+        # regardless of what some other staged file claiming the same
+        # number did.
         return False
-    rc, _, _ = _run_git("cat-file", "-e", f"HEAD:{path}")
+    rc_head, _, _ = _run_git("cat-file", "-e", f"HEAD:{path}")
     # rc != 0 means it was NOT in HEAD -> it was brought in by staging.
-    return rc != 0
+    return rc_head != 0
 
 
 def _emit_collision(num: int, source: str, suggestion_pool: set[int]) -> None:
@@ -350,15 +366,22 @@ def _run_collision_check() -> int:
         ReadFailure: Propagated from any git-reading helper when the
             decision-number sequence could not be established.
     """
-    staged_numbers = get_staged_adr_numbers()
-    if not staged_numbers:
+    staged_entries = get_staged_adr_entries()
+    if not staged_entries:
         return 0
 
     committed = get_committed_adr_numbers("origin/main")
     inflight = get_inflight_adr_numbers(committed)
     all_taken = committed | inflight
 
-    staged_numbers = [n for n in staged_numbers if not _is_merge_in(n, committed)]
+    # Filter FILE BY FILE, not number by number: a merge that brings an
+    # upstream ADR in excuses that file only. Any other staged file claiming
+    # the same number was authored here and must still be judged.
+    staged_numbers = [
+        num
+        for num, path in staged_entries
+        if not _is_merge_in(num, path, committed)
+    ]
     if not staged_numbers:
         return 0
 
@@ -447,5 +470,26 @@ DECISION HISTORY
   detected -- a history-only comparison against origin/main and in-flight
   branches cannot see that case, and it is the literal Gherkin scenario
   GE-122a-1 names for the decision namespace.
+- 2026-08-26 [python-coder/GE-122a-1-ii]: Scoped the merged-in exemption to the
+  FILE instead of the NUMBER. The filter was keyed on the ADR integer and
+  resolved that integer to a single staged path via a first-match lookup
+  (_adr_num_to_path), so when a merge staged an upstream ADR-034 and the author
+  staged their own new ADR-034 in the same commit, the lookup returned
+  whichever path sorted first, the exemption dropped BOTH claimants, and
+  _find_self_collisions ran on an emptied list -- the guard exited 0 on the
+  double-claim it exists to catch, and did so intermittently depending on
+  filename order. get_staged_adr_entries() now carries (number, path) pairs
+  through to the filter, _is_merge_in() takes the path of the file it is
+  judging, and _adr_num_to_path() is deleted rather than corrected so no future
+  caller can reintroduce the number-to-path collapse. get_staged_adr_numbers()
+  keeps its integer signature and delegates (retained as public API; the
+  entries form is what this module now consumes). The exemption also gained a
+  second probe: a file only counts as merged in when its own path exists on
+  origin/main AND is absent from HEAD. Absence from HEAD alone cannot
+  distinguish a merged-in file from one the author just wrote, so a per-file
+  filter without the upstream probe still drops the authored file and still
+  passes the double-claim -- verified against the test. Git-call cost per
+  staged ADR: one 'git diff --cached' removed, one 'cat-file -e origin/main:'
+  added, and the latter only for numbers already known to be upstream.
 ====================================================================
 """

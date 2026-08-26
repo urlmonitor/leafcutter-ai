@@ -151,6 +151,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-122a-1-i
+  - GE-122a-1-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GE122UniquenessPassAndRepair/01_TICKET-20260818-GE-122a-1.md
 - templates/scripts/commit_guardian/check_identifier_uniqueness.py
