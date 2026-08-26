@@ -10,7 +10,7 @@ description: |
   so the BA can decompose L1s into testable L2/L3 Gherkin behaviors.
 model: opus
 name: product-owner
-tools: Read, Write, Bash, Skill  # Write scoped to docs/acceptance-criteria/, docs/vision.md, docs/roadmap.json.
+tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/, docs/vision.md, docs/roadmap.json. Edit is required by S6b.
 portable: true
 requires_verification: true
 signoff: false
