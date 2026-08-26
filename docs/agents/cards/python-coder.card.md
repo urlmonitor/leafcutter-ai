@@ -635,7 +635,7 @@ flowchart TD
 - BO-1000b-2: The end-of-run summary is composed from the recorded per-step outcomes
 - BO-1000b-2-i: On HALT the recap reports which steps completed, which step halted, and why
 - BO-1000b-3: Step outcomes and the recap carry concrete result data, never a content-free 'done'
-- BO-1000c-1a: Background finalize appends each progress line to a durable, pollable run-progress journal as it happens
+- BO-1000c-1a: A background finalize run leaves a durable, in-flight-readable record of its progress that the workflow body does not write itself
 - BO-100a: Dependencies are resolved automatically so nothing runs out of order
 - BO-100a-1: Empty epic folder produces an empty graph and immediate completion
 - BO-100a-2: Linear dependency chain produces one-at-a-time sequential dispatch
@@ -981,6 +981,41 @@ flowchart TD
 - BO-300c: Finalize command always uses the epic or branch name, never a raw path
 - BO-300c-1: Finalize command uses epic or branch name, not a raw path, in all three locations
 - BO-300c-1-1: Nested epic path is reduced to just the epic name in the finalize command
+- BO-3100a-1: An agent holding the means to hand off work with no cleared recipient fails assembly
+- BO-3100a-1-i: A record clearing recipients an agent cannot reach is reported as its own distinct mismatch
+- BO-3100a-2: The reconciliation reads the declarations as they stand, so a newly added agent is covered without editing the check
+- BO-3100b-1: Two steps returning identical text get opposite verdicts, because the verdict is read from the project not the reply
+- BO-3100b-2: A step judged to have produced nothing is re-run, and cannot be recorded as completed
+- BO-3100b-2-i: A step that parks every time ends as a named failure, not as an endless retry
+- BO-3100b-3: A step that legitimately changes nothing passes on a declared no-op, and nothing else confers one
+- BO-3100b-3-i: A specialist cannot declare its own step a no-op in the reply that ends it
+- BO-3100c-1: Each dispatched step's result reaches the layer that dispatched it and decides what runs next
+- BO-3100c-2: No entry point reaches a specialist that coordinates other specialists, and a surviving one fails even when the new path works
+- BO-3100c-2-i: A newly added coordinating specialist is caught by the same sweep, with nothing added to it
+- BO-3100c-3: Independent steps still run at the same time, and a dependent step still waits
+- BO-3100c-4: The arrangement holds with background dispatch forced on and with the choice removed entirely
+- BO-3100d-1: Every behavioural claim in the delivery record is paired with a check that exercises it, and a contradicted claim fails
+- BO-3100d-2-i: A half-finished supersession is reported: a dangling pointer or an unmarked predecessor
+- BO-3200a-1: A fact the build depends on is still obtained when no specialist can be dispatched at all
+- BO-3200a-1-i: The fact resolves correctly when the process is not started from the repository
+- BO-3200a-2: Every path that needs a project fact still works with specialists unavailable, and one that does not is named
+- BO-3200b-1: A run that stops after claiming work releases the claim in the store that outlives it, from every failure point
+- BO-3200b-1-i: A run that stops part-way through claiming releases what it already claimed, and one that claimed nothing reports no failure
+- BO-3200b-2: A required action that did not happen appears in the halt report beside the failure that triggered it
+- BO-3200b-2-i: An outcome that cannot be read as success counts as the action not having happened
+- BO-3200b-3: Best-effort is a recorded choice with a stated reason, and an action without one cannot be dropped
+- BO-3200c-1: The question is put to the person, and when it cannot be, the run pauses resumably with the work intact
+- BO-3200c-2: A reply that did not come from the person never settles the gate, even when it is a perfectly formed decision
+- BO-3200c-3: At every decision point, no answer available and the person answering no are different outcomes with different consequences
+- BO-3200c-3-i: A decision point added later without the distinction is reported, not silently exempt
+- BO-3200d-1: A result of 149 kilobytes reaches the step that reads it byte-for-byte identical to what was produced
+- BO-3200d-1-i: A genuinely bad result of the same size still halts the run — the gate is not loosened
+- BO-3200d-2: The consumer obtains the result without depending on the producer reproducing it in its reply
+- BO-3200d-2-i: A result that was never produced reports as not obtained, distinct from empty and from bad
+- BO-3200e-1: A check whose inspection failed reports that it could not tell, and never the finding it would have made
+- BO-3200e-1-i: The advice on an undetermined outcome points at the inspection that failed, not at the subject
+- BO-3200e-2: An undetermined outcome still stops the work — fail-closed is preserved, only its wording changes
+- BO-3200e-3: Every check that can fail to inspect is driven into that state, and one that answers substantively is named
 - BO-400a-2-ii: A ticket the drive carried to completion is recorded done in the ticket's own record
 - BO-400a-2-iii: A ticket with any needed phase skipped, blocked or unrecorded is never recorded done
 - BO-400a-2-iv: A completion decision reached with no phase required of the ticket never records it done

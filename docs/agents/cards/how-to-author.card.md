@@ -127,5 +127,6 @@ flowchart TD
 
 ### how-to-author
 
+- BO-3200c-4: A how-to shows a person how to answer a paused run and how to resume it
 - TKT-500b-5: How-to: configuring and overriding TDD sequencing
 - TKT-500c-5: How-to: reading and interpreting AC delivery state

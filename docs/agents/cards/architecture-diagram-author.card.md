@@ -184,6 +184,14 @@ flowchart TD
 - BO-2500d-4: Component diagram: fast-lane vs heavy-pipeline phase order after review retirement
 - BO-2900a-5: Sequence diagram: from a done claim to a verdict, including the run observation and the exemption branch
 - BO-2900b-5: Component diagram: the capability surface, the automation that runs it, and the two checks between them
+- BO-3100a-3: A component diagram shows where hand-off authority is declared and where it is reconciled
+- BO-3100b-4: A sequence diagram shows the exit-time judgement and the retry it forces
+- BO-3100b-5: A component diagram shows what the exit-time judgement reads and what it can stop
+- BO-3100c-5: A sequence diagram shows fan-out and collection happening at the layer that awaits
+- BO-3100c-6: A component diagram shows which layers may coordinate and which may only do work
+- BO-3200b-4: A sequence diagram shows the failure path performing its cleanup and reading the outcome
+- BO-3200c-5: A sequence diagram shows the question reaching the person and the pause when it cannot
+- BO-3200d-3: A sequence diagram shows the result travelling out of band and the reply carrying no content
 - BP-1000a-4: Component diagram of the source-to-shipped parity relationship at the merge gate
 - BP-1000b-4: Sequence diagram of the parity gate firing within the finalize-feature merge flow
 - BP-1100e-3: A sequence diagram shows where the declared-vs-actual reconciliation sits before done
