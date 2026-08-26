@@ -16,9 +16,9 @@ ARCHITECTURE: Tests import the hook module dynamically via importlib so they
 from __future__ import annotations
 
 import importlib.util
-import types
 import unittest
 from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Module loader
@@ -35,8 +35,15 @@ HOOK_PATH = (
 )
 
 
-def _load_hook() -> types.ModuleType:
+def _load_hook() -> Any:
     """Dynamically load the hook module from its template path.
+
+    Typed ``Any`` rather than ``types.ModuleType``: the whole point of this
+    loader is that the returned object's attribute surface is defined by
+    whatever source file it executes, which mypy cannot know statically.
+    Typing it as ``ModuleType`` would make every dynamic attribute
+    read/write on the result a false ``attr-defined`` error rather than
+    reflecting the genuinely dynamic contract.
 
     Returns:
         Loaded module object.

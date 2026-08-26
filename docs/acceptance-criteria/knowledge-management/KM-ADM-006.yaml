@@ -7,6 +7,9 @@ status: active
 component: knowledge-management
 level: L2
 title: "The data-map prose and the graph JSON cannot disagree about an edge's trust"
+parent: KM-ADM-100d
+depends_on:
+  - KM-ADM-100d
 origin_agent: BrainCandy
 criteria: |
   Given the artifact knowledge graph exists twice — as the machine-readable
@@ -39,5 +42,12 @@ notes: |
   e.g. ticket `source_ac`). A skip-what-you-cannot-match test degrades to vacuously green
   if the table is reformatted, which is why the minimum-match-count assertion is part of
   the criteria rather than an implementation detail.
+
+  PARENT ADDED 2026-08-18 (product-owner). Home is KM-ADM-100d ("whichever copy of the
+  map you open, it tells you the same thing"), under the L0 KM-ADM-100. Note for anyone
+  touching the parity test: the minimum-match-count assertion in the criteria above is
+  the same requirement ACS-1100 states generally — a check that reports a pass over
+  zero matched rows is a zero-denominator silent pass. It is a standing constraint on
+  this L1, not an implementation detail that may be optimised away.
 change_target: docs
 risk_surface: internal

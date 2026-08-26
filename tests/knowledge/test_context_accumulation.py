@@ -36,6 +36,7 @@ def _load_module():
     return mod
 
 
+_LOAD_ERROR: str | None
 try:
     cfm = _load_module()
 except (FileNotFoundError, ModuleNotFoundError, AttributeError) as exc:

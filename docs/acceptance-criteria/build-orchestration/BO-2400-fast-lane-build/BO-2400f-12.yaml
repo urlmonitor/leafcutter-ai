@@ -1,0 +1,207 @@
+id: BO-2400f-12
+components:
+  - build_orchestration
+title: "Refuse an unbuildable resolved set up front, naming what cannot be made and why"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run has resolved the connected build set for the acceptance
+    criterion the operator named,
+  When the run examines that set — before it claims any acceptance criterion, and
+    before it dispatches the first build agent of the run,
+  Then it decides, for each member of the set, whether the run's own phase roster
+    contains a phase that produces the deliverable that member declares and a phase
+    that produces the proof that member's done-obligation requires,
+  And when every member is producible the run continues unchanged, so this decision
+    adds no ending to a set the lane can build.
+
+  Given a resolved set with at least one member the roster cannot produce — today that
+    is a criterion whose declared proof is not a passing covering test
+    (test_required: false), or one whose declared producer is an agent the roster does
+    not contain, because the roster produces exactly one kind of deliverable: source
+    and test code proved by a passing covering test,
+  When the run reaches that decision,
+  Then the run ends there with a refusal,
+  And the refusal names every unproducible member individually — its id, the
+    deliverable or the producer it declares, and the fact that this run has no phase
+    that produces it — so the operator reads which criterion cannot be made and why,
+    rather than a message about a missing test,
+  And the refusal is the run's terminal outcome, reported as a refusal: it is not
+    reported as a successful run, and it never asserts that a pull request was opened,
+  And at the moment the refusal is issued no build agent has been dispatched, no
+    acceptance criterion has been claimed, and no file in the repository has been
+    changed by the run — so the operator has paid for resolution and nothing more.
+
+  Given the same resolved set,
+  When the run refuses,
+  Then it refuses the whole set: it does not drop the unproducible members and build
+    the remainder, and it does not build the remainder and report a partial success,
+  And it does not quietly narrow what it was asked to build, because a member removed
+    from the set and left todo is indistinguishable, from the store, from a member that
+    was never asked for.
+
+  Given a resolved set containing a member the roster cannot produce,
+  When this run's correct ending is judged,
+  Then that ending is the pre-work refusal above, and not a run that proceeds to its
+    finish-time done transition and fails there,
+  And BO-2400f-9's unconditional "every built acceptance criterion ends done", together
+    with its guard BO-2400f-9-i, is narrowed to sets every member of which the roster
+    can produce — where the two readings differ for an unproducible member, this
+    criterion governs,
+  And the late ending those two produce today — a stale-todo failure raised after the
+    test-writer and the coder have both run — does not satisfy this criterion, whatever
+    the message says.
+depends_on: [BO-2400f, BO-2400f-1]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The live lane and its fixed, code-defined phase order — Worktree, Resolve, Test Writer, Coder, Review, Commit, Pull Request. The refusal guard belongs immediately after Resolve, ahead of the claim step and of the Test Writer dispatch."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the connected set is resolved. The producibility verdict is computed here, alongside the set, so the command-line surface and the workflow read one verdict rather than two implementations of it."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: related
+    status: exists
+    relevance: "KI-BO-013 is the live counterexample this criterion closes, including the standing repro and the reason a correct refusal currently presents as an unexplained jam. Read it before implementing; do not fix it by loosening the done gate."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "run_workflow_under_e2 is how the covering tests must execute the lane; the recorded agent_calls are the evidence that no build agent was dispatched."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+it_requirements:
+  config_schema_fragment:
+    fast_lane_producibility_verdict:
+      type: object
+      description: "Producibility verdict carried on the resolver's output and read by a guard sitting between the Resolve step and the claim step: {producible: bool, unproducible: [{ac_id: str, declared_producer: str|null, declared_proof: str|null, reason: str}]}. Every downstream step — claim, test-writer, coder, review, commit, pull request — is unreachable when producible is false. The terminal payload of a refusing run echoes each unproducible entry verbatim."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The check runs on the resolved set, before the claim step (BO-2400f-7) and before the test-writer dispatch. Placing it later — after the claim, or after any agent dispatch — fails the criterion even if the message is identical, because the operator has already paid and the store already carries in_progress claims that must then be released."
+    - "Do NOT presuppose a documentation phase. The producible predicate is 'some phase in this run's roster produces this member's declared deliverable and its declared proof', evaluated against the roster as it stands. If a documentation phase is added later (KI-BO-013 fix direction 1), doc-only members become producible and the refusal stops firing with no change to this criterion. Hard-coding 'documentation ACs are refused' would have to be undone by that work."
+    - "Refusing is not skipping. The unproducible member must not be dropped from the set, must not be marked done, and must not be marked in_progress. There is no partial build: the run refuses the set it resolved, whole."
+    - "The refusal is a distinct terminal outcome, not an 'ok' carrying a warning and not the pull-request outcome (BO-2400f-4-vi asserts a pull request exists; a refusing run opened none). Follow the single-construction-site precedent of buildFastLaneDeliveryOutcome so the refusal payload cannot drift between return sites."
+    - "Fail closed on an unreadable verdict, by the same plain-falsy read the red-baseline gate_passed key already uses: a missing key, a null, or an unparseable resolver reply takes the refusing branch and reports that producibility could not be determined. No default-true, no `|| true`."
+    - "Because the refusal precedes the claim, the run holds no claims and must NOT invoke the release step (BO-2400f-10) — a release on a run that claimed nothing would flip ACs another run legitimately holds."
+    - "Covering tests must EXECUTE the lane under unit_tests/_workflow_engine_harness.py (run_workflow_under_e2 with label_responses), or run the resolver as a real subprocess, and assert on the recorded dispatches and the real store on disk. A test that greps fast-lane-ship.js or fast_lane.py for a phase name, a message string, or source-text ordering is NOT acceptable evidence and must be rejected at review: it passes on dead code, and this same lane already shipped a runner whose gates never executed behind exactly that kind of test (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep')."
+delivers_to:
+  agent: python-coder
+  contract: "A producibility verdict computed with the resolved set and read by a guard before the claim step. Every later phase is reachable only on a verdict that lists no unproducible members; otherwise the run's terminal outcome is a refusal naming each unproducible member, its declared deliverable, and the absent phase."
+expects_from:
+  ac_id: BO-2400f-1
+  contract: "The resolved connected build set — the dependency-ordered list of leaf AC ids, with each member's declared producer and declared proof obligation readable from the store."
+test_required: true
+test_spec:
+  - name: test_unproducible_member_refuses_before_any_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executed under the E2 harness against a store whose resolved set contains one member the roster cannot produce, the run records no test-writer, coder, claim, commit or pull-request dispatch, and returns a refusal."
+  - name: test_refusal_names_each_unproducible_member_and_the_absent_phase
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The refusing run's terminal payload carries, for every unproducible member, its id, the deliverable or producer it declares, and that no phase in the roster produces it — not a count and not a stale-todo message."
+  - name: test_refusal_is_not_reported_as_success_or_as_a_pull_request
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The refusing run's terminal payload is a refusal outcome; it is neither an ok status carrying a warning nor an outcome asserting a pull request was opened."
+  - name: test_refusal_does_not_build_the_producible_remainder
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With a resolved set of three members of which one is unproducible, no coder dispatch occurs for the other two and the terminal payload reports no partial success — the set is refused whole, not trimmed."
+  - name: test_unreadable_verdict_refuses_rather_than_proceeding
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the resolver stubbed to return a payload missing the producibility verdict, the run refuses and states that producibility could not be determined; it does not proceed to dispatch."
+  - name: test_resolver_reports_unproducible_members_on_the_real_store
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run as a real subprocess against an on-disk fixture store written the way the store is actually serialised, the resolver's own output lists the unproducible member with its declared producer and proof — proving the verdict is derived from real records, not from a hand-built dict."
+test_rationale: |
+  Every covering test here must EXECUTE the lane (run_workflow_under_e2 under
+  unit_tests/_workflow_engine_harness.py) or run the resolver as a real subprocess
+  against an on-disk store, and must assert on recorded dispatches, the terminal
+  payload, and the files on disk. Grep-shaped tests over fast-lane-ship.js or
+  fast_lane.py are explicitly forbidden for this criterion and must be rejected at
+  review — they are not weaker evidence, they are no evidence: they pass unchanged when
+  the guard is defined and never reached. This lane has already shipped exactly that
+  failure once (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'),
+  and a second time in this family, where roughly 25 green unit tests plus a grep test
+  stayed green for a month while the bundle layer never ran.
+
+  The load-bearing test is the first one. A guard that computes a correct verdict and
+  then dispatches the test-writer anyway satisfies every other assertion in this list.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-2400f-12-i, BO-2400f-12-ii]
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored against the 2026-08-24 amendment to BO-2400f, which replaced the
+  unconditional promise of a pull request with two honest endings — a pull request, or
+  a refusal issued before work begins. Nothing in the tree implemented the second
+  ending; this criterion is that ending.
+
+  Relationship to BO-2400f-9 (work_status: done) — tracked, not silent. BO-2400f-9
+  states that on a passing run EVERY built acceptance criterion is flipped to done, and
+  BO-2400f-9-i makes any un-flipped member an error. Read unconditionally, that pair
+  is what produces the KI-BO-013 jam: a doc-only member can never pass the coverage
+  gate, so it can never be flipped, so a run that includes one must fail at the finish
+  step — after the test-writer and the coder have both been paid for. This criterion
+  supersedes that unconditional reading for the undeliverable case only: for a set
+  containing a member the roster cannot produce, the correct ending is a pre-work
+  refusal and the run never reaches the finish transition, so BO-2400f-9 and
+  BO-2400f-9-i apply only to sets every member of which the roster can produce. Where
+  the two read differently, this criterion governs. BO-2400f-9 itself is deliberately
+  left unedited and its work_status is unchanged — narrowing an already-done criterion
+  by rewriting it would erase the record of the conflict, which is the thing worth
+  keeping.
+
+  Deliberately NOT decided here: whether the lane acquires a documentation phase.
+  KI-BO-013 lists that as fix direction 1 and it is BrainCandy's capability call. The
+  producible predicate is written against 'the run's own phase roster' precisely so it
+  stays correct either way — add the phase and doc members become producible with no
+  amendment to this text; do not add it and they are refused up front instead of
+  jamming at the end.
+
+  Blast radius, measured 2026-08-25: 87 not-done acceptance criteria across the store
+  carry test_required: false, including members of the BO-2600 and ACD-1800 / ACD-1900
+  families. So this is not one awkward criterion — it is a standing property of the
+  store that today makes an unknown number of subtrees silently unbuildable by the
+  lane. The refusal makes that visible for the price of a resolution instead of the
+  price of a full run.

@@ -1,0 +1,61 @@
+id: BO-3100e-2-i
+title: "A declared result the build has no way to look for makes the step undecided, never done"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose declaration names a result the build has no means of looking
+    for,
+  When the step ends and its completion is judged,
+  Then the step is not counted as done,
+    And the build reports that the step's declared result could not be looked for,
+      naming the step and the result,
+    And the run's overall verdict reflects that a step was left undecided.
+
+  Given a step whose declared result the build can normally look for, but the
+    attempt to look fails,
+  When the step's completion is judged,
+  Then the step is not counted as done,
+    And the failure to look is reported as a failure to look, not as the result
+      being absent and not as the result being present,
+  So the three outcomes — found, not found, could not look — stay distinct.
+
+  Given a step whose declared result was looked for successfully and found,
+  When the step's completion is judged,
+  Then it is counted as done and nothing is reported as undecided,
+  So the undecided outcome is reserved for cases where the build genuinely could
+    not tell.
+depends_on:
+  - BO-3100e-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — the entry's shape is a step counted as completed on evidence nobody checked. An unlookable declaration is the same failure arriving through the front door."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ABSENT EVIDENCE MUST NOT READ AS SUCCESS, and this is where a derived expectation
+  is most likely to leak: an expectation the build cannot evaluate is trivially not
+  falsified, so the tempting default is to let the step pass. That converts every
+  hard-to-observe result into a free pass and reproduces KI-BO-007 exactly.
+
+  Nor may it read as failure by default — the second scenario keeps "could not look"
+  distinct from "looked and did not find", because the two have different remedies
+  and collapsing them makes the report untrustworthy in the other direction.

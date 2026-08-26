@@ -1,0 +1,163 @@
+id: ACD-2100c-4
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "An answer that did not come from the person is refused even when it is well formed"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run waiting at a decision point with drafted work on disk,
+  And an answer that is well formed and names one of the choices the decision
+    offers but that did not originate from the person running the route,
+  When the run evaluates that answer,
+  Then it is not treated as the person's decision and the choice it names is not
+    carried out,
+  And the run stays at the decision point and stays waiting with its record on
+    disk,
+  And the reason it records is that the answer did not come from the person -- not
+    that the answer could not be understood,
+  And an answer identical in every respect except that it did come from the person
+    is accepted and carried out.
+depends_on: [ACD-2100c, ACD-2100c-1]
+doc_links:
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "The sequence diagram authored by ACD-2100e-1 -- the refused-answer branch is one of the paths it depicts."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 -- the verbatim refusal payload. Note the KI's stated root cause and fix direction are out of date; see this record's notes."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. resolveGate's 'valid explicit decision' test at 1577-1579 and the gate parse at 2075 accept any object carrying a string action."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "A recorded reason that names the wrong cause is the same family of defect: a claim the run did not establish."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose gate evaluation this record changes."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "Provenance -- where the answer came from -- must be the discriminator. The answer's content must not be inspected to decide whether to accept it. Any content-based test is re-implementing the defect with a longer regex: the agent gets better at sounding like a user and the bug returns."
+  - "Hardening the answer parser does not satisfy this record and must not be offered as satisfying it. resolveGate already pauses on a null or unparseable answer; the observed loss came from a well-formed answer that passed every shape check."
+  - "A refused answer must leave the run waiting, not failed, and must leave the record on disk. The person is still owed the question."
+  - "The recorded reason must name provenance. Recording 'could not understand the answer' for an answer that was perfectly well formed is how this defect stayed invisible for a whole run -- the journal showed a clean decision."
+  - "The accept-and-refuse pair must differ only in origin. If accepting an answer requires it to carry anything the refused answer could not also carry, the pair is not a controlled comparison and the record is not proved."
+  - "Must satisfy the repository error-handling policy on the channel interaction."
+test_spec:
+  - name: test_well_formed_answer_not_from_the_person_is_refused
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      An answer that is well formed and names a valid choice for the waiting decision
+      but did not originate from the person is not carried out -- no step after the
+      decision point executes and the named choice takes no effect on disk.
+  - name: test_identical_answers_differing_only_in_origin_produce_opposite_outcomes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Two answers byte-identical in content, one arriving from the person's channel and
+      one not; the first is carried out and the second is refused. The only variable is
+      origin.
+  - name: test_refusal_records_provenance_as_the_reason_not_unparseable
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The recorded reason for the refusal states that the answer did not come from the
+      person, and does not state that the answer could not be understood.
+  - name: test_refused_answer_leaves_the_run_waiting_with_its_record_on_disk
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      After the refusal the run is still at the decision point, its record is still
+      present, and the drafted work is byte-identical.
+test_rationale: >-
+  The pair assertion is the whole proof and it is why the last Then clause is written as
+  a pair. Two answers identical in content and differing only in origin must produce
+  opposite outcomes; a test built that way cannot be passed by a parser change and fails
+  on any implementation that inspects the text instead of the source. Everything else in
+  this record is satisfiable by accident -- a run that refuses everything passes the
+  first, third and fourth assertions. The known issue's own fix direction, hardening the
+  parser, closes nothing: resolveGate already pauses on a null or unparseable answer, and
+  the observed refusal was well-formed JSON carrying a valid action plus a paragraph of
+  explanation, which satisfied both the parse check and the valid-explicit-decision test
+  and was accepted as the user's choice.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100c-5
+    contract: "An unattributable answer resolves to a refusal that leaves the run waiting with its drafted work intact -- never to a stop that the run records as the person's choice."
+expects_from:
+  - ac_id: ACD-2100c-1
+    contract: "A decision-point mechanism in which an answer carries the channel it arrived on, so provenance is a readable property of the answer at the point of evaluation rather than something inferred from its content."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/17_TICKET-20260826-ACD-2100c-4.md
+change_target: pipeline
+risk_surface: safety
+notes: |
+  THIS IS THE RECORD THAT ACTUALLY CLOSES KI-ACD-005, AND THE KNOWN ISSUE'S OWN FIX
+  DIRECTION WOULD NOT. Re-verified against the code on 2026-08-25 -- do not
+  re-investigate:
+
+    - The KI says any reply the parser cannot map resolves to cancel, and therefore
+      that the parser should be hardened. That is not the live behaviour.
+      resolveGate (1571-1582) ALREADY pauses on a null or unparseable answer.
+    - The observed refusal was WELL-FORMED JSON carrying `action: "cancel"` plus a
+      paragraph explaining that approving product-truth artifacts is not
+      status-checker's job. It satisfied the gate's parse check at 2075
+      (`parsed && typeof parsed.action === "string"`) and then the "valid explicit
+      decision" test at 1577-1579, and was accepted as the user's choice.
+
+  So the hole is not answer shape. A well-formed refusal is indistinguishable from a
+  real user answer BY SHAPE ALONE, and any child framed as "reject refusal-shaped
+  replies" is re-implementing the defect with a longer regex: the agent gets better
+  at sounding like a user and the bug returns. The discriminator is provenance --
+  who produced the answer.
+
+  THE LAST THEN CLAUSE IS THE WHOLE PROOF and it is why it is written as a pair. Two
+  answers identical in content, differing only in origin, must produce opposite
+  outcomes. A test built that way cannot be passed by a parser change, and it fails
+  on any implementation that inspects the text instead of the source. Everything
+  else in this record is satisfiable by accident; that clause is not.
+
+  THE THIRD CLAUSE MATTERS FOR THE NEXT DEBUGGER. Recording "could not understand
+  the answer" for an answer that was perfectly well formed is how this defect stayed
+  invisible for a run: the journal showed a clean decision. The recorded reason has
+  to name the real one.
+
+  RESIDUAL DESTRUCTIVE DEFAULT, covered by ACD-2100c-5: line 2086 is
+  `const ptGate = _ptGateResult || { action: "cancel" }`. resolveGate should not
+  return a bare null today, but the fallback still says the answer to "no answer" is
+  to discard.
+
+  2026-08-25 (it-po): the it_requirement about the pair being a controlled comparison
+  is the trap to watch. An implementation that accepts only answers carrying a token
+  the refused answer cannot carry passes the pair test trivially and is in fact a
+  reasonable design -- but the test must then be built so the two answers are identical
+  in the content the gate reads, with the token supplied by the channel rather than by
+  the answer's author. If the token is part of what the author writes, the comparison
+  is back to inspecting content and the record is not proved.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

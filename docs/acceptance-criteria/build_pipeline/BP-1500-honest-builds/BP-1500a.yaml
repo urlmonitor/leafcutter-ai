@@ -1,0 +1,225 @@
+id: BP-1500a
+components:
+  - build_pipeline
+title: "Building the tool never changes your work behind your back"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  Run the build, and the only changes in your tree are the ones you made.
+
+  A build leaves the repository it is run from exactly as it found it, so you are
+  never handed edits you did not make and cannot safely commit. Where a generated
+  file is deliberately kept under review, a rebuild that would change it fails a
+  check that names the file -- it is never silently rewritten.
+
+  A build step still produces every file it produces today. Where a step writes
+  into this repository, what it writes is generated from this repository's own
+  sources -- the place it reads from and the place it writes to are the same
+  place -- so the content is a function of the sources being written from and
+  never of wherever the build happens to be deploying. A step that leaves the
+  tree clean by writing nothing, generating nothing, or excluding its output from
+  review does not satisfy this: the file is still generated, still reviewable, and
+  now correct.
+
+  The check that enforces this is computed over every tracked generated artifact
+  in the repository, not over the subset of them appearing in the change under
+  review. The artifact that has drifted is by definition never in that subset --
+  a source changes and the file generated from it does not -- so a verdict
+  computed over the change alone reports clean on precisely the case this promise
+  exists to catch, and a check of that shape does not satisfy this.
+depends_on:
+  - BP-1500
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-001 (high, seen 4x) and KI-BP-002 (medium, seen 2x) are the two observed defects. Both carry full reproduction evidence."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "PRODUCING CODE, not population. The doc-index phase and the agent-card generation phase are the two live instances. Both live in scripts/build_phases.py. Scoping an implementation to these two phases satisfies neither criteria clause — see the three population entries below."
+  - path: docs/agents/cards/
+    relationship: related
+    status: exists
+    relevance: "POPULATION MEMBER, not producing code. 63 tracked files (git ls-files, 2026-08-25) — the bulk of the population the criteria quantify over. Listed because the population clause binds every tracked generated artifact, and these are reachable from no other link here except through the phase that writes them. KI-BP-002's six drifted cards are members of this set, not the whole of it."
+  - path: docs/roadmap.md
+    relationship: related
+    status: exists
+    relevance: "POPULATION MEMBER, not producing code. The generated roadmap mirror, produced by regenerate_roadmap_mirror.py rather than by either build.py phase named above — so it is in the population and outside the two instances. KI-CG-011 records it drifting on every regeneration (stripped description, backdated created) and explicitly flags it as worth checking against this AC when this AC is built. This link is that check landing."
+  - path: docs/INDEX.md
+    relationship: related
+    status: exists
+    relevance: "POPULATION MEMBER, named in its own right rather than left implicit behind the doc-index phase. It is the one member whose content is currently WRONG rather than merely stale — KI-BP-001 has every run write 'No docs found.' into all nine sections — which makes it the subject of the ordering hazard in notes: regenerate-to-go-green must not run on this file until the scan-root rule holds."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+created_by_ticket: null
+amended_by:
+  - reason: notes-to-criteria-promotion
+    by: business-analyst
+    at: '2026-08-25'
+    note: >-
+      Two rules that the record already stated in notes were promoted into
+      criteria. Neither is new and neither widens or relaxes any existing
+      criterion; the promotion makes them binding, because a rule that lives only
+      in notes is read by no gate, no generated ticket and no test contract --
+      the same defect in miniature as the one this L1 is about, a record marking
+      something critical in a field nothing reads. (1) The scan-root rule: a
+      step's read location and its write location resolve from the same base, so
+      what it writes is a function of the sources it is writing from. Promoted
+      because without it the top clause is satisfiable by a step that simply
+      stops writing, which the record's own PRODUCT DECISION paragraph forbids;
+      the promoted text names that vacuous reading and excludes it. (2) The
+      population rule, which the notes label THE CLAUSE THAT MAKES OR BREAKS IT:
+      the verdict is computed over every tracked generated artifact, not over the
+      subset in the change under review. Promoted because the change-scoped shape
+      is the existing check-build-drift hook's shape and is exactly why KI-BP-002
+      goes uncaught. CONSEQUENCE RECORDED DELIBERATELY, NOT SLIPPED IN: "every
+      tracked generated artifact" is a population, and the population is larger
+      than the two phases named in doc_links -- 63 tracked agent cards plus
+      docs/INDEX.md plus docs/roadmap.md, counted 2026-08-25. It therefore pulls
+      in the roadmap mirror (KI-CG-011), which that entry itself flags as worth
+      checking when this AC is built. work_status stays todo; readiness stays
+      reviewed; nothing else in the file was touched.
+  - reason: doc-links-population-alignment
+    by: business-analyst
+    at: '2026-08-25'
+    note: >-
+      Three doc_links added naming the POPULATION the promoted criteria quantify
+      over -- docs/agents/cards/ (63 tracked files), docs/roadmap.md and
+      docs/INDEX.md -- and the scripts/build.py relevance relabelled as PRODUCING
+      CODE. Nothing in criteria changed. Reason: after the promotion, criteria
+      bound a 65-artifact population while doc_links named only two build phases,
+      so an implementer could scope to those two phases in good faith, pass, and
+      call the AC done -- a truthful narrow verdict against a broad claim, which
+      is ACS-300h-1's exact failure shape reproduced inside the record written to
+      end it. The producing-code / population-member labels are load-bearing:
+      they are what stops the next reader collapsing the population back down to
+      the code that writes it. docs/INDEX.md is named in its own right rather
+      than left reachable through the doc-index phase, for the same reason and
+      because it is the subject of the ordering hazard.
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A REVIEWED L2 DRAFT ALREADY EXISTS for this L1 at
+  /tmp/selfhost_leaf_build_clean.yaml. Its criteria, it_requirements and
+  test_spec were reviewed and verified; only its id and parent are wrong (it was
+  written at BP-900h-4, which is now a live unrelated approved record). Re-id it
+  as the first L2 of BP-1500a and keep its content. Do not re-derive it.
+
+  TWO CAUSES, ONE GUARANTEE -- kept as one L1 deliberately.
+
+  The user-visible outcome is identical in both cases: you run the documented
+  build on a clean tree and are left holding a tracked diff you did not author,
+  which is easy to sweep into an unrelated commit with git add -A and easy to
+  blame on a concurrent author. Both known-issue entries record that same trap in
+  the same words. Splitting this into one L1 per defect would produce two point
+  patches and hide that they are one promise. The two causes are:
+
+  - KI-BP-001 -- the doc-index phase scans the deploy target while writing into
+    the package repository, so it regenerates the index from a tree that has no
+    docs. Every run leaves docs/INDEX.md as the sole working-tree modification,
+    11 insertions and 172 deletions, reading "No docs found." in all nine
+    sections. The generic rule is that a phase's scan root and its write target
+    must resolve from the same base, so the content produced is a function of the
+    sources being written from, not of where the build is deploying.
+  - KI-BP-002 -- the generated agent cards derive from agent template
+    descriptions and the AC store, are tracked, and are not regenerated by the
+    pull requests that change those sources. One run rewrote six cards, 99
+    insertions and 36 deletions.
+
+  THE PRODUCT DECISION, restated because it is easy to "fix" the wrong way. The
+  generated artifacts STAY TRACKED and reviewable in the pull request diff. The
+  requirement is that a rebuild producing a different result FAILS A CHECK. An
+  implementation that gitignores or stops generating them does not satisfy this
+  L1.
+
+  THE CLAUSE THAT MAKES OR BREAKS IT. The verdict must be computed over every
+  tracked generated artifact in the repository, not over the subset appearing in
+  the change under review. The artifact that drifts is by definition never in
+  that subset -- a template's description changes and its card does not. The
+  existing check-build-drift hook has exactly the change-set-scoped shape, which
+  is precisely why KI-BP-002 goes uncaught. This is the M3 blind spot in
+  docs/reference/false-green-mechanisms.md, live elsewhere as KI-CG-001.
+
+  BOUNDARY. BP-900h-2 (consecutive builds produce zero git diff) measures the
+  DEPLOYED output in a consumer-simulation scratch repository and cannot see
+  either defect: KI-BP-001 writes into the package repository, and it is
+  deterministic, so a second build reproduces the same wrong result and the
+  idempotency comparison passes. BP-1000 (source-to-template parity) asks whether
+  a source script matches its shipped copy, which is a different pair of files
+  entirely. Cite both; duplicate neither.
+
+  ==========================================================================
+  DOES THE POPULATION CLAUSE COLLIDE WITH THE DIFF-SCOPING DECISION? CHECKED
+  2026-08-25 AGAINST THE NUMBERS, NOT ASSUMED. ANSWER: NO -- BUT IT IS ORDERED.
+  ==========================================================================
+  The objection to raise is ACS-200g-2 and the ac-store-valid CI comment: a
+  whole-store gate applied per pull request "would fail every contributor on day
+  one and get switched off". That objection has two limbs, and only the second
+  is the load-bearing one.
+
+  VOLUME. The AC store is 3,260 records (grep -rl "^id: " over
+  docs/acceptance-criteria, 2026-08-25) carrying 53 orphans (scan_ac_orphans.py,
+  2026-08-25). The tracked generated-artifact population is 65: 63 files under
+  docs/agents/cards/ (git ls-files, 2026-08-25) plus docs/INDEX.md plus
+  docs/roadmap.md. Two orders of magnitude apart.
+
+  A NOTE ON THAT FIRST FIGURE, BECAUSE THE ERROR IS INSTRUCTIVE. This paragraph
+  first read "2,784 records ... (scan_ac_orphans.py, 2026-08-25)" and both halves
+  of that citation were wrong. The number was the 2026-08-13 count carried over
+  from ACS-1100b-1 and ACS-1100c-1 -- which date it honestly -- and re-stamped
+  with today's date; the store had grown 17% since. And scan_ac_orphans.py does
+  not compute store size at all, only orphan counts, so the named tool could not
+  have produced the number attributed to it. Caught in review on 2026-08-25, before
+  this record was committed. Recorded rather than quietly corrected because it is
+  this L1's own subject matter one level up: a figure that looks measured, cites a
+  tool, carries a date, and is none of those things. Each count above now names the
+  command that produced it, and they are different commands for a reason.
+
+  OWNERSHIP, WHICH IS THE REAL LIMB. The CI comment's own rule is "touch a broken
+  record and you own it; leave it alone and it is not your failure" -- because
+  each of the 53 orphans is an authored record needing a separate judgement call
+  by whoever owns it, and no contributor can clear another's. Every one of the 65
+  generated artifacts is DERIVED, owned by nobody, and the entire backlog is
+  cleared by one regeneration with zero judgement calls. A gate that is red until
+  the artifacts are regenerated once and green thereafter is a finite one-off,
+  not a standing tax on every contributor. And clearing it is not a side quest --
+  it is this L1's guarantee arriving.
+
+  THE ORDERING HAZARD, WHICH IS REAL AND IS INTERNAL TO THIS L1. Do not switch
+  the whole-population verdict on before the scan-root rule is satisfied. While
+  KI-BP-001 stands, the doc-index phase produces "No docs found." in all nine
+  sections, so the "just regenerate once to go green" step would commit that as
+  the reconciled state -- a green gate over wrong content, which is worse than
+  the red it replaced. Both promoted clauses live in this one L1 precisely so the
+  dependency is visible: scan root equals write target FIRST, then the verdict
+  over the whole population. The decomposing BA should carry this ordering into
+  depends_on between the resulting L2s rather than leaving it here.
+
+  ==========================================================================
+  THE POPULATION IS ENUMERATED IN doc_links, AND THAT IS DELIBERATE.
+  ==========================================================================
+  Three of the doc_links entries are labelled POPULATION MEMBER and one is
+  labelled PRODUCING CODE. The labels carry weight and should not be tidied away.
+  Once the population clause was promoted into criteria, the criteria bound 65
+  artifacts while doc_links named two build phases -- so the cheapest honest
+  reading of this record was "make the two phases in scripts/build_phases.py
+  behave", which passes, and leaves the roadmap mirror and 57 of the 63 cards
+  ungoverned. That is a truthful narrow verdict against a broad claim: exactly
+  ACS-300h-1's failure shape, occurring inside the record written to end it.
+  Naming the members separately from the producer is what prevents the collapse.
+  If a new tracked generated artifact is added, add it here too, or this record
+  starts under-describing its own population again.

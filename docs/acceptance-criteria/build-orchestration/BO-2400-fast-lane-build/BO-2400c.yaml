@@ -2,7 +2,7 @@ id: BO-2400c
 components:
   - build_orchestration
   - injection_builder
-title: "Spend less time and money on every build"
+title: "Spend less time and money on every build — and see that it actually happened"
 component: build-orchestration
 level: L1
 status: active
@@ -12,18 +12,25 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Reuse context across steps instead of re-deriving it from scratch every time.
+  Reuse context across steps, and show from the run record that the reuse occurred.
 
   Each step of a build reuses the stable groundwork and carries forward what
   earlier steps already worked out, rather than starting cold and re-deriving the
   same context repeatedly — so the same feature costs less and finishes sooner.
+  The saving is reported, not assumed: after a run you can see from its own record
+  whether the reuse held for the whole drive or broke partway through, so the cost
+  claim is backed by evidence instead of by hope.
 depends_on: [BO-2400]
+child_limit_override: 6
 doc_links: []
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Honest-promise correction. This L1 claimed a cost saving that nothing in the product measures: the lane orders a stable prefix in the HOPE that a cache anchors, and there is no observation anywhere that one ever did. Its L2 BO-2400c-2 tried to close that with configuration ('set the cache TTL to one hour') for a knob leafcutter does not own — verified 2026-08-18 that the string cache_control appears nowhere in scripts/, templates/ or config/; the 'cache breakpoint' is a literal <!-- CACHE_BREAKPOINT --> HTML comment inside a prompt string, a textual convention, not a provider cache-control block. leafcutter never issues the model API call (the workflow engine's agent() does; we hand it plain prompt text), so a TTL setting here would be a config value nothing reads — a new phantom-done. BrainCandy's decision: re-spec BO-2400c-2 and BO-2400c-2-i as MEASUREMENT rather than configuration. This L1 is amended to state what is actually owned and observable, so the L2s have an honest parent to hang off."
 superseded_by: null
 covered_by:
   - BO-2400c-1
@@ -31,6 +38,7 @@ covered_by:
   - BO-2400c-3
   - BO-2400c-4
   - BO-2400c-5
+  - BO-2400c-6
 implemented_by: []
 documentation_triggers: [reference-doc]
 change_target: prompt

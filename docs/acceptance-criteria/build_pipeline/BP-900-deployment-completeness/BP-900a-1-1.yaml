@@ -26,9 +26,43 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: XS
 it_requirements:
-  - "Must validate source file existence before writing any output to the target — no partial deployment"
-  - "Error message must name the specific missing file(s) to aid debugging"
-  - "Must handle errors gracefully per the project error handling policy"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_phases.py
+  n_location_rule: "1 — the pre-write source-existence check in build_ac_store()"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must validate source file existence before writing any output to the target — no partial deployment"
+    - "Error message must name the specific missing file(s) to aid debugging"
+    - "Must handle errors gracefully per the project error handling policy"
+  notes: |
+    SOURCE-PATH CORRECTION (2026-08-17): the criteria prose says
+    templates/scripts/ac_store/. That directory holds only .gitkeep; the real
+    source is scripts/ac_store/. Guard the sources build_ac_store() actually
+    reads. See BP-900a-1 notes.
+
+    Today build_ac_store() logs a warning and SKIPS a missing source
+    (build_phases.py:881, "source script not found, skipping"). This AC changes
+    that to a hard non-zero exit before any target write — that skip is exactly
+    how a capability ships half-deployed.
+test_spec:
+  - name: test_build_exits_nonzero_when_an_ac_store_source_is_missing
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "With one source script absent from scripts/ac_store/, build.py exits non-zero instead of warning and skipping."
+  - name: test_missing_source_error_names_the_missing_file
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "The failure message identifies the specific missing source filename."
+  - name: test_no_partial_output_written_when_a_source_is_missing
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "The target directory receives no deployed ac_store files when the build aborts on a missing source."
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3

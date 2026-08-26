@@ -1,0 +1,148 @@
+id: GE-125d-4-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "The self-description follows the decision, so a reduction cannot be widened or narrowed without the answer changing"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a change that adds a fifth location to the set the check treats with
+    reduced scrutiny, made only where the check decides that question,
+  And no other file is edited,
+  When the check is asked to state what it declines to examine,
+  Then the answer includes the fifth location,
+  And a path under that fifth location is thereafter classified as reduced both
+    by the answer and by the check's actual treatment of it,
+  Because a description maintained separately from the decision drifts the first
+    time someone edits one and not the other — and a description that is wrong
+    about a removed protection is worse than no description at all, since it
+    tells a reader they are covered when they are not.
+
+  Given a change that removes one location from that set, made in the same
+    single place,
+  And no other file is edited,
+  When the check is asked to state what it declines to examine,
+  Then the answer no longer lists that location,
+  Because the drift has to be unreachable in both directions: an answer that
+    over-reports what is unexamined trains a reader to discount it, which ends
+    in the same place as under-reporting.
+
+  Given the answer and the check's treatment of any path,
+  When the two disagree for any path,
+  Then that disagreement is reachable by executing both — asking for the answer
+    and checking the path — rather than only by reading the check's source,
+  Because this record's whole subject is a claim about the source being the only
+    place the truth lived, and a criterion verified by reading the source would
+    reproduce it.
+depends_on:
+  - GE-125d-4
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "Names the single place the decision lives today — _PROSE_FILE_PREFIXES / _is_prose_exempt in templates/scripts/commit_guardian/check_secrets.py — which is the definition the answer must be derived from."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "ONE DEFINITION, TWO READERS. The set of reduced locations must have exactly one definition in the canonical copy — today the _PROSE_FILE_PREFIXES tuple in templates/scripts/commit_guardian/check_secrets.py — and BOTH the reduction decision (_is_prose_exempt) and the self-description must read it. Adding, removing or renaming a location in that one place must change the answer with no other edit anywhere. A second list, a docstring copy, or a constant duplicated for rendering is the defect, not an implementation detail."
+  - "The condition must be derived, not transcribed. It is not enough for the answer to list the location names; it must state the condition as the check applies it. Today the test is a substring test against the whole path, so the answer must not describe the set as four root-anchored directories. If a sibling changes the matching rule, the answer must change with it for the same reason the location list must — one definition, two readers."
+  - "Drift must be unreachable in BOTH directions. Over-reporting what is unexamined trains a reader to discount the answer and ends in the same place as under-reporting, so the removal arm is not a symmetry nicety — it is the arm that fails an implementation that appends to the answer without ever pruning it."
+  - "VERIFICATION EXECUTES BOTH HALVES. Ask for the answer, then check a path, then compare. A test that reads the source and observes that both come from one place reproduces exactly the verification method this goal exists to replace, and would pass on a refactor that reintroduced a second list one release later. The anti-precedent is load-bearing and already cited twice in this component: a guard here is documented as automatically dispatching a specialist and does not, because its remediation path is a placeholder that always reports success — a documented-but-dead promise is worse than a missing one, because authors believe they are covered."
+  - "Exercise the fifth-location and removed-location changes INSIDE the test — by patching or parameterising the single definition for the duration of the run, against a throwaway repository — and never by editing the real canonical file at test time. A test that mutates templates/scripts/commit_guardian/check_secrets.py on disk leaves the working tree dirty and can leak a widened exemption into a real commit."
+  - "No fixture under an existing reduced location is needed here, and one should not be added. The subject is the answer, not a scan. Where a path is required to confirm the classification, use an ordinary source path inside the throwaway repository that the change under test makes reduced or not reduced, so the arm measures the change rather than the pre-existing set."
+  - "ADR-001 parity: the single definition lives in the canonical copy under templates/. Run `python scripts/build.py --target-dir .` and confirm the derived answer is identical in the deployed copy; check_hook_parity enforces all four locations, so a divergence between the definition and the rendering would surface there as a parity failure rather than as a wrong answer."
+delivers_to: null
+expects_from:
+  ac_id: GE-125d-4
+  contract: "The self-description itself. This record requires that it be produced from the same decision the check applies, rather than maintained beside it."
+test_required: true
+test_spec:
+  - name: test_adding_a_fifth_location_in_one_place_changes_the_answer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "With the single definition parameterised to include a fifth location and no other file edited, the answer includes that location and a path under it is classified reduced both by the answer and by the check's actual treatment in a throwaway repository"
+  - name: test_removing_a_location_in_one_place_removes_it_from_the_answer
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "With one location removed from the same single definition, the answer no longer lists it and a path under it is thereafter treated normally — the arm that fails an implementation which appends to the answer but never prunes"
+  - name: test_disagreement_between_answer_and_behaviour_is_reachable_by_executing_both
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "For each of a set of paths, the classification derived from the answer and the treatment observed from a real check agree; the comparison is made by executing both halves, never by inspecting the source"
+  - name: test_answer_states_the_condition_as_applied_not_as_intended
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A path that matches a reduced location name at depth rather than at the repository root is classified identically by the answer and by the check, so an answer describing four root-anchored directories while the code substring-matches is caught"
+  - name: test_derived_answer_is_identical_in_the_deployed_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After `python scripts/build.py --target-dir .`, the deployed scripts/commit_guardian/check_secrets.py derives the same answer from the same single definition, so no rendering diverges across the four copies check_hook_parity holds identical"
+test_rationale: "The claim is that the description and the decision cannot diverge, and the natural way to check that — read the code and see that both come from one place — is precisely the verification method this goal exists to replace: the original exemption was fully visible in the source and stayed unnoticed for the life of the check, and a source-reading test would also pass on a refactor that reintroduces a second list a release later. Every entry therefore executes both halves: it asks for the answer through the check's own query surface and separately observes the check's treatment of a path in a throwaway repository, then compares. The two mutation entries are seam tests because the producer is the single definition and the consumers are the decision and the rendering; changing the producer once and observing both consumers move is the only evidence that they share a source. They are run by parameterising the definition for the duration of the test rather than editing the canonical file on disk, which would dirty the working tree and could leak a widened exemption into a real commit. The condition entry exists because listing the right location names while describing the wrong matching rule is a partial drift that the two mutation entries would not see. No fixture is placed under an existing reduced location: the subject is the answer, and a pre-existing reduced path would let an arm pass on the old set rather than on the change under test."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at S. Authored seven it_requirements. The central one names the single definition concretely — the _PROSE_FILE_PREFIXES tuple in the canonical templates/ copy, read by both _is_prose_exempt and the self-description — so 'one place' is a checkable claim rather than a principle. Added a requirement that the CONDITION be derived and not merely the location list, because listing the right names while describing a root-anchored match when the code substring-matches is a partial drift neither mutation arm would catch. Added a hard constraint that the fifth-location and removal changes be exercised by parameterising the definition inside the test rather than by editing the canonical file on disk, which would dirty the working tree and could leak a widened exemption into a real commit. Carried the component anti-precedent forward as an explicit prohibition on source-reading verification. Authored a five-entry test_spec plus test_rationale, with the two mutation entries typed as seam tests because the evidence required is one producer moving two consumers. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  ANTI-PRECEDENT, LOAD-BEARING AND ALREADY CITED TWICE IN THIS COMPONENT. A
+  guard here is documented as automatically dispatching a specialist and does
+  not — its remediation path is a placeholder that always reports success. The
+  recorded lesson is that a documented-but-dead promise is worse than a missing
+  one, because authors believe they are covered. A self-description that is a
+  hand-written list sitting beside the real decision is the same failure with a
+  slower fuse: correct on the day it is written, silently wrong afterwards.
+
+  WHY THE THIRD ARM IS PHRASED AS IT IS. The natural way to verify "the answer
+  follows the decision" is to read the code and see that both come from one
+  place. That is exactly the verification method this whole goal exists to
+  replace — the original exemption was perfectly visible to anyone reading the
+  source, and that was not enough. Both halves must be executed: ask for the
+  answer, then check a path, and compare.
+
+  NO FIXTURE UNDER A REDUCED LOCATION IS NEEDED HERE. The subject is the answer,
+  not a scan. Where a path is needed to confirm the classification, it should be
+  an ordinary source path inside the throwaway repository that is made reduced
+  or not reduced by the change under test, so the arm measures the change rather
+  than the pre-existing set.
+
+  IT-PO NOTE, 2026-08-24 — WHERE THE ONE PLACE IS TODAY. The decision is the
+  _PROSE_FILE_PREFIXES tuple read by _is_prose_exempt in
+  templates/scripts/commit_guardian/check_secrets.py. Naming it makes "exactly
+  one definition" a checkable claim rather than a principle, and it tells
+  whoever implements GE-125d-4 which object the answer must be derived from. If
+  GE-125a, GE-125b or GE-125c relocates or restructures that definition, this
+  record still holds unchanged — the requirement is one definition with two
+  readers, not this particular tuple.

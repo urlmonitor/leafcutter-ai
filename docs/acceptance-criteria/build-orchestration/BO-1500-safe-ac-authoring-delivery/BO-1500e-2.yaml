@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500e.yaml
 criteria: |
   Given the workflow has been installed into a consumer project (deployed copy)
@@ -43,6 +43,32 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_repo_root_resolves_to_the_consumer_git_toplevel_in_an_installed_layout
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  description: In a fixture consumer repo containing the package in a subdirectory, layout resolution returns
+    the consumer git toplevel — not the package subdirectory and not a dev-workspace parent path.
+- name: test_authoring_worktree_is_created_relative_to_the_resolved_consumer_root
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  description: The worktree created from the installed layout lives under the consumer repo's worktrees
+    location and is registered in the consumer repo's `git worktree list`.
+- name: test_ac_store_path_is_derived_from_the_installed_layout
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  description: AC YAML written during a run in the installed copy lands under <consumer-root>/docs/acceptance-criteria/,
+    with no path component from the dev workspace layout.
+- name: test_dev_workspace_layout_still_resolves_identically
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  description: Regression control — the same resolution run against a dev-workspace-shaped fixture (parent
+    dir with package child) yields the package repo root, so the installed-layout fix did not break the
+    dev path.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1

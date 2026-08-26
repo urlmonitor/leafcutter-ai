@@ -100,6 +100,7 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
+| `Edit` |
 ---
 
 ## Skills Used

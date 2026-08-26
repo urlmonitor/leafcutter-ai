@@ -1,0 +1,171 @@
+id: BO-300a-5-ii
+components:
+  - build_orchestration
+title: "The epic's machine-readable outcome never says success while the epic itself is reported not complete"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a drive producing its epic completion output,
+    And in the first case the drive withholds the epic-complete claim because work
+      added to the epic after planning was never built,
+    And in the second case the drive could not confirm it re-read the epic's set of
+      work at all,
+    And in the third case the epic did complete and the re-read of its set was
+      affirmatively confirmed,
+  When the drive returns its completion output,
+  Then in the first two cases the single overall outcome value the output leads with --
+    the one a caller routes on without reading anything else -- is not a success value,
+    and a caller reading only that value cannot take the epic for finished,
+    And the reason is still named in the same output, so nothing is lost by the outcome
+      value no longer reading as success,
+    And in the third case that value is a success value,
+    And in all three cases the overall outcome value, the epic's own complete-or-not
+      verdict, and the sentence the output states about the epic all agree: none of the
+      three reports completion while another denies it,
+  So the drive cannot hand back an output that says succeeded and not complete at the
+    same time, and no caller has to read the prose to learn which one is true.
+depends_on:
+  - BO-300a-5
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver, and the only place this applies: both of its epic completion returns -- the early one taken when there are no batches to run, and the final one -- assemble the overall outcome value and then merge the re-check's verdict in beside it. Both must be corrected; fixing only the final return leaves the early one inverted."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. Extend it to surface the epic-level overall outcome value from the payload a run returned, and to reach the early no-batches completion return as well as the final one."
+  - path: unit_tests/prompt_assembly/_driver_harness.py
+    relationship: describes
+    status: exists
+    relevance: "The existing epic-completion assertion helper. It cannot see this defect: it inspects only the message text for a completion claim and never reads the epic-level outcome value, so a payload that says succeeded while its message says NOT complete passes it. It must gain a way to assert on the outcome value before any descriptor here can be written."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling that establishes the two conditions reaching this defect -- work discovered after planning, and a set that was not confirmed re-read. That record makes the drive withhold the claim in the prose; this one makes the withholding visible to a machine."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The completion output's specified sections and their order. This change alters the overall outcome value and must leave those sections intact."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- build-feature.js only, and within it BOTH epic completion returns (the early no-batches return and the final return), which are two sites of the one location. build-ticket.js drives a single piece of work, has no epic path and no epic completion return, so there is nothing to change in the twin: state in the sign-off that it was inspected and correctly carries no counterpart, so the twins do not silently drift into two different completion contracts."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_status_verdict_agreement.py"
+  constraints:
+    - "THE OUTCOME VALUE IS THE CONTRACT, THE PROSE IS NOT. Today the only place the withholding is visible is a sentence. A caller routing on the outcome value alone reads an unfinished epic as a finished one, and that caller does not exist yet -- which is why nothing has broken and why this must be fixed before one is written. Assert on the outcome value, not on the message."
+    - "BOTH RETURNS, NOT JUST THE LAST ONE. The epic path has two completion returns and both hardcode the success value before merging the verdict in. The early no-batches return is the easier one to overlook and the more likely one to be reached on a degraded run, when there is least other evidence for the operator to fall back on."
+    - "AGREEMENT IS THE ASSERTION, NOT SUPPRESSION. The requirement is that the outcome value, the complete-or-not verdict and the message agree -- not merely that the success value disappears. An implementation that stops emitting the verdict, or softens the message, satisfies a naive reading of the fix and destroys the information BO-300a-5 and BO-300a-5-i were authored to add."
+    - "THE SUCCESS PATH MUST STAY SUCCESSFUL. A completed epic with a confirmed re-read must still lead with a success value. Without that assertion the cheapest passing fix is to never report success, which breaks every consumer of a normal drive and is not detectable by the negative cases."
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that reads the return statements cannot tell which value survives the merge that follows them -- and the merge is precisely where the contradiction is produced. Drive the real workflow via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on the payload the run returned."
+    - "THE EXISTING HELPER IS BLIND TO THIS. _driver_harness.py's epic-completion check reads only the message string, so it passes on the contradictory payload. Extending it to expose and assert on the epic-level outcome value is part of this work; reusing it unchanged would produce a green suite over the unfixed defect."
+delivers_to:
+  agent: python-coder
+  contract: "An epic completion payload whose leading outcome value, complete-or-not verdict and message text are mutually consistent in every path, so routing on the outcome value alone is safe"
+test_spec:
+  - name: test_withheld_completion_does_not_report_a_success_outcome
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive an epic that grew after planning so the completion claim is withheld; assert the payload's overall outcome value is not a success value and that a caller reading only that value cannot take the epic for finished."
+  - name: test_an_unconfirmed_work_set_does_not_report_a_success_outcome
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The second route: the completion-time re-read is not affirmatively confirmed. Assert the same non-success outcome value, so the fix is not written against the withhold condition alone."
+  - name: test_the_reason_is_still_named_alongside_the_non_success_outcome
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Assert that in both non-success cases the payload still names why -- the additions, or the unconfirmed read -- so the change is a correction of the outcome value and not a loss of detail."
+  - name: test_the_early_no_batches_completion_return_obeys_the_same_agreement
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Reach the epic completion return taken when there are no batches to run, with the claim withheld, and assert its outcome value is non-success too -- the site most likely to be left behind by a fix applied only to the final return."
+  - name: test_a_completed_verified_epic_still_reports_a_success_outcome
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "CONTROL. An epic that completed with an affirmatively confirmed re-read leads with a success value -- so the four cases above are attributable to their conditions and not to a drive that stopped reporting success."
+  - name: test_the_outcome_value_and_the_completion_verdict_never_disagree
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Across every scenario in this suite, assert no returned payload pairs a success outcome value with a not-complete verdict or a not-complete message -- the invariant stated directly, so a future path that reintroduces the inversion is caught wherever it is added."
+test_rationale: |
+  The defect lives in the merge that happens after the outcome value is chosen, so
+  reading the return statements proves nothing about the payload that emerges: the
+  success value is written first and the contradicting verdict is layered on top of it.
+  Only the assembled payload from a real run shows the contradiction, which is why
+  every descriptor is behavioral and asserts on what the run returned.
+
+  The existing epic-completion helper cannot be reused as-is, and that is itself part
+  of why this shipped: it checks the message text for a completion claim and never
+  looks at the outcome value, so the contradictory payload is invisible to the one
+  assertion the suite already had for this area. A green suite over this defect already
+  exists.
+
+  The invariant descriptor is deliberately written as a cross-scenario assertion rather
+  than another case. The two conditions known today are the withhold and the
+  unconfirmed read, but the defect is structural -- a hardcoded success value with the
+  verdict merged in afterwards admits any future condition too, and a per-condition
+  test set will not notice the third one when it is added.
+
+  The control descriptor is required for the usual reason: the cheapest way to pass
+  every negative case is to stop emitting success at all, and an epic drive that never
+  reports success is a worse regression than the one being fixed.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  A REGRESSION INTRODUCED BY REMEDIATION, and the third in this batch. The same
+  status-inversion the per-ticket fix in this very diff corrected one level down --
+  a payload that reports success while its own detail says the work is not complete --
+  was reintroduced one level up, in code from the same change. The per-ticket lesson
+  was learned and applied per ticket; the epic wrapper was not revisited.
+
+  THE OBSERVED SHAPE. Both epic completion returns fix the overall outcome value as a
+  success before merging the re-check's fields in beside it. Those fields can carry a
+  not-complete verdict and an unverified-set marker, and the message is already
+  branched to say the epic is NOT complete. The result is one payload asserting three
+  things, two of which contradict the first. Two conditions reach it today: work added
+  to the epic after planning and never built, and a work set that could not be
+  re-read at completion time -- which is to say, exactly the two conditions
+  BO-300a-5 and BO-300a-5-i were authored to make visible. The information they add is
+  correct and present, and the field a machine reads contradicts it.
+
+  WHO IS MISLED, AND WHEN THAT CHANGES. Today, only the human reading the drive's
+  output -- and the prose is unambiguous, so a careful reader is safe. The moment any
+  script, gate or wrapper routes on the outcome value, an unfinished epic reads as a
+  finished one, and it does so on precisely the runs where something went wrong. The
+  cost of fixing it now is one value; the cost of fixing it after a consumer exists is
+  the consumer's own failure mode plus this one.
+
+  WHY IT IS EPIC-ONLY. The single-ticket driver has no epic path and no epic completion
+  return, so there is no counterpart to correct in the twin. That is recorded here
+  explicitly because every other AC in this batch requires the change to land in both
+  drivers, and an implementer following that pattern here would be looking for code
+  that does not exist.

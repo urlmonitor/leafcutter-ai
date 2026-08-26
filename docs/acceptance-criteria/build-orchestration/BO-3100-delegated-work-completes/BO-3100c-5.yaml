@@ -1,0 +1,128 @@
+id: BO-3100c-5
+title: "A sequence diagram shows fan-out and collection happening at the layer that awaits"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who needs to know where parallel work is handed out and where its results
+    are collected,
+  When they open the sequence diagram for the relocated coordination,
+  Then it shows the coordinating layer dispatching two independent steps, both steps running
+    with overlapping lifelines, both results returning to that same layer, and the dependent
+    step being dispatched only after both have returned.
+
+  Given the diagram,
+  When it is compared against a real drive of a build with that shape,
+  Then every interaction it shows occurred, in the order shown, and no specialist appears in
+    it as the source of a dispatch.
+depends_on:
+  - BO-3100c
+  - BO-3100c-1
+  - BO-3100c-3
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The topology page whose current drawing this diagram replaces."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The delivery-workflow record the new fan-out shape belongs to."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert. A documentation-expert dispatch that then dispatches a leaf author is the exact defect this L1 removes; drawing the fix while committing it would be its own kind of failure."
+  - "RESULTS MUST RETURN TO THE SAME LIFELINE THAT DISPATCHED THEM. That single detail is the whole structural change and is what the superseded records get wrong; a drawing in which a result arrives at a different participant reproduces the old shape."
+  - "The two independent steps must be drawn with OVERLAPPING activation, and the dependent step's dispatch must begin after both returns. Overlap is not decoration — it is BO-3100c-3's guarantee made visible, and a diagram drawn serially would document a serial queue as correct."
+  - "NO SPECIALIST MAY APPEAR AS THE SOURCE OF ANY ARROW. This is the invariant expressed as a shape rather than as a rule to remember, and it is the clause that stops the drawing being redrawn into the arrangement this tree removed."
+  - "The coherence claim must be enforced by an executable test comparing the diagram's declared interaction sequence against the dispatch record of a REAL drive of a build with that shape, in both directions and in order."
+  - "The diagram page must declare its participants and ordered interactions in a machine-readable form so the coherence test reads data, not a picture."
+  - "The drive used for the coherence check must genuinely exhibit overlap; a drive that happened to serialise would let a serial diagram pass. Assert the overlap in the captured record before comparing."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100c-1
+    contract: "The per-dispatch runtime record with source, target and received_kind, so the diagram can be compared arrow by arrow against dispatches that occurred."
+  - ac_id: BO-3100c-3
+    contract: "The recorded start and end moments per step from a drive that genuinely overlapped, so the overlapping lifelines depict concurrency that actually exists."
+test_spec:
+  - name: test_bo_3100c_5_diagram_declares_fan_out_collection_and_the_gated_dependent
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the declared sequence and assert: two dispatches from the coordinating layer, overlapping activations for the two steps, both returns terminating at the dispatching participant, and the dependent step's dispatch ordered after both returns."
+  - name: test_bo_3100c_5_no_specialist_is_the_source_of_any_arrow
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert every declared interaction's source participant is the coordinating layer. A specialist-sourced arrow fails, which is the invariant drawn as a shape."
+  - name: test_bo_3100c_5_diagram_matches_a_real_overlapping_drive
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Drive a real fan-out build, assert from the recorded moments that the two steps actually overlapped, then assert two-way ordered equality between the diagram's declared interactions and the drive's dispatch record."
+  - name: test_bo_3100c_5_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  ADR-006 and ADR-019 both drew this topology as a depth problem and both were wrong; review did
+  not catch it for months. So the coherence test compares the drawing against a real drive's
+  dispatch record rather than against an author's intention.
+  The overlap precondition inside the coherence test is easy to omit and load-bearing: if the
+  drive used for comparison happened to serialise, a serially-drawn diagram would pass and would
+  then document a serial queue as the correct arrangement — undoing BO-3100c-3 in prose.
+  Deliberately NOT covered: legibility and layout, which are human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the sequence-diagram entry in BO-3100c's documentation_triggers.
+
+  The diagram must show results returning to the SAME lifeline that dispatched them. That
+  single detail is the whole structural change, and it is the detail the superseded records
+  get wrong: ADR-006 and ADR-019 both draw the topology as a depth problem, so a reader
+  reasons about how many levels are allowed rather than about who can wait. The clause
+  forbidding a specialist as the source of any dispatch is what keeps the drawing from
+  reproducing the old shape.
+
+  Sequenced after c-3 so the overlapping lifelines depict concurrency that actually exists.
+
+  The parent L1 notes that BO-3100c may change the correct topology, so any topology diagram
+  authored earlier is about to move — this AC is the replacement, and BO-3100d handles
+  reconciling the written decisions.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The overlap precondition on the coherence test is the one
+  addition worth flagging: without it the check is satisfiable by comparing against a drive that
+  serialised, and the resulting diagram would then be the authoritative picture of a serial
+  queue — quietly reversing BO-3100c-3 through documentation.

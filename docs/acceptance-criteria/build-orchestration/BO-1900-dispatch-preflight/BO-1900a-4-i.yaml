@@ -1,0 +1,118 @@
+id: BO-1900a-4-i
+components:
+  - build_orchestration
+title: "No phase agent is spawned while the isolated working copy is still undetermined"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a resolved target whose isolated working copy is still not determined,
+    And no later step has since established one,
+  When the drive reaches the point where it would spawn a phase agent,
+  Then no phase agent is spawned,
+    And the drive holds the work back with a reason naming the undetermined working
+      copy,
+    And it does not fall back to the location the process happens to be running in,
+      nor to the epic's work-store folder, nor to any other location it can find,
+    And once a working copy has been established for that target, the same drive
+      spawns the phase normally,
+  So an unanswered question about where the work belongs stops the drive instead of
+    being answered by whatever is nearest.
+depends_on:
+  - BO-1900a-4
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver's dispatch point, which must consume the undetermined marker rather than a substitute. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver's dispatch point. TWIN of build-feature.js; the same refusal must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness already records exactly which phase agents a run dispatched, which is the assertion this AC needs. Today it supplies a working copy up front to skip the ambient check; the scenario here is the case where it does not."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000e-2-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "The established shape for a fail-closed dispatch gate in these drivers -- absent evidence holds the work back, verified by observing which agents were dispatched rather than by reading the source."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "2 -- the pre-dispatch working-copy check in build-ticket.js and its twin in build-feature.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_target_resolver_worktree.py"
+  constraints:
+    - "ASSERT ON WHAT WAS DISPATCHED. The harness records the phase agents a run actually spawned; that list is the assertion. A test that greps the driver for a guard string passes on a guard that is computed and ignored -- the failure this repository has already shipped once in a runner built specifically to prevent phantom-done."
+    - "NO AMBIENT FALLBACK. Resolving an undetermined working copy to the process's current location is the single most likely wrong implementation, is invisible in a passing test suite, and is precisely how a phase agent ends up committing into the shared clone. Assert negatively that the ambient location is not used."
+    - "THE POSITIVE PATH IS PART OF THE GATE. Once the working copy is established the phase must dispatch. Without that assertion, a gate that refuses unconditionally passes the negative case and deadlocks every drive -- the same trap the pre-coder gate hit and had to be widened for."
+    - "BOTH TWINS IN ONE CHANGE."
+delivers_to: null
+expects_from:
+  ac_id: BO-1900a-4
+  contract: "An unambiguous not-yet-determined marker on the resolved target, distinguishable from a real location without external comparison -- the input this refusal reads"
+test_spec:
+  - name: test_no_phase_agent_is_dispatched_while_the_working_copy_is_undetermined
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the real workflow with the resolved target's working copy undetermined and assert the harness recorded zero phase-agent dispatches."
+  - name: test_the_holdback_reason_names_the_undetermined_working_copy
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Assert the run's outcome states why it stopped and names the undetermined working copy, so an operator is not left with a silent no-op."
+  - name: test_the_ambient_location_is_not_used_as_a_fallback
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Run with the undetermined marker and assert no dispatch carries the process's current location, the epic's work-store folder, or any other substitute as the working copy."
+  - name: test_the_phase_dispatches_once_a_working_copy_is_established
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Control case: supply an established working copy and assert the expected phase agents are dispatched -- so the refusal above is attributable to the undetermined marker and not to a driver that stopped dispatching."
+test_rationale: |
+  The behaviour is which agents ran and where, and the existing harness measures
+  exactly that -- which is why every descriptor drives the real workflow and reads the
+  dispatch record. A source-reading test cannot separate a consumed guard from an
+  ignored one, and an ignored guard is the expected regression here because the value
+  the guard inspects used to be a plausible path. The third descriptor is the
+  fail-closed clause made falsifiable: an implementation that substitutes the ambient
+  location satisfies the first two by never reaching the refusal at all, and is
+  indistinguishable from a fix until something commits in the wrong repository.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The consumer half of BUG-01. BO-1900a-4 makes the resolver honest; this AC makes the
+  honesty load-bearing.
+
+  WHY BOTH ARE NEEDED. An honest marker that no consumer checks is a comment. In the
+  observed run the wrong value was harmless only because the next step overwrote it,
+  so there is currently no evidence that any consumer would have refused. Stating the
+  refusal explicitly is what converts the marker from documentation into a gate.
+
+  THE WRONG FIX TO WATCH FOR. Substituting the process's current location for an
+  undetermined working copy looks like robustness and is the exact harm: it sends
+  phase agents to work, and commit, in the shared clone. It is called out as a
+  constraint and tested negatively, because it passes every positive test.

@@ -1,0 +1,116 @@
+id: GE-124f-4
+readiness: approved
+priority: high
+title: "A component diagram shows the chain across the four stores it crosses"
+component: guardrail-engine
+components:
+  - ux_prototyping
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+criteria: |
+  Given a reader wants to follow a thing on screen back to the requirement it
+    was built for
+  When they open the traceability chain component diagram
+  Then the diagram shows all four stores the chain crosses — the built
+    application, the designs, the flows, and the acceptance-criteria store
+  And it shows each hop as its own link, including the first hop from the built
+    page to the design, which no existing diagram shows
+  And it marks which links existed before this work and which are new, so a
+    reader can see what changed
+  And it shows the two links that are optional — a page with no design modelled
+    for it, and a component with no element pins — rather than drawing a chain
+    that is only ever complete
+depends_on:
+  - GE-124f
+  - GE-124f-1
+  - GE-124f-2
+  - GE-124f-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/ux-prototyping.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/diagrams/c3-005-artifact-knowledge-graph.md"
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "PLACE AND NAME IT BY THE HOUSE CONVENTION. Author under docs/architecture/diagrams/ as a c2- or c3-level component diagram, taking its sequence number from scripts/next_diagram_seq.py rather than inventing one. It must satisfy check_diagram_naming, check_mermaid_complexity and check_mermaid_parent_link, and be linked from docs/architecture/components/ux-prototyping.md."
+  - "NAME THE FOUR STORES BY THEIR REAL LOCATIONS: the built application (leafcutter-web/), the designs (docs/product-truth/mockups/), the flows (docs/product-truth/flows/), and the acceptance-criteria store (docs/acceptance-criteria/). Abstract boxes cannot be checked for staleness and cannot be reached from the code."
+  - "MARK THE EXISTING LINKS AS EXISTING AND THE NEW ONES AS NEW, and be accurate about which is which. Verified 2026-08-25: mockup.screen -> flow step.screen -> step.implements already resolves designs to criteria; the built-page -> design hop (GE-124f-1's data-screen) does NOT exist. Drawing an existing link as new, or the reverse, misleads exactly the reader this diagram is for."
+  - "DRAW THE TWO OPTIONAL LINKS AS OPTIONAL — a page with no design modelled for it (GE-124f-1-ii) and a component with no element pins (GE-124b-1 scenario 3). Drawing every link as mandatory contradicts both ACs at a glance, and a diagram is the artifact people trust over prose when the two disagree."
+  - "DO NOT DRAW A HOP FROM A DECLARATION TO COVERAGE. The chain runs built page -> design -> flow step -> criterion; a covering test is a SEPARATE and independent obligation (GE-124e-3-i, GE-124g-2). If tests appear on the diagram at all they must be visibly off the chain, or the picture itself teaches the substitution GE-124g exists to block."
+  - "c3-005-artifact-knowledge-graph.md already draws part of this artifact graph — extend or cross-reference it rather than drawing a second, competing picture of the same stores."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the diagram document."
+delivers_to:
+  agent: python-coder
+  contract: "The shape of the chain across four named stores — leafcutter-web/, docs/product-truth/mockups/, docs/product-truth/flows/, docs/acceptance-criteria/ — with each hop drawn as its own link, the new built-page-to-design hop distinguished from the pre-existing design-to-flow-to-criterion hops, the two optional links drawn as optional, and covering tests visibly OFF the chain. The reference an implementer of any single hop works against."
+expects_from:
+  ac_id: GE-124f-1
+  contract: "The first hop the diagram introduces — built page to registered design, via data-screen resolved against the product-truth store — including its outside-the-chain state"
+test_spec:
+  - name: test_ge_124f_4_all_four_named_stores_resolve_to_real_directories
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Every store path the diagram names exists in the repo. The staleness ratchet: when a store moves, the diagram goes red rather than quietly describing a layout that is gone."
+  - name: test_ge_124f_4_diagram_marks_the_first_hop_as_new_and_the_later_hops_as_existing
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The built-page-to-design link is marked new; the design-to-flow-step and flow-step-to-criterion links are marked existing. Verified against the product-truth store, where mockup.screen and step.screen/step.implements already resolve."
+  - name: test_ge_124f_4_the_two_optional_links_are_drawn_as_optional
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The page-to-design link and the component-to-pin link both carry the diagram's optional marking. Drawing them as mandatory contradicts GE-124f-1-ii and GE-124b-1 at a glance, and readers trust the picture over the prose."
+  - name: test_ge_124f_4_diagram_passes_the_repo_diagram_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run check_diagram_naming, check_mermaid_complexity and check_mermaid_parent_link over the new diagram and assert all pass, so a naming or complexity violation is a red test rather than a surprise block on someone else's commit."
+test_rationale: |
+  A diagram is not executable, so the tests target the two ways this one becomes wrong: it names
+  stores that have moved, and it mislabels which links already existed. The second is specific
+  and checkable here because the answer is verifiable on disk — the design-to-flow-to-criterion
+  hops resolve today and the built-page-to-design hop does not — and getting it backwards
+  misleads precisely the reader the diagram is for. The optional-links test guards the failure
+  the PO named: a diagram drawing every link as mandatory contradicts two ACs at a glance, and
+  readers trust pictures over prose. The gate test converts a future blocked commit into a
+  present red test.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Named the four stores by their real on-disk locations, recorded which hops verifiably exist today (mockup.screen -> step.screen -> step.implements) and which does not (built page -> design), required covering tests to be drawn OFF the chain so the picture cannot teach GE-124g's substitution, and pointed at c3-005-artifact-knowledge-graph.md to extend rather than compete with. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for GE-124f's `documentation_triggers: [component-diagram]`. The PO's
+  reason: the VALUE of this L1 is the shape of the chain, a reader cannot use it
+  without seeing how the pieces connect, and no existing diagram shows the first
+  hop because it does not exist yet.
+
+  The last clause is the one a diagram usually gets wrong. Drawing every link as
+  mandatory would contradict GE-124b-1 and GE-124f-1-ii at a glance, and a
+  diagram is exactly the artifact people trust over prose when the two disagree.
+
+  IT-PO NOTE (2026-08-25). One more thing this diagram can get wrong and no
+  criteria clause covers: drawing a link from a declaration to a covering test.
+  The chain and the test obligation are independent by design (GE-124e-3-i,
+  GE-124g-2), and a picture that joins them would undo four ACs at a glance.
+  Required in it_requirements that tests, if drawn at all, are visibly off the
+  chain.

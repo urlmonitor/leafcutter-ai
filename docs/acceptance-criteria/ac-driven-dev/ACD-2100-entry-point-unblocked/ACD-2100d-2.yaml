@@ -1,0 +1,147 @@
+id: ACD-2100d-2
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: approved
+priority: medium
+title: "A repair that is missing from the source an installed file is generated from is reported as not delivered"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy in which an installed route file carries a repair that the
+    source it is generated from does not carry,
+  When the check that decides whether a change is delivered runs over that working
+    copy,
+  Then it reports the installed file as carrying behaviour its source does not and
+    names the file,
+  And the change is not reported as delivered while that remains true,
+  And running the installer over that working copy leaves the installed file
+    without the repair -- confirming the report rather than contradicting it.
+depends_on: [ACD-2100d]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state which directory a repair has to land in for an install to carry it -- this record is the check that enforces it."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004's workaround note -- the deployed copy was patched by hand on 2026-08-18 and build.py overwrote it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Which directories are source and which are build output."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The generated-file relationships this check reasons over."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Where a delivery check sits relative to the rest of the build surface."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The check must derive the source-to-installed relationship from the installer's own mapping, not from a hand-maintained list of file pairs. A second list of pairs goes stale the first time a file is added and the check then reports clean on the file it cannot see."
+  - "The check must name the file. 'Something is out of sync' cannot be acted on and cannot be distinguished by a test from a check that found nothing."
+  - "The check must not fire on a generated file that merely differs from its source in a way generation explains -- template expansion, header injection, path rewriting. Comparing raw bytes across a transform produces a check that is always red and is therefore always ignored."
+  - "The check must be usable from the point where 'delivered' is decided, and its result must be consumed there. A check that computes a correct verdict nobody reads is inert -- the phantom-gate failure mode this repo keeps rediscovering."
+  - "Must satisfy the repository error-handling policy: reading both copies is external I/O."
+  - "Must be idempotent and side-effect free: running the check must not modify either copy."
+  - "This is not a ban on touching an installed copy while debugging. The requirement is that a repair living only in build output is visible as undelivered before someone reports it as done."
+test_spec:
+  - name: test_installed_file_carrying_a_repair_its_source_lacks_is_reported
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A working copy in which an installed route file carries a change its source does
+      not; the check reports that file by name as carrying behaviour its source does
+      not.
+  - name: test_change_is_not_reported_as_delivered_while_the_divergence_stands
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the delivery check invoked the way the build invokes it, with its verdict read from the caller's decision rather than from the check's return value"
+    description: >-
+      The verdict is consumed where 'delivered' is decided -- the divergent working copy
+      is not reported as delivered -- so the check is wired, not merely present.
+  - name: test_running_the_installer_confirms_the_report_by_removing_the_repair
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The installer is run over the same working copy and the installed file afterwards
+      no longer carries the repair -- the report is confirmed by what the installer
+      actually does, not by an opinion about paths.
+  - name: test_a_generated_file_that_only_differs_by_generation_is_not_reported
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A freshly installed file that differs from its source only in ways generation
+      explains produces no report -- the check is not a raw byte comparison.
+test_rationale: >-
+  The third Then clause is what makes this testable end to end: it requires the report to
+  be confirmed by what the installer actually does, so the check cannot pass by being
+  merely opinionated about paths. Running the installer and observing the repair gone is
+  the real-artifact evidence. The reachability test is separate because a delivery check
+  whose verdict nobody reads is exactly the phantom-gate shape this repo keeps
+  rediscovering -- a correct verdict computed and discarded looks identical to a correct
+  verdict acted on, from the check's own tests. The negative case is charged as a
+  boundary angle because a check that fires on every generated file is worse than no
+  check: it gets filtered and then ignored.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100d-2-i
+    contract: "An installer-derived source-to-installed mapping plus a divergence determination per generated file -- the same determination the installer needs in order to announce that it is replacing a locally changed file."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100d-2-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/20_TICKET-20260826-ACD-2100d-2.md
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE MOTIVATING FACT: on 2026-08-18 the KI-ACD-004 workaround was applied to the
+  DEPLOYED copy of setup_ticket_worktree.py. That file is build output; the next
+  build overwrote it from templates/ and the repair evaporated. For the window in
+  between, the defect looked fixed on the machine where it was tested.
+
+  THE THIRD CLAUSE IS THE ONE THAT MAKES THIS TESTABLE END TO END. It requires the
+  report to be confirmed by what the installer actually does, so the check cannot
+  pass by being merely opinionated about paths -- run the installer and observe the
+  repair gone.
+
+  WHAT THIS IS NOT. It is not a ban on touching an installed copy while debugging,
+  and it is not the general question of what "delivered" means for this repo. It is
+  the narrow guarantee that a repair living only in build output is visible as
+  undelivered before someone reports it as done. That distinction is what separates
+  this from a sibling behaviour: a, b and c say what the route must do, this says
+  where a repair must live for the copy that runs to do it.
+
+  THE SILENT-OVERWRITE HALF is ACD-2100d-2-i: an install that replaces a locally
+  changed generated file should say so. Reporting and refusing-to-be-silent are
+  different behaviours with different observations.
+
+  2026-08-25 (it-po): the delivers_to contract to ACD-2100d-2-i is deliberate -- the
+  divergence determination this record needs and the one the installer needs to
+  announce a replacement are the same computation. Building them twice is how the two
+  come to disagree, and a disagreement here means the check reports clean while the
+  installer silently discards a repair, which is the 2026-08-18 incident exactly.
+  The generation-transform requirement is the one a coder is most likely to trip on:
+  the naive implementation compares bytes, fires on every deployed file, and is
+  switched off within a week.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

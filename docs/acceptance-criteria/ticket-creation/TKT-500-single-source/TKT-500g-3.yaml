@@ -1,0 +1,110 @@
+id: TKT-500g-3
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A requirement that asked for nothing receives nothing — no proof is invented on the author's behalf"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an approved requirement that authors no proof demand at all,
+  And every path that requirement says it will change is documentation,
+  And the worker named on it is not classified as producing production code,
+  When a work item is generated from that requirement,
+  Then the generated work item carries no proof section,
+  And no proof statement is manufactured from the requirement's own wording,
+  And the work item's phase list does not record the proof writer as owed,
+  And generation completes without recording a warning about the absent section.
+depends_on: [TKT-500g, TKT-500g-1]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+    relevance: "The bounded fallback. When no demand was authored the generator may derive one from the requirement's own wording — this criterion is the boundary on that derivation, so widening the authored route does not start manufacturing obligations for records nobody asked to prove."
+  - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
+    relationship: verifies
+    status: exists
+    relevance: "Carries this criterion's negative control, currently mis-tagged to BP-1100g-1; re-point it at TKT-500g-3."
+  - path: docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-7.yaml
+    relationship: related
+    status: exists
+    relevance: "Adjacent, not identical. TKT-500f-7 decides from the shape of the changed paths; this criterion decides from the absence of an authored demand. They agree on this input and are distinguished by TKT-500g-1-i, where they do not."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The derived route's reachability floor is what this criterion bounds. Read it to see what the fallback is entitled to append and to whom — the boundary is 'no authored demand', not 'no code worker'."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The subject of the negative control must be discovered by scanning the real store, not named in the test. A named subject can be chosen to agree with the author, and if the scan finds no subject that is a finding — the widening is unbounded — not a reason to skip."
+  - "The omission and the phase list must move together. A work item with no proof section but the proof writer still marked owed dispatches somebody to write a proof that was never demanded, which is the over-correction this criterion exists to catch."
+  - "A legitimate omission must be silent: no warning, no non-zero exit, no blocked generation. A warning on this path trains readers to ignore warnings on the path that matters."
+  - "This boundary is stated in terms of whether a demand was authored. Any implementation that restates it in terms of who is assigned reintroduces the original defect with the sign flipped."
+test_spec:
+  - name: test_no_authored_spec_and_a_non_coder_agent_still_emits_nothing
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Discovers a real store record that authors no demand and is assigned to a non-code worker, runs the real generator over it, and asserts no proof section is emitted. The subject is discovered by scanning, never named."
+  - name: test_no_authored_demand_leaves_the_proof_writer_off_the_phase_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The section and the phase list must agree: with no demand authored, the phase list records neither the proof writer nor the proof runner as owed."
+  - name: test_an_omitted_section_on_this_path_records_no_warning
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Generation over such a record completes clean — no warning, no non-zero exit. A legitimate skip that warns is indistinguishable from a loss, which is how the original defect stayed invisible."
+test_rationale: |
+  The existing test covers one of this AC's four Then clauses — that no section is
+  emitted. Its angle is real_artifact rather than criterion because what makes it strong
+  is that it discovers its subject by scanning the real store instead of accepting a
+  hand-typed record, which its own docstring states. The other two descriptors are new
+  and cover clauses nothing asserts today: a work item can carry no proof section while
+  still marking the proof writer owed (dispatching somebody to write nothing), and the
+  no-warning clause has never been checked at all. Both are cheap and both are load-bearing
+  — this AC is the control that keeps the parent's widening from becoming "a proof section
+  for everyone".
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-1
+  contract: "The authored route, widened to every assignee — this criterion is the control that proves the widening did not become 'a proof section for everyone'."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  ALREADY BUILT — the bounded fallback shipped alongside the f3ac950c /
+  PR #536 fix. work_status stays todo until its covering test cites this AC.
+
+  WHY THE NEGATIVE CONTROL IS A CRITERION AND NOT A TEST DETAIL. The obvious
+  over-correction for "the proof section was gated on who is assigned" is to
+  emit one unconditionally. That would put an obligation on hundreds of records
+  whose authors never asked for one, and the downstream refusal check would then
+  hold them to it. This criterion is what makes the parent's guarantee a
+  fidelity guarantee rather than a volume increase.
+
+  OVERLAP DECLARED. On this exact input TKT-500f-7 (approved, unbuilt) requires
+  the same observable outcome. It is not a duplicate: its discriminating input
+  is the shape of the changed paths and this one's is the absence of an authored
+  demand. Where the two inputs disagree — a documentation-only requirement that
+  DID author a demand — TKT-500g-1-i rules for the authored demand and narrows
+  TKT-500f-7 accordingly.
+
+  IT-PO NOTE 2026-08-25 — "BUILT" IS ONE CLAUSE OF FOUR. Only the no-section clause
+  has a covering test. The phase-list clause and the no-warning clause are unasserted,
+  so the AC is one-quarter proven, not built. Two new descriptors are recorded as owed;
+  do not flip work_status on the strength of the re-tagged test alone.

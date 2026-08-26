@@ -1,0 +1,150 @@
+id: INF-400b-2-i
+components:
+  - infrastructure
+  - knowledge_system
+title: "Two learnings captured the same day to the same place are never mistaken for one"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400b-2.yaml"
+criteria: |
+  Given the knowledge-capture loop is producing records again at ordinary
+    working volume,
+  And two records describe genuinely different learnings, but were captured
+    on the same day, routed to the same destination, and classified with the
+    same kind,
+  When the component that decides whether a record has already been dealt
+    with examines them,
+  Then it treats them as two records and deals with both,
+  And neither is discarded as a repeat of the other,
+  And no part of that decision rests on a field that is absent from every
+    record the system has ever written,
+  And running the same decision twice over an unchanged body of records still
+    deals with nothing a second time.
+depends_on:
+  - INF-400b-2
+  - INF-400b-2-ii
+doc_links:
+  - path: docs/known-issues/knowledge-management.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE DEFECT, STATED CONCRETELY. scripts/knowledge/harvest_learnings.py `_event_hash` builds its SHA-256 digest from the tuple (ticket, timestamp, destination, entry_kind) — verified at lines 129-135 on this branch. `ticket` is absent from all 28 knowledge_captured records in debugging/logs/agent_telemetry.jsonl (one key set across all 28: event, timestamp, agent, component, destination, entry_kind), so `event.get(\"ticket\", \"\")` yields a constant empty string and one of the four key components carries no information. The effective key is three fields wide, not four."
+  - "THE KEY MUST BE BUILT ONLY FROM FIELDS THE RECONCILED SHAPE REQUIRES OF EVERY PRODUCER. Under INF-400b-2-ii's recommended resolution that is (timestamp, agent, component, destination, entry_kind). `ticket` becomes optional and must NOT appear in the key under any spelling — including as a defaulted-to-empty lookup, which is exactly the present bug. If INF-400b-2-ii settles the shape differently, take the required set from that decision; do not re-derive it here and do not land ahead of it."
+  - "THE COLLISION IS REACHABLE, NOT THEORETICAL, AND ONLY AFTER THE REPAIR. Verified 2026-08-26: 17 of the 28 records carry a day-resolution timestamp of the form 2026-06-16T00:00:00Z, and the 28 records happen to yield 28 distinct (timestamp, destination, entry_kind) triples — so no collision exists today and no test against the current corpus alone can demonstrate one. The defect becomes reachable the moment emissions resume at volume, which is precisely when INF-700b repairs the capture loop. This AC must therefore ship in the same release as INF-700b-1, not in a follow-up. A repaired loop running against an unrepaired digest silently drops the second learning of any same-day, same-destination, same-kind pair."
+  - "PRESERVE IDEMPOTENCY WHILE FIXING IT — these pull in opposite directions and the naive repairs fail one or the other. Widening the key to include a value that changes between runs (a read timestamp, a line number, a file offset, a UUID minted at read time) makes every re-run reprocess everything. Narrowing it, or keying on the whole record including a mutable field, is equally wrong. The key must be a pure function of the record's own persisted content."
+  - "DO NOT KEY ON THE LEARNING BODY. INF-700b-1 adds an additive `text` field, and including it would make the digest unstable for the 28 existing records that lack it and for any future record whose prose is later corrected. `text` is content; the digest is identity. Keep them separate."
+  - "CHANGING THE KEY INVALIDATES EVERY PREVIOUSLY STORED DIGEST. State the consequence explicitly wherever processed-state is persisted: after this change, records processed under the old digest are no longer recognised as processed. For the current corpus that is harmless — INF-700c establishes that all 28 are ineligible-to-write and nothing was ever written for them — but the behaviour must be deliberate and documented, not discovered."
+  - "SILENCE IS NOT A PASS. If a record is missing a field the key requires, the run must report it with the record's line number rather than substituting an empty string and hashing on. Defaulting an absent required field to \"\" is the mechanism that produced this defect in the first place; reproducing it for a different field would reproduce the defect."
+  - "Must handle errors gracefully per the project error handling policy, and must not change the harvester's exit-code vocabulary — the malformed-line handling is KI-KM-011's territory and must not be conflated with this change."
+test_spec:
+  - name: test_two_same_day_same_destination_same_kind_records_are_both_processed
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "THE COLLISION TEST. Two records with an identical day-resolution timestamp, identical destination and identical entry_kind, differing only in the learning they carry, both pass the already-processed decision and are dealt with. Fails against the current (ticket, timestamp, destination, entry_kind) digest, which conflates them."
+  - name: test_the_digest_changes_when_any_required_field_changes
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "For each field in the required set, a record differing only in that field yields a different digest. This is the test that would have caught the original defect: a key component that contributes nothing cannot pass it."
+  - name: test_the_digest_ignores_fields_absent_from_the_required_shape
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Two records identical in every required field but differing in an optional one (ticket present versus absent, text present versus absent) yield the SAME digest, proving optionality was honoured rather than smuggled back into identity."
+  - name: test_every_required_key_component_is_populated_across_the_real_corpus
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Over tests/fixtures/harvest_learnings/unroutable_corpus_28.json, no field the digest reads is empty or absent in any record, and the 28 records yield 28 distinct digests. Asserts against the real corpus, not a fixture, because the defect is exactly a field that a hand-written fixture would have populated."
+  - name: test_rerunning_over_an_unchanged_corpus_processes_nothing_twice
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two consecutive runs over the same unchanged corpus deal with every record on the first and none on the second, proving the collision fix did not buy discrimination by sacrificing idempotency."
+  - name: test_a_record_missing_a_required_key_field_is_reported_not_silently_hashed
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A record lacking a field the digest requires is reported with its line number and is not folded into an empty-string default, closing the substitution path that created this defect."
+test_rationale: |
+  The first descriptor is the one the known-issue names as mandatory, and it
+  is the only descriptor that is red today. Everything else could pass against
+  the current implementation.
+
+  The second and third descriptors are the pair that make the fix meaningful
+  rather than incidental. The second is the general form of the defect — a key
+  component that never varies — and would have failed on `ticket` from the day
+  the digest was written. The third guards the over-correction: the tempting
+  repair is to hash the whole record, which restores discrimination and then
+  breaks idempotency the moment an optional field appears on a re-emitted
+  record.
+
+  The fourth uses the real 28-record corpus rather than constructed records
+  for a specific reason. A hand-authored fixture reproduces the author's
+  assumption that every documented field is present — the assumption that hid
+  this defect for two months. Only the real corpus exhibits the always-absent
+  field. Note that it cannot demonstrate a collision (all 28 triples are
+  distinct, verified), which is why the collision must be constructed in the
+  first descriptor and the corpus used only as the population check.
+
+  A test that inspects the digest function's source for which fields it names
+  is worthless here and is forbidden by this repository's gate-AC rule: it
+  passes on a function whose fields are named correctly and combined wrongly,
+  and it passes on dead code.
+delivers_to: null
+expects_from:
+  ac_id: INF-400b-2-ii
+  contract: "The reconciled record shape and, from it, the set of fields required of every producer — expected to be (timestamp, agent, component, destination, entry_kind), with `ticket` optional. This AC builds the idempotency digest from exactly that required set and from nothing else."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Filed from KI-KM-010 (severity high, 2026-08-26), second half and fix
+  direction item 3: "Re-key `_event_hash` on fields that are actually
+  populated, and add a collision test using two same-day same-destination
+  same-kind records." The known issue's trap applies directly: "The hash
+  defect is invisible today — no collisions exist among the 28 (verified). It
+  becomes reachable the moment emissions resume at any volume, which is
+  exactly when the loop is repaired. Fix it with the repair, not after."
+
+  Scope boundaries. INF-400b-2-ii owns which fields the record has; this AC
+  owns only which of them establish identity. INF-700b-1 owns `text` and this
+  AC must not key on it. KI-KM-011 (a valid-JSON non-object line crashing the
+  per-line loop) touches the same function's neighbourhood and is a separate
+  defect — do not fold it in.
+
+  Independently reproduced 2026-08-26 at branch
+  fix/inf400-h1-h4-knowledge-loop: digest tuple confirmed at
+  harvest_learnings.py:129-135; 28/28 records lack `ticket`; 17/28 timestamps
+  are day-resolution; 0 collisions present.
+change_target: code
+risk_surface: contract_boundary

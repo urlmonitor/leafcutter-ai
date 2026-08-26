@@ -1,0 +1,68 @@
+id: BO-100e-3
+title: "The run carries the layers of the set it started with, and does not absorb work that appears underneath it"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run over a set of work fixed when the run started, containing a chain
+    three layers deep,
+    And a further piece is added to that body of work after the run has started and
+      before it ends, carrying no prerequisite, so that it would be eligible if it
+      were part of this run's set,
+  When the run looks again for eligible work,
+  Then the three layers present at the start are all built,
+    And the piece added after the run started is not built by this run,
+    And the run's set of work is the same set at its last look as at its first,
+  So looking again releases later layers of the work the run took on and never
+    enlarges the work it took on.
+
+  Given the same run,
+  When it ends,
+  Then the piece added after the run started is left outstanding rather than
+    discarded,
+  So nothing is lost by the run declining to absorb it.
+
+  Given a run over a set fixed at the start in which one piece is removed from the
+    body of work after the run started,
+  When the run looks again for eligible work,
+  Then the run does not begin the removed piece,
+    And work whose only prerequisite was the removed piece is not made eligible by
+      its removal,
+  So a piece disappearing is never read as a prerequisite being satisfied.
+depends_on:
+  - BO-100e
+  - BO-100e-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The settled boundary this criterion must not reopen: work that appears mid-run is reported and left outstanding, because absorbing it would leave a run with no stopping point. That record owns the reporting; this one owns the refusal to build."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the scope of the fix is work that was already there and never taken on, not work that arrives later."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE TERMINATION ARGUMENT'S OTHER HALF. BO-100e-2 bounds the number of
+  looks; this record bounds what each look may see. Without it, "keep going until
+  nothing further can be built" over a growing set has no stopping point at all —
+  the exact reason BO-300a-5 settled mid-run additions the other way.
+
+  The third scenario is the mirror of BO-100e-1-i: neither a failed prerequisite nor
+  a vanished one may be read as a satisfied one.

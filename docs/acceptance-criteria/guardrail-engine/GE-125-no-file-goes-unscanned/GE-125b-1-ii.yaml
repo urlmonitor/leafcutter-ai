@@ -1,0 +1,173 @@
+id: GE-125b-1-ii
+components:
+  - security_scanner
+  - commit_guardian
+title: "Gating by kind moves no verdict except the shapeless-value rule's"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository holding the four listed locations at its root,
+  And a Markdown ticket file is staged at the repository-relative path
+    "tickets/00_inbox/TICKET-20260818-Example.md" carrying four separate lines:
+    a fixed-prefix cloud access key, a private-key header line, an
+    exchange-key-shaped value, and a quoted value assigned to a field named
+    password that the keyword-based rule matches,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the set of findings reported for those four lines is identical to the set
+    reported for the same file today, before the kind gate exists,
+  And the only rule whose verdict this change moves anywhere is the
+    shapeless-value rule,
+  Because the reduced scrutiny being gated here has only ever applied to the
+    shapeless-value rule. A kind gate that changed which findings any other rule
+    produces would be a different change wearing this one's name.
+
+  Given a Python script is staged at the repository-relative path
+    "templates/skills/some-skill/scripts/helper.py" carrying those same four
+    lines and, in addition, the twenty-four-character opaque token,
+  When the staged file is checked by the pre-commit secrets check,
+  Then five findings are reported for that file — the four that are reported
+    there today plus the shapeless-value finding for the token,
+  And the check exits reporting findings present,
+  Because the kind gate adds the one rule that was switched off at this path and
+    subtracts nothing: the four rules that already fire in listed locations keep
+    firing.
+depends_on:
+  - GE-125b-1
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CANONICAL SOURCE. The change lands in `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and a deployed-copy-only fix is reverted by the next `python scripts/build.py --target-dir .`. `check_hook_parity` enforces all four locations."
+  - "THE GATE MUST BE CONFINED TO THE SHAPELESS-VALUE POST-FILTER. KI-SEC-001 measured the scope of the existing exemption precisely — it gates `ENTROPY_HIGH` only, while `AWS_KEY`, `PRIVATE_KEY`, `EXCHANGE_API_KEY` and `GENERIC_SECRET` all still fire at these paths. The kind gate therefore narrows `_is_prose_exempt` / `_filter_prose_findings` on the `ENTROPY_HIGH` path and touches no other rule's detection or reporting. Refactoring the four other rules through a shared exemption helper is out of scope here even if it looks tidier: it would put four verdicts at risk to change one."
+  - "CAPTURE THE BEFORE-BASELINE MECHANICALLY, NOT FROM MEMORY. The first arm is a before-and-after claim about THIS change. The four-rule finding set must be recorded from the unmodified canonical check — a fixture captured at red-baseline time and asserted against afterwards — rather than from a hand-written list of what the rules are believed to report. A hand-written expectation that happens to be wrong makes this fence pass while the invariance it claims is violated."
+  - "ONE ARM IS GREEN ON ARRIVAL AND MUST BE LABELLED AS SUCH IN THE TEST ITSELF. The first arm passes today, before any change — that is what makes it a characterisation fence rather than evidence of the fix. The test name, its docstring and any red-baseline report must say so explicitly. A test-writer must NOT cite a passing first arm as evidence that the kind gate landed, and a red-baseline gate must not count it toward the required red set. Only the second arm's fifth finding is red today."
+  - "THE INVARIANCE CLAIM IS ABOUT THIS CHANGE, NOT ABOUT THE END STATE. GE-123d proposes to change exactly the keyword-based rule's verdict for exactly these locations, and that proposal is out of scope here and is not contradicted here. If it lands, this criterion is re-baselined against the behaviour of the day rather than cited as an objection to it. Neither record closes the other, neither may be recorded as a duplicate, and no depends_on edge into the GE-123 tree may be added — GE-123d-4-i already carries the mirror of this fence from its own side."
+  - "COORDINATE WITH THE SIBLING L1s. GE-125a re-anchors the same path predicate and GE-125c moves the decision from the file to the individual finding, both against these same members, concurrently. Both legitimately change which shapeless-value findings appear; neither may change the other four rules' verdicts either. Reconcile with what is in the file at implementation time and re-capture the baseline if a sibling has already landed."
+  - "THROWAWAY ROOT, AND ASSERT IT IS NOT ITSELF EXEMPT. Both fixtures sit at listed locations on purpose — an invariance claim about listed locations is unmeasurable anywhere else — so both must be real files inside a `tempfile`-backed throwaway git repository with those locations constructed inside it. Because the location match is a substring test (KI-SEC-001), assert as a precondition that the root path above the constructed directories contains none of the four segment names."
+  - "EVERY CREDENTIAL-SHAPED LINE IS ASSEMBLED AT RUNTIME FROM FRAGMENTS, AND THIS FIXTURE IS THE SHARPEST CASE FOR IT IN THE TREE. It carries a private-key header and a cloud-access-key shape; writing either as a source literal would force a `.security-allowlist` entry that suppresses the two highest-signal detectors on a real file in this repository. Follow `unit_tests/commit_guardian/test_scan_secrets_suppression.py`. No allowlist entry may be added for this tree."
+  - "VERIFY BY EXECUTION AND BY EXACT COUNT. Stage the files and run the pre-commit secrets check as a process, asserting the exit status together with the parsed findings, their rule identifiers and their 1-based line numbers. The second arm's assertion is an equality — exactly five, with the four pre-existing rule identifiers present and unchanged — because a count-only assertion cannot distinguish adding the shapeless-value finding from silently swapping one rule's finding for another."
+  - "ERROR HANDLING PER CLAUDE.md. The kind decision is pure over a path string and must not be wrapped in try/except (Rule 4); any file or subprocess access added by the check or its tests is wrapped in a typed `except` that logs at WARNING or re-raises (Rules 1-3)."
+test_spec:
+  - name: test_other_four_rules_verdicts_unchanged_by_the_kind_gate_GREEN_ON_ARRIVAL
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "GREEN ON ARRIVAL — a characterisation fence, NOT evidence the gate landed. A ticket Markdown file at a listed location in a throwaway root carrying a cloud access key, a private-key header, an exchange-key-shaped value and a keyword-matched password line yields the SAME finding set, by rule identifier and 1-based line number, as the unmodified canonical check recorded at red-baseline time. This passes today and must keep passing; a test-writer must not count it toward the red baseline and must not cite it as proof of the fix."
+  - name: test_script_at_a_listed_location_gains_exactly_the_shapeless_value_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "THE ONLY RED ARM. A Python file at templates/skills/some-skill/scripts/helper.py in the throwaway root carrying the same four credential-shaped lines PLUS the runtime-assembled 24-character token yields EXACTLY FIVE findings — the four pre-existing rule identifiers unchanged, plus the shapeless-value finding for the token — with a non-zero exit. The gate adds one rule at this path and subtracts nothing."
+  - name: test_four_rule_baseline_is_captured_from_the_unmodified_canonical_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Fence-integrity precondition: the expected four-rule finding set is derived by running the unmodified canonical check over the fixture and recording the result, not from a hand-written list of what the rules are believed to report. A wrong hand-written expectation makes the invariance fence pass while the invariance it claims is violated."
+test_rationale: |
+  Three descriptors, and only one of them is red. That asymmetry is the point of this
+  record and it has to survive into the test suite, because the failure mode here is
+  not a missing behaviour but a false signal: a suite in which two of three arms are
+  green before any code changes will look two-thirds discharged to anyone reading a
+  summary. The first descriptor is therefore named and documented as GREEN ON ARRIVAL
+  so a test-writer cannot count it toward a red baseline or cite it as evidence the
+  kind gate landed, and the second is marked as the only arm that is red today.
+
+  The third descriptor exists because an invariance fence is only as good as the
+  baseline it compares against. If the four-rule expectation is hand-written and
+  happens to be wrong, the fence passes while the invariance is violated — the exact
+  shape of a test that measures nothing. Capturing the baseline by executing the
+  unmodified canonical check makes the comparison real.
+
+  Assertions are on rule identifiers and 1-based line numbers, not on counts alone: a
+  count-only assertion cannot distinguish adding the shapeless-value finding from
+  silently swapping one rule's finding for another, which is precisely the substitution
+  this record exists to forbid. A predicate-level test was rejected — the claim is
+  about which rules fire on a real staged file, and the exemption predicate has no
+  opinion about four of the five.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001, `Scope of the exemption, precisely` — it gates ENTROPY_HIGH only, while AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET still fire in these paths. That measurement is the baseline this invariance fence pins across the repair."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125b-1
+  contract: "The kind gate confined to the ENTROPY_HIGH prose post-filter, leaving the AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET detection and reporting paths untouched, so the before-and-after finding sets for those four rules at a listed location are directly comparable. Plus the throwaway-root harness and the runtime fragment-assembly helpers for credential-shaped fixture lines."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-25'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity S, ten it_requirements,
+      three test_spec descriptors, test_rationale, four doc_links and an expects_from
+      contract on GE-125b-1; set readiness reviewed. The it_requirements confine the gate to
+      the ENTROPY_HIGH post-filter and put a shared-exemption-helper refactor of the other
+      four rules out of scope; require the four-rule baseline to be captured by executing the
+      unmodified canonical check rather than hand-written; and carry the BA GREEN ON ARRIVAL
+      labelling into a hard constraint — the first arm passes today, must be named and
+      documented as such in the test, must not be counted toward a red baseline and must not
+      be cited as evidence the gate landed. The GE-123d-4-i mirror fence is restated with the
+      prohibition on editing GE-123 files or adding a depends_on edge into that tree.
+      criteria, title, level, work_status and priority unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS AN INVARIANCE FENCE, NOT A NEW BEHAVIOUR, and it is deliberately
+  written as a before-and-after claim about THIS change rather than as an
+  absolute claim about the end state. KI-SEC-001 records the scope of the
+  existing exemption precisely: it gates the shapeless-value rule only, while the
+  fixed-prefix rules, the exchange-key rule and the keyword-based rule all still
+  fire at these paths. This criterion pins that scope across the repair, so the
+  repair cannot quietly become a widening or a narrowing of which rules the
+  entitlement covers.
+
+  IT IS ALSO THE FENCE WITH GE-123d-4-i, WRITTEN FROM THIS SIDE. GE-123d-4-i's
+  own contract carries the mirror of this: it requires that its work leave the
+  existing shapeless-value exemption unchanged at the same path. This record
+  requires that this work leave the keyword-based rule's verdict unchanged at the
+  same path. The two records therefore agree at their boundary and neither one
+  crosses it.
+
+  READ THE FIRST ARM CORRECTLY. It says the keyword-based rule's verdict is the
+  same before and after THIS change. It does not say that verdict is permanent.
+  GE-123d proposes to change exactly that verdict for exactly these locations,
+  and that proposal is out of scope here and is not contradicted here. If it
+  lands, this criterion is re-baselined against the behaviour of the day, not
+  cited as an objection to it. Neither record closes the other; neither may be
+  recorded as a duplicate of the other; and no depends_on edge into the GE-123
+  tree may be added from here.
+
+  FIXTURE PLACEMENT, STATED AND JUSTIFIED. Both files sit at listed locations on
+  purpose — an invariance claim about listed locations is unmeasurable anywhere
+  else. Real files in a throwaway git repository, staged and driven through the
+  pre-commit secrets check. Every credential-shaped line, including the four in
+  the first arm, must be assembled at runtime from fragments: this fixture
+  carries a private-key header and a cloud-access-key shape, and writing either
+  as a source literal would force an allowlist entry that suppresses the two
+  highest-signal detectors on a real file in this repository.
+
+  ONE ARM IS GREEN ON ARRIVAL AND MUST NOT BE CITED AS EVIDENCE THE FIX LANDED.
+  The first arm passes today, before any change — that is what makes it a
+  characterisation fence. Only the second arm's fifth finding is red today.

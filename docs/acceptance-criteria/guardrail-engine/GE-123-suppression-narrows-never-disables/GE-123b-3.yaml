@@ -1,0 +1,158 @@
+id: GE-123b-3
+components:
+  - commit_guardian
+  - security_scanner
+title: "A file with nothing to report has not lost its coverage, and is not treated as though it had"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file "settings.py" containing only ordinary configuration text that no
+    content rule recognises,
+  And the allowlist contains exactly one entry naming the high-entropy rule, the
+    path "settings.py", and every line,
+  When the file is scanned through the scanner's multi-file entry point — the
+    same entry point the pre-commit secrets check calls,
+  Then no findings are reported, the run exits clean, and no lost-coverage
+    warning is emitted about "settings.py",
+  Because the file's other five rules remain able to report on it: what is
+    counted is the rules still capable of firing on a file, not the findings the
+    file happens to produce today.
+
+  Given a file "notes.py" whose only recognised line is a quoted
+    twelve-character value assigned to a field named password,
+  And the allowlist contains exactly one entry naming the single rule that
+    recognises that line, the path "notes.py", and every line,
+  When the run completes,
+  Then that finding is suppressed, no findings are reported, the run exits
+    clean, and no lost-coverage warning is emitted,
+  Because suppressing the only finding a file currently produces is the
+    ordinary, intended use of the allowlist; it becomes a collapse only when no
+    rule is left able to report on that file at all.
+
+  Given a file the scanner cannot read,
+  And no allowlist entry names it,
+  When the run completes,
+  Then no finding is reported for that file and no lost-coverage warning is
+    emitted about it,
+  Because no suppression took anything away — this guarantee is about coverage
+    removed by an allowlist entry, and it must not manufacture coverage where
+    none was ever offered. Whether an unreadable file should be announced on its
+    own account is GE-120a's question, which this criterion neither answers nor
+    repeals.
+depends_on:
+  - GE-123b
+  - GE-123b-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The scanner is a packaged template. templates/skills/security-scanner/scripts/scan_secrets.py is the canonical edited copy; build.py propagates it to the materialized copies. Edit the template only."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Its third arm establishes that suppressing the only finding a file genuinely produces is legitimate and must keep working. Read literally against a findings-based reading of GE-123b that arm is a contradiction; this criterion is where the two are reconciled, by fixing coverage as the set of rules still able to report rather than the set of findings currently produced. Do not close either as a duplicate of the other — GE-123a-2's subject is the env-filename collapse, this criterion's subject is the definition itself."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THIS IS THE OVER-REACH GUARD and its whole content is a silence-and-inertness constraint: on anything that is not a collapse, the new decision point must change nothing and say nothing. No lost-coverage warning may be emitted for a file that merely has nothing to report, and no well-scoped narrowing may be declined. On a check that runs on every commit, over-reach here is its own outage."
+  - "THE COUNTED QUANTITY IS RULES-STILL-ABLE-TO-REPORT, file-independent, exactly as GE-123b-1 defines it. Stated here as a prohibition rather than a definition: the implementation must NOT decide by looking at how many findings a file produced. Both green arms below are files that produce zero findings after suppression and are nonetheless fully covered, so a findings-based implementation fails them immediately — which is precisely what they exist to catch."
+  - "SCOPE THE SILENCE ASSERTION TO THE LOST-COVERAGE WARNING SPECIFICALLY. Tests must assert the absence of THAT warning, not an empty error stream. An empty-stream assertion would forbid GE-120a from ever announcing an unreadable file on its own account, and would collide with GE-113c-3-v's malformed-entry warnings, neither of which this criterion touches. Emit the lost-coverage warning with a stable, greppable marker so its absence can be asserted without asserting global silence."
+  - "THE UNREADABLE-FILE ARM IS ABOUT WHAT DRIVES THE DECISION, not about unreadable files. `scan_file` swallows the read error and returns no findings, so a file that cannot be read is indistinguishable from a clean file at the findings level. The decision must be driven by the allowlist entries in force for that file: no entry names it, so nothing was taken away, so there is no decline and no warning. Do not manufacture coverage where none was ever offered, and do not use 'this file produced zero findings' as the trigger for anything."
+  - "COMPATIBILITY WITH GE-123a-2 IS A HARD CONSTRAINT, not a nicety. Its third arm requires that suppressing the only finding a file genuinely produces keeps working. Under a findings-based reading of GE-123b that arm becomes a contradiction; under the rules reading the two agree exactly. Any implementation that breaks arm 2 below has put the two L1s in conflict."
+  - "REAL-ARTIFACT FALSE-POSITIVE GUARD IS MANDATORY: loading this repository's own on-disk `.security-allowlist` and scanning a real repository file that it names must emit no lost-coverage warning. That file has at most two of six rules silenced, so it is nowhere near a collapse; a rule strict enough to warn on the real artifact would be a commit-time nuisance on every commit. Read-only — the test must never write to the repository's allowlist, and must skip if the file is absent."
+  - "VERIFICATION STANDARD, non-negotiable: every arm through `scan_files` with real files on disk and a real `.security-allowlist` in the same temporary root. Calling `_is_suppressed` with hand-built tuples discharges nothing."
+  - "Fixture reachability: ordinary `.py` filenames throughout. `scan_file` short-circuits an environment-named path to a single name-based finding and returns before any content rule runs. The environment-filename collapse is GE-123a's subject, not this one's."
+  - "ADR-001 parity: edit the canonical `templates/skills/security-scanner/scripts/scan_secrets.py` only and let `build.py` propagate. Never hand-edit the copies under `.claude/`, `.gemini/`, `.leafcutter/`, `EPIC-*/` or `worktrees/**`."
+  - "RED-FIRST LABELLING, and this record is the exception in the batch: arms 1 and 2 are declared REGRESSION GUARDS and are GREEN ON ARRIVAL by design (both measured 0 findings, clean exit, no warning). They are the guard rails on this L1, not the change it asks for — green here is expected and is not a TDD-order violation. They fail only if an implementation of GE-123b-1, GE-123b-2 or GE-123b-4 over-reaches, which is exactly what they exist to catch. Do not let a red-baseline gate reject this record for lacking a red arm."
+delivers_to: null
+expects_from:
+  ac_id: GE-123b-1
+  contract: "The per-file decision helper in templates/skills/security-scanner/scripts/scan_secrets.py that scan_files calls once per scanned file, returning the rule ids still able to report on that file plus the entries declined for it. This criterion pins down what that decision must count — declared rules still able to report, never findings produced — and constrains it to return no declined entries and emit no lost-coverage warning for every case below, none of which is a collapse."
+test_spec:
+  - name: test_clean_file_with_one_rule_suppressed_is_not_a_collapse
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 1, REGRESSION GUARD, GREEN ON ARRIVAL by design (measured 0, clean, silent). A fixture of ordinary configuration text that no content rule recognises, with one entry naming the high-entropy rule and that path: no findings, clean exit, and no lost-coverage warning about it on the error stream"
+  - name: test_suppressing_the_only_current_finding_is_not_a_collapse
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 2, REGRESSION GUARD, GREEN ON ARRIVAL by design (measured 0, clean, silent). This is the definition arm that reconciles GE-123b with GE-123a-2: a fixture whose only recognised line is a quoted value assigned to a field named password, with one entry naming exactly that rule and that path, is suppressed to zero findings with no lost-coverage warning — five rules remain able to report, so it is a narrowing"
+  - name: test_unreadable_file_named_by_no_entry_produces_no_lost_coverage_warning
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Arm 3: a path the scanner cannot read, named by no allowlist entry, yields no finding and no lost-coverage warning about it. Asserts the absence of the lost-coverage marker specifically, never an empty error stream, so GE-120a stays free to announce unreadable files on its own account"
+  - name: test_repository_allowlist_emits_no_lost_coverage_warning_on_a_real_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "False-positive guard on the real artifact: loading this repository's own on-disk .security-allowlist and scanning a real repository file that it names emits no lost-coverage warning — that file has at most two of six rules silenced. Read-only; skips if the allowlist is absent from the checkout"
+test_rationale: "Every other criterion under GE-123b pushes towards refusing more entries, and left alone that pressure produces an implementation that refuses ordinary well-scoped suppressions and warns about clean files — on a check that runs on every commit, its own outage. This record is therefore all guard rails, and its descriptors are deliberately green on arrival: they fail only when a sibling's implementation over-reaches. The two positive arms are also the strongest available test of the definition itself, because both are files that produce zero findings after suppression and are nonetheless fully covered; a findings-based implementation cannot pass either, which is exactly the reading that would put GE-123b in conflict with GE-123a-2. The unreadable-file descriptor asserts the absence of the lost-coverage marker rather than an empty error stream, because a global-silence assertion would forbid GE-120a from ever announcing unreadable files and would collide with GE-113c-3-v's malformed-entry warnings. The real-artifact descriptor mirrors the one GE-113c-3-v added for the same reason: a rule strict enough to fire on the repository's own allowlist would be a nuisance on every commit, and only the real artifact can prove it does not."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): authored it_requirements framing this record as the over-reach guard (silence and inertness on every non-collapse), restating the counted quantity as a prohibition on findings-based deciding, requiring the lost-coverage warning to carry a stable greppable marker so its absence can be asserted without asserting global error-stream silence (which would forbid GE-120a and collide with GE-113c-3-v), and pinning that the unreadable-file arm is about what drives the decision rather than about unreadable files. Added a mandatory real-artifact false-positive descriptor against the repository's own allowlist, read-only. Flagged explicitly that both arms are green on arrival by design so a red-baseline gate does not reject the record. Baselines re-verified through the real entry point: 0 / 0 / 0, all silent. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE DEFINITION CRITERION, and it exists because the invariant has a
+  failure mode in the opposite direction from the one that prompted it. Every
+  other criterion under GE-123b pushes towards refusing more entries. Left
+  alone, that pressure produces an implementation that refuses ordinary,
+  well-scoped suppressions and warns about clean files — which on a check that
+  runs on every commit is its own outage, and which would put GE-123b in direct
+  conflict with its sibling GE-123a-2.
+
+  THE CONTRADICTION IT RESOLVES, stated plainly for whoever implements this.
+  GE-123a-2's third arm requires that suppressing the only finding a file
+  genuinely produces keeps working. GE-123b requires that no suppression takes a
+  file's effective coverage to zero. These are only compatible under one reading
+  of "coverage": the RULES still able to report on the file, not the FINDINGS it
+  currently produces. Under that reading GE-123a-2's arm suppresses one of the
+  six live rules on that file and leaves five, which is a narrowing; whereas the
+  measured collapse left the file with one live rule and then removed it. If a
+  future change ever makes rule applicability genuinely file-dependent, this is
+  the criterion that has to be revisited first.
+
+  MEASURED TODAY, end-to-end through the multi-file entry point (2026-08-18):
+    - arm 1 baseline: 0 findings, clean exit, no warning — ALREADY CORRECT.
+    - arm 2 baseline: 0 findings, clean exit, no warning — ALREADY CORRECT.
+  Both arms are therefore green on arrival, deliberately and by design. They are
+  the guard rails on this L1, not the change it asks for; a green result here is
+  expected and is not a TDD-order violation. They fail only if an implementation
+  of GE-123b-1, GE-123b-2 or GE-123b-4 over-reaches, which is exactly what they
+  exist to catch. The third arm's silence requirement is scoped to the
+  lost-coverage warning specifically, so that it cannot be read as forbidding
+  whatever GE-120a decides about unreadable files.
+
+  Ordinary source filenames throughout — no env-named file appears here, per the
+  tree-wide authoring constraint. Every arm must be exercised through the
+  multi-file entry point with real files on disk.
+
+  IT-PO RE-VERIFICATION (2026-08-18, before enrichment): both baselines were
+  re-measured through scan_files with real files on disk and a real allowlist in
+  the same temporary root — 0 findings, clean, silent in each case — matching the
+  BA's figures. The unreadable-file arm was also exercised: a path that does not
+  resolve produces no finding and no output on either stream, because scan_file
+  swallows the read error and returns an empty finding list.

@@ -19,7 +19,9 @@ python .agents/agents/documentation-expert/scripts/run.py --args="$ARGUMENTS"
 {% endif %}
 The agent will:
 
-1. Read `docs/README.md` to anchor on the Diataxis genre-folder mapping.
+1. Read `config/doc_types.json` to anchor on the Diataxis genre mapping — the
+   `description`, `writer_agent` and `default_path` for each genre. Path
+   placeholders resolve against `config/paths.json`.
 2. Classify the request by Diataxis intent (do / decide-record / design / look up / understand).
 3. Dispatch to the matching specialist sub-agent(s) sequentially.
 4. Return a unified payload listing every doc file produced.

@@ -26,7 +26,7 @@ doc_links:
   - path: scripts/build_orchestration/fast_lane.py
     relationship: describes
     status: exists
-    relevance: "The defect. Verified 2026-08-17: _update_ac_work_status (lines 98-125) re-serialises the whole record with the serialiser's default key ordering, so every update alphabetically re-keys the entire file. With three writes per requirement per run (lines 203, 261, 376), an eleven-member build produces roughly thirty whole-file rewrites — each a large spurious change that buries the one value that actually moved."
+    relevance: "The surface. SATISFIED as of 2026-08-18 — the description below is retained as history, not as current state. Originally: _update_ac_work_status re-serialised the whole record with the serialiser's default key ordering, so every update alphabetically re-keyed the entire file, and with three writes per requirement per run an eleven-member build produced roughly thirty whole-file rewrites. That round-trip was replaced by a targeted single-line text edit; the function now lives at lines 130-210 and its three call sites at lines 288, 346 and 461. Measured 2026-08-25 on a real 177-line record: 2 changed lines, against 305 for safe_dump(sort_keys=False) and 387 for the default dump."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400e-2.yaml
     relationship: related
     status: exists
@@ -40,7 +40,7 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   reference_file_path: "scripts/build_orchestration/fast_lane.py"
   n_location_rule: "all"
@@ -118,9 +118,36 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: evidence-correction-and-closure
+  by: claude
+  at: 2026-08-25
+  note: >-
+    Flipped work_status todo -> done and set implemented_by. The behaviour was already
+    shipped on 2026-08-18 under known-issue KI-BO-003; this record simply never learned
+    of it. Replaced the stale "VERIFIED EVIDENCE (do not re-investigate)" block, whose
+    quoted code, function line range and three call-site line numbers were all wrong.
+    Linked coverage by adding `# covers: BO-2400e-4` to the 14 existing tests in
+    test_ki_bo_003_ac_yaml_preservation.py, which take done_proof from
+    "no linked test found" to eligible. criteria, title and test_spec untouched.
+    Recorded honestly: two of four test_spec entries remain unwritten, including the
+    reachability test, so this is closed on partial coverage by explicit decision, not
+    because the spec was met in full.
+    Also flipped declares_side_effect true -> false. This was NOT a judgement about the
+    behaviour, which plainly does write durably to disk. Per BO-2900g-2 the field is
+    DERIVED from the Then clause and "never authored by opinion", and
+    derive_declares_side_effect finds no durable-effect phrase in this record's Then
+    text — "changes exactly those thirty-three values and nothing else in the store"
+    does not match the deliberately narrow pattern, which wants "updates the store" or
+    "written to disk". The hand-authored true from the 2026-08-17 it-po pass was
+    therefore the anomaly, and check-ac-schema rejected it the first time this file was
+    ever staged after that rule shipped. Nothing routes off the flag on this lane today
+    (the fast lane does not dispatch user-surface-smoker), so the flip has no behavioural
+    consequence. Recorded because the field now reads false on a record whose whole
+    subject is bytes on disk, and that looks wrong without this explanation.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -131,16 +158,57 @@ notes: |
   there is the mechanism that must also preserve the record's shape. Landing this one
   first would specify the shape of a writer that BO-2400e-3 then replaces.
 
-  VERIFIED EVIDENCE (2026-08-17, do not re-investigate).
-  scripts/build_orchestration/fast_lane.py:98-125, function _update_ac_work_status:
+  RESOLVED 2026-08-18. SUPERSEDES THE ORIGINAL EVIDENCE BLOCK — READ THIS FIRST.
+  The block that stood here was headed "VERIFIED EVIDENCE (2026-08-17, do not
+  re-investigate)" and quoted a yaml.safe_dump round-trip at lines 98-125 with call
+  sites at 203/261/376. Every one of those pointers is now wrong, and the
+  "do not re-investigate" instruction actively produced the wrong answer when this
+  record was next read (2026-08-25). It is replaced rather than annotated for that
+  reason. Original text, for history:
 
       with yaml_path.open("w", encoding="utf-8") as fh:
           yaml.safe_dump(data, fh, allow_unicode=True)
 
-  The serialiser sorts keys by default, so every write alphabetically re-keys the whole
-  record. It is called three times per requirement per run — line 203 (in_progress),
-  line 261 (todo), line 376 (done) — so an eleven-member build set produces roughly
-  thirty whole-file rewrites.
+  CURRENT STATE. _update_ac_work_status is at lines 130-210 and performs a targeted
+  text edit of the single column-0 work_status line; the three call sites are at 288
+  (in_progress), 346 (todo) and 461 (done). Measured on a real 177-line record: 2
+  changed lines, against 305 for safe_dump(sort_keys=False) and 387 for the default
+  dump. Eleven real records driven through all three call sites: 22 changed lines
+  total, none outside work_status, 71 bystander records byte-identical. The targeted
+  edit is also ~24-27x FASTER than the round-trip, so the performance constraint is
+  met with room to spare.
+
+  HOW IT CAME TO BE SATISFIED, AND WHY THAT MATTERS. This AC was not built. The same
+  defect was independently recorded as known-issue KI-BO-003 one day after this record
+  was authored, and fixed under that id on 2026-08-18. Two registries tracked one
+  defect and neither closed the other, so this AC sat at work_status: todo for a week
+  while the behaviour it demands was already shipped — and the fast lane kept selecting
+  it as ready work. Worth remembering the next time a KI and an AC look like the same
+  thing: they were.
+
+  COVERAGE IS PARTIAL AND THE GAP IS THE DANGEROUS HALF. The 14 tests in
+  unit_tests/build_orchestration/test_ki_bo_003_ac_yaml_preservation.py now carry
+  `# covers: BO-2400e-4` alongside their original KI tag, which is what makes this AC
+  done-eligible. They supply two of the four test_spec entries. Still missing: the
+  eleven-record real-artifact case, and the `reachability` case that drives
+  claim_build_set / release_claim / mark_done_built_acs rather than the private helper.
+  Every existing test calls _update_ac_work_status DIRECTLY, so if BO-2400e-3's durable
+  write introduces a NEW writer and repoints the three call sites at it, this suite goes
+  on testing an orphaned function and stays green while the guarantee is gone. That is
+  precisely the "two writers will drift" outcome constraint 3 warns about, and it is
+  live right now because e-3 is being built after e-4 rather than before, inverting the
+  order this AC's depends_on was written to enforce. Tracked as a TODO in
+  docs/known-issues/build-orchestration.md.
+
+  THE GUARANTEE HOLDS BECAUSE THE STORE IS UNIFORM, NOT BECAUSE THE CODE ENFORCES IT.
+  A review on 2026-08-25 executed the function against constructed edge cases and found
+  several inputs that break the "nothing else changes" property: a CRLF record is
+  rewritten LF end-to-end (154 changed lines) while still parsing to the right value;
+  `work_status:` followed by its value on the next line corrupts to 'done todo'; and
+  `work_status : todo` or a quoted key silently appends a duplicate key. A scan of all
+  3,257 store records found zero instances of any of these today, so all are latent.
+  The CRLF one is filed separately — this repo is developed under WSL2 across /mnt/c,
+  where a single Windows-tool write would make it live.
 
   WHY THIS IS WORTH AN AC AND NOT JUST A TIDY-UP. Three compounding consequences:
     - It buries the real change. A reviewer looking at a fast-lane commit sees a record
@@ -175,3 +243,29 @@ notes: |
   way rather than naming one, because both satisfy the criteria. Assigned python-coder
   (single surface, no mixed-surface caveat); object-form it_requirements is mandated by
   the schema's root if/then for python-coder + build-orchestration.
+
+  REOPENED 2026-08-25 (was work_status: done). Filed as KI-BO-022 and KI-BO-028. The criterion
+  says "every other part of the record keeps its original text and its original position", and
+  the it_requirements say "no other line in the file may differ, including whitespace". Line
+  endings are not preserved.
+
+  scripts/build_orchestration/fast_lane.py: the read at :266 is
+  yaml_path.open(encoding="utf-8") and the durable write at :186 is
+  os.fdopen(tmp_fd, "w", encoding="utf-8"). Neither passes newline="", so Python's universal
+  newline handling reads CRLF as LF and writes LF back. A single work_status flip on a CRLF
+  record therefore rewrites all 154 lines. Line numbers re-checked after PR #541 landed
+  BO-2400e-3's durable write in this same file; the defect is unchanged, only the addresses
+  moved.
+
+  STATED PLAINLY BECAUSE IT AFFECTS PRIORITY: current exposure is ZERO. No record in the store
+  has CRLF endings today, and this record's own notes already recorded the hole in writing. It
+  is a phantom by the letter of the criterion, not a concealed one, and it is the least urgent
+  of the six found in this triage. It is reopened rather than left alone because the criterion
+  as written is false, and because the population is one contributor's git config away from
+  being non-empty.
+
+  Related: KI-BO-021 records that this AC was closed on two of its four specified tests, and
+  the two missing ones are the pair that would survive a writer swap. Its amended_by says so
+  explicitly ("closed on partial coverage by explicit decision, not because the spec was met in
+  full"), which is why that was classified as an honest partial rather than a second phantom.
+  Closing this properly means both the newline fix and those two tests.

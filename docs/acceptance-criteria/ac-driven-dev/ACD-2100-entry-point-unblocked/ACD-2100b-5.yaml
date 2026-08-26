@@ -1,0 +1,148 @@
+id: ACD-2100b-5
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: approved
+priority: medium
+title: "The startup check reads the registry itself instead of asking an agent to read it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an environment in which no agent can be dispatched -- every dispatch
+    attempt fails immediately with a transport error,
+  And an agent registry that is present readable and lists the agent the route
+    uses to create the authoring worktree with permission to run repository
+    commands,
+  When a run starts and reaches the startup check,
+  Then the check completes with the permitted verdict and the run proceeds past it,
+  And the run's record of what it dispatched contains no dispatch made on behalf of
+    the check,
+  And repeating the run with dispatch available reaches the same verdict.
+depends_on: [ACD-2100b]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state that the startup check is a local read, so an operator hitting a transport error knows it is not this check."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 cause 2 -- '[resolve-workspace-setup-permission] failed: API Error: Connection lost mid-response', and the third fix direction."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The resolve-workspace-setup-permission step dispatches an agent to read a static local file."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the registry the check reads locally once the round-trip is removed."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose startup path loses a failure source here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output and does not carry this step at all today."
+  - "The verdict must be a function of the registry contents alone. It must be identical whether dispatch is available or not -- 'skip the check when dispatch is unavailable' is a fail-open regression wearing this record's clothes and is explicitly forbidden."
+  - "The startup path must reach this check and pass it with no network available."
+  - "Removing the round-trip must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them."
+  - "If a helper that dispatches for this purpose remains in the source for another caller, this behaviour is not satisfied by its absence from the file -- what must be observable is that no dispatch is made on the check's behalf during a run."
+  - "Must satisfy the repository error-handling policy: the local read replaces a network call, so its failure paths are the ones ACD-2100b-1 and ACD-2100b-2 own and must not be swallowed."
+  - "Must not add a per-run cost beyond a single local file read -- this record removes latency from startup and must not reintroduce it elsewhere."
+test_spec:
+  - name: test_startup_check_passes_with_every_dispatch_attempt_failing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Dispatch made impossible -- every attempt fails immediately with a transport
+      error -- and a registry that permits the worktree-creation agent; the check
+      completes with the permitted verdict and the run proceeds to the next step.
+  - name: test_no_dispatch_is_made_on_the_checks_behalf_during_a_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner, with the run's own dispatch record read back afterwards"
+    description: >-
+      The run's record of what it dispatched contains no entry attributable to the
+      startup check -- observed from the record the run produced, not from the absence
+      of a call in the source.
+  - name: test_verdict_is_identical_with_and_without_dispatch_available
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      The same registry produces the same verdict in two runs, one with dispatch made
+      impossible and one with dispatch available -- so the verdict comes from the file
+      rather than from the transport.
+  - name: test_removing_the_round_trip_does_not_remove_the_halt
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With dispatch impossible and a registry that withholds permission, the run still
+      stops at the check -- the local read is not a bypass.
+test_rationale: >-
+  Making dispatch impossible and requiring the run to get past the check anyway is the
+  only Given that cannot be satisfied by a source scan. A test that greps for the
+  absence of a dispatch call passes on a call that is present but unreachable, and fails
+  on a correct implementation that keeps the helper for another purpose -- so the
+  evidence has to be the run's own dispatch record. The third assertion is what stops
+  the fix being "skip the check when dispatch is unavailable": the verdict must be the
+  same either way because it comes from the file, not from the transport. The fourth
+  keeps the halt, because a local read that always returns permitted would pass the
+  first three.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/12_TICKET-20260826-ACD-2100b-5.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FOURTH CAUSE IS AVOIDABLE, NOT MERELY REPORTABLE -- this is the record that
+  removes it rather than labelling it. The observed run recorded
+  `[resolve-workspace-setup-permission] failed: API Error: Connection lost
+  mid-response`. Startup is gated on a live agent round-trip taken in order to read
+  a static local file, so a network hiccup closes the mandated entry point, and in
+  the output it is indistinguishable from a real mis-assignment. Removing the
+  round-trip removes a whole class of false halt.
+
+  THE FIRST GIVEN IS THE TEST. Make dispatch impossible and require the run to get
+  past the check anyway. That is observable in a fresh process and cannot be
+  satisfied by a source scan; a test that greps for the absence of a dispatch call
+  passes on a call that is present but unreachable, and fails on a correct
+  implementation that keeps the helper for another purpose.
+
+  THE THIRD THEN CLAUSE stops the fix being "skip the check when dispatch is
+  unavailable", which would be a fail-open regression wearing this AC's clothes.
+  The verdict must be the same either way because it comes from the file, not from
+  the transport.
+
+  ORDER OF LANDING. Once this lands, ACD-2100b-1 through -3 have three outcomes to
+  distinguish rather than four -- the dispatch-failure cause no longer exists. That
+  is the intended outcome and not a reason to defer them: the remaining three are
+  still conflated today, and ACD-2100b-3-i shows the space is not closed by
+  enumeration alone.
+
+  2026-08-25 (it-po): delivers_to and expects_from are both null deliberately. This
+  record interacts with ACD-2100a-3 (which makes the read succeed from a worktree) and
+  with b-1..b-3 (which report its failures), but neither relationship is a prerequisite
+  in either direction and neither is carried in depends_on. Writing an expects_from
+  edge with no depends_on mirror would create a contract the build sequencer cannot see
+  (KI-ACD-015, open) and that nothing enforces. The interactions are stated in
+  it_requirements instead, where the coder will actually read them.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

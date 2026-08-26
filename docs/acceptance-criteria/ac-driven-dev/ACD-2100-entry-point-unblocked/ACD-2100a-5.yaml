@@ -1,0 +1,156 @@
+id: ACD-2100a-5
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "A run reaches its first question to the user from any working directory"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the same run is started three times against the same project -- once with
+    the process working directory set to the project root, once set to a git
+    worktree of the project, and once set to a directory that contains neither the
+    project nor any installed copy of the route's support files,
+  When each run starts,
+  Then all three reach the same point -- the first question the route puts to the
+    user,
+  And no run stops before that point reporting a file it could not find or a
+    directory that is not a repository,
+  And every support file each run read or executed before that point resolves to a
+    file inside the project it was pointed at.
+depends_on: [ACD-2100a, ACD-2100a-1, ACD-2100a-2, ACD-2100a-3, ACD-2100a-4]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 -- this record is the behaviour that page's 'which copy runs from where' table describes."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Both KI-ACD-004 and KI-ACD-009 cause 1 are instances of the class this record guards."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The five known cwd-relative sites are lines 1552, 1625, 1642, 1749 and 1800; this record is what catches the sixth."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The layout that makes an arbitrary working directory a realistic starting condition rather than a contrived one."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose whole startup path this record exercises."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The reachability angle and its rule that asserting a value was passed as an argument is dispatch topology rather than execution -- directly applicable to the last Then clause."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. This record's evidence must be gathered against the source copy; ACD-2100d-1 is where the deployed copy is exercised."
+  - "The class must be closed by a single resolution used by every support-file access on the startup path -- not by five per-site repairs. A per-site repair leaves the sixth site to be added the same way the last five were written."
+  - "The last Then clause must be established from what the process actually did -- the files it opened or the commands it issued, as recorded by the run itself or by the operating system -- never from a source scan. A scan for the literal string passes on a path that is never executed and fails on a correct path built by concatenation."
+  - "All three runs must complete their startup path with no network available, so a transport failure cannot be mistaken for a resolution failure."
+  - "Must satisfy the repository error-handling policy across every resolution site touched."
+  - "The startup path must reach its first question in under 2 seconds from each of the three directories on a cold run, so that a resolution built on a filesystem search does not become the new startup cost."
+test_spec:
+  - name: test_startup_reaches_the_first_user_question_from_three_working_directories
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The same run is driven three times -- project root, a real worktree, and an
+      unrelated directory holding neither the project nor any installed support files --
+      and all three reach the first question the route puts to the user.
+  - name: test_no_startup_run_halts_on_a_missing_file_or_a_non_repository_directory
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      None of the three runs terminates before the first question with a
+      file-not-found or not-a-git-repository outcome; the assertion is on the run's
+      recorded outcome, not on the absence of an exception.
+  - name: test_every_support_file_opened_before_the_first_question_is_inside_the_project
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner, with the set of files opened and commands issued captured from the run itself"
+    description: >-
+      For each of the three runs, every support-file location the process actually
+      opened or executed before the first question resolves to a path inside the
+      project it was pointed at -- collected from observed process behaviour, not from
+      reading the workflow source.
+test_rationale: >-
+  The third run is the sharp one. The project-root case passes today, and the worktree
+  case is what KI-ACD-009 reproduces, but the unrelated-directory case cannot be
+  satisfied by any accident of layout -- there is nothing there to resolve against, so a
+  surviving relative path has nowhere to hide. The last assertion is deliberately built
+  from observed process behaviour rather than a source scan: a scan for the literal
+  support-directory string passes on a dead code path and fails on a correct path
+  assembled by concatenation, which is the exact inversion that makes grep-based
+  evidence worthless for this class (CLAUDE.md, "Gate / Workflow ACs -- Verify
+  Behaviorally").
+delivers_to:
+  - agent: documentation-expert
+    ac_id: ACD-2100d-4
+    contract: "The established resolution order for each of the three starting directories -- project root, worktree, unrelated directory -- which is the table ACD-2100d-4's reference page states rather than re-derives."
+expects_from:
+  - ac_id: ACD-2100a-1
+    contract: "An absolute repository-anchored location for the worktree setup step, derived from the repository being operated on."
+  - ac_id: ACD-2100a-2
+    contract: "A setup step that exits successfully from a working directory that is not a repository, having resolved the repository it operates on."
+  - ac_id: ACD-2100a-3
+    contract: "A startup charter check that reads the project's registry from a worktree working directory."
+  - ac_id: ACD-2100a-4
+    contract: "A pause store whose read, write and read-back all resolve to the project's own store from any working directory."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/06_TICKET-20260826-ACD-2100a-5.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE ANTI-REGRESSION, authored in preference to a per-site duplicate exactly as
+  ACD-2100a's sizing note asks. Its subject is the CLASS -- a support file resolved
+  against the caller's working directory -- not any one of the five sites, which
+  ACD-2100a-1 through -4 already own.
+
+  WHY IT IS WORTH A SLOT. Five sites were found; the count reached five only because
+  someone went looking past the two the known issues named. The sixth site is
+  whichever one is added next, and it will be added by someone who fixed a
+  cwd-relative path the same way the last five were written. Only a behaviour that
+  exercises the whole startup path from an arbitrary directory fails on it.
+
+  THE THIRD RUN IS THE SHARP ONE. The project-root case passes today. The worktree
+  case is what KI-ACD-009 reproduces. The unrelated-directory case is the one that
+  cannot be satisfied by any accident of layout -- there is nothing there to
+  resolve against, so a surviving relative path has nowhere to hide.
+
+  HOW TO OBSERVE THE LAST CLAUSE WITHOUT GREPPING SOURCE. Take it from what the
+  process actually did -- the files it opened or the commands it issued, as recorded
+  by the run itself or by the operating system -- and assert each resolved location
+  is inside the project. A source scan for the string `.leafcutter` is not evidence:
+  it passes on a path that is never executed and fails on a correct one built by
+  concatenation.
+
+  DEPENDS_ON CARRIES ORDERING, NOT PARENTAGE. The four siblings are listed because
+  this behaviour cannot pass until they do. Structural parentage is derived from the
+  id, so listing them does not affect the child count under ACD-2100a.
+
+  2026-08-25 (it-po): all four expects_from edges have a depends_on mirror already in
+  place, so the build sequencer will honour them (KI-ACD-015 is not a hazard here).
+  The 2-second startup budget is stated because the natural implementation of
+  ACD-2100a-2's fallback is a filesystem search, and a search re-run at every one of
+  the five sites turns a resolution fix into a startup regression that nobody would
+  attribute to this tree.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

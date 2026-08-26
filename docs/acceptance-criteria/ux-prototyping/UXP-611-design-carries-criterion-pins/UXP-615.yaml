@@ -1,0 +1,91 @@
+id: UXP-615
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Design and built page speak one vocabulary, so a one-sided criterion is a reported difference and never a dropped one"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a criterion id pinned in a rendered mockup
+  When the id is resolved
+  Then it is resolved by the same acceptance-criterion resolver the built side
+    uses, so both sides are speaking one vocabulary rather than two that
+    happen to look alike
+  And an id that resolves to no acceptance criterion is reported as an
+    unresolvable pin naming the file and the value, distinct from the design
+    having no pin at all
+
+  Given a criterion pinned in the design and absent from the built page
+  When the two sides are compared
+  Then that id is reported as a difference in the in-design-not-on-page
+    direction
+
+  Given a criterion pinned on the built page and absent from the design
+  When the two sides are compared
+  Then that id is reported as a difference in the on-page-not-in-design
+    direction, kept separate from the first
+  And no id present on either side is omitted from the comparison result
+
+  Given a criterion pinned in an approved design
+  When that criterion's coverage is assessed
+  Then the pin counts only as evidence that the design shows the criterion
+  And it never counts as evidence that the criterion works, is tested, or is
+    done, and never appears in a coverage figure
+depends_on:
+  - UXP-611
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-611-design-carries-criterion-pins/UXP-611.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f-2.yaml
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+delivers_to:
+  ac_id: GE-124f-2
+  contract: "Design-side pins expressed in the same resolvable AC-id vocabulary as the built side, so the two pin sets are commensurable and every one-sided id is reportable in its own direction rather than dropped. Unresolvable design-side pins are surfaced as their own verdict, never folded into 'no pins in the design'."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  ONE VOCABULARY IS WHAT MAKES THE COMPARISON MEAN ANYTHING. Two sides that
+  each hold a set of strings can always be diffed; the result is only
+  informative if both sets are drawn from the same namespace and validated the
+  same way. Sharing the resolver — not re-implementing id validation on the
+  design side — is the mechanism. A private design-side resolver would drift
+  and the drift would present as phantom differences nobody can explain.
+
+  DIRECTION MATTERS AND SYMMETRY DESTROYS IT. In-design-not-on-page means an
+  incomplete build. On-page-not-in-design means either an undocumented addition
+  or a stale design. Those have different remedies and different owners; a
+  symmetric set difference collapses two conversations into one number. This
+  restates GE-124f-2's requirement from the design side so the design side
+  cannot be built in a way that makes the distinction impossible — for example
+  by emitting an unordered deduplicated bag with no provenance.
+
+  SILENTLY DROPPED IS THE FAILURE MODE THAT LOOKS LIKE SUCCESS. An id the
+  comparison cannot place — unresolvable, malformed, one-sided — must appear in
+  the result. An implementation that filters such ids out reports a clean
+  comparison for a screen it could not actually compare, which is the exact
+  shape of phantom-done.
+
+  AND STILL NOT COVERAGE — THE FOURTH SCENARIO IS THE LIMIT THAT CARRIES OVER
+  FROM GE-124g. A pin is on-screen-presence evidence. An annotated mockup may
+  never read as proof of anything beyond "this screen shows this". It is
+  written as a scenario rather than left in prose precisely so it survives as
+  something a test can hold, because the pressure to count pins as coverage
+  will be constant the moment the numbers exist.

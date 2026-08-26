@@ -149,6 +149,7 @@ flowchart TD
 - ACD-1900c-5: State diagram shows the emit/enforce states and legal transitions
 - ACD-2000a-5: State diagram shows a requirement's attempt lifecycle from first try to escalation
 - ACD-2000b-3-i: State diagram shows a requirement's claim lifecycle including the reclaim path
+- ACD-2100e-1: A sequence diagram shows every point where the route stops to ask and what follows from each answer
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
 - BO-1000a-4: Sequence diagram of the start-of-step narration emission path
 - BO-1000c-3: Sequence diagram of live progress delivery from background workflow to the conversation
@@ -183,6 +184,14 @@ flowchart TD
 - BO-2500d-4: Component diagram: fast-lane vs heavy-pipeline phase order after review retirement
 - BO-2900a-5: Sequence diagram: from a done claim to a verdict, including the run observation and the exemption branch
 - BO-2900b-5: Component diagram: the capability surface, the automation that runs it, and the two checks between them
+- BO-3100a-3: A component diagram shows where hand-off authority is declared and where it is reconciled
+- BO-3100b-4: A sequence diagram shows the exit-time judgement and the retry it forces
+- BO-3100b-5: A component diagram shows what the exit-time judgement reads and what it can stop
+- BO-3100c-5: A sequence diagram shows fan-out and collection happening at the layer that awaits
+- BO-3100c-6: A component diagram shows which layers may coordinate and which may only do work
+- BO-3200b-4: A sequence diagram shows the failure path performing its cleanup and reading the outcome
+- BO-3200c-5: A sequence diagram shows the question reaching the person and the pause when it cannot
+- BO-3200d-3: A sequence diagram shows the result travelling out of band and the reply carrying no content
 - BP-1000a-4: Component diagram of the source-to-shipped parity relationship at the merge gate
 - BP-1000b-4: Sequence diagram of the parity gate firing within the finalize-feature merge flow
 - BP-1100e-3: A sequence diagram shows where the declared-vs-actual reconciliation sits before done
@@ -212,6 +221,8 @@ flowchart TD
 - GE-120c-5: The new verification surface is drawn as an architecture component
 - GE-122c-4: The remediation flow is drawn once per stage, showing who can act at each
 - GE-122d-4: The three-stage arrangement is drawn, showing which stage owns which promise
+- GE-124c-5: A sequence diagram shows the ordering that keeps the four verdicts distinguishable
+- GE-124f-4: A component diagram shows the chain across the four stores it crosses
 - KM-KGS-100a-4: Component diagram shows the acceptance-criteria store as a knowledge-map surface
 - KM-KGS-100b-4: Sequence diagram of a requirement-to-code traversal
 - PER-100c-4: Sequence diagram for persona capability query workflow
@@ -226,6 +237,7 @@ flowchart TD
 - TKT-500e-5: Sequence diagram: inject model within a goal
 - TKT-500e-6: Component diagram: agent lifecycle within and across goals
 - TKT-500f-1: Component diagram: goal-as-dispatch-boundary architecture
+- TKT-500g-2-iii: A sequence diagram shows the demand, the two places it can be dropped, and which of them is guarded
 - TQ-100b-3: State diagram of a tagged test's informational-to-enforced lifecycle
 - TQ-100d-2: State diagram of an allowlist entry's added-tracked-flagged lifecycle
 - TQ-400a-6: The component diagram shows one verdict source with three checkers over three populations

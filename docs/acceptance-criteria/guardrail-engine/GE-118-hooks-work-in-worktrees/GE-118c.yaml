@@ -1,0 +1,293 @@
+id: "GE-118c"
+components:
+  - commit_guardian
+title: "A guard enforces the document types the project declared, not a narrower list it kept to itself"
+component: guardrail-engine
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a repository whose config/doc_types.json declares the set of permitted
+    document types,
+  And the deployed frontmatter guard running from the installed layout rather
+    than from the source tree,
+  When a document is committed whose `type` is one this file declares,
+  Then the guard accepts it,
+    And a document whose `type` is absent from that file is still rejected by
+      name,
+    And a generated agent card — declared in that file as not component-linked —
+      is not additionally rejected for lacking a components field,
+    And if the guard cannot read the declaring file at all it says so and fails
+      rather than continuing against a narrower built-in list, because a guard
+      that silently substitutes its own answer for the one it was configured
+      with is enforcing a rule nobody wrote.
+depends_on:
+  - GE-118
+doc_links:
+  - path: config/doc_types.json
+    relationship: describes
+    status: exists
+    relevance: "The declaring file. Its own _comment asserts that check_doc_frontmatter.py reads it at startup and that it is the single source of truth — a claim this AC makes true. Do not edit its contents."
+  - path: templates/scripts/commit_guardian/doc_type_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "The defect site: _DOC_TYPES_JSON at lines 18-21, and the silent .exists() fallthrough in _load_doc_types(). This is the SOURCE; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build outputs regenerated from it."
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: "The established root resolver. Considered and DELIBERATELY NOT USED — see it_requirements #2, amended 2026-08-18. It anchors on the invoking process's cwd (git rev-parse --show-toplevel), which resolves into the throwaway repo this AC's own tests 2 and 3 create. Retained as a doc_link because the reasoning for rejecting it is load-bearing for anyone revisiting the resolver."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118b.yaml
+    relationship: context
+    status: exists
+    relevance: "The nearest sibling and the reason this record lives under GE-118. Same defect shape: a hand-counted parents[2] plus a hardcoded 'leafcutter' segment resolving to a path that never existed in any layout, so the gate silently no-ops. Also authored by /quick-fix, also a level-L2 record hanging directly off the GE-118 L0."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "FIX THE TEMPLATE, NOT THE BUILD OUTPUT. templates/scripts/commit_guardian/doc_type_validators.py is the source; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are regenerated from it by build_commit_guardian. An edit to the deployed copy alone is reverted by the next build.py run."
+  - "RESOLVE THE DECLARING FILE FROM THIS SCRIPT'S OWN LOCATION, NOT FROM A HAND-COUNTED parents[N] AND NOT FROM THE CALLER'S CWD. AMENDED 2026-08-18 — this requirement originally read 'REUSE THE EXISTING RESOLVER ... scripts/commit_guardian/_resolve_root.py exists for exactly this'. That instruction was wrong and the implementation correctly did not follow it; the requirement is restated here to describe what was actually built, because a record that keeps demanding something the code deliberately does not do cannot honestly be called done. find_project_root() prefers `git rev-parse --show-toplevel`, so it anchors on the INVOKING PROCESS'S CWD. Tests 2 and 3 of this AC stage files in an isolated throwaway git repo and invoke the deployed hook with cwd set to that repo, where no config/doc_types.json exists — so find_project_root() resolves there and both tests fail. doc_types.json is a package-bundled file tied to the script's own installed location, not to whichever repo the caller happens to be standing in. The binding constraint is unchanged and is what the original wording was reaching for: NO hand-counted parents[N] — that fixed-index walk is the defect. The implementation satisfies it with an unbounded __file__-ancestor directory walk (_find_doc_types_json()), mirroring the sibling diagram_type_validators._find_diagram_types_json() pattern already used for the same category of problem, with the cwd-vs-__file__ reasoning recorded in the module docstring. Verified: the fixed-index defect class is structurally eliminated."
+  - "THE FALLBACK MUST STOP BEING SILENT. Today the miss happens at `if _DOC_TYPES_JSON.exists():`, before any exception could be raised, so the `except (json.JSONDecodeError, OSError): pass` arm never runs and nothing is ever logged. An unreadable or absent declaring file must produce an observable failure, not a quiet substitution of DOC_FM_ALLOWED_TYPES."
+  - "DO NOT WIDEN THE ENUM BY HAND. The fix is to read the declaring file. Adding 'card' and 'how_to' to the hardcoded constant would make the symptom disappear while leaving the file still unread and still falsely advertising itself as the source of truth — the same shape as BP-900g-5, which emptied a list of known-bad entries while the mechanism that produced them stayed as it was."
+  - "The components exemption for cards must follow the declaring file's own 'Not component-linked' property rather than a second hardcoded card special-case, or the two statements drift."
+  - "After editing the template, run `python scripts/build.py --target-dir .` and then `python -m pytest unit_tests/commit_guardian/ -q`. The build step is not optional: the tests that matter exercise the deployed copy."
+test_spec:
+  - name: test_ge_118c_deployed_validator_resolves_the_real_doc_types_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "PRODUCTION LAYOUT: run build.py into a temp target, then import doc_type_validators from the DEPLOYED .leafcutter/scripts/commit_guardian/ path in a fresh subprocess and assert _DOC_TYPES_JSON resolves to a file that exists. Importing from the source tree is structurally blind to this defect — the two layouts resolve differently and only the deployed one is what runs."
+  - name: test_ge_118c_deployed_guard_accepts_a_card_and_a_how_to_document
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT: stage a document with `type: card` and one with `type: how_to` and run the deployed hook via `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <paths>` as a subprocess. Assert exit zero. Asserting the loaded key set is not sufficient: the reported failure named BOTH the unknown type AND a missing components field, so only the real hook proves both arms are cleared."
+  - name: test_ge_118c_deployed_guard_still_rejects_an_undeclared_type
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "must_block negative control through the SAME deployed entry point: a document with a `type` absent from config/doc_types.json must exit non-zero and name the offending value. Without this the fix is indistinguishable from disabling the check."
+  - name: test_ge_118c_unreadable_declaring_file_fails_observably
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Point the resolver at an absent and then at a malformed doc_types.json and assert each produces an observable failure naming the file — not a silent fallback to the built-in list. This is the clause that stops the defect reappearing the next time the path moves."
+test_rationale: |
+  Every weaker shape passes on the bug. A test that imports the module from the
+  source tree resolves a different path than the deployed copy and cannot see
+  the defect at all. A test that asserts `'card' in _load_doc_types()` passes
+  the moment someone appends 'card' to the hardcoded constant, leaving the
+  declaring file still unread. And a test that only checks the happy path
+  passes if the guard is disabled outright — hence the must_block negative
+  control on an undeclared type.
+
+  NON-VACUITY, MEASURED 2026-08-18 rather than asserted. Reconstructing the
+  pre-fix module from 160d4f47^ in a harness turns the suite 3 failed / 1
+  passed. The BP-900g-5-shaped "fake fix" — appending `card` and `how_to` to
+  the hardcoded allowed-types list while leaving the declaring file unread —
+  ALSO turns it 3 failed / 1 passed, so enum-widening does not buy a green
+  suite. Disabling the check outright turns exactly the negative control red.
+  The suite runs 4 passed with zero xfails and zero skips, byte-identical
+  under AC_ENFORCE_STRICT=1.
+origin_agent: "BrainCandy"
+created: 2026-08-18
+amended_by:
+  - reason: identifier-collision-repair
+    date: '2026-08-18'
+    by: business-analyst
+    entry: 'Renumbered from GE-120 to GE-118c and moved from the namespace root
+      (docs/acceptance-criteria/guardrail-engine/GE-120.yaml) into the GE-118
+      feature folder; depends_on changed from [] to [GE-118] and GE-118.yaml''s
+      covered_by gained GE-118c. GE-120 was claimed by two unrelated records:
+      this loose L2 (authored by /quick-fix on 2026-08-18, PR #466) and the
+      goal-level L0 "Trust that a green check actually checked something",
+      which owns the 43-file GE-120-green-means-checked/ tree and had held the
+      id since PR #453 landed ~16 hours earlier. This record moves because it
+      is the later claimant and the cheaper direction (one file versus a
+      43-file tree), and because the L0''s claim on GE-120 is test-enforced:
+      unit_tests/commit_guardian/test_ge_122e_1.py pins
+      EXPECTED_GOAL_FOLDER_NAME = "GE-120-green-means-checked" and asserts
+      every record in that folder carries a GE-120 id. Criteria are unchanged.
+      See notes for why the id is suffix-shaped and why GE-118 rather than
+      GE-120 is the parent.'
+  - reason: reconcile-record-with-implementation-before-marking-done
+    date: '2026-08-18'
+    by: business-analyst
+    entry: 'work_status todo -> done, req_status draft -> active, covered_by and
+      implemented_by populated, on the evidence of two independent verification
+      passes (implementation verified behaviourally through the deployed
+      run_hook.py entry point; tests verified 4 passed, zero xfails, zero
+      skips, and proven non-vacuous against both the reconstructed pre-fix code
+      and a fake-fix mutation). The record and its implementation landed in the
+      SAME commit, 160d4f47 (PR #466), so nothing ever ran between authoring
+      and shipping and work_status was never reconciled: todo was stale
+      bookkeeping, not unfinished work. it_requirements #2 was ALSO amended in
+      this pass — it demanded reuse of _resolve_root.find_project_root(), which
+      the implementation deliberately does not use, and marking a record done
+      while one of its stated requirements is literally unmet is the
+      phantom-done failure this component exists to prevent. The requirement
+      now describes what was actually built (an unbounded __file__-ancestor
+      walk) and why (find_project_root() is cwd-anchored and resolves into the
+      throwaway repo this AC''s own tests 2 and 3 create), with the binding
+      no-hand-counted-parents[N] constraint unchanged. No criterion was widened
+      or relaxed.'
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_118c_doc_types_deployed_resolution.py
+implemented_by:
+  - templates/scripts/commit_guardian/doc_type_validators.py
+  - templates/scripts/commit_guardian/frontmatter_validators.py
+  - unit_tests/commit_guardian/test_ge_118c_doc_types_deployed_resolution.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix on 2026-08-18 as a loose L2 claiming GE-120.
+  Renumbered to GE-118c on 2026-08-18 — see amended_by and the two sections at
+  the end of these notes.
+
+  ROOT CAUSE, verified by import rather than by reading:
+
+      _DOC_TYPES_JSON = Path(__file__).resolve().parents[2] / "leafcutter" / "config" / "doc_types.json"
+
+  From the deployed location .leafcutter/scripts/commit_guardian/, parents[2]
+  is .leafcutter, so this resolves to .leafcutter/leafcutter/config/doc_types.json
+  — a doubled segment that has never existed in any layout. From the source
+  location templates/scripts/commit_guardian/ it resolves to
+  templates/leafcutter/config/, which does not exist either. Observed:
+
+      resolved path: .../.leafcutter/leafcutter/config/doc_types.json
+      exists: False
+      types actually loaded: ['adr', 'architecture', 'explanation', 'how-to',
+                              'reference', 'retro', 'tutorial']
+
+  So config/doc_types.json has never been read by anything. It declares ten
+  types; seven are honoured. The canonical spelling `how_to` is rejected while
+  the entry marked `_deprecated: true` (`how-to`) is the only one that works,
+  and `card` — the type every generated agent card carries — is rejected, which
+  makes agent cards uncommittable.
+
+  WHY THIS IS WORTH AN AC RATHER THAN A ONE-LINE PATCH. build.py regenerates
+  architect-review.md and business-analyst.md from this file, so agents are
+  being told about document types the validator will reject. The file asserts
+  in its own _comment that it is the single source of truth and that
+  check_doc_frontmatter.py reads it at startup. Both statements are false
+  today. This is the same failure class as BP-900g-7 (a registry naming
+  something nothing consumes) and BP-900g-10 (a loader that degrades to a
+  default instead of failing) — found while committing this very branch, when
+  the hook rejected regenerated agent cards.
+
+  WHY THE ID IS SUFFIX-SHAPED AND NOT A NEW ROOT NUMBER (2026-08-18).
+  GE-124 was free by ADR-029's both-tests rule (no file, no citation,
+  repo-wide) and was the obvious answer. It is the wrong SHAPE.
+  check_ac_parent_covered_by.py and scan_ac_orphans.py both derive a record's
+  parent STRUCTURALLY from its own id via derive_parent_id(), and neither
+  reads the documented `parent:` escape-hatch field. derive_parent_id() returns
+  None for a root-shaped id, so GE-124 would have carried a parent link that no
+  gate could police — the record would satisfy its parent criterion on paper
+  with no mechanical enforcement, which is precisely the failure mode the
+  GE-122 tree exists to end. derive_parent_id("GE-118c") == "GE-118", so the
+  back-link is enforced natively. This reasoning is inherited verbatim from
+  GE-122e-1's it_requirements, which reached it the hard way during the GE-119
+  repair. GE-118c is free by both tests as of 2026-08-18: no file, and no
+  citation anywhere in the repository.
+
+  WHY GE-118 IS THE PARENT, AND WHY THE OBVIOUS ALTERNATIVE IS FORBIDDEN.
+  The semantically attractive parent is GE-120 itself. A guard that silently
+  falls back to a narrower built-in list when it cannot read the file it was
+  configured with is textbook "green when it could not actually check", and
+  GE-120's own L0 notes reject GE-118 as a parent for exactly the fourth
+  clause of this criterion's territory — arguing GE-118's scope is dependency
+  RESOLUTION from the deployed layout ("hooks find their helpers") while a
+  check can also degrade quietly "because of a parse error, a missing config".
+  That argument is engaged with here rather than ignored, and it is correct on
+  the merits about the CLASS. It is nonetheless RULED OUT on a mechanical
+  ground that outranks the semantic one:
+
+    - unit_tests/commit_guardian/test_ge_122e_1.py's
+      test_goal_record_claims_a_new_id_and_its_folder_matches_origin_main
+      asserts that `git diff origin/main -- docs/acceptance-criteria/
+      guardrail-engine/GE-120-green-means-checked/` is EMPTY. Parenting here
+      requires both placing this file inside that folder and appending
+      GE-118c to GE-120.yaml's covered_by. Either edit turns that guard test
+      RED. Every one of GE-120a..e is independently at the 5-child L2 cap, so
+      the alternative — hanging this under an existing L1 — is also closed,
+      and minting a new L1 means editing the frozen L0 anyway.
+    - This is the SECOND occurrence of a trap GE-122e-1 already recorded for
+      GE-119: "the obvious choice is forbidden ... because parenting under it
+      requires adding the child to its covered_by, and that file is one this
+      AC requires to be byte-identical afterwards." Verify the survivor set is
+      untouchable BEFORE assuming a parent is available.
+
+  GE-118 is the right home on the merits as well, not merely the residual
+  option. GE-118b is a near-identical precedent in shape and in kind: the same
+  hand-counted parents[2] plus a hardcoded "leafcutter" segment resolving to a
+  path that never existed, so the gate silently no-ops; also authored by
+  /quick-fix; also a level-L2 record hanging directly off the GE-118 L0 rather
+  than under an L1. This record's PRIMARY root cause is that same resolution
+  defect — the announce-on-failure clause is the second half of the fix, not
+  its subject.
+
+  THE COUNTER-ARGUMENT, STATED RATHER THAN SUPPRESSED. The guardrail-engine
+  PROJECT_CONTEXT and GE-120's L0 notes both record a standing rule: "GE-118 =
+  the point fixes that landed (GE-118a-1, GE-118b, both done); GE-120 = the
+  class they are instances of. GE-118 was deliberately NOT amended or
+  superseded." Adding GE-118c does amend GE-118. The distinction relied on
+  here: that rule was written to stop the cross-cutting POLICY being grafted
+  onto the point-fix tree, which would invert containment by putting the
+  general rule beneath a specific instance. Adding a third point fix of the
+  same shape does not invert anything — it extends a register of point fixes
+  with a point fix. GE-118 goes from 2 of 7 children to 3 of 7.
+  Related, and worth carrying forward rather than hiding: GE-120's L0 notes
+  warn that "three prior point patches exist in this area (GE-112, GE-118a-1,
+  GE-118b). Favour a structural fix; a fourth point patch is the failure mode
+  to avoid." This record IS that fourth point patch, and it has already
+  shipped. Filing it beside its three siblings makes the count visible in one
+  place, which strengthens the argument for building GE-120 rather than
+  weakening it.
+
+  TWO TEST-SUITE GAPS, RECORDED BECAUSE THEY ARE REAL AND NOT FIXED HERE.
+  Neither blocks done; both are honest limits of the coverage above.
+    - Test 1 does not build into a temp target as its test_spec text literally
+      requires. It exercises this repo's own .leafcutter/scripts/commit_guardian/,
+      which is gitignored. That copy is byte-identical to the template today,
+      but the consequence is that a fix applied to the DEPLOYED copy only,
+      leaving the template broken, would pass this suite green — exactly the
+      failure mode it_requirements #1 warns about, and the one thing this suite
+      does not cover. The test module documents the substitution deliberately
+      (self-hosted layout, ADR-001), so it is a scoping choice rather than an
+      accident.
+    - All four tests skipTest when .leafcutter/ is absent. On a fresh clone
+      with no build step the module reports 4 skips, which reads as green. CI
+      builds before pytest so it is latent, but it is a silent-pass vector of
+      precisely the kind GE-120a-1 is being written to outlaw.
+
+  REOPENED 2026-08-25 (was work_status: done; readiness stays approved — the requirement is
+  correct, the implementation does not meet it in the layout the criteria name). The first
+  clause is false for a consumer install, and the second recorded test-suite gap above is
+  exactly why nobody saw it.
+
+  The resolver was fixed as required: _find_doc_types_json() walks ancestors from __file__ and
+  the hand-counted parents[2] is genuinely gone. But config/doc_types.json is NOT in the build's
+  deploy manifest. Verified: .leafcutter/config/ contains only commit_guardian/ and
+  feedback_categories.yaml. From a deployed hook at <install>/.leafcutter/scripts/commit_guardian/,
+  the walk therefore finds nothing under .leafcutter/, escapes it, and continues up the consumer's
+  own tree, where config/doc_types.json does not exist because it is a leafcutter file. The walk
+  reaches the filesystem root, returns candidates_checked[0], and _load_doc_types() raises
+  FileNotFoundError — so the guard does not accept a declared type, it crashes.
+
+  It passes HERE for a reason that does not generalise: the git root is the package, so the walk
+  escaping .leafcutter/ lands on this repo's own tracked config/doc_types.json. The AC is
+  satisfied in the one layout that cannot distinguish the two failure modes, and its criteria
+  are written about the other one. That is the self-hosting mask, and it is the same
+  deploy-manifest omission class as KI-BP-003.
+
+  Closing this needs the file added to the deploy manifest and a test that runs the deployed hook
+  from a target directory that is NOT inside this repository. Re-running the existing suite will
+  not show the defect: it exercises this repo's own gitignored .leafcutter/, as its module
+  docstring admits.

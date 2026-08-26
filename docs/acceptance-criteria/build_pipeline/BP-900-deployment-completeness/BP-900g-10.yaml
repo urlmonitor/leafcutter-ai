@@ -194,7 +194,7 @@ amended_by:
   agent: approve_acs
   date: '2026-08-17'
 superseded_by: null
-covered_by: []
+covered_by: [BP-900g-10-i, BP-900g-10-ii, BP-900g-10-iii]
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

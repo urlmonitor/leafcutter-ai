@@ -24,6 +24,10 @@ doc_links:
   - path: scripts/ac_store/scan_ac_store.py
     relationship: related
     status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "Shipped instance of this L1's verdict cap, applied to a trust rating rather than a check result: 'enforced' can no longer be read downstream as store-wide coverage, because the rating now carries the scope it was earned over."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -36,6 +40,7 @@ covered_by:
   - ACS-1100d-1
   - ACS-1100d-2
   - ACS-1100d-4
+  - ACS-1100d-5
 implemented_by: []
 documentation_triggers:
   - component-diagram
@@ -61,3 +66,27 @@ notes: |
   ACs). The component-diagram trigger STAYS here and is satisfied by ACS-1100d-4 —
   a different artifact in a different target document by a different agent, and
   deliberately not folded into ACS-1100e-1.
+
+  ALREADY SATISFIED, FOR ONE SURFACE ONLY (2026-08-18, PO). KM-ADM-005 applied this
+  L1's verdict cap to a hop this tree did not have on its list — a TRUST RATING read
+  by a human, rather than a check result consumed by a tool. The chain it repaired
+  was: check-done-proof (diff scope) -> "enforced" rating on the test-covers edge ->
+  a reader inverting that edge to conclude every done AC is test-proven. The
+  laundering happened at the last hop, in a person's head, and the fix was to make
+  the rating carry the scope it was earned over.
+  Carry this into L2: an "answer" for the purposes of this L1 is not only a machine
+  payload. A rendered rating, a badge, a dashboard tile and a legend entry are all
+  hops that can drop a coverage figure, and the map is currently the only one of
+  them that does not. ACS-1100d-1's enumeration of consuming hops should say so
+  explicitly rather than leaving human-read surfaces implicit.
+
+  THE LAST HOP IS A DURABLE WRITE (added 2026-08-25, BA, via ACS-1100d-5). d-1 makes
+  the figure survive each hop and d-2 caps what a verdict may claim, but the chain
+  stopped one hop short of where the damage lands: an agent or a person reads a
+  verdict earned over a fraction of a population and writes work_status: done on a
+  record whose wording claims the whole of it. d-5 caps that write — a requirement
+  claiming a population is not closed on a verdict narrower than the claim, and the
+  two honest routes are to widen the evidence or to reword the claim. The worked
+  examples are in-component and measured: ACS-300h-1 and ACS-300i-2 each stood as
+  finished while 36 of the 45 entries in docs/components.json broke the property
+  they claim (counted 2026-08-25).

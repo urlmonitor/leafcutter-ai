@@ -7,7 +7,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -146,7 +146,12 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1100g-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-1100g-3.md
+- scripts/ac_store/done_proof.py
+- templates/agents/test-writer.md
+- unit_tests/ac_store/test_bp_1100g_3.py
+- unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
 change_target:
   - prompt
   - code

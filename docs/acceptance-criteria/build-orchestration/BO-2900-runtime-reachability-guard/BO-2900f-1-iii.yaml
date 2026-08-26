@@ -1,0 +1,128 @@
+id: BO-2900f-1-iii
+components:
+  - build_orchestration
+  - supervisor_system
+title: "The record check runs after every dispatched gate, so verification cannot hold on one work item and lapse on the next"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one drive carrying three work items through the same set of gates,
+    And on the first work item it is the test gate that reports success while leaving
+      no entry,
+    And on the second it is the review gate,
+    And on the third it is the delivery gate,
+  When the drive completes,
+  Then all three work items report that gate as failed,
+    And no work item reaches the end of its gates carrying a success that was never
+      confirmed against its record,
+    And the outcome is the same whichever gate and whichever work item it happened
+      to be,
+    And a reader given any one of the three work items afterwards can tell, from that
+      work item alone, that the gate ran and did not record -- distinct both from a
+      gate that was never requested and from a gate that was requested and skipped,
+  So the guarantee is a property of the drive rather than a property of a lucky work
+    item.
+depends_on:
+  - BO-2900f-1
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver, which carries many work items through the same dispatch loop -- the surface on which the observed unreliability was per work item. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js; the verification must be the same generic path in both."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. Extend it to drive several work items in one run and to record, per work item and per gate, whether an entry was produced -- the shape needed to falsify a verification that is applied inconsistently."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the skipped entry and its reason. This AC requires the ran-and-did-not-record outcome to remain distinguishable from that skipped outcome, rather than being folded into it."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the generic post-dispatch verification in build-feature.js and its twin in build-ticket.js; there must be exactly one such point per driver, not one per gate"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_phase_signoff_verification.py"
+  constraints:
+    - "ONE VERIFICATION POINT, NOT ONE PER GATE. The observed defect is not a broken gate, it is an inconsistently applied check. An implementation that adds the read-back at each gate's call site satisfies BO-2900f-1-i on the gates it touches and re-creates this defect for the next gate anyone adds. The verification belongs to the single generic path every dispatch returns through, and the sign-off must name that point."
+    - "MULTI-ITEM RUN IS PART OF THE TEST, NOT AN EXTRA. A single-work-item test cannot express this AC at all. The harness must drive at least three work items in one run, each with a different gate silently failing to record."
+    - "KEEP THE OUTCOME DISTINGUISHABLE. Reporting the ran-and-did-not-record case as skipped attributes a configuration cause to a recording failure, and sends the reader to turn on a gate that is already on. It is its own outcome, and per BO-2900f-2 a gate that was never requested still produces no entry at all."
+    - "VERIFY BY EXECUTION. A source-reading test cannot observe that a check is applied uniformly across items -- that is a runtime property by definition."
+delivers_to: null
+expects_from:
+  ac_id: BO-2900f-1-i
+  contract: "The per-gate adjudication itself; this AC constrains where it is applied and requires that it hold for every dispatched gate on every work item in a drive"
+test_spec:
+  - name: test_three_work_items_each_missing_a_different_gate_entry_all_report_failed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "One harness run, three work items, a different gate silently failing to record on each; assert all three report that gate as failed."
+  - name: test_no_work_item_finishes_carrying_an_unconfirmed_success
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Across the same multi-item run, assert that for every work item and every gate the run reached, the outcome carried forward was derived from a record read-back -- there is no gate whose success went unchecked."
+  - name: test_verification_point_is_reached_once_per_dispatch_over_the_real_phase_set
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Drive the canonical phase set and assert the number of read-back verifications equals the number of dispatches -- proving a single generic point rather than a set of per-gate call sites, and catching a newly added gate that bypasses it."
+  - name: test_ran_and_did_not_record_is_reported_apart_from_skipped_and_from_never_requested
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "In one run, produce a gate that ran without recording, a gate that was requested and skipped, and a gate never requested; assert three distinguishable results, with no entry at all for the third."
+test_rationale: |
+  This AC's content is uniformity, and uniformity is unobservable from any single
+  work item -- which is precisely why the production defect survived: each individual
+  ticket looked like an ordinary incomplete ticket. Every descriptor therefore
+  executes a run containing more than one work item or more than one gate, and
+  asserts a property of the whole run. The third descriptor is the durable one: by
+  tying the verification count to the dispatch count it fails the day someone adds a
+  gate that returns through a different path, which is the mechanism by which this
+  defect will otherwise come back.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The uniformity half of BUG-23 (run wf_cc2b46d9-f6f), and the reason that defect is
+  worse than a deterministic bug.
+
+  THE EVIDENCE IS THE INCONSISTENCY. Ticket 01 lost test-runner and pr-reviewer;
+  ticket 03 lost test-runner but recorded pr-reviewer; ticket 09 recorded test-runner
+  but lost pr-reviewer. No gate is reliably broken and no gate is reliably sound. The
+  consequence is the one stated in the criteria: from a work item alone you cannot
+  distinguish a gate that was skipped from a gate that ran and did not record, so
+  every downstream reader -- the completion trigger, the roll-up, the archive check,
+  and a human -- is reading a record that cannot answer the question it is being
+  asked.
+
+  WHY THIS IS NOT ABSORBED INTO BO-2900f-1-i. That AC can be satisfied completely by
+  a read-back added at two or three gate call sites, which would have fixed the three
+  tickets in the observed run and left the next gate unguarded. The property that
+  survives is that the check belongs to the dispatch path itself, and that property
+  is only falsifiable across multiple items and gates in one run.

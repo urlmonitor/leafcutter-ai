@@ -24,6 +24,9 @@ created: 2026-06-05
 amended_by:
   - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
   - "split: INF-400 -> INF-400 + INF-700, 2026-06-05 — reparented from INF-400 to INF-700"
+  - reason: "child_limit_override set to 9 to record the EXISTING child count, not to admit a new child. These nine L2s have been in place since 2026-06-05; the cap was never tripped because no commit had staged one of them until now. Flipping INF-400g-1 to done (the emit_event.py delivered in #528) staged a child for the first time and surfaced the pre-existing violation. A split was NOT attempted here: rebalancing a nine-child L1 is a PO/BA-owned restructuring decision, and burying it inside a status reconciliation is how AC trees drift. This override is a HOLD, not an endorsement — the tree is genuinely overcrowded. REMOVE IT when a PO-owned split rebalances INF-400g, and do not raise it further to admit additional children."
+    by: main-loop-reconciliation
+    at: 2026-08-25
 superseded_by: null
 covered_by:
   - INF-400g-1
@@ -36,5 +39,6 @@ covered_by:
   - INF-400g-8
   - INF-400g-9
 implemented_by: []
+child_limit_override: 9
 change_target: code
 risk_surface: contract_boundary

@@ -1,0 +1,78 @@
+id: BO-3600d-3
+title: "A decided conflict stops being raised, and is raised again when the facts behind the decision change"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a conflict decided as a narrowing, with the amendment recorded, where the
+    fault entry still reads open and the requirement still reads finished so the
+    pairing still exists,
+  When the reconciliation runs again,
+  Then that pairing is not presented as needing attention,
+    And it is not counted among the outstanding conflicts,
+  So a disagreement that has been settled does not reappear on every run.
+
+  Given the same decided conflict,
+  When the fault entry is reopened, or the requirement's wording changes again,
+  Then the conflict is raised again as needing a fresh decision,
+    And the earlier decision is presented alongside it, stating what it was and why
+      it no longer applies,
+  So the settlement is retired by the facts changing and not by a person having to
+    remember it existed.
+
+  Given a decided conflict and a second, different pairing between the same fault
+    entry and a different requirement,
+  When the reconciliation runs,
+  Then the second pairing is raised,
+  So a decision covers the pairing it was made about and nothing wider.
+
+  Given a decision recorded against a conflict,
+  When someone asks why that pairing is not being reported,
+  Then the decision is findable from the pairing,
+  So suppression is always explained by a recorded decision that can be looked up.
+depends_on:
+  - BO-3600d
+  - BO-3600d-1
+  - BO-3600d-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028's mechanism argument — a detector that produces noise gets switched off, and a check that looks like coverage while being ignored is worse than none."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2800-gate-value-measurement/BO-2800e.yaml
+    relationship: related
+    status: exists
+    relevance: "The counterpart that dispositions the checks themselves; this one dispositions the conflicts a check finds. Cite the parallel, do not merge."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS WHAT MAKES THE TREE SURVIVABLE. BO-3600d's notes are blunt about it: if
+  surfacing is all that happens, the same pairs are re-raised every run, the output
+  stops being read, and the check is worse than nothing because it looks like
+  coverage.
+
+  The second scenario is the safety valve and the harder half. Silence that persists
+  after the facts change is the very failure this goal exists to end, recreated by
+  its own noise suppression — a decision, once recorded, would otherwise hide a
+  disagreement forever.
+
+  The third scenario keeps a decision from being used as a blanket exemption for an
+  entry, which is how a narrow settlement quietly becomes a suppression rule.

@@ -1,0 +1,192 @@
+id: GE-125c-1-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "Every value in the file is judged on its own — neither the first value met nor the file's overall composition decides any other"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose ticket area holds one Markdown file staged for
+    commit,
+  And that file contains six high-entropy values on six separate lines, in this
+    order: a project identifier of the ticket form, an opaque credential of at
+    least thirty characters matching no recognised explanation, two further project
+    identifiers, a second opaque credential, and a final project identifier,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then EXACTLY TWO findings are reported for that file, naming the two credentials'
+    1-based line numbers and no other line,
+  And the commit is blocked,
+  Because the parent's scenario holds one set-aside value and one credential, which
+    an implementation that stops deciding after the first value it meets would also
+    satisfy — six values with the explained one first is the arrangement that
+    catches it.
+
+  Given a second staged file in the same ticket area holding the same six lines in
+    reverse order, so a credential is the first value met,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then exactly two findings are reported, naming the two credential lines,
+  And the per-line verdicts are the same as in the first file for every one of the
+    six values,
+  Because which value a file happens to begin with must not change the verdict on
+    any other value in it, and an implementation that reports the whole file once it
+    has seen a credential — the mirror image of today's defect — produces six
+    findings here and passes any assertion of at-least-one.
+
+  Given a third staged file in the same ticket area holding only the four project
+    identifiers, with no credential anywhere in it,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then no finding is reported and the commit is not blocked by that file,
+  Because the four identifiers are still four separate set-aside decisions, and a
+    file whose values all happen to be explained must reach the same result as it
+    would have reached one value at a time.
+depends_on:
+  - GE-125c-1
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. Any production change lands in `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and `check_hook_parity` enforces all four locations. Run `python scripts/build.py --target-dir .` after editing the template and before running the suite."
+  - "NO NEW CLASSIFIER. This record adds no recognition of its own: it exercises the per-value decision GE-125c-1 establishes, built on the existing `_TICKET_ID_RE` / `_EPIC_NAME_RE` machinery at `templates/scripts/commit_guardian/check_secrets.py:120-121` and Rule 2 of `_is_prose_exempt` at lines 189-202. If satisfying this record appears to need a second recogniser, that is a signal the per-value decision was implemented as a special case rather than as the general rule."
+  - "THE DECISION MUST BE STATELESS ACROSS VALUES WITHIN A FILE. No early return, no accumulator, no `seen_credential` flag and no memoisation keyed on the file may influence the verdict on any other value. The verdict for a value must be a pure function of that value (and, where surrounding context is needed, its own line) — which is what makes the forward and reversed orderings produce identical per-line verdicts."
+  - "ASSERT THE PER-LINE DISTRIBUTION, NOT THE TOTAL. The forward and reversed files must be compared as a mapping from value to verdict, not as two counts. Two runs can agree on a total of two while disagreeing about which lines produced them, and an order-sensitive implementation is exactly the shape that does so. A test that asserts only `len(findings) == 2` on both files does not discharge the second scenario."
+  - "EXACT COUNTS ONLY — TWO, TWO, ZERO. Both wrong implementations this record exists to kill produce counts an at-least-one assertion accepts: a decide-once implementation reports one, a report-the-whole-file-on-first-credential implementation reports six. Equality assertions are the only shape that separates them."
+  - "EACH LINE MUST PRODUCE AT MOST ONE FINDING, so that two is an exact expectation rather than a floor. Assert as a fixture precondition that none of the six chosen values cross-triggers a second rule (`AWS_KEY`, `PRIVATE_KEY`, `EXCHANGE_API_KEY`, `GENERIC_SECRET`) — a credential that also matches a prefixed form would produce a second finding on the same line and turn an exact count into an accident."
+  - "THE IDENTIFIERS MUST BE RECOGNISABLE AS IDENTIFIERS, NOT MERELY LONG. Each of the four must be a well-formed ticket- or epic-form identifier that Rule 2's patterns actually match, and each must independently exceed the entropy threshold, so the file genuinely contains six high-entropy values. Assert both properties as fixture preconditions before asserting any verdict; a `TICKET-` string that falls below the threshold would be set aside for the wrong reason."
+  - "THE DECISION MUST NOT BE FED `Finding.excerpt`. GE-125c-3 owns that constraint; it is repeated here only so a six-value fixture is not built with its interesting values pushed past the truncation point by accident. Keep every one of the six lines comfortably under 120 characters so this record measures ordering alone and nothing else, and leave the boundary behaviour to GE-125c-3 and GE-125c-3-i."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file inside a `tempfile`-backed throwaway project root with the ticket area constructed INSIDE that root and the check pointed at that root. No fixture under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. Assert as a precondition that the root path ABOVE the constructed prose directory contains none of those four segment names — the match is a substring test, so a temporary root can re-arm the exemption by accident."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY DIRECT CALL. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers."
+  - "CREDENTIAL-SHAPED FIXTURE STRINGS ARE ASSEMBLED AT RUNTIME from concatenated fragments, as `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does, and no `.security-allowlist` entry may be added so that literals can be committed."
+  - "ERROR HANDLING PER CLAUDE.md: the per-value decision stays a pure function and is not wrapped in try/except (Rule 4); file and subprocess access in the tests is wrapped in a typed except that logs at WARNING or re-raises (Rules 1-3)."
+test_spec:
+  - name: test_six_values_explained_first_report_exactly_two
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The forward-order file — identifier, credential, identifier, identifier, credential, identifier — yields EXACTLY TWO findings naming only the two credential lines' 1-based numbers, and the check exits non-zero. One finding means the implementation stopped deciding after the first value it met."
+  - name: test_reversed_order_produces_identical_per_line_verdicts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The reversed-order file yields exactly two findings, and the value-to-verdict mapping is compared element by element against the forward file so that every one of the six values reaches the same verdict in both. Six findings means the mirror defect — one unexplained value carrying the whole file into scope."
+  - name: test_all_identifiers_no_credential_reports_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The file holding only the four project identifiers yields zero findings and does not block the commit — four separate set-aside decisions reaching the same result they would reach one value at a time."
+  - name: test_each_fixture_value_is_high_entropy_and_triggers_at_most_one_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: each of the six values independently exceeds the entropy threshold, each identifier is matched by the ticket- or epic-form pattern, no value cross-triggers AWS_KEY / PRIVATE_KEY / EXCHANGE_API_KEY / GENERIC_SECRET, and every line is under 120 characters. Makes two an exact expectation rather than an accident, and keeps this record measuring ordering rather than truncation."
+test_rationale: |
+  Four descriptors. The first three are the criterion's three arms; the fourth is
+  the fixture contract that makes the first three mean what they say.
+
+  The second descriptor is the one that carries the record. Its assertion is a
+  per-line comparison rather than a count, because the parent already asserts a
+  count and the failure this record exists to catch — an order-sensitive
+  implementation — can agree with the parent on the total while disagreeing about
+  which lines produced it. Comparing the two files as mappings is the only shape
+  that separates them, and it is why a simple duplicate of the parent's count
+  assertion over a reversed file would not discharge this.
+
+  The fourth descriptor is not ceremony. Two is an exact expectation only if each
+  line can produce at most one finding, so a credential that happens to also match a
+  prefixed rule, or an identifier that happens to fall below the entropy threshold,
+  silently converts an exact assertion into a coincidence. Asserting those properties
+  before the verdicts means a fixture that drifts fails loudly. The same descriptor
+  pins every line under the truncation point, so this record measures ordering alone
+  and leaves the column-offset behaviour to GE-125c-3 and GE-125c-3-i.
+
+  A weaker shape — calling the per-value decision directly over a list of six
+  strings — was rejected. It cannot show that the ordering independence survives the
+  reporting path, and per CLAUDE.md a gate AC is discharged only by executing the
+  behaviour.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001's third fix direction and the substring-match measurement that makes a badly placed fixture pass for the wrong reason."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125c-1
+  contract: "A per-finding exemption decision in templates/scripts/commit_guardian/check_secrets.py that evaluates each ENTROPY_HIGH finding individually, so that a file may yield a mixture of set-aside and reported values. This record constrains that decision to be stateless across the values within one file."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity M, twelve it_requirements,
+      four test_spec descriptors, test_rationale, four doc_links and an expects_from
+      contract on GE-125c-1; set readiness reviewed. The it_requirements add the
+      statelessness constraint that makes the forward/reversed pair meaningful, require
+      the per-line distribution rather than the total to be compared, require exact
+      counts of two/two/zero, require each fixture value to be verified high-entropy and
+      single-rule before the verdicts are asserted, and pin every fixture line under 120
+      characters so this record measures ordering rather than truncation (that boundary
+      is GE-125c-3 and GE-125c-3-i). criteria, title, level and work_status unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS ITS OWN RECORD. The parent's scenario contains exactly one set-aside
+  value and exactly one credential, and both of the cheap wrong implementations
+  survive it. An implementation that decides once and applies the answer to the
+  rest of the file satisfies the parent whenever the explained value comes first.
+  An implementation that reports the whole file as soon as any value is unexplained
+  also satisfies the parent, because the parent's file contains only one of each.
+  Multiplicity and order are what separate them, and neither is in the parent's
+  text.
+
+  BOTH FAILURE DIRECTIONS ARE THE SAME DEFECT SEEN FROM OPPOSITE SIDES. Today one
+  explained value carries the whole file out of scope. The mirror — one unexplained
+  value carrying the whole file into scope — is not an improvement; it is the same
+  loss of granularity, and it reintroduces the false positives the exemption exists
+  to prevent. The exact count of two is what distinguishes them: six findings and
+  zero findings are both reachable from plausible implementations.
+
+  ASSERT THE PER-LINE DISTRIBUTION, NOT THE TOTAL. The second scenario compares the
+  verdict on each of the six values between the forward and reversed files. Two runs
+  can agree on a total of two while disagreeing about which lines produced them,
+  and an order-sensitive implementation is exactly the shape that does so.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED. Every fixture must be a real file
+  created inside a tempfile-backed throwaway project root, with the ticket area
+  constructed INSIDE that root and the check run against that root. No fixture may
+  be created under this repository's own `tickets/`, `docs/retrospectives/`,
+  `docs/acceptance-criteria/` or `templates/skills/` trees — a fixture under one of
+  those measures the exemption rather than the scanner and passes for the wrong
+  reason. The test module belongs under `unit_tests/commit_guardian/`.
+
+  EACH LINE MUST PRODUCE AT MOST ONE FINDING, so that two is an exact expectation
+  rather than a floor: verify the chosen values do not cross-trigger a second rule,
+  and keep the identifiers recognisable as identifiers rather than merely long.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Every arm runs the real
+  pre-commit secrets check over real staged files and asserts the process exit
+  status and the reported findings. Credential-shaped fixture strings are assembled
+  at runtime from concatenated fragments rather than written as source literals.

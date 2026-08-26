@@ -12,7 +12,8 @@ priority: medium
 roadmap_phase: phase_1
 criteria: |
   When you point the build system at a single requirement, it should set up
-  everything that requirement still needs — not just that one item.
+  everything that requirement still needs — not just that one item, and not
+  everything that happens to sit near it.
 
   Today, asking to build one acceptance criterion produces a single ticket and
   silently ignores the un-finished work it sits on top of. The result looks
@@ -23,7 +24,9 @@ criteria: |
   genuine prerequisites it depends on) and lays it out in the right order, so the
   whole thing can actually be built start to finish. Structural parent links are
   not mistaken for prerequisites, so the set stays tight and does not balloon to
-  unrelated siblings.
+  unrelated siblings. This holds however you point at the requirement — every way
+  in resolves the same tight set, so the scope you get never depends on which
+  entry point you happened to use.
 depends_on: []
 doc_links:
   - path: templates/agents/build-ac.md
@@ -38,9 +41,12 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-18"
+    reason: "Promise made entry-point-agnostic, and BO-2600b added to carry it into the fast lane. The tightness guarantee ('structural parent links are not mistaken for prerequisites') was already stated here, but the only L1 beneath it, BO-2600a, is scoped to /build-ac by its own title and opening line. The fast lane was therefore never covered: templates/workflows-js/fast-lane-ship.js:307 builds the select_connected command and never passes --exclude-structural-parent, so the capability delivered by BO-2600a-1 and BO-2600a-2 (both done) has no production caller on that lane. Measured 2026-08-18: aiming the lane at the leaf BO-2400c-1-v resolves to the whole BO-2400c subtree (5 ids), where the flag plus target BO-2400c-1 resolves to the intended 3. Amended so the goal states the guarantee holds for every entry point, not just the one that happened to be built first."
 superseded_by: null
-covered_by: [BO-2600a]
+covered_by: [BO-2600a, BO-2600b]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

@@ -1,0 +1,153 @@
+id: BO-3200b-2
+title: "A required action that did not happen appears in the halt report beside the failure that triggered it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run stopping on a failure, which must perform a required action before it ends,
+    And that action does not succeed,
+  When the run reports its halt,
+  Then the report names the failure that triggered the halt and states that the required
+    action did not succeed, together, in the same report.
+
+  Given the same run where the required action succeeds,
+  When it reports its halt,
+  Then the report names the failure and states that the required action succeeded.
+
+  Given a run whose required action does not succeed,
+  When the run's overall outcome is read by whatever consumes it,
+  Then the outcome is not reported as one in which everything that had to happen happened.
+depends_on:
+  - BO-3200b
+  - BO-3200b-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020's fix direction — 'a release that did not release should surface in the halt payload next to the failure that triggered it'."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The halt-payload shape this AC extends."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "BOTH FACTS IN ONE REPORT, not two places a reader has to correlate. A halt naming only the triggering failure sends the reader to diagnose that failure while the real damage — stranded state — goes unmentioned and is found days later by the guard that refuses to rebuild."
+  - "THE SUCCESS CASE MUST BE REPORTED TOO. Silence must never be the answer to 'did the cleanup run', because silence is indistinguishable from the cleanup not having been attempted."
+  - "THE MACHINE-READABLE OUTCOME MUST AGREE WITH THE REPORT. The value a caller branches on must not read as everything-fine while the report states an action did not succeed. This is the consumed-in-control-flow clause CLAUDE.md requires, and this repository has hit the divergence repeatedly — including a cancelled run that returned an ok status having authored nothing."
+  - "The required-action outcome must be a FIELD of the halt payload, not a line appended to a message, so a consumer can branch on it without parsing prose."
+  - "THE OUTCOME MUST BE READ EVERY TIME, on every failure path that performs a required action, and the set of those paths must be derived rather than listed. KI-BO-020 was nine paths with one defect."
+  - "Reading the outcome must not be able to raise: an action whose result is absent or malformed becomes 'did not succeed' (see BO-3200b-2-i), never an exception that replaces the original failure and loses it."
+  - "The original triggering failure must survive intact in the report. A report that replaces the triggering failure with the cleanup failure has traded one invisible fact for another."
+delivers_to:
+  - agent: python-coder
+    contract: "A halt payload carrying both facts: {triggering_failure: {...}, required_actions: [{name: str, outcome: 'succeeded' | 'refused' | 'uninterpretable' | 'not_attempted', detail: str, best_effort: bool, best_effort_reason: str | null}], overall: <status that is not a success value whenever any non-best-effort action did not succeed>}. BO-3200b-2-i constrains the outcome vocabulary; BO-3200b-3 populates best_effort and its reason; BO-3200b-4's diagram is checked against a real run producing this payload."
+  - agent: architecture-diagram-author
+    contract: "The ordered failure-path trace showing the release outcome being READ as its own interaction before the halt is reported, so BO-3200b-4 can draw the return arrow that nobody consumed in the old arrangement."
+expects_from:
+  - ac_id: BO-3200b-1
+    contract: "The inline release's per-item outcome list and aggregate {attempted, released, failed}, which this AC places into the halt payload's required_actions entry."
+test_spec:
+  - name: test_bo_3200b_2_failed_action_and_triggering_failure_appear_together
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the real failure path with the required action forced to fail; assert the single halt report names the triggering failure AND states the action did not succeed."
+  - name: test_bo_3200b_2_successful_action_is_also_stated
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Same path with the action succeeding: the report names the failure and states the action succeeded. Silence is never the answer to 'did the cleanup run'."
+  - name: test_bo_3200b_2_machine_outcome_does_not_read_as_everything_fine
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE CONSUMED-IN-CONTROL-FLOW CLAUSE. With the action failed, assert the value a caller branches on is not a success value — not only that the message says so. A report that states the problem while the outcome reads fine is the false-success shape."
+  - name: test_bo_3200b_2_triggering_failure_survives_a_cleanup_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "With both the original step and the cleanup failing, assert the original triggering failure is still present and identifiable in the payload — not replaced by the cleanup failure."
+  - name: test_bo_3200b_2_reading_a_malformed_outcome_does_not_raise
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "An absent or malformed action result becomes a did-not-succeed entry rather than an exception that replaces and loses the original failure."
+  - name: test_bo_3200b_2_every_derived_failure_path_reads_its_action_outcome
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Enumerate the failure paths that perform a required action FROM THE RUN'S STRUCTURE and assert each one's halt payload carries a required_actions entry. Nine paths with one defect is the recorded shape; a hand-written list of nine is eight next month."
+test_rationale: |
+  The defect this AC closes is not that the action failed — it is that nobody read the result.
+  So the discriminating coverage asserts on what a CALLER receives, not on what the log says:
+  the machine-readable outcome must not read as everything-fine while the report names a
+  problem. This repository has hit that divergence repeatedly, including a cancelled run that
+  returned an ok status having authored nothing.
+  The success-case test matters as much as the failure case: without it, "did the cleanup run"
+  is answered by silence, and silence is indistinguishable from the cleanup never having been
+  attempted — which is the original defect exactly.
+  The triggering-failure-survives test covers the natural over-correction: reporting the cleanup
+  failure by replacing the one that caused the halt trades one invisible fact for another.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200b-2-i
+implemented_by: []
+notes: |
+  THE PARENT L1 NAMES TWO INDEPENDENT DEFECTS and this is the second: "a required action whose
+  outcome is never inspected cannot be known to have happened." Doing the action directly
+  (BO-3200b-1) does not close it — a directly-performed action can also fail, and if nobody
+  reads the result the failure is just as invisible as a refusal that was discarded.
+
+  KI-BO-020's fix direction states it plainly: "Whatever the shape, read the reply: a release
+  whose result is discarded cannot distinguish 'released' from 'refused', which is precisely
+  how this stayed invisible. A release that did not release should surface in the halt payload
+  next to the failure that triggered it."
+
+  BOTH FACTS IN ONE REPORT is the load-bearing requirement. A halt that names only the
+  triggering failure sends the reader to diagnose that failure while the real damage — stranded
+  state — goes unmentioned and is discovered days later by the guard that refuses to rebuild.
+  The second scenario forces the success case to be reported too, so silence is never the
+  answer to "did the cleanup run".
+
+  THE THIRD SCENARIO IS THE CONSUMED-IN-CONTROL-FLOW CLAUSE required by CLAUDE.md "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep": a report that states the failure while the
+  machine-readable outcome still reads as everything-fine is the false-success shape recorded
+  against this repository repeatedly. The covering test must run the real failure path and
+  assert on both the report and the outcome a caller branches on.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Two additions the criteria imply. First, the triggering
+  failure must survive: the obvious way to make the cleanup failure visible is to report it, and
+  the obvious way to report it is to overwrite the halt reason. Second, reading the outcome must
+  not raise — an exception thrown while inspecting the cleanup result would destroy the original
+  failure and produce a third invisible fact, which is how a fix for an invisibility defect
+  becomes a new one.

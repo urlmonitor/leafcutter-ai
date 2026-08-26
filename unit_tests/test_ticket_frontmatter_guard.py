@@ -56,7 +56,11 @@ class TestChangeTargetValidation(unittest.TestCase):
 
     def test_all_valid_change_targets_produce_no_errors(self):
         """Each of the 10 valid change_target values must return an empty list."""
-        # covers: BO-610-1, BO-610-3-i
+        # One id per line: the done-proof scanner's covers-tag pattern captures a
+        # single \S+ token, so "covers: A, B" registers the id "A," (with the
+        # comma) and drops B entirely — leaving A unlinked and A, dangling.
+        # covers: BO-610-1
+        # covers: BO-610-3-i
         expected_values = (
             "code",
             "schema",
@@ -241,7 +245,9 @@ class TestRiskSurfaceValidation(unittest.TestCase):
 
     def test_all_valid_risk_surfaces_produce_no_errors(self):
         """Each of the 6 valid risk_surface values must return an empty list."""
-        # covers: BO-610-2, BO-610-4-i
+        # One id per line — see the note on the change_target equivalent above.
+        # covers: BO-610-2
+        # covers: BO-610-4-i
         expected_values = (
             "internal",
             "contract_boundary",

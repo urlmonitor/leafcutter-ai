@@ -107,7 +107,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-120a-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/04_TICKET-20260825-GE-120a-2.md
 change_target:
   - code
   - config
@@ -133,3 +134,4 @@ notes: |
   inventory across all 54 hooks_manifest.hooks[] entries is in it_requirements. The
   disposition is therefore a NEW distinct key, and the scope is all 54 entries — which is
   why the estimate was raised from M to L.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

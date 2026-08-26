@@ -1,0 +1,203 @@
+id: GE-122d-6
+title: "The commit-time numbering check is wired into the live registry and fires on a real commit"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy of the project in which the install has been performed by running
+    `python scripts/build.py --target-dir .`, so the commit path resolves its checks from the
+    deployed layout rather than from the source tree,
+  And a change staged in that working copy that introduces an artifact claiming a number
+    already claimed by a second artifact in the same namespace,
+  When a commit is attempted through the ordinary commit path — no skip flag, no environment
+    override, no direct invocation of the check script,
+  Then the commit does not complete,
+  And the output identifies the numbering check by the hook identifier it is registered under,
+    and names the contested number and every claimant path,
+
+  And given that same built working copy, the deployed registry the commit path reads —
+    `.pre-commit-config.yaml` as it resolves in the built working copy — lists that hook
+    identifier, so registration is observable where the commit path looks rather than only in a
+    source manifest,
+
+  And given the check's registration entry is removed from
+    `templates/scripts/commit_guardian/commit_guardian.json` — the 55-entry manifest the install
+    deploys the registry from — and the working copy is rebuilt,
+  When the same contested change is staged and the same commit is attempted,
+  Then the commit completes and no numbering output is produced,
+
+  And given the check is registered ONLY in `templates/commit-guardian/commit_guardian.json` —
+    the 3-entry file the install does not deploy the registry from — and the working copy is
+    rebuilt,
+  When the same contested change is staged and the same commit is attempted,
+  Then the commit completes and no numbering output is produced, so registering the check in
+    the non-operative manifest does not satisfy this criterion.
+
+  Coverage note: covered only by making real commits in a real built working copy and observing
+  what the commit path does. An assertion that a hook identifier appears in a JSON manifest, or
+  that a YAML block exists in a configuration file, does not cover any clause here — this
+  repository already holds four checks that are written, tested, deployed and registered
+  nowhere, so the presence of a name is evidence of nothing. The last two clauses are the ones
+  that distinguish a real wiring from a wiring made in the wrong file: both must be executed,
+  because a registration placed in the manifest the install ignores produces exactly the silent
+  no-op this criterion exists to detect.
+depends_on:
+  - GE-122d
+  - GE-122d-1
+  - GE-122d-3-ii
+  - GE-122e-3
+  - BP-900h-6
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The registration procedure and the deliberate commit-time bypass affordance this criterion excludes from its When clause."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "THE OPERATIVE MANIFEST — 55 entries, verified 2026-08-25. scripts/build_phases.py records that scripts/commit_guardian/commit_guardian.json serves the hook runner, and the install deploys the registry from this file. Registration goes here."
+  - path: scripts/build_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO 2026-08-25 — the deploy manifest. Every module check_identifier_uniqueness.py imports (including _uniqueness_scanners.py and everything IT pulls in) must appear in the matching deploy list here, or the deployed hook raises an import error at commit time while the source-tree unit tests stay green. This is the done_proof.py precedent, and it is an edit surface of this AC, not merely context."
+  - path: templates/commit-guardian/commit_guardian.json
+    relationship: context
+    status: exists
+    relevance: "THE NON-OPERATIVE FILE — 3 entries, verified 2026-08-25. GE-122d's own coverage matrix already records that this file's hooks_manifest is NOT the operative list. Registering here is the silent no-op this criterion is written to detect; the fourth clause exercises it deliberately. NOT AN EDIT SURFACE — see the FILE SCOPE it_requirement."
+  - path: templates/scripts/commit_guardian/check_identifier_uniqueness.py
+    relationship: related
+    status: exists
+    relevance: "The whole-collection uniqueness check this criterion wires up. Verified 2026-08-25: its name appears in neither commit_guardian.json nor the deployed pre-commit registry, so it has never run."
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml
+    relationship: context
+    status: exists
+    relevance: "IT-PO 2026-08-25 — the empirical detector for the fresh-install regression this registration risks. It is a depends_on: the consumer-install commit job must EXIST and be green before this registration lands, and must be RE-RUN and still green after it. That re-run is the third leg of the required order (scaffold, register, re-run)."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122d-3-ii.yaml
+    relationship: context
+    status: exists
+    relevance: "IT-PO 2026-08-25 — the scaffold prerequisite, and the reason it is a depends_on rather than a preference. Until every namespace root exists in a plain install and resolves through declared path configuration, registering this hook makes every commit in every fresh install fail closed on an unresolvable root."
+  - path: docs/architecture/adrs/ADR-034-whole-collection-uniqueness-pass.md
+    relationship: context
+    status: exists
+    relevance: "The accepted decision describing the pass being registered, including the four namespaces it holds itself responsible for."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "The template-is-canonical, build-deploys rule. It is why a registration edited only in a template that the install does not read is a no-op in the layout the commit path actually runs from."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "RESOLVE THE TWO-FILE AMBIGUITY BEFORE WRITING ANY REGISTRATION. There are two files named commit_guardian.json and they disagree: templates/scripts/commit_guardian/commit_guardian.json holds 55 entries and is the one the install deploys the registry from; templates/commit-guardian/commit_guardian.json holds 3 entries and is not. GE-122d's coverage matrix names .pre-commit-config.yaml as the live registry, while GE-120c-3's it_requirements treat the 55-entry file as authoritative. Both are consistent once the direction is stated: the 55-entry manifest is the SOURCE the registration is authored in, and the deployed .pre-commit-config.yaml is where the registration must be OBSERVABLE. Assert on the deployed side; author on the source side."
+  - "The verification is a real commit, not an invocation of the check script. Invoking the script directly proves the script works and proves nothing about whether the commit path reaches it — which is the entire defect. Stage real files in a real git index in a real built working copy and run the ordinary commit."
+  - "The two negative clauses are the deliverable, not decoration. A test that only exercises the positive path passes identically on a check registered in the wrong file, because the positive path can be made to pass by invoking the script from the test. Deregistering and rebuilding, then observing the commit succeed, is the only construction that fails when the wiring is in the file the install ignores."
+  - "DEPLOY MANIFEST: every module the check imports must appear in the matching deploy list in scripts/build_phases.py, or the deployed hook raises an import error at commit time while the source-tree unit tests pass. This is the done_proof.py precedent and it applies to every module _uniqueness_scanners.py pulls in as well as to the check itself."
+  - "ORDERING IS LOAD-BEARING, and it is the same ordering GE-122d-2 records for the build stage: do not register this check until GE-122e's repair has landed. A whole-collection uniqueness check registered over a collection that still holds the GE-119 collision and the five twice-held work items blocks every commit in the repository from the moment it is wired."
+  - "BUILD ORDER IS NOW ENCODED IN depends_on AND IS NOT ADVISORY (IT-PO 2026-08-25). Three items must be landed and green BEFORE this registration is committed: GE-122d-3-ii (the base install scaffolds every namespace root, and every root resolves through declared path configuration), GE-122e-3 (the collection itself passes the guard with nothing excused), and BP-900h-6 (the consumer-install commit job that can observe the regression). Measured 2026-08-25 on both documented install paths, INCLUDING --seed-docs: build.py creates neither docs/architecture/adrs/ nor docs/architecture/diagrams/. Under GE-122d-3's fail-closed contract those are unresolvable roots, so a registration that lands first blocks EVERY commit in EVERY fresh install — the guard would ship as a denial of service on new adopters. Required order: scaffold, register, re-run."
+  - "RE-RUN THE CONSUMER-INSTALL COMMIT JOB AFTER REGISTRATION, and treat its green as part of this AC's evidence. BP-900h-6's use-the-install step must be executed against a from-empty install built AFTER this registration lands, with no opt-in documentation-seeding step, and the adopter's first commit must still complete. Signing this AC off on the positive and negative in-repo commits alone accepts exactly the evidence class that let four guards ship registered nowhere: it proves the wiring, not that the wiring is safe to ship."
+  - "FILE SCOPE — READ THIS BEFORE TRUSTING THE GENERATED TICKET'S files_touched. The edit surface of this AC is templates/scripts/commit_guardian/commit_guardian.json (the operative manifest — the registration is authored here), scripts/build_phases.py (deploy manifest, if the check pulls in a module not already listed), and the new test module. templates/commit-guardian/commit_guardian.json is named throughout these requirements ONLY as the wrong-file negative case and MUST NOT be edited — generate_ticket_from_ac.py extracts path tokens from prose bullets, so if that path appears in the ticket's files_touched it is a generator artefact: correct the ticket, do not edit the file. scripts/commit_guardian/commit_guardian.json and .pre-commit-config.yaml are BUILD OUTPUTS under ADR-001 — regenerate them with build.py, never hand-edit."
+  - "Error handling per CLAUDE.md Rules 1-4. The dispositions on the cannot-establish and internal-defect conditions are GE-122d-3's and GE-122d-3-i's and are not re-decided here; this criterion concerns only whether the check is reached at all."
+test_spec:
+  - name: test_ge122d6_contested_commit_is_blocked_in_a_real_built_install
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In a working copy produced by `python scripts/build.py --target-dir <copy>`, a staged change introducing a second claimant of an already-claimed number is committed through the ordinary commit path — no skip flag, no environment override, no direct script invocation — and the commit does not complete."
+  - name: test_ge122d6_blocking_output_names_hook_id_contested_number_and_every_claimant
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: deployed
+    description: "The text the blocked commit itself wrote identifies the check by the hook identifier the built copy's deployed .pre-commit-config.yaml registers it under, and names the contested number and every claimant path. Asserted on the commit's observable output in the deployed layout — never on a manifest key, and never on anything imported from the source tree."
+  - name: test_ge122d6_deregistering_from_the_operative_manifest_lets_the_same_commit_through
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "With the registration entry removed from templates/scripts/commit_guardian/commit_guardian.json and the copy rebuilt, the identical contested change commits cleanly and no numbering output is produced. This is the delete-the-wiring-line test: it goes red if anything other than the registration is what reaches the check."
+  - name: test_ge122d6_registration_only_in_the_non_operative_manifest_does_not_block
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "With the check registered ONLY in templates/commit-guardian/commit_guardian.json — the 3-entry file the install does not deploy the registry from — and the copy rebuilt, the identical contested change commits cleanly, so a registration authored in the wrong file fails this AC instead of passing it."
+  - name: test_ge122d6_from_empty_install_first_commit_still_completes_after_registration
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A project built from an EMPTY directory with no opt-in documentation-seeding step, using the build that carries this registration, still lets an adopter's first ordinary commit complete — the fail-closed unresolvable-root regression this registration would otherwise ship. Invokes the same entry point BP-900h-6's CI step uses rather than reimplementing it."
+test_rationale: "Every clause of this AC is about what the COMMIT PATH does, and no assertion over the check script's return value can reach that question — the script already works, has a green suite and six adversarial reviews, and has never run. Asserting that a hook identifier appears in commit_guardian.json, or that a YAML block appears in .pre-commit-config.yaml, is the same evidence class that certified four guards as covered while none of them executed; per CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep' it covers nothing here. The contract is therefore four real `git commit` invocations in real built working copies. The two negative runs are load-bearing rather than thorough: the positive run passes identically on a registration written into the manifest the install ignores, so only deregister-and-rebuild and register-in-the-wrong-file can distinguish a real wiring from the silent no-op. The fifth test exists because this registration is the one change in the tree that can turn a fail-closed guard into a repo-wide commit block for every new adopter, and it must be shown not to."
+delivers_to:
+  agent: python-coder
+  contract: "A numbering check reachable from the deployed commit-time registry, so that an ordinary commit invokes it."
+expects_from:
+  ac_id: GE-122d-1
+  contract: "The commit-time stage entry point, which this criterion requires to be registered rather than merely deployed."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: it-po-technical-enrichment
+    agent: it-po
+    date: '2026-08-25'
+    changed: "readiness draft->reviewed; depends_on gained GE-122d-3-ii, GE-122e-3 and BP-900h-6 to make the scaffold/register/re-run order machine-enforced; doc_links gained scripts/build_phases.py as a modifies edge plus context edges to GE-122d-3-ii and BP-900h-6; three it_requirements added (build order, post-registration re-run, file scope); test_spec and test_rationale authored as five behavioural real-commit descriptors. criteria unchanged."
+superseded_by: null
+covered_by:
+  - GE-122d-6-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/08_TICKET-20260825-GE-122d-6.md
+declares_side_effect: true
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS AC EXISTS AT ALL, stated plainly because it is embarrassing and therefore easy to
+  soften: the commit-time numbering check was built, tested to a green suite, and adversarially
+  reviewed six times — and it is registered nowhere. It has never run. GE-122d's own coverage
+  matrix predicted this trap verbatim while documenting a DIFFERENT guard
+  (check_adr_collision.py) that had already fallen into it. Verified 2026-08-25:
+  check_identifier_uniqueness.py appears in neither commit_guardian.json nor the deployed
+  pre-commit registry. That is the fourth unregistered detector in this component.
+
+  THE TWO-FILE PROBLEM IS THE DEFECT, NOT A DETAIL. Registering in
+  templates/commit-guardian/commit_guardian.json (3 entries) instead of
+  templates/scripts/commit_guardian/commit_guardian.json (55 entries) produces a guard that
+  looks registered in every inventory and never executes. That is indistinguishable, from the
+  outside, from the state the repository is in today. The fourth clause of the criteria
+  therefore exercises the wrong-file case on purpose: an implementation that registers in the
+  wrong file fails this AC rather than passing it.
+
+  WHY THIS IS NOT A DUPLICATE OF GE-122d-1. GE-122d-1 asks whether the three stages compute the
+  same verdict; it is satisfied by three stages that all evaluate the shared rule identically.
+  Three stages that all agree and none of which is reached by a commit satisfy GE-122d-1 in
+  full. This AC asks the separate question GE-122d-1 explicitly cannot answer, and its own
+  it_requirements say so: "this repository already holds guards that are registered nowhere ...
+  so the presence of a name proves nothing."
+
+  WHY IT IS NOT A DUPLICATE OF GE-122d-2 EITHER. GE-122d-2 covers the shared-build stage and
+  the GitHub required-check set. This covers the commit-time stage and the pre-commit registry.
+  Different stage, different registry, different failure mode — and GE-122d-2's premise (an
+  author who bypasses the commit-time guards) presumes the commit-time guard exists to bypass.
+
+  IT-PO (2026-08-25) — ON THE ORDERING, AND WHY IT IS THREE PREDECESSORS AND NOT TWO.
+  The user-stated required order is scaffold, register, re-run the deployed-consumer test. The
+  first two legs are directly expressible as depends_on (GE-122d-3-ii, GE-122e-3) and are now
+  encoded. The third is an ACT on BP-900h-6's job, not a build of a later artifact — and a job
+  that does not yet exist cannot be re-run. BP-900h-6 is therefore ALSO a predecessor here:
+  build the detector, scaffold the roots, then register, then re-run the detector against the
+  registered build. That is a strict superset of the stated order and is the only arrangement
+  in which the registration is guarded at the moment it lands rather than afterwards.
+  BP-900h-6 itself gains no dependency on this AC, so it stays buildable and green today.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

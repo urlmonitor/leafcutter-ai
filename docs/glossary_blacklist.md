@@ -91,3 +91,4 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | build_epic_from_ids | Python function name in scripts/goal_to_epic.py (code identifier), not a standalone domain concept | 2026-08-12 |
 | verify_ticket_coverage | Python function name in scripts/ac_store/ac_coverage_resolver.py (code identifier), not a standalone domain concept | 2026-08-18 |
 | user_facing_surface | Pending/candidate field name discussed in phantom-done-prevention.md prose (not a shipped selector), not a standalone domain concept | 2026-08-18 |
+| workspace_setup_agent | JS workflow-argument key (args.workspace_setup_agent) in plan-feature.js overriding the workspace-setup dispatch target; a configuration argument name matching the pattern of existing blacklisted config identifiers, not a standalone domain concept | 2026-08-18 |

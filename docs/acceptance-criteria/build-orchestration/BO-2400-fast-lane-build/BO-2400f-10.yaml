@@ -53,9 +53,14 @@ expects_from:
   contract: "The set claimed as in_progress at start, plus which of those were transitioned to done, so the release targets only claimed-but-not-done ACs."
 origin_agent: BrainCandy
 created: 2026-08-10
-amended_by: []
+amended_by:
+  - agent: BrainCandy
+    date: "2026-08-25"
+    reason: "work_status correction (not a change of intent), following KI-BO-020: reset done -> in_progress, and two children added. THE CRITERION TEXT IS UNCHANGED AND WAS NEVER WRONG — the status was. It promises that a run which halts after claiming puts its acceptance criteria back to todo. Verified 2026-08-25: no fast-lane run has ever done so. All nine release dispatches in templates/workflows-js/fast-lane-ship.js (lines 506, 574, 596, 648, 668, 751, 773, 871, 943) pass agentType \"status-checker\" while opening their prompt 'You are the release-phase agent.' status-checker refuses role reassignment by design, the lane discards the reply, and the run reports a clean halt over five acceptance criteria it just stranded. After run wf_bd4984e8-438 all five claimed records were still in_progress in the run's own store, two confirmed by direct read. So the command exists and is correct; its only invocation path is dead. That is in_progress, not done, and specifically it is the phantom-done shape this whole AC family was written to end: specified, believed working, never once executed. DECIDED: amend-plus-children rather than a rewrite. The parent states the outcome and states it correctly; what was missing is any requirement that the outcome be REACHABLE, and any requirement that a failure to reach it be VISIBLE. Both are additions rather than corrections, so they become BO-2400f-10-i (the release actually releases, on every halting path, proved against a real on-disk store rather than by the presence of a dispatch) and BO-2400f-10-ii (the release's own result is read, and a release that did not release is named in the halt beside the failure that triggered it). Product Owner's fix direction, carried into both children: do not route the release through a persona-mismatched agent — the release is a single deterministic command, so have it invoked rather than requested of an agent that will decline it — and READ THE REPLY, because a release whose result is discarded cannot distinguish released from refused. CAP CHECK: this is an L2, and check_ac_limits._MAX_CHILDREN has keys for L0 and L1 only, continuing past every other level, so two children trip nothing and no child_limit_override is added — on an L2 it would be a silent no-op that reads as a waiver. UNRESOLVED TENSION, RAISED NOT SETTLED: this record says the release is 'landed on mainline'. A fast-lane run claims in its own workspace's copy of the store, and that copy is discarded with the workspace — which is the only reason the observed failure was harmless. Whether the release is meant to reach mainline at all, or only the workspace store the claim was made in, is a product question for BrainCandy. BO-2400f-10-i is deliberately worded against 'the store the run claimed in' so it is true either way and does not pre-empt that decision."
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-2400f-10-i
+  - BO-2400f-10-ii
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

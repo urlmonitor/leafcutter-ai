@@ -1,0 +1,120 @@
+id: GE-124d-4
+readiness: approved
+priority: high
+title: "A how-to shows how to record an opt-out and how an area gets onto the warn list"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+criteria: |
+  Given an author has a file that genuinely renders no criterion of its own
+  When they open the escapes how-to
+  Then the how-to shows where the opt-out reason goes in each supported file
+    shape and shows a worked reason that the check accepts
+  And it states which reasons are refused — a bare marker, a placeholder token,
+    and whitespace — and that a refused opt-out leaves the file blocked
+  And it states that the reason appears in the diff and in the check's report,
+    so the author knows a reviewer will read it
+
+  Given a team wants an area of the product not yet held to this rule
+  When they open the same how-to
+  Then it states where the warn list lives and how a path is added to it
+  And it states that the warn tier is per-path, that it cannot be applied to the
+    whole repository, and that a warn-tier file is still reported
+  And it distinguishes the two escapes by when to use which — the opt-out for a
+    file that will never declare, the warn list for an area that does not
+    declare yet
+depends_on:
+  - GE-124d
+  - GE-124d-1
+  - GE-124d-2
+  - GE-124d-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/how-to/frontend-declaration-escapes.md"
+    relationship: describes
+    status: planned
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "Author under docs/how-to/ with check_doc_frontmatter-compliant frontmatter (title, type: how-to, status, created, last_updated, components, description) and stay within the check_doc_length budget."
+  - "THE WORKED REASON AND THE OPT-OUT MARKER EXAMPLES MUST BE EXECUTABLE — complete leading-comment regions per dialect, extractable by the test contract and accepted by the real reader as pass-with-reason. An example the check refuses would leave an author blocked while following the instructions."
+  - "NAME THE WARN LIST BY ITS REAL LOCATION — the `warn_paths` key in the `frontend_ac_declaration` section of commit_guardian.json — and state that editing it is a reviewed configuration change, not a local convenience. An author who cannot find the list will reach for the per-item opt-out instead, which is the wrong tool but the discoverable one."
+  - "STATE THE ASYMMETRY EXPLICITLY: the reason lives IN THE FILE (so it appears in the diff) and the warn list lives IN CONFIG (because it excuses an area). Readers will otherwise assume both are configured in one place, which is the design GE-124d-2 rejects."
+  - "THE LAST CLAUSE IS THE POINT AND MUST NOT BE SOFTENED. The failure the PO is guarding against is someone adding a directory to the warn list because ONE file in it was awkward — silently exempting every other file in that directory, now and in future. Say that outcome plainly."
+  - "CARRY GE-124g'S BOUNDARY: these escapes govern whether a FILE MUST DECLARE. They never change what a declaration is worth, and there is no opt-out from that rule (GE-124g-1-i scenario 3). A reader who learns about escapes here is the reader most likely to look for one there."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the how-to document."
+delivers_to:
+  agent: frontend-coder
+  contract: "The two escape routes told apart by when each applies — the in-file opt-out reason for a file that will never declare, the config warn list for an area that does not declare yet — so an author does not reach for a warn-list entry to solve a single-file problem. Its opt-out examples are executable: each must be accepted by the real reader as pass-with-reason."
+expects_from:
+  ac_id: GE-124d-2
+  contract: "The opt-out marker placement (leading comment region, both dialects) and the reason-acceptance rule (non-empty, non-placeholder) this how-to documents"
+test_spec:
+  - name: test_ge_124d_4_worked_opt_out_examples_are_accepted_by_the_real_reader
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Extract each opt-out example from the how-to, place it in a temp file of the matching extension with no declaration, and run the real check: each must resolve to 'pass-with-reason'. An example the check refuses is guidance that blocks the author who followed it."
+  - name: test_ge_124d_4_documented_refused_reasons_are_actually_refused
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Every reason the page lists as refused (bare marker, placeholder token, whitespace) is run through the real check and must yield 'block'. Both directions of the acceptance rule are documented, so both are checked; a page listing a refused form the check silently accepts is worse than silence."
+  - name: test_ge_124d_4_warn_list_location_named_in_the_page_resolves_to_the_real_config_key
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The config file and key path the page names exist in commit_guardian.json. When the section or key is renamed the page goes red rather than sending readers to a key that is gone."
+  - name: test_ge_124d_4_page_states_the_when_to_use_which_distinction_and_the_directory_hazard
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The page contains the two-escapes distinction (opt-out for a file that will never declare; warn list for an area that does not declare yet) and states plainly that adding a directory to the warn list exempts every file in it, now and in future. This is the clause whose absence causes the specific harm the PO named."
+test_rationale: |
+  This page's danger is that it makes escaping easy, so its examples must be correct in BOTH
+  directions: the accepted forms have to be accepted and the refused forms have to be refused,
+  each verified against the real check rather than described. A page that lists a refused form
+  the check silently accepts is actively harmful — it advertises a bypass. The config-key test
+  is the staleness ratchet for the one piece of the page that points outside itself. The final
+  content test covers the clause with no executable counterpart, which is also the clause whose
+  omission produces the exact failure the PO named: a whole directory exempted because one file
+  in it was awkward.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the opt-out examples to be executable in BOTH directions (accepted forms accepted, refused forms refused) against the real check, named the warn list by its real config key with a staleness test, made the in-file-versus-config asymmetry explicit, and carried GE-124g's no-escape-from-worth boundary onto the page most likely to be read by someone hunting for one. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for GE-124d's `documentation_triggers: [how-to]`. The PO explicitly
+  ruled out a sequence-diagram here: unlike GE-117e this L1 has no multi-actor
+  remediation flow, it is a single authoring action plus a configuration list.
+
+  THE LAST CLAUSE IS THE POINT. The two escapes are not interchangeable, and
+  the failure mode the PO is guarding against is someone adding a directory to
+  the warn list because one file in it was awkward — which silently exempts
+  every other file in that directory, now and in future.
+
+  IT-PO NOTE (2026-08-25). This is the page an author lands on when they want
+  out of the guardrail, which makes it the page most likely to be mined for a
+  loophole. GE-124g's boundary — escapes govern whether a file must declare,
+  never what a declaration is worth — is therefore required content here, not
+  only in GE-124g-5's reference.

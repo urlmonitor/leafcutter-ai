@@ -21,13 +21,17 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+child_limit_override: 8
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - "2026-08-19 [business-analyst]: added ACS-100i-6, ACS-100i-7 and ACS-100i-8 to covered_by. These decompose the KI-ACS-005 narrowing of the package-surface it_requirements cross-field rule — a conditional constraint keyed off assigned_agent + component, which is this L1's subject matter. Child ids -3, -4 and -5 were skipped: they are already in use by EPIC-AcParentChildLinkEnforcement (tickets and # covers: tags exist) even though their YAML records are absent from the store, and re-issuing them would create the duplicate-id defect recorded as KI-ACS-003."
+  - "2026-08-25 [business-analyst]: added ACS-100i-9, ACS-100i-10 and ACS-100i-11 to covered_by — the assigned_agent referential-integrity set. Subject-matter fit: this L1 already owns 'dangling references that point to non-existent ACs'; a producer name that points to a non-existent AGENT is the same rule family, and the components -> docs/components.json precedent it copies is enforced one field over. Child ids -9, -10 and -11 were verified free store-wide (no YAML, no ticket, no `# covers:` tag), so KI-ACS-003 does not apply."
+  - "2026-08-25 [business-analyst]: added child_limit_override: 8. This L1 stood at exactly 5 active L2 children (-1, -2, -6, -7, -8), which is the default cap, so ANY new child would have been blocked by check_ac_limits regardless of how few were added — the override is unavoidable here, not a consequence of adding three. 8 is the exact new child count, not headroom: a fourth addition must re-justify. RETIREMENT: this waiver dies with ACS-800e, which makes check_ac_limits count children from metadata instead of id strings and retires child_limit_override entirely. The alternative considered and rejected was a new sibling L1 under ACS-100 (per the ACS-800/900/1200 precedent of minting rather than overloading); it was rejected because ACS-100 itself sits at 9 of its own overridden cap of 10, so a new L1 would consume the last slot of a waiver whose own note calls it temporary, and because authoring an L1 is the product-owner's decision, not the BA's."
 superseded_by: null
-covered_by: [ACS-100i-1, ACS-100i-2]
+covered_by: [ACS-100i-1, ACS-100i-2, ACS-100i-6, ACS-100i-7, ACS-100i-8, ACS-100i-9, ACS-100i-10, ACS-100i-11]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

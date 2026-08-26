@@ -1,0 +1,148 @@
+id: GE-125d-1-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "The notice goes to the error stream and leaves the findings report on the output stream untouched"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the same three-file staged set as the parent criterion — two files under
+    locations to which reduced scrutiny applies
+    ("docs/retrospectives/2026-08-19-incident.md" and
+    "templates/skills/example-skill/scripts/helper.py", placed there
+    deliberately because the reduction is the subject) and one outside them
+    ("src/app.py", the control),
+  When the staged set is checked on the path a real commit takes and the two
+    streams are captured separately,
+  Then the output stream carries the finding for "src/app.py" in the report
+    format it already uses, and carries no part of the notice — not the header,
+    not a per-file line, not the count,
+  And the error stream carries the notice and nothing that belongs to the
+    findings report,
+  Because the output stream is what the check's own summary and any log reader
+    parse; a line of notice text mixed into it corrupts a report that other
+    things already depend on, and a capture that merges the two streams cannot
+    tell a correct notice from one that did exactly that.
+
+  Given a staged set on which the check produces no findings at all and no
+    withheld findings,
+  When the staged set is checked on the path a real commit takes,
+  Then the output stream is what it is today for a clean run,
+  Because this record adds a stream, it does not renegotiate the existing one.
+depends_on:
+  - GE-125d-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Establishes this component's warning contract: the error stream, not the output stream that carries the findings report. Reuse that split rather than inventing a second convention. The one departure — the verbatim offending text, which -v includes and this notice must never include — is held by the parent GE-125d-1, not here."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Reuses the same stream split for the adjacent goal's exemption notice. Cited in prose only — no depends_on edge into the GE-123 tree, and no GE-123 file may be edited."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is the canonical copy; the copies under scripts/ and .leafcutter/scripts/ are build.py outputs and check_hook_parity enforces all four."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "MEASURED IN THE CANONICAL COPIES ON 2026-08-24, not assumed, because this record fixes a stream and the existing one must be described correctly. In templates/scripts/commit_guardian/check_secrets.py the findings report — the SECRETS DETECTED header, the per-finding lines, and the trailing allowlist hint — is written by bare print() with NO file= argument, so it goes to STDOUT. The only existing write to STDERR in that file is the WARNING emitted when `git diff --cached` cannot be listed. In templates/skills/security-scanner/scripts/scan_secrets.py, allowlist-parse warnings go to stderr and the module docstring states 'never stdout', while its standalone CLI prints findings to stdout. The convention therefore already exists and is consistent — findings on stdout, warnings on stderr — and this record joins the stderr side rather than inventing a second convention."
+  - "Stream discipline is a hard boundary, not a preference. Not one character of the notice may reach the output stream — not the header, not a per-file line, not the count — and not one character of the findings report may move to the error stream. A single line of notice text on the output stream corrupts a report that the check's own summary and any log scraper already parse."
+  - "The existing output-stream report must be unchanged for a run that produces the same reported findings, whether or not anything was withheld: same format, same ordering, same trailing allowlist hint. This record adds a stream; it does not renegotiate the existing one. A diff of the output stream between the pre-change and post-change build over identical input must be empty."
+  - "On a run with no findings and nothing withheld, the output stream must remain exactly what it is today for this check — which is nothing, because main() returns 0 before producing any output. The clean-run output contract is inherited unchanged and must not be re-achieved by printing an empty block."
+  - "Every test covering this record must capture the two streams SEPARATELY. A merged capture passes whether the notice went to the right stream or corrupted the report, which makes this the arm most easily lost in review. Capturing stdout and stderr into one buffer is a defect in the test, not a convenience."
+  - "ADR-001 parity: edit templates/scripts/commit_guardian/check_secrets.py, then run `python scripts/build.py --target-dir .` and verify the deployed copy behaves identically. check_hook_parity enforces all four locations; a deployed-copy-only fix is reverted by the next build."
+delivers_to: null
+expects_from:
+  ac_id: GE-125d-1
+  contract: "The notice itself. This record fixes which stream carries it and asserts that the pre-existing findings report on the other stream is unchanged."
+test_required: true
+test_spec:
+  - name: test_notice_on_error_stream_and_findings_report_on_output_stream
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The parent's three-file staged set run as a subprocess with stdout and stderr captured into SEPARATE buffers: stderr carries the notice and nothing belonging to the findings report, stdout carries the src/app.py finding in the existing format and no part of the notice"
+  - name: test_output_stream_carries_no_notice_header_line_or_count
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Each individually identifiable element of the notice — the header, any per-file line, the total — is asserted absent from the stdout buffer, so a partial leak of one element cannot pass"
+  - name: test_existing_findings_report_format_is_byte_identical_with_and_without_withholding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Two runs producing the same reported findings, one with withheld findings and one without, emit an identical stdout buffer — proving the added stream did not renegotiate the existing report that the hook summary and log readers parse"
+  - name: test_clean_run_leaves_both_streams_as_they_are_today
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A staged set with no findings and nothing withheld produces empty stdout and empty stderr for this check — no header, no zero count, no empty block"
+  - name: test_stream_split_holds_in_the_deployed_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After `python scripts/build.py --target-dir .`, the deployed scripts/commit_guardian/check_secrets.py places the notice and the findings report on the same two streams as the canonical templates/ copy"
+test_rationale: "The whole content of this record is which stream carries what, so the only assertion shape that can prove it is a subprocess run with stdout and stderr captured into two separate buffers. A test that merges the streams — or that asserts on a formatter's return value rather than on process output — passes whether the notice landed correctly or corrupted the findings report, which is exactly the failure this record exists to make unreachable. The byte-identical entry is a seam test rather than a criterion test because the consumer of the output stream is not this check: the hook's own summary and any log scraper parse that report, so the evidence needed is that the producer's real output is unchanged for the real consumer. The clean-run entry pins the inherited contract at its boundary, where main() returns 0 before producing any output today. The deployed entry exists because the file ships through build.py into three further copies that check_hook_parity holds identical."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at S. Authored six it_requirements. The first records what the code actually does today rather than assuming it: the findings report in check_secrets.py is written by bare print() with no file= argument and therefore goes to stdout; the only existing stderr write in that file is the git-listing WARNING; and the scanner already sends allowlist-parse warnings to stderr with a docstring stating 'never stdout'. The convention this record adopts therefore already exists. Added the requirement that the pre-change and post-change output streams diff empty over identical input, so 'does not renegotiate the existing stream' is checkable rather than aspirational, and the requirement that every covering test capture the two streams separately, because a merged capture is what makes this arm silently droppable. Authored a five-entry test_spec plus test_rationale, including one deployed-layout entry for the build.py round trip. GE-113c-3-v and GE-123d-5 are cited as doc_links and in prose only: no depends_on edge crosses into the GE-113 or GE-123 trees and no file in either was edited. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS A SEPARATE RECORD RATHER THAN A CLAUSE. The parent is about what
+  the notice says. This is about where it lands, and it is the arm most likely
+  to be quietly dropped, because a merged stream capture makes a violation
+  invisible: a test that reads combined output passes whether the notice went to
+  the right stream or corrupted the report. The two streams must be captured
+  separately for this criterion to mean anything.
+
+  THE COMPONENT ALREADY HAS THIS CONVENTION. Warnings from this family of checks
+  go to the error stream while the findings report stays on the output stream;
+  GE-113c-3-v established it for an allowlist warning and GE-123d-5 reuses it
+  for the adjacent exemption notice. This record adopts the same split rather
+  than inventing a second convention, and the one place it departs from
+  GE-113c-3-v — the verbatim offending text, which that record includes and this
+  one must never include — is held by the parent, not here.
+
+  FIXTURE PLACEMENT is the parent's, unchanged and for the parent's reason: for
+  this L1 the fixture belongs under an exempt path by design. The control file
+  outside those locations is what supplies the finding that the output stream
+  must still carry, so it is load-bearing here too and must not be dropped as
+  redundant.
+
+  IT-PO NOTE, 2026-08-24 — the convention was CONFIRMED IN THE CODE, not taken
+  on the strength of the two sibling records. templates/scripts/commit_guardian/
+  check_secrets.py writes its findings report with bare print() and no file=
+  argument, so that report is on stdout today; its single stderr write is the
+  warning issued when the staged set cannot be listed. The scanner it calls,
+  templates/skills/security-scanner/scripts/scan_secrets.py, sends
+  allowlist-parse warnings to stderr and says so in its module docstring
+  ("never stdout"). So the split this record fixes is the one already in force,
+  and the change is additive.

@@ -9,7 +9,7 @@ level: L2
 scope: standing
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given an AC YAML file that violates config/ac_store_schema.json
     (for example a package-surface AC — assigned_agent python-coder in a
@@ -34,6 +34,44 @@ it_requirements:
   - "Verify behaviorally — run the validator against a real on-disk AC file that the commit hook rejects, and assert a non-zero exit; do not grep the validator source"
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_acs_200e_every_hook_rule_is_also_a_validator_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Enumerate the rules the commit hook applies beyond the shared schema file and assert the standalone validator applies each one. Asserting both load config/ac_store_schema.json is NOT sufficient and is why this AC was falsely closed: the hook grew Python-side rules the schema does not express (declares_side_effect is the known case, three occurrences in the hook, zero in the validator) and a shared-schema test is blind to every one of them."
+  - name: test_acs_200e_file_rejected_by_hook_is_rejected_by_validator
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Write a real AC YAML file that violates a hook-only rule, run BOTH the standalone validator and the deployed commit hook against it as subprocesses, and assert the two exit codes agree. This is the criterion stated literally — no file may pass the standalone validator and then be rejected by the commit hook — and it must be exercised on a real on-disk file, not a dict fixture, because the divergence lives in rule coverage rather than in parsing."
+  - name: test_acs_200e_parity_holds_through_both_real_entry_points
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/ac_store/validate_ac_schema.py <path> and .leafcutter/scripts/commit_guardian/run_hook.py check_ac_schema.py"
+    description: "Invoke both surfaces the way an author and a commit actually invoke them, rather than importing their validate functions. The hook reads its file set from the git index, so an import-level test can agree while the two real invocations disagree — and the index-scoping is itself the KI-CG-001 defect this store keeps rediscovering."
+  - name: test_acs_200e_valid_file_passes_both
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Negative control: a schema-valid AC file passes both surfaces. Without it, parity is satisfiable by making the validator reject everything."
+test_rationale: |
+  The shape that already failed here is the one to exclude: a test asserting that
+  both surfaces resolve the same schema FILE. That passed, and the AC was marked
+  done, while the hook carried three rules the validator did not. Parity of inputs
+  is not parity of verdicts. The first test therefore quantifies over the hook's
+  rule set rather than over its configuration, and the second checks the two
+  verdicts directly on a real file rather than inferring agreement.
+
+  Non-vacuity is measurable today rather than hypothetically: the current
+  validator and hook already disagree on a declares_side_effect violation, so
+  tests 1 and 2 must be RED on HEAD before any fix. If they are green on first
+  authoring, they are testing the wrong thing.
 origin_agent: BrainCandy
 created: 2026-08-13
 amended_by: []
@@ -44,4 +82,15 @@ implemented_by:
 - unit_tests/ac_store/test_acs_200e_validator_schema_parity.py
 change_target: code
 risk_surface: contract_boundary
-notes: "Authored by /quick-fix. Root cause: scripts/ac_store/validate_ac_schema.py never loads config/ac_store_schema.json — it imports only sys, pathlib, yaml and _ac_components and performs hand-rolled field checks — despite its module docstring claiming it 'validates the full schema against config/ac_store_schema.json'. The commit-time hook templates/scripts/commit_guardian/check_ac_schema.py does load that schema (SCHEMA_PATH) and run validate_with_jsonschema, so authors get a false green from the standalone validator and only discover violations at commit time."
+notes: "Authored by /quick-fix. Root cause: scripts/ac_store/validate_ac_schema.py never loads config/ac_store_schema.json — it imports only sys, pathlib, yaml and _ac_components and performs hand-rolled field checks — despite its module docstring claiming it 'validates the full schema against config/ac_store_schema.json'. The commit-time hook templates/scripts/commit_guardian/check_ac_schema.py does load that schema (SCHEMA_PATH) and run validate_with_jsonschema, so authors get a false green from the standalone validator and only discover violations at commit time.
+
+
+  REOPENED 2026-08-25 (was work_status: done). The parity criterion is still false. The
+  standalone validator contains zero occurrences of `declares_side_effect`; the commit hook
+  templates/scripts/commit_guardian/check_ac_schema.py contains three. A file can therefore
+  still pass the standalone validator and be rejected by the hook, which is the exact symptom
+  the criteria say must not occur. The record is `scope: standing` with `covered_by: []`, so
+  nothing was watching it after the initial fix — the schema-file resolution was made common,
+  but the hook grew Python-side rules beyond the shared schema and the parity test does not
+  see them. Any re-fix must assert parity over the hook's full rule set, not over the schema
+  file both sides load."

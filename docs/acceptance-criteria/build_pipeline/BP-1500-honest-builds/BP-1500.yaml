@@ -1,0 +1,168 @@
+id: BP-1500
+components:
+  - build_pipeline
+title: "A build does what it says, and says everything it did"
+component: build-pipeline
+level: L0
+status: active
+req_status: draft
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+criteria: |
+  No silent edits, no leftovers, no stale copies -- and no false all-clear.
+
+  Running the build should never cost you anything you did not ask to give up.
+  Today it can quietly rewrite files you did not touch, abandon files you deleted,
+  and leave the checks on your machine running last week's rules -- and in each
+  case it finishes by telling you everything is fine. This goal makes the build's
+  own account of its work complete and true: what it changed, what it removed,
+  and what it left behind all match what it reports. You can run it, read the one
+  line it prints, and act on it without checking by hand.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-001, KI-BP-002, KI-BP-004, KI-BP-005 and KI-BP-008 are the observed defects this goal exists against. Read them before decomposing -- each carries reproduction evidence and an occurrence count."
+  - path: docs/roadmap.json
+    relationship: describes
+    status: exists
+    relevance: "phase_1 exit criterion 4 (self-hosting parity). See the roadmap note below -- this goal is what makes that criterion safe to claim, but the goal is deliberately broader than self-hosting."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build whose behaviour and reporting this goal constrains. Also scripts/build_phases.py, which holds the doc-index, agent-card, and stale-cleanup phases."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "Every defect behind this goal is catalogued there as an M2 variant (the deployed layout differs from the source you are reading), plus the M3 blind spot that keeps a change-set-scoped check from ever seeing them."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The self-hosting boundary is why the package repository and the deploy target are two different trees, which is the structural precondition for all three branches of this goal."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1500a
+  - BP-1500b
+  - BP-1500c
+  - BP-1500d
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY A NEW L0 -- the caps forced it, and the theme justifies it.
+
+  The two thematically correct homes are both structurally closed. BP-900
+  ("every capability you install actually works") is at 8 L1s carrying
+  child_limit_override: 8, and its newest branch BP-900h is at the 5-L2 cap.
+  BP-100 ("every build produces exactly what you expect") carries
+  child_limit_override: 13 against a default of 7. Neither can absorb this at
+  any id without a further override, and _MAX_L1_PER_L0 = 7 is a hard cap in
+  check_ac_limits.py. Per the ac-tree-split guidance this is a horizontal split:
+  a new sibling L0, not another waiver.
+
+  The theme stands on its own regardless of the caps. BP-900 asks whether
+  everything PROMISED arrived. BP-100 asks whether every artifact landed in the
+  right PLACE. This goal asks a third question neither one poses: is the build's
+  ACCOUNT of its own work complete and true -- did it change only what it says
+  it changed, remove what it says it removed, and admit what it left behind.
+  All five observed defects are silent or actively reassuring, and that is the
+  property that unites them.
+
+  THE ROADMAP CRITERION -- read this before claiming it closed.
+
+  phase_1 exit criterion 4 reads "Self-hosting parity: leafcutter development
+  uses its own compiled agents". Taken literally that is already true -- this
+  repository does self-host. What is missing is that self-hosting is SAFE: the
+  documented self-host build command currently damages the repository it is run
+  from. This goal is what makes the criterion honest to claim, but the criterion
+  as worded arguably measures the wrong thing. Flagged for the user as a possible
+  roadmap wording change; NOT changed here, because roadmap edits require
+  explicit confirmation.
+
+  WHY THE L0 IS NOT FRAMED AS "SELF-HOSTING". The defects were all OBSERVED in
+  the self-hosted workspace, but two of the three guarantees are not
+  self-host-specific. An orphaned artifact (BP-1500b) persists in every install
+  that ever received it -- KI-BP-005 says so explicitly. A deployed copy frozen
+  behind its source (BP-1500c) hits consumers permanently and invisibly --
+  KI-BP-008 records exactly that for a consumer on an older toolchain. Naming
+  this goal after self-hosting would narrow three general guarantees to the
+  layout where they happened to be caught. Do not re-narrow them at L2.
+  BP-1500d, added 2026-08-25, is the sharpest case of the same point: the
+  drift-detection record the other branches rely on is written into the package
+  rather than into the project it describes, so outside this workspace the
+  checks are not weaker -- they are absent.
+
+  WHAT ALREADY COVERS PART OF THIS, AND MUST NOT BE RE-DERIVED.
+
+  - BP-900h-2 (consecutive builds produce zero git diff) does NOT cover
+    BP-1500a, despite the surface similarity. It measures the DEPLOYED output in
+    a scratch git repository built from the consumer simulation of BP-900h-1.
+    KI-BP-001 writes into the PACKAGE repository while scanning the deploy
+    target, so the scratch repository never sees it; and the defect is
+    deterministic, so a second build produces the same wrong result and the
+    idempotency comparison passes. Two different trees, two different
+    properties, both needed.
+  - BP-1300b ("checks judge the canonical source, not stale deployed copies") is
+    the nearest neighbour to BP-1500c and is NOT the same requirement. Its three
+    L2s (BP-1300b-1, -2, -3) all govern where a guardrail resolves the SUBJECT
+    it validates. BP-1500c governs whether the guardrail's OWN deployed code is
+    current. A guardrail can obey BP-1300b perfectly and still be an old build
+    that never learned the rule. Cite BP-1300b when decomposing BP-1500c; do not
+    merge them, and do not restate BP-1300b's canonical-source rule here.
+  - BP-100b-3 ("stale workflow artifacts are removed during build cleanup", L2,
+    work_status: done) is a narrower already-shipped instance of BP-1500b. It is
+    scoped to the workflows output directory only, and it says nothing about the
+    build's REPORT. KI-BP-005 is the same failure in the commit-guardian tree
+    with a false clean bill of health attached. Treat b-3 as prior art to reuse,
+    not as coverage.
+  - KI-BP-003 (a deployed hook cannot find config/doc_types.json) is
+    DELIBERATELY EXCLUDED from this goal -- it is already covered. BP-900h-4
+    proves empirically that every declaring file a deployed guardrail reads is
+    present under a consumer install's deployed root; BP-900g-8-ii makes the
+    build refuse to ship an install whose declaring files are unmanifested; and
+    BP-900g-10-iii requires the file to be located from where the running
+    artifact lives rather than from the process working directory, which
+    dissolves the hardcoded package-directory-name half of the defect. Authoring
+    for KI-BP-003 here would duplicate three approved records.
+
+  THE PRODUCT DECISION THAT CONSTRAINS BP-1500a -- already made, carry it down.
+
+  Generated artifacts (the documentation index, the generated agent cards) STAY
+  TRACKED and reviewable in the pull request diff. The requirement is that a
+  rebuild producing a different result FAILS A CHECK. An implementation that
+  gitignores them, or stops generating them, does not satisfy this goal.
+
+  ORDERING CONSTRAINT ADDED WITH BP-1500d. BP-1500d is a prerequisite of
+  BP-1500c: drift cannot be reported against a record that was never written in
+  the project being checked. Land BP-1500d first, and do not accept BP-1500c on
+  evidence gathered only inside this workspace.
+
+  TWO REVIEWED L2 DRAFTS EXIST -- do not re-derive them.
+
+  A BA drafted and verified two leaves before the BP-900 caps were discovered.
+  Their criteria, it_requirements and test_spec were reviewed and are good; only
+  their ids and parent were wrong (they were written at BP-900h-4 and BP-900h-5,
+  both of which are now live, unrelated, approved records on main -- see
+  docs/known-issues/ac-driven-dev.md KI-ACD-008). They map one-to-one onto the
+  first two L1s here:
+    - /tmp/selfhost_leaf_build_clean.yaml  -> first L2 of BP-1500a
+    - /tmp/selfhost_leaf_orphans.yaml      -> first L2 of BP-1500b
+  Re-id them under their new parents rather than re-deriving. BP-1500c and
+  BP-1500d have no drafts yet.
+
+  ID EVIDENCE. BP-1500 and BP-1600 were both confirmed free by a store-wide
+  grep of every "^id: BP-" line in docs/acceptance-criteria/ and by a full-text
+  grep across docs/, unit_tests/, tests/ and tickets/ -- zero hits for either.
+  BP-1500 taken here; BP-1600 remains free. BP-1500d was confirmed free the same
+  way on 2026-08-25 -- zero hits repo-wide.

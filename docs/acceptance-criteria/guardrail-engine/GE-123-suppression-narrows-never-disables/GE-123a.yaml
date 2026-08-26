@@ -1,0 +1,82 @@
+id: GE-123a
+title: "Every file is judged on what is inside it, not on what it is called"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - security_scanner
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Recognising a file by its name adds to the checking — it never replaces it.
+
+  A file whose name marks it as sensitive is still read through line by line
+  like any other file, so there is no kind of file where quieting a single
+  result leaves its contents unexamined.
+depends_on:
+  - GE-123
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-123a-1
+  - GE-123a-2
+  - GE-123a-3
+  - GE-123a-4
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  This is the coverage FLOOR L1 — the specific gap that makes the measured
+  collapse reachable. GE-123b is the invariant it is an instance of; keep them
+  separate (see the L0 notes for why).
+
+  MEASURED BASELINE, to be reproduced as the red state before any fix: five
+  files whose names mark them as configuration, each containing a cloud access
+  key, a private-key header, a password assignment and a high-entropy token,
+  reported ZERO problems and exited clean with one suppression line present.
+  The identical content in an ordinary source file reported four. The
+  difference is entirely the filename.
+
+  ROOT CAUSE IN PLAIN TERMS (the BA should preserve this shape, not the
+  implementation detail): when a file's name matches the sensitive-file
+  pattern, one result is recorded for the name and the function returns
+  immediately — the contents are never read. That makes the name-based result
+  the ONLY result such a file can ever produce, which is what turns a single
+  suppression line into total coverage loss for that file.
+
+  THE FIX SHAPE THIS L1 ASKS FOR: the name-based result and the content-based
+  results must be additive. Suppressing the name-based result must leave every
+  content-based result intact. A fix that merely makes the name-based result
+  harder to suppress does NOT satisfy this L1 — the contents must actually be
+  examined.
+
+  DECOMPOSITION WARNINGS.
+    - Two existing criteria in this component were written against situations
+      the real entry point cannot produce, precisely because of this
+      short-circuit. Any L2 here must be verified through the path a real
+      commit takes, with a real file on disk, not by calling the matching
+      logic directly.
+    - Expect a false-positive cost: files of this kind exist legitimately in
+      example and fixture form. Whether reading their contents produces noise
+      that then needs its own answer is a real question for L2 — but the answer
+      must not be to reinstate the short-circuit, and it interacts with GE-123d
+      (the noise question) rather than with this L1's guarantee.
+    - The name-based result itself is still wanted. This L1 does not remove it;
+      it removes its exclusivity.

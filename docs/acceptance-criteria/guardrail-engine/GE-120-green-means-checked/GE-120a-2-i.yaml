@@ -84,7 +84,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/05_TICKET-20260825-GE-120a-2-i.md
 change_target:
   - code
   - config
@@ -102,3 +103,4 @@ notes: |
   IT-PO (2026-08-14): check_hook_parity is the verified candidate enforcement home — its
   files patterns already fire on manifest edits. See it_requirements for the
   enforce-on-the-live-gate rule.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

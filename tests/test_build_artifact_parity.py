@@ -32,12 +32,14 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 _HELPERS_PATH = _SCRIPTS_DIR / "build_helpers.py"
 spec = importlib.util.spec_from_file_location("build_helpers", _HELPERS_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_HELPERS_PATH}"
 _helpers_mod = importlib.util.module_from_spec(spec)
 sys.modules.setdefault("build_helpers", _helpers_mod)
 spec.loader.exec_module(_helpers_mod)
 
 _PHASES_PATH = _SCRIPTS_DIR / "build_phases.py"
 spec2 = importlib.util.spec_from_file_location("build_phases", _PHASES_PATH)
+assert spec2 is not None and spec2.loader is not None, f"could not load spec for {_PHASES_PATH}"
 _phases_mod = importlib.util.module_from_spec(spec2)
 sys.modules.setdefault("build_phases", _phases_mod)
 spec2.loader.exec_module(_phases_mod)

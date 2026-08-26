@@ -126,7 +126,7 @@ function narrate(progressText, description) {
 // The 'progressText' argument carries the literal 'Step X of N' label so the
 // text is statically visible to tooling and tests that parse the source file.
 //
-// BP-1100b-45 NOTE: in-flight visibility of a running finalize workflow is
+// BO-1000c-1a / BP-1100b-45 NOTE: in-flight visibility of a running finalize workflow is
 // provided by the E2 engine's own per-agent run journal
 // (<transcriptDir>/journal.jsonl), not by anything this script writes. See
 // the removal note where the old on-disk journal helper used to live,
@@ -587,8 +587,9 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
 // agent/parallel/pipeline/phase/log/args/workflow/budget into a workflow
 // script's top-level body — no filesystem primitive, no module loader
 // (ADR-030; docs/reference/workflow-authoring-contract.md #4/#6). The append
-// was wrapped in a try/catch that silently swallowed the throw and logged a
-// WARNING while the run still reported success.
+// was wrapped in a try/catch that swallowed the throw and logged a WARNING
+// while the run still reported success, so the AC read work_status: done
+// while the mechanism had never once written a line.
 //
 // The E2 engine already writes its own per-run journal at
 // <transcriptDir>/journal.jsonl — a `{"type":"started",...}` /
@@ -597,7 +598,8 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
 // this script writes. This is a granularity change from the old per-step
 // (narrate/outcome) journal to per-agent-dispatch — the engine journal does
 // not persist log() output, so per-step text lines are not recoverable from
-// it. See this ticket's Comments for the full decision record.
+// it. See this ticket's Comments for the full decision record, and
+// BO-1000c-1a's amended_by entries for the AC-level history.
 // ---------------------------------------------------------------------------
 
 // Track completed and skipped steps for the final summary.

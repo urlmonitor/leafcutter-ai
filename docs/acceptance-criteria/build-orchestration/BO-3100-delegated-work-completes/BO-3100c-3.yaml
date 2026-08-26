@@ -1,0 +1,147 @@
+id: BO-3100c-3
+title: "Independent steps still run at the same time, and a dependent step still waits"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build containing two steps that depend on nothing and on each other not at all,
+    And each step records the moment it starts and the moment it ends,
+  When the build is driven,
+  Then the two steps overlap in time — the second starts before the first ends.
+
+  Given a build containing a step that depends on another,
+    And both record their start and end moments,
+  When the build is driven,
+  Then the dependent step starts only after the step it depends on has ended.
+
+  Given a build containing four independent steps,
+  When the build is driven,
+  Then all four end, and each one's result is held by the coordinating layer before the build
+    is reported as complete.
+depends_on:
+  - BO-3100c
+  - BO-3100c-1
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "Where ticket batching and fan-out are defined; the concurrency must survive the relocation described there."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The topology record the parallel arrangement is drawn from."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "CONCURRENCY MUST BE REAL, NOT CLAIMED. Fan-out happens at the coordinating layer using its own concurrent-dispatch primitive, and overlap is asserted from recorded start and end moments — a property observable from outside the coordination layer. An implementation that dispatches sequentially while reporting a parallel plan fails the first criterion and passes every plan-shaped test."
+  - "The parallel primitive must be given a LIST of dispatch thunks, not a spread-form call. The repository's E2 harness records a spread-form call as a contract violation precisely because that shape silently executes nothing — the H-5 defect it was hardened against."
+  - "COLLECTION IS AS BINDING AS FAN-OUT. The build must not report complete until every dispatched step's result is held. A coordinator that reports completion with results in flight is the original defect wearing a different hat."
+  - "Every dispatched step must be accounted for at collection: completed, failed, or undetermined. A result that never arrives must not be silently dropped from the collection set — the count of results held must equal the count of dispatches issued."
+  - "Timing must be recorded by the runtime at dispatch and at result receipt, not self-reported by the step. A step's own account of when it started is the same class of evidence BO-3100b-1 refuses."
+  - "This AC interacts with BO-3100b-1's exit-time judgement: concurrent steps writing to the project at the same time must not have each other's changes attributed to them. Whichever resolution BO-3100b-1's implementer chooses (per-step snapshot scope or serialised judgement) must be exercised by a test in THIS AC's concurrent setting, not only in a single-step one."
+delivers_to:
+  - agent: architecture-diagram-author
+    contract: "The recorded start and end moments per step from a real drive of a fan-out build, so BO-3100c-5's sequence diagram can be checked for overlapping lifelines against a run that actually overlapped."
+expects_from:
+  - ac_id: BO-3100c-1
+    contract: "The per-dispatch record {dispatch_id, source, target_step, result_held_before_continuing, received_kind} extended with the runtime's recorded start and end moments for each dispatch."
+test_spec:
+  - name: test_bo_3100c_3_independent_steps_overlap_in_time
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE ANTI-SERIALISATION TEST. Drive a real two-independent-step build; assert from the recorded moments that the second step starts before the first ends. Fails the serial-queue implementation that would otherwise satisfy BO-3100c-1 completely."
+  - name: test_bo_3100c_3_dependent_step_starts_only_after_its_dependency_ends
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a real build with a declared dependency, assert the dependent step's recorded start is at or after the dependency's recorded end."
+  - name: test_bo_3100c_3_all_four_results_held_before_completion_is_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Four independent steps: assert all four end, the count of results held equals four, and the build's completion report is emitted only after the fourth result is held."
+  - name: test_bo_3100c_3_missing_result_is_not_silently_dropped_from_collection
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the harness returning null for one of the four dispatches, assert the build does not report complete and the missing result is accounted for rather than reducing the expected count."
+  - name: test_bo_3100c_3_parallel_primitive_receives_a_list_not_a_spread
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the harness records no contract violation for the fan-out call. A spread-form parallel call executes zero thunks and would otherwise pass a plan-shaped assertion while dispatching nothing."
+  - name: test_bo_3100c_3_concurrent_steps_do_not_inherit_each_others_work
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two concurrent steps, one of which produces nothing while the other writes real files. Assert BO-3100b-1's verdict for the empty step is produced_nothing — it must not inherit its sibling's changes. This is the interaction that would silently defeat the whole exit-time guard under concurrency."
+test_rationale: |
+  Overlap is only observable from recorded moments, and only meaningful if those moments come
+  from the runtime rather than from the steps' own accounts — a step that claims to have
+  started early is the same class of evidence BO-3100b-1 refuses. So the tests read the
+  runtime's dispatch record from a real drive under the E2 harness.
+  The spread-form test looks like trivia and is not: the harness records that shape as a
+  contract violation because a spread-form parallel call executes zero thunks, which is a
+  silent no-op that passes any assertion about the plan.
+  The last test belongs here rather than on BO-3100b-1 because the defect only exists under
+  concurrency, and a single-step suite cannot produce it. It is the one place the two halves of
+  this tree can silently cancel each other out.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent L1 names parallel work explicitly — "handing out parallel work and collecting the
+  results is done only at the level of the system that can genuinely wait for an answer" — so
+  the concurrency has to survive the relocation, not be traded away for it.
+
+  WHY THIS NEEDS ITS OWN CRITERION. The simplest way to satisfy BO-3100c-1 is to run every
+  step one after another; each result then trivially reaches the dispatcher before the next
+  step begins. That would pass c-1 completely while turning every drive into a serial queue,
+  and nothing else in this tree would notice. The first scenario is written to fail that
+  implementation.
+
+  THE THIRD SCENARIO IS THE COLLECTION HALF. Concurrency without collection is the original
+  defect wearing a different hat: several steps in flight and a coordinator that reports
+  completion before their results arrive. Requiring every result to be held before the build
+  is reported complete closes it.
+
+  Measuring overlap by recorded start and end moments is deliberate — it is observable from
+  outside the coordination layer and cannot be satisfied by a system that merely claims to
+  dispatch concurrently.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The cross-AC hazard worth naming: BO-3100b-1 judges a
+  step by comparing project state before and after it ran, and this AC requires steps to run at
+  the same time. Unless the snapshot is scoped per step or the judgement is serialised, a parked
+  step inherits its concurrent sibling's changes and is judged to have produced work — which
+  turns off the exact guard BO-3100b exists to install, with nothing failing. The test is placed
+  here because only a concurrent build can produce it.

@@ -1,0 +1,127 @@
+id: GE-124e-1
+readiness: approved
+priority: high
+title: "The reverse gate fires only on screen criteria that are already finished"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+criteria: |
+  Given the criteria store contains UXP-607-2, whose change target is the user
+    interface and whose work status is done
+  When the reverse-direction gate selects the criteria it will check
+  Then UXP-607-2 is selected
+
+  Given the criteria store contains KM-ADM-003, whose change target is the user
+    interface and whose work status is todo
+  When the reverse-direction gate selects the criteria it will check
+  Then KM-ADM-003 is not selected
+  And its outcome is recorded as skipped with the reason "not done", not as a
+    pass
+
+  Given the criteria store contains GE-111f, whose change target is code and
+    whose work status is todo
+  When the reverse-direction gate selects the criteria it will check
+  Then GE-111f is not selected
+  And its outcome is recorded as out of scope, distinct from both skipped and
+    passed
+depends_on:
+  - GE-124e
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THIS AC CREATES THE CI GATE. New script templates/scripts/commit_guardian/check_ui_ac_declared.py with its deployed twin at scripts/commit_guardian/check_ui_ac_declared.py — the check name the mock-data artifact uses for every ci-tier finding. Model it on scripts/commit_guardian/check_done_proof.py, which already asks the same shape of question about tests and already carries the --mode / --base argument surface; do not invent a parallel idiom."
+  - "ADD ITS CI JOB TO .github/workflows/ci.yml MIRRORING THE EXISTING done-proof JOB (which runs `python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }}`), including the install_shims build step that job performs before invoking the check. Without the job the gate is a script nobody runs; without install_shims it resolves .leafcutter incorrectly."
+  - "SELECTION IS TWO AXES, BOTH REQUIRED: change_target includes `ui` AND work_status == `done`. Read the store through the shared AC index (GE-124c-2-i / _ac_store_index.get_ac_index) rather than walking the store again — this gate and check_done_proof will otherwise hold two walkers over the same corpus."
+  - "change_target MAY BE A SCALAR OR A LIST — the AC schema permits both (anyOf string|array). A membership test that assumes a string silently drops every record whose change_target is a list, which would shrink the selected set without any error. Normalise before testing."
+  - "THREE OUTCOMES, NOT TWO, AND ALL THREE ARE RECORDED. Selected; skipped-with-reason (UI but not done); out-of-scope (not UI). A non-UI criterion recorded as PASSING would inflate every figure built on this gate by the entire non-UI store — precisely the number GE-124g-3 forbids. The mock-data Ac entity encodes this as declaration_status == 'n-a' iff change_target != 'ui'."
+  - "SKIPPED IS NOT BLOCKED. A UI criterion still in progress is skipped, never failed (mock record gf-ci-km-adm-003-skipped, code 'not-done', verdict 'skip'). Blocking in-progress work would make the gate hostile to the normal case."
+  - "Must handle errors gracefully per the project error handling policy, and must announce rather than silently pass if the store cannot be read (GE-124c-2-ii's rule applies to this tier too; the IT-PO recommendation for the CI tier is to BLOCK, since a CI run that could not read the store produced no evidence)."
+delivers_to:
+  agent: python-coder
+  contract: "The selected set of criteria the reverse gate evaluates — change_target includes 'ui' AND work_status == 'done', with change_target normalised from scalar-or-list — plus a recorded outcome for every criterion NOT selected and why: skipped-with-reason for a UI criterion not yet done, out-of-scope for a non-UI criterion. Neither is a pass. Emitted by scripts/commit_guardian/check_ui_ac_declared.py, further narrowed by GE-124e-4's diff scoping."
+expects_from: null
+test_spec:
+  - name: test_ge_124e_1_done_ui_criterion_is_selected
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A record with change_target ui and work_status done is in the selected set. Include a record whose change_target is the LIST form ['ui','code'] and assert it is also selected — the schema permits both shapes and a string-equality test silently drops the list form."
+  - name: test_ge_124e_1_in_progress_ui_criterion_is_skipped_with_a_reason_not_passed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The KM-ADM-003 worked case: not selected, outcome 'skip' with reason 'not-done', and absent from any passed collection. Assert the absence from passed as well as the presence of the skip."
+  - name: test_ge_124e_1_non_ui_criterion_is_out_of_scope_distinct_from_skipped_and_passed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "GE-111f (change_target code) records out-of-scope, a third value distinct from both skip and pass. Assert the three outcome values are pairwise distinct over a mixed store — collapsing out-of-scope into pass inflates every downstream figure by the whole non-UI store."
+  - name: test_ge_124e_1_gate_is_reached_from_its_real_ci_entry_point_over_a_real_store
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Invoke check_ui_ac_declared.py as the CI job invokes it (subprocess, real argv including --mode and --base) against a temp store written by the project's real serializer, and assert the selected set matches the on-disk records. Then flip one record's work_status to done and assert the second run selects it. Selection computed in process cannot show the gate is wired to anything."
+test_rationale: |
+  Three of the four tests are cheap unit assertions because selection is a pure predicate — but
+  each is written against the failure that is invisible to the obvious version. The list-form
+  change_target case is the sharpest: the AC schema permits scalar or list, a string-equality
+  membership test passes every scalar fixture, and the effect in production is a silently
+  smaller selected set with no error anywhere. The three-outcome test asserts pairwise
+  distinctness rather than each value in isolation, because the defect is a collapse. The
+  entry-point test charges the reachability floor for the CI tier, which every other GE-124e AC
+  leans on, and mutates a real on-disk store between runs so a cached or snapshotted store read
+  cannot pass.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Named the new CI gate script and its ci.yml job modelled on the existing done-proof job (--mode ci-changed --base origin/<base_ref>, with install_shims), required the store to be read through the shared AC index rather than a second walker, and flagged that change_target may be a scalar OR a list so a naive membership test silently shrinks the selected set. Charged the CI tier's reachability floor here. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE TRIGGER IS NARROW AND MUST STAY NARROW — the PO's words. Two axes,
+  both required: change target is the user interface, and the criterion is
+  marked done.
+
+  THREE OUTCOMES, NOT TWO. The third scenario is the one an implementation gets
+  wrong by counting rows: a non-UI criterion is OUT OF SCOPE, not "passing". If
+  it is recorded as a pass, every report built on this gate inherits a coverage
+  figure inflated by the entire non-UI store — which is precisely the number
+  GE-124g-3 forbids.
+
+  The in-progress case is the mock-data record KM-ADM-003, carried explicitly by
+  the PO so that a UI criterion still being built is skipped rather than
+  blocked.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). Two facts the implementer should not have
+  to rediscover. First, the CI-tier gate does not exist and neither does its
+  workflow job; the shape to copy is the done-proof job already in
+  .github/workflows/ci.yml, which is also the gate this one composes with
+  (GE-124e-3-i). Second, change_target is `anyOf string|array` in
+  config/ac_store_schema.json — the scalar assumption is a real and silent
+  selected-set bug, not a hypothetical.

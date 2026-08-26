@@ -1,0 +1,109 @@
+id: ACS-100i-6
+components:
+  - ac_store
+title: "The structured-spec obligation is triggered by an explicit declaration on the record, not inferred from who is assigned or which namespace it sits in"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criterion record that declares itself as registering a
+    package surface by carrying the field `package_surface: true`,
+  When the AC-record validator evaluates it,
+  Then its implementation requirements are required to be a structured object
+    (a plain string, a list of strings, or a null value is refused),
+  And the refusal states that a record declaring a package surface must carry a
+    structured implementation spec.
+
+  And given a record that does not carry `package_surface: true` — whether the
+    field is absent altogether or set to `false` —
+  When the same validator evaluates it,
+  Then no structured implementation spec is required of it, and it is not
+    refused on that ground, regardless of which agent it is assigned to and
+    regardless of the value of its `component` or `components` fields.
+
+  And given two records identical in every respect except that one is assigned
+    to `python-coder` and the other to `llm-expert`, neither declaring a package
+    surface,
+  When both are validated,
+  Then both receive the same verdict — the assigned agent alone never decides
+    whether the structured spec is demanded.
+depends_on: [ACS-100i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-005 — the writeup that measured this rule's over-match and named the explicit-marker narrowing as fix direction (1)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000d.yaml
+    relationship: describes
+    status: exists
+    relevance: "The L1 that introduced the package-surface obligation. Its intent — no fictional spec reaches a coder — is preserved; only the trigger changes."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: it-po
+  contract: "A record-level declaration (`package_surface`) that the authoring agent sets deliberately, and which is the sole trigger for the structured implementation-spec obligation."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-100i-6-i
+  - ACS-100i-6-ii
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  WHY A DECLARED MARKER AND NOT A SHARPER PROXY — evidence measured on the store
+  at 9b16d013, all 2,900-odd records, index.yaml excluded.
+
+  The present trigger is `assigned_agent: python-coder` AND `component` in
+  {build_pipeline, build-orchestration}. It is wrong in both directions at once:
+
+  - OVER-MATCH. 280 records fail schema validation store-wide; 243 of them fail
+    on this one rule. Most register no config key. The three records that
+    *define* the rule — BO-2000d-1, BO-2000d-2, BO-2000d-1-i — are themselves in
+    the failing set. A rule its own specification cannot satisfy is not a rule
+    about package surfaces; it is a rule about a spelling.
+
+  - UNDER-MATCH. `component` is the AC-store namespace key from
+    docs/acceptance-criteria/index.yaml, where the namespace is declared as
+    `build-pipeline` (kebab). The trigger enum lists `build_pipeline`
+    (underscore), which is a docs/components.json graph id — a different axis.
+    Consequence: 440 records carry `component: build-pipeline` and are invisible
+    to the rule, while 65 stragglers spelling it `build_pipeline` are caught.
+    239 python-coder records sit in the kebab namespace and 215 of those carry
+    no structured spec at all. The gate has never once fired on them.
+
+  - THE PROXY IS NOT EVEN TRUE OF THE COMPLIANT SET. 245 records carry the
+    object form; 73 of them set `config_schema_fragment: null`. Nearly a third
+    of the population that satisfies the rule registers no config key and had to
+    write an explicit null to get through. "python-coder in these components"
+    and "registers a package surface" are simply different sets.
+
+  SCOPE BOUNDARY — read before extending this AC. This tree specifies the
+  trigger narrowing ONLY. The backfill of the 243 already-failing records into
+  the object form is deliberately NOT in scope: it is a separate epic and it
+  must depend on TICKET-20260710-ITPOv3-StructuredItRequirements.md, so the
+  authoring agent stops emitting list-form implementation requirements before
+  the backfill begins. Backfilling first would be rework.
+
+  WHAT DOES NOT CHANGE. The five-field completeness requirement is already
+  carried by the `it_requirements` object branch itself, independently of the
+  trigger — any record using the object form is held to all five fields today
+  and must still be. Narrowing the trigger removes the *coercion into* the
+  object form; it must not relax the object form's own shape. ACS-100i-6-i
+  pins that.

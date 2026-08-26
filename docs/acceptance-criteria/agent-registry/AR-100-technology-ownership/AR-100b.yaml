@@ -1,0 +1,42 @@
+id: AR-100b
+title: "If your product is written in JavaScript, a JavaScript expert builds it"
+component: agent-registry
+components:
+  - agent_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Installed projects whose own code is JavaScript get a JavaScript specialist.
+
+  When leafcutter is installed into a project whose application code is
+  JavaScript, that code is implemented by someone fluent in the language and
+  its everyday tooling — a genuinely different need from maintaining
+  leafcutter's own automation, and served on its own terms rather than folded
+  into it.
+depends_on:
+  - AR-100
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where a new implementation specialist is declared and made available to installed projects."
+  - path: docs/reference/frontend-coder-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: "The existing user-interface specialist, whose remit this must stay distinct from."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - how-to

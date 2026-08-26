@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500d.yaml
 criteria: |
   Given the authoring workflow has just opened the delivery pull request to main,
@@ -42,6 +42,31 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_final_output_contains_the_pr_number_returned_by_delivery
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With the PR-creation step stubbed to return a known number, that number appears in the
+    workflow's final user-facing output payload.
+- name: test_final_output_contains_the_clickable_pr_url
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: The same run's final output contains the full https:// PR URL as returned by the creation
+    step, not a truncated or reconstructed reference.
+- name: test_reported_url_matches_the_pr_that_carries_the_approved_acs
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: The reported URL corresponds to the PR opened for the authoring branch of this run (head
+    branch in the URL/payload matches the run's authoring branch), not a stale or unrelated PR.
+- name: test_delivery_failure_surfaces_a_warning_instead_of_a_silent_missing_pr_reference
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: When the PR-creation step returns an error, the final output states the delivery warning
+    and the branch to push manually, rather than presenting a success message with a null PR reference.
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1

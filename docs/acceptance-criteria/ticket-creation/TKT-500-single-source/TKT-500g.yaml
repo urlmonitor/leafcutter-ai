@@ -1,0 +1,119 @@
+id: TKT-500g
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "The proof you asked for is the proof the work is held to"
+component: ticket-creation
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  What you specified as proof survives the trip to the work — never quietly dropped.
+
+  When an approved requirement states what must be proven before it counts as done,
+  that statement travels with the work: it appears in the work item, somebody is put
+  on the hook for producing it, and the readiness report says plainly whether it
+  survived. Nothing that was asked for is discarded, nothing nobody asked for is
+  invented, and a deliberate "no proof needed" stays an explicit choice rather than
+  an accident of who happens to be doing the work.
+depends_on: [TKT-500]
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: related
+    status: exists
+    relevance: "The surface where the loss happened: the whole proof section was gated on whether the assigned worker is classed as producing production code. Fixed for the authored route in f3ac950c / PR #536; the ticket-side half only."
+  - path: templates/agents/ticket-supervisor.md
+    relationship: related
+    status: exists
+    relevance: "The dispatch-side half, still open at authoring time. Its test-writer skip rule keys ONLY on 'is a production-code worker needed', so it will still skip on exactly the records the ticket-side fix now serves. templates/skills/building-epics/SKILL.md keys on the block instead — the two surfaces disagree."
+  - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
+    relationship: related
+    status: exists
+    relevance: "The seven tests that shipped with the fix and currently cite BP-1100g-1, an unrelated AC. They are the evidence this L1's first L2 already has; re-tag them once the L2s exist."
+  - path: docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-6.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling boundary. TKT-500f-6/-7 decide WHETHER a proof section is owed from the files a requirement touches, and are unbuilt. This L1 is about an EXPLICITLY AUTHORED proof statement surviving. Do not fold them together — different inputs, different failure."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100g-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Downstream boundary. BP-1100g-4 refuses at commit time a promised proof that was never claimed. That check is worthless if the promise never reached the work item in the first place — this L1 is its upstream precondition, not a duplicate of it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500g-1, TKT-500g-2, TKT-500g-3, TKT-500g-4, TKT-500g-5]
+implemented_by: []
+documentation_triggers: [sequence-diagram]
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  WHY A NEW SIBLING L1 AND NOT A 19TH CHILD OF TKT-500f. TKT-500f is at
+  child_limit_override: 18 and its theme is "the generated work item is
+  structurally valid and the cut-over is safe" — assignments resolve, components
+  map, contracts render, the old route keeps working. This is a different theme:
+  a fidelity guarantee about ONE authored field surviving end to end, with its own
+  producer (the record's author), its own consumer (whoever writes the proof), and
+  its own negative control. Adding it as a 19th child would have required bumping
+  the override again and would have buried a 4-5 behaviour cluster inside a bucket
+  nobody reads to the bottom of. TKT-500 goes 6 -> 7 L1 children, exactly at the
+  hard cap; an eighth sibling requires a tree split.
+
+  THE DEFECT THIS EXISTS FOR (shipped without an AC, f3ac950c / PR #536).
+  generate_ticket_from_ac.py gated the ENTIRE proof section on whether some worker
+  in the computed map declares `produces: production_code`. Exactly nine do, all
+  coders. For every other assignee the authored statement was discarded, nobody was
+  put on the hook for it, and the readiness report called the loss a PASS
+  ("non-code AC — no test contract required"). Measured on the real store at
+  06ce1c43: 85 records, 308 discarded descriptors, 65 approved, 37
+  approved-and-todo. By assignee: llm-expert 43, test-writer 13 (the proof author's
+  own records), documentation-expert 12, unassigned 9, business-analyst 4,
+  test-failure-triage 2, architecture-diagram-author 2.
+
+  WHAT IS ALREADY BUILT vs WHAT IS NOT — READ BEFORE DECOMPOSING.
+  Built and shipped: the work-item side. An authored statement now emits the block
+  and puts test-writer + test-runner on the hook regardless of assignee; the
+  readiness report acknowledges it; the derive-from-nothing fallback stays bounded
+  so a docs-only record does not start receiving invented proofs.
+  NOT built: the dispatch side. templates/agents/ticket-supervisor.md still decides
+  whether to skip the proof-writing phase by asking whether a production-code
+  worker is needed — which is false for every record in the 85. On that route the
+  block is emitted, test-writer is marked needed, and the supervisor skips it
+  anyway. The fix is currently half a fix, and the unbuilt half is the half that
+  decides whether anything actually happens.
+  ALSO NOT covered anywhere: the 43 records already marked done that were built
+  through the defective path. 42 carry a covering proof by some other route;
+  FIN-100c-7 does not.
+
+  THE MIS-TAG THIS CORRECTS. The seven tests in
+  unit_tests/ac_store/test_authored_test_spec_survives_generation.py were tagged
+  `# covers: BP-1100g-1` because the work had no criterion of its own to cite.
+  BP-1100g-1 is about vocabulary parity between what a plan can name and what the
+  proof writer has been taught — unrelated, and already marked done with its own
+  covering file. The stray tags make a required gate report coverage on BP-1100g-1
+  that BP-1100g-1 did not earn. Once this L1 has L2s, re-point all seven.
+
+  BOUNDARY. Nothing here judges whether a written proof is any good, or whether it
+  reaches the running product. That is BO-2900's observer and is explicitly out of
+  scope. This L1 only guarantees that a stated demand is not silently thrown away
+  between the record and the doer.
+
+  L2 DECOMPOSITION, 2026-08-25 (business-analyst). Five L2 children, the hard cap:
+  TKT-500g-1 the demand arrives whole and names who owes it (BUILT);
+  TKT-500g-2 every route runs the phase, one question (NOT BUILT — the live half);
+  TKT-500g-3 the negative control (BUILT);
+  TKT-500g-4 the explicit waiver stays a choice (BUILT);
+  TKT-500g-5 the readiness report tells the truth (PARTLY BUILT).
+  The sequence-diagram trigger is satisfied by TKT-500g-2-iii, authored at L3
+  because all five L2 slots carry load-bearing behaviour and the cap was not
+  raised — see that file's notes for the deviation rationale.

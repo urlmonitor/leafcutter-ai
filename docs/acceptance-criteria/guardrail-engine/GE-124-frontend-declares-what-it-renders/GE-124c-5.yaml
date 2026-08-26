@@ -1,0 +1,113 @@
+id: GE-124c-5
+readiness: approved
+priority: high
+title: "A sequence diagram shows the ordering that keeps the four verdicts distinguishable"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given a reader needs to understand how the commit-tier check reaches each of
+    its four verdicts
+  When they open the sequence diagram for the frontend declaration check
+  Then the diagram shows the ordered exchange between the staged set, the
+    in-scope decision, the declaration and pin readers, the shared id resolver,
+    and the commit
+  And it shows the branch that produces each of the four verdicts — missing,
+    unresolved, not reported, and pass — from the step that decides it
+  And it shows where the escapes in GE-124d downgrade a verdict, so a reader can
+    see that a downgrade replaces a verdict rather than adding to it
+  And it shows the point at which the one-finding-per-file-and-code rule is
+    applied
+depends_on:
+  - GE-124c
+  - GE-124c-1
+  - GE-124c-2
+  - GE-124c-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md"
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "PLACE AND NAME IT BY THE HOUSE CONVENTION. Author under docs/architecture/diagrams/ as a c3-level sequence diagram, taking the next sequence number from scripts/next_diagram_seq.py rather than inventing one (GE-122 exists because unnumbered and colliding diagrams are an established drift shape in this repo). c3-done-proof-evaluation-sequence.md is the closest existing sibling and the shape to follow. It must satisfy check_diagram_naming, check_mermaid_complexity and check_mermaid_parent_link, and be linked from docs/architecture/components/commit-guardian.md."
+  - "THE PARTICIPANTS ARE THE REAL ARTIFACTS: the staged set (git index), the in-scope decision (GE-124a-3), the shared declaration/pin reader module, the shared AC-id resolver entry point (GE-124c-2-i), and the commit. Naming real modules rather than abstract roles is what makes the diagram checkable against the code and reachable from it."
+  - "DRAW THE DOWNGRADE AS A REPLACEMENT, NOT AS AN ADDITIONAL OUTCOME. A downgrade drawn as an extra arrow invites an implementation where an opt-out finding sits beside a block finding, which the mock-data invariant forbids outright (verdict == 'block' implies suppression_reason == null). This is the single most consequential drawing decision in the diagram."
+  - "PLACE THE DEDUPLICATION STEP AT THE POINT THE (subject, code) KEY IS APPLIED — before the verdict set is rendered and before the exit code is decided. A deduplication step drawn in the wrong place produces the double-report GE-124c-1-i rules out, and a diagram is the artifact people trust over prose when the two disagree."
+  - "SHOW ALL FOUR VERDICT BRANCHES INCLUDING THE TWO QUIET ONES. Not-reported must be visibly a branch that leaves the sequence before any verdict is computed — not a pass arrow — or the diagram itself teaches the not-examined-is-passed conflation GE-124c-3 forbids."
+  - "change_target stays `code` under the L0's tree-wide instruction; the deliverable is the diagram document."
+delivers_to:
+  agent: python-coder
+  contract: "The ordered call sequence an implementer of the commit tier works against — staged set, in-scope decision, shared reader, shared resolver, deduplication by (subject, code), escape downgrade, exit decision — drawn so that the four verdicts stay distinguishable, downgrades replace rather than accumulate, and not-reported exits before any verdict is computed."
+expects_from:
+  ac_id: GE-124c-2
+  contract: "The resolver interaction the diagram places in the sequence, including the three-valued answer (resolved | not-found | store-unreachable) that GE-124c-2-ii's branch depends on"
+test_spec:
+  - name: test_ge_124c_5_diagram_participants_resolve_to_real_modules
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Every participant the diagram names as a code artifact resolves to a file that exists in the repo. This is the staleness ratchet: when the reader module or the resolver entry point is renamed, the diagram goes red instead of quietly describing something that is gone."
+  - name: test_ge_124c_5_diagram_covers_every_verdict_the_check_emits
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The set of verdicts drawn as branches equals the check's verdict enum (block, warn, pass-with-reason, pass, plus the not-reported exit), derived from the check at test time rather than hard-coded. A verdict added to the check without a branch fails here."
+  - name: test_ge_124c_5_diagram_passes_the_repo_diagram_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run check_diagram_naming, check_mermaid_complexity and check_mermaid_parent_link over the new diagram and assert all pass. These are the gates that will fire on it at commit time anyway; running them here makes the failure a test result rather than a blocked commit."
+test_rationale: |
+  A diagram cannot be behaviourally executed, so the honest question is: what would make this
+  diagram WRONG, and can a test see it? Two things: it names modules that no longer exist, and
+  it omits a verdict the check has since gained. Both are checkable, and both are derived from
+  live sources rather than from literals — the participant paths against the filesystem, the
+  verdict set against the check's own enum. That is the same instrument used for the reference
+  docs in this tree and it is what keeps the artifact honest after the day it is drawn. The
+  third test runs the repo's existing mermaid gates so a naming or complexity violation
+  surfaces as a red test rather than as a surprise block on someone else's commit. The two
+  drawing decisions that matter most — downgrade-as-replacement and deduplication placement —
+  are not machine-checkable and are pinned in it_requirements for review instead.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Placed the diagram under docs/architecture/diagrams/ as a c3 sequence with a sequence number from next_diagram_seq.py (GE-122's drift shape), named the real participant modules, and required not-reported to be drawn as an early exit rather than a pass arrow. Tests derive participants from the filesystem and the verdict set from the check's enum so the diagram goes red on drift; the two non-checkable drawing decisions are pinned in it_requirements for review. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Produced for the `sequence-diagram` entry in GE-124c's
+  `documentation_triggers`. The PO's reason: the check sits between the staged
+  set, the shared resolver and the commit, and THE ORDERING IS WHAT MAKES THE
+  FOUR VERDICTS DISTINGUISHABLE.
+
+  The two extra clauses are the ordering facts most likely to be got wrong by
+  someone reading the code alone: a downgrade that is drawn as an additional
+  outcome invites an implementation where an opt-out finding sits beside a block
+  finding — which the mock-data artifact forbids outright — and a
+  deduplication step drawn in the wrong place produces the double-report
+  GE-124c-1-i rules out.
+
+  IT-PO NOTE (2026-08-25). Sequencing: this diagram describes an implementation
+  that GE-124c-1 through GE-124c-3 create. Drawing it first is fine and probably
+  useful, but its participant-existence test cannot pass until those modules
+  exist — schedule it after GE-124c-1, or accept a red test in the interim and
+  say so.

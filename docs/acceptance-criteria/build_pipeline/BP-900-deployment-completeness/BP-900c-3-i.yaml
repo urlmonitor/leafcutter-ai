@@ -36,8 +36,16 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "The state-based selector must default to the add-a-deploy-phase action when the source directory (and its deploy phase) does not exist, so genuinely-new capabilities are not misdiagnosed as untracked-source problems."
-  - "Selection is per-entry: a single report may contain both action types, each chosen from the state of its own broken reference."
+  config_schema_fragment: null
+  reference_file_path: scripts/build_propagation_audit.py
+  n_location_rule: "1 — the default branch of the suggested-action selector"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The state-based selector must default to the add-a-deploy-phase action when the source directory (and its deploy phase) does not exist, so genuinely-new capabilities are not misdiagnosed as untracked-source problems."
+    - "Selection is per-entry: a single report may contain both action types, each chosen from the state of its own broken reference."
 delivers_to: null
 expects_from:
   ac_id: BP-900c-3

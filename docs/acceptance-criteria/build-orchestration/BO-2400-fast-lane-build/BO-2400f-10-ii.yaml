@@ -1,0 +1,231 @@
+id: BO-2400f-10-ii
+components:
+  - build_orchestration
+title: "A release that did not release is read, and named in the halt beside the failure that triggered it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run is halting after having claimed its connected set,
+  And it has asked for that claim to be released,
+  When it composes the outcome it hands back to its operator,
+  Then the result of the release appears in that outcome, beside the failure that
+    triggered it — either the acceptance criteria that went back to todo, or the fact
+    that they did not, together with what came back instead,
+  And a run that never inspected the release's result does not satisfy this: a discarded
+    result cannot tell a release that ran from one that was declined, and that is exactly
+    how a lane released nothing for as long as it did while every one of its runs looked
+    correctly halted.
+
+  Given the release did not happen,
+  When the operator reads the run's outcome,
+  Then it names the acceptance criteria that are therefore left at in_progress, and says
+    that a later run aimed at them will be refused while they stay there,
+  And the failure that triggered the halt is still named as the reason the run stopped,
+    so the unreleased claim is reported as a second fact about the same run rather than
+    displacing the first — an operator must not have to choose between learning why the
+    run stopped and learning what it left behind.
+depends_on: [BO-2400f-10, BO-2400f-10-i]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Each of the nine failure paths awaits its release step and then returns a terminal payload that mentions only the triggering failure. The release's return value is discarded at every one of them — that discard is what this criterion removes."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020's closing point: a release whose result is discarded cannot distinguish released from refused, which is precisely how this stayed invisible for as long as it did."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "What an operator is told when a run halts. A stranded claim is something they must act on, so it belongs in the operator-facing account of the run, not only in a log."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Gives access to the run's terminal payload as well as its recorded steps, which is the only place this criterion can be observed — the claim is about what the run says, not about what it did."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-4-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "Added by the IT PO 2026-08-25. Owns the single-construction-site rule for the run's terminal outcome (buildFastLaneDeliveryOutcome). Nine independently-edited halt payloads is how the reporting drifts back apart one path at a time, so the release fields belong at one construction site — and the general 'a halt must not state a reason its own evidence denies' rule lives in that family, not here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_halt_payload_release_fields:
+      type: object
+      description: >-
+        Fields ADDED to every halting terminal payload, alongside — never in place of —
+        the fields it already carries (status, classification, message, failing_phase and
+        the phase-specific detail):
+        {release_attempted: bool, released_ac_ids: [str], unreleased_ac_ids: [str],
+        release_executor: str, release_error: str|null}.
+        On a successful release, released_ac_ids names the ids the store reports as
+        returned to todo and unreleased_ac_ids is empty. On a refusal, an unparseable
+        reply, a null reply or a missing key, release_attempted is false, released_ac_ids
+        is empty, unreleased_ac_ids names every id the run claimed, and the operator-facing
+        message additionally states that those ids are left at in_progress and that a later
+        run aimed at them will be refused while they stay there (BO-2400f-8).
+        Fail closed: an absent or unreadable release outcome is reported as NOT released,
+        never as released and never as silence.
+        INVARIANT — ADDITIVE ONLY: failing_phase and the existing halt text are unchanged
+        by this record. The release fact is a second fact about the same run.
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "9"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "READ THE REPLY — THE MECHANICAL CHANGE. All nine release dispatches are today `await agent(...)` with the return value dropped on the floor (fast-lane-ship.js:501, 569, 591, 643, 663, 746, 768, 866, 937). Each must bind its result and each of the nine `return { status: \"blocked\", ... }` payloads that follow must carry it. Nine sites, all in one change: a payload assembled correctly at the context-bundle halt and not at the commit halt is eight ninths of the same bug."
+    - "ADDITIVE, NOT SUBSTITUTIVE — THIS IS THE CLAUSE MOST LIKELY TO BE IMPLEMENTED BACKWARDS. The obvious implementation replaces the halt message with the release problem, which trades one hidden fact for another. Concretely: failing_phase keeps its existing value, the existing message text describing the triggering failure is preserved verbatim, and the release fact is carried in its own fields and appended to the message — never woven in as a replacement, never conditionally suppressing the original reason. At least one covering test must assert BOTH facts are present in the SAME payload; asserting the release fact alone would pass on an implementation that has deleted the halt reason."
+    - "FAIL CLOSED, following BO-2400f-12's precedent and the review-verdict read at fast-lane-ship.js:737. release_attempted is a plain-falsy read of the outcome BO-2400f-10-i delivers. A missing key, a null reply, an unparseable reply, and the literal refusal shape observed on run wf_bd4984e8-438 — {\"status\": \"refused\", \"reason\": \"out-of-scope-...\"} — are all NOT released. No default-true, no `|| true`, no treating 'the dispatch returned something' as 'the release happened'. Silence is the failure mode this record exists to end, so silence must never be the reported outcome."
+    - "ONE CONSTRUCTION SITE. Follow the buildFastLaneDeliveryOutcome precedent already used for the delivery outcome (BO-2400f-4-vi): build the release portion of the halt payload in a single helper the nine sites call, so the reporting cannot drift between paths. Nine hand-written payload literals is exactly how a correctly-reported context-bundle halt and a silent commit halt end up coexisting."
+    - "BEST-EFFORT ACTION IS PRESERVED; BEST-EFFORT REPORTING IS NOT. A release that fails must not raise, must not change status or classification, and must not turn a clean halt into a crash. The distinction this record draws is between 'try, and carry on if it fails' and 'try, and never find out'. Only the second is the defect, and only the second is being removed."
+    - "NAME THE CONSEQUENCE, NOT ONLY THE FACT. On a failed release the payload must state that the named ids are left at in_progress AND that a later run aimed at them will be refused while they stay there. That second half is the operator's actual call to action — BO-2400f-8 will correctly refuse to rebuild an in_progress target, so a failed run silently makes its own target unbuildable, and an operator who is told only 'release failed' has not been told that."
+    - "SOURCE VS GENERATED, VERIFIED 2026-08-25. templates/workflows-js/fast-lane-ship.js is the source; build_workflow_scripts copies templates/workflows-js/*.js into <output_root>/workflows/ (scripts/build_phases.py:723-734), so the deployed copy is a build output and an edit there is erased by the next build. Rebuild after editing. Do NOT add a byte-parity assertion between a template and its deployed copy — unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py deliberately asserts a difference, so parity is not the invariant."
+    - "NO GREP TESTS. This criterion is about what a halting run SAYS, on a payload that is never constructed today. A test that greps fast-lane-ship.js for a field name, a message fragment, or the presence of a helper call passes unchanged on code that never runs — and the release path in this very file has been dead for its entire existence behind exactly that kind of evidence. Assert on HarnessResult.result, the run's terminal payload, obtained by executing the lane under unit_tests/_workflow_engine_harness.py with run_workflow_under_e2."
+    - "THE LOAD-BEARING CASE IS THE REFUSAL, NOT THE SUCCESS. Running only the success case is worthless here: today's lane passes it by saying nothing, and saying nothing is indistinguishable from a silent success. Stub the release step to the observed refusal object, assert the payload says the release did not happen, lists the ids left at in_progress, and STILL names the original failure. Then run the success case with the same driver and assert the two payloads DIFFER — a single message covering both outcomes satisfies each test in isolation while telling the operator nothing, which is the same undifferentiated-messaging defect the sibling amendment to BO-2400c-1-iii fixes one phase earlier in this same lane."
+    - "THIS RECORD IS THE JAVASCRIPT HALF ONLY, and it is strictly downstream of BO-2400f-10-i: it consumes the release outcome that record produces. It changes no Python. If -10-i has not landed, this record can still be implemented against the outcome contract — the refusal path is in fact the one that is exercisable today — but the success path cannot be observed for real until an executor exists that actually releases."
+    - "OPERATOR-FACING DOCUMENTATION IS FLAGGED, NOT ABSORBED. docs/how-to/fast-lane-build.md describes what an operator is told when a run halts, and gains a new thing to say. A .md how-to is documentation-expert's surface, not python-coder's (config/agent_registry.json gives python-coder .py and .js), so the doc is not in this record's declared surface and the record is deliberately not split for it — splitting would require inventing criteria the BA did not write. Report the gap at sign-off so a companion documentation AC can be raised."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-10-i
+  contract: "A fast_lane_release_outcome object returned from each of the nine halting paths — {attempted: bool, released: [str], unreleased: [str], executor: str, error: str|null} — where released is taken from the release command's own {\"released\": [...]} stdout and never inferred from the fact that the step ran. This record reads that object and reports it; if it is still discarded at the dispatch site, this criterion is unimplementable, which is why the dependency runs in this direction."
+test_required: true
+test_spec:
+  - name: test_a_refused_release_is_named_in_the_halt_payload
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE LOAD-BEARING TEST. Drive a halting path under the E2 harness with the release step stubbed to the literal refusal shape observed on run wf_bd4984e8-438 — {\"status\": \"refused\", \"reason\": \"out-of-scope-...\"} — and assert the terminal payload says the release did not happen and reports what came back instead."
+  - name: test_a_refused_release_payload_still_names_the_triggering_failure
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The ORDERING clause. In the same payload as the previous test, failing_phase and the original halt reason are still present and unaltered. Guards the obvious wrong implementation, which replaces the halt message with the release problem and trades one hidden fact for another."
+  - name: test_a_refused_release_payload_lists_the_ids_left_in_progress
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With a claim of several ids, the payload names each one left at in_progress — the ids themselves, not a count and not 'some ACs'."
+  - name: test_a_refused_release_payload_says_a_later_run_will_be_refused
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The payload states the consequence, not only the fact: a later run aimed at those ids will be refused while they stay in_progress (BO-2400f-8). This is the operator's call to action."
+  - name: test_a_successful_release_payload_names_the_released_ids
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With the release stubbed to a successful outcome, the payload names the ids returned to todo. On its own this test is worthless — today's lane passes it by saying nothing — which is why it is paired with the difference test below."
+  - name: test_the_released_and_refused_payloads_differ
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Drive the same halting path twice, once with a successful release and once with a refusal, and compare the two terminal payloads: they must not be equal. A single message covering both outcomes satisfies each test in isolation while telling the operator nothing."
+  - name: test_the_release_result_is_read_rather_than_discarded
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: ".claude/workflows/fast-lane-ship.js (top-level body under run_workflow_under_e2)"
+    description: "Stub the release step with a distinctive, otherwise-impossible marker value and assert it is observable in the terminal payload. A lane that awaits the dispatch and drops the result cannot pass this, which is the precise defect KI-BO-020 records."
+  - name: test_an_unreadable_release_reply_is_reported_as_not_released
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With the release stubbed in turn to null, to an empty object, and to a reply missing the outcome key, each run reports NOT released with every claimed id in unreleased_ac_ids. Fail closed — silence is never reported as success."
+  - name: test_release_reporting_holds_on_more_than_one_halting_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Parameterised across the halting paths (all nine once BO-2400f-10-i has made their labels unique; at minimum the context-bundle, coverage, changelog and commit halts): each carries the release result in its payload. A payload assembled correctly at one halt and not at another is the same bug, eight ninths unrepaired."
+  - name: test_a_failed_release_does_not_change_the_runs_halting_status
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "With the release refusing, status, classification and failing_phase are identical to the same run with a successful release. Best-effort ACTION is preserved: a failed release must not turn a clean halt into a crash or a different verdict."
+test_rationale: |
+  This criterion is about what a halting run SAYS, so the assertion target is the run's
+  terminal payload, and the only way to obtain one is to run the lane. Execute it under
+  unit_tests/_workflow_engine_harness.py with run_workflow_under_e2, drive a failure path,
+  and assert on the returned payload. A grep over templates/workflows-js/fast-lane-ship.js
+  for a field name or a message fragment is not acceptable evidence and must be rejected
+  at review: it passes on a payload that is never constructed, which is today's state.
+
+  The load-bearing test is the REFUSAL case, and it needs the release step stubbed to
+  return something other than a successful release — the literal shape observed in run
+  wf_bd4984e8-438 is a refusal object, `{"status": "refused", "reason":
+  "out-of-scope-..."}`, so use that. Assert the terminal payload says the release did not
+  happen, lists the ids left at in_progress, and STILL names the original failure. Then
+  run the success case with the same driver and assert the payload names the released
+  ids. Running only the success case is worthless here: today's lane would pass it by
+  saying nothing, since saying nothing is indistinguishable from a silent success.
+
+  Assert the two payloads DIFFER. A single message that covers both outcomes satisfies
+  each test in isolation while telling the operator nothing, and undifferentiated
+  messaging is the exact defect the sibling amendment to BO-2400c-1-iii exists to fix one
+  phase earlier in the same lane.
+
+  Cover more than one failure path. The release result must be read on every path that
+  releases; a payload assembled correctly at the context-bundle halt and not at the commit
+  halt is eight ninths of the same bug.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - agent: it-po
+    date: "2026-08-25"
+    reason: "TECHNICAL ENRICHMENT ONLY — no criteria, title, depends_on, covered_by, declares_side_effect, work_status or test_rationale text was touched. declares_side_effect stays false and the enrichment agrees with it: this record changes only what the run REPORTS. Its sibling BO-2400f-10-i owns the store mutation and is correctly true. Set assigned_agent python-coder, estimated_complexity M, it_requirements, expects_from, delivers_to (null) and test_spec; added one doc_link. WHY M AND NOT L: nine mechanical edit sites in one file, one language, no signature change and no new dependency — but nine, so not S. THE ORDERING CLAUSE IS ELEVATED TO ITS OWN CONSTRAINT AND ITS OWN TEST, because the failure mode is specific and quiet: the natural implementation swaps the halt message for the release problem, every assertion about the release passes, and the operator loses the reason the run stopped. The constraint therefore states the mechanics — failing_phase unchanged, existing message text preserved verbatim, release fact carried in its own fields — and test_a_refused_release_payload_still_names_the_triggering_failure asserts BOTH facts in the SAME payload. delivers_to is null deliberately: this record's consumer is the human operator reading the terminal payload, not a downstream agent, and inventing an agent-shaped contract for that would be false precision. FLAGGED, NOT SPLIT: docs/how-to/fast-lane-build.md gains a new thing to tell the operator, and a .md how-to is documentation-expert's surface while python-coder owns .py and .js. Splitting would require inventing criteria the BA did not write, so the implementer reports the gap at sign-off instead and a companion documentation AC follows."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The sibling BO-2400f-10-i makes the release work. This one makes its failure visible,
+  and the two are separable on purpose: a release can be fixed and then quietly break
+  again, and without this criterion the second breakage is as invisible as the first was.
+
+  The whole reason KI-BO-020 took a month to surface is in the second clause of the first
+  scenario. The lane treats the release as best-effort and discards its reply, so
+  "released" and "refused" produce identical runs. Verified 2026-08-25: after run
+  wf_bd4984e8-438, the release agent had run and returned a well-formed refusal, and
+  nothing anywhere in the run's output mentioned it. The run reported a clean halt on the
+  context bundle, which was true, and said nothing about the five acceptance criteria it
+  had just stranded, which was also true and considerably more urgent.
+
+  Best-effort is a defensible posture for the ACTION and is kept — a failed release must
+  not turn a clean halt into a crash. What is not defensible is best-effort REPORTING.
+  The distinction this record draws is between "try, and carry on if it fails" and "try,
+  and never find out". Only the second one is the defect.
+
+  The second scenario's ordering clause is deliberate. The obvious implementation replaces
+  the halt message with the release problem, which trades one hidden fact for another. An
+  operator needs both: why the run stopped, and what it left behind for the next one.
+
+  ENRICHMENT NOTE, it-po, 2026-08-25 — THIS RECORD IS BUILDABLE BEFORE ITS SIBLING, AND
+  THAT IS USEFUL. The dependency on BO-2400f-10-i is real for the SUCCESS path, which
+  cannot be observed for real until an executor exists that actually releases. The REFUSAL
+  path, which is the load-bearing one, is exercisable against today's lane exactly as it
+  stands — the release genuinely does refuse. So if the two are built in sequence rather
+  than together, build this one first or at least test its refusal path first: it is the
+  only one of the pair whose primary case can be proved against the live defect rather
+  than against a stub.

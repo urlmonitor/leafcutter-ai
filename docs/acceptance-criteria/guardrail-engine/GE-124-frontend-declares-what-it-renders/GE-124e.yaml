@@ -1,0 +1,137 @@
+id: GE-124e
+title: "A finished screen requirement can never have nothing on screen behind it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Marked a screen requirement done? Something on screen has to claim it.
+
+  Before a change is accepted, every screen requirement recorded as finished is
+  checked from the other direction: at least one part of the product says it is
+  the thing that delivers it. A requirement that is complete on paper with
+  nothing anywhere claiming to render it is reported as unfinished business
+  rather than quietly counted as done. Being claimed is only half of finished —
+  a requirement that something on screen points at, but that no test proves, is
+  still not done, and passing this check never says otherwise.
+depends_on:
+  - GE-124
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124e-1
+  - GE-124e-2
+  - GE-124e-3
+  - GE-124e-4
+  - GE-124e-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO authoring note (for the BA / IT PO).
+
+  THIS IS THE CI TIER AND THE REVERSE DIRECTION (requirement → code). Its
+  subjects are AC ids; GE-124c's subjects are file paths. That difference is
+  what makes them two L1s rather than one, and the mock-data artifact states it
+  as an invariant.
+
+  THE MODEL TO MIRROR IS `check_done_proof`, which already asks the same shape
+  of question about tests. Do not invent a parallel idiom, and where the two
+  gates would report on the same AC, say how they compose rather than leaving a
+  reviewer with two unrelated failures.
+
+  THE TRIGGER IS NARROW AND MUST STAY NARROW: only criteria whose change target
+  is the user interface, and only once they are marked done. A UI criterion
+  still in progress is skipped, not blocked — the mock-data artifact carries
+  that case explicitly (KM-ADM-003). A non-UI criterion is out of scope
+  entirely, not "passing".
+
+  EITHER SURFACE SATISFIES IT. A component-level declaration OR an element-level
+  pin discharges the requirement — this gate asks only "does anything claim
+  this?", not "is the floor in place". The floor is GE-124c's job at commit
+  time. Requiring both here would make the optional pin compulsory by the back
+  door and contradict GE-124b.
+
+  THIS GATE IS NECESSARY, NEVER SUFFICIENT — the sharpest risk in the whole
+  tree, and the reason GE-124g exists. Passing here means the requirement is
+  CLAIMED BY SOMETHING ON SCREEN. It does not mean the requirement works. A
+  criterion that is `done`, declared, and has no covering test is exactly as
+  unfinished as one that is tested and undeclared, and this check must be
+  specified so that it can never be read as having discharged the test
+  obligation:
+    - It must not relax, satisfy, or stand in for the test-coverage gate, and
+      the two must be able to fail independently on the same criterion.
+    - Its passing message must not use language a reader could mistake for
+      proof — say the criterion is DECLARED, never that it is verified,
+      covered, or proven.
+    - Nothing it produces may be written into an AC's `covered_by`.
+  The mock-data artifact deliberately includes a criterion that is pinned on a
+  real element and has no covering test at all. GE-124g owns this guarantee in
+  full; this L1 must be decomposed so as not to breach it.
+
+  SEQUENCING RISK WORTH FLAGGING TO THE USER: switching this gate on against
+  today's store will fail on every already-done UI criterion at once, because
+  none of them were authored under this convention. Decide the introduction path
+  explicitly at L2 — the honest options are a dated cutoff or a one-time
+  declared backfill, NOT a permanently advisory gate, which would make it
+  decorative.
+
+  documentation_triggers [how-to] — the person who hits this in CI needs to know
+  the two ways to satisfy it, and needs to be told plainly that satisfying it is
+  not the same as proving the criterion, because this failure and a
+  test-coverage failure look superficially identical.
+
+  BA decomposition note (2026-08-25). Five L2s: GE-124e-1 (the narrow trigger,
+  with THREE outcomes — selected, skipped, out of scope — because recording a
+  non-UI criterion as "passing" would inflate every downstream figure),
+  GE-124e-2 (either surface satisfies), GE-124e-3 (the failing verdict, keyed by
+  criterion id rather than file path), GE-124e-4 (the evaluated set), GE-124e-5
+  (the how-to). GE-124e-3-i answers the PO's composition question: this gate and
+  the test-proof gate compose by ADDITION, never by substitution, and the two
+  half-finished states fail in opposite gates.
+
+  THE INTRODUCTION PATH IS DIFF-SCOPING (user decision, 2026-08-25) — this
+  supersedes the dated cutoff the PO note above offers as one of its two honest
+  options, and it supersedes the cutoff that an earlier revision of GE-124e-4
+  specified. Pre-commit and CI fire only on changed files, so the backfill
+  happens whenever an existing file is touched. GE-124e-4 defines the evaluated
+  set as: a done UI criterion is evaluated when EITHER its own record is in the
+  diff, OR a changed front-end file declares or pins it. Everything else is not
+  evaluated on that run — not exempt, not deferred, not counted, and not passed.
+
+  WHY THIS IS BETTER THAN THE CUTOFF IT REPLACES, recorded so it is not
+  relitigated: a cutoff creates a dated exempt population that has to be sized,
+  scheduled and eventually retired, and that population is a permanent hole
+  until someone funds the work. Diff-scoping creates no population at all and
+  grows coverage monotonically. It is also the established house pattern —
+  `check_done_proof --mode ci-changed --base origin/main` (whose docstring gives
+  this precise rationale for promotability to a required gate), the diff-scoped
+  component-vocabulary CI job, GE-111c-1, and the presence-only-assertion
+  staged-hunks ratchet. Matching it, rather than inventing a second idiom, is
+  the same instruction the PO gave about `check_done_proof` itself.
+
+  SUBJECT-TYPE TRANSLATION IS WHERE THIS TIER DIFFERS from every precedent
+  above: those all scope by file path, and this tier's subjects are criterion
+  ids. Hence the two routes into the diff in GE-124e-4 rather than one. Do not
+  simplify it to "changed AC records only" — a criterion whose record is stable
+  while its screen churns would then never be evaluated.
+
+  DIFF-SCOPING IS NOW VISIBLE ON BOTH TIERS: GE-124c-3 scenario 1 owns it at
+  commit time (an untouched file reports nothing), GE-124e-4 owns it here. They
+  are one principle applied to two subject types, not two conventions.

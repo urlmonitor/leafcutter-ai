@@ -275,8 +275,8 @@
         "BO-201",
         "BO-202"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-08-25"
     },
     {
       "id": "livetest",
@@ -414,10 +414,10 @@
     }
   ],
   "impl_summary": {
-    "done": 3,
-    "in_progress": 1,
+    "done": 2,
+    "in_progress": 2,
     "not_started": 15,
     "total": 19,
-    "asof": "2026-07-20"
+    "asof": "2026-08-25"
   }
 }

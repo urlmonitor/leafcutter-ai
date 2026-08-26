@@ -1,0 +1,123 @@
+id: BO-3100f
+title: "A step that stopped short is reported as stopped, never as finished"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Work that could not be completed is named as unfinished, not counted.
+
+  When a step ends because it ran into something it could not get past — a
+  permission it was not given, a decision only you can make — the build says so,
+  names what stopped it, and does not call the run a success. Stopping short is
+  never quietly dropped, waved through, or removed from what the run was
+  supposed to do in order to make the report come out clean.
+depends_on:
+  - BO-3100
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007, second branch of its fix direction: a step's own 'I halted at the gate' outcome needs a distinct status the run routes on, so it lands somewhere other than the completed list. Its evidence is a top-level success reported for a change that was never published."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200c.yaml
+    relationship: related
+    status: exists
+    relevance: "The consent half — that a decision only you can make actually reaches you, and that nothing else is read as your reply. This is the accounting half: what the run says happened once a step stopped for one. Sequence them; do not merge them."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300.yaml
+    relationship: related
+    status: exists
+    relevance: "Governs what the end-of-run summary shows. This governs whether what it shows is true. The summary is the surface a false success is read from."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3100f-1
+  - BO-3100f-2
+  - BO-3100f-3
+  - BO-3100f-4
+  - BO-3100f-5
+implemented_by: []
+documentation_triggers:
+  - state-diagram
+notes: |
+  AUTHORED 2026-08-26 against KI-BO-007 (high, open), the second branch of that
+  entry's own stated fix direction. BO-3100e is the first branch; this is what
+  the run must SAY once a step has been judged not to have delivered.
+
+  THE ANCHOR, in the entry's own words. Run wf_ebe75602-f98 returned
+  {"status":"ok", completed_phases:[…,"commit","pull-request"]}. Checked against
+  the repository: the branch had never reached the remote, no review existed,
+  and the step's own journal entry said so clearly — "I am holding at the
+  mandatory confirmation gate before pushing … No user turn is available in this
+  dispatch to supply the required affirmative." The step told the truth. The run
+  recorded it as completed and reported overall success. The information needed
+  to report honestly was present and discarded.
+
+  THREE CLAUSES, AND THE THIRD IS THE ONE THAT IS ABSENT EVERYWHERE.
+  1. A step that stopped short is recorded as stopped, not completed. The
+     equivalent already exists for the empty case (BO-3100b-2) and for a gate
+     that did not run (BO-2900f-1) — neither reaches a step that stopped at a
+     confirmation it could not obtain.
+  2. The run's overall verdict reflects it. A run missing a step it was supposed
+     to perform is not a successful run, and must not read as one at the top.
+     This is the clause the anchor case violates most visibly.
+  3. Stopping short is never resolved by removing the step. Dropping the step,
+     marking it optional, or letting the run declare it not required in order to
+     get past the blocker converts a loud blocker into a silent gap. That is the
+     exact failure being fixed, one level up, and AR-200a-1's constraint 1
+     already had to write this down when the tempting fix for its five templates
+     was to delete the obligation rather than grant the capability. Any solution
+     to this L1 that makes a step easier to omit has failed it.
+
+  A STOPPED STEP IS NOT A SKIPPED STEP, AND THE VOCABULARY MUST KEEP THEM APART.
+  The known issue is careful about this and the BA must be too: the same run
+  correctly surfaced two steps it had skipped on declared blockers, and calls
+  that legible and correct. Skipped means the run decided in advance not to run
+  it. Stopped short means it ran, tried, and could not finish. Collapsing the
+  two loses the difference between a step nobody expected and a step that failed
+  to happen. BO-2900f-1's own notes record the identical term collision for the
+  word 'skipped' at the gate layer — inherit that distinction, do not re-derive
+  a third meaning for it.
+
+  BOUNDARY vs BO-3200c, because they will look like the same AC. BO-3200c is
+  about a question reaching the person entitled to answer it, and about no reply
+  from anything else being read as their answer. It ends at "the build stops and
+  says so with your work intact." This L1 starts one step later: given that a
+  step has stopped, what the run records and what it tells you at the end. Both
+  are needed and neither implies the other — a build could route the question
+  perfectly and still file the halt as a completed step.
+
+  BOUNDARY vs BO-3100e. That one decides whether a step delivered. This one
+  decides what is said when it did not. Keep the judgement and the reporting
+  separate: a judgement with no honest report changes nothing a user can see,
+  and a report with no judgement has nothing to report.
+
+  ID ALLOCATION. Authored as BO-3100f, not the allocated BO-3500. BO-3500 is
+  left unused and free. Rationale recorded on BO-3100e.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, this L1's full
+  child cap, one per clause plus the vocabulary guard and the diagram:
+  BO-3100f-1 (clause 1 — recorded as stopped, naming what stopped it, with the
+  step's own account preserved), BO-3100f-2 (clause 2 — the leading outcome
+  value, with the mandatory clean-run control and the later-step-overwrites
+  hole closed), BO-3100f-3 (the skipped/stopped-short vocabulary held apart in
+  both directions, inheriting BO-2900f-1's sense of skipped), BO-3100f-4
+  (clause 3 — the owed set cannot shrink, checked as a count comparison), and
+  BO-3100f-5 (the state diagram, whose value is the absent transitions).
+  Whether a SKIPPED step withholds the run's success value is deliberately left
+  undecided: the entry calls the anchor run's skips legible and correct, and
+  BO-3100f-2 scopes the leading value to steps that stopped short.

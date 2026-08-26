@@ -1,0 +1,75 @@
+id: BO-3600b-4
+title: "A state diagram shows a fault entry's states and that retirement is reachable only through evidenced delivery"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader deciding whether a fault entry can be closed,
+  When they open the state diagram for a fault entry's lifecycle,
+  Then it shows each state an entry can be in, including open, open with an
+    ambiguity recorded, and retired,
+    And it shows the transition into retired as requiring evidence that the entry's
+      subject was delivered,
+    And it shows no transition into retired that does not carry that evidence.
+
+  Given the diagram,
+  When it is compared against the states real entries occupy and the transitions
+    they actually make,
+  Then every state the diagram shows is one a real entry occupies,
+    And every transition a real entry makes appears in the diagram.
+
+  Given the diagram,
+  When a reader looks for a transition that changes a requirement record,
+  Then the diagram shows none,
+  So the picture cannot be read as one in which retiring an entry also demotes or
+    finishes a requirement.
+
+  Given the diagram,
+  When a reader looks for what happens to an entry's text on retirement,
+  Then the diagram shows the text preserved in the retired state,
+  So retirement is documented as a change of state and never as a removal.
+depends_on:
+  - BO-3600b
+  - BO-3600b-1
+  - BO-3600b-3
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the state diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The register whose entries gain a retired state; the diagram must be reachable from the material that describes how the register is kept."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-3600b's documentation_triggers: [state-diagram].
+
+  As with BO-3100f-5, the load-bearing content is the transitions the diagram does
+  NOT show: no unevidenced route into retired, and no route that touches a
+  requirement record. Those are BO-3600b-1's and BO-3600b-3's guarantees made
+  legible, and a diagram omitting them would license exactly the implementations
+  those records forbid.
+
+  The second scenario reconciles the diagram against real entries in both
+  directions, so it documents the register as kept rather than as imagined.
+
+  assigned_agent deliberately unset — the diagram surface belongs to the IT Product
+  Owner's assignment pass.

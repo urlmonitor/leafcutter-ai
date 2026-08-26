@@ -1,0 +1,95 @@
+id: INF-700b-5
+components:
+  - infrastructure
+  - knowledge_system
+  - documentation_system
+title: "Reference documentation states what the capture step requires of an agent, and names only steps that exist"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
+criteria: |
+  Given an agent author needs to know what the knowledge-capture step requires
+    of an agent before writing a new agent template,
+  When they open the reference documentation for the agent knowledge system,
+  Then it states each field a knowledge record carries, including the learning
+    text itself, and what each field is for,
+  And it states what an agent does when it has no learning to record,
+  And it states what an agent does when capture cannot complete, and where that
+    failure is recorded so it can later be counted,
+  And every directory, file and step the reference names exists in the package
+    at the location given,
+  And it describes no step that ADR-034 retired as something an agent takes,
+  And it does not state or imply that a captured learning reaches its surface
+    automatically while no trigger for the routing step exists.
+depends_on:
+  - INF-700b
+  - INF-700b-1
+  - INF-700b-1-i
+  - INF-700b-1-ii
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "TARGET SURFACE: docs/architecture/agent_knowledge_system.md, which ADR-034 section 5 records as 'describes the Option A pipeline; now superseded on the write step and needing amendment'. This AC is that amendment. Dispatch reference-author for the field table; the document also carries INF-700b-4's sequence diagram, so coordinate rather than each rewriting the other's section."
+  - "The field table must document seven fields, not six: event, timestamp, agent, component, destination, entry_kind, and `text` (INF-700b-1). It must state which single field is CONTENT (`text`) and that all others are descriptive — that distinction is what makes INF-700c-1's eligibility rule legible to a reader rather than arbitrary."
+  - "It must state the backward-compatibility rule explicitly: `text` is required of a producer and optional to a consumer, so records emitted before the field existed remain valid and are classified ineligible-to-write rather than invalid. Without this sentence a reader encountering a six-field record will read it as corrupt."
+  - "It must state where a capture FAILURE is recorded and that it is on a different stream from the knowledge record (INF-400c-4-iii), and it must name the report that counts it (INF-700b-3). 'Where that failure is recorded so it can later be counted' is answerable only by naming both the artefact and its reader."
+  - "It must not describe route-learning or capture-learning as steps an agent takes (ADR-034 section 2 item 3). Note that after INF-700b-2 lands, scripts/check_skill_refs.py still does NOT cover this file — it scans templates/*.md only — so this clause is a review obligation here, and a scope-widening of that guard to docs/ is a recommended follow-up rather than this AC's cover."
+  - "The 'no implied automatic routing' clause is the standing one from ADR-034 and INF-700a. Concretely: the document must not use present-tense automatic phrasing ('the harvester routes each emission') for a step with no caller. State plainly that routing is manual-invoke today and name INF-700a as the criterion that owns the trigger."
+  - "Every path the document names must resolve at the moment of writing. Known trap: the harvester's default sink debugging/logs/knowledge_emissions.jsonl has never existed and the live records are in debugging/logs/agent_telemetry.jsonl. Do not document the default as though it were the sink — INF-400c-4 owns the reconciliation, and until it lands the reference must describe the discrepancy rather than pick a side."
+test_required: false
+test_rationale: |
+  A reference document produces no executable behaviour. The clauses that could
+  in principle be mechanised — 'every directory, file and step the reference
+  names exists' and 'names no retired step' — are not covered by any gate that
+  reaches this file: check_skill_refs.py scans templates/*.md and the doc-links
+  hook checks Markdown links rather than prose-named paths. Asserting them with
+  a bespoke grep test would be the grep-only pattern CLAUDE.md forbids and would
+  pass on a document that names a path correctly while describing it wrongly.
+  They are therefore review obligations, and test_required is set false
+  explicitly so test-writer skips with an accurate reason.
+delivers_to: null
+expects_from:
+  - ac_id: INF-700b-1
+    contract: "The settled seven-field record shape including `text`, and the producer-required / consumer-optional compatibility rule the reference must state"
+  - ac_id: INF-700b-1-i
+    contract: "The no-learning branch behaviour: no knowledge record, attempt record still written"
+  - ac_id: INF-700b-1-ii
+    contract: "The failure record, the stream it lands on, and the missing-target field the reference must describe"
+  - ac_id: INF-700b-3
+    contract: "The capture-health report the reference names as the reader of the failure records"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Named the target document and the coordination hazard with INF-700b-4, which amends the same file. Expanded expects_from from one entry to four: the criteria require the reference to state the no-learning behaviour, the failure behaviour and where the failure is counted, none of which comes from INF-700b-1. Flagged that no existing gate covers this file's prose-named paths, so the 'everything named exists' clause is a review obligation, and recorded the sink-path discrepancy the writer will hit."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc entry in INF-700b's documentation_triggers.
+  The last clause is inherited from ADR-034's consequence ("Until the harvester
+  has a caller, capture is not automatic and any documentation implying
+  otherwise is wrong") and from INF-700a, which owns the trigger itself. This
+  AC does not require the trigger to exist; it requires the documentation to
+  stop implying one that does not.
+change_target: docs
+risk_surface: internal

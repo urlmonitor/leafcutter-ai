@@ -104,7 +104,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-120e-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/30_TICKET-20260825-GE-120e-2.md
 change_target:
   - code
   - config
@@ -133,3 +134,4 @@ notes: |
   manifest check gets its CHANGE SET. Reuse GE-120c-3's manifest-reading callable rather
   than writing a second manifest reader; two readers will disagree and the disagreement will
   be settled by whichever is quieter.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

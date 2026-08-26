@@ -1,0 +1,152 @@
+id: ACD-2100a-1
+components:
+  - ac_driven_dev
+  - worktree_manager
+readiness: approved
+priority: medium
+title: "The worktree step runs the copy of the setup script that belongs to the repository being worked on"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given two copies of the worktree setup step exist on the machine -- one inside
+    the repository the run will operate on, and one in an untracked parent
+    directory that is not itself a repository,
+  And the two copies differ in an externally observable way, so which one ran can
+    be told from the run's output alone,
+  And the run is started with the process working directory set to that untracked
+    parent directory,
+  When the route creates the authoring worktree,
+  Then the copy that executes is the one inside the repository being operated on,
+  And the authoring worktree exists on disk afterwards as a working copy of that
+    repository with the expected branch checked out,
+  And the run's own record of the command it issued names an absolute location
+    inside that repository rather than a location relative to the working
+    directory.
+depends_on: [ACD-2100a]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4. This behaviour is one of the layout facts it must state; cross-link rather than restate."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004 records the observed failure and the reproduction; its second fix direction is this behaviour."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source of the route. The resolution site is the worktree-creation step around line 1800; the deployed copy under .leafcutter/ is build output and is not the place to fix it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the self-hosting layout in which the deployed copy sits outside the repository it operates on."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route; primary_code names templates/workflows-js/plan-feature.js as the surface this behaviour changes."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "The worktree-creation surface the route shells out to."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. A repair applied to the deployed copy under .leafcutter/ is regenerated away by the next build and does not count as delivered (see ACD-2100d)."
+  - "The resolved script location must be absolute at the point it is handed to the process launcher -- the run must not rely on the caller's working directory to complete the path."
+  - "The run's own diagnostic record must carry the resolved absolute location it invoked so a wrong-copy execution is diagnosable after the fact without re-running."
+  - "The resolution must be shared with the other four cwd-relative sites (ACD-2100a-3 and ACD-2100a-4) rather than patched here alone; a per-site fix is what left three sites standing after the known issues were filed."
+  - "Must satisfy the repository error-handling policy: the resolution is external I/O, so a failure to resolve must raise a typed error or log at WARNING and re-raise -- never be swallowed into a silent fallback."
+  - "Must not change the setup step's existing command-line contract; callers that already pass an explicit location must behave exactly as they do today."
+  - "The startup path up to and including this step must complete with no network available."
+test_spec:
+  - name: test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Two distinguishable copies of the setup step on disk (one inside the target
+      repository, one in an untracked parent); the workflow is driven from the
+      untracked parent and the marker emitted by the in-repository copy -- not the
+      parent copy -- appears in the captured output.
+  - name: test_worktree_step_invocation_is_reached_from_the_workflow_entry_point
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow's worktree-creation step, driven through the workflow runner rather than by importing a helper"
+    description: >-
+      Driving the real workflow entry point produces the worktree on disk under the
+      target repository with the expected branch checked out, and the recorded
+      command string is an absolute path rooted inside that repository.
+  - name: test_wrong_copy_execution_is_observable_and_blocks
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With only the untracked-parent copy present and no copy inside the target
+      repository, the step fails and names the location it could not resolve -- it
+      does not silently fall back to the parent copy.
+test_rationale: >-
+  A single copy of the setup step on disk makes the criterion unfalsifiable: whichever
+  path is resolved, the same file runs and the test passes against unfixed code. Two
+  observably different copies is the only fixture shape in which the Then clause can
+  fail. Asserting the recorded command string separately is what catches an
+  implementation that resolves correctly by accident of the caller's cwd -- the string
+  must be absolute, not merely correct on this machine.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100a-5
+    contract: "An absolute repository-anchored location for a named support file under the route's installed support directory, derived from the repository being operated on and not from the caller's working directory. The same resolution ACD-2100a-3 and ACD-2100a-4 consume for the registry and the pause store."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/01_TICKET-20260826-ACD-2100a-1.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SITE 1 OF 5 (the one KI-ACD-004 names). Verified by the PO on 2026-08-25:
+  templates/workflows-js/plan-feature.js line 1800 shells
+  `{{config.output_root}}/scripts/setup_ticket_worktree.py`, and
+  `{{config.output_root}}` expands to the BARE NAME `.leafcutter`, so the path is
+  resolved against whatever the caller's working directory happens to be. In the
+  ADR-001 dev layout that selects the deployed build-output copy in the untracked
+  workspace parent.
+
+  WHY THE TWO-DIFFERENT-COPIES GIVEN. A test that places only one copy on disk
+  cannot fail: whichever path is resolved, the same file runs. The two copies must
+  be distinguishable in observable output (an argument echo, an exit banner, a
+  marker on stderr) or the Then clause is unfalsifiable. This is the same fixture
+  bias that hid the defect -- see ACD-2100a-2's note on the tmp_path fixture.
+
+  THIS IS THE PATH HALF ONLY. Even the right copy still has to find the repository
+  it operates on; that is ACD-2100a-2, and both layers are needed to reproduce the
+  observed failure. Do not let one close the other.
+
+  SIBLING SITES: ACD-2100a-3 (registry) and ACD-2100a-4 (pause store) are the same
+  defect at three further sites. ACD-2100a-5 is the anti-regression that covers the
+  class from an arbitrary working directory.
+
+  BUILD-SURFACE CONSTRAINT (ACD-2100d): a repair applied to the deployed copy under
+  .leafcutter/ evaporates on the next build. The change lands in templates/.
+
+  2026-08-25 (it-po): assigned python-coder -- the registry gives python-coder
+  `owns_file_extensions: ['.py', '.js']`, so the JavaScript workflow template and the
+  Python setup script are one owner and this AC needs no split. The S2.8
+  intent-vs-surface check passes: every extension in the declared surface is one the
+  assigned implementer and its pytest harness can act on. `workflow-architect` was
+  considered and rejected -- it is `is_ticket_phase: false` and cannot be dispatched
+  as an implementing phase. The doc_links entry with `relationship: implements` is
+  what puts templates/workflows-js/plan-feature.js into the generated ticket's
+  files_touched; the `describes` entries are informational and deliberately stay out
+  of it.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

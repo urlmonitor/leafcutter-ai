@@ -1,0 +1,99 @@
+id: GE-125a
+title: "Reduced checking applies where it was intended, not to every folder sharing a name"
+component: guardrail-engine
+components:
+  - security_scanner
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A folder name repeated elsewhere no longer switches off detection.
+
+  The places that get less scrutiny are the specific ones the project chose,
+  identified from the top of the project down. A feature area, a bought-in
+  dependency, or any nested folder that merely reuses one of those names keeps
+  full credential detection.
+depends_on:
+  - GE-125
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records the six measured paths that decide this L1: three exempt-but-not-intended locations reached purely by name reuse, against an ordinary source path that is reported. Those six are the acceptance shape."
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-125a-1
+  - GE-125a-2
+  - GE-125a-3
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE BLAST-RADIUS L1 AND THE CHEAPEST OF THE FOUR. It changes nothing
+  about which places are entitled to less scrutiny — it makes the entitlement
+  reach only those places. KI-SEC-001 names it the single change with the
+  largest payoff for the least work, and it is the only one of the four that can
+  land without any judgement call about what a location is entitled to.
+
+  IT IS ALSO THE ONE WITH REAL EXPOSURE TODAY, not merely theoretical exposure.
+  This repository already ships a web directory that would satisfy one of the
+  reused names, and any bought-in dependency containing such a folder inherits
+  the same loss silently. The exposure is identical for executable files and for
+  written ones, which is why this L1 is separate from GE-125b: fixing the reach
+  of the entitlement and fixing what the entitlement covers are two changes, and
+  either can land while the other is still broken.
+
+  THE ACCEPTANCE SHAPE IS A PAIR, NOT A SINGLE CASE. An intended location must
+  still receive its reduced scrutiny after this lands. A fix that simply deletes
+  the reduced scrutiny would pass a one-sided test and would reintroduce the
+  false positives that GE-123d exists to remove. Both arms belong in the L2.
+
+  BEWARE THE FIXTURE TRAP (inherited from the L0, and sharpest here). The L2
+  scenarios for this L1 are ABOUT paths, so every fixture path is load-bearing
+  and none may be chosen casually. State each one and say why it was chosen.
+
+  DECOMPOSITION, 2026-08-19 (business-analyst). Three L2s and three L3s, well
+  inside the five-L2 cap; no further behaviour was deferred.
+
+    - GE-125a-1 (L2) — a folder reusing a chosen name keeps full detection. The
+      four measured not-intended rows plus the measured reported row, plus a
+      written file at a reused-name path so an executable-only anchoring cannot
+      pass.
+      - GE-125a-1-i (L3) — one file, one answer however its path is spelled.
+        Anchoring only means something if the path is understood rather than
+        matched as text, and every scenario in the parent uses one spelling.
+      - GE-125a-1-ii (L3) — near-miss names collect nothing: a name a chosen name
+        merely begins, the tail of a two-segment location without its head, and a
+        chosen name worn by a file. These guard the REPLACEMENT, not the defect.
+    - GE-125a-2 (L2) — THE MANDATORY CONTROL required by the pair rule above. All
+      four chosen locations still exempt, the set gains and loses no member, and
+      the entitlement still removes the opaque-token rule only. Green on arrival
+      by design; it earns its place by what it forbids.
+      - GE-125a-2-i (L3) — WHICH top of the project. The check today resolves its
+        suppression file from the enclosing workspace rather than the working
+        copy, so the anchor nearest to hand is the wrong one, and reusing it
+        would make every acceptance-criterion file in a secondary working copy
+        report a credential. Also settles that an undetermined top entitles
+        nothing.
+    - GE-125a-3 (L2) — discharges documentation_triggers [reference-doc], as ONE
+      passage amended once per behaviour, per the L0's discharge-them-once rule.
+
+  THE PAIR IS SPLIT ACROSS GE-125a-1 AND GE-125a-2 ON PURPOSE, and each says so
+  in its own notes: neither is admissible as evidence for the other, and closing
+  GE-125a-1 while GE-125a-2 is unfinished would certify a change that cannot be
+  told apart from deleting the entitlement.

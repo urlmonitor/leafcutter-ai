@@ -1,0 +1,139 @@
+id: GE-123c-1-i
+components:
+  - commit_guardian
+  - security_scanner
+title: "An entry carrying a fourth field, including a Windows drive letter, is caught by the same unmatchable-entry rule"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the security allowlist's second line is
+    "ENTROPY_HIGH:C:\\Users\\dev\\project\\secrets.py:*" — an author on Windows
+    pasting an absolute path,
+  And "secrets.py" contains a high-entropy token the ENTROPY_HIGH rule reports,
+  When the allowlist is loaded and the file is scanned through the multi-file
+    entry point,
+  Then the finding is reported — the entry suppressed nothing,
+  And exactly one warning is emitted on the error stream naming the allowlist
+    file, the 1-based line number 2, and the verbatim text of that line,
+  And the entry is skipped,
+  Because the field boundaries fall at the first two separators, so the drive
+    letter "C" becomes the whole file path and the rest of the path becomes the
+    line-number field — an entry that parses cleanly into something the author
+    never wrote and can never match.
+
+  Given the security allowlist's third line is "GENERIC_SECRET:secrets.py:12:extra",
+  When the allowlist is loaded,
+  Then exactly one warning is emitted for line 3 — one warning per offending
+    line, not one per surplus field,
+  And the entry is skipped,
+  Because everything from the third separator onward is absorbed into the
+    line-number field, leaving a value that is neither the wildcard nor a decimal
+    line number.
+
+  Given the security allowlist contains the well-formed entries
+    "GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*" and
+    "ENTROPY_HIGH:docs/agents/README.md:429",
+  When the allowlist is loaded,
+  Then no warning is emitted for either line and both entries are loaded and
+    applied,
+  Because entries with two or three fields and nothing surplus are the ordinary
+    form and must stay silent.
+depends_on:
+  - GE-123c-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The canonical source of the scanner is the templates/ copy; every other copy on disk is a build output."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the angle vocabulary used in this AC's test_spec."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "No special case for surplus fields or for a drive letter: both shapes must be caught by the parent's single predicate, and a branch that names either shape explicitly is a defect — a new way to produce the same inert value would then escape."
+  - "Exactly one message per offending line, never one per surplus field: the per-line announcement contract inherited from GE-113c-3-v is what the assertion protects."
+  - "A Windows-style absolute path is rejected, not repaired. Do not add drive-letter or separator translation here; making such paths suppressible is a separate change with its own matching semantics."
+  - "Edit the canonical template at templates/skills/security-scanner/scripts/scan_secrets.py and propagate with build.py; never edit a deployed copy (ADR-001)."
+  - "Warn-and-skip stays non-fatal and stays on the error stream; the findings report the pre-commit check parses must remain free of diagnostics."
+  - "Tests must never create, modify or delete a .security-allowlist at any real project root, workspace root or worktree root; every fixture allowlist lives under tmp_path/tempfile."
+  - "Fixture files must use ordinary source filenames — the per-file scan short-circuits environment-named files and never reads their content."
+test_spec:
+  - name: test_windows_drive_letter_entry_warns_once_and_suppresses_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A tempfile-backed allowlist whose second line is a pasted Windows absolute path leaves the high-entropy finding reported, produces exactly one warning naming the allowlist path, line 2 and the verbatim text, and loads no entry for that line."
+  - name: test_four_field_entry_emits_exactly_one_warning_for_the_line
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An entry with one field more than the grammar allows produces one warning for its line, not one per surplus field, and is skipped."
+  - name: test_two_and_three_field_entries_load_silently
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Ordinary two-field and three-field entries with nothing surplus load with an empty error stream and are present in the loaded set."
+test_rationale: |
+  Both offending shapes are already inert for the parent's reason, so the value of
+  these tests is that they must pass with no code written specifically for them —
+  if either needs its own branch, the parent's predicate is too narrow. The
+  one-warning-per-line assertion is written explicitly because the natural
+  implementation of a surplus-field check emits one message per surplus field,
+  which would silently fork the announcement contract inherited from GE-113c-3-v.
+  All three arms use a real tempfile-backed allowlist; the drive-letter arm also
+  scans a real file on disk, because the claim is that the finding survives.
+delivers_to: null
+expects_from:
+  ac_id: GE-123c-1
+  contract: "The load-time predicate that a line-number field which is neither the wildcard nor a decimal line number makes the entry unmatchable, together with the warn-and-skip announcement it reuses."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS AN EDGE CASE OF THE PARENT AND NOT A SEPARATE BEHAVIOUR. Both shapes
+  here are already inert for exactly the parent's reason — the line-number field
+  holds something that is not a line number. No new predicate is needed; the value
+  of writing them down is that the parent's rule must be shown to catch them
+  without any special case, and that the drive-letter shape is the one an author
+  is most likely to produce while being most confident it is correct.
+
+  THE DRIVE-LETTER SHAPE IS NOT HYPOTHETICAL for this project — it is developed
+  from Windows through a Linux subsystem, and absolute paths pasted from the host
+  side carry a drive letter.
+
+  ONE WARNING PER LINE is asserted explicitly because the natural implementation
+  of a "too many fields" check can produce one message per surplus field, which
+  would break the per-line announcement contract inherited from GE-113c-3-v.
+
+  A WINDOWS DRIVE LETTER IS NOT MADE TO WORK HERE. The entry is rejected, not
+  repaired: making absolute Windows paths suppressible is a separate question with
+  its own matching semantics, and silently guessing at the author's intent is the
+  failure mode this whole L1 exists to remove. Warning and skipping tells them.
+
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-18. Kept at python-coder, complexity S: no
+  new predicate, no new message shape, only the demonstration that the parent's
+  rule reaches both shapes. The load-bearing it_requirement is the prohibition on
+  a shape-specific branch — the moment either shape gets its own code path, the
+  next variant escapes.

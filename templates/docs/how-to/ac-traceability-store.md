@@ -272,4 +272,4 @@ All three commands should exit 0 with no error output.
 - `docs/reference/ac-schema.md` — complete field-by-field reference for the AC YAML schema.
 - `docs/acceptance-criteria/README.md` — directory structure and quick-start.
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07).
-- `docs/README.md` — full documentation index.
+- `docs/INDEX.md` — full documentation index.

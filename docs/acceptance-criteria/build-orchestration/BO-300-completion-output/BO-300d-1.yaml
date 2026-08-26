@@ -1,0 +1,69 @@
+id: BO-300d-1
+title: "The closing report states the number of pieces it did not build, and that number matches the pieces it names"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run over a body of work of thirty-seven pieces of which it built
+    seventeen,
+  When the run produces its closing report,
+  Then the report states, as a number the run itself arrives at, that twenty pieces
+    were not built,
+    And it names each of those twenty,
+    And the count it states equals the number of pieces it names,
+    And the operator does not have to compare the run's plan against the body of
+      work to obtain that number.
+
+  Given a run over a body of work of thirty-seven pieces of which it built none,
+  When the run produces its closing report,
+  Then the report states that thirty-seven pieces were not built and names them,
+  So a run that built nothing is reported as a shortfall of everything, not as a
+    run with nothing to say.
+
+  Given a run in which one piece was removed from the body of work and one added
+    after the plan was fixed, so that the number of pieces is the same at the end as
+    at the start,
+  When the run produces its closing report,
+  Then the pieces it reports as unbuilt are determined by identity and not by count,
+    And the removed piece is not named as unbuilt,
+  So an unchanged total can never be read as nothing having changed.
+depends_on:
+  - BO-300d
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the run that built 17 of 37 and stated no count; the arithmetic was left to whoever compared the plan against the folder."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The completion guard that already re-reads the body of work by identity and names the pieces. This record adds the count on top of it and must not restate the guard."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE COUNT IS THE WHOLE OF THIS RECORD. Naming the pieces is BO-300a-5's and is
+  already done; what is missing is the run stating how many, so the operator is not
+  the one doing the arithmetic.
+
+  The third scenario is the identity clause, promoted into BO-300a-5's criteria body
+  in the concurrent amendment ("by identity and not by count") and restated here
+  only because a stated COUNT is exactly the thing that tempts an implementation to
+  compute it by subtraction.
+
+  VERIFY BY EXECUTION. Assert on the text the run emits at the end of a real drive
+  over a body of work whose size is known, not on an internal tally.

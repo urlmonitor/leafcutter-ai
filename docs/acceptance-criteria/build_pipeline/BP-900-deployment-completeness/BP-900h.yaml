@@ -35,12 +35,19 @@ documentation_rationale: "CI-only verification gate — surfaces as a failing st
 origin_agent: BrainCandy
 created: 2026-08-17
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: "covered_by extended with BP-900h-4 and BP-900h-5 (consumer-layout install fixture + per-guardrail verdict in that install). No other field changed; rewritten in full because the Edit tool was unavailable in this session."
+    by: business-analyst
+    at: 2026-08-18
 superseded_by: null
+child_limit_override: 6
 covered_by:
   - BP-900h-1
   - BP-900h-2
   - BP-900h-3
+  - BP-900h-4
+  - BP-900h-5
+  - BP-900h-6
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

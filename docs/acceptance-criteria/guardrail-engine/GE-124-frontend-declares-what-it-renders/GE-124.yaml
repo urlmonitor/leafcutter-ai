@@ -1,0 +1,131 @@
+id: GE-124
+title: "Every screen says which requirement it is showing you"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+  - frontend_coding
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Point at anything on screen and find the requirement it was built for.
+
+  Today, when a reviewer looks at a finished screen, nothing on it says what it
+  was supposed to prove. They have to search the requirements by hand, guess
+  which one the screen answers, and hope they guessed right. This goal removes
+  the guesswork: the screen's own source states the requirement it exists to
+  satisfy, and an individual thing on the page can be pinned to the specific
+  criterion it renders. New screen work cannot land without saying what it
+  serves, and a finished screen requirement cannot quietly have nothing on
+  screen behind it. Anyone reviewing the product can travel from what they see
+  back to what was asked for, without archaeology and without asking the author.
+  What a screen says about itself is a signpost to the requirement — never proof
+  that the requirement works.
+depends_on: []
+doc_links:
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: related
+    status: exists
+  - path: "docs/reference/ac-schema.md"
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-124a
+  - GE-124b
+  - GE-124c
+  - GE-124d
+  - GE-124e
+  - GE-124f
+  - GE-124g
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PO placement rationale (2026-08-24). GE-124 is a NEW SIBLING L0. It is NOT a
+  child of, and must not be folded into, either of its two neighbours:
+
+    - GE-117 ("Every piece of code declares which requirement and which
+      component it serves") is the SAME lifecycle stage (establish the
+      declaration, check at commit time) on a DIFFERENT surface. Every one of
+      GE-117's scenarios is written in Python vocabulary — module docstring,
+      public function/class, `__all__`, DECISION HISTORY entry. None of them
+      reach `.tsx` / `.jsx` / `.vue` / `.svelte` / HTML. A rendered element has
+      no docstring and no public symbol, so GE-117 cannot be stretched to cover
+      it without rewriting its scenarios. That gap is the whole reason GE-124
+      exists.
+    - GE-111 ("Refactoring can never silently break the link...") governs the
+      OPPOSITE direction and a later lifecycle stage: keeping an already-recorded
+      AC→code link honest as code moves. GE-124 establishes a link that does not
+      exist yet on the frontend.
+
+  Complementary, not overlapping. Do NOT close any of the three as a duplicate
+  of another, and do NOT amend GE-117 to absorb this.
+
+  L1 CUT — deliberate; do NOT re-cut by file type. One-L1-per-framework
+  (.tsx / .jsx / .vue / .svelte) was the rejected alternative: four
+  near-identical ACs that hide where the real differences are. The cut is by
+  GUARANTEE:
+    - GE-124a — the required FLOOR (component-level declaration).
+    - GE-124b — the optional PIN (element-level attribute) and its limits.
+    - GE-124c — ENFORCEMENT at commit, and the verdicts it must distinguish.
+    - GE-124d — the deliberate ESCAPES (warn tier, per-item opt-out).
+    - GE-124e — the REVERSE direction at CI (a done screen requirement must be
+      declared somewhere).
+    - GE-124f — the CHAIN: screen → mockup → flow step → requirement, and the
+      test selector that falls out of it.
+    - GE-124g — the WORTH of a declaration: a signpost, never proof. Added
+      2026-08-24 at review; see its own note for why it is a sibling rather
+      than a caveat inside GE-124b.
+
+  THREE LIMITS THAT ARE LOAD-BEARING — do not let L2 decomposition flatten any
+  of them:
+
+  1. PRESENCE, NOT BEHAVIOUR. An element-level pin can only express that
+     something is ON SCREEN. A validation rule, a sort order, a debounce has no
+     element to hang on. This is precisely why the component-level declaration
+     is the required floor and the element attribute can NEVER be the only link
+     a file offers. Any L2 that lets an element attribute satisfy the floor
+     contradicts this L0.
+  2. A DECLARATION IS NEVER COVERAGE. Declaring or pinning a criterion is
+     evidence it is rendered — never evidence it is tested. It must never be
+     accepted in place of a covering test, and must never be written into an
+     AC's `covered_by`. The mock-data artifact encodes this deliberately
+     (KM-ADM-004 is pinned at element level with `covered_by: []`). This limit
+     is owned outright by GE-124g — it is not a footnote on any other L1.
+  3. ONE FINDING PER SUBJECT PER CODE. A frontend file that merely lacks a
+     declaration block is reported once, not once per surface and not again for
+     each element it happens to carry.
+
+  SHARED RESOLVER — cross-cutting constraint for the IT PO. GE-111, GE-117 and
+  GE-124 all have to answer the same question: "is this string a real AC id?"
+  They must share ONE resolver (`scripts/ac_store/ac_coverage_resolver.py`),
+  not carry three private copies. Three copies drift, and the user-visible
+  symptom of drift is that the same id is accepted by one check and rejected by
+  another — which destroys the reason to trust any of them.
+
+  WHY A DATA ATTRIBUTE AND NOT A CSS CLASS — user decision, do not relitigate at
+  L2. `class` is the styling namespace: it is mangled by CSS-modules hashing and
+  purged by Tailwind content scanning, and putting a meaning there invites
+  someone to style it. A data attribute is inert, greppable, survives
+  minification, and follows the existing `data-testid` precedent — including
+  being strippable in production builds by the same transform, while being
+  retained in dev, test and the Atlas.
+
+  DELIBERATE `change_target: code` ON THIS WHOLE FAMILY. These ACs ship guard
+  code and an authoring convention; they do not ship a screen. Marking them
+  `ui` would enrol GE-124's own records in the reverse-direction gate GE-124e
+  defines, which is circular. Keep `code` on every record in this tree.

@@ -81,7 +81,8 @@ created: 2026-08-17
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/33_TICKET-20260825-GE-120e-3-i.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -93,3 +94,4 @@ notes: |
 
   It is written as a property of the VERIFICATION rather than of any one check, so a future
   check added to the sweep inherits the control automatically rather than needing its own.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

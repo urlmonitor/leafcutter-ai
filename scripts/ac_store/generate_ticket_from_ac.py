@@ -753,6 +753,7 @@ def _build_agents_map(
     agent_registry_path: Path | str | None = None,
     files_touched: list[str] | None = None,
     declares_side_effect: bool = False,
+    has_authored_test_spec: bool = False,
 ) -> dict[str, str]:
     """Build the agents map for the ticket frontmatter.
 
@@ -797,6 +798,9 @@ def _build_agents_map(
             are wired when needed.
         declares_side_effect: When True, include user-surface-smoker as a needed
             gating verification phase (BP-1100f-5). Default: False.
+        has_authored_test_spec: When True, the AC carries an it-po-authored
+            test_spec, so test-writer and test-runner are needed even though
+            no production_code agent is in the chain. Default: False.
 
     Returns:
         Ordered dict suitable for YAML frontmatter serialisation.
@@ -912,7 +916,7 @@ def _build_agents_map(
             # Collect the set of change_target values covered by a non_triggering
             # entry for the current risk_surface.
             suppressed_targets: set[str] = {
-                entry.get("change_target")
+                str(entry["change_target"])
                 for entry in non_triggering
                 if isinstance(entry, dict)
                 and entry.get("change_target")
@@ -969,6 +973,17 @@ def _build_agents_map(
                 all_needed.add("test-runner")
                 break
 
+        # An AUTHORED test_spec is an explicit statement by the it-po that this
+        # work must be tested, and it outranks the registry's produces field.
+        # Without this, an AC assigned to a non-production_code agent got its
+        # ## Test Requirements block emitted (see _build_ticket_body) with
+        # nobody dispatched to satisfy it. The population is not marginal: 85
+        # store records carry an authored spec under a non-coder agent, 13 of
+        # them assigned to test-writer itself.
+        if has_authored_test_spec:
+            all_needed.add("test-writer")
+            all_needed.add("test-runner")
+
         # Wire ac-validator and ac-fulfillment-gate for code tickets
         # (TKT-500f-12, broadened by TKT-500f-14). A ticket is classified as a
         # code ticket when EITHER of the following is true:
@@ -981,8 +996,9 @@ def _build_agents_map(
         #       sufficient regardless of files_touched content.
         # Docs/config/diagram-only tickets (no source file in files_touched AND
         # a non-coder assigned agent) satisfy neither condition and are not gated.
-        _has_source_file = bool(files_touched) and any(
-            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS for p in files_touched
+        _has_source_file = any(
+            Path(p).suffix.lower() in _SOURCE_CODE_EXTENSIONS
+            for p in (files_touched or [])
         )
         _is_coder_assigned = assigned_agent in _KNOWN_CODERS
         if _has_source_file or _is_coder_assigned:
@@ -1345,8 +1361,65 @@ def _derive_tests_from_criteria(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
     # function — ``_build_test_requirements_section`` returns the spec-derived
     # descriptors before calling it. So there is nothing here that could already
     # be a reachability entry, and an "is one present?" guard would be dead code.
+    # This append is kept (rather than moved wholesale to the universal floor
+    # in ``_ensure_reachability_floor``) so direct callers of this function —
+    # bypassing ``_build_test_requirements_section`` entirely — still observe
+    # the floor; ``_ensure_reachability_floor``'s dedupe-by-kind check makes
+    # the two call sites idempotent together (BO-2900g-1-i), never doubled up.
     tests.append(_reachability_descriptor(ac_id, file_path, seen))
     return tests
+
+
+def _ensure_reachability_floor(
+    ac_id: str, descriptors: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Guarantee exactly one ``angle: reachability`` descriptor, at the one
+    finalisation point every produced test plan passes through.
+
+    BO-2900g-1: the reachability request used to be attached ONLY inside
+    ``_derive_tests_from_criteria`` (the criteria-derived fallback route). An
+    AC that authored its own ``test_spec`` never reached that function, so it
+    received a privileged, undecided exemption from the floor. This helper is
+    called from ``_build_test_requirements_section`` — the single place a
+    plan is finalised for a piece of work, regardless of which route produced
+    the descriptor list — so a third route introduced later inherits the
+    floor without being told about this rule.
+
+    BO-2900g-1-i: de-duplication is by declared KIND (``angle ==
+    "reachability"``), never by descriptor name, file path, or text
+    similarity. A plan that already carries one such entry — in any authored
+    shape, naming any entry point — is returned unaltered: its authored
+    order and fields survive byte-for-byte, and no second, contradictory
+    request is stapled on next to it.
+
+    Args:
+        ac_id: The AC id, used to build the appended descriptor's name/file
+            when the floor is not already present.
+        descriptors: The descriptor list produced by whichever route ran
+            (spec-derived or criteria-derived), in authored/derived order.
+
+    Returns:
+        *descriptors* unchanged when a reachability entry is already present;
+        otherwise a new list with *descriptors* followed by exactly one
+        sentinel reachability descriptor.
+    """
+    if any(
+        isinstance(item, dict) and item.get("angle") == TEST_ANGLE_REACHABILITY
+        for item in descriptors
+    ):
+        return descriptors
+
+    slug = _slugify_for_test(ac_id)
+    first_file = descriptors[0].get("file") if descriptors else None
+    file_path = first_file if isinstance(first_file, str) and first_file else (
+        f"unit_tests/test_{slug}.py"
+    )
+    seen = {
+        item["name"]
+        for item in descriptors
+        if isinstance(item, dict) and item.get("name")
+    }
+    return [*descriptors, _reachability_descriptor(ac_id, file_path, seen)]
 
 
 def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
@@ -1426,6 +1499,25 @@ def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]
     return descriptors
 
 
+def _has_authored_test_spec(ac: AcRecord) -> bool:
+    """Return True when the it-po authored a non-empty test contract on this AC.
+
+    An authored ``test_spec`` is an explicit statement that this work must be
+    tested. It is deliberately independent of the assigned agent's ``produces``
+    classification: the two questions "does this change production code?" and
+    "did somebody specify tests for it?" are orthogonal, and conflating them is
+    what caused 308 authored descriptors across 85 records to be discarded.
+
+    Args:
+        ac: Parsed AC record.
+
+    Returns:
+        True when test_spec is a non-empty list.
+    """
+    spec = ac.get("test_spec")
+    return isinstance(spec, list) and len(spec) > 0
+
+
 def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     """Build the ## Test Requirements section, derived from the AC.
 
@@ -1453,6 +1545,14 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     descriptors = _test_descriptors_from_spec(ac, ac_id)
     if not descriptors:
         descriptors = _derive_tests_from_criteria(ac, ac_id)
+
+    # BO-2900g-1 / BO-2900g-1-i: the reachability floor is universal — every
+    # route's finalised plan passes through this one check, which is a no-op
+    # (dedupe) when a reachability entry already made it into `descriptors`
+    # (e.g. via _derive_tests_from_criteria's own unconditional append) and
+    # appends exactly one sentinel entry otherwise (the authored-test_spec
+    # route, which previously received no generator-added entries at all).
+    descriptors = _ensure_reachability_floor(ac_id, descriptors)
 
     try:
         # sort_keys=False is REQUIRED: 'name' must stay the first key in each test
@@ -2127,8 +2227,8 @@ def _build_components_list(ac: AcRecord, ac_id: str = "") -> list[str]:
                 )
                 warned_values.add(resolved)
         return result
-    kebab = ac.get("component", "unknown")
-    return [_COMPONENT_MIGRATION_MAP.get(kebab, kebab)]
+    kebab = str(ac.get("component") or "unknown")
+    return [str(_COMPONENT_MIGRATION_MAP.get(kebab, kebab))]
 
 
 def _build_frontmatter(
@@ -2370,13 +2470,28 @@ def _build_ticket_body(
             change_targets=change_targets,
             risk_surface=risk_surface,
             files_touched=files_touched_for_map,
+            has_authored_test_spec=_has_authored_test_spec(ac),
         )
     signoffs = _build_signoffs_section(agents)
     complexity = _infer_complexity(ac)
 
-    # Gate Test Requirements block on computed map: emit whenever any needed
-    # agent in the computed map produces production_code.
+    # Gate the Test Requirements block on EITHER of two independent grounds:
+    #   (a) some needed agent in the computed map produces production_code, or
+    #   (b) the it-po authored a test_spec on this AC.
+    #
+    # (b) is not a widening of (a) — it is the correction of a category error.
+    # The old gate asked the agent registry "does the assigned agent produce
+    # production_code?" and treated a No as "no tests are required", which
+    # silently discarded an explicitly authored contract. Only nine agents
+    # declare production_code, so every prompt, doc, diagram and analysis AC
+    # lost its test contract, INCLUDING the 13 assigned to test-writer itself.
+    #
+    # The derive-from-criteria fallback stays on (a) alone: a doc ticket that
+    # never asked for tests must not start receiving invented stubs. See the
+    # negative controls in
+    # unit_tests/ac_store/test_authored_test_spec_survives_generation.py.
     has_code_producer = _computed_map_has_production_code_producer(agents)
+    authored_spec = _has_authored_test_spec(ac)
 
     checkbox_lines = _criteria_checkboxes(criteria)
     lines: list[str] = [
@@ -2405,7 +2520,7 @@ def _build_ticket_body(
         "",
     ]
 
-    if has_code_producer:
+    if has_code_producer or authored_spec:
         # Derive the Test Requirements from the AC (test_spec first, else the
         # Gherkin criteria) — never a hardcoded empty stub. The AC is the source
         # of truth for what test-writer must test.
@@ -2913,8 +3028,9 @@ def _build_verification_report(
 
     is_code_ac = _computed_map_has_production_code_producer(agents)
     criteria = str(ac.get("criteria") or "").strip()
-    test_spec = ac.get("test_spec")
-    has_spec = isinstance(test_spec, list) and len(test_spec) > 0
+    raw_spec = ac.get("test_spec")
+    test_spec: list = raw_spec if isinstance(raw_spec, list) else []
+    has_spec = len(test_spec) > 0
     test_required = ac.get("test_required")
 
     # 1. Criteria present — a coder and test-writer both need it.
@@ -2929,11 +3045,20 @@ def _build_verification_report(
     else:
         record("WARN", "assigned_agent absent — generator defaults to python-coder")
 
-    # 3. Test contract (only meaningful for code ACs).
-    if is_code_ac:
-        if has_spec:
-            record("PASS", f"test_spec authored ({len(test_spec)} test(s)) — precise test contract")
-        elif test_required is False:
+    # 3. Test contract. An authored test_spec counts on ANY AC, code or not:
+    # reporting "no test contract required" on a record that authored one is a
+    # success-shaped message over a silent discard, and is what allowed 85
+    # records to reach `approved` with their contracts being thrown away.
+    if has_spec:
+        record("PASS", f"test_spec authored ({len(test_spec)} test(s)) — precise test contract")
+        if test_required is False:
+            record(
+                "WARN",
+                "test_required: false alongside an authored test_spec — the opt-out "
+                "wins and the spec is ignored (remove one of the two)",
+            )
+    elif is_code_ac:
+        if test_required is False:
             record("WARN", "test_required: false on a code AC — no tests will be authored (confirm this is intentional)")
         elif criteria:
             record(
@@ -2944,10 +3069,10 @@ def _build_verification_report(
         else:
             record("FAIL", "code AC with neither test_spec nor derivable criteria — test-writer has nothing to write")
     else:
-        record("PASS", "non-code AC — no test contract required")
+        record("PASS", "non-code AC with no authored test_spec — no test contract required")
 
     # 4. Generated Test Requirements would pass the ticket-level guard.
-    if is_code_ac and test_required is not False:
+    if (is_code_ac or has_spec) and test_required is not False:
         if re.search(r"^\s*-\s+name:\s+\S+", ticket_body, re.MULTILINE):
             record("PASS", "generated ## Test Requirements has >=1 test entry (ticket guard passes)")
         else:
@@ -3077,6 +3202,7 @@ def main(argv: list[str] | None = None) -> int:
             risk_surface=risk_surface,
             files_touched=files_touched,
             declares_side_effect=declares_side_effect,
+            has_authored_test_spec=_has_authored_test_spec(ac),
         )
         frontmatter = _build_frontmatter(
             ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
@@ -3116,6 +3242,7 @@ def main(argv: list[str] | None = None) -> int:
         risk_surface=risk_surface,
         files_touched=files_touched,
         declares_side_effect=declares_side_effect,
+        has_authored_test_spec=_has_authored_test_spec(ac),
     )
     frontmatter = _build_frontmatter(
         ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root

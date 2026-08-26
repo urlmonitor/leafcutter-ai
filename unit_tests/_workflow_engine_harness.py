@@ -43,6 +43,30 @@ ENGINE FIDELITY (BP-1100b-4): the workflow body under test now executes inside
     generated shim, outside the vm context) still runs as a plain Node.js
     module and keeps full `require`/`process` access — only the target
     script's body is sandboxed.
+
+BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
+    - plan-feature.js dispatches an unconditional "resolve-workspace-setup-
+      permission" agent() call before Stage 0 on every invocation, and its
+      fail-closed default halts the run when that label's response is not a
+      real, parseable registry payload. A per-call-site test fix (mocking the
+      label at every run_workflow_under_e2(plan-feature.js, ...) call) was
+      applied twice and, both times, the same root cause resurfaced in a wider
+      set of caller files that were never updated. run_workflow_under_e2() now
+      merges a SCRIPT-SPECIFIC set of built-in defaults (see
+      _default_label_responses_for_script()) under any caller-supplied
+      label_responses, so every existing and future call — in any file — gets
+      a sane "permitted" default for that gate without having to know about it,
+      while a test that deliberately wants to exercise the denial path still
+      overrides the label explicitly (caller-supplied keys always win).
+
+BO-2400f-12 (2026-08-25): the same script-specific-default mechanism now also
+    covers fast-lane-ship.js's unconditional "check-producibility" dispatch —
+    a fail-closed producibility-guard gate added between Resolve and the claim
+    step. Every pre-existing caller of fast-lane-ship.js gets a real
+    {"producible": true, "unproducible": []} default so its claim/test-writer/
+    coder dispatch assertions are unaffected by the new gate; a test that wants
+    to exercise the refusal path overrides the "check-producibility" label
+    explicitly (see unit_tests/workflows/test_bo2400f_12_refusal_workflow.py).
 """
 
 from __future__ import annotations
@@ -112,6 +136,15 @@ class HarnessResult:
         stderr: Raw stderr from the Node.js process.
         returncode: Exit code of the Node.js process.
         error: Error message if the harness itself failed (not the script).
+        result: The workflow script's own top-level ``return`` value (the
+            terminal payload), JSON-round-tripped into a plain Python object
+            (dict / list / str / bool / None). ``None`` when the script threw
+            before returning, returned nothing, or returned ``undefined``.
+            Added for BO-2400f-11 / BO-2400f-4-vi so tests can assert on
+            terminal-payload CONTENT (status, message, named findings) rather
+            than only on which agent() calls were dispatched. Additive and
+            backward-compatible: existing consumers that never read
+            ``.result`` are unaffected.
     """
 
     agent_calls: list[AgentCall] = field(default_factory=list)
@@ -120,6 +153,7 @@ class HarnessResult:
     stderr: str = ""
     returncode: int = 0
     error: str = ""
+    result: Any = None
 
     @property
     def dispatch_count(self) -> int:
@@ -455,15 +489,24 @@ try {
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
     violations: __contractViolations__,
+    result: null,
   }));
   process.exit(0);
 }
 
-Promise.resolve(__resultPromise__).then(function() {
-  // Emit captured calls and contract violations as structured JSON to stdout.
+// Emit captured calls, contract violations, AND the script's own top-level
+// return value (the terminal payload) as structured JSON to stdout.
+// (BO-2400f-11 / BO-2400f-4-vi: terminal-payload CONTENT assertions need
+// the actual resolved value, not just which agent() calls fired.) The
+// resolved value comes from the SANDBOXED run above (vm.runInContext), never
+// from a plain unsandboxed IIFE — engine fidelity (BP-1100b-4) and terminal-
+// payload capture (BO-2400f-11) are independent features layered on the same
+// promise chain, not alternatives.
+Promise.resolve(__resultPromise__).then(function(__scriptResult__) {
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
     violations: __contractViolations__,
+    result: (typeof __scriptResult__ === 'undefined' ? null : __scriptResult__),
   }));
 }).catch(function(__topErr__) {
   // Swallow errors from the script — we only care about dispatch count.
@@ -472,6 +515,7 @@ Promise.resolve(__resultPromise__).then(function() {
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
     violations: __contractViolations__,
+    result: null,
   }));
 });
 """
@@ -479,6 +523,126 @@ Promise.resolve(__resultPromise__).then(function() {
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+# BO-1500f-1: plan-feature.js's pre-Stage-0 workspace-setup permission gate
+# (see the module docstring's "REGRESSION HARDENING" note). Any caller that
+# drives this exact script gets a real, registry-backed "permitted" default
+# for this one label unless it supplies its own value for the same key.
+_PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
+_WORKSPACE_SETUP_PERMISSION_LABEL = "resolve-workspace-setup-permission"
+_AGENT_REGISTRY_RELATIVE_PATH = Path("config") / "agent_registry.json"
+
+# BO-2400f-12: fast-lane-ship.js dispatches an unconditional producibility-guard
+# check ("check-producibility") between Resolve and the claim step. Its
+# fail-closed default (a missing/unreadable verdict) REFUSES the run before any
+# claim or build-agent dispatch — exactly the behavior BO-2400f-12 requires, but
+# it means every PRE-EXISTING caller of this script that drives it past Resolve
+# without knowing about the new label would otherwise see its claim/test-writer/
+# coder dispatches vanish behind a refusal the moment this gate was added. As
+# with _WORKSPACE_SETUP_PERMISSION_LABEL above, a real producible default is
+# supplied here so every existing and future caller gets a sane "producible"
+# verdict without having to know about this gate; a test that deliberately wants
+# to exercise the refusal path still can — caller-supplied label_responses
+# always take precedence over this default.
+_FAST_LANE_SHIP_SCRIPT_NAME = "fast-lane-ship.js"
+_CHECK_PRODUCIBILITY_LABEL = "check-producibility"
+
+# BO-2400f-12: a producible verdict is meant to let the run proceed exactly as
+# before this gate existed — including all the way to the test-writer dispatch,
+# which sits behind the (pre-existing, BO-2400c-1) "fastlane-context-bundle"
+# assembly step. A caller asserting only "test-writer was reached on a
+# producible verdict" (BO-2400f-12-ii) has no reason to also know about that
+# unrelated, earlier-shipped gate, so a real, schema-conforming default bundle
+# (mirroring the one every context-bundle-aware caller already hand-stubs) is
+# supplied here too — never a source of a false "obtained" verdict for a test
+# that deliberately stubs its own bundle response instead.
+_CONTEXT_BUNDLE_LABEL = "fastlane-context-bundle"
+_CONTEXT_BUNDLE_DEFAULT_TEXT = (
+    "ARCHITECTURE (stub)\n\nCONVENTIONS (stub)\n\nHIGH-LEVEL ACS (stub)"
+    "\n\n<!-- CACHE_BREAKPOINT -->\n\nBATCH ACS (stub)\n\nPRIOR TESTS (stub)"
+)
+
+
+def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
+    """Walk upward from `start` looking for an ancestor containing `relative_path`.
+
+    Returns the ancestor directory (not the joined path) the first time
+    ``ancestor / relative_path`` exists, or None if no ancestor up to the
+    filesystem root has it. Used to locate the worktree/repo root from an
+    arbitrary workflow script path without assuming a fixed nesting depth.
+    """
+    for ancestor in [start, *start.parents]:
+        if (ancestor / relative_path).exists():
+            return ancestor
+    return None
+
+
+def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
+    """Return baseline label_responses every caller of `script_path` implicitly needs.
+
+    Currently only plan-feature.js has an unconditional pre-Stage-0 gate
+    (BO-1500f-1's "resolve-workspace-setup-permission" dispatch) whose
+    fail-closed default halts the run for any caller that does not mock it.
+    Rather than requiring every test file that drives plan-feature.js to know
+    about that gate, this returns a real, registry-backed "permitted" default
+    for it, sourced from the actual config/agent_registry.json on disk (never
+    a hand-authored fixture) — mirroring the {output, exit_code} shape every
+    other status-checker "run this command, return JSON" dispatch in
+    plan-feature.js uses.
+
+    A test that wants to exercise the DENIAL path still can: caller-supplied
+    label_responses always take precedence over this default (see
+    run_workflow_under_e2()'s merge order), so an explicit override for this
+    same label replaces it entirely.
+
+    Returns an empty dict (no default) for any other script, or if the
+    registry cannot be located/parsed — in which case plan-feature.js's own
+    fail-closed behavior applies exactly as before this hardening pass, so
+    this is never a source of a false "permitted" verdict.
+    """
+    if script_path.name == _FAST_LANE_SHIP_SCRIPT_NAME:
+        return {
+            _CHECK_PRODUCIBILITY_LABEL: {
+                "producible": True,
+                "unproducible": [],
+                "message": "all producible (harness default)",
+            },
+            _CONTEXT_BUNDLE_LABEL: {
+                "obtained": True,
+                "bundle": _CONTEXT_BUNDLE_DEFAULT_TEXT,
+                "message": "bundle assembled (harness default)",
+            },
+        }
+
+    if script_path.name != _PLAN_FEATURE_SCRIPT_NAME:
+        return {}
+
+    repo_root = _find_ancestor_containing(
+        script_path.resolve().parent, _AGENT_REGISTRY_RELATIVE_PATH
+    )
+    if repo_root is None:
+        logger.warning(
+            "Could not locate config/agent_registry.json above %s; "
+            "no default resolve-workspace-setup-permission response supplied.",
+            script_path,
+        )
+        return {}
+
+    registry_path = repo_root / _AGENT_REGISTRY_RELATIVE_PATH
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Could not load default agent registry from %s: %s", registry_path, exc
+        )
+        return {}
+
+    return {
+        _WORKSPACE_SETUP_PERMISSION_LABEL: {
+            "output": json.dumps(registry),
+            "exit_code": 0,
+        }
+    }
 
 
 def _strip_exports(source: str) -> str:
@@ -600,7 +764,12 @@ def run_workflow_under_e2(
             return specific decisions, enabling tests to reach code paths
             that the default stub would short-circuit past (e.g., the
             parallel() dispatch in build-epic.js requires the planner to
-            return non-empty batches).
+            return non-empty batches). Merged OVER
+            ``_default_label_responses_for_script(script_path)`` — any
+            script-specific built-in default (see that function; currently
+            only plan-feature.js's "resolve-workspace-setup-permission" gate)
+            is included automatically unless this argument supplies its own
+            value for the same label, in which case the caller's value wins.
         args: Optional mapping merged over the default stub ``args`` global.
             Use this to inject workflow inputs such as ``resume_answer`` and
             ``run_id`` so a second invocation can drive the resume path of a
@@ -623,9 +792,18 @@ def run_workflow_under_e2(
             f"Expected a .js file, got: {script_path}"
         )
 
+    # Script-specific built-in defaults (currently just plan-feature.js's
+    # workspace-setup permission gate) are merged UNDER caller-supplied
+    # label_responses, so an explicit caller value for the same label always
+    # wins (e.g. a test deliberately exercising the denial path).
+    merged_label_responses = {
+        **_default_label_responses_for_script(script_path),
+        **(label_responses or {}),
+    }
+
     try:
         shim_source = _build_shim(
-            script_path, label_responses=label_responses, args=args
+            script_path, label_responses=merged_label_responses, args=args
         )
     except OSError as exc:
         logger.warning("Failed to build shim for %s: %s", script_path, exc)
@@ -686,9 +864,11 @@ def run_workflow_under_e2(
     stdout = proc.stdout or ""
     stderr = proc.stderr or ""
 
-    # Parse the structured JSON output {calls: [...], violations: [...]} from stdout.
+    # Parse the structured JSON output {calls: [...], violations: [...], result: ...}
+    # from stdout.
     agent_calls: list[AgentCall] = []
     contract_violations: list[dict] = []
+    script_result: Any = None
 
     parse_error = ""
     if stdout.strip():
@@ -727,6 +907,10 @@ def run_workflow_under_e2(
             violations = raw_output.get("violations", [])
             if isinstance(violations, list):
                 contract_violations = [v for v in violations if isinstance(v, dict)]
+            # `result` is the script's own top-level return value — absent for
+            # any shim produced before this key existed, so .get() with a
+            # None default keeps old captured stdout (if ever replayed) safe.
+            script_result = raw_output.get("result")
         else:
             raw_calls = []
 
@@ -746,6 +930,7 @@ def run_workflow_under_e2(
         stderr=stderr,
         returncode=proc.returncode,
         error=parse_error,
+        result=script_result,
     )
 
 

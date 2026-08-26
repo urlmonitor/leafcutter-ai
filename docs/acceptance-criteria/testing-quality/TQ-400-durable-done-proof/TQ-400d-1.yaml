@@ -2,7 +2,7 @@ id: TQ-400d-1
 components:
   - testing_quality
   - ac_store
-title: "The unproven-finished pile is a worked list carrying a decision on each item"
+title: "The unproven-finished pile is a worked list that declares its population and carries a decision on each item"
 component: testing-quality
 level: L2
 status: active
@@ -19,7 +19,29 @@ criteria: |
     redo it, or retire it — or is explicitly marked as not yet decided,
   And the number of records awaiting a decision is stated,
   And no record in the sweep's unproven population is missing from the list,
-  And records the sweep found proven or exempt do not appear in the list.
+  And records the sweep found proven or exempt do not appear in the list,
+  And the list declares the POPULATION it draws from and the INCLUSION RULE by which a
+    record entered it — which store root was enumerated, which record levels were
+    included, what makes a record count as finished, what makes a finished record count
+    as unproven, and the date the population was measured — stated with the list itself
+    rather than left to be inferred from the count,
+  And the list states which of the already-recorded counts of this same pile it
+    continues, and why the others differ, instead of adding another unattributed figure:
+    244 of 607 (measured 2026-08-13, all record levels, identifiers quote-stripped before
+    joining, recorded by KM-ADM-005 and frozen as the ratchet's high-water mark), 240 of
+    641 (measured 2026-08-17, finished L2 and L3 records only, recorded in TQ-400's
+    notes) and 259 of 641 (measured 2026-08-17, recorded as this record's own authoring
+    scale) are three measurements of one pile whose inclusion rules and dates differ,
+  And the join between finished records and the tests that carry their coverage tag is
+    made on NORMALISED identifiers — a record whose identifier is written with
+    surrounding quotes matches the bare token a coverage tag carries — so no record
+    enters the pile on formatting variance alone, and the list names that normalisation
+    as part of its inclusion rule,
+  And a count of this pile reported without its inclusion rule and its measurement date
+    does not satisfy this criterion, the bug symptom being that a second count is read as
+    movement: a reader seeing 244 and then 240 cannot tell whether four records were
+    proven, whether the denominator changed, or whether one pile was simply counted twice
+    under two different rules.
 depends_on:
   - TQ-400d
   - TQ-400a-4
@@ -41,6 +63,18 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The AC record shape the triage entries reference. Read before deciding where a decision is recorded — the decision is per record and must be addressable by AC id."
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: describes
+    status: exists
+    relevance: "The shipped ratchet whose join rule this list inherits: it enumerates the store filter-free via rglob and STRIPS QUOTES from identifiers before matching them against coverage tags, because a quoted id does not match a bare token. Four records were mis-counted as untagged before it did. Its HIGH_WATER_MARK = 244 is the figure this list must either continue or explicitly reconcile against."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: context
+    status: exists
+    relevance: "Source of the 244 of 607 measurement and of the join-normalisation rule. It is the FLOOR (the pile cannot grow); this L1 is the drawdown. Its reconciliation note (2026-08-18) records that whichever AC builds first must state its method and the other must be reconciled to it."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The STANDING contract this clause instantiates: an answer names its enumerated root, its inclusion rule, its measurement provenance and any join normalisation. Inherited, not duplicated — ACS-1100 is scope: standing and this record is not re-homed under it."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -48,11 +82,11 @@ it_requirements:
   - "NOT-YET-DECIDED MUST BE A REPRESENTED STATE, NOT AN ABSENT FIELD. An undecided record and a record nobody has looked at must be distinguishable — that distinction is what TQ-400d-3 then enforces, and it is unenforceable if 'undecided' is encoded as absence."
   - "SET-EQUALITY WITH THE SWEEP'S UNPROVEN POPULATION IS THE CONTRACT, IN BOTH DIRECTIONS. No record of the sweep's unproven population may be missing, and no record may be present that the sweep did not classify unproven. Test both directions: a list that silently shrinks and a list padded with everything are different defects and each passes the other's test."
   - "EXEMPT AND PROVEN RECORDS MUST BE EXCLUDED BY CONSUMING TQ-400e-3'S OUTCOME, NOT BY A LOCAL RULE. Re-deriving 'is this exempt?' here creates a second exemption reader that will drift from the one TQ-400e-4 guards. The 37 records that carry a test-free declaration today must leave the pile because the sweep classified them exempt, not because this list filtered them."
-  - "SCALE IS 259 RECORDS AT AUTHORING TIME (measured 2026-08-17: 259 of 641 done L2/L3 records have no test carrying their coverage tag), minus whatever the exemption path legitimately removes. The list must be usable at that size — ordered deterministically so two readers see the same list, and carrying enough per-record context (the oracle's reason, the record's component) to triage without opening each file."
+  - "SCALE IS 259 RECORDS AT AUTHORING TIME (measured 2026-08-17: 259 of 641 done L2/L3 records have no test carrying their coverage tag), minus whatever the exemption path legitimately removes. The list must be usable at that size — ordered deterministically so two readers see the same list, and carrying enough per-record context (the oracle's reason, the record's component) to triage without opening each file. NOTE (BA, 2026-08-18): this figure is one of THREE recorded counts of the same pile and is not reconciled with TQ-400's own 240 of 641 on the same date. The inclusion-rule clause added to criteria requires the built list to state which count it continues; the IT PO should not treat 259 as settled."
   - "Must handle errors gracefully per the project error handling policy: a record whose decision state cannot be read must be reported and must remain in the awaiting-decision population — never dropped, and never defaulted to a decision."
 delivers_to:
   - agent: python-coder
-    contract: "The triage list for a completed run: one entry per unproven record, each carrying {ac_id, outcome_reason, decision: prove|redo|retire|not_yet_decided}, plus the stated count of entries in the not_yet_decided state. Consumed by TQ-400d-2 (progress arithmetic), TQ-400d-3 (the clear-refusal gate operates on these entries) and TQ-400d-4 (which constrains how the list is derived)."
+    contract: "The triage list for a completed run: one entry per unproven record, each carrying {ac_id, outcome_reason, decision: prove|redo|retire|not_yet_decided}, plus the stated count of entries in the not_yet_decided state, plus the list-level inclusion-rule record {enumerated_root, levels_included, unproven_rule, identifier_normalisation, measured_at, continues_count}. Consumed by TQ-400d-2 (progress arithmetic), TQ-400d-3 (the clear-refusal gate operates on these entries) and TQ-400d-4 (which constrains how the list is derived)."
 expects_from:
   - ac_id: TQ-400e-3
     contract: >-
@@ -99,6 +133,15 @@ test_rationale: |
   declaration mutation is what proves consumption rather than a local reimplementation. The
   empty case gets its own entry because at a starting population of 259 nobody will exercise
   it naturally, and it is the state the feature is supposed to eventually reach.
+
+  BA NOTE (2026-08-18): the inclusion-rule clauses added to criteria are NOT covered by the
+  four entries above and need two more from the IT PO — (1) a criterion-angle test that the
+  emitted list carries its inclusion-rule record with every field populated, and that a list
+  emitted without it is refused rather than published; (2) a data-shape test that a finished
+  record whose identifier is written with surrounding quotes is matched to its coverage tag
+  and therefore does NOT enter the pile. The second must use a real quoted identifier from
+  the store, not a hand-typed fixture — this is the exact bug that mis-counted four records
+  in the shipped ratchet, and a synthetic bare-token fixture reproduces the blind spot.
 origin_agent: business-analyst
 created: 2026-08-17
 amended_by:
@@ -114,6 +157,27 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-18'
+- reason: scope-addition
+  by: business-analyst
+  at: 2026-08-18
+  note: >-
+    Added three clauses requiring the worked list to declare the population it draws
+    from and its inclusion rule, to state which of the three already-recorded counts of
+    this pile it continues (244/607, 240/641, 259/641) and why the others differ, and to
+    join on quote-stripped identifiers per the rule already shipped in the ratchet. Added
+    a bug-symptom clause. Title extended; two doc_links added; delivers_to contract
+    extended with the list-level inclusion-rule record; a reconciliation caveat appended
+    to the scale it_requirement; two missing test angles flagged in test_rationale for
+    the IT PO. No existing clause, decision, or test entry was altered or removed. NOTE
+    this record was already readiness: approved on 2026-08-18 — the amendment postdates
+    that approval and widens scope, so it warrants re-approval.
+- action: approved
+  agent: BrainCandy
+  date: '2026-08-18'
+  note: >-
+    Re-approval after the scope-addition above. The widened scope — declaring the
+    population and inclusion rule, naming which of the three recorded counts the list
+    continues, and joining on quote-stripped identifiers — is approved as authored.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -144,3 +208,47 @@ notes: |
   disagree about the same 37 records. it_requirements state the consumption
   obligation and test_spec makes it falsifiable by flipping a declaration and
   observing the record enter the list.
+
+  ==========================================================================
+  THE LIST MUST DECLARE ITS INCLUSION RULE (2026-08-18, BA).
+  ==========================================================================
+  VERIFIED, AND WORSE THAN THE BRIEF SAID: this pile has THREE recorded counts, not
+  two, and no two of them agree.
+    - 244 of 607 — KM-ADM-005 criteria + notes, measured 2026-08-13, all record
+      levels, identifiers quote-stripped before joining. Frozen as HIGH_WATER_MARK
+      in the shipped ratchet, so it is the only one of the three that a build gate
+      currently enforces.
+    - 240 of 641 — TQ-400's L0 notes, measured 2026-08-17, finished L2/L3 records
+      only.
+    - 259 of 641 — THIS record's own scale note and its it_requirements, measured
+      2026-08-17, same stated rule as the 240 and the same date, differing by 19
+      with no explanation anywhere in the store.
+  The third figure is the sharpest evidence of all: two figures in the SAME tree,
+  taken on the SAME day, under the SAME stated inclusion rule, that disagree. A
+  reader cannot tell whether the pile grew, shrank, was counted twice, or was
+  counted correctly twice under rules that were never written down. Nobody can act
+  on that, which is exactly the failure ACS-1100 describes.
+
+  WHY THIS AMENDS d-1 RATHER THAN ADDING AN L3. The inclusion rule is a property of
+  the list itself on its normal path — the list is not correct without it, and the
+  same tests that assert membership must assert it. An L3 would frame "says what it
+  counted" as an edge case of a list whose whole purpose is to be a count that
+  people act on. It is also the clause TQ-400d's own notes ask for by name
+  ("TQ-400d-1's worked list must declare its own inclusion rule and state which of
+  these two populations it is drawing from").
+
+  INHERITED, NOT DUPLICATED. The standing contract is ACS-1100 (ac-store,
+  scope: standing) and this record stays in testing-quality. The clauses added here
+  are this list's instance of ACS-1100b-1's method record and ACS-1100a-2's join
+  normalisation; they are not a second specification of either, and the join rule
+  is copied from the shipped ratchet rather than re-derived.
+
+  DO NOT RESOLVE THE THREE COUNTS BY PICKING ONE HERE. The criterion requires the
+  BUILT list to state which count it continues and why the others differ, computed
+  at run time. Hand-typing a fourth reconciled constant into this record would
+  reproduce the defect one more time.
+
+  RE-APPROVAL. This record was readiness: approved on 2026-08-18 and these clauses
+  widen its scope after that approval. readiness has been left as approved rather
+  than silently downgraded, but the amendment is flagged in amended_by and should
+  be put back in front of the approver.

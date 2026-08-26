@@ -1,0 +1,87 @@
+id: BO-2600b
+components:
+  - build_orchestration
+title: "Aim the fast lane at one piece of work and get that piece of work"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Pointing the lane at a requirement builds that requirement, not everything next to it.
+
+  When an operator aims the fast lane at a single requirement, the work it picks up is
+  that requirement, what sits under it, and the genuine prerequisites it is waiting on —
+  and nothing else. Belonging to the same parent is not a reason to be dragged into the
+  run, so aiming at a small piece of work does not silently turn into a run over its
+  parent's whole branch. The operator gets the scope they asked for, and can tell from
+  the run what that scope is before it starts.
+depends_on: [BO-2600]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: related
+    status: exists
+    relevance: "Already exposes the capability this L1 promises: select_connected --ac <id> --ac-root <dir> [--exclude-structural-parent], delivered under BO-2600a-1 and BO-2600a-2 (both done). The flag skips a depends_on entry that is the node's own structural parent."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The production caller. Line 307 builds the select_connected command and never passes the flag, so the capability has no production caller on this lane and the operator cannot aim it at a subtree."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2600b-1
+  - BO-2600b-2
+  - BO-2600b-3
+implemented_by: []
+documentation_triggers: [how-to]
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Placement rationale (2026-08-18). This is a second L1 under BO-2600 rather than a
+  twelfth L2 under BO-2400f, for two reasons. First, the promise being broken is
+  BO-2600's own, stated verbatim in its L0: "Structural parent links are not mistaken
+  for prerequisites, so the set stays tight and does not balloon to unrelated siblings."
+  BO-2400f's promise is end-to-end automation (one id in, a PR out), not scope precision.
+  Second, BO-2600a is explicitly scoped to one caller — its title begins "build-ac
+  resolves..." and its criteria opens "As a developer running /build-ac" — so the fast
+  lane was never inside it. BO-2600 L0 = the promise; BO-2600a = /build-ac honours it;
+  BO-2600b = the fast lane honours it too. No new family invented, no L0 needed.
+  (BO-2400f is also at 11 of its 12-child override, which is a reason not to park
+  unrelated scope there, but it is not the reason for this placement.)
+
+  Measured evidence, 2026-08-18 — the gap is real and observable, not inferred:
+    select_connected --ac BO-2400c-1-v            -> ["BO-2400c-1", "BO-2400c-1-i",
+                                                      "BO-2400c-1-v", "BO-2400c-2",
+                                                      "BO-2400c-2-i"]
+    select_connected --ac BO-2400c-1 --exclude-structural-parent
+                                                  -> ["BO-2400c-1", "BO-2400c-1-i",
+                                                      "BO-2400c-1-v"]
+  The leaf depends on its parent, which depends on ITS parent, which expands to every
+  not-done leaf underneath — so aiming at one L3 pulled in the whole BO-2400c subtree,
+  including the two criteria that Problem 2 established are mis-specified.
+
+  Left to the BA (deliberately not decided here, because it is behavioural, not
+  product-value): whether the fast lane always excludes the structural parent, whether
+  the operator chooses per run, and what the lane reports about the resolved scope
+  before it begins work. Whatever is chosen must not regress BO-2600a — the /build-ac
+  caller already passes the flag and its behaviour is settled — and must not change the
+  default of resolve_connected_build_set itself, which BO-2600a-1 fixed at False as a
+  backward-compatibility invariant covered by test_default_false_preserves_existing_behavior.
+
+  BA decision, 2026-08-19 (answering the section above; full reasoning in BO-2600b-1's
+  notes): the fast lane ALWAYS excludes the structural parent — no per-run operator
+  control, no second workflow argument — because the exclusion touches only the
+  prerequisite walk, so an operator wanting a whole branch still gets it by aiming at the
+  branch (pinned by BO-2600b-1-i), and because a per-run switch would have to default
+  either to today's broken scope or to a documented way of opting back into it. The
+  library default stays False; this is a caller decision. The lane states its resolved
+  scope — target, ordered set, and the exclusion — in the run record before it builds
+  and again on the terminal payload (BO-2600b-2).

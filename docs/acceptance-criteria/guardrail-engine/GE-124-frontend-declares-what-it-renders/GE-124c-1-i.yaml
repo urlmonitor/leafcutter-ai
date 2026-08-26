@@ -1,0 +1,104 @@
+id: GE-124c-1-i
+readiness: approved
+priority: high
+title: "A file that lacks the floor while carrying element pins yields exactly one finding"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c.yaml"
+criteria: |
+  Given the staged set contains `components/atlas/detail-drawer.tsx`, an
+    in-scope screen component with no component-level declaration
+  And the file pins KM-ADM-004 on one rendered element
+  When the commit-tier declaration check runs
+  Then exactly one finding is reported for that file with the code
+    "missing-component-declaration"
+  And no second finding is reported for the same file and the same code from the
+    element surface
+  And the single finding's message states that the file does pin KM-ADM-004 and
+    that an element attribute never satisfies the component-level floor
+
+  Given the same file pins three criteria on three separate rendered elements
+  When the commit-tier declaration check runs
+  Then exactly one finding is still reported for that file with the code
+    "missing-component-declaration"
+depends_on:
+  - GE-124c-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "AT MOST ONE FINDING PER (subject, code) IS A STRUCTURAL PROPERTY, NOT A POST-FILTER. Key the finding collection by the (subject, code) pair so a duplicate cannot be constructed, rather than appending freely and de-duplicating before printing. A de-duplication pass at the end is one refactor away from being applied after the exit-code decision, or to stdout but not to a machine-readable report, and the mock-data artifact states the at-most-one rule as an invariant on the finding set itself."
+  - "PIN COUNT MUST NOT AFFECT FINDING COUNT. One pin, three pins or a dozen pins on an undeclared file all yield the same single finding; the pins contribute ac_ids[] and message text to that finding, nothing more. The scaling scenario exists because a per-surface or per-element loop passes the single-pin case by luck."
+  - "THIS RULE IS PER CODE, NOT PER FILE. A file may legitimately carry one missing-component-declaration finding AND one unresolved-ac-id finding (GE-124c-2) — those are different codes with different remedies. Do not collapse to one finding per file."
+  - "The deduplication key must be applied identically to the human-readable output and to any structured report the check emits, so a reviewer and a downstream consumer never see different counts."
+delivers_to: null
+expects_from:
+  ac_id: GE-124c-1
+  contract: "The finding record whose per-(subject, code) cardinality this edge case fixes at one — enforced by keying the finding collection on that pair rather than by a de-duplication pass"
+test_spec:
+  - name: test_ge_124c_1_i_undeclared_file_with_one_pin_yields_exactly_one_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The detail-drawer worked case: exactly one finding with code 'missing-component-declaration' for that subject. Assert the count is 1 for the (subject, code) pair — asserting 'a finding exists' passes on two."
+  - name: test_ge_124c_1_i_three_pins_still_yield_exactly_one_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Three pinned elements on the same undeclared file still produce one finding. This is the scaling form that catches a per-element loop, which the single-pin case passes by coincidence."
+  - name: test_ge_124c_1_i_single_finding_message_names_the_pinned_criterion_and_the_floor_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The one finding's message states both facts at once — that the file pins KM-ADM-004, and that an element attribute never satisfies the component-level floor — matching the mock record gf-commit-detail-drawer-missing. Assert against the rendered message."
+  - name: test_ge_124c_1_i_two_different_codes_on_one_file_are_not_collapsed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A file that both lacks its declaration and carries an unresolvable pin id yields two findings with different codes. The rule is one per (subject, code), not one per subject; an over-eager de-duplication that keys on subject alone would hide the second remedy."
+test_rationale: |
+  Counting is the whole content of this AC, so every test asserts an exact count for a
+  (subject, code) pair rather than the existence of a finding — existence assertions pass on
+  double-reporting, which is the defect. The three-pin case is separate from the one-pin case
+  because a per-element loop passes the latter by coincidence, and the two-different-codes case
+  is separate because the natural over-correction (de-duplicate by subject) would hide a
+  remedy the author needs. No entry-point run is added: the tier's wiring and must-block path
+  are charged at GE-124c-1, and cardinality is fully observable in the finding set.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Required the at-most-one rule to be structural (a collection keyed on the (subject, code) pair) rather than a de-duplication pass that a later refactor can misplace, and added the counter-case that two different codes on one file must NOT be collapsed — the natural over-correction. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GE-124's LIMIT 3, and a direct transcription of the mock-data invariant "At
+  most ONE GuardrailFinding exists per (subject, code) pair". The worked record
+  is `gf-commit-detail-drawer-missing`, whose message says both things at once
+  in one finding.
+
+  The second scenario is the scaling form: the count must be one per (subject,
+  code), not one per surface and not one per pinned element. A file with a dozen
+  pins and no declaration must still produce a single line.
+
+  Double-reporting is how a guardrail becomes noise, and noise is how it gets
+  turned off — the PO calls this load-bearing and it is the reason this is an
+  L3 with its own test rather than a clause inside GE-124c-1.

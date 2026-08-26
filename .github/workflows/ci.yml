@@ -1,26 +1,37 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Three jobs:
+# Runs on every push to main and every PR targeting main. Eight jobs — six
+# BLOCKING (the required status checks named in the branch-protection ruleset)
+# and two informational:
 #
 #   lint       — ruff check over scripts/, tests/, unit_tests/ (config: ruff.toml).
 #                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
 #
-#   test       — full pytest suite over tests/ and unit_tests/. INFORMATIONAL
-#                ONLY (continue-on-error) FOR NOW. The build step
+#   component-vocab — every `components` value is a canonical id in
+#                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
+#                on push to main.
+#
+#   test       — full pytest suite over tests/ and unit_tests/. BLOCKING: there
+#                is no continue-on-error on this job, so a PR carrying a failing
+#                test cannot merge. The build step
 #                (python scripts/build.py --target-dir .) runs before pytest
 #                because build.py's install_shims() creates symlinks at
 #                scripts/commit_guardian/, scripts/doc_compliance/, and
 #                scripts/feedback/ pointing into .leafcutter/scripts/. Tests
 #                import from those paths at startup; without the build step they
-#                fail at import on a fresh clone (ADR-016). The shim fix (this
-#                job's reason for existing) is complete, but the suite is NOT yet
-#                green on a fresh checkout: ~4 collection errors (test files for
-#                unbuilt modules: check_test_fixture_bloat, link_feedback,
-#                transform_decision_history, known_failing_tests) plus pre-existing
-#                failures keep it red. Until those are resolved, this job runs
-#                informationally so it surfaces results without blocking merges.
-#                Promote to BLOCKING (drop continue-on-error) once the suite is
-#                green — that is the BP-1200b deliverable, tracked separately.
+#                fail at import on a fresh clone (ADR-016). The suite runs under
+#                AC_ENFORCE_STRICT=1 so AC-enforcement xfail-masking is off and
+#                genuinely-failing tests surface as real failures. Promoting this
+#                job to blocking WAS the BP-1200b deliverable; it is done, and the
+#                job name "Test suite (pytest)" is the stable contract referenced
+#                by the required-status-checks list (BP-1200c) — do NOT rename it.
+#
+#   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
+#
+#   ac-store-valid — the AC store passes its schema and governance hooks.
+#                BLOCKING.
+#
+#   changelog-presence — a changelogs/ entry accompanies the change. BLOCKING.
 #
 #   typecheck  — mypy over the .py files changed in a PR (non-strict,
 #                --ignore-missing-imports, since the codebase has no type config
@@ -30,6 +41,32 @@
 #                findings on changed files without blocking the merge. Promote
 #                to blocking once the codebase is annotated. On direct pushes
 #                there is no diff base, so it is a no-op.
+#
+#   consumer-install-sim — empirical consumer-install simulation (AC BP-900h-1).
+#                Checks the package out into a leafcutter-ai/ subdirectory (so
+#                the job's default working directory holds nothing but that
+#                checkout — the "scratch directory containing no files other
+#                than a minimal skills_config.json" the AC's Gherkin
+#                describes, once the script below writes that file), then runs
+#                scripts/ci/check_consumer_install.py, which drives a REAL
+#                `build.py --target-dir` into that scratch directory (never a
+#                copy of this repo — copying would reintroduce the
+#                source-tree bias that hid BP-900g-4/-5/-6, BP-015..BP-018)
+#                and reuses the existing BP-900b-1/BP-900c-1
+#                reference-resolution machinery against the deployed output.
+#                All job logic lives in that one invocable script; this job
+#                supplies only arguments (mirrors the constraint already
+#                written into sibling AC BP-900h-6 for merge-gate tooling).
+#                Runs on both push and pull_request — unlike ac-store-valid /
+#                changelog-presence, this job's logic does not differ between
+#                the two events, so no `if:` guard is needed; the AC's
+#                requirement ("must run on pull_request, so it gates before
+#                merge") is satisfied simply by not excluding pull_request.
+#                INFORMATIONAL ONLY for now: this is NOT yet a required/
+#                blocking branch-protection check — promoting it to required
+#                is BP-900h-3 (a separate ticket, out of scope here). Do not
+#                add it to any required-status-checks list until that ticket
+#                lands.
 #
 # Dependencies are pinned in requirements-dev.txt.
 
@@ -317,3 +354,36 @@ jobs:
           # --explicit-package-bases avoids "source file found twice" errors from
           # the flat sys.path-based layout (scripts/ is not an installed package).
           mypy --ignore-missing-imports --explicit-package-bases --no-error-summary $CHANGED
+
+  consumer-install-sim:
+    name: Consumer install simulation (BP-900h-1)
+    runs-on: ubuntu-latest
+    # INFORMATIONAL ONLY for now — see header. This is NOT yet a required/
+    # blocking branch-protection check (that promotion is BP-900h-3, a
+    # separate ticket). Runs on both push and pull_request: the job's logic
+    # is identical either way, so no `if:` guard is needed to satisfy the
+    # AC's "must run on pull_request" requirement.
+    steps:
+      # Checked out into leafcutter-ai/ beneath the job's default working
+      # directory (github.workspace), simulating a real consumer install: the
+      # scratch directory contains nothing but this checkout until the script
+      # below writes a minimal skills_config.json into it.
+      - uses: actions/checkout@v4
+        with:
+          path: leafcutter-ai
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r leafcutter-ai/requirements-dev.txt
+
+      - name: Run consumer install simulation
+        # All job logic lives in check_consumer_install.py; this step supplies
+        # only arguments (mirrors the constraint already written into sibling
+        # AC BP-900h-6 for merge-gate tooling). --target-dir . is
+        # github.workspace itself, which holds only the leafcutter-ai/
+        # checkout at this point.
+        run: python leafcutter-ai/scripts/ci/check_consumer_install.py --package-dir leafcutter-ai --target-dir .

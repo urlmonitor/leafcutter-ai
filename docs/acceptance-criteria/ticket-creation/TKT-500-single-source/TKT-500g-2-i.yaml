@@ -1,0 +1,97 @@
+id: TKT-500g-2-i
+components:
+  - ticket_creation_pipeline
+  - supervisor_system
+  - testing_quality
+readiness: draft
+priority: medium
+title: "The route that loses the phase is the route the fix must be proven on — a work item built inside a batch keeps its proof phase"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a work item whose proof section lists at least one proof statement and
+    on which no worker is classified as producing production code,
+  When that work item is driven as one member of a batch of several rather than
+    on its own,
+  Then the proof-writing phase runs for it,
+  And the outcome is the same as when the identical work item is driven on its
+    own,
+  And the evidence for both is produced by exercising the route each case
+    actually takes, not a stand-in for it.
+depends_on: [TKT-500g-2]
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: constrains
+    status: exists
+    relevance: "The batch route dispatches this supervisor per work item; the single-feature route does not. That asymmetry is why this criterion exists as a separate reachability obligation rather than a line in its parent."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Which route dispatches which driver. Read this before choosing what to exercise — the proof must run through the dispatch topology the batch route really uses."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "The specific dispatch step this criterion is about: the batch route spawns a supervisor per work item. This diagram is the reference for what 'the route it actually takes' means, so a proof cannot quietly substitute a simpler path."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Why a dispatch-topology assertion is not a proof: this component page records the twice-phantom-built case where tests keyed on dispatch presence and counts that a mock controlled, while the on-disk effect never happened. That is the exact shortcut this criterion forbids."
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The evidence must come from the batch route's real dispatch path. A proof that asserts the supervisor was dispatched, or that counts dispatches, is dispatch topology rather than execution and does not satisfy this criterion — the observable is that the proof phase ran."
+  - "The same work item must be driven both ways and the two outcomes compared. A pass on the batch route alone leaves the equivalence clause unproven, and a pass on the single route alone is the failure mode this criterion is written against."
+  - "The subject must be shaped like the measured population — a proof demand present and no production-code worker — because that is the input on which every route currently disagrees. A subject with a coder assigned proves nothing here."
+  - "Any mock standing in for a dispatched worker must not be able to decide the outcome under test. If the stand-in reports the phase ran, the test measures the stand-in."
+test_spec:
+  - name: test_a_work_item_driven_in_a_batch_keeps_its_proof_phase
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "templates/workflows-js/build-epic.js batch dispatch (per-item ticket-supervisor), exercised through the real dispatch path"
+    description: "Drives a proof-demanding, non-code work item as one member of a batch through the batch route's own dispatch path and asserts the proof-writing phase ran — not that a supervisor was dispatched."
+  - name: test_the_batch_route_and_the_single_route_reach_the_same_phase_outcome
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Drives the identical work item both ways and asserts the proof-phase outcome matches. Whether a proof gets written must not depend on which route happened to build the item."
+  - name: test_a_batch_route_that_skips_on_worker_classification_fails_the_check
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Must-block control: with the batch route's skip rule restored to its pre-fix worker-classification form, the check goes red. Without this the two positive tests could pass on a route that is not actually gated."
+test_rationale: |
+  The whole point of this criterion is that the cheap proof is the wrong proof. The
+  per-phase driver already behaves correctly, so a test written against it would be green
+  on day one while every requirement built inside a batch still silently loses its proof
+  phase — which is why descriptor 1 names the batch route's own dispatch path as its
+  surface and why the it_requirements forbid a dispatch-count assertion. Descriptor 3
+  exists because a reachability test with no negative control cannot distinguish "the
+  route runs the phase because the rule was fixed" from "the route runs the phase
+  regardless"; that distinction is the entire finding.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-2
+  contract: "The single skip question, applied identically on every route — this criterion pins the one route on which the defect is currently live."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE CRITERION. Of the three routes, exactly one — the batch
+  route — dispatches the supervisor that carries the defective skip rule. A
+  demonstration against the per-phase driver, which already behaves correctly,
+  would pass while the defect stays live for every requirement built inside a
+  batch. This is the reachability question, and answering it with a stand-in for
+  the route is the failure mode this criterion is written against.

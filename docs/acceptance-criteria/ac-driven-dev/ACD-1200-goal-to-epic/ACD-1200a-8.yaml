@@ -38,15 +38,36 @@ it_requirements:
   - "Must be idempotent — re-running goal_to_epic on the same input must produce an identical Master_Plan.md without corrupting existing content"
   - "Must handle file-system I/O errors gracefully per the project error handling policy"
   - "The sub-ticket list in Master_Plan.md must be parseable by ticket-supervisor's batching algorithm (one filename per line with depends_on metadata)"
+test_spec:
+  - name: test_acd_1200a_8_master_plan_written_with_every_declared_section
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Run the epic-folder assembly and assert Master_Plan.md exists and carries all four declared elements: epic name and source AC id, the goal AC's criteria text, the ordered sub-ticket list with titles, and the depends_on edges per ticket. Assert each element separately — a single 'file is non-empty' assertion passes on a stub."
+  - name: test_acd_1200a_8_regenerating_the_same_input_produces_an_identical_file
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The idempotency requirement in it_requirements: assemble twice from the same input and assert the two Master_Plan.md files are byte-identical. Any wall-clock stamp in the output fails this, which is the point — a generated file that changes on every run cannot be tracked."
+  - name: test_acd_1200a_8_generated_plan_is_accepted_by_the_real_frontmatter_gate
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Round-trip the generated Master_Plan.md through the commit-time doc-frontmatter validator that actually guards tickets/**/*.md and assert it passes. This is the discriminating test: the generator emits epic_name, created, status, components and source_ac, while the gate's ticket_frontmatter.required_fields is title, status, components, created, depends_on — so title and depends_on are missing and this must be RED on HEAD. Read the required set from the gate's own configuration, never from a hand-copied list. Overlaps ACD-1200a-8-i deliberately; that record owns the guarantee, this descriptor is how this AC stops being closable without it."
 delivers_to: null
 expects_from:
   ac_id: ACD-1200a-3
   contract: "str — absolute path to the created EPIC- folder (e.g. tickets/00_inbox/epics/EPIC-ValidateApiInputs/) containing ordered NN_*.md ticket files; this AC writes Master_Plan.md into that folder"
 origin_agent: BrainCandy
 created: 2026-06-08
-amended_by: []
+amended_by:
+  - reason: "added L3 ACD-1200a-8-i (the generated Master_Plan must be accepted by the frontmatter gate that guards a hand-written ticket file, without the gate being weakened or generated files exempted), from KI-ACD-012, 2026-08-25"
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-1200a-8-i
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-ACD-1200a-8.md
 change_target: code

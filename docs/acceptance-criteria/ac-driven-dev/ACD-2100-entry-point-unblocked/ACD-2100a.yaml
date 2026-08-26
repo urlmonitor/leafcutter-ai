@@ -1,0 +1,120 @@
+id: ACD-2100a
+components:
+  - ac_driven_dev
+  - worktree_manager
+readiness: draft
+priority: medium
+title: "Starting new work succeeds from wherever you are working"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The route finds its own files no matter which folder you launched it from.
+
+  Whether you start from the top of your project or from inside a side working
+  copy makes no difference: the route locates everything it needs and gets as
+  far as asking you what you want to build. It never fails at the very first
+  step because it looked for one of its own files in the wrong place.
+depends_on: [ACD-2100]
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004 in full, plus the first cause of KI-ACD-009. Both name two resolution sites; this L1 covers five -- setup_ticket_worktree.py at 1800, agent_registry.json at 1749, and pause_store.py at 1552, 1625 and 1642."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The layout that makes the defect deterministic rather than intermittent: the workspace parent carries a CLAUDE.md but no git repository, so a cwd-relative path resolves against a directory that is not the repo."
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100a-1
+  - ACD-2100a-2
+  - ACD-2100a-3
+  - ACD-2100a-4
+  - ACD-2100a-5
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - reference-doc
+notes: |
+  COVERS: KI-ACD-004 in full, and the FIRST of the two causes of KI-ACD-009.
+  They are ONE defect observed at two resolution sites -- a relative
+  `.leafcutter/` path resolved against whatever the caller's working directory
+  happened to be. They are combined here on purpose: fixing them as two
+  unrelated tickets is what leaves the third, fourth and fifth site standing.
+
+  THE FIVE SITES (verified in templates/workflows-js/plan-feature.js in this
+  worktree, 2026-08-25). `{{config.output_root}}` expands to the BARE NAME
+  `.leafcutter`, so every one of these is cwd-relative:
+    - 1800  `{{config.output_root}}/scripts/setup_ticket_worktree.py`  (KI-ACD-004)
+    - 1749  `{{config.output_root}}/config/agent_registry.json`        (KI-ACD-009 cause 1)
+    - 1552  `{{config.output_root}}/scripts/pause_store.py` read
+    - 1625  `{{config.output_root}}/scripts/pause_store.py` write
+    - 1642  `{{config.output_root}}/scripts/pause_store.py` read (verify)
+  The three pause_store sites are in NO known issue. They are load-bearing for
+  ACD-2100c: if the pause record cannot be written from a worktree, the fix for
+  the gate defect degrades into `pause_persist_failed`. Any solution that
+  repairs only the two sites named in the known issues leaves ACD-2100c
+  half-broken.
+
+  THE SECOND LAYER, and it is separate from the path. Even given the right
+  script, `_git_toplevel()` in templates/scripts/setup_ticket_worktree.py
+  (~line 116; anchor at 134-135) defaults to `Path(__file__).resolve().parent`
+  with no fallback. For the deployed copy that directory is
+  `<workspace>/.leafcutter/scripts/`, and `<workspace>` is UNTRACKED -- the git
+  root is `leafcutter-ai/`, one level DOWN. `rev-parse` exits 128. Reproduced:
+    $ git -C /home/henzeh/projects/leafcutter/.leafcutter/scripts rev-parse --show-toplevel
+    fatal: not a git repository ...
+  The docstring names this exact layout as what it protects against and then
+  asserts "the script always lives physically inside the repository it operates
+  on", which under self-hosting is false. Both layers are needed to reproduce,
+  so BOTH need a behaviour here -- resolving the script correctly does not
+  excuse a resolver that cannot find the repository, and vice versa.
+
+  WHY NO TEST CAUGHT IT: unit tests invoke setup_ticket_worktree.py from a
+  tmp_path fixture that IS a git repository, so the default anchor always
+  resolves. Same fixture bias as the check_secrets root-resolution defect fixed
+  in GE-118a-1. Per CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally", at
+  least one behaviour here must execute from a directory that is NOT a git
+  repository with the script itself outside the repo. A test that greps for the
+  resolution helper proves nothing.
+
+  A DEAD WORKAROUND, recorded so nobody mistakes it for a fix: on 2026-08-18 the
+  DEPLOYED copy was patched by hand. That file is build output -- build.py
+  overwrites it from templates/ -- so the patch evaporates on the next build.
+  Every behaviour here must land in templates/ or in build.py. See ACD-2100d.
+
+  SIZING FOR THE BA: the L2 cap is 5. A shape that fits with one slot spare:
+    1. the worktree-creation step resolves its script from the repository being
+       operated on rather than from the caller's cwd;
+    2. the setup script locates the repository even when it is deployed outside
+       it -- and re-raises rather than guessing when the answer is ambiguous;
+    3. the startup registry read succeeds from inside a worktree;
+    4. a pause record can be written and read back from inside a worktree.
+  If a fifth is needed, prefer one anti-regression behaviour asserting that
+  every file the route reaches for resolves from an arbitrary cwd, over adding
+  a per-site duplicate. If more than five are genuinely needed, split the
+  pause-store sites into a sibling L1 rather than overflowing.
+
+  DO NOT hand-author `declares_side_effect` on any child (BO-2900g-2; it is
+  derived from the Then clause, and hand-authoring it produced the nine
+  store-wide disagreements in KI-CG-015).
+
+  2026-08-25 (business-analyst): decomposed into five L2s, taking the suggested
+  shape as written and using the spare slot for the anti-regression behaviour
+  the sizing note prefers (ACD-2100a-5). The ambiguity case in suggestion 2 --
+  re-raise rather than guess -- is pinned separately as ACD-2100a-2-i because a
+  search that returns its first hit passes every test written for the
+  exactly-one case while silently creating the worktree in the wrong project.
+  Cap is now FULL at 5: the reference-doc documentation trigger on this L1 is
+  served by ACD-2100d-4 rather than by a sixth child here.

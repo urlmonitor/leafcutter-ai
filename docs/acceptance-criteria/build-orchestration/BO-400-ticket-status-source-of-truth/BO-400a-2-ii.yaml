@@ -1,0 +1,138 @@
+id: BO-400a-2-ii
+components:
+  - build_orchestration
+title: "A ticket the drive carried to completion is recorded done in the ticket's own record"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose record names four phases as needed,
+    And the drive carries the ticket through all four,
+    And after each one the ticket's own record carries that phase's sign-off,
+  When the drive finishes that ticket,
+  Then the ticket's recorded lifecycle state is done,
+    And the state is written into the ticket's own record, not only into the drive's
+      report of the run,
+    And the trigger for that write is that every needed phase carries a sign-off in
+      the record -- not that the drive counted the ticket among its completed work,
+      and not that the delivery phase alone succeeded while another needed phase did
+      not,
+    And a reader given only the ticket afterwards can tell the work completed,
+  So a drive that really finished the work never leaves behind a store in which
+    nothing happened.
+depends_on:
+  - BO-400a-2
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver and its per-ticket phase loop -- the surface that actually drives phases since the supervisor chain was flattened. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js; the same completion rule must land here in the same change."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness that loads the real workflow script and runs it against stubbed workflow globals. Extend it to expose the ticket record the run wrote, so this AC is verified by executing the workflow rather than by reading its source."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Why the parent AC's ticket-supervisor wording no longer names the surface that drives phases; this L3 restates the same completion rule for the driver that does."
+  - path: templates/skills/finalize-feature-archive-check/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The downstream consumer that gates epic archival on the recorded lifecycle state -- the reason an unwritten state blocks the epic even though the work landed."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the ticket-completion write in build-feature.js and its twin in build-ticket.js, which must stay identical"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_ticket_done_recording.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that searches the workflow source for a status-setting call passes on the broken driver too, because the driver already contains completion-reporting code. The test must run the real workflow script through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs (extended to record the ticket-record writes the run performed) and assert on what the run wrote."
+    - "THE TRIGGER IS RECORDED SIGN-OFFS, NOT THE DRIVE'S OWN TALLY. The observed defect is a drive whose report named four completed batches while the store recorded zero tickets done. An implementation that writes done from the same in-memory tally that produced the report re-creates the defect with an extra step: the report and the record would agree because they share one unverified source. The write must be driven by the phase sign-offs actually present in the ticket's record."
+    - "THE DELIVERY PHASE ALONE IS NOT THE TRIGGER. A successful commit phase proves code landed, not that the review and test gates ran. Keying completion off the commit phase would mark done the exact tickets in the observed run that were missing their test-runner and reviewer sign-offs."
+    - "BOTH TWINS IN ONE CHANGE. The file headers declare the two drivers twins that must stay in sync; a change landed in only one produces a store where single-ticket drives record completion and epic drives do not, or the reverse."
+delivers_to:
+  agent: python-coder
+  contract: "A ticket record whose lifecycle state reads done exactly when every needed phase carries a sign-off in that record -- the state the epic archive check reads before it will archive an epic"
+expects_from:
+  ac_id: BO-2900f-1-i
+  contract: "A per-phase verdict in which a phase that reported success while leaving no sign-off is already adjudicated as failed, so the completion trigger here counts only sign-offs that actually landed"
+test_spec:
+  - name: test_ticket_with_all_needed_phases_signed_off_is_recorded_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a ticket with four needed phases through the real workflow via the harness, with every phase leaving a sign-off, and assert the run wrote the done lifecycle state into the ticket record."
+  - name: test_completion_write_reaches_the_ticket_record_not_only_the_run_report
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Assert the done state is observable by re-reading the ticket record the run produced, not merely present in the value the workflow returned -- the exact gap between the observed run's completed-batches payload and the untouched store."
+  - name: test_completion_is_driven_by_recorded_signoffs_not_by_the_run_tally
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Drive a ticket the workflow counts among its completed work but whose record is missing one needed phase's sign-off, and assert no done state is written -- proving the write consumes the record and not the tally."
+  - name: test_successful_delivery_phase_alone_does_not_record_done
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Drive a ticket whose commit phase succeeds while a needed review or test phase left no sign-off, and assert the lifecycle state is unchanged."
+test_rationale: |
+  The defect is an absent write, and an absent write is invisible to every test that
+  inspects the value the workflow returned -- that value already said the batches
+  completed. Only a test that reads back the ticket record the run produced can tell
+  the fixed driver from the broken one, which is why every descriptor asserts on the
+  record rather than on the return payload. The third descriptor exists because the
+  most attractive wrong fix is to write done from the same in-memory completion tally
+  that produced the misleading report; that implementation passes descriptors one and
+  two and reproduces the defect the first time a phase fails to record.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BUG-22, observed in run wf_cc2b46d9-f6f (a 15.5-hour drive of
+  EPIC-DeploymentCompleteness that completed 4 of 10 tickets then halted).
+
+  THE OBSERVED STATE. After the drive, all 13 open tickets still carried the todo
+  lifecycle state, including the four the drive's own payload named as completed
+  batches and which have real feature commits on the branch. The only ticket that
+  differed was one already complete before the drive began.
+
+  THIS IS THE INVERSE OF PHANTOM-DONE, AND THAT MATTERS FOR THE FIX. The work is
+  real and committed; the record claims nothing happened. So the fix is not another
+  gate that withholds completion -- it is a write that was never performed. The
+  fail-closed half lives in the sibling BO-400a-2-iii, and the two must land
+  together: adding the write without the negative produces a driver that marks
+  everything done.
+
+  RELATION TO THE PARENT. BO-400a-2 states this rule for ticket-supervisor, the
+  agent ADR-006 flattened away. Nothing in the parent is wrong; it simply names a
+  surface that no longer drives phases. This L3 restates the same rule for the
+  drivers that do, and deliberately does not touch the parent's criteria.
+
+  CONSEQUENCE. The epic archive check gates on the recorded lifecycle state, so
+  every epic driven by this path is unarchivable until the record is written by
+  hand -- which is how the defect surfaced.

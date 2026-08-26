@@ -1,0 +1,15 @@
+---
+title: "Merge commits no longer trip the contract-shrinking guard on the base branch's history"
+date: "2026-08-18"
+time: "19:20"
+type: manual
+components: 
+  - commit_guardian
+  - ac_store
+summary: "The TDD contract-shrinking guard blocked merge commits over test deletions the merge author never wrote. It now judges a merge on what the merge itself introduces, while keeping the guard fully effective on the author's own changes. Closes KI-CG-003."
+description: "A merge stages the entire incoming branch, so `git diff --cached` showed the guard every test the base branch had ever deleted or skipped. Merging an up-to-date main into a feature branch was blocked on nine deleted test functions from PR #461 that the branch neither wrote nor could change, and the only way past was SKIP= — on the one commit where a genuine test deletion is easiest to hide. Weakening detection is now scoped to files differing from BOTH merge parents, matching the four sibling AC hooks that already had this fix; this was the last of the family without it. Crucially, production-change detection stays on the FULL staged diff: this guard's predicate spans two disjoint file sets (production changed AND a test weakened), so scoping both halves would break the conjunction and let an author take the base branch's production edit verbatim, skip the tests it broke, and never form the pairing that should block. Adversarial review caught that hole before the fix landed, along with three silent-pass paths that all failed identically — an unresolvable pathspec yields an empty diff, and an unmatched pathspec is not a git error, so the gate simply passed: paths containing a space were split into two tokens, non-ASCII paths came back C-quoted because core.quotePath defaults to true, and pathspecs after `--` resolved against the current directory rather than the repo root. Fixed with -z NUL splitting and :(top) anchoring, plus a contradiction check that falls back to the full diff whenever a non-empty scope produces an empty one, so the next pathspec bug announces itself instead of quietly disarming the gate. Separately, a covers-tag parsing bug is worked around and recorded: `# covers: A, B` registered the id \"A,\" with the comma attached and dropped B entirely, so BO-610-1 and BO-610-2 were reported as having no linked test despite passing tests existing. Two affected tag lines were split one-id-per-line, and covers tags were added to four more ACs whose tests already existed and passed but carried no machine-readable tag (BO-1600d-2, BO-1600d-3-i, BO-510-3-i, BO-1500b-1-i). The regex itself is unchanged — that is a gate behaviour change and needs its own AC. Known-issues entries added for the defects not fixed here: KI-ACS-005 (the package-surface it_requirements rule blocks commits that did not cause it; 251 of 2887 store records affected) and KI-ACS-006 (three done-proof oracle defects), plus KI-CG-006 (the pre-commit proof-of-done gate is stricter than the CI backstop it approximates). No AC records are modified by this change."
+commits: []
+breaking: false
+---
+
+## Entry

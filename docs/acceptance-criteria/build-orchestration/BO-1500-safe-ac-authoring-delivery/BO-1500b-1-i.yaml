@@ -42,6 +42,31 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_fresh_authoring_worktree_has_precommit_config_after_bootstrap
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: integration
+  description: A worktree created without .pre-commit-config.yaml or .leafcutter resolves both to readable
+    targets after the bootstrap step, on the symlink path and on the copy fallback.
+- name: test_ac_hooks_execute_against_staged_ac_files_in_the_authoring_worktree
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  description: Committing a staged AC YAML in the bootstrapped worktree produces observable AC-hook output
+    (the hook ran), rather than the PRE_COMMIT_ALLOW_NO_CONFIG no-config skip path.
+- name: test_stage_commit_violating_an_ac_hook_is_blocked
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  description: Staging a schema-invalid AC YAML and committing in the bootstrapped worktree exits non-zero
+    and leaves the branch HEAD unmoved, proving the hook gates rather than decorates the commit.
+- name: test_unbootstrapped_worktree_would_have_let_the_bad_commit_through
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  description: Negative control — the same schema-invalid commit in a worktree without the bootstrap succeeds,
+    proving the previous test's block is caused by the bootstrap and not by unrelated validation.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1

@@ -1,0 +1,226 @@
+id: BO-300a-5
+components:
+  - build_orchestration
+title: "The epic's work is re-read before the drive reports, and work the drive did not build is named as not built, with a cause stated only where the drive can establish one"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic whose set of work is enumerated once, when the drive fixes its plan,
+    And at the end of that drive the epic contains three pieces of work that the plan
+      was not built from and that the drive did not build,
+  When the drive produces its completion output,
+  Then the epic's set of work is read again at that moment and compared with the set
+    the plan was built from, by identity and not by count,
+    And each of the three is named in the output as not built,
+    And a cause is stated for a piece of unbuilt work only where the drive can
+      establish that cause from what it holds: work the plan WAS built from and that
+      did not finish is reported as started and not finished,
+    And because nothing the drive holds records what the epic contained at the moment
+      the plan was fixed, each piece the plan was not built from is reported with its
+      cause not determined, and is not reported as work added to the epic after the
+      plan was fixed,
+    And the output does not state that the epic is complete,
+    And the output states what the operator should do about the work that was not built,
+  So an epic that ends with work the drive did not build never loses that work from
+    the built list and the outstanding list at once, and the operator is never sent
+    after a cause the drive did not establish.
+depends_on:
+  - BO-300a
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver: it enumerates the epic's work once when it plans, and produces the completion output at the end. TWIN of build-ticket.js; the two must change identically."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket driver. TWIN of build-feature.js. It drives no epic and so carries no counterpart to the re-read; the twin obligation here is to confirm and record that, not to add a stub."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. Extend it so the stubbed enumeration of an epic's work can return a different set on the second call than on the first, which is the only way to reproduce a mid-drive addition."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing completion-output sections and their order; the not-built list is an addition to that output and must not disturb the four sections already specified."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-026 -- the criterion as originally worded required unbuilt work to be named as discovered after planning, a cause no run can establish because no plan-time folder snapshot exists anywhere in the data flow. That defect is what this record's 2026-08-26 amendment removes. KI-BO-025 is the upstream reason unselected work exists at all, and is NOT fixed here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- the epic driver's completion path in build-feature.js. build-ticket.js drives a single piece of work and has no epic set to re-read; state in the sign-off that the twin was inspected and correctly carries no counterpart, so the twins do not silently drift into two different completion contracts."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_ticket_set_recheck.py"
+  constraints:
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', a test that finds a second enumeration call in the source cannot tell whether its result reaches the output. Drive the real workflow through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs with an enumeration stub that returns a larger set on its second call, and assert the emitted completion output names the additions."
+    - "DETECT AND REPORT -- DO NOT BUILD. Building the additions inside the same drive is out of scope and is not a safe default: work added during a drive can itself add more, and the drive would have no termination condition. The contract is that the additions are surfaced, named, and left outstanding."
+    - "THE COMPLETE CLAIM IS THE PART THAT MUST CHANGE. Naming the additions in a list while still emitting an epic-complete statement leaves the operator with two contradictory sentences and an archive attempt that will fail later. Suppressing the complete claim is the load-bearing half, and must be asserted on the emitted text."
+    - "COMPARE SETS, NOT COUNTS. A drive in which one piece of work was added and another removed has an unchanged count. The comparison must be by identity."
+    - "SAY WHEN, TOO. The criteria fix the latest moment the re-read must happen -- before the completion output. If the re-read is also performed earlier, at batch boundaries, that is an improvement and not a substitute: the completion-time re-read is what makes the claim in the output true at the moment it is made."
+    - "STATE NO CAUSE THE DRIVE CANNOT ESTABLISH (added 2026-08-26 with the KI-BO-026 amendment). The drive holds the set the plan was built from and the set present at completion. It does NOT hold what the epic contained when the plan was fixed, so from those two sets alone, work the planner never selected and work added mid-drive are indistinguishable. Report such work with its cause not determined. Do NOT satisfy this by relabelling an internal field while the operator-facing sentence still asserts a mid-drive addition -- the assertion to make is on the emitted text, that it does not claim the work was added after the plan was fixed. Satisfying this criterion must NOT require introducing a plan-time snapshot; if one is later introduced, the undetermined bucket remains the honest answer whenever it is absent or stale."
+delivers_to:
+  agent: python-coder
+  contract: "A completion output that names, by identity, every piece of the epic's work that existed at the end of the drive but not in the plan, that withholds the epic-complete statement while any such work exists, and that attributes a cause to that work only where the drive can establish one -- reporting the cause as not determined otherwise"
+expects_from: null
+test_spec:
+  - name: test_work_absent_from_the_plan_is_named_as_not_built_in_the_completion_output
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the real epic workflow with an enumeration that grows by three between the plan and the end, and assert all three are named in the emitted completion output as not built."
+  - name: test_no_unestablished_cause_is_asserted_for_work_absent_from_the_plan
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In the same scenario, assert the emitted output does NOT state that the unbuilt work was added to the epic after the plan was fixed, and does report its cause as not determined -- the KI-BO-026 defect being a correct verdict delivered with a fabricated cause. Assert on the emitted text, not on the name of an internal field."
+  - name: test_the_epic_complete_statement_is_withheld_while_unplanned_work_exists
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "In the same scenario, assert the emitted output contains no statement that the epic is complete -- the defect being that the drive would have reported completion having never seen the additions."
+  - name: test_unchanged_epic_still_reports_complete_with_no_additions_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control case: an epic whose set is identical at both reads produces the existing completion output unchanged, with no not-built entries -- so the assertions above are attributable to the additions."
+  - name: test_the_comparison_is_by_identity_not_by_count
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "One piece of work added and one removed between the reads, leaving the count unchanged; assert the addition is still named."
+  - name: test_existing_completion_sections_are_unchanged
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Assert the four sections BO-300a-2 specifies remain present and in order in the emitted output, so the new section is an addition rather than a rewrite."
+test_rationale: |
+  The failure being prevented is a sentence the drive emits, so every descriptor
+  asserts on the emitted completion text rather than on an intermediate structure --
+  a roll-up that internally knows about the additions while the output still reads
+  epic complete is the same defect with a better data model. The same reasoning
+  applies to the cause: renaming an internal field from discovered-after-planning to
+  something honest, while the operator-facing sentence still says the work was added
+  mid-drive, leaves KI-BO-026 in place. Reproducing the condition at all requires an
+  enumeration that answers differently on its second call, which no static test can
+  express; that is what makes the harness extension the natural verification. The
+  control case is required because the cheapest way to pass the first descriptors is
+  to stop claiming completion at all.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: "KI-BO-026: criteria required unbuilt work to be named as 'discovered after planning', a cause no run can establish -- no plan-time folder snapshot exists in the data flow, so work the planner never selected is indistinguishable from work added mid-drive. Amended to require unbuilt work be named as NOT BUILT, with a cause stated only where the drive can establish one and 'cause not determined' as the default. Title, one it_requirements constraint, two test_spec descriptors and one doc_link updated to match. Set-comparison and suppress-the-complete-claim behaviour unchanged. business-analyst, 2026-08-26"
+superseded_by: null
+covered_by:
+  - BO-300a-5-i
+  - BO-300a-5-ii
+  - BO-300a-5-iii
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BUG-19, observed in run wf_cc2b46d9-f6f.
+
+  THE OBSERVED STATE. The batch plan was computed once at drive start and enumerated
+  ten pieces of work. Three more were committed to the epic branch twenty-six minutes
+  after planning. They were never built -- which is defensible -- AND never appeared
+  in the final output's halted or skipped lists, which is not: the drive would have
+  reported the epic complete having never seen them. The additions were invisible in
+  both directions at once.
+
+  WHY THE CONTRACT IS DETECT-AND-REPORT RATHER THAN BUILD. Extending the running plan
+  to absorb new work gives the drive no termination condition: work added during a
+  drive can itself add more, and a fifteen-hour run would become an open-ended one.
+  Reporting is also the honest contract, because the operator who added the work
+  during the drive is the one who knows whether it belongs in this drive at all.
+  The cost of reporting is a second read of a set the drive already knows how to
+  enumerate.
+
+  WHY IT SITS UNDER BO-300a. The harm is entirely in the completion output: the drive
+  told the operator it knew what had been built, and it did not. That is the promise
+  BO-300 makes.
+
+  ---
+
+  AMENDMENT 2026-08-26 -- KI-BO-026. WHAT CHANGED AND WHY.
+
+  This record originally required each unbuilt piece to be named "as discovered after
+  planning and not built". That single phrase conflates two different facts: "absent
+  from the plan" and "added to the epic after the plan was fixed". The drive can
+  establish the first and cannot establish the second. It holds the set the plan was
+  built from and the set present at completion; it holds NO record of what the epic
+  folder contained at the moment planning ran. From those two sets, work the planner
+  never selected and work added mid-drive are indistinguishable.
+
+  So a FAITHFUL implementation of the original wording necessarily mislabels one as
+  the other -- which is exactly what shipped, and is registered as KI-BO-026. On the
+  37-ticket drive, twenty tickets that had been in the epic folder before launch were
+  reported as having been added after the plan was fixed. The operator following that
+  sentence goes looking for a change that never happened, and the real defect
+  (KI-BO-025, the planner scheduling only the first ready wave) stays hidden behind an
+  explanation that sounds complete. Fixing the code without amending this criterion
+  would have put the code out of conformance with its own AC, which is why the
+  amendment comes first.
+
+  ONLY THE CAUSAL ATTRIBUTION CHANGED. The load-bearing half of this record is
+  untouched and remains binding, verbatim in effect:
+    - the epic's work set is re-read at reporting time and compared with the set the
+      plan was built from;
+    - the comparison is of SETS, by identity, NOT of counts;
+    - each unbuilt item is NAMED in the output;
+    - the output does NOT state the epic is complete;
+    - the output states what the operator should do.
+  That guard is why KI-BO-025 was caught rather than shipping as a false-complete, and
+  weakening any part of it would be a regression, not a fix.
+
+  THE SHAPE CHOSEN, AND WHY. Not a single unattributed bucket, because one distinction
+  IS genuinely available and is worth keeping: work the plan WAS built from that did
+  not finish is knowably "started and not finished" -- the plan membership and the
+  completed record are both in hand. What is not available is any split of the
+  not-in-the-plan set. So the criterion permits a cause only where the drive holds the
+  evidence for it, and makes "cause not determined" the default for everything else.
+  An unattributed "not built" is honest; "discovered after planning" asserted on no
+  evidence is not, and is worse than an acknowledged gap because it stops the reader
+  looking.
+
+  SATISFIABLE WITHOUT A PLAN-TIME SNAPSHOT -- this is a constraint on the fix, not an
+  oversight. Nothing in the amended criterion requires capturing what the epic folder
+  contained at plan time. POSSIBLE FUTURE DIRECTION, NOT SPECIFIED HERE: such a
+  snapshot would make "never selected" and "added mid-drive" separable and would let
+  the undetermined bucket shrink. If it is ever introduced, the undetermined bucket
+  must survive as the answer whenever the snapshot is absent or stale -- on a resumed
+  or cached run, for instance. Silently falling back to one of the two definite labels
+  is precisely how the current fabricated cause arose.
+
+  RELATIONSHIP TO BO-300d. BO-300d (L1, authored 2026-08-26) sits ON TOP of this guard
+  and explicitly forbids re-specifying it. It buys three deltas this record does not
+  cover: a COUNT of unbuilt work, an honest REASON vocabulary, and a per-reason NEXT
+  ACTION. This amendment is consistent with it and does not encroach: it removes a
+  false cause from this record rather than specifying BO-300d's reason vocabulary or
+  its count. Where BO-300d says the run "must not assert [a cause] it cannot
+  establish" and that the honest output "says the cause is undetermined", this
+  amendment is that same principle applied to the one sentence this record owns.
+
+  RESIDUAL, NOT FIXED HERE -- reported rather than resolved unilaterally. The phrase
+  "discovered after planning" still appears in the criteria and notes of the child
+  records BO-300a-5-i and BO-300a-5-iii, where it is used to refer to this record's
+  output section rather than to assert a cause. Those are separate approved records
+  and were out of scope for this surgical amendment; they should be re-worded to
+  "not built" for consistency when they are next opened.

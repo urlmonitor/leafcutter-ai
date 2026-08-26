@@ -1,0 +1,154 @@
+id: ACD-2100b-1
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: approved
+priority: medium
+title: "A registry the startup check cannot read is reported as unreadable and names what it tried to read"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run in which the agent registry the startup check resolves to cannot be
+    read -- the location holds no file, or the process is refused permission to
+    open it,
+  When the startup check runs,
+  Then the run stops and reports that the registry could not be read,
+  And the report states the location that was tried and the reason the read
+    failed,
+  And the report contains no statement about whether any agent is permitted to run
+    repository commands,
+  And the report does not direct the reader at a permission setting.
+depends_on: [ACD-2100b]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must name each startup check and say what each of its reports means -- this is one of the four."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 -- the false verdict, and the first of its three fix directions ('distinguish the four outcomes')."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The permitsShell computation and its single message are at lines 1745-1791."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "Mechanism M8 inverted -- a check reporting a specific failure cause it did not establish."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the registry whose unreadability this outcome reports."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output and today carries no charter gate at all (see ACD-2100d-3)."
+  - "Fail closed: the run still stops. The objection is to the diagnosis, not to the caution -- relaxing this outcome to a warning reintroduces the hazard the BO-1500f-1 gate was built for, and that AC is work_status: done."
+  - "The reported location must be the location actually attempted, taken from the resolution that ran -- not a constant reproduced in the message. A hard-coded path in the message is wrong the moment the resolution changes and is exactly what made the current message misleading."
+  - "The reported reason must distinguish 'no file at that location' from 'permission refused'; these have different remedies and collapsing them recreates the defect one level down."
+  - "The report must not name a permission setting, and must not assert anything about any agent's permission. This is a negative constraint on observable output and must survive as one -- a test that asserts only that some message was printed restates the bug."
+  - "Must satisfy the repository error-handling policy: the failed read is external I/O and must be logged at WARNING or higher before the halt."
+  - "Must not emit the registry's contents or the process environment in the report -- the location and the failure reason only."
+test_spec:
+  - name: test_absent_registry_is_reported_as_unreadable_with_the_location_tried
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      No file at the resolved registry location; the run stops and its report contains
+      that location and states the read failed because nothing is there.
+  - name: test_unreadable_registry_report_contains_no_permission_verdict
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The same report contains no statement about any agent being permitted or not
+      permitted to run repository commands and does not name a permission setting --
+      asserted as an absence, because the buggy code also prints a message.
+  - name: test_permission_refused_registry_reports_a_different_reason_than_absent
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A registry file present but with read permission withheld from the process
+      produces a report naming the location and a reason distinct from the
+      nothing-is-there reason.
+  - name: test_unreadable_registry_halts_the_run_at_the_check
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner to its startup charter check"
+    description: >-
+      Driving the real workflow with the registry unreadable stops the run at the check
+      -- no step after the check runs -- and the halt is what the caller observes.
+test_rationale: >-
+  The last two Then clauses are negative and they are the actual defect: the current
+  code already prints a message, so a test asserting that some message appeared passes
+  against unfixed code. The evidence has to be the absence of the permission text in
+  this outcome. The two read-failure reasons are asserted as a pair because the cheap
+  implementation of "report honestly" is one catch-all message, which leaves the
+  operator unable to tell a wrong location from a locked file -- two different remedies.
+  The halt is asserted by driving the real workflow rather than by reading the source
+  for a return statement, which proves nothing about whether the check is reached.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100b-4
+    contract: "One of the four distinguishable startup-check outcomes, each of which the fail-closed guard must observe halting the run: the unreadable-registry outcome, carrying the attempted location and a read-failure reason and carrying no permission verdict."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/07_TICKET-20260826-ACD-2100b-1.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  OUTCOME 1 OF 4. Verified by the PO on 2026-08-25 at
+  templates/workflows-js/plan-feature.js:1745-1791:
+
+    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+    permitsShell = !!(match && match.permits_shell === true);
+
+  `permitsShell` is false for four different reasons and all four print one
+  message asserting a permissions problem and pointing the operator at
+  `config/agent_registry.json`'s `permits_shell` field. In the observed run that
+  field was already correct (`worktree-agent` has `permits_shell: true`,
+  agent_registry.json:1368), so the remedy named a field with nothing to fix.
+
+  NAMING THE LOCATION IS THE ACTIONABLE PART. "Could not read the registry" alone
+  is barely better than the false verdict: the whole reason the read failed is that
+  the location was wrong, and the operator cannot see that without being told which
+  location was tried. This is also what makes the behaviour testable against a
+  fixture rather than by eye.
+
+  THE LAST TWO CLAUSES ARE THE ACTUAL DEFECT. They are negative on purpose. A test
+  that asserts only that SOME message was printed restates the bug -- the buggy code
+  prints a message too. What must be observable is that this outcome no longer
+  produces the permissions text.
+
+  FAILING CLOSED IS NOT UP FOR TRADE. The run still stops. ACD-2100b-4 is the guard
+  that keeps it stopping; the objection is to the diagnosis, not to the caution.
+
+  ORDERING: ACD-2100a-3 makes the read succeed from a worktree, which removes the
+  common cause of this outcome. It does not remove the outcome -- a genuinely
+  missing or unreadable registry still has to be reported honestly, and this is the
+  behaviour that survives the path fix.
+
+  2026-08-25 (it-po): the it_requirement forbidding a hard-coded location in the
+  message is the one a coder is most likely to miss. The obvious implementation
+  interpolates the same constant the resolution uses, which reads correctly today and
+  silently goes stale the first time the resolution changes -- and a stale location in
+  a diagnostic is the same class of defect as the permission verdict this record
+  removes: a specific claim the check did not establish.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

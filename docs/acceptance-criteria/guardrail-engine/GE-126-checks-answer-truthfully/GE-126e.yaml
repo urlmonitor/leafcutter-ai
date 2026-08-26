@@ -1,0 +1,114 @@
+id: GE-126e
+title: "You can find out which checks can still pass without inspecting anything"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Ask the whole family which of its members can still abstain silently.
+
+  How many checks can return a clean answer from a path on which they inspected
+  nothing is a question you can put to the system and get a measured answer to —
+  not something discovered one check at a time by whoever happened to look. The
+  answer says how many checks were examined alongside how many were found so a
+  run that examined nothing cannot report nothing wrong.
+depends_on:
+  - GE-126
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "The register this census makes obsolete as a discovery mechanism. Three entries here — KI-CG-018, KI-CG-019, KI-CG-020 — plus KI-CG-001, KI-CG-006, KI-CG-010 and KI-CG-012 are all the same family, and every one was found while doing something else."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-10.yaml
+    relationship: context
+    status: exists
+    relevance: "The precedent to copy. It turned a silence discovered one ticket at a time into a state the store can be asked about, and required the count found to be reported alongside the count examined for exactly the reason this L1 exists."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - component-diagram
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126e-1
+  - GE-126e-2
+  - GE-126e-3
+  - GE-126e-4
+  - GE-126e-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ENFORCEABILITY LEG, AND IT IS WHY THIS GOAL IS NOT A GENERAL RULE.
+  The authoring brief posed the trade directly: a general rule nobody can
+  mechanically check is worse than three fixes that can. This L1 is the general
+  obligation expressed as a fact anyone can go and measure rather than as a rule
+  nobody can verify. Without it, GE-126a to GE-126d are three repairs to three
+  checks that happened to be looked at, and the honest description of the
+  remaining roughly seventy is that nobody knows.
+
+  THE OBSERVABLE IS THE OUTCOME OF RUNNING THE CHECK, NEVER A PROPERTY OF ITS
+  SOURCE. A census built by grepping for "return 0" reports on dead code, ranks
+  by nothing, and will be quietly wrong in both directions. The classification
+  each check receives must come from executing it. The discriminating procedure
+  is already written down in KI-CG-018's evidence block and in this component's
+  standing verification advice, and it is the acceptance shape:
+    - hand the check something that genuinely violates its rule
+    - run it from two working directories, one of them a place where its
+      prerequisites do not resolve
+    - record which of three outcomes each run produced: refused, said it could
+      not inspect, or reported a clean pass
+  A check that reports a clean pass on the second run while refusing on the first
+  is an instance. That comparison names WHY the two runs differ, which is the
+  thing a printed count never does.
+
+  IT MUST COUNT WHAT IT EXAMINED, NOT ONLY WHAT IT FOUND. A census that reports
+  "no checks with this defect" after failing to execute any of them is this whole
+  goal's defect wearing the census's clothes, and it is the single most likely way
+  this L1 ships broken. ACS-100i-10 required exactly this pairing for the same
+  reason and its wording is worth reusing rather than reinventing.
+
+  ENROLMENT IS PART OF THE PROMISE. A check the census does not know about is
+  indistinguishable from a check with no defect. The set examined must be derived
+  from the registration data, so a newly added check is enrolled by existing
+  rather than by being remembered. This is the same reasoning GE-120c-3 applies to
+  its parity harness; the two should share their notion of the registered set if
+  they can, and if they cannot, say why at L2 rather than growing a second list.
+
+  IT REPORTS. IT DOES NOT REPAIR. The census will very likely surface KI-CG-001,
+  KI-CG-006, KI-CG-010 and KI-CG-012 again, and possibly a great many more. Those
+  are out of scope. Producing a list that is too long to fix in one pass is a
+  successful outcome for this L1 and the input to prioritising the rest — the
+  precedent is KI-CG-017, where a detector that already existed reported five
+  unreachable checks and was skipped rather than acted on because its verdict
+  arrived as a commit blocker. Decide at L2 where this runs and how loudly, with
+  that precedent in view.
+
+  THE FIRST MEASURED NUMBER IS A DELIVERABLE. Until it exists, no criterion in
+  this tree may state or imply how widespread the defect is. When it exists,
+  record it with its date and the commit it was measured at, because it will move.
+
+  BOUNDARY WITH GE-120c — RELATED, NOT DUPLICATE. GE-120c ("The sameness is
+  proven, not assumed") builds a harness that compares each check's verdict
+  between two working copies, to prove a parity property. This L1 asks a
+  different question of one layout at a time: can this check reach a clean answer
+  without inspecting anything. The two want the same execution machinery and
+  should share it if GE-120c lands first; they are not the same criterion and
+  neither closes the other. If GE-120c's harness exists by the time this is
+  built, extend it rather than writing a second one, and record that decision.

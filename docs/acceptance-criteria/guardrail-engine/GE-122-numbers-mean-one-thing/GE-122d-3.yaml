@@ -142,7 +142,9 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-122d-3-i
-implemented_by: []
+  - GE-122d-3-ii
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/03_TICKET-20260825-GE-122d-3.md
 change_target:
   - code
   - pipeline
@@ -174,3 +176,4 @@ notes: |
   must block. Reusing that guard, as GE-122a-1 requires, therefore means amending or superseding
   ADR-029 in the same change. That is a real cost and it is cheaper than the alternative, which
   is shipped code that silently contradicts an accepted decision.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

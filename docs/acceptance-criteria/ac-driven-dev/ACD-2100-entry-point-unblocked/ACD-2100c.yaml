@@ -1,0 +1,152 @@
+id: ACD-2100c
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Every decision recorded as yours is one you actually made"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Approval questions reach a person or wait for one -- nothing else answers them.
+
+  When the route asks whether to go ahead, change something or stop, that
+  question goes to you. If you cannot be reached the run waits and can be picked
+  up later exactly where it left off. Nothing that was not your answer is ever
+  allowed to throw away work you have not seen.
+depends_on: [ACD-2100]
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005. Its stated root cause and fix direction are BOTH out of date -- resolveGate already pauses on an unparseable answer, and the observed refusal was well-formed JSON. Read this L1's notes before that entry."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause-and-resume mechanism that makes 'pause instead of discard' a real option. Durable only once ACD-2100a-4 lands, which is why ACD-2100c-2 depends on it across L1 families."
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100c-1
+  - ACD-2100c-2
+  - ACD-2100c-3
+  - ACD-2100c-4
+  - ACD-2100c-5
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+documentation_triggers:
+  - sequence-diagram
+  - how-to
+notes: |
+  COVERS: KI-ACD-005. Read this note before decomposing -- the known issue's
+  root cause and its fix direction are BOTH out of date, verified against the
+  code in this worktree on 2026-08-25.
+
+  WHAT THE KNOWN ISSUE SAYS: "any reply the parser cannot map to approve/edit
+  resolves to cancel", and therefore "harden the answer parser".
+
+  WHAT THE CODE ACTUALLY DOES: resolveGate (plan-feature.js 1571-1582) already
+  pauses on a null or unparseable answer -- `pauseAtGate` is the fallback, not
+  `cancel`. The parser is not the hole. The observed refusal from status-checker
+  was WELL-FORMED JSON carrying `action: "cancel"` with a paragraph of feedback
+  explaining that approving product-truth artifacts is not its job. That satisfies
+  the live gate's own check (2075: `parsed && typeof parsed.action === "string"`)
+  and then the "valid explicit decision" test at 1577-1579, so it was accepted
+  as a user's choice and the run was discarded. A well-formed refusal is
+  INDISTINGUISHABLE from a real user answer by shape alone. Hardening the parser
+  therefore closes nothing.
+
+  THE ONE THING THAT CLOSES IT: a gate whose answer is a human decision must not
+  be routed to an agent for that answer. Either it reaches the real user, or it
+  pauses. Provenance -- not answer shape -- is the discriminator. Any child
+  framed as "reject refusal-shaped replies" is re-implementing the defect with a
+  longer regex; the agent gets better at sounding like a user and the bug comes
+  back.
+
+  ALL THE SITES, not just the three in the known issue (line numbers 2026-08-25,
+  templates/workflows-js/plan-feature.js):
+    - 2067  pt-gate-<stage>          product-truth approve/edit/cancel
+    - 2361  gate-<stage>             mid-pipeline authoring gate
+    - 2458  final-gate               final approval, sets readiness + priority
+    - 1913  covered-route-gate       route choice when the request looks covered
+    -  841  resolve-orphans-choice   what to do with stranded prior drafts
+  All five dispatch to `status-checker`. The last two are in no known issue and
+  the orphan one is destructive in its own right (it can delete drafts). Fix the
+  CLASS with one mechanism; five per-site patches is how the two unlisted ones
+  get missed.
+
+  RESIDUAL DESTRUCTIVE DEFAULT: line 2086 is
+  `const ptGate = _ptGateResult || { action: "cancel" }`. resolveGate should
+  never return a bare null today, but the fallback still says that the answer to
+  "no answer" is to discard. The safe default for an absent answer is pause.
+
+  DEPENDENCY YOU CANNOT DESIGN AROUND: pausing is only durable if the pause
+  record can actually be written. That store is reached at three cwd-relative
+  paths (plan-feature.js 1552/1625/1642) covered by ACD-2100a. Until ACD-2100a
+  lands, "pause instead of discard" degrades to `pause_persist_failed` when run
+  from a worktree -- which is where the failure was observed. Do not mark any
+  child here done on evidence gathered from the workspace root only.
+
+  IN FLIGHT ELSEWHERE: two commits on worktrees/pf-gate-fix (c6087fae, 5a3eae6d)
+  fix ADJACENT gate defects -- pause-persist verification and dropped `edit`
+  feedback. They do not fix this one. Do not author over them; assume they land.
+
+  OUT OF SCOPE HERE: KI-ACD-006 -- a cancelled run returning `status: ok`. It is
+  adjacent (the cancel return path at 2091-2094 is the very code a child here
+  will read) and tempting to absorb. It is a separate, high-severity
+  false-success concern and is not one of the three blockers this tree closes.
+  Leave the return status alone.
+
+  SIZING FOR THE BA: the L2 cap is 5, and this L1 is the one at risk of
+  overflowing it. A shape that fits exactly:
+    1. a decision gate is presented to the real user and never dispatched to an
+       agent for its answer;
+    2. when no user can be reached the run pauses with a durable record and
+       reports that it is waiting -- it does not proceed and does not discard;
+    3. a paused run resumes at the same gate with the user's later answer;
+    4. an answer that did not come from the user is never accepted as one, even
+       when it is well formed and names a valid action;
+    5. discarding work is reachable only from an explicit user choice.
+  If the five gate sites need per-site coverage beyond that, put the shared
+  mechanism here and split the site sweep into a sibling L1 -- do not overflow.
+  At least one behaviour must be proved by executing the gate path in a fresh
+  process; CLAUDE.md is explicit that a grep for gate prose is not evidence.
+
+  2026-08-25 (business-analyst): decomposed on the suggested shape exactly, all
+  five slots used and no sibling L1 needed. The five gate sites are carried inside
+  ACD-2100c-1's criteria as the decisions they make rather than as a per-site
+  sweep, so the class is covered without a sixth child. ACD-2100c-2 puts the
+  worktree working directory into its Given rather than into a note, so evidence
+  gathered only from the workspace root cannot close it. ACD-2100c-4 is written as
+  a PAIR of answers identical in content and differing only in origin, which is the
+  only assertion a parser change cannot pass. One L3 added: ACD-2100c-3-i, an
+  answer that names a different decision than the one being waited on -- provenance
+  and subject are separate bindings and the resume path checks neither today.
+  Cap is FULL at 5: the sequence-diagram and how-to triggers on this L1 have no
+  slot and are reported to the it-po rather than displacing a blocker behaviour.
+
+  2026-08-26 RESOLVED — this L1's two documentation_triggers ARE served. Read the
+  paragraph above as history, not as an open question. `ACD-2100e` ("You can pick up
+  a waiting run without reading the program") was authored as the sibling L1 the note
+  above recommends, and its two children serve exactly these triggers:
+
+    - `ACD-2100e-1`  sequence-diagram  -> docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    - `ACD-2100e-2`  how-to            -> docs/how-to/resume-a-paused-plan-feature-run.md
+
+  The triggers stay declared here because this L1 is the SUBJECT the pages document;
+  `ACD-2100e` is where the deliverables live. Do not remove them from this record and
+  do not author a second diagram or how-to — five of this L1's own children already
+  link `e-1` or `e-2` by id from their doc_links, and two carry delivers_to contracts
+  naming them, so a duplicate under a different id would dangle those links silently.
+
+  The cap is still genuinely FULL at 5 and that part is unchanged: nothing further may
+  be added to this L1, and `child_limit_override` remains the wrong tool here.

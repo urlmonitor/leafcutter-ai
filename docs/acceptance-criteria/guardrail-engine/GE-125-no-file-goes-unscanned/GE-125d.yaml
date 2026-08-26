@@ -1,0 +1,113 @@
+id: GE-125d
+title: "You can see what the check chose not to look at"
+component: guardrail-engine
+components:
+  - security_scanner
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Reduced protection is announced, never silent.
+
+  Whenever the check gives something less scrutiny than usual, it says so and
+  says which file and why — without repeating the value it declined to judge.
+  A gap in your protection is visible while you are still working, instead of
+  being found years later by someone reading the source.
+depends_on:
+  - GE-125
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "The silence is why KI-SEC-001 survived: the exemption reports nothing, so a clean result and an unexamined file are indistinguishable to the person committing. This L1 is the part of the goal that would have surfaced the other three."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "The standing rule this L1 applies, inherited and not repealed: a check must be able to tell you the difference between looking and finding nothing, and not looking. GE-120 covers a check that CANNOT run; this covers one that runs and declines to look by policy. GE-120's folder is byte-frozen by a guard test and must not be edited to accommodate this."
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-125d-1
+  - GE-125d-2
+  - GE-125d-3
+  - GE-125d-4
+  - GE-125d-5
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE L1 THAT SURVIVES EVERY OUTCOME OF THE OTHER THREE. Even if every
+  remaining reduction in scrutiny is judged correct, it should still be visible.
+  Silence is what let a whole-file exemption written into this check go
+  unnoticed until someone read the source, and it is the only property here that
+  would have shortened that.
+
+  IT IS A VISIBILITY PROMISE, NOT A BLOCKING ONE, and the distinction is
+  deliberate. This check runs on every commit, so an announcement must not
+  become an obstruction. GE-120's line applies unchanged: the unit of the rule
+  is whether a reduced run is distinguishable from a clean one by whoever reads
+  the output, not whether it stops anything. Whether any of these conditions
+  should ALSO block is a per-case decision to be made explicitly at L2, not by
+  default in either direction.
+
+  THE NEGATIVE ARM IS MANDATORY: the notice must never echo the value it
+  declined to judge. An announcement that prints the thing it chose not to
+  report would write the candidate credential into the terminal, into whatever
+  captures that output, and quite possibly into a log — turning a protection
+  notice into a disclosure. GE-123d-5 already holds this same never-echo rule
+  for the adjacent rule's notice; reuse its shape.
+
+  VOLUME IS A REAL RISK AND THE L2 MUST FACE IT. A per-result announcement on
+  a large staged set could be noisier than the findings themselves, and a notice
+  people learn to scroll past has failed. Choose the granularity deliberately —
+  per file, per run summary, or per result — and justify the choice against the
+  purpose, which is that someone notices an unexpected gap. Say which was chosen
+  and why the rejected ones were rejected.
+
+  THIS IS ALSO THE ONGOING GUARD FOR THE OTHER THREE. Once reduced scrutiny is
+  announced, a future change that quietly widens it shows up in the output of
+  the very next commit rather than requiring someone to read the source again.
+
+  BA DECOMPOSITION NOTE, 2026-08-19 (criteria, notes above and every other field
+  untouched; only covered_by was written). Five L2 children, at the cap:
+    GE-125d-1  the notice's content, and the never-echo arm asserted by the
+               absence of an embedded marker rather than by matching text.
+    GE-125d-2  the machine-readable reduction record, always present, carrying
+               an explicit zero on a clean run, independent of the exit status.
+    GE-125d-3  when nothing is said at all, and the one-summary-per-run shape
+               with a bounded file list when a great deal was withheld. Holds
+               the mandatory negative control for the whole L1.
+    GE-125d-4  the check can be asked what it declines to examine, and the
+               answer is checked against what it actually does.
+    GE-125d-5  the single consolidated reference section, discharging the
+               reference-doc trigger for all four L1s of this goal at once.
+  Three L3 constraint children: GE-125d-1-i (stream discipline), GE-125d-1-ii
+  (the count covers only the location-based reduction), GE-125d-4-i (the
+  self-description follows the decision and cannot drift from it).
+
+  GRANULARITY, decided as this L1 demands rather than left open: announce only
+  when the reduction actually WITHHELD a finding, one summary per run, exact
+  total, at most ten per-file lines and a remainder count. Announcing every file
+  the reduction merely applied to was rejected — the reduced locations include
+  the acceptance-criteria store, the ticket tree and the retrospectives, so an
+  ordinary documentation commit would print dozens of lines that mean nothing. A
+  paragraph per withheld finding, and one block per file, were rejected for the
+  same reason more slowly. See GE-125d-3.
+
+  BLOCK-VS-ANNOUNCE, decided per case as required: none of the five blocks. Each
+  child states this in its own criteria with its own reason rather than
+  inheriting it.

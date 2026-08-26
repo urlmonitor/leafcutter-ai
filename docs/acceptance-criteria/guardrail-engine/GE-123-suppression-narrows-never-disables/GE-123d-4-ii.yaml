@@ -1,0 +1,223 @@
+id: GE-123d-4-ii
+components:
+  - commit_guardian
+  - security_scanner
+title: "The reference states where the exemption applies, in one place, as a closed list"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the reference that documents the secrets scanner's rules and its
+    suppression forms,
+  When a reader wants to know whether a particular file they are about to
+    commit is exempt from the generic-credential rule,
+  Then the reference answers it from one section without the reader consulting
+    the check itself, by stating: the five enumerated prose locations, the four
+    admitted non-executing file kinds, the closed list of recognised
+    non-credential value shapes, and the one value shape that is exempt in
+    every file regardless of location,
+  And it states that all three lists are closed — a value, a location or a kind
+    that is not on its list is treated as a credential,
+  And it states that source and configuration never inherit the exemption, and
+    that a file inside a prose location whose kind is not admitted does not
+    either.
+
+  Given the same reference,
+  When a reader wants to know what happens when an exemption is granted,
+  Then the reference states that a notice naming the file, the 1-based line
+    number and the granting shape goes to the error stream, that the
+    notice never reproduces the matched value, and that it does not change
+    whether the commit succeeds.
+
+  Given a reader who wants to widen the exemption to a new location or a new
+    value shape,
+  When they consult the reference,
+  Then it states that each list is extended by a deliberate edit with a
+    recorded reason, and that resemblance to an existing entry is never
+    sufficient,
+  Because a reference that describes the lists without saying they are closed
+    invites exactly the silent inheritance this feature is designed to prevent.
+depends_on:
+  - GE-123d-4
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The reference being edited lives under templates/skills/ and is the canonical copy; the deployed copies under .claude/ and .leafcutter/ are build.py outputs and must not be hand-edited."
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The reference is templates/skills/security-scanner/SKILL.md, which already carries the allowlist, path-matching, detection-rules and false-positive-guidance sections. The new material belongs as one section beside those, not scattered across them, because the criteria promise a reader can answer the question from one place."
+  - "That file is the canonical copy per ADR-001. Edit it under templates/ and verify through the build.py round-trip; the copies under .claude/ and .leafcutter/ are build outputs and must never be hand-edited."
+  - "This AC must land after GE-123d-1, GE-123d-2, GE-123d-4 and GE-123d-5 have settled. The reference records behaviour, and a reference written from the ACs rather than from the shipped lists documents an intention — which is the failure the expects_from contract already names and the reason the ordering is a hard constraint rather than a preference."
+  - "The three lists in the reference must be enumerated in full and must match, item for item, the lists the implementation actually reads. A reference that paraphrases the lists cannot be checked for drift and will not survive the first extension."
+  - "The reference must state explicitly that each list is CLOSED and extended only by a deliberate edit with a recorded reason. The criteria make this the load-bearing scenario; a section that lists five locations without that sentence reads as an example set, which is the silent inheritance the whole feature is built to prevent."
+  - "Self-referential hazard, and it is live rather than theoretical: this section documents credential-shaped text and is therefore liable to be blocked by the very check it documents. Every example value in the section must itself be in one of the recognised non-credential shapes. The file is a Markdown file in the skill-prompt area, so it is an admitted kind in a named location once the code lands — which is exactly why the ordering constraint above is not negotiable: written first, the section blocks its own commit."
+  - "Do not duplicate the hand-written-suppression guidance that GE-123c owns. Cross-reference it rather than restating it, so there is one place to keep in step."
+  - "The section must not reproduce a matched value anywhere, in prose or in an example, for the same reason the notice does not."
+delivers_to: null
+expects_from:
+  ac_id: GE-123d-4
+  contract: "The final content of the three closed lists — locations, file kinds, value shapes — as settled by GE-123d-1, GE-123d-2 and GE-123d-4, plus the notice contract from GE-123d-5. The reference records what those ACs decide; it must not be written before they settle or it will document an intention rather than the behaviour."
+test_spec:
+  - name: test_reference_enumerates_the_three_closed_lists_in_one_section
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Parsing the real templates/skills/security-scanner/SKILL.md on disk finds one section that names all five prose locations, all four admitted file kinds, every recognised non-credential value shape, and the one shape exempt in every file regardless of location"
+  - name: test_reference_lists_match_the_lists_the_implementation_reads
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Drift guard: the locations, kinds and value shapes enumerated in the reference match, item for item, the corresponding data in the canonical check and scanner sources — a documentation check, not a prose review"
+  - name: test_reference_states_the_lists_are_closed_and_extended_deliberately
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The section states that a value, location or kind absent from its list is treated as a credential, that each list is extended only by a deliberate edit with a recorded reason, and that source and configuration and an unadmitted kind inside a prose location never inherit the exemption"
+  - name: test_reference_states_the_notice_contract_and_its_withheld_value
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The section states that a granted exemption produces a notice on the error stream naming the file, the 1-based line number and the granting shape, that the notice never reproduces the matched value, and that it does not change whether the commit succeeds"
+  - name: test_reference_section_passes_the_check_it_documents
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "The real reference file, staged at its own repository-relative path in a temporary git repository and checked by the canonical pre-commit check, produces exit status 0 — the section describing credential shapes does not block its own commit"
+test_rationale: "This is a documentation AC, so four of the five entries are documentation checks rather than code tests: they parse the real reference file on disk and assert what it states. They are checks rather than a review pass because the thing most likely to go wrong here is drift — a reference that enumerates five locations while the code reads six is worse than silence, since a reader trusts it and stops looking. The second entry is therefore the load-bearing one: it compares the reference's enumerations against the data the canonical sources actually read, so an extension to either side that forgets the other goes red. None of the four may be satisfied by a fixture: they must read the real templates/skills/security-scanner/SKILL.md, because a fixture would assert only that the test author can write the section. The fifth entry is the analogue of this tree's real-pre-commit-path standard for a docs AC, and it guards a live hazard rather than a hypothetical one — a section documenting credential shapes is liable to be blocked by the check it documents, and the sibling authoring pass in this subtree was blocked five times by exactly that. Test-writer, not documentation-expert, authors these; the assigned agent writes the reference."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18)"
+    detail: "Criteria untouched. assigned_agent documentation-expert confirmed, not changed to llm-expert despite the surface living under templates/skills/ — the content is reference documentation about a scanner's behaviour, not agent-behaviour prompt text. Complexity held at S. Authored eight policy-level it_requirements naming the concrete surface (templates/skills/security-scanner/SKILL.md, beside its existing allowlist and detection-rules sections), the ADR-001 parity obligation, the hard ordering constraint (this lands last, or it documents an intention), and the live self-referential hazard that the section describing credential shapes can block its own commit. Authored a five-entry test_spec plus test_rationale specifying documentation checks against the real file on disk — including a drift guard comparing the reference's enumerations to the lists the code reads — plus one entry staging the real reference through the pre-commit check. readiness draft->reviewed; work_status and priority untouched."
+  - reason: gating-correction
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'THREE ROUTING FIELDS CHANGED. NO REQUIREMENT CHANGED. criteria, title, level,
+      depends_on, the eight it_requirements, the five-entry test_spec, work_status, readiness and
+      priority are all untouched. change_target docs -> prompt, risk_surface safety ->
+      contract_boundary, assigned_agent documentation-expert -> llm-expert.
+
+      THIS ENTRY DIRECTLY REVERSES THE 2026-08-18 IT-PO DECISION RECORDED IMMEDIATELY ABOVE, which
+      states that assigned_agent was "confirmed, not changed to llm-expert despite the surface
+      living under templates/skills/ — the content is reference documentation about a scanner''s
+      behaviour, not agent-behaviour prompt text". That reasoning is about GENRE and it is correct
+      on its own terms. It is reversed on CAPABILITY, which it did not consider:
+      documentation-expert never authors files ("all authoring is delegated to specialists", stated
+      twice in its template), and every genre in config/doc_types.json has a default_path under
+      docs/. Handed templates/skills/security-scanner/SKILL.md it can only classify the work
+      `reference` and emit docs/reference/<topic>.md — a SECOND copy of the passage, in the wrong
+      tree, which this record''s own first it_requirement forbids ("The new material belongs as one
+      section beside those, not scattered across them, because the criteria promise a reader can
+      answer the question from one place"). The genre judgement was right and the routing
+      consequence was not checked against what the agent can actually do.
+
+      GATING. config/guardrail_gates.yaml maps docs.safety to an EMPTY mandatory-agent list against
+      docs.contract_boundary -> [documentation-expert, pr-reviewer]. This record was therefore
+      UNGATED — no required reviewer on documentation describing a security control. The more
+      alarming-sounding risk surface is the one that removed the gating. prompt.contract_boundary
+      yields [llm-expert, architect-review, pr-reviewer], and documentation_gates.risk_surface_triggers
+      adds documentation-expert and documentation-verifier independently of change_target, so
+      documentation-expert is RETAINED as reviewer. Nothing is lost; the genre owner keeps its say
+      over the genre and stops being asked to author a file it cannot author.
+
+      CONSISTENT WITH GE-123c-5 (same change, same date) and with GE-125a-3 / GE-125b-4 / GE-125c-4 /
+      GE-125d-5, which target the same passage in the same file. GE-125b-4 had cited THIS record as
+      its precedent for documentation-expert; that citation is now corrected on both sides rather
+      than in one tree only.'
+  - reason: clarification
+    date: '2026-08-25'
+    by: safety-security-expert
+    entry: 'FOUR WORDS IN THE SECOND SCENARIO. "the granting shape is written to the error
+      stream" now reads "the granting shape goes to the error stream". Identical requirement.
+      The clause is a REPORTED one — "the reference STATES THAT a notice ... goes to the error
+      stream" — so what is required is that the documentation conveys a fact. The verb used to
+      convey it was never the requirement; the four facts are (the notice names the file, names
+      the 1-based line number, names the granting shape, and reaches the error stream) and all
+      four are unchanged. The write itself is behaviour GE-123d-5 specifies; this record only
+      requires that the reference describe it. test_spec descriptor 4, which asserts this same
+      content, is untouched and still passes on the reworded text.
+
+      WHY IT WAS NECESSARY, RECORDED BECAUSE EDITING ANOTHER TREE''S CRITERIA TO SATISFY A LINTER
+      DESERVES SCRUTINY. check-ac-schema''s declares_side_effect derivation (BO-2900g-2) matched
+      the bare phrase "is written" and concluded this record asserts a durable side-effect. It
+      does not — its deliverable is a documentation section. The check is a forward ratchet that
+      validates STAGED records only, so this sat unflagged on main and fired the moment the
+      record was touched for the routing change; the block was not caused by that change and is
+      not evidence of anything wrong with it. validate_declares_side_effect REJECTS an authored
+      false that disagrees with the derivation, so on a false positive there is no way to state
+      the truth in the field: the only options are to declare an effect the record does not have,
+      or to remove the accidental trigger. Declaring true routes user-surface-smoker into the
+      generated ticket NON-OVERRIDABLY — a phase agent that invokes a user-facing surface and
+      asserts side-effects against a ## Smoke Fixture block, on a record that produces prose.
+
+      THIS IS THE SECOND SUCH REWORD, AND THAT IS THE POINT. GE-125b-4 was the first, in #526.
+      Two records in two trees have now had prose adjusted around one regex. The correct fix is
+      to the derivation, not to any further criteria: it cannot distinguish a durable write from
+      a stream write, and it reads reported clauses ("the reference states that X is written") as
+      first-person assertions. Filed against the guardrail engine. IF A THIRD RECORD TRIPS THIS,
+      FIX THE REGEX INSTEAD OF THE RECORD.
+
+      Nothing else changed: the other two scenarios, all eight it_requirements, the five-entry
+      test_spec, doc_links, depends_on, expects_from, work_status, readiness and priority are
+      untouched.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  THIS SATISFIES THE PARENT L1's documentation_triggers OF [reference-doc]. It
+  is authored at L3 under GE-123d-4 rather than as a sixth L2 because the L1 is
+  already at the five-child hard cap, and because the boundary AC is the one
+  whose content the reference records. The parent-child link is honest — the
+  reference documents GE-123d-4's lists — so the placement is not a workaround
+  of the cap so much as the correct home for it.
+
+  WHY THE REFERENCE IS PART OF THE FEATURE RATHER THAN A FOLLOW-UP. The
+  reference that documents the scanner's rules is silent today on what is
+  exempt and why. That silence is a direct contributor to the observed cost: the
+  accepted forms are learned by imitation, so an author who is blocked has no
+  way to tell whether their line is a false positive with a known remedy or a
+  genuine finding. Shipping a closed-list exemption without writing the lists
+  down reproduces that.
+
+  THE THIRD SCENARIO IS THE LOAD-BEARING ONE. A reference that lists five
+  locations reads as an example set unless it says otherwise; the next author
+  who wants their directory exempt will add it by analogy. The reference has to
+  say the lists are closed and extended only deliberately, which is the
+  product-owner's positive-rule constraint carried through into prose.
+
+  A HOW-TO WAS DELIBERATELY NOT AUTHORED. The parent L1 triggers reference-doc
+  only. Writing a suppression by hand is a task with a how-to already claimed by
+  GE-123c, and duplicating that guidance here would create two places to keep in
+  step. If the reference addition grows past the section described above, raise
+  a follow-up documentation AC rather than expanding this one.
+
+  IT-PO NOTE, 2026-08-18, on which file and why it is not llm-expert work. The
+  reference is templates/skills/security-scanner/SKILL.md, which already carries
+  the allowlist format, the path-matching rules, the detection-rule table and a
+  false-positive-guidance section — it is the only document that answers "what
+  does this scanner do" in one place, and it is silent on exemption today. The
+  file sits under templates/skills/, a surface usually owned by llm-expert
+  because skill bodies are prompt text; this section is not prompt text but
+  reference documentation about a program's behaviour, so documentation-expert
+  is the correct owner. The ADR-001 obligation is the same either way: the
+  templates/ copy is canonical and the deployed copies are build outputs.

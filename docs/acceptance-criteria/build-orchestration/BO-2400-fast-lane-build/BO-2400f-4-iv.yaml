@@ -1,0 +1,97 @@
+id: BO-2400f-4-iv
+components:
+  - build_orchestration
+  - changelog
+title: "The entry's breaking flag is never guessed: emitted not-breaking and declared undetermined"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run producing a required changelog entry,
+  When the entry is created,
+  Then the entry records the change as not breaking,
+  And the run states, in the pull request it opens, that the breaking flag was not
+    determined by the run and must be confirmed by a human before merge,
+  And that statement is present whatever the built criteria declare, so an unreviewed
+    entry is never mistaken for a reviewed judgement,
+  And the run does not infer the flag from any acceptance-criterion metadata field.
+depends_on: [BO-2400f-4, BO-2400f-4-iii]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/changelog.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_changelog_breaking:
+      type: object
+      description: "The emitted entry always carries breaking false, paired with an explicit undetermined-and-needs-review notice in the PR body. The run performs no inference of breakingness from AC metadata."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Do NOT derive breaking from risk_surface. risk_surface describes where an acceptance criterion sits, not whether a change breaks existing callers. Counter-example verified 2026-08-18: TKT-600a-1 declares risk_surface contract_boundary, yet its change was genuinely non-breaking and its hand-written entry correctly set breaking false. A risk_surface-derived rule would have emitted true for the very run this AC family exists to fix."
+    - "A false positive here is NOT cheap and NOT correctable. scripts/release/compute_next_version.py maps any breaking=true to a MAJOR bump, and release.yml cuts the version tag automatically once the PR merges. A wrong true therefore burns a major version permanently, whereas a wrong false is caught in review while the entry is still an unmerged file in the PR. The asymmetry is what picks the default."
+    - "The undetermined notice must be emitted unconditionally, not only when some heuristic is unsure. A notice that appears sometimes trains reviewers to treat its absence as a determination — which is the silent-constant failure mode in a different costume."
+    - "The covering test must assert BOTH halves: the emitted entry's breaking field is false, AND the PR body carries the undetermined notice. Asserting only the false value cannot distinguish this honest default from an unlabelled hardcoded constant."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-4-iii
+  contract: "The changelog payload the run assembles; this criterion governs its breaking field and the accompanying review notice."
+test_required: true
+test_spec:
+  - name: test_emitted_entry_is_not_breaking
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "The entry the run emits records the change as not breaking."
+  - name: test_pr_body_declares_breaking_undetermined
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "The opened PR states that the breaking flag was not determined by the run and needs human confirmation."
+  - name: test_notice_present_regardless_of_ac_risk_surface
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    description: "Two runs whose built criteria differ only in risk_surface produce the same not-breaking entry and the same notice — the flag is not inferred from AC metadata."
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/build_orchestration/fast_lane.py"
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  An earlier draft of this criterion required breaking to be derived as
+  "any built AC declares risk_surface contract_boundary", on the reasoning that
+  over-reporting is cheap. Both halves were wrong and it was rewritten before any
+  test or code was authored.
+
+  Wrong on accuracy: risk_surface marks the area a criterion touches, not the
+  compatibility of the change made to it. Most contract-boundary work is additive or
+  corrective. TKT-600a-1 is the worked counter-example — contract_boundary, genuinely
+  non-breaking.
+
+  Wrong on cost: a wrongly-true flag auto-cuts a MAJOR release tag on merge and cannot
+  be withdrawn, while a wrongly-false flag sits in the PR diff where review can catch
+  it. And because contract_boundary is common and rarely means breaking, the rule would
+  have produced mostly-wrong trues — which is worse than no signal, because it teaches
+  reviewers to ignore the field.
+
+  The honest position is that the run cannot know. So it emits the recoverable value and
+  says out loud that it did not decide, rather than dressing a guess as a derivation.

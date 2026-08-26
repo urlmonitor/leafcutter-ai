@@ -1,0 +1,152 @@
+id: BP-900g-10-i
+components:
+  - build_pipeline
+title: "A missing rule-declaring file is never replaced by a substitute rule"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+criteria: |
+  Given a guardrail whose verdict is defined by a rule it reads from a declaring file
+    that ships with the install,
+  And that declaring file being absent, unreadable, or unparseable in the install
+    where the guardrail is running,
+  When the guardrail is invoked against input it would otherwise judge,
+  Then it stops and reports that the file defining its rule could not be read, naming
+    the file and the location it looked for,
+  And it judges the input against NO other rule — not one compiled into the
+    guardrail, not a previously bundled default, not a stricter or looser variant,
+    and not the last rule it successfully read,
+  And it emits no per-input findings whatsoever, because a finding produced against a
+    substitute rule reports a violation of something nobody wrote, and reads to its
+    audience as a defect in their input,
+  And the presence of an available substitute is not a reason to use one: a guardrail
+    that HAS a built-in rule to hand is still required to stop,
+  And when the declaring file is present, the guardrail judges the input against it
+    and returns the verdict that file defines, so the fix is not a guardrail that
+    refuses to run.
+
+  Because on 2026-08-18 the AC-schema guardrail found its schema absent in a consumer
+  install, silently substituted a stricter schema compiled into itself, and rejected
+  920 of that consumer's 973 records against an identifier pattern their identifiers
+  had never matched and were never required to match. What the consumer was told was
+  "920 malformed identifiers". What was true was "one file is missing". The document
+  type guardrail, in the same situation, refuses to substitute and says so — that is
+  the behaviour this criterion generalises to every rule-declaring file.
+depends_on:
+  - BP-900g-10
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-10.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_ac_schema.py
+    relationship: modifies
+    status: exists
+    relevance: "The live instance. Substitutes a built-in schema when the declaring schema cannot be resolved, and reports the resulting mismatches as record defects."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "The declaring file whose absence triggers the substitution. Deploying it is BP-900g-8-ii's job, not this AC's."
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: "The correct precedent — refuses to fall back when its type vocabulary is absent. Read it before implementing; the reporting shape it uses is the target, not an invention."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "Error Handling Policy Rule 3. BP-900g-10 already narrows it for REQUIRED dependencies; this AC pins that a rule-declaring file is always REQUIRED, never OPTIONAL, because the guardrail's entire output is defined by it."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-10
+  contract: "The REQUIRED-versus-OPTIONAL dependency classification and the fail-closed load contract. This AC fixes the classification for one kind of dependency — the file that defines the rule — and adds the prohibition on substituting a different rule, which the parent's neutral-default clause does not reach."
+test_spec:
+  - name: test_bp_900g_10_i_absent_declaring_schema_produces_a_stop_and_exactly_zero_per_record_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Invoke the DEPLOYED AC-schema guardrail as a subprocess inside a consumer-layout install with config/ac_store_schema.json ABSENT, against a batch of REAL on-disk AC records taken verbatim from docs/acceptance-criteria/ - not hand-typed fixtures. Assert two things: it reports that the file defining its rule could not be read and names the location it looked for; and the number of per-record findings is EXACTLY ZERO. The zero-findings count is the load-bearing assertion. The live defect reports something too - it reports 920 findings - so a test that asserts only that an error was emitted, or that the exit code was non-zero, is green on the substitution path this AC exists to remove."
+  - name: test_bp_900g_10_i_absent_unreadable_and_unparseable_declaring_files_all_take_the_same_stop_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "All three failure modes the criterion names, through the same deployed entry point and against the same real records: declaring file absent; present but unreadable (permissions removed); present but unparseable (truncated to invalid JSON). Each must stop, name the file and the location, and emit zero per-record findings. Assert all three, not one: a fix scoped to 'the file is missing' leaves the unparseable branch substituting, and the unparseable branch is the one a partially-deployed or truncated install actually produces."
+  - name: test_bp_900g_10_i_the_hook_runner_blocks_and_the_blocker_message_names_the_schema_rather_than_any_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Run the guardrail through the REAL commit-guardian hook runner as a subprocess, in the consumer install, with the declaring schema absent and real AC files staged. Assert non-zero; assert the blocker message names the schema path it could not read; and assert the message does NOT contain the id of any staged record. The negative half is what distinguishes a correct stop from the misdirecting substitute: the harm this AC exists against is not that the guardrail complained, it is that the complaint pointed at 920 records that were never wrong. A message assertion without the does-not-name-a-record half cannot tell the two apart."
+  - name: test_bp_900g_10_i_with_the_declaring_schema_present_the_deployed_guardrail_returns_the_verdict_that_file_defines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The paired positive control, and the second killer of the built-in substitute. Through the same deployed entry point with the schema present: a record the DECLARED schema rejects is rejected, and the report cites the rule from the declaring file; and a large batch of real on-disk records that the declared schema accepts is accepted with zero findings. The second half is the discriminator - if the compiled-in stricter pattern is still consulted anywhere, the real-record batch produces findings and this entry goes red. It is also the only entry that would catch the fix being satisfied by a guardrail that simply refuses to run."
+test_rationale: |
+  A substitute rule is not a neutral default and that is exactly why the parent AC's
+  wording does not reach it. It is loud, specific and confident: it produces 920
+  findings that appear to explain themselves. Every conventional shape of test for a
+  fail-closed contract — assert an error was raised, assert a warning was logged,
+  assert a non-zero exit — is green on the substitution path, because the substitution
+  path does all three. The only assertion the defect cannot survive is a count: zero
+  per-input findings. That count is therefore the spine of entries 1 and 2, and its
+  mirror in entry 3 is the assertion that no record id appears in the blocker message.
+
+  Entry 4 is the control that stops the fix in both directions. Without its
+  real-records half, a guardrail that quietly kept its built-in schema as a secondary
+  check would stay green; without its rejected-record half, a guardrail that simply
+  refuses to run would stay green, and the criterion explicitly says the fix is not
+  that. Feeding it real on-disk AC records rather than hand-built dicts matters for the
+  same reason it mattered in EPIC-ComputedQualityGates FP-1 layer 2 — a fixture the
+  test author typed reproduces the author's model of the format, and the 920 rejected
+  identifiers were real identifiers in the real store's shape.
+
+  Every entry runs the DEPLOYED guardrail as a subprocess rather than importing the
+  check function. In the package's own repository the schema resolves, so the
+  substitution branch is unreachable from a source-tree import and a direct-import test
+  is structurally incapable of exercising it. That is the same construction blindness
+  recorded for BP-811 and done_proof.py.
+
+  Angles: criterion, failure, reachability, deployed — at the cap of four, with
+  must_block riding entry 3.
+origin_agent: business-analyst
+created: 2026-08-18
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT ALREADY COVERED BY BP-900g-10. The parent forbids continuing with a
+  NEUTRAL default — an empty mapping, an empty list, a passthrough — on the grounds
+  that a neutral default is indistinguishable from a correct result. A substitute rule
+  is the opposite shape and slips straight past that wording: it is not neutral, it is
+  not empty, and it is emphatically distinguishable from a correct result. It produces
+  a large, confident, specific set of findings. That is what makes it worse than the
+  neutral case, not better — nobody investigates an empty result for half a day, and
+  920 findings command immediate attention and point in the wrong direction.
+
+  THE MISDIRECTION IS THE HARM, and it is what the criterion is written to prevent.
+  Rank the two failures by what they cost the reader: a guardrail that stops costs one
+  lookup of a filename. A guardrail that substitutes costs an investigation of 920
+  records that were never wrong, and ends with a consumer editing their identifiers to
+  satisfy a rule that does not apply to them. The second outcome is reachable from the
+  first only by an implementation that treats "I have something to fall back on" as
+  permission.
+
+  ONE FURTHER TRAP. Reporting the substitution as a warning and then proceeding does
+  not satisfy this criterion. The parent already establishes why — a warning into a
+  transcript carrying hundreds of lines is observationally equivalent to silence — and
+  here the warning would be printed immediately above 920 findings that appear to
+  explain themselves.

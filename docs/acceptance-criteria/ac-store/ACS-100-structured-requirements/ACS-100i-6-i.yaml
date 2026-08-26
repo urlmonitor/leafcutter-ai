@@ -1,0 +1,68 @@
+id: ACS-100i-6-i
+components:
+  - ac_store
+title: "A record that declares a package surface but omits any of the five spec fields is still refused, and the refusal names each field it is missing"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record carrying `package_surface: true` whose implementation
+    requirements are a structured object supplying the config-schema fragment,
+    the reference-file path and the required-skills list, but omitting both the
+    N-location rule and the post-write commands,
+  When the AC-record validator evaluates it,
+  Then the record is refused,
+  And the refusal names the N-location rule and the post-write commands as the
+    missing fields,
+  And the refusal does not name the three fields that were supplied.
+
+  And given the same record with all five fields supplied — the config-schema
+    fragment, the reference-file path, the N-location rule, the required-skills
+    list and the post-write commands —
+  When it is validated,
+  Then it is accepted.
+
+  And given a record that does NOT carry `package_surface: true` but whose
+    implementation requirements are nevertheless a structured object missing the
+    N-location rule,
+  When it is validated,
+  Then it is still refused for the missing field — the object form is held to
+    its full shape whatever the declaration says, so narrowing the trigger
+    cannot become a way to file a half-populated structured spec.
+depends_on: [ACS-100i-6]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: config/ac_store_schema.json
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-6
+  contract: "The declaration-keyed trigger whose 'then' branch this criterion asserts still bites."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  This is the criterion that distinguishes "narrowed" from "switched off". The
+  third scenario is the load-bearing one: at 9b16d013 the object branch of
+  `it_requirements` already carries its own `required` list of all five fields,
+  so a half-populated object is refused today regardless of the top-level
+  if/then. That behaviour must survive the change untouched. If the
+  implementation reaches the narrowing by loosening the object branch instead of
+  by narrowing the `if`, this scenario fails.

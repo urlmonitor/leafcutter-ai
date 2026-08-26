@@ -2,10 +2,13 @@
 description: |
   Runs the knowledge-emission harvester for a worktree. Reads unprocessed
   knowledge_captured events from debugging/logs/knowledge_emissions.jsonl
-  (per ADR-011), routes each to the correct knowledge surface via the
-  capture-learning write protocol, marks events as processed, and reports
-  a summary. Invoked by ticket-supervisor or by the user after a batch of
-  phase agents have signed off.
+  (per ADR-011) and routes each to the correct knowledge surface via the
+  capture-learning write protocol. A routed event is marked processed so
+  re-runs are idempotent; an event whose entry_kind is unrecognised is left
+  UNMARKED and retained for a later run rather than dropped (INF-400c-2-ii).
+  Reports a summary distinguishing routed from unroutable counts. Invoked by
+  ticket-supervisor or by the user after a batch of phase agents have signed
+  off.
 model: sonnet
 name: knowledge-harvester
 tools: Bash, Read
@@ -32,9 +35,18 @@ outputs:
   name: completion_report
   type: structured_response
 mutates:
-- description: Read-only agent — no filesystem mutations
-  name: none
-  surface: none
+- description: 'The agent has no Edit/Write tool itself, but the
+    harvest_learnings.py script it runs via Bash appends each routed
+    event''s learning text to the destination file named in that event.'
+  name: knowledge_surface_files
+  surface: destination path named in each knowledge_captured event
+- description: 'The script rewrites the idempotency state file with the
+    updated set of processed-event hashes after each non-dry-run pass.
+    Unroutable events are deliberately excluded from this file so they
+    remain retryable on a later run (INF-400c-2-ii) — this is not a
+    read-only agent.'
+  name: harvest_state_file
+  surface: debugging/logs/harvest_state.json
 behavioral_patterns:
 - behavior: 'Stop and ask the user when:
 
@@ -66,9 +78,15 @@ Phase agents emit `knowledge_captured` events to
 the sink until this agent runs. Running the harvester:
 
 1. Reads every unprocessed event from the sink.
-2. Routes each event's learning text to the destination file named in the event.
-3. Marks processed events so re-runs are idempotent.
-4. Prints a summary line: `"N learnings routed: K1 kind1, K2 kind2 (M previously processed)"`.
+2. Routes each routable event's learning text to the destination file named
+   in the event, then marks that event processed so re-runs are idempotent.
+3. Leaves an event whose `entry_kind` is unrecognised UNMARKED — it is
+   retained in the sink and will be re-read on a later run once the routing
+   rules cover that `entry_kind` (INF-400c-2-ii). It is never silently
+   dropped.
+4. Prints a one-line summary. See "Interpreting the Output" below for the
+   exact format and the exit-code table — do not rely on an older format
+   remembered from elsewhere in this file.
 
 This agent does NOT sign off on any ticket. It is a post-processing step.
 
@@ -119,17 +137,55 @@ python3 scripts/knowledge/harvest_learnings.py --sink debugging/logs/knowledge_e
 The harvester prints one summary line when complete:
 
 ```
-N learnings routed: K1 kind1, K2 kind2 (M previously processed)
+N learnings routed: K1 kind1, K2 kind2 (M previously processed); P unroutable: K3 kind3, K4 kind4; Q write failures: K5 kind5; state NOT persisted (N routed learnings will be re-applied on the next run)
 ```
 
 - `N learnings routed` — number of new knowledge events written to surfaces.
 - `K1 kind1` — breakdown by entry_kind (e.g. `1 memory-project, 1 per-folder-readme`).
 - `M previously processed` — events skipped because they were already handled.
+- `P unroutable` — events the harvester could not route, with a count per
+  distinct `entry_kind`. **This segment appears only when P is nonzero.**
+- `Q write failures` — events whose destination write raised an I/O error,
+  with a count per distinct `entry_kind`. Like unroutable events, these are
+  **retained**, not dropped: the next run retries them.
+- `state NOT persisted` — the run wrote its learnings but could not save the
+  idempotency record, so **the next run will route them again and append each
+  learning to its destination a second time**. Report this as a duplication
+  risk, never as a clean run.
 
-If a warning appears for an unrecognised `entry_kind`, note the kind name and
-the destination path — the learning was not written but the event is marked
-processed (it will not be retried on the next run). Surface this to the user
-if the entry_kind should have been routed but was not recognised.
+Each trailing segment appears only when the condition it reports is present.
+
+Read the exit code, not just the summary:
+
+| Exit | Meaning |
+|------|---------|
+| `0` | Drained cleanly — nothing left behind. |
+| `1` | Sink file not found or unreadable. |
+| `2` | State file exists but cannot be parsed (corrupted). |
+| `3` | Drained, but unroutable events remain. Not a failure — see below. |
+| `4` | **The run was not clean**: a destination write failed, and/or the state file could not be persisted. Outranks `3` — a broken run needs attention before a retained backlog does. |
+
+**A run where every write failed still prints `0 learnings routed: none`.**
+That text alone is indistinguishable from a run that had nothing to do, so
+the `Q write failures` segment and exit `4` are the only things that tell
+them apart. Never report exit `4` as success.
+
+**An unroutable event is retained, not dropped (INF-400c-2-ii).** When a
+warning appears for an unrecognised `entry_kind`, the learning was not written
+**and the event was deliberately NOT added to the idempotency record** — so a
+later run reads it again. Nothing is lost. Once the routing rules are extended
+to cover that kind, re-running the harvester over the same sink routes the
+previously unroutable events.
+
+Report this accurately. Do **not** tell the user that unroutable events were
+skipped, dropped, or will not be retried — that was the pre-2026-08-25 behaviour
+and it is exactly what `INF-400c-2-ii` changed. Saying so would misreport a
+recoverable backlog as permanent data loss.
+
+`0 learnings routed` with a nonzero unroutable count is the expected shape when
+the emitters' vocabulary has drifted from the harvester's. It means "nothing
+*could* be routed", which is a different statement from "there was nothing to
+route" — exit code 3 vs 0 is what distinguishes them.
 
 ## Stop-and-Ask Rule
 
@@ -140,7 +196,10 @@ Stop and ask the user when:
   emitting to the correct sink path.
 - A `WARNING: Unrecognised entry_kind` line appears for an `entry_kind` that
   looks intentional (not a typo). Ask whether the kind should be added to
-  `_KNOWN_ENTRY_KINDS` in `harvest_learnings.py`.
+  `_KNOWN_ENTRY_KINDS` in `harvest_learnings.py`. State clearly that the
+  affected events are still in the sink and will route once the kind is
+  recognised — the question is about extending the vocabulary, not about
+  recovering lost data.
 - The summary shows `0 learnings routed` and `0 previously processed` after
   multiple phase agents have signed off. This may indicate that no agent
   answered "yes" to the knowledge-capture prompt in signoff §7, or that events
@@ -154,9 +213,13 @@ After running the harvester, emit a brief report:
 ## Knowledge Harvest Complete
 
 - Summary: <one-line output from the script>
+- Exit code: <0 clean | 3 unroutable events retained | 4 write and/or state failure | 1 sink missing | 2 state corrupt>
 - Sink path: debugging/logs/knowledge_emissions.jsonl
 - State path: debugging/logs/harvest_state.json
 - Warnings: <any WARNING lines from the run, or "none">
+- Retained for a later run: <count and per-kind breakdown when exit is 3, else "none">
+- Failed writes: <count and per-kind breakdown when exit is 4, else "none">
+- Duplication risk: <"yes — state was not persisted, the next run will re-append this run's learnings" when the summary says state NOT persisted, else "no">
 ```
 
 ## Constraints
@@ -173,3 +236,34 @@ DECISION HISTORY
 - 2026-06-05 14:25 [llm-expert]: Created knowledge-harvester agent template.
   Wraps scripts/knowledge/harvest_learnings.py (ADR-011). Standalone (no signoff),
   invoked post-batch by user or supervisor. (#EPIC-AgentLearningLoop/01)
+- 2026-08-25 22:47 [claude]: Realigned "Interpreting the Output" with the
+  INF-400c-2-ii behaviour change in the same diff. The template previously told
+  the operating agent that an unroutable event "is marked processed (it will not
+  be retried on the next run)" — now the exact opposite of what the script does.
+  An agent following it would have reported a recoverable backlog as permanent
+  data loss, which is the precise misreport INF-400c-2-ii exists to prevent.
+  Added the `; P unroutable: ...` summary segment, the exit-code table (3 = drained
+  with events retained, distinct from 0), the retained-not-dropped rule, and the
+  "0 routed + nonzero unroutable" reading. Caught by pr-reviewer during the
+  /fast-lane-build run for this AC, which halted the run rather than shipping the
+  code with its operator documentation inverted. (#INF-400c-2-ii)
+- 2026-08-26 [llm-expert]: Completed the INF-400c-2-ii documentation correction that
+  the 2026-08-25 22:47 pass left half-finished. That pass rewrote only "Interpreting
+  the Output" and left five other contradictions asserting the pre-change,
+  mark-processed-and-drop behaviour: (1) the frontmatter `description:` said the
+  agent "marks events as processed" with no qualification — the exact inverse of the
+  contract for unroutable events, and the field a dispatching model reads first; (2)
+  the frontmatter `mutates:` block asserted "Read-only agent — no filesystem
+  mutations", which is flatly false (the script writes knowledge surface files and
+  the state file, even though the agent's own tool list — Bash, Read — has no
+  Edit/Write); (3)-(4) the `## Context` numbered list still said unroutable events
+  are silently skipped and repeated a stale, pre-INF-400c-2-ii summary-line format
+  that omitted the unroutable segment entirely. Rewrote all four to match
+  `harvest_learnings.py` as actually merged in PR #571, and pointed the Context
+  list at "Interpreting the Output" for the summary format instead of duplicating it
+  a second time (duplication is exactly how the file drifted last time). Also
+  hand-edited `docs/agents/cards/knowledge-harvester.card.md` to match — the card is
+  generated purely from this template's frontmatter (`generate_agent_cards.py`), so
+  running the full build pipeline was avoidable and, in this workspace, risky
+  per CLAUDE.md's KI-BP-016 note; a hand-edit was the narrower fix.
+  (#INF-400c-2-ii)

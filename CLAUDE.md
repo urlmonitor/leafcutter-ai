@@ -463,16 +463,38 @@ run. 23 `submit-failed` events occurred without detection — the drive complete
 telemetry was captured, making the retrospective impossible.
 (Root cause ticket: TICKET-20260527-FeedbackSinkPreDriveCheck)
 
-**Also verify `feedback_categories.yaml` is accessible.** The `submit_feedback.py` script requires this file in the worktree's `.leafcutter/` directory. When absent, all agent feedback calls fail silently with `(submit-failed)`, making the retrospective's quantitative category breakdown unavailable.
+**Also verify `feedback_categories.yaml` is accessible.** The `submit_feedback.py` script requires this file. When it cannot be read, agent feedback calls fail with `(submit-failed)`, making the retrospective's quantitative category breakdown unavailable.
 
-Check:
+It is deployed under `config/`, **not** at the root of `.leafcutter/`:
+
 ```
-ls <worktree-root>/.leafcutter/feedback_categories.yaml
+ls <worktree-root>/.leafcutter/config/feedback_categories.yaml
 ```
+
 If the command fails (`No such file or directory`), the file is missing.
 
-Fix: symlink or copy from the main tree's `.leafcutter/` alongside the `.pre-commit-config.yaml` fix in the section below.
-(Source: EPIC-ComputedQualityGates FP-5, 2026-07-07.)
+Fix: **do not** reach for `python scripts/build.py --target-dir <workspace-root>` here. That
+command is the subject of KI-BP-016 (severity high, filed the same day this line was added):
+when `docs_root` points into a subdirectory — as it does in this workspace, where
+`.claude/skills_config.json` sets `docs_root: "leafcutter-ai/docs/"` — the doc-index phase
+scans `<target_root>/docs`, finds nothing, and overwrites the tracked `docs/INDEX.md` with a
+nine-section `No docs found.` stub. It also deploys a worktree's unmerged templates over the
+shared `.leafcutter` install tree, which is a second and quieter way to lose work.
+
+Prefer the symlink instead — point the worktree's `.leafcutter` at the main tree's, alongside
+the `.pre-commit-config.yaml` fix in the section below. If you do run the build, run
+`git status` immediately afterwards and look at `docs/INDEX.md` before staging anything: a
+`git add -A` after an affected build silently commits a ~175-line deletion of the very index
+this file points agents at for doc discovery.
+
+Caveat on the symlink, so it is chosen with eyes open: a symlinked `scripts/feedback` makes
+`submit_feedback.py` resolve `__file__` through the link, so its walk-up for `.claude/` lands
+in the **install tree** and feedback is written to the install tree's
+`debugging/logs/feedback.jsonl` rather than the worktree's. See KI-BP-017 and KI-FC-001 — the
+sink still works, it is just not where you will look for it.
+
+**The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
+(Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)
 
 ### Worktree pre-commit config (MANDATORY for worktree-based drives)
 
@@ -685,19 +707,26 @@ serial per-commit hook cascade — child-limit caps, missing parent `covered_by`
 and schema-invalid fields (e.g. a list-valued `test_rationale` that must be a string):
 
 ```bash
-find docs/acceptance-criteria/<component> -name "*.yaml" -exec python scripts/ac_store/validate_ac_schema.py {} +
+python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>
 ```
 
-**Do NOT pass a bare directory.** `validate_ac_schema.py` takes file paths and does no
-globbing of its own. Given a directory it prints `No YAML files to validate.` and **exits
-0** — a success-shaped result from a run that checked nothing. This instruction previously
-prescribed the bare-directory form, so the documented defence against store rot was itself
-a no-op from 2026-08-10 until 2026-08-18.
+A directory argument is walked **recursively**, so this reaches AC YAML at every depth —
+records directly under a component directory and records inside a feature folder alike.
+`index.yaml` is skipped, being the component registry rather than an acceptance criterion.
 
-Use `find -exec` rather than a shell glob: AC YAML sits at more than one depth (some files
-are directly under `docs/acceptance-criteria/`), so a fixed-depth pattern like `*/*.yaml`
-silently skips whole directories — the same failure in a smaller costume. Before believing
-a pass, confirm the command actually named some files.
+A run that resolves to **zero** files now **exits non-zero**. That matters more than it
+sounds: until 2026-08-19 the script did no globbing of its own, so a bare directory matched
+nothing, printed `No YAML files to validate.` and exited **0** — a success-shaped result
+from a run that checked nothing. This very instruction prescribed the bare-directory form
+from 2026-08-10 until 2026-08-18, so the documented defence against store rot was itself a
+no-op for eight days, and reported clean the whole time.
+
+Two habits survive the fix, because they are about *your* command rather than the script:
+
+- Avoid a fixed-depth shell glob like `*/*.yaml` — it silently skips whole directories.
+  Pass the directory and let the script walk it, or use `find -exec`.
+- Before believing a pass, confirm the run actually named some files. `OK: all N ... valid`
+  states N for exactly this reason.
 
 (Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10; bare-directory no-op found
-2026-08-18.)
+2026-08-18, fixed 2026-08-19 — KI-ACS-001.)

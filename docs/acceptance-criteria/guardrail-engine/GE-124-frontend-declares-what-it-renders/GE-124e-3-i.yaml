@@ -1,0 +1,122 @@
+id: GE-124e-3-i
+readiness: approved
+priority: high
+title: "The declaration gate and the test-proof gate fail independently on the same criterion"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+criteria: |
+  Given a finished user-interface criterion that nothing on screen claims and
+    that no test asserts
+  When both the reverse-direction declaration gate and the existing test-proof
+    gate run
+  Then two separate failures are reported for that criterion
+  And each names which obligation was unmet — nothing claims it, and nothing
+    proves it
+  And neither failure is suppressed by the presence of the other
+
+  Given a finished user-interface criterion that is declared on screen and that
+    no test asserts
+  When both gates run
+  Then the reverse-direction declaration gate passes for that criterion
+  And the test-proof gate still fails for that criterion
+
+  Given a finished user-interface criterion that a test asserts and that nothing
+    on screen claims
+  When both gates run
+  Then the test-proof gate passes for that criterion
+  And the reverse-direction declaration gate still fails for that criterion
+depends_on:
+  - GE-124e-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "TWO SEPARATE CI JOBS OR TWO SEPARATE INVOCATIONS, NEITHER READING THE OTHER'S RESULT. check_ui_ac_declared.py and check_done_proof.py must have no data path between them: no shared verdict cache, no 'skip if the other already failed' short-circuit, no combined exit-code aggregation that lets one satisfy the other. The composition is ADDITION, never substitution — both must hold."
+  - "DO NOT EXTEND check_done_proof.py TO ALSO CHECK DECLARATIONS. Folding the declaration obligation into the existing done-proof gate is the shortest path to 'one failure per criterion' and it is exactly the substitution GE-124g forbids: whichever obligation is checked first would then be able to short-circuit the other. Two gates, side by side."
+  - "THEY MAY SHARE READ-ONLY INFRASTRUCTURE — the AC index (GE-124c-2-i) and the store path — but nothing that carries a VERDICT. Sharing the index is desirable (one walker); sharing a result is the defect."
+  - "BOTH FAILURES MUST BE VISIBLE IN ONE RUN, not one-at-a-time. If the two jobs are separate CI jobs, both must run on the same commit rather than the second being gated on the first passing; a reviewer must see both obligations at once or they will fix one, re-push, and discover the other."
+  - "EACH FAILURE NAMES ITS OWN OBLIGATION IN ITS OWN VOCABULARY: 'nothing claims it' for the declaration gate, 'nothing proves it' for the test-proof gate. Identical or near-identical wording is how a reader concludes they are two reports of one problem and dismisses one."
+delivers_to: null
+expects_from:
+  ac_id: GE-124e-3
+  contract: "The reverse-direction finding whose independence from the test-proof verdict this edge case fixes — no shared verdict path with check_done_proof.py in either direction"
+test_spec:
+  - name: test_ge_124e_3_i_declared_but_untested_criterion_fails_only_the_test_proof_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run both real gates over one fixture where the criterion is declared on screen and has no covering test: the declaration gate passes, check_done_proof fails. Run both as subprocesses over the same store and test tree — this is a composition claim about two real programs and cannot be asserted in process."
+  - name: test_ge_124e_3_i_tested_but_undeclared_criterion_fails_only_the_declaration_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The mirror case: a covering test exists, nothing on screen claims it. check_done_proof passes, the declaration gate fails. The two half-finished states fail in OPPOSITE gates, and an implementation that wires them together passes one of these two and quietly fixes the other."
+  - name: test_ge_124e_3_i_criterion_failing_both_produces_two_findings_naming_different_obligations
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Neither declared nor tested: two findings for the same criterion id from the two gates, with distinct messages — one naming that nothing claims it, one that nothing proves it. Assert both are present and that neither suppressed the other."
+  - name: test_ge_124e_3_i_neither_gate_reads_the_other_s_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Force check_done_proof to PASS for a criterion (give it a covering test) and independently force the declaration gate's evidence to be absent, then assert the declaration gate still fails — and the symmetric case. Any short-circuit or shared verdict cache makes one of the two pass. This is the behavioural form of 'no data path between them'."
+test_rationale: |
+  Every claim in this AC is about the relationship between two real programs, so every test runs
+  both of them as subprocesses over one fixture; an in-process assertion about two functions
+  cannot show that two CI gates compose by addition. The second and third scenarios are written
+  as separate tests deliberately because they fail in OPPOSITE gates — an implementation that
+  wires the two together will pass one of them, and a single combined test would let that
+  through. The fourth test is the one with teeth: it forces each gate's inputs independently and
+  asserts the other is unmoved, which is the only way to detect a short-circuit that happens to
+  agree with the expected verdict on ordinary fixtures.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Forbade extending check_done_proof.py to also check declarations (the shortest path to one-failure-per-criterion and the exact substitution GE-124g forbids), allowed shared read-only infrastructure but no shared verdict, required both jobs to run on the same commit rather than one gating the other, and added the force-each-input-independently test that actually detects a short-circuit. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE COMPOSITION QUESTION the PO asked for: where the two gates would report on
+  the same criterion, say how they compose rather than leaving a reviewer with
+  two unrelated failures. The answer is that they compose by ADDITION and never
+  by substitution — both must hold.
+
+  The second and third scenarios are the two half-finished states the PO
+  describes as equally unfinished: declared but untested, and tested but
+  undeclared. They are written as separate scenarios because they fail in
+  opposite gates, and an implementation that wires the two gates together will
+  pass one of them and quietly fix the other.
+
+  This L3 is the enforcement side of GE-124g-2, which owns the guarantee. It
+  lives here as well because GE-124e is where the mistake would actually be
+  made — a gate author looking for a way to avoid two failures on one criterion
+  is one refactor away from making one gate satisfy the other.
+
+  IT-PO NOTE (2026-08-25). The concrete temptation is specific and worth naming:
+  check_done_proof.py already walks every done AC and already has a --mode
+  ci-changed surface. Adding a declaration check to it would be a small diff and
+  would produce one tidy failure per criterion. That is the defect. Two gates.

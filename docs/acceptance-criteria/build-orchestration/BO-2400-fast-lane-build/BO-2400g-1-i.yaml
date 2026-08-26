@@ -29,7 +29,7 @@ doc_links:
     status: exists
     relevance: "resolve_connected_build_set (line 498) is what turns one named id into the connected set — the subtree plus unmet prerequisites, readiness-agnostic. The resolved set is the lane's only notion of 'the work', and it is exposed to the workflow as batchIds."
   - path: templates/workflows-js/fast-lane-ship.js
-    relationship: describes
+    relationship: modifies
     status: exists
     relevance: "The Resolve and Claim phases run before Test Writer (line 327), so the full resolved set is already known at the moment the test-writing instructions are composed. There is no ordering excuse for asking only about the named id."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-1.yaml

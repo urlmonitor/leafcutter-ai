@@ -1,0 +1,75 @@
+id: BO-100e-1
+title: "A four-deep chain of prerequisites is carried to the end by one start, in prerequisite order"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a body of work of four pieces present in the set before the run begins,
+    And piece A carries no prerequisite,
+    And piece B's only prerequisite is A, piece C's only prerequisite is B, and
+      piece D's only prerequisite is C, so the four form a single chain four layers
+      deep and only A is eligible at the moment the run starts,
+  When the run is started once and left to run to its own end, with no further
+    instruction given to it,
+  Then all four pieces are built within that one run,
+    And B is not begun before A has finished successfully, C not before B, and D
+      not before C,
+    And the run ends having built the whole chain rather than only A,
+  So the depth of the chain changes how long the run takes and not how many times
+    it has to be started.
+
+  Given the same four-piece chain,
+  When the run is started once,
+  Then the eligibility of B, C and D is decided more than once during that run,
+    each time against what has finished by that moment rather than against what had
+    finished when the run began,
+    And this is established by observing the later pieces actually being taken on
+      during the run, not by observing that a decision was made.
+
+  Given a body of work of four pieces in which none carries any prerequisite,
+  When the run is started once,
+  Then all four are built, and the run does not take longer than a run over four
+    pieces needs to, so carrying the chain case has not made the flat case slower
+    by forcing it through layers it does not have.
+depends_on:
+  - BO-100e
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 — the run that built 17 of 37 pieces, where the 20 unbuilt were exactly those carrying a prerequisite. The chain, not the fan-out, is the case that failed."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "Where the planning step and the batch loop that consumes its output are defined; the topology this criterion changes."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-100e-1-i
+implemented_by: []
+notes: |
+  THE CHAIN IS THE LOAD-BEARING SHAPE, per BO-100e's decomposition warning. A
+  scenario in which everything is eligible at the start passes on today's behaviour
+  and proves nothing, which is why the third scenario here is a control rather than
+  the main case: it exists only so the fix cannot be "ignore prerequisites entirely".
+
+  VERIFY BY EXECUTION. Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not
+  by Grep", finding a repeated eligibility decision in the source cannot tell whether
+  its answer is ever used. The proof is the later layers being taken on in a real
+  drive over a real four-piece chain.
+
+  Ordering is on SUCCESSFUL completion, not on the earlier piece's attempt ending;
+  that distinction is BO-100e-1-i and is deliberately not restated here.

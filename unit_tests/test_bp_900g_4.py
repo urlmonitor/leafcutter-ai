@@ -24,11 +24,13 @@ ARCHITECTURE: Two tiers, deliberately. The extractor tests are unit-level and pi
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Path setup — make scripts/ importable regardless of working directory.
@@ -39,8 +41,32 @@ _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-import build as _build  # noqa: E402 — after sys.path setup
 import build_referential_integrity as _bri  # noqa: E402 — after sys.path setup
+
+
+def _load_build_module() -> Any:
+    """Load scripts/build.py by path rather than ``import build``.
+
+    ``scripts/build.py`` shares its module name with the installed PyPI
+    ``build`` package (the PEP 517 build frontend). At runtime the
+    ``sys.path.insert(0, ...)`` above makes the local script win, but mypy's
+    static import resolution does not execute that sys.path mutation — it
+    resolved ``import build`` to the installed package instead, so
+    ``_build.main`` / ``_build._get_source_deployable_scripts`` looked like
+    attribute errors against a module that never had them. Loading by path
+    sidesteps the name collision entirely (and removes a real runtime
+    footgun: this test no longer depends on sys.path ordering to avoid
+    silently exercising the wrong package).
+    """
+    build_py_path = _SCRIPTS_DIR / "build.py"
+    spec = importlib.util.spec_from_file_location("scripts_build_under_test", build_py_path)
+    assert spec is not None and spec.loader is not None, f"could not load spec for {build_py_path}"
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_build = _load_build_module()
 
 def _deployed_invoke_re(output_root_name: str) -> re.Pattern[str]:
     """Build the invocation matcher for a specific deployed output root.

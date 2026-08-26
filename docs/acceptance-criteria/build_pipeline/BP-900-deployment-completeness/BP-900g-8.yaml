@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
 criteria: |
   Given any script the build deploys into a consumer install,
@@ -82,6 +82,7 @@ doc_links:
     relevance: "IT-PO ADDITION. 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest' is the prose statement of this defect after the done_proof.py incident. It records the rule as a convention for humans to remember, which is precisely what this AC replaces with a mechanism — the convention was written and the fourth instance still shipped."
 assigned_agent: python-coder
 estimated_complexity: L
+declares_side_effect: true
 it_requirements:
   reference_file_path: "scripts/build_phases.py"
   n_location_rule: "all"
@@ -202,7 +203,13 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-900g-8-i
-implemented_by: []
+  - BP-900g-8-ii
+  - BP-900g-8-iii
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-900g-8.md
+- scripts/build.py
+- scripts/build_phases.py
+- scripts/build_referential_integrity.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

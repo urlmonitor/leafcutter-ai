@@ -178,6 +178,8 @@ flowchart TD
 - ACD-1900g-4: How-to guide covers the dogfood proof and the go/no-go checklist
 - ACD-2000a-4: Reference doc describes the requirement's adjudication trail and its retry budget
 - ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
+- ACD-2100d-4: A reference page states which copy of the route runs and where a repair has to land
+- ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
 - ACS-1200a-3: The written back-link rule matches the enforced one
 - ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
 - ACS-500g-2-ii: A how-to guide walks a reader from a noticed repetition to a referenced pattern
@@ -209,6 +211,7 @@ flowchart TD
 - BO-2500b-4: How-to: local pre-commit proof-of-done feedback and the required CI gate
 - BO-2500c-4: How-to: author real-artifact fixtures and round-trip tests
 - BO-2500c-5: Reference: fixture policy and real-producer fixture rules
+- BO-2600b-3: How-to: what a fast-lane run picks up when you aim it at one criterion
 - BO-2900a-4: How-to: prove a criterion done through the real way in, and what to do when the guard refuses
 - BO-2900b-4: How-to: keep capabilities and their automation connected in both directions
 - BO-2900c-3: How-to: the reverse-direction content of the connection guide — stale calls, renames and removals
@@ -221,7 +224,9 @@ flowchart TD
 - BP-100b-10: Drift hook docs include a developer checklist for adding new template categories
 - BP-100b-8: Build pipeline diagram includes the workflow scripts phase
 - BP-100b-9: Consolidated output root doc lists .claude/workflows/ as a shimmed output
+- BP-1100a-5: The guidance on getting a generated ticket's surface right describes the derivation that actually runs
 - BP-1200a-2: The CI test command is documented as the single authoritative way to run the suite from a clean checkout
+- BP-1500d-5: The published reference tells an adopter where their record lives and how to tell an inert check from a passing one
 - BP-200c-4: Agents README documents llm-expert in the phase agents table
 - BP-300a-7: debug.md falls back to prose skill for older Claude Code runtimes
 - BP-300a-8: SKILL.md contains supersession note for debug.js
@@ -234,6 +239,7 @@ flowchart TD
 - BP-800d-4: How-to guide for legacy agent retirement
 - BP-800e-4: How-to guide for upgrading from legacy agent layout
 - BP-800f-4: Reference documentation for database paradigm support
+- BP-900g-8-iii: The written deploy-dependency rule names data and configuration files, not only imported modules
 - CR-100a-4: Reference doc: the code-smell finding anatomy and named catalogue
 - CR-100d-3: Reference doc: severity rubric and consolidated report format
 - CR-100e-2: How-to guide: running /code-smell-review on a file, folder, or snippet
@@ -259,6 +265,16 @@ flowchart TD
 - GE-122b-4: Which locations must carry a number, and which need not, is written down
 - GE-122c-3: A person blocked where nobody can be brought in has a procedure to follow
 - GE-122d-5: Which stage you can skip, and what still catches you, is written down
+- GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
+- GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
+- GE-123c-4: Someone writing their first suppression can find out how to write one instead of copying a neighbouring line
+- GE-124a-4: A how-to shows where the declaration goes in each front-end file shape
+- GE-124b-4: A how-to shows an author how to pin one element to one criterion
+- GE-124b-5: One reference doc holds the data-ac contract for all of its consumers
+- GE-124c-4: A how-to tells a blocked author which of the two mistakes they made and how to clear it
+- GE-124d-4: A how-to shows how to record an opt-out and how an area gets onto the warn list
+- GE-124e-5: A how-to separates 'nothing claims this' from 'nothing proves this' for the person who hit the gate
+- GE-124g-5: A reference doc states what each kind of evidence is worth, for every future check
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface

@@ -31,11 +31,36 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Must follow the existing build phase function pattern in build_phases.py"
-  - "Shim installation must use the same mechanism as build_helpers.py (symlinks at {target}/scripts/ pointing to .leafcutter/scripts/)"
-  - "Deployed files must be byte-identical to sources — no transformation or interpolation"
-  - "Build must be idempotent — re-running with the same inputs produces the same output"
-  - "Must handle file I/O errors gracefully per the project error handling policy"
+  config_schema_fragment: null
+  reference_file_path: scripts/build_phases.py
+  n_location_rule: "2 — the standalone-script deploy list and the shim-install list"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "Must follow the existing build phase function pattern in build_phases.py"
+    - "Shim installation must use the same mechanism as build_helpers.py (symlinks at {target}/scripts/ pointing to .leafcutter/scripts/)"
+    - "Deployed files must be byte-identical to sources — no transformation or interpolation"
+    - "Build must be idempotent — re-running with the same inputs produces the same output"
+    - "Must handle file I/O errors gracefully per the project error handling policy"
+  notes: |
+    Shim targets must be RELATIVE, not absolute local paths — BP-016 and BP-017
+    (commits 47fb660ff, 9bf606c28) both fixed regressions where build-shim
+    symlinks pointed at absolute developer-machine paths and so broke in any
+    consumer install. Verify the created symlink target is relative before
+    signing off.
+test_spec:
+  - name: test_standalone_scripts_are_deployed_to_output_root
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "After a real build, goal_to_epic.py and build_ac_mode_detection.py exist under the deployed output root's scripts/ directory."
+  - name: test_standalone_script_shims_resolve_to_the_deployed_copy
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    description: "The shims at {target}/scripts/ resolve to the deployed copies and their symlink targets are relative, not absolute."
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
