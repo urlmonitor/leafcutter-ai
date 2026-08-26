@@ -35,6 +35,11 @@ Exit codes
     per-entry_kind breakdown). Distinct from 0 so a caller cannot mistake a
     run that routed nothing because there was unroutable input for a run
     that had nothing to route.
+4   The run was not clean: at least one destination write failed, and/or the
+    state file could not be persisted. Outranks 3 -- a broken run is more
+    urgent than a retained backlog. Both conditions leave the affected events
+    retryable, but a state-persist failure additionally means the learnings
+    routed by this run WILL be routed (and re-appended) again next run.
 """
 
 from __future__ import annotations
@@ -65,15 +70,27 @@ class HarvestResult:
     skipped_unknown: int = 0
     by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
     unroutable_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
+    write_failures: int = 0
+    failed_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
+    state_persist_failed: bool = False
 
     def summary(self) -> str:
         """Return the human-readable one-line summary.
 
         Format: ``"N learnings routed: K1 kind1, K2 kind2 (M previously
-        processed); P unroutable: K3 kind3, K4 kind4"``. The unroutable
-        segment is present only when ``skipped_unknown`` is nonzero, and
-        names each distinct unroutable ``entry_kind`` with its count so the
-        backlog is visible on every run (INF-400c-2-ii).
+        processed); P unroutable: K3 kind3, K4 kind4; Q write failures: ...;
+        state NOT persisted"``. Each trailing segment appears only when the
+        condition it reports is present.
+
+        The unroutable segment names each distinct unroutable ``entry_kind``
+        with its count so the backlog is visible on every run
+        (INF-400c-2-ii).
+
+        The write-failure and state segments exist because a run in which
+        every write failed otherwise renders as ``"0 learnings routed:
+        none"`` — textually identical to a run that had nothing to do. The
+        counters are what let the caller tell an empty queue from a broken
+        one.
         """
         parts = [f"{count} {kind}" for kind, count in sorted(self.by_kind.items())]
         breakdown = ", ".join(parts) if parts else "none"
@@ -85,6 +102,16 @@ class HarvestResult:
                 f"{count} {kind}" for kind, count in sorted(self.unroutable_by_kind.items())
             ]
             base += f"; {self.skipped_unknown} unroutable: {', '.join(unroutable_parts)}"
+        if self.write_failures:
+            failed_parts = [
+                f"{count} {kind}" for kind, count in sorted(self.failed_by_kind.items())
+            ]
+            base += f"; {self.write_failures} write failures: {', '.join(failed_parts)}"
+        if self.state_persist_failed:
+            base += (
+                f"; state NOT persisted ({self.routed} routed learnings will be"
+                " re-applied on the next run)"
+            )
         return base
 
 
@@ -327,7 +354,16 @@ def harvest(
             try:
                 capture_fn(learning_text, destination)
             except OSError:
-                # capture_fn already logged the error; continue to next event
+                # capture_fn already logged the specific error. Record the
+                # failure and move on to the next event: one unwritable
+                # destination must not abort the whole drain. The event's
+                # hash is deliberately NOT added to new_hashes, so the write
+                # is retried on the next run — same retention rule as an
+                # unroutable event (INF-400c-2-ii).
+                result.write_failures += 1
+                result.failed_by_kind[entry_kind] = (
+                    result.failed_by_kind.get(entry_kind, 0) + 1
+                )
                 continue
 
         result.routed += 1
@@ -335,12 +371,32 @@ def harvest(
         new_hashes.add(h)
 
     # 3. Persist updated state
-    if not dry_run:
+    #
+    # Only when there is something new to record. With new_hashes empty the
+    # write is a no-op (seen | {} == seen), so attempting it can only
+    # manufacture a failure that costs nothing: nothing was routed, so
+    # nothing can be re-routed. Reporting that as a failed run would raise
+    # the exit code to 4 and mask the exit-3 backlog signal on precisely the
+    # run that most needs it -- an all-unroutable sink, which is today's
+    # real corpus.
+    if not dry_run and new_hashes:
         try:
             _save_state(state_path, seen | new_hashes)
         except OSError:
-            # _save_state already warned; do not abort the run
-            pass
+            # _save_state already warned with the specific errno. Do not abort
+            # -- the learnings were written and that work is real -- but the
+            # run is NOT clean: without the state file every hash in
+            # new_hashes is forgotten, so the next run re-routes all of them
+            # and appends each learning to its destination a second time.
+            # Recording this is what stops the caller reading a duplicating
+            # run as a successful one.
+            result.state_persist_failed = True
+            logger.warning(
+                "Harvest state was not persisted; the %d learnings routed by "
+                "this run will be routed again (and re-appended to their "
+                "destinations) on the next run.",
+                result.routed,
+            )
 
     return result
 
@@ -388,11 +444,13 @@ def main(argv: list[str] | None = None) -> int:
     Returns
     -------
     int
-        ``0`` if the run drained cleanly (no unroutable events left behind),
-        ``3`` if unroutable events remain in the sink (see the printed
-        summary for the per-entry_kind breakdown). ``harvest()`` itself may
-        also ``sys.exit(1)``/``sys.exit(2)`` for sink/state I/O failures
-        before this function returns.
+        ``0`` if the run drained cleanly, ``3`` if unroutable events remain
+        in the sink (see the printed summary for the per-entry_kind
+        breakdown), ``4`` if any destination write failed or the state file
+        could not be persisted. ``4`` outranks ``3``: a broken run is more
+        urgent than a retained backlog. ``harvest()`` itself may also
+        ``sys.exit(1)``/``sys.exit(2)`` for sink/state read failures before
+        this function returns.
     """
     args = _parse_args(argv)
 
@@ -408,6 +466,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(result.summary())
 
+    if result.write_failures or result.state_persist_failed:
+        return 4
     return 3 if result.skipped_unknown else 0
 
 

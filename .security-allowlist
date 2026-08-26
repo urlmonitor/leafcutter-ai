@@ -103,3 +103,13 @@ ENTROPY_HIGH:tests/fixtures/acs_100i_7/pre_change_refusal_baseline.json:*
 # trips the entropy heuristic. Glob rather than per-line: the note is prose and
 # any later edit shifts line numbers, which would silently void a pinned entry.
 ENTROPY_HIGH:memory/feedback_po_ba_itpo_bo3100_3200_delegation_boundary.md:*
+# INF-400c-2-ii regression corpus. This fixture is a VERBATIM capture of the 28
+# knowledge_captured records in debugging/logs/agent_telemetry.jsonl -- that is
+# the point of it, replacing a fabricated fixture whose invented entry_kinds
+# meant the test could never go red. The findings are ordinary telemetry lines
+# (timestamp + agent + component + destination + entry_kind) whose density trips
+# the entropy heuristic; there is no credential here. Glob rather than per-line:
+# the fixture is re-captured from the real sink whenever the corpus legitimately
+# changes, and pinned line numbers would silently void themselves on the first
+# re-capture.
+ENTROPY_HIGH:tests/fixtures/harvest_learnings/unroutable_corpus_28.json:*
