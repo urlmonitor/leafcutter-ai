@@ -1768,7 +1768,7 @@ entirely.*
 
 ---
 
-### KI-BP-021 — The closure guard's `sys.path` lens sees `insert` and `append` only, so an `extend` or a slice assignment derives an empty closure and reports the script clean
+### KI-BP-021 — The closure guard's reference lens misses four import idioms, each yielding an empty closure the build reports as clean
 
 - **Severity:** medium
 - **Status:** open — no AC. Found during the BP-900g-8 build (PR #578); disclosed by the
@@ -1837,6 +1837,21 @@ unsupported form and imports through it, asserting the dependency **appears** in
 closure — a negative fixture, since a test that only checks `insert`/`append` cannot fail
 when the other forms are dropped.
 
+**Three further idioms the lens does not see** — found by an independent adversarial review
+round on 2026-08-26, after the entry above was first written. All three land in the same
+place as the `sys.path` gap (empty closure, script reported clean) and all three are latent:
+
+| idiom | why it is invisible | log output | live instances |
+|---|---|---|---|
+| `importlib.import_module("sibling")` / `__import__("sibling")` | `_extract_static_import_candidates` recognises only `ast.Import`/`ast.ImportFrom`; `_is_spec_from_file_location_call` matches only `spec_from_file_location` | **none** | 0 — grep of `scripts/` and `templates/` returns nothing |
+| `from . import <subpackage>` | `:841-849` adds only `base/"{name}.py"` as a candidate, never `base/name/"__init__.py"`, and a plain import that resolves to nothing is treated as external by design | **none** | 0 — no `from . import` anywhere in either tree |
+| `sibling: Path = Path(__file__).parent / "x.py"` | `_build_local_assignments` (`:500-539`) captures `ast.Assign` targets only, not `ast.AnnAssign` | WARNING (the "unresolvable" path) | 0 |
+
+The annotated-assignment case is the least severe of the three precisely because it *is*
+logged. The other two are silent, which makes them the same defect as the `sys.path` gap
+rather than a milder relative of it — and in a codebase that annotates heavily, the
+`AnnAssign` gap is the one most likely to appear first.
+
 **Do not trust `git log` on this one.** The commit that introduced the lens, `4627c634`
 ("close the sys.path-insert blind spot in the closure guard"), describes the capability in
 general terms that the code does not have — it reads as though `sys.path` mutation is now
@@ -1849,3 +1864,159 @@ a broader change landed than did.
 
 **Pattern:** an allowlist of syntactic forms, guarding against a class of mistake, where an
 unlisted form is silence rather than a warning.
+
+---
+
+### KI-BP-022 — A deployable script that fails to parse gets an empty closure and a clean bill of health — and 107 of the 152 scripts the guard parses are in `templates/`, which CI's ruff run excludes
+
+- **Severity:** high
+- **Status:** open — no AC. Found by an adversarial third review round on PR #578,
+  2026-08-26, after two prior rounds had passed the same code.
+- **Occurrences:** 1 (latent — no unparseable source today, see Exposure)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build_referential_integrity.py:863-873` `_closure_walk`;
+  amplifier at `.github/workflows/ci.yml:74`
+
+**Symptom.** `_closure_walk` reads and parses each script inside two handlers:
+
+```python
+try:
+    text = script.read_text(encoding="utf-8")
+except OSError as exc:
+    _log.warning("... cannot read %s: %s", script, exc)
+    return                      # <-- closure stays empty
+try:
+    tree = ast.parse(text, filename=str(script))
+except SyntaxError as exc:
+    _log.warning("... cannot parse %s: %s", script, exc)
+    return                      # <-- closure stays empty
+```
+
+Both return early, so the script's closure is `set()` and
+`find_uncovered_closure_dependencies` reports **zero** missing dependencies for it. A
+script with real, undeployed intra-package imports comes back indistinguishable from one
+with no dependencies at all. The build proceeds and reports it clean.
+
+There is a WARNING, so this is not literally silent — but it is one line in a build that
+emits many, it does not change exit status, and nothing downstream distinguishes "this
+script has no dependencies" from "this script's dependencies could not be determined."
+That distinction is the entire value of the guard.
+
+**Why the obvious mitigation does not apply.** The natural objection is that a committed
+`.py` with a `SyntaxError` would be caught by the required `Lint (ruff)` gate long before
+this mattered. That is true for 45 of the guard's inputs and false for the other 107.
+
+CI runs `ruff check scripts tests unit_tests` (`ci.yml:74`), and `ci.yml:8` states the
+exclusion outright: "The templates/ source tree is excluded (see ruff.toml)." Measured on
+the BP-900g-8 branch by resolving every Set B entry through
+`_source_file_for_deploy_path` and recording where it lands:
+
+```
+SET B: 152
+PARSED FROM templates/ (ruff-excluded): 107
+PARSED FROM scripts/  (ruff-covered):    45
+```
+
+So **70% of what this guard parses is never linted**, and that 107 is not an arbitrary
+slice — it is `templates/scripts/commit_guardian/` in its entirety, every AC hook and
+schema validator in the repository, which is the single most consequence-bearing deploy
+population there is. A syntax error there is caught by neither ruff nor this guard; the
+guard actively reports the file clean.
+
+**Related, same boundary: `except OSError` does not catch `UnicodeDecodeError`.**
+`read_text(encoding="utf-8")` on a file with invalid UTF-8 raises `UnicodeDecodeError`,
+which subclasses `ValueError`, not `OSError`. It therefore escapes the handler and
+propagates out of `compute_intra_package_closure` and
+`_check_intra_package_closure_guard`, aborting `build.py` with a raw traceback instead of
+the designed `[CLOSURE GUARD]` message. This one **fails closed** — the build stops
+non-zero, which is the correct outcome — so it is a diagnosability defect rather than a
+false-green, and it is worth noting that it accidentally protects against the read-failure
+half of the symptom above. It still violates the repo's own Rule 1 (catch what the
+operation can actually raise) and should be fixed alongside, not instead of, the parse case.
+
+**Exposure today.** Verified 2026-08-26: all 152 Set B sources parse, none raise on read,
+and both silent-skip branches at `build.py:1109-1113` (`resolved is None`,
+`not source_file.is_file()`) fire zero times. Nothing is mis-reported now.
+
+**Fix direction.** Treat "could not determine" as a distinct third outcome from "no
+dependencies," not as a synonym for it. The guard is a *preflight* gate whose whole
+purpose is to fail closed, so an unparseable or unreadable deployable script should exit
+non-zero naming the file — there is no legitimate build in which one of the 152 scripts
+about to be deployed cannot be parsed. If that proves too strict during rollout, the
+minimum is to surface the count in the guard's own summary output so a human sees "N
+scripts could not be analysed" rather than nothing. Widen the read handler to
+`(OSError, UnicodeDecodeError)` in the same change. Independently, and cheaper than
+either: add `templates/` to the ruff invocation, or add a standalone
+`ast.parse`-every-deployable-source check — the 107-file blind spot is worth closing on
+its own merits regardless of what this guard does with the result.
+
+**Pattern:** an analyser that reports "I found nothing" and "I could not look" through the
+same return value, wired to a gate that only understands the first.
+
+---
+
+### KI-BP-023 — The closure guard's "every script this build will deploy" covers eight deploy families and the build has ten
+
+- **Severity:** medium
+- **Status:** open — no AC. Found in the same third review round as KI-BP-022.
+- **Occurrences:** 1 (latent — see Exposure)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build.py:535-573` `_get_source_deployable_scripts` (docstring at
+  `:538-539`, `:552-554`); missed phases at `scripts/build_phases.py:1546`
+  `build_doc_compliance` and `build_sync_platforms`
+
+**Symptom.** `_get_source_deployable_scripts` is the guard's Set B — the universe it checks
+closures against and, per its docstring, the set of "all scripts that will be deployed to
+the target project on the next build run." It unions eight per-phase manifest helpers. The
+build has at least two more deploy phases that ship `.py` files and neither is among them:
+
+- `build_doc_compliance` (`build_phases.py:1546`) copies `templates/doc-compliance/*` to
+  `<target>/scripts/doc_compliance/`. `templates/doc-compliance/cli.py` has five real
+  sibling imports — `bootstrap`, `generator`, `verifier`, `scanner`, `config`.
+- `build_sync_platforms` deploys `scripts/sync_platforms/sync_platforms.py`, which
+  `_manifest_template_standalone_scripts` cannot see because it globs only the **top
+  level** of `templates/scripts/` (`.glob("*.py")`, non-recursive, `:529`) and that file
+  lives one directory deeper.
+
+Because these paths never enter Set B, the loop at `build.py:1107` never calls
+`compute_intra_package_closure` on them at all. An entire deployed Python package is
+invisible to the guard, with no warning and no error. Confirmed by querying the function
+directly:
+
+```
+SET B SIZE: 152
+DOC_COMPLIANCE IN SET B: []
+SYNC_PLATFORMS  IN SET B: []
+```
+
+**Exposure today is nil, and the reason matters.** Both phases deploy their **whole source
+directory** — `build_doc_compliance` iterates `dc_dir.rglob("*")` and copies every file.
+So all five of `cli.py`'s siblings ship automatically, and a sixth added tomorrow ships
+too. These phases are structurally immune to the "one file forgotten from a curated list"
+defect that BP-900g-8 exists to close, which is precisely why nobody noticed they were
+outside the guard.
+
+**Why file it anyway.** Two reasons, neither hypothetical:
+
+1. **The docstring is wrong in a load-bearing way.** "Eight deployment locations are
+   covered" and "every script this build will deploy" are the sentences a future author
+   will read before deciding whether a new phase needs registering. They currently say the
+   coverage is total when it is enumerated, and nothing detects the divergence — there is
+   no test asserting Set B is complete against the `build_*` functions in
+   `build_phases.py`.
+2. **The immunity is a property of the deploy mechanism, not of the guard.** The moment
+   either phase is refactored toward a curated `deploy_map` — which is exactly the pattern
+   `build_ac_store` used until this ticket replaced it — the blind spot becomes a live
+   silent regression vector with zero guard coverage, and the refactor will look safe
+   because it matches the shape of the fix that just landed.
+
+**Fix direction.** Derive Set B rather than unioning hand-written helpers, or — since that
+is the larger BP-900g-9 job — add a test that enumerates `build_*` functions in
+`build_phases.py` and asserts each one that writes `.py` files has a corresponding manifest
+helper, failing on a new phase that has none. Fix `_manifest_template_standalone_scripts`
+to `rglob` rather than `glob` while there. Correct the docstring in the same change; a
+comment that overstates coverage is how the next author concludes their phase is already
+handled.
+
+**Pattern:** a completeness claim written as prose in the docstring of the function whose
+incompleteness it is describing.
