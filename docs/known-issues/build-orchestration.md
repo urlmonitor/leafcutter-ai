@@ -24,9 +24,20 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-BO-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new `### KI-BO-YYYYMMDD-HHMM` section, using the UTC time you
+filed it (`date -u "+%Y%m%d-%H%M"`). Nothing here is generated — edit it by hand. Fill in what
+you actually know; an issue recorded with a thin `Evidence` line is far better than one not
+recorded.
+
+**Why datetime ids and not the next free number.** Sequential ids collide whenever two
+sessions file at once, which happens constantly here. On 2026-08-26 alone: two different
+defects both landed as `KI-CG-012`, a branch's `KI-BP-010`/`KI-BO-016`/`KI-BO-017` all had to
+be renumbered at merge because main had independently minted the same numbers, and a
+changelog ended up describing `KI-CG-012` using what became `KI-CG-013`'s text. Renumbering is
+worse than it sounds — inbound references do not disambiguate, so a rename can silently
+repoint a citation at the wrong defect. A UTC timestamp cannot collide and needs no lookup of
+"the next free number", which is itself a read of a file another session is editing. Existing
+`KI-BO-NNN` entries keep their ids; do not renumber them.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -1762,3 +1773,134 @@ merely wrong.
 
 **Pattern:** same shape as `KI-TQ-003` — a gate that works correctly and whose remediation
 instruction cannot be followed.
+
+---
+
+### KI-BO-20260826-1214 — The fast lane cannot complete: its context-bundle gate demands a 1359-line document inlined into a JSON field, and the agent returns a pointer instead
+
+- **Severity:** blocker
+- **Status:** open — no AC
+- **Occurrences:** 3 (three consecutive runs of the same AC, identical halt)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/workflows-js/fast-lane-ship.js`, the `context-bundle` phase and its
+  validation of the returned `bundle` field
+
+**Symptom.** `/fast-lane-build BP-900g-9` halts every time with:
+
+```
+status: blocked
+failing_phase: context-bundle
+"The context bundle was not obtained — the prompt-caching layer's assembling dispatch
+ failed, returned nothing usable, or the bundle was empty or missing the cache
+ breakpoint marker."
+```
+
+**That message is wrong about its own cause, and the difference matters.** The dispatch did
+not fail. On the third run the phase agent completed successfully (`agents_error: 0`) and
+returned `"obtained": true`. The bundle was genuinely built:
+
+```
+$ wc -l /tmp/bp-900g-9-bundle/bundle_output.txt      -> 1359
+$ grep -c CACHE_BREAKPOINT /tmp/bp-900g-9-bundle/bundle_output.txt -> 1
+```
+
+`injection_builders.py assemble-bundle` exited 0 with empty stderr, assembled all five
+layers, and inserted the `<!-- CACHE_BREAKPOINT -->` marker after the `high_level` layer.
+The artefact is correct and on disk.
+
+**The actual defect is the contract.** The workflow requires the bundle *content* to come
+back inline in the agent's `bundle` return field, and validates that field for the cache
+breakpoint marker. Asked to return 1359 lines through a JSON field, the agent did what
+models reliably do with bulk content — it wrote a reference instead:
+
+```
+"bundle": "See /tmp/bp-900g-9-bundle/bundle_output.txt for the full 1359-line
+           assembled bundle (verified zero-exit, no stderr). Layer sources used: ..."
+```
+
+while its own `message` asserted "The bundle field of this response contains the command's
+stdout verbatim." It does not. The field holds a summary, the summary contains no marker,
+the guard correctly rejects it, and the run halts.
+
+**The guard is not the bug — keep it.** Refusing to proceed on a bundle that fails its
+marker check is right, and the workflow explicitly declines to fall back to prompts composed
+some other way (`BO-2400c-1-iii`). That is the correct posture. The bug is that the only path
+through the guard requires an agent to inline a large document verbatim, which is not a
+thing an agent reliably does. So the gate is unpassable in practice: **the fast lane cannot
+currently ship anything**, deterministically, for any AC.
+
+**Why it went unnoticed.** The halt is honest — it stops rather than proceeding on bad
+context — so it reads as a transient infrastructure problem rather than a permanent
+deadlock. The first run of this AC *did* fail for a genuine API reason
+(`Failed to authenticate. API Error: Blocked Content Notification`), which masked the real
+cause; only on the third run, with `agents_error: 0` and `obtained: true`, was the contract
+defect visible.
+
+**Fix direction.** Pass the bundle by *path*, not by value: have the phase agent return the
+file path it wrote, and have the workflow read and validate that file itself. The workflow
+already has the marker check; pointing it at the artefact rather than at a field the agent
+must retype removes the failure mode entirely and keeps the guard intact. If the content
+must travel inline, the contract needs to say so in a way an agent can satisfy — and the
+validation error must distinguish "the command failed" from "the agent summarised instead of
+pasting", because those need opposite responses.
+
+**Pattern:** a gate whose only passing path requires an agent to do something agents do not
+reliably do — so the guard is sound and the workflow is still unpassable.
+
+---
+
+### KI-BO-20260826-1215 — The fast lane reports a successful AC release as "refused or unreadable" and warns the next run will be blocked, when the ACs are already released
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 (every halted run of the same AC)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/workflows-js/fast-lane-ship.js`, the release step in the halt path
+
+**Symptom.** On halting, the workflow reports:
+
+> "Release: refused or unreadable — BP-900g-9, BP-900g-9-i left at `in_progress`; a later run
+> aimed at those ids **will be refused** while they remain in_progress."
+
+with `release_attempted: false`, `released_ac_ids: []`, `unreleased_ac_ids: [both]`.
+
+**All of that is false.** Checked against the store immediately after the halt:
+
+```
+BP-900g-9.yaml:work_status: todo
+BP-900g-9-i.yaml:work_status: todo
+```
+
+Both ACs were released cleanly. A later run is not refused — verified by resuming twice, both
+of which re-claimed the ids without complaint.
+
+**The release agent succeeded and the workflow could not read its reply.** The `release_error`
+field contains the agent's actual return value:
+
+```
+"release_error": "\"{\\\"released\\\": [\\\"BP-900g-9\\\", \\\"BP-900g-9-i\\\"]}\""
+```
+
+That is a well-formed success payload naming both ids, filed as an error. Note the escaping —
+it is a JSON *string containing* JSON, i.e. double-encoded. The parser is handed a string
+where it expects an object, fails, and falls through to the "refused or unreadable" branch.
+
+The payload is also internally inconsistent and should not be able to be: `release_attempted:
+false` while `release_executor: "python-coder"` and `release_error` are both populated. A
+release that was never attempted cannot have an executor or an error from one.
+
+**Why this is more than cosmetic.** The report instructs the next operator to treat two ACs as
+wedged. Acting on it means hand-editing store records that are already correct, or abandoning a
+re-run that would have worked. It is the phantom-done failure inverted — work reported as *not*
+done that was in fact done — and it is just as capable of causing a wrong repair. It survived
+three runs because nothing cross-checks the claim against the store, and the claim is only
+falsifiable by looking.
+
+**Fix direction.** Parse the release reply with the same JSON-unwrapping the workflow's other
+agent replies use (the double-encoding suggests one call site stringifies a value another has
+already stringified). Make `release_attempted` derive from whether the executor ran, so it
+cannot contradict `release_executor`. Best: after releasing, re-read the AC files and report
+the observed `work_status`, so the claim is grounded in the store rather than in a parse.
+
+**Pattern:** a status report that is never checked against the state it describes — the same
+shape as the phantom-done family, pointing the other way.
