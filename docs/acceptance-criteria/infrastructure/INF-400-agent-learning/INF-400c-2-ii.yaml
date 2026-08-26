@@ -6,7 +6,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: critical
 readiness: draft
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-2.yaml"
@@ -52,7 +52,10 @@ origin_agent: BrainCandy
 created: 2026-08-25
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "tests/knowledge/test_harvest_learnings.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
+  - "templates/agents/knowledge-harvester.md"
 change_target: code
 risk_surface: contract_boundary

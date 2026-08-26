@@ -1,0 +1,13 @@
+---
+title: "An unroutable knowledge event is retained and counted instead of silently discarded"
+date: "2026-08-26"
+time: "00:10"
+type: manual
+components: 
+  - infrastructure
+summary: "The harvester no longer marks an event it cannot route as processed, so the 28 learnings stranded on disk survive to a later run instead of being burned on the first one."
+description: "Implements INF-400c-2-ii. Before this change the harvester treated an unrecognised entry_kind as handled: it logged a warning, wrote nothing, and added the event's hash to the idempotency record so it was never offered again. That was not a bug against its acceptance criterion — INF-400c-2-i said in as many words to mark the event processed 'so it does not retry indefinitely', and the code complied. It was the criterion that was wrong, which is why c-2-i was superseded rather than quietly amended, and why the test that asserted the old contract is replaced here rather than deleted. The cost was measured, not assumed: a dry-run over the real sink found all 28 knowledge_captured events on disk carry an entry_kind the harvester does not recognise — its 11 accepted values and the 15 the writers actually emit overlap on zero — so the first real run would have discarded every one of them permanently. Now an unroutable event is not added to the idempotency record, the run reports the unroutable count separately from the routed count and names each distinct entry_kind with how many events carried it, and the exit status distinguishes a clean drain (0) from a drain that left events behind (3) so a caller cannot read 'nothing could be routed' as 'nothing to route'. Verified against the real corpus rather than fixtures: 0 routed, 28 unroutable with the full per-kind breakdown, state file [] and exit 3. The agent template is updated in the same change, which is the part that would otherwise have shipped a correct fix with inverted operator documentation — knowledge-harvester.md still told the agent running the script that unroutable events 'will not be retried on the next run', so an agent following it would have reported a recoverable backlog as permanent data loss. It now carries the new summary format, an exit-code table, and an explicit instruction not to describe retained events as dropped. That gap was caught by the review phase of the /fast-lane-build run that produced this change, which halted before committing rather than shipping the two out of sync. The remaining half of the problem is untouched and still open: nothing yet maps those 15 legacy entry_kind values onto the canonical vocabulary, so the 28 events are now safely retained but still unroutable until INF-400c-5-ii lands."
+breaking: false
+---
+
+## Entry
