@@ -1,0 +1,164 @@
+id: BO-3200e-3
+title: "Every check that can fail to inspect is driven into that state, and one that answers substantively is named"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every check in the system whose inspection can fail to be performed,
+  When each is driven into the state where its inspection cannot be performed,
+  Then each reports that it could not tell, and none reports a finding about its subject.
+
+  Given one such check restored to reporting a substantive finding when its inspection cannot
+    be performed, while every other check reports correctly,
+  When all checks are driven into that state,
+  Then the restored check is named, and the fact that every other check behaves correctly does
+    not suppress the report.
+
+  Given a check that could not be driven into that state during the sweep,
+  When the sweep reports,
+  Then that check is reported as not having been exercised, distinguishable from one that was
+    exercised and behaved correctly.
+
+  Given a new check added afterwards that answers substantively when its inspection cannot be
+    performed,
+  When the sweep is run with nothing changed in it,
+  Then the new check is named.
+depends_on:
+  - BO-3200e
+  - BO-3200e-1
+  - BO-3200e-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018's reusable finding — this generalises past the one case, which is what the sweep enforces."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-001 — the validator that reported a pass having examined zero files; the precedent for the sweep committing the failure it detects."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "One of the check populations the sweep must cover — hook-based checks read their outcomes outside the workflow runtime."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE CHECK POPULATION MUST BE DERIVED, NOT LISTED. A sweep written against today's checks passes on the day it lands and says nothing about the next one added — the same rot as building-epics §2.1-R1. Enumerate the checks from the deployed surface so a new one is swept without editing the sweep."
+  - "THE SWEEP MUST DRIVE EACH CHECK INTO THE REAL FAILURE STATE AND OBSERVE WHAT IT REPORTS. Reading a check's source for the undetermined vocabulary passes on a check that defines the value and never emits it, which is exactly what a half-migrated check looks like."
+  - "THREE STATES PER CHECK IN THE REPORT — exercised-and-correct, exercised-and-substantive, not-exercised — with not-exercised reported rather than omitted. A sweep that silently skips the checks it cannot drive is itself a check that could not perform its inspection and reported a clean result, which is this AC's own subject matter committed by the instrument that prevents it."
+  - "A SWEEP THAT EXERCISED NO CHECKS MUST FAIL. This repository's AC-store validator exited 0 having examined zero files for eight days while being the documented defence against store rot."
+  - "A VIOLATION MUST NOT BE SUPPRESSED BY CORRECT BEHAVIOUR ELSEWHERE: per-check verdicts, an aggregate report, no early return, no summarisation that collapses named checks into a count."
+  - "THE SWEEP MUST COVER CHECKS OUTSIDE THE WORKFLOW RUNTIME — commit-guardian hooks and CI gates included. PR #565 fixed the runtime's handling of an undetermined agent result; a hook that reads a check outcome is a separate consumer and a separate check site, and scoping the sweep to the runtime would leave the larger population untouched."
+  - "The report must NAME each offending check, so the remaining work is enumerable rather than estimated."
+  - "Runtime budget: the full sweep must fit inside a CI job. If it cannot, split it in CI by check population — but never narrow the derived set, and never let a skipped check report as correct."
+delivers_to:
+  - agent: reference-author
+    contract: "The sweep's derived check population and its per-check verdict rule, so BO-3200e-4's documentation states the rule the sweep actually enforces rather than a parallel one."
+expects_from:
+  - ac_id: BO-3200e-1
+    contract: "The three-valued check outcome and the requirement that a failed inspection reports undetermined with no finding about the subject — the property this sweep verifies at every site."
+  - ac_id: BO-3200e-2
+    contract: "The requirement that undetermined still stops the work at every consumer, so a check that reports correctly but whose consumer passes it through is also a violation the sweep can express."
+test_spec:
+  - name: test_bo_3200e_3_every_derived_check_reports_undetermined_when_it_cannot_inspect
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Enumerate checks from the deployed surface, drive each into the state where its inspection cannot be performed, and assert every one reports undetermined and none reports a finding about its subject."
+  - name: test_bo_3200e_3_one_restored_substantive_check_is_named
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE PARTIAL-FIX TEST. Restore exactly one check to reporting a substantive finding when it cannot inspect, leave the rest correct, and assert that check is named and the others' correctness does not suppress the report."
+  - name: test_bo_3200e_3_undrivable_check_is_reported_as_not_exercised
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A check the sweep cannot drive into the failure state is reported with a state distinguishable from exercised-and-correct — the sweep must not commit the failure it detects."
+  - name: test_bo_3200e_3_new_check_is_caught_with_the_sweep_unmodified
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE DURABILITY TEST. Add a new check that answers substantively when it cannot inspect; re-run the identical sweep with no source edit and assert it is named."
+  - name: test_bo_3200e_3_zero_checks_exercised_fails
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A sweep that exercised no checks exits non-zero rather than reporting clean (KI-ACS-001 shape)."
+  - name: test_bo_3200e_3_hook_and_ci_gate_checks_are_in_the_population
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Assert the derived population includes commit-guardian hooks and CI gates, not only workflow-runtime checks. Scoping the sweep to the runtime would leave the larger population untouched while reporting clean."
+test_rationale: |
+  Reading a check's source for the undetermined vocabulary passes on a check that defines the
+  value and never emits it — the shape a half-migrated check actually has — so every test here
+  drives the real check into the real failure state and observes the report.
+  Two tests exist to keep the instrument honest, and both have precedent in this repository. The
+  not-exercised test stops the sweep quietly covering a shrinking fraction; the zero-checks test
+  stops it reporting a pass having examined nothing, which is exactly what the AC-store validator
+  did for eight days while being the documented defence against the thing it was not checking.
+  The population test is the specific way this sweep would silently under-deliver: scoped to the
+  workflow runtime it would be green, small, and blind to the hooks and CI gates that are the
+  larger check population and the ones that actually block merges.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The parent L1's scope is exactly this: the vocabulary exists, using it everywhere does not.
+  "Every place that can fail to perform its inspection must distinguish 'I looked and found a
+  problem' from 'I could not look', and must not report the first when the second is true."
+
+  THE SECOND SCENARIO IS WRITTEN TO FAIL A PARTIAL FIX, the same shape as BO-3100c-2 and
+  BO-3200a-2. Correcting the check that caused KI-BO-018 and testing only that one satisfies
+  BO-3200e-1 completely while leaving every other site untouched, and the reusable finding that
+  entry records — that this generalises past the one case — would go unimplemented.
+
+  THE THIRD SCENARIO GUARDS THE SWEEP AGAINST ITS OWN SUBJECT MATTER. A sweep that silently
+  skips the checks it cannot drive is itself a check that could not perform its inspection and
+  reported a clean result — the failure this AC exists to prevent, committed by the instrument
+  that prevents it. This repository has the precedent on record: the AC-store validator exited 0
+  having examined zero files, and was the documented defence against store rot for eight days
+  while doing nothing.
+
+  THE FOURTH SCENARIO IS WHAT MAKES IT DURABLE. A sweep written against today's list of checks
+  passes on the day it lands and says nothing about the next one added.
+
+  Verification must drive the real checks into the real failure state. Reading a check's source
+  for the undetermined vocabulary passes on a check that defines the value and never emits it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Scope warning worth stating plainly: the tempting reading
+  of "every check in the system" is "every check in the workflow runtime", because PR #565 is
+  fresh in mind and that is where it landed. The larger population is the commit-guardian hooks
+  and CI gates, and they matter more — they are the checks that block merges, and they read their
+  outcomes outside the runtime's refusal. A sweep scoped to the runtime would be green, cheap,
+  and would leave the reusable finding unimplemented at every site that counts.

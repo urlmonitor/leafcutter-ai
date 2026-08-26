@@ -1,0 +1,152 @@
+id: BO-3100c-1
+title: "Each dispatched step's result reaches the layer that dispatched it and decides what runs next"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build of three steps, where the third depends on the results of the first two,
+    And each of the first two produces a value that identifies which step produced it,
+  When the build is driven end to end,
+  Then the layer that dispatched the first two holds both of their produced values before it
+    dispatches the third,
+    And the third is dispatched carrying both values.
+
+  Given a build in which the first step fails,
+  When the build is driven,
+  Then the layer that dispatched it holds the failure before deciding what happens next, and
+    the step that depended on it is not dispatched.
+
+  Given any step in the build,
+  When it is dispatched,
+  Then what the dispatching layer receives is that step's result, not an acknowledgement that
+    the step has been started.
+depends_on:
+  - BO-3100c
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The dispatch topology this AC relocates coordination within."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The component-level record of who dispatches whom."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the start-acknowledgement-then-proceed arrangement this AC removes, and why no subagent can be the layer that waits."
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: modifies
+    status: exists
+    relevance: "Argues inline dispatch from a depth limit rather than from the inability to await; BO-3100d supersedes the premise, this AC changes the behaviour."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THE COORDINATING LAYER IS THE WORKFLOW RUNTIME, not a subagent. It is the only layer in this system that both awaits a dispatch and retains the ability to put a question to the user; a subagent has neither. Relocating coordination anywhere that is itself dispatched re-creates the defect, whatever its depth."
+  - "THE DISCRIMINATOR IS WHAT COMES BACK, NOT THAT SOMETHING COMES BACK. The value the dispatching layer receives must be the completed step's own result. A handle, a job id, a start acknowledgement, or a promise the layer does not await before continuing all fail the third criterion while passing any test that only checks a value arrived."
+  - "The failure branch must hold the failure before deciding. Optimistic continuation on the failure path is where an unconsumed result does the most damage, and it is the branch least likely to be exercised by a happy-path test."
+  - "Results must be correlated to the step that produced them by an identity carried through the dispatch, so a build cannot pass by receiving two values and attributing them to the wrong steps."
+  - "The relocation must not require the coordinating layer to know the step's internals. The contract between the layer and a step stays {dispatch(step, inputs) -> result}; a relocation that inlines step logic into the coordinator has moved the work, not the coordination."
+  - "Must hold under the harness's background-dispatch setting in both states — see BO-3100c-4, which is the expiry test for the current workaround and must not be satisfied by depending on the setting."
+  - "Behavioural coverage must use unit_tests/_workflow_engine_harness.py (`run_workflow_under_e2`), which executes the real workflow under Node with a mocked agent() and can return null to simulate a dead agent. unit_tests/test_fail_closed_agent_results.py is the worked example."
+delivers_to:
+  - agent: python-coder
+    contract: "A dispatch record emitted per dispatch by the coordinating layer: {dispatch_id: str, source: str, target_step: str, result_held_before_continuing: bool, received_kind: 'result' | 'acknowledgement'}. BO-3100c-2 sweeps over the ordered list of these records; BO-3100c-3 reads their start and end timestamps; BO-3100c-5 and c-6 are checked against them."
+  - agent: architecture-diagram-author
+    contract: "The dispatch record stream of a real drive, so BO-3100c-5's sequence diagram and BO-3100c-6's component diagram can each be compared against dispatches that actually occurred rather than against intent."
+expects_from: null
+test_spec:
+  - name: test_bo_3100c_1_dispatcher_holds_both_results_before_the_dependent_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive a real three-step workflow under run_workflow_under_e2 where steps 1 and 2 each return a self-identifying value; assert the dispatching layer holds both values before dispatching step 3, and that step 3's dispatch carries both."
+  - name: test_bo_3100c_1_failure_is_held_and_the_dependent_step_is_not_dispatched
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Step 1 fails. Assert the coordinating layer holds the failure before deciding, and that no dispatch for the dependent step appears in the captured call sequence."
+  - name: test_bo_3100c_1_received_value_is_a_result_not_an_acknowledgement
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Have the mocked agent return a distinctive completion payload only after its work is done, and separately have it return a start-shaped acknowledgement. Assert the layer proceeds only on the former and treats the latter as not-a-result. A layer that continues on the acknowledgement passes every 'a value came back' test and fails this one."
+  - name: test_bo_3100c_1_dead_agent_result_is_not_treated_as_a_completed_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the harness returning null for a dispatch (dead or stopped agent), assert the workflow's terminal payload does not report that step as completed. Extends the PR #565 guarantee to the relocated coordination."
+  - name: test_bo_3100c_1_dispatch_records_are_emitted_for_every_dispatch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert one dispatch record per actual dispatch, carrying source, target and received_kind — this is the substrate BO-3100c-2's sweep and both diagrams' coherence checks read, so a missing record silently narrows all three."
+test_rationale: |
+  A test that inspects the coordination source for an await passes on a path that awaits the
+  wrong thing — a handle, or a promise resolved at start. The only way to tell the arrangements
+  apart is to execute the real workflow and observe WHAT crossed the boundary and WHEN, which is
+  what run_workflow_under_e2 makes possible: it runs the actual workflow script under Node with
+  a mocked agent() whose responses the test controls, including returning null for a dead agent.
+  The dispatch-record test is not incidental. Three downstream ACs (c-2's sweep, c-5's and c-6's
+  coherence checks) all read that record; if it can be silently incomplete, all three report
+  clean over a shrinking subset — the KI-ACS-001 shape.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the positive half of the structural fix: coordination happens where waiting is a
+  real operation. The parent L1 calls this the most valuable of the four children because it
+  makes the failure unrepresentable rather than detectable — there is no longer anywhere for
+  a coordinator to be left waiting for something it cannot wait for.
+
+  THE THIRD SCENARIO IS THE DISCRIMINATOR. "The result reaches the dispatcher" is satisfied
+  trivially by any dispatch that returns something; what must be true is that the something
+  is the completed step's own result. A layer that receives a start acknowledgement and then
+  proceeds is exactly the arrangement that produced the 2026-08-18 stall, and it passes any
+  test that only checks that a value came back.
+
+  The second scenario covers the failure branch, where the temptation to proceed optimistically
+  is strongest and where an unconsumed result does the most damage.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", the covering test
+  must drive the real coordination path and observe the values crossing the boundary; a test
+  that inspects the coordination code for an await passes on a path that awaits the wrong
+  thing.
+
+  BOUNDARY: this AC establishes that the new arrangement works. It is explicitly NOT
+  sufficient on its own — BO-3100c-2 verifies by ABSENCE that no old arrangement survives,
+  because a passing test here is satisfied by a system that still contains several.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The dispatch record introduced here is deliberately a
+  RUNTIME artifact, not a static declaration. It exists because BO-3100c-2 must sweep by
+  observation rather than by source inventory, and a runtime record is the only substrate that
+  supports that. Making it a first-class deliverable of this AC — rather than something c-2
+  invents — is what keeps c-2 from being forced back into a grep.

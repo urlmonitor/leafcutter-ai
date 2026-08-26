@@ -1,0 +1,145 @@
+id: BO-3200e-4
+title: "Reference documentation defines the three answers a check may give and when each applies"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author writing a check,
+  When they open the reference documentation for what a check may report,
+  Then it defines three answers — the subject is in order, the subject has a problem, and the
+    inspection could not be performed — states that the third is required whenever the
+    inspection did not happen for any reason, states that the third stops the work just as the
+    second does, and states that the advice accompanying the third describes restoring the
+    inspection rather than changing the subject.
+
+  Given the reference documentation,
+  When each rule it states is applied to a check and that check is driven into the
+    corresponding state,
+  Then the check behaves as the documentation says it will.
+
+  Given the reference documentation,
+  When it is read alongside the existing guarantee that a failed inspection must not report a
+    clean pass,
+  Then it states that both directions are required and that neither replaces the other.
+depends_on:
+  - BO-3200e
+  - BO-3200e-1
+  - BO-3200e-2
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the check-outcome reference lands."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: modifies
+    status: exists
+    relevance: "Where GE-120a-1's one-directional guarantee is described; the reference must sit alongside it and say both directions are required."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — the worked example the page should use, because the two-answer habit it illustrates is not carelessness."
+assigned_agent: reference-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: reference-author, the leaf author, not documentation-expert."
+  - "THE PAGE'S ENTIRE CONTENT IS 'THREE ANSWERS, NOT TWO', stated as a definition an author reads BEFORE writing a check. The two-answer habit is not carelessness — fail-closed with a boolean genuinely has only two values, so an author reaching for the safe default has nowhere to put 'I could not look' and puts it in the failure bucket. Naming the third answer gives them somewhere to put it."
+  - "THE PAGE MUST STATE ALL FOUR RULES the first criterion names: the three answers; that the third is required whenever the inspection did not happen FOR ANY REASON; that the third stops the work just as the second does; and that its advice describes restoring the inspection rather than changing the subject."
+  - "IT MUST STATE EXPLICITLY THAT BOTH DIRECTIONS ARE REQUIRED and neither replaces the other. GE-120a-1 already guarantees that a failed inspection must not report a clean pass, and a reader who finds one of the two will reasonably assume the question is settled — which is how the missing direction stayed missing until KI-BO-018."
+  - "EACH RULE MUST CARRY A CLAIM IDENTIFIER BOUND TO AN EXERCISED CHECK, using BO-3100d-1's pairing mechanism rather than inventing a second one, so the second scenario is enforced rather than intended."
+  - "The page must name the actual outcome values a check emits, matching BO-3200e-1's vocabulary, so an author writing a new check uses the value the sweep and the runtime both recognise."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200e-1
+    contract: "The three-valued outcome and its field names — the definitions this page states."
+  - ac_id: BO-3200e-2
+    contract: "The rule that undetermined stops the work at every consumer, which the page must state as a property rather than a convention."
+  - ac_id: BO-3100d-1
+    contract: "The claim-identifier pairing mechanism and three-state report, reused unchanged for this page's rules."
+test_spec:
+  - name: test_bo_3200e_4_page_defines_three_answers_and_all_four_rules
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the page's declared claim set covers the three answers, the any-reason rule, the stops-the-work rule, and the advice rule — and that it names the real outcome values BO-3200e-1 emits."
+  - name: test_bo_3200e_4_each_documented_rule_holds_when_a_check_is_driven_into_that_state
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE NON-DIVERGENCE CHECK. For each documented rule, drive a real check into the corresponding state and assert the observed behaviour matches what the page says. A page that drifts from BO-3200e-3's enforced behaviour fails."
+  - name: test_bo_3200e_4_page_states_both_directions_are_required
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the page carries an explicit claim that GE-120a-1's direction and this one are both required and neither replaces the other — the confusion that let the missing direction stay missing."
+  - name: test_bo_3200e_4_every_rule_is_bound_to_an_exercised_check
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Each rule carries a claim identifier resolving to an exercised check, and no check is orphaned — so a rule added later without a check is a failing test rather than unnoticed prose."
+  - name: test_bo_3200e_4_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  A definitions page is exactly the artifact most likely to be covered by a grep, and a grep on
+  prose is what the goal's hard constraint rejects. So each rule is bound to an exercised check
+  via BO-3100d-1's pairing mechanism and driven against a real check — the page's claims are
+  confirmed by behaviour, not by their own presence.
+  The both-directions claim gets its own test because it is the one statement whose absence
+  caused real cost: a reader who found GE-120a-1 reasonably concluded the question was settled,
+  and the mirror direction went unimplemented until KI-BO-018 surfaced it.
+  Deliberately NOT covered: whether the definitions are well phrased. Human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf reference author), complexity, it_requirements,
+    expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc entry in BO-3200e's documentation_triggers.
+
+  THREE ANSWERS, NOT TWO, is the entire content of this document, and stating it as a definition
+  an author reads before writing a check is what stops the two-answer habit from being re-created
+  at each new site. The habit is not carelessness: fail-closed with a boolean genuinely has only
+  two values, so an author reaching for the safe default has nowhere to put "I could not look"
+  and puts it in the failure bucket. Naming the third answer gives them somewhere.
+
+  THE THIRD SCENARIO PREVENTS A KNOWN CONFUSION. GE-120a-1 already guarantees the other direction
+  — a failed inspection must not report a clean pass — and a reader who finds one of the two
+  will reasonably assume the question is settled. Saying explicitly that both are required is
+  cheaper than the alternative, which is discovering the gap the way KI-BO-018 was discovered.
+
+  The second scenario makes the definitions executable, so the document cannot drift from the
+  behaviour BO-3200e-3 enforces.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). This page is one of four documentation ACs across the two
+  trees that use BO-3100d-1's claim-to-check pairing (the others being BO-3100a-4, BO-3100d-3 and
+  BO-3200a-3). That is deliberate: one mechanism, four consumers. Four separately-invented pairing
+  schemes would each be correct and jointly unmaintainable, and the first one to be forgotten
+  would rot invisibly — which is the failure mode all four exist to prevent.

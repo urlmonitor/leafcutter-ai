@@ -1,0 +1,111 @@
+id: BO-3100c-2-i
+title: "A newly added coordinating specialist is caught by the same sweep, with nothing added to it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a system in which every entry point passes the sweep,
+  When a new specialist is added that dispatches another specialist and is reachable from an
+    entry point,
+    And the sweep is run again with nothing changed in the sweep itself,
+  Then that entry point is reported as violating the arrangement and the new specialist is
+    named.
+
+  Given a new specialist that is added but is not reachable from any entry point,
+  When the sweep is run,
+  Then it is not reported, because the sweep reports what a drive actually reaches rather
+    than what exists on disk.
+depends_on:
+  - BO-3100c-2
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the second stall was in an agent added to the chain without the rule following it, which is the durability failure this AC prevents."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE SWEEP MUST NOT BE EDITED FOR EITHER SCENARIO. Both outcomes must follow from the sweep's existing subject derivation. If catching the new specialist requires adding its name anywhere, the sweep is a frozen roster and this AC is unmet."
+  - "THE SECOND SCENARIO IS A BOUNDARY, NOT AN OVERSIGHT — DO NOT WIDEN IT. An added-but-unreachable coordinating specialist must stay unreported. Reporting it is only possible by inventorying the source tree, which BO-3100c-2 forbids because it gives wrong answers in both directions. No requirement, optimisation or coverage improvement on this AC may introduce a source scan, an agent-template walk, or a static call-graph. If unreachable coordinators are later judged worth reporting, that is a NEW criterion with its own mechanism, not a widening of this one."
+  - "Reachability is decided by observation: a specialist is reachable if it appears as a dispatch target in the runtime record of an executed entry point. It is not decided by whether a path to it exists in the sources."
+  - "The report must name the newly added specialist and the entry point that reached it, so the diagnosis does not restart from nothing."
+  - "Adding a specialist that is reachable but does NOT dispatch another specialist must remain unreported, so the sweep does not report the roster and get switched off."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100c-2
+    contract: "The sweep, its derived entry-point set, and its report shape {entry_points: [{name, state, violations: [{coordinator, dispatch_id}]}], total}. This AC re-runs that sweep unmodified against a changed agent population and constrains what reachability means."
+test_spec:
+  - name: test_bo_3100c_2_i_new_reachable_coordinator_is_named_with_sweep_unmodified
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE DURABILITY TEST. Start from a fixture where every entry point passes; add a new specialist that dispatches another specialist and make it reachable from one entry point; re-run the identical sweep with no source edit and assert that entry point is reported violating and the new specialist is named."
+  - name: test_bo_3100c_2_i_added_unreachable_coordinator_is_not_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE SCOPE LIMIT. Add the same coordinating specialist but leave it unreachable from every entry point; assert the sweep reports nothing about it. A sweep that has drifted into a source inventory fails here — which is the point."
+  - name: test_bo_3100c_2_i_reachable_non_coordinating_specialist_stays_silent
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A newly added specialist that is reachable but dispatches nobody produces no report line. Keeps the sweep from reporting the roster and being switched off."
+test_rationale: |
+  The two scenarios pull in opposite directions and only work as a pair: the first fails a
+  frozen-roster sweep, the second fails a source-scanning sweep. An implementation that passes
+  only one of them is broken in a specific, named way, which is why both tests must exist and
+  neither may be relaxed to make the other easier.
+  The unreachable-coordinator test is unusual in that its job is to FORBID coverage. That is
+  deliberate: BO-3100c-2's method is observation, and the natural instinct to also catch dead
+  coordinators is exactly how a sweep drifts back into a grep that is wrong in both directions.
+  Encoding the limit as a failing test is what stops a later "improvement" from passing review.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements (explicitly preserving the
+    no-source-scan scope limit), expects_from, doc_links, test_spec/test_rationale,
+    change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A sweep written against today's list of coordinators passes on the day it lands and stops
+  working the first time someone adds one. That is precisely how the prompt-level fix rotted:
+  building-epics §2.1-R1 was correct for the agent that loaded it and had nothing to say about
+  the agent that stalled one level down, which had been added to the chain without the rule
+  following it.
+
+  THE SECOND SCENARIO IS A DELIBERATE SCOPE LIMIT, and it is where this AC could be argued
+  either way. A coordinating specialist that exists but is unreachable is dead weight, not a
+  live hazard, and reporting it would push the sweep back towards inventorying the source
+  tree — which is the method BO-3100c-2 forbids because it gives wrong answers in both
+  directions. Recording the reasoning here so a later implementer does not "improve" the sweep
+  into a source scan. If unreachable coordinators are judged worth reporting, that is a
+  separate criterion with a separate mechanism, not a widening of this one.
+
+  IT-PO CONFIRMATION (2026-08-26). The scope limit is preserved deliberately and is now
+  enforced twice over: as an it_requirement on this AC forbidding any source scan, and as a
+  test on BO-3100c-2 asserting the sweep reaches its verdict with the source tree unreadable.
+  Recorded here because the boundary was previously carried only in prose, where a future
+  contributor could remove it without failing anything.

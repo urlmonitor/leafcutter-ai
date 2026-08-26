@@ -1,0 +1,135 @@
+id: BO-3200c-4
+title: "A how-to shows a person how to answer a paused run and how to resume it"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_driven_dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person whose run has paused because a question could not be put to them,
+  When they open the how-to for answering a paused run,
+  Then it tells them how to see which question is waiting, how to supply their answer, how to
+    resume the run, and how to confirm that the work authored before the pause is still there.
+
+  Given the how-to,
+  When its steps are followed exactly against a real run paused at a decision point,
+  Then the run resumes, the answer given is the one applied, and the previously authored work
+    is present and unchanged.
+
+  Given the how-to,
+  When it describes what happens if the person declines,
+  Then it states that declining and never answering lead to different outcomes, and says which
+    one preserves the work.
+depends_on:
+  - BO-3200c
+  - BO-3200c-1
+  - BO-3200c-3
+doc_links:
+  - path: docs/how-to/
+    relationship: describes
+    status: exists
+    relevance: "Where the how-to lands, alongside the store's other task-oriented guides."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "The substrate whose commands and record fields the how-to's steps use."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — the run lost to a cancel the person never gave; the reader of this how-to is the person that happened to."
+assigned_agent: how-to-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: how-to-author, the leaf author, not documentation-expert — the same rule applied to every documentation child in these two trees."
+  - "THE STEPS MUST BE EXECUTABLE VERBATIM. Each must be a concrete command or action with concrete arguments, not a description of what to achieve. The second criterion runs them exactly as written against a real paused run; a step saying 'find the pause record' cannot be executed and therefore cannot be covered."
+  - "THE HOW-TO MUST COVER ALL FOUR THINGS THE FIRST CRITERION NAMES, including the last one — how to CONFIRM the earlier work is still there. That is the reassurance the reader actually came for, and it is the step most likely to be dropped as obvious."
+  - "IT MUST NAME THE TWO OUTCOMES USING THE VOCABULARY BO-3200c-3 ESTABLISHES, and say which one preserves the work. A person who has just lost a run to a cancel they never gave needs to know which state they are in; a paraphrase that drifts from the emitted value leaves them searching for something that is not there."
+  - "EVERY COMMAND AND PATH THE HOW-TO NAMES MUST BE ASSERTED TO EXIST by the covering test, so a rename turns into a failing test rather than a guide that no longer works."
+  - "The how-to must be written for the person, not for an agent — the reader is the party who cannot be reached by the run, and the whole document exists because they were bypassed."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200c-1
+    contract: "The paused-at-decision run record {run_id, gate_id, question, choices, resume_point, authored_paths} and the concrete commands to inspect it, supply an answer, and resume — the substance of the how-to's steps."
+  - ac_id: BO-3200c-3
+    contract: "The two outcome values (no_answer_obtained / person_declined) and what follows each, so the third scenario states the difference in the words the system actually uses."
+test_spec:
+  - name: test_bo_3200c_4_steps_run_verbatim_against_a_real_paused_run
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: e2e
+    angle: seam
+    description: "THE EXECUTABLE CHECK. Create a real run paused at a decision point, extract the how-to's steps and run them exactly as written; assert the run resumes, the answer given is the one applied, and every previously authored file is present and byte-identical."
+  - name: test_bo_3200c_4_how_to_covers_all_four_required_actions
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the how-to's declared steps cover seeing the waiting question, supplying the answer, resuming, and confirming the earlier work is still present — the fourth being the one most likely to be dropped."
+  - name: test_bo_3200c_4_named_commands_and_paths_exist
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Every command and path the how-to names is asserted to exist in the repository, so a rename fails a test rather than silently breaking the guide."
+  - name: test_bo_3200c_4_declined_and_never_answered_are_described_with_the_real_values
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the how-to names both outcomes using BO-3200c-3's actual vocabulary and states which one preserves the work — not a paraphrase that will drift from the emitted value."
+  - name: test_bo_3200c_4_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  A how-to is worth writing in this tree only if its steps are executed, and the second criterion
+  says exactly that — so the load-bearing test creates a real paused run and runs the document's
+  steps verbatim against it. That converts the guide from a description into a covered path, and
+  it means a change to the pause commands breaks a test rather than a person's recovery.
+  The name-existence test covers the cheapest way for the guide to rot: a command renamed
+  elsewhere, leaving a document that still reads correctly and no longer works.
+  Deliberately NOT covered: whether the how-to is easy to follow for a person under stress. That
+  is human judgement and no test here claims it.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf how-to author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the how-to entry in BO-3200c's documentation_triggers.
+
+  THE SECOND SCENARIO MAKES THIS EXECUTABLE, which is the only way a how-to is worth writing in
+  this tree: its steps are run against a real paused run and must produce the stated result.
+  That converts the document from a description into a covered path, and it is the same
+  discipline BO-3100d applies to the topology record.
+
+  THE THIRD SCENARIO PUTS THE DISTINCTION IN FRONT OF THE PERSON WHO CARES ABOUT IT. A user
+  who has just lost a run to a cancel they never gave needs to know which of the two states
+  they are in; BO-3200c-3 makes the system distinguish them, and this makes the distinction
+  legible to the only party affected by it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). "Steps executable verbatim" is stated as a requirement
+  because the second criterion is otherwise unimplementable: a step phrased as an objective
+  rather than a command cannot be run exactly as written, so the covering test would degrade
+  into a human reading the page — which is the review-based coverage this tree rejects
+  everywhere else.

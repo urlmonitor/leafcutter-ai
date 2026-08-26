@@ -1,0 +1,149 @@
+id: BO-3200d-1
+title: "A result of 149 kilobytes reaches the step that reads it byte-for-byte identical to what was produced"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a specialist that produces a well-formed result of at least 149 kilobytes, containing
+    a distinctive marker part-way through it,
+  When that result is handed to the step that reads it,
+  Then what that step reads is byte-for-byte identical to what was produced, and it finds the
+    marker.
+
+  Given the same result,
+  When the step that reads it forms its verdict,
+  Then the verdict is the one it reaches from the whole result, and matches the verdict it
+    reaches when reading the produced result directly.
+
+  Given a result of a few hundred bytes containing the same marker,
+  When it is handed to the step that reads it,
+  Then it is read whole and the marker found, so the handover behaves the same way regardless
+    of size.
+depends_on:
+  - BO-3200d
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 — 148,891 bytes, 2,232 lines, marker at line 958, returned as a 47-character pointer."
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: modifies
+    status: exists
+    relevance: "The lane whose bundle handover this AC changes."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "ONE HANDOVER, WHATEVER THE SIZE. No size threshold, no fast path for small results. A size-dependent split leaves two code paths, one of which is the defect, and a threshold nobody will re-examine. The third criterion exists to fail exactly that implementation."
+  - "THE FIXTURE MUST BE AT OR ABOVE THE REAL SIZE (149 KB) with the marker placed PART-WAY THROUGH, not at the start. A truncating handover delivers the beginning intact, so a marker in the first kilobyte is found by a handover that lost ninety per cent of the content. Prefer a real bundle over a synthetic block of repeated bytes, per CLAUDE.md 'Real-artifact behavioral spot-check' — a synthetic fixture can also compress or serialise differently from real content."
+  - "EQUALITY MUST BE ASSERTED BYTE-FOR-BYTE, on content, not by length or by a checksum of a normalised form. A handover that re-encodes line endings or strips a trailing newline is a handover that altered the result."
+  - "THE VERDICT MUST BE COMPARED, not just the bytes. Content equality can hold while the consuming step reads something else entirely; requiring the verdict to match the one reached from the produced result directly is what ties this AC to the halt it prevents."
+  - "The handover must not require the producer to reproduce the content in its reply — that is BO-3200d-2, and this AC must not be satisfied by a bigger reply field."
+  - "THIS AC MUST NOT BE SATISFIED BY LOOSENING THE GATE. The cheapest way to make it pass is to stop the reading step refusing; BO-3200d-1-i is the guard and both must be delivered together."
+  - "The artifact the handover uses must be cleaned up or scoped to the run, so a repeated drive does not read a previous run's result. A stale artifact read as this run's output is a new phantom-done vector."
+delivers_to:
+  - agent: python-coder
+    contract: "A size-independent result handover: the consumer reads the producer's result whole, byte-for-byte identical to what was written, with no size threshold and no dependence on the reply's content. BO-3200d-2 constrains how the location is agreed; BO-3200d-1-i asserts the reading step still refuses a genuinely bad result; BO-3200d-2-i defines the three not-good outcomes."
+  - agent: architecture-diagram-author
+    contract: "The ordered trace of a real run in which a result of at least 149 KB is produced and consumed, so BO-3200d-3's diagram can be compared against a run at the real size."
+expects_from: null
+test_spec:
+  - name: test_bo_3200d_1_149kb_result_arrives_byte_identical_with_the_marker_found
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Produce a well-formed result of at least 149 KB with a distinctive marker part-way through; assert what the reading step reads is byte-for-byte identical to what was produced and that it finds the marker."
+  - name: test_bo_3200d_1_verdict_matches_the_one_from_the_produced_result
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Compute the reading step's verdict from the handed-over result and from the produced result read directly; assert they are equal. Content equality alone can hold while the step reads something else."
+  - name: test_bo_3200d_1_small_result_uses_the_same_handover
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE NO-THRESHOLD TEST. A few-hundred-byte result containing the same marker is read whole through the SAME mechanism. Fails any implementation that keeps the old in-reply path for small results and adds a second one for large."
+  - name: test_bo_3200d_1_handover_preserves_bytes_exactly_not_normalised
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A result containing mixed line endings, a trailing newline and non-ASCII content survives the handover unchanged — a re-encoding handover is one that altered the result."
+  - name: test_bo_3200d_1_stale_artifact_from_a_previous_run_is_not_read
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With a previous run's artifact present, assert the current run reads its own result and never the stale one. A stale artifact read as this run's output is a new phantom-done vector introduced by the fix."
+test_rationale: |
+  The failing size is not a round number and neither is the marker position: KI-BO-019's bundle
+  was 148,891 bytes with the marker at line 958. A fixture below the size at which the handover
+  changes behaviour passes on the broken handover, and a marker in the first kilobyte is found
+  even by a handover that lost ninety per cent of the content. Both choices are the difference
+  between a test that can fail and one that cannot.
+  The small-result test is the one that forbids the tempting fix: keep the reply for small
+  payloads, add a file for large ones. That passes the first two criteria completely and ships
+  the defect behind a threshold nobody revisits.
+  The stale-artifact test covers a hazard the fix itself creates — moving the result out of the
+  reply means it now persists, and a persisted artifact read by the wrong run is a fresh way to
+  be confidently wrong.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to, doc_links,
+    test_spec/test_rationale, change_target/risk_surface, declares_side_effect. criteria
+    untouched; the gate-not-loosened boundary preserved.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200d-1-i
+implemented_by: []
+notes: |
+  THE SIZE IS THE REAL ONE, not a round number. KI-BO-019: the bundle was 148,891 bytes, 2,232
+  lines, and the marker was present at line 958; the specialist wrote it correctly to disk and
+  returned a 47-character pointer, and the gate reading that pointer found no marker and
+  halted a run whose work was fine. A fixture below the size at which the handover changes
+  behaviour passes on the broken handover, which is exactly the fixture bias CLAUDE.md's
+  "Real-artifact behavioral spot-check" warns about.
+
+  A MARKER PART-WAY THROUGH, not at the start, for the same reason: a truncating handover
+  delivers the beginning intact, so a marker in the first kilobyte is found by a handover that
+  loses ninety per cent of the content.
+
+  THE SECOND SCENARIO ASSERTS THE CONSEQUENCE. Content equality alone can be satisfied while
+  the consuming step still reads something else; requiring the verdict to match the one reached
+  from the produced result ties this AC to the halt it exists to prevent.
+
+  THE THIRD SCENARIO FORBIDS A SIZE-DEPENDENT SPLIT. An implementation that keeps the old
+  in-reply handover for small results and adds a second mechanism for large ones has two code
+  paths, one of which is the defect, and a threshold nobody will re-examine. One handover,
+  whatever the size.
+
+  THE GATE IS NOT THE BUG — see BO-3200d-1-i. Its fail-closed posture is correct and this
+  criterion must not be read as loosening it.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The stale-artifact requirement is a hazard this fix
+  introduces rather than one it inherits. Once the result lives outside the reply it persists,
+  and a consumer that reads a path without knowing which run wrote it will happily validate a
+  previous run's bundle — a confident, well-formed, entirely wrong pass. Run-scoping the artifact
+  is also what BO-3200d-2's caller-supplied path gives for free, which is one more reason the two
+  should be implemented together.

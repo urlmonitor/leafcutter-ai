@@ -1,0 +1,113 @@
+id: BO-3200
+title: "A build never acts on a second-hand answer"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Facts are read at the source, actions are performed, decisions come from you.
+
+  A build constantly needs three different things: to know a fact about your
+  project, to make something happen, and occasionally to get a decision from you.
+  Today all three are sometimes obtained by asking a specialist — and a
+  specialist can paraphrase, truncate, hand back a pointer instead of an answer,
+  or decline the job entirely. Any of those replies can be read as a confident
+  answer, and builds have halted, discarded finished work, and left work stranded
+  because of it.
+
+  This goal draws the line. Judgement is the only thing worth asking a specialist
+  for. Facts are looked up where they live, required actions are carried out
+  directly, and a decision that belongs to you is put in front of you. Nothing
+  the build depends on arrives second-hand.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 (truncated relayed config read), KI-BO-019 (large result returned as a pointer), KI-BO-020 (required action dispatched to a specialist that refused)."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005 — a user approval gate answered by a specialist, discarding authored work."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface for BO-2900 parity. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3200a
+  - BO-3200b
+  - BO-3200c
+  - BO-3200d
+  - BO-3200e
+implemented_by: []
+notes: |
+  Authored 2026-08-25 from a user (BrainCandy) request. Sibling of BO-3100; see
+  that record's notes for the shared root cause and the split rationale.
+
+  THE RULE, in the user's words: only JUDGEMENT is delegable to a specialist.
+  I/O, control flow, and consent are not.
+
+  KNOWN STARTING STATE, to be re-measured rather than trusted: roughly 69
+  dispatches currently use a read-only reporting specialist as a general-purpose
+  errand runner — to read files, run commands, or collect user consent.
+
+  FOUR OBSERVED FAILURES, all the same shape, all currently open. These are the
+  evidence base and each child should be traceable to at least one:
+  - A configuration file was read by asking a specialist to print it. The file
+    was ~130 KB; the reply truncated at 75,000 characters mid-escape-sequence, so
+    parsing failed. The failure was fail-closed into a SUBSTANTIVE verdict — "this
+    agent is not permitted" — and the run halted. The permission was in fact
+    granted. (KI-BO-018)
+  - A ~149 KB result was requested as a text field in a reply. The specialist did
+    the work correctly, wrote it to disk, and returned a file path. The gate
+    checked the 47-character path for content, found none, and halted a run whose
+    work was fine. The gate was right; the transport was impossible. (KI-BO-019)
+  - A required cleanup action was dispatched to a read-only reporting specialist,
+    which correctly refused the role. The reply was never inspected, so the
+    action silently never happened and claimed work was left stranded. (KI-BO-020)
+  - Approval gates were put to a reporting specialist rather than a person. It
+    refused, and its refusal was parsed as the user choosing to cancel, which
+    discarded already-authored work. (KI-ACD-005)
+
+  ALREADY SHIPPED — DO NOT RE-SPECIFY. PR #565 (88c6395e) added an `undetermined`
+  status and stopped the approval gates defaulting to discard. So the fourth
+  failure no longer destroys work, and a status exists for "I could not perform my
+  task". What remains is making the gates actually reach a person (BO-3200c) and
+  using that status at every check that can fail to inspect (BO-3200e).
+
+  MECHANICAL ENFORCEMENT ONLY — the same hard constraint as BO-3100 applies here.
+  "Workflow authors are instructed not to use a specialist as an errand runner"
+  is not an acceptable L2. The gap must be closed so the misuse cannot be
+  expressed, or is caught automatically.
+
+  A NOTE ON BLAME, worth preserving because it shapes the fix: in every case
+  above the specialist behaved well. It said plainly what it had done, or
+  correctly refused a role outside its remit. What failed was asking it for
+  something no specialist can reliably provide. Decompose these as contract
+  defects, not as agent-obedience problems.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). risk_surface is contract_boundary at L0
+  rather than internal, unlike BO-3100: every child of this tree changes the
+  contract between the build and something outside it — the declaration a dispatch
+  site must carry (BO-3200a-2), the out-of-band handover between a producer and a
+  consumer (BO-3200d-2), the three-answer vocabulary every check site must emit
+  (BO-3200e). BO-3200c's children carry `auth` instead, because the property under
+  test there is the PROVENANCE of an answer that settles a consent gate, which is
+  an authorisation question rather than a contract-shape one.

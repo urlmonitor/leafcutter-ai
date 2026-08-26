@@ -1,0 +1,161 @@
+id: BO-3200b-1
+title: "A run that stops after claiming work releases the claim in the store that outlives it, from every failure point"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run that has claimed work in a store that outlives the run,
+    And the run then stops because a later step failed,
+    And an environment in which dispatching a specialist is impossible,
+  When the run ends,
+  Then every item it claimed is back in its unclaimed state in that same store.
+
+  Given that ended run,
+  When a new run selects work from that store,
+  Then it is able to claim the same items, so the failed run did not make its own target
+    unbuildable.
+
+  Given a run driven separately to each distinct point at which it can stop after the claim,
+  When it ends at each of those points in turn,
+  Then every item it claimed is back in its unclaimed state after each one.
+depends_on:
+  - BO-3200b
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 — nine release dispatches, all with the same defect; KI-BO-022 is the adjacent raise-escapes defect this AC does not claim."
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: modifies
+    status: exists
+    relevance: "The loop whose failure paths carry the release dispatches."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The claim/selection guard that correctly refuses occupied work — the mechanism that turns a stranded claim into permanent exclusion."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE RELEASE MUST BE PERFORMED INLINE BY THE LAYER THAT MUST GUARANTEE IT, with no dispatch in its path. Testable only by removing the ability to dispatch — an assertion that the claim was released passes on a run that got lucky with a cooperative specialist."
+  - "THE TEST STORE MUST OUTLIVE THE RUN. Asserting against a fast-lane run's throwaway copy proves nothing: that copy being discarded is the accident that made the first sighting cheap, and the parent L1 is explicit that the severity must not be set by it. Exercise a store the run does not own."
+  - "EVERY DISTINCT STOP POINT AFTER THE CLAIM MUST BE COVERED, and the set of stop points must be DERIVED from the run's structure rather than listed by hand. KI-BO-020 records nine release dispatches with the same defect; fixing the first found and testing only that one leaves eight live, and a hand-written list of nine will be eight the next time a stop point is added."
+  - "RELEASE MUST RUN ON ABNORMAL TERMINATION TOO, not only on the paths that reach an orderly halt. An exception escaping the claim/release region strands exactly the records this AC is about — see KI-BO-022, which is adjacent and not adopted here, but whose shape must not be re-created."
+  - "RELEASE MUST BE IDEMPOTENT: releasing an already-unclaimed item is a no-op, not an error. Otherwise a run that releases on both an inner and an outer path fails on the second."
+  - "THE ASSERTION MUST REACH RE-CLAIMABILITY, not stop at the field value. A store whose field reads unclaimed but which the selection guard still refuses has not been released in the sense that matters."
+  - "The release's outcome must be produced in the shape BO-3200b-2 consumes, so the halt report can state whether it succeeded — performing the action inline does not, by itself, mean anyone read the result."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py to withhold the dispatch surface, and must exercise the real lane rather than a re-implementation of its claim logic."
+delivers_to:
+  - agent: python-coder
+    contract: "An inline release operation with no dispatch in its path, returning a per-item outcome list [{item_id: str, released: bool, reason: str | null}] plus an aggregate {attempted: int, released: int, failed: [item_id]}. BO-3200b-2 places this aggregate in the halt report; BO-3200b-1-i constrains its partial-claim and per-item-failure behaviour."
+  - agent: architecture-diagram-author
+    contract: "The ordered failure-path trace of a real run driven to a failure after the claim — claim recorded, later step fails, release performed inline, outcome read, halt reported — so BO-3200b-4's diagram can be compared against it."
+expects_from: null
+test_spec:
+  - name: test_bo_3200b_1_claim_is_released_with_dispatch_impossible
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Drive the real lane against a store that outlives the run, claim items, force a later step to fail, with the dispatch surface withheld entirely; assert every claimed item is back in its unclaimed state in that same store."
+  - name: test_bo_3200b_1_released_items_are_re_claimable_by_a_new_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After the failed run ends, start a new run selecting from the same store and assert it can claim the same items. Asserts the consequence — the selection guard accepts them — not merely the field value."
+  - name: test_bo_3200b_1_every_derived_stop_point_releases
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Enumerate the run's stop points after the claim FROM ITS STRUCTURE, drive to each in turn, and assert full release after every one. A hand-written list of nine fails the moment a tenth is added; the derivation is what makes this durable."
+  - name: test_bo_3200b_1_release_runs_on_abnormal_termination
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Force an exception to escape after the claim and assert the items are still released. The orderly-halt paths are the ones an author remembers; this is the one that strands records."
+  - name: test_bo_3200b_1_release_is_idempotent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Releasing an already-unclaimed item is a no-op rather than an error, so a run that releases on both an inner and an outer path does not fail on the second."
+  - name: test_bo_3200b_1_release_outcome_is_produced_for_the_halt_report
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert the release produces the per-item and aggregate outcome BO-3200b-2 consumes. Performing the action inline does not by itself mean anyone reads the result — that was the second, independent defect in KI-BO-020."
+test_rationale: |
+  "Performs the release itself" is a claim about HOW, and a run with a cooperative specialist
+  releases correctly too. Removing the ability to dispatch is the only shape that can only be
+  passed by a run that does it inline — the same technique as BO-3200a-1.
+  Two choices here are deliberate and load-bearing. Asserting RE-CLAIMABILITY rather than the
+  field value ties the test to the actual damage: a stranded claim is permanently excluded from
+  selection by a guard that is behaving correctly. And using a store that outlives the run
+  refuses the accident that made the first sighting cheap — a test against the fast lane's own
+  throwaway copy would pass on a completely broken release.
+  Deriving the stop points rather than listing them is what keeps this from being nine fixes and
+  a tenth defect.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to, doc_links,
+    test_spec/test_rationale, change_target/risk_surface, declares_side_effect. criteria
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200b-1-i
+implemented_by: []
+notes: |
+  Anchor case KI-BO-020: every failure path released its claim by dispatching a reporting
+  specialist under a role name that was not its own. The specialist refused — correctly, since
+  reassigning its role is out of scope — the reply was discarded because the release is
+  best-effort, and the claims stayed stuck. The run reported its halt and looked fine.
+
+  THE UNAVAILABLE-SPECIALIST CLAUSE IS THE DISCRIMINATOR, as in BO-3200a-1: an assertion that
+  the claim was released passes on a run that got lucky with a cooperative specialist.
+  Requiring the release with no specialist available can only be passed by a run that performs
+  it itself.
+
+  THE STORE MUST BE ONE THAT OUTLIVES THE RUN. The parent L1 is explicit that the observed
+  harmlessness was luck, not design: the damage stayed contained only because a fast-lane run
+  claims in its own throwaway copy, so the shared copy was untouched. A test asserted against a
+  discarded copy proves nothing, and the severity must not be set by the accident that made the
+  first sighting cheap.
+
+  THE SECOND SCENARIO ENCODES THE REAL DAMAGE. Stranded claims are permanently excluded from
+  future selection by the guard that correctly refuses occupied work, so a failed run silently
+  makes its own target unbuildable and recovery is a hand edit. Asserting re-claimability, not
+  just the field value, is what ties this AC to that consequence.
+
+  THE THIRD SCENARIO EXISTS BECAUSE THIS IS NINE PATHS, NOT ONE. KI-BO-020's update records
+  that every release dispatch in the lane had the same defect. Fixing the first one found and
+  testing only that one leaves eight live.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Two additions the criteria imply but do not state:
+  abnormal termination and idempotency. The first because an exception escaping the claim region
+  strands exactly these records and is the shape KI-BO-022 records as latent — adjacent and not
+  claimed by this AC, but a defect the fix must not re-create. The second because the natural
+  way to satisfy "release from every stop point" is a release call on several nested paths, and
+  a non-idempotent release then fails on the second one, which would be a new failure introduced
+  by the fix.
