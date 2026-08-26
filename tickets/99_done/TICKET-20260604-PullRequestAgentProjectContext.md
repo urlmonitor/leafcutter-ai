@@ -204,3 +204,33 @@ completion_manifest:
   pr_created: true
   pr_body_complete: true
 Pushed feature/pullrequestagentprojectcontext to origin. PR created at https://github.com/urlmonitor/leafcutter-ai/pull/50. urlmonitor account was already active — no account switch needed. Ticket status flipped to done (all agents signed_off or not_needed).
+
+## Repair Resolution (GE-122e-2)
+
+- resolution: kept the 'done' copy (previously held by 99_done) and removed the 'todo' copy (held by 00_inbox)
+- reason: tickets/ticket_lifecycle.json permits status 'done' only in a terminal, permanent archive folder (99_done), while status 'todo' is only permitted in non-terminal, still-in-flight folders, so the 'done' declaration records the later, completed state.
+
+### Recovered content from the deleted copy
+
+| AC-1 |      |                |           |
+| AC-2 |      |                |           |
+| AC-3 |      |                |           |
+| AC-4 |      |                |           |
+| AC-5 |      |                |           |
+| AC-6 |      |                |           |
+## AC Traceability
+| AC ID | Level | Title | Agent |
+|-------|-------|-------|-------|
+| INF-100a-1 | L2 | Pre-Flight section in template loads PROJECT_CONTEXT.md before Step 0 | llm-expert |
+| INF-100a-2 | L2 | EMU identity guard: check gh auth, switch to urlmonitor if different | python-coder |
+| INF-100a-3 | L2 | PR writing standards: title and description conventions | python-coder |
+| INF-100a-4 | L2 | Wiring tests: template has Pre-Flight, context file exists, contains required keywords | test-writer |
+| INF-100a-1-i | L3 | Graceful degradation when PROJECT_CONTEXT.md is absent | llm-expert |
+| INF-100a-2-i | L3 | No-op case: already authenticated as urlmonitor | python-coder |
+AC files: `docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100a-*.yaml`
+- [ ] test-writer
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
+- [ ] commit
+- [ ] pull-request

@@ -528,6 +528,19 @@
                 "pass_filenames": false
             },
             {
+                "id": "check-decision-number-uniqueness",
+                "tier": "judgment",
+                "name": "Check Decision-Number Uniqueness (GE-122a-1 decision namespace)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_adr_collision.py",
+                "language": "system",
+                "files": "^docs/architecture/adrs/.*\\.md$",
+                "stages": [
+                    "pre-commit"
+                ],
+                "pass_filenames": false,
+                "_comment": "GE-122a-1: Registers check_adr_collision.py, which was deployed but wired into no manifest (verified 2026-08-17 -- see ADR-029 Amendment 1). Adopts its staged-vs-origin/main-vs-inflight-branch comparison for the decision-number namespace of the whole-collection uniqueness effort, extended with same-commit self-collision detection (_find_self_collisions). Fail-closed on inability to read the sequence (git unavailable, ADR directory absent, remote-branch scan failing); fail-open only for a bug in its own reporting after a completed read (ADR-029 Amendment 1)."
+            },
+            {
                 "id": "check-infra-docs",
                 "tier": "judgment",
                 "name": "Check Infrastructure Documentation",
