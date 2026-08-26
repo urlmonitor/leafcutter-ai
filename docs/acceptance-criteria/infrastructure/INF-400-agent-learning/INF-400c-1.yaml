@@ -6,7 +6,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 criteria: |
@@ -50,7 +50,9 @@ origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/docs/test_adr_learning_emission_sink.py"
+implemented_by:
+  - "docs/architecture/adrs/ADR-011-learning-emission-sink.md"
 change_target: docs
 risk_surface: internal

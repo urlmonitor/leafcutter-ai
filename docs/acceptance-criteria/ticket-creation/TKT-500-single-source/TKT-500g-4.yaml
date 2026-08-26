@@ -1,0 +1,108 @@
+id: TKT-500g-4
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A declared \"no proof needed\" stays a choice, and is recorded as the reason"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an approved requirement that both authors a proof demand of one
+    statement and separately declares that no proof is required for it,
+  When a work item is generated from that requirement,
+  Then the generated work item carries no proof section,
+  And the work item's phase list does not record the proof writer as owed,
+  And the reason recorded for the omission states that the requirement declared
+    no proof was needed,
+  And that reason does not attribute the omission to the kind of worker named on
+    the requirement.
+depends_on: [TKT-500g, TKT-500g-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Defines the explicit waiver as the field that distinguishes 'intentionally no proof' from 'no demand authored yet', and makes it the one thing that suppresses an authored demand."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+    relevance: "Where the waiver is applied and where the omission reason is written. The recorded reason is the observable: a waived record and a discarded record must never be indistinguishable after the fact."
+  - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
+    relationship: verifies
+    status: exists
+    relevance: "Carries this criterion's suppression test, currently mis-tagged to BP-1100g-1; re-point it at TKT-500g-4."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Why the recorded reason is the load-bearing clause. A success-shaped message over a silent loss is the mechanism catalogued here; a waiver and a discard producing the same silence is that mechanism in this pipeline."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A waiver and a discard must be distinguishable from the recorded output alone, after the fact, by someone who was not there. Two paths that produce the same silence are one path as far as any later reader is concerned."
+  - "The recorded reason must name the input the decision actually used. A reason that cites the assignee's job title describes a decision nobody made, and it is what made 85 records look fine for weeks."
+  - "The waiver is the only sanctioned suppressor of an authored demand. Nothing else — path shape, worker classification, an empty demand — may produce the same outcome; the empty-demand look-alike is closed by TKT-500g-4-i."
+  - "The suppression and the phase list must move together: a waived record must not leave the proof writer or the proof runner marked as owed."
+test_spec:
+  - name: test_test_required_false_still_suppresses_an_authored_spec
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A record that both authors one statement and declares no proof is required generates a work item with no proof section. The fixture record is written with the project's real serializer and read back through the real generator entry point."
+  - name: test_the_recorded_reason_names_the_declared_waiver_not_the_assigned_worker
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The last two Then clauses, which nothing asserts today: the omission reason states that the requirement declared no proof was needed, and does not attribute the omission to the kind of worker assigned."
+  - name: test_a_waived_record_leaves_the_proof_writer_off_the_phase_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The suppression must reach the phase list too — a waived record that still marks the proof writer owed dispatches somebody to satisfy a demand the author explicitly withdrew."
+test_rationale: |
+  The existing test asserts only that the section disappears, which is the clause this
+  AC's own notes call the least important one. What made 85 records look fine was not the
+  silence, it was that the silence had a success-shaped reason attached — so the recorded
+  reason (descriptor 2) is where the real content of this criterion lives and it is
+  currently unasserted. Descriptor 3 closes the same section-versus-phase-list gap that
+  TKT-500g-3 carries, because the two suppression paths can regress independently.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-1
+  contract: "The authored-demand survival rule, with the one sanctioned exception to it: an explicit declaration by the author that no proof is owed."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: [TKT-500g-4-i]
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  ALREADY BUILT — shipped with f3ac950c / PR #536. work_status stays todo until
+  its covering test cites this AC.
+
+  THE LAST THEN CLAUSE IS THE ONE THAT MATTERS. Before the fix, a discarded
+  demand and a deliberate waiver produced the same silence, and the readiness
+  report described both as "no proof required". That is what made 85 records
+  look fine. A waiver is a decision somebody made and must be readable as such
+  afterwards; an omission attributed to the assignee's job title is not a
+  decision anybody made.
+
+  PRECEDENCE ORDER ESTABLISHED ACROSS THIS SUBTREE, HIGHEST FIRST:
+    1. An explicit declaration that no proof is needed (this criterion).
+    2. An authored proof demand (TKT-500g-1), which outranks path shape
+       (TKT-500g-1-i).
+    3. Inference from the shape of the changed paths (TKT-500f-6 / -7).
+  Worker classification appears nowhere in that order, on either side.
+
+  IT-PO NOTE 2026-08-25 — THE CLAUSE THE NOTES CALL DECISIVE IS THE UNTESTED ONE.
+  The one existing test covers the section's absence; the recorded reason, which
+  these notes identify as the clause that matters, has no assertion at all. Two
+  descriptors are recorded as owed. Treat this AC as partly proven, not built.

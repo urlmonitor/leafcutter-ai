@@ -1,0 +1,66 @@
+id: INF-400c-4-iii
+components:
+  - infrastructure
+title: "Phase telemetry and knowledge emissions are separate streams, and the harvester drains only its own"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
+criteria: |
+  Given two record shapes exist in this system: a phase-telemetry record
+    carrying event_type, timestamp, ticket_path, agent_name and payload
+    (the shape INF-400g-2 pins for the drive-telemetry emitter), and a
+    knowledge-capture record carrying event, timestamp, agent, component,
+    destination and entry_kind,
+  And they have different lifecycles — telemetry is appended and aggregated
+    for trend analysis and is never consumed, while a knowledge emission is
+    drained exactly once and then watermarked,
+  When a drive writes both kinds of record,
+  Then the phase-telemetry records are written to the telemetry sink and the
+    knowledge-capture records are written to the knowledge-emission sink, and
+    neither file receives the other kind,
+  And the harvester reads only the knowledge-emission sink, so a run over a
+    corpus containing no knowledge records drains nothing and reports zero
+    records read rather than zero records recognised,
+  And the aggregation surface that reads the telemetry sink returns the same
+    results before and after the split, because no telemetry record moved,
+  And the split is recorded in the architecture documentation as the reason a
+    single sink with a type discriminator was not chosen: one file drained by
+    a watermark and simultaneously appended for aggregation makes an unrouted
+    record and an unaggregatable record indistinguishable.
+depends_on: [INF-400c-4]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "The drive-telemetry emitter's existing record shape is pinned by INF-400g-2 and must not change to accommodate the split"
+  - "The harvester must not be given a fallback that reads the telemetry sink when its own sink is absent — an absent sink reports zero records, it does not widen the search"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: architecture-diagram-author
+  contract: "The two-stream decision and its rationale, to be reflected in the knowledge-system architecture documentation alongside the harvester flow"
+expects_from:
+  ac_id: INF-400c-4
+  contract: "The declared knowledge-emission sink path, distinct from the telemetry sink path"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

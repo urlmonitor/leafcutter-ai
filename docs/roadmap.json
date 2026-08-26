@@ -13,7 +13,7 @@
         "Clean install succeeds on a blank project with only skills_config.json present",
         "build.py --validate-only returns 0 with no template injection errors",
         "Consecutive builds produce zero git diff (idempotent)",
-        "Self-hosting parity: leafcutter development uses its own compiled agents"
+        "The self-host build leaves the repository clean and reports truthfully: no unrequested edits to tracked files, no orphaned artifacts, no false all-clear"
       ],
       "tickets_advancing_outcome": [],
       "components": [

@@ -1,0 +1,37 @@
+id: AR-100d
+title: "Mis-assignment warnings you can actually trust"
+component: agent-registry
+components:
+  - agent_registry
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A warning about the wrong specialist means something is really wrong.
+
+  The safeguard that flags a mismatch between the work requested and the
+  specialist assigned stops firing on work that was routed correctly, so it
+  becomes a signal worth stopping for rather than background noise everyone has
+  learned to wave through.
+depends_on:
+  - AR-100
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The ownership information the mismatch safeguard reads."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "No new user-facing surface — the observable change is that an existing safeguard stops raising false alarms."

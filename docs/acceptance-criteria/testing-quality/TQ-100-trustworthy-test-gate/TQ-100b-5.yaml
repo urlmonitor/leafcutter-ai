@@ -1,0 +1,220 @@
+id: TQ-100b-5
+components:
+  - testing_quality
+  - ac_store
+  - commit_guardian
+title: "Every coverage-tag recognition rule in the repo recognises the same tags over the real tree"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+criteria: |
+  Given the four places in the repository that each define a coverage-tag
+    recognition rule of their own, named here as the closed set this AC is about:
+      R1, the canonical capturing rule in the AC-store test-enforcement module,
+        which the done-proof verdict applies and which the pytest enforcement
+        plugin and the fast lane reuse by import rather than redefining;
+      R1f, the duplicate of that same rule written out a second time in the
+        commit-time done-proof check's import-fallback branch, which is the copy
+        that runs whenever the enforcement module is not importable;
+      R2, the separately written rule carried by the commit-time test-tag check,
+        which only detects that a tag is present and never captures its value;
+      R3, the separately written rule carried by the AC-to-test coverage check,
+        which captures the value but recognises Python "#" comments only and so
+        is blind to the "//" tags the other three accept,
+  And the unit-test tree exactly as committed,
+  When every rule in that named set is run over that same on-disk tree,
+  Then each produces the same set of records of (file, test function, captured
+    value), including the same verdict on every capture: recognised tag,
+    rejected non-tag, or malformed tag
+  And any capture that one rule recognises and another does not is reported as a
+    disagreement naming the captured value, the file, and every rule that accepted
+    it alongside every rule that did not
+  And the comparison covers every rule in the named set, so a comparison that comes
+    out clean over any proper subset of the set — any pair, or any three of the
+    four — does not satisfy this criterion
+  And the comparison is made from the rules' output over real files, not from
+    comparing their pattern strings, so two patterns that read differently but
+    behave identically are not reported and two patterns that read similarly but
+    behave differently are.
+depends_on:
+  - TQ-100b
+  - TQ-100b-4
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-1-ii.yaml
+    relationship: relates-to
+    status: exists
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: implements
+    status: exists
+    relevance: "RULE R1 — COVERS_TAG_RE = (?:#|//)\\s*covers:\\s*(\\S+) at :57. Captures a value; no shape rule; position-blind. Lives only in scripts/ (no templates/ copy), so this path IS its source of truth."
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "R1's application site (:370, .search() per line) and the owner of _scan_test_root_for_covers_tags(), the function that produces the record set to be compared."
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: implements
+    status: exists
+    relevance: "RULE R2, SOURCE OF TRUTH. COVERS_REGEX = covers:\\s*[A-Z]{2,6}-[0-9]{3} at :38, applied at :136/:144/:152 to the comment line above the def, the docstring, and the first body line via AST. Note it only DETECTS presence — it never captures the id — and its shape rule demands exactly three digits, so it and R1 already disagree today on both axes. Edit this file, not the deployed copy. Measured 2026-08-19: this script is NOT registered in commit_guardian.json's hooks_manifest, so it is not invoked at commit time today."
+  - path: scripts/commit_guardian/check_test_ac_tags.py
+    relationship: relates-to
+    status: exists
+    relevance: "R2's DEPLOYED copy. build.py overwrites it from templates/; a change made only here is silently reverted at the next build. This is why the parity test must also run against the deployed layout. Measured 2026-08-19: scripts/commit_guardian/ is a build output and is not tracked in git, so this path is absent from a fresh worktree until build.py has run."
+  - path: templates/scripts/commit_guardian/check_ac_coverage.py
+    relationship: implements
+    status: exists
+    relevance: "RULE R3, found 2026-08-19 and invisible to this AC's original two-reader framing. _COVERS_REGEX = #\\s*covers:\\s*([A-Z]{2,6}-[0-9]{3,}) at :41. Captures the id like R1, but anchors on a Python \"#\" comment marker so it never matches a \"// covers:\" tag, and its shape rule takes THREE OR MORE digits where R2 takes exactly three. It scans the reverse direction (every active AC must be pointed at by some test) and is warn-only. Like R2 it is NOT registered in the hooks_manifest today."
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "RULE R1f, found 2026-08-19. Imports COVERS_TAG_RE from test_enforcement at :91 and, in the except ImportError branch at :92-95, writes the identical pattern out a second time as a local literal. Byte-equal to R1 at HEAD, so it is not a behavioural difference today — it is a second definition site that can drift from R1 silently, and it is the copy that fires in any layout where the AC-store module is not importable. This hook IS registered (hooks_manifest :1056) and is the only registered consumer of any rule in the set."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the test_ac_tag_enforcement commit_guardian key that gates R2's check in warn/error mode — read before deciding where the parity verdict is consumed. Measured 2026-08-19: that key is not present in commit_guardian.json, so the documented default path is what applies."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the seam angle and cites EPIC-ComputedQualityGates FP-1 layer 3 — two disjoint vocabularies each tested against its own copy — which is precisely this AC's failure mode."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "MEASURED STARTING POINT the criteria could not carry: the two readers do not merely spell one pattern differently, they differ on three axes today. Reader 1 captures the id and applies no shape rule and no position rule. Reader 2 applies a stricter shape rule (exactly three digits after a 2-6 letter prefix, so AC-1 and other short-form ids never match) and IS position-aware via AST, but only detects that a tag is present — it never extracts the value. Producing 'the same set of records of (file, test function, captured value)' therefore requires reader 2 to start capturing values, which is new behaviour, not a pattern tweak. Budget for that before starting."
+  - "Parity must be established from the two readers' OUTPUT over real on-disk files. Comparing the two pattern strings, asserting one module imports the other, or asserting the two constants are equal does not satisfy any clause of this AC — those are the grep-only structural tests this AC exists to replace."
+  - "Reader 2 has a source-of-truth split that will silently revert a fix: templates/scripts/commit_guardian/check_test_ac_tags.py is the source and scripts/commit_guardian/check_test_ac_tags.py is a build.py-generated copy (byte-identical at HEAD). Land recognition changes in the template and re-run build.py; never patch only the deployed copy. Reader 1 has no template and is edited in place under scripts/ac_store/."
+  - "If parity is implemented by extracting a single shared reader, that shared module must be added to build.py's deploy map for BOTH the ac_store and commit_guardian consumers in the same change. A commit-time hook importing an undeployed module raises ModuleNotFoundError, and the done-proof gate is a required check — that failure blocks every merge."
+  - "The parity verdict must be CONSUMED by something that runs, not merely computed. Reader 2's check currently runs in warn mode behind the commit_guardian test_ac_tag_enforcement key; name explicitly which gate consumes the parity result and in which mode it runs, and make that the entry point the tests exercise. A parity function nobody calls is the phantom-done shape, one level up."
+  - "A disagreement report must name the captured value, the file, and which of the two readers accepted it. A boolean 'readers differ', or a count of differences, is not actionable and does not satisfy the criterion."
+  - "The comparison must be order-insensitive and deterministic: parity is over sets of records, so a difference in filesystem walk order or in the order either reader emits records must never register as a disagreement."
+  - "Must run inside the existing commit-time budget over the full committed tree (roughly 2,328 tag records today): at most one pass per reader per file, no repeated full-tree scans per report class."
+  - "Ordering constraint: TQ-100b-4 and TQ-100b-4-ii both change what reader 1 recognises. Establish the parity comparison first and record the pre-change disagreement set as a known baseline, then require it to be EMPTY after those two land. Asserting empty parity before the narrowing lands will fail for reasons unrelated to this AC."
+  - "BA CENSUS CORRECTION 2026-08-19 — the nine it_requirements above were written against a two-reader picture and remain accurate ONLY as a description of the R1/R2 pair. The criteria now name four definition sites (R1, R1f, R2, R3). R3 (templates/scripts/commit_guardian/check_ac_coverage.py:41) and R1f (templates/scripts/commit_guardian/check_done_proof.py:92-95) are not costed anywhere above, and R3 adds a fourth axis of disagreement not listed in the first requirement: it is blind to \"// covers:\" tags entirely. This entry does not attempt to price them — it flags that an IT-PO re-pass is owed before this AC is built, and that the estimated_complexity of M was set against two readers, not four."
+test_spec:
+  - name: test_both_readers_produce_the_same_record_set_over_the_committed_tree
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run BOTH readers over the committed unit_tests/ tree and assert set equality on (file, test function, captured value) plus the same verdict class (recognised / rejected non-tag / malformed) for every capture. Real files, real readers, output compared — never the two pattern strings."
+  - name: test_shared_tag_vocabulary_is_single_sourced_across_the_two_consumers
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The cross-source contract test: pipe the real done-proof reader's output and the real commit-guardian reader's output into the comparison and assert the recognition vocabularies are not disjoint sets maintained independently. This is EPIC-ComputedQualityGates FP-1 layer 3 in miniature — each side is already green against its own copy, and only a set-equality contract across the two sources detects the drift."
+  - name: test_parity_verdict_is_reached_and_consumed_by_its_production_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Invoke the gate that consumes the parity verdict through its real runner as a subprocess and assert both that the comparison executed and that its result is acted on in control flow (exit status or blocker payload reflects it) — not merely that a parity helper exists or was passed an argument. Deleting the single line that wires the verdict into the gate must turn this red."
+  - name: test_parity_holds_between_the_deployed_copies_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run build.py into a temp target and compare the DEPLOYED readers' output over a real tree. Catches the specific drift this repo has hit: a recognition change landed in scripts/commit_guardian/check_test_ac_tags.py but not in its templates/ source, so the next build silently reverts it and the deployed pair disagrees while the source pair agrees."
+  - name: test_every_named_recognition_rule_is_included_in_the_comparison
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Added 2026-08-19 with the referent clarification. Assert the comparison's input set contains all four named rules (R1, R1f, R2, R3), so a parity run that silently covers only a pair fails rather than reporting agreement. Removing any one rule from the comparison must turn this red."
+delivers_to:
+  agent: python-coder
+  contract: "A parity result over the two readers' real output: agreement, or a named disagreement per capture. Consumed by whatever gate decides a change to tag recognition is safe to land, and by TQ-100b-4's narrowing, which must be applied to both readers rather than one."
+expects_from:
+  ac_id: TQ-100b-4
+  contract: "The narrowed recognition rules (id-shape plus tag-position). This AC asserts that both live readers apply them identically, so the narrowing lands on both surfaces instead of drifting."
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: TQ-100b-5 it-po technical enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Criteria untouched. Added assigned_agent (python-coder), estimated_complexity
+    (M), it_requirements, a four-angle test_spec (criterion / seam / reachability
+    / deployed) and doc_links naming both readers with relevance. Recorded three implementer-facing
+    facts not visible from the criteria: (1) the two readers differ on three axes
+    today, not one — reader 2''s COVERS_REGEX demands exactly three digits and reader
+    2 never captures the id at all, so record-level parity requires new extraction
+    behaviour there; (2) reader 2''s source of truth is templates/scripts/commit_guardian/check_test_ac_tags.py
+    and build.py overwrites the scripts/ copy, which is why a deployed-layout parity
+    test is charged; (3) the parity verdict must be consumed by a gate that runs,
+    since reader 2''s check is currently warn mode behind the test_ac_tag_enforcement
+    key. Added the ordering constraint that parity be asserted empty only AFTER TQ-100b-4/-4-ii
+    land.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+- reason: clarification
+  by: business-analyst
+  at: 2026-08-19
+  note: >-
+    AMBIGUOUS: the Given referred to its subject as "two independently defined
+    coverage-tag readers" and identified them only by description; the title said
+    "Both live coverage-tag readers". WRONG BINDING AVAILABLE: an unnamed "two"
+    binds to whichever two an implementer finds first. DAMAGE: a parity gate that
+    compares two of the rules passes while a third disagrees — a gate that cannot
+    see the drift it exists to catch. CENSUS MEASURED 2026-08-19 at this worktree's
+    HEAD, by grepping every definition of a covers-tag pattern under scripts/ and
+    templates/: there are FOUR definition sites, not two, with THREE distinct
+    behaviours. R1 scripts/ac_store/test_enforcement.py:57 (captures, both # and //,
+    no shape rule, position-blind). R1f
+    templates/scripts/commit_guardian/check_done_proof.py:95 (same pattern written
+    out again in the except-ImportError branch; byte-equal to R1 today, so not a
+    behavioural difference, but a second site that can drift and the one that fires
+    when the AC-store module is not importable). R2
+    templates/scripts/commit_guardian/check_test_ac_tags.py:38 (detect-only, never
+    captures, exactly three digits, AST position-aware). R3
+    templates/scripts/commit_guardian/check_ac_coverage.py:41 — THE ONE THE
+    ORIGINAL FRAMING COULD NOT SEE — captures like R1 but anchors on "#" so it is
+    blind to "// covers:" tags, and takes three OR MORE digits where R2 takes
+    exactly three. pytest_ac_enforcement.py and fast_lane.py are NOT further
+    readers: both reuse R1 by import. NOW PINNED: the criteria name all four as a
+    closed set with their distinguishing behaviour, require the comparison to cover
+    every member, and state that a clean result over any proper subset does not
+    satisfy the AC. Also corrected: the title said "Both", which re-seeded the wrong
+    cardinality. TWO FURTHER MEASURED FACTS, reported not fixed — neither R2's nor
+    R3's script is registered in commit_guardian.json's hooks_manifest, so "live" in
+    the old title was not accurate for R2 either; and the only registered consumer
+    of any rule in the set is check_done_proof.py (hooks_manifest :1056), which uses
+    R1. it_requirements and test_spec were left as the IT PO wrote them apart from
+    one additive entry in each flagging the census gap; they are still priced for
+    two readers and an IT-PO re-pass is owed.
+superseded_by: null
+covered_by:
+  - TQ-100b-5-i
+implemented_by: []
+notes: |
+  Four definition sites exist today, not two, and they carry three distinct
+  behaviours: the canonical capturing rule in the test-enforcement module (applied
+  by the done-proof scan, and reused by import — not redefined — by the pytest
+  enforcement plugin and the fast lane); a byte-equal duplicate of it written out
+  again in the commit-time done-proof check's import-fallback branch; a separate
+  detect-only rule carried by the commit-time test-tag check; and a fourth,
+  separate rule carried by the AC-to-test coverage check that is blind to "//"
+  tags altogether. A change to one that is not mirrored in the others is the drift
+  failure this repo has hit before, and TQ-100b-4's narrowing is exactly the kind
+  of change that invites it — narrow one rule only and the commit-time check and
+  the done-proof verdict start disagreeing about what a tag is. Whether the fix is
+  a single shared reader or several rules held in parity is an implementation
+  choice; this criterion only requires that their observable behaviour over the
+  real tree is identical, that a divergence is named, and that no member of the
+  set is left out of the comparison.
+
+  TEST ANGLE: run EVERY rule over the committed tree and diff their outputs. A
+  test that compares the pattern strings, or that asserts one imports the other,
+  is a grep-only structural test and proves nothing about behaviour. A test that
+  compares only two of the four is the specific hole the 2026-08-19 clarification
+  closed.
+change_target: code
+risk_surface: contract_boundary

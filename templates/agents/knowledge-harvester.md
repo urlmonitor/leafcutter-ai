@@ -119,17 +119,40 @@ python3 scripts/knowledge/harvest_learnings.py --sink debugging/logs/knowledge_e
 The harvester prints one summary line when complete:
 
 ```
-N learnings routed: K1 kind1, K2 kind2 (M previously processed)
+N learnings routed: K1 kind1, K2 kind2 (M previously processed); P unroutable: K3 kind3, K4 kind4
 ```
 
 - `N learnings routed` — number of new knowledge events written to surfaces.
 - `K1 kind1` — breakdown by entry_kind (e.g. `1 memory-project, 1 per-folder-readme`).
 - `M previously processed` — events skipped because they were already handled.
+- `P unroutable` — events the harvester could not route, with a count per
+  distinct `entry_kind`. **This segment appears only when P is nonzero.**
 
-If a warning appears for an unrecognised `entry_kind`, note the kind name and
-the destination path — the learning was not written but the event is marked
-processed (it will not be retried on the next run). Surface this to the user
-if the entry_kind should have been routed but was not recognised.
+Read the exit code, not just the summary:
+
+| Exit | Meaning |
+|------|---------|
+| `0` | Drained cleanly — nothing left behind. |
+| `1` | Sink file not found or unreadable. |
+| `2` | State file exists but cannot be parsed (corrupted). |
+| `3` | Drained, but unroutable events remain. Not a failure — see below. |
+
+**An unroutable event is retained, not dropped (INF-400c-2-ii).** When a
+warning appears for an unrecognised `entry_kind`, the learning was not written
+**and the event was deliberately NOT added to the idempotency record** — so a
+later run reads it again. Nothing is lost. Once the routing rules are extended
+to cover that kind, re-running the harvester over the same sink routes the
+previously unroutable events.
+
+Report this accurately. Do **not** tell the user that unroutable events were
+skipped, dropped, or will not be retried — that was the pre-2026-08-25 behaviour
+and it is exactly what `INF-400c-2-ii` changed. Saying so would misreport a
+recoverable backlog as permanent data loss.
+
+`0 learnings routed` with a nonzero unroutable count is the expected shape when
+the emitters' vocabulary has drifted from the harvester's. It means "nothing
+*could* be routed", which is a different statement from "there was nothing to
+route" — exit code 3 vs 0 is what distinguishes them.
 
 ## Stop-and-Ask Rule
 
@@ -140,7 +163,10 @@ Stop and ask the user when:
   emitting to the correct sink path.
 - A `WARNING: Unrecognised entry_kind` line appears for an `entry_kind` that
   looks intentional (not a typo). Ask whether the kind should be added to
-  `_KNOWN_ENTRY_KINDS` in `harvest_learnings.py`.
+  `_KNOWN_ENTRY_KINDS` in `harvest_learnings.py`. State clearly that the
+  affected events are still in the sink and will route once the kind is
+  recognised — the question is about extending the vocabulary, not about
+  recovering lost data.
 - The summary shows `0 learnings routed` and `0 previously processed` after
   multiple phase agents have signed off. This may indicate that no agent
   answered "yes" to the knowledge-capture prompt in signoff §7, or that events
@@ -154,9 +180,11 @@ After running the harvester, emit a brief report:
 ## Knowledge Harvest Complete
 
 - Summary: <one-line output from the script>
+- Exit code: <0 clean | 3 unroutable events retained | 1 sink missing | 2 state corrupt>
 - Sink path: debugging/logs/knowledge_emissions.jsonl
 - State path: debugging/logs/harvest_state.json
 - Warnings: <any WARNING lines from the run, or "none">
+- Retained for a later run: <count and per-kind breakdown when exit is 3, else "none">
 ```
 
 ## Constraints
@@ -173,3 +201,14 @@ DECISION HISTORY
 - 2026-06-05 14:25 [llm-expert]: Created knowledge-harvester agent template.
   Wraps scripts/knowledge/harvest_learnings.py (ADR-011). Standalone (no signoff),
   invoked post-batch by user or supervisor. (#EPIC-AgentLearningLoop/01)
+- 2026-08-25 22:47 [claude]: Realigned "Interpreting the Output" with the
+  INF-400c-2-ii behaviour change in the same diff. The template previously told
+  the operating agent that an unroutable event "is marked processed (it will not
+  be retried on the next run)" — now the exact opposite of what the script does.
+  An agent following it would have reported a recoverable backlog as permanent
+  data loss, which is the precise misreport INF-400c-2-ii exists to prevent.
+  Added the `; P unroutable: ...` summary segment, the exit-code table (3 = drained
+  with events retained, distinct from 0), the retained-not-dropped rule, and the
+  "0 routed + nonzero unroutable" reading. Caught by pr-reviewer during the
+  /fast-lane-build run for this AC, which halted the run rather than shipping the
+  code with its operator documentation inverted. (#INF-400c-2-ii)

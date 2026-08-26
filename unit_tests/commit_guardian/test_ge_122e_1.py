@@ -262,19 +262,55 @@ def _resolve_first_ref(*candidates: str) -> str | None:
     return None
 
 
-def _git_diff_against_ref(ref: str, relative_path: str) -> str:
-    result = subprocess.run(
-        ["git", "diff", ref, "--", relative_path],
+def _git_ac_ids_at_ref(ref: str, relative_path: str) -> set[str]:
+    """Return the set of AC ids declared under ``relative_path`` at ``ref``.
+
+    Reads the YAML records as they existed at the baseline commit, without
+    touching the working tree, so the caller can compare which identifiers the
+    folder claimed then against which it claims now.
+
+    Args:
+        ref: A git ref that resolves to a commit.
+        relative_path: Repo-relative folder to read, POSIX-style.
+
+    Returns:
+        Every non-empty ``id`` declared by a .yaml file under that folder at
+        that ref. An unreadable or unparseable blob contributes nothing rather
+        than raising -- the id-stability assertion this feeds is about ids that
+        DISAPPEAR, and a blob we cannot read cannot prove one is still present.
+    """
+    listing = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", ref, "--", relative_path],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         check=False,
     )
-    if result.returncode not in (0, 1):
+    if listing.returncode != 0:
         raise AssertionError(  # noqa: TRY003
-            f"git diff {ref} -- {relative_path} failed: {result.stderr}"
+            f"git ls-tree {ref} -- {relative_path} failed: {listing.stderr}"
         )
-    return result.stdout
+
+    ids: set[str] = set()
+    for name in listing.stdout.splitlines():
+        if not name.endswith(".yaml"):
+            continue
+        blob = subprocess.run(
+            ["git", "show", f"{ref}:{name}"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if blob.returncode != 0:
+            continue
+        try:
+            data = yaml.safe_load(blob.stdout)
+        except yaml.YAMLError:
+            continue
+        if isinstance(data, dict) and data.get("id"):
+            ids.add(str(data["id"]).strip())
+    return ids
 
 
 def _declared_parent_id(data: dict) -> str | None:
@@ -384,29 +420,47 @@ class TestGE122e1(unittest.TestCase):
 
     def test_goal_record_claims_a_new_id_and_its_folder_matches_origin_main(self):
         # covers: GE-122e-1
-        """Gherkin Then: the former goal record claims "GE-120", with its
-        folder's content identical to origin/main's copy of it -- whatever
-        the file count is at merge time (see below; it is NOT the 32 this
-        AC's own criteria stated when it was authored).
+        """Gherkin Then: the former goal record claims "GE-120", and every
+        identifier the goal folder claimed at the baseline it still claims --
+        whatever the file count is (see below; it is NOT the 32 this AC's own
+        criteria stated when it was authored).
 
-        BASELINE CHOICE (see module docstring, "GOAL-FOLDER BASELINE
-        CHOICE"): this test diffs the folder against origin/main directly
-        (`git diff origin/main -- <folder>`), because the folder arrived on
-        this branch via the merge and origin/main is the one meaningful
-        pre-merge source of truth for it. An empty diff is exactly this
-        ticket's own Definition of Done headline check #5. It is combined
-        with a structural id-prefix assertion as a second, independent
-        signal.
+        BASELINE CHECK IS ID-STABILITY, NOT CONTENT-IDENTITY (amended
+        2026-08-18): this assertion originally required `git diff origin/main
+        -- <folder>` to be EMPTY, which was this ticket's own Definition of
+        Done headline check #5. That was correct for the reconciliation PR and
+        wrong as a permanent test. The goal folder holds 43 records, all
+        `work_status: todo`; a byte-identity assertion against main FREEZES
+        them, so the first PR to legitimately implement GE-120a-1 and flip it
+        to `done` would turn this test red. A guard written to protect a tree
+        must not be the reason the tree cannot be worked on -- and a test that
+        must be deleted before ordinary work can proceed teaches authors to
+        delete tests.
+
+        What is actually durable is that the tree's IDENTIFIERS are settled.
+        A record may change its content freely; an id that the folder claimed
+        at the baseline and no longer claims means the tree is being
+        renumbered again, which is the defect GE-122e-1 exists to close. The
+        check is therefore a set-difference over declared ids, and it remains
+        one-directional on purpose: ADDING a record to the tree is ordinary
+        growth (origin/main did exactly that, 32 -> 43, while this AC was in
+        flight) and must not fail.
+
+        Found while repairing the SECOND collision in this namespace: the
+        loose GE-120 L2 minted by a later /plan-feature run could not be
+        parented under GE-120 where it semantically belonged, because doing so
+        required appending to this folder's `covered_by` and the frozen diff
+        forbade it. It was parented under GE-118 as GE-118c instead. That was
+        the right call on its own merits, but the freeze -- not the merits --
+        is what closed the option.
 
         NO HARDCODED FILE COUNT (found while writing this test): the goal
         folder held 32 files when this AC was authored, but origin/main's
         own further, unrelated work on that tree independently grew it to
         43 files before this branch merged -- a hardcoded count here would
         be exactly the kind of stale-measurement defect this AC's own
-        history (see amended_by) has already been bitten by once. The
-        content-identity diff against origin/main is count-agnostic and is
-        the meaningful, durable assertion; the file count is not asserted
-        as a fixed number anywhere in this test.
+        history (see amended_by) has already been bitten by once. The file
+        count is not asserted as a fixed number anywhere in this test.
         """
         path, data = _find_goal_record()
         goal_id = data.get("id")
@@ -438,23 +492,34 @@ class TestGE122e1(unittest.TestCase):
                 )
 
         # The structural assertions above are the durable half of this test and
-        # always run. The git-baseline diff below is a stronger second signal,
+        # always run. The git-baseline check below is a stronger second signal,
         # but it can only run where the baseline ref exists. CI checks out a
         # detached merge of the PR head and base and has no 'origin/main' ref,
-        # so an unconditional diff here passed locally and FAILED in CI with
-        # "fatal: bad revision 'origin/main'". It is therefore attempted
+        # so an unconditional comparison here passed locally and FAILED in CI
+        # with "fatal: bad revision 'origin/main'". It is therefore attempted
         # against the first ref that actually resolves, and skipped -- with the
         # structural half still enforcing -- when none does. This is a
         # conditional extra assertion, never a silent pass.
         relative = folder.relative_to(REPO_ROOT).as_posix()
         baseline_ref = _resolve_first_ref("origin/main", "main", "HEAD^2")
         if baseline_ref is not None:
-            diff_output = _git_diff_against_ref(baseline_ref, relative)
+            baseline_ids = _git_ac_ids_at_ref(baseline_ref, relative)
+            current_ids = {
+                str(d["id"]).strip()
+                for d in (
+                    _load_yaml(p) for p in files if p.suffix == ".yaml"
+                )
+                if isinstance(d, dict) and d.get("id")
+            }
+            missing = sorted(baseline_ids - current_ids)
             self.assertEqual(
-                diff_output,
-                "",
-                f"the goal record's folder {folder} differs from {baseline_ref} -- this "
-                f"reconciliation must not modify main's tree:\n{diff_output}",
+                missing,
+                [],
+                f"identifiers claimed by {folder} at {baseline_ref} are no longer "
+                f"claimed there: {missing}. The goal tree's identifiers are settled; "
+                "a record may change its CONTENT freely, but an id disappearing from "
+                "this folder means the tree is being renumbered again -- which is the "
+                "defect this AC exists to close.",
             )
 
     def test_every_coverage_tag_resolves_to_exactly_one_record(self):

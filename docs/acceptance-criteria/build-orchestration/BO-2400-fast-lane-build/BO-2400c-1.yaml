@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -59,9 +59,18 @@ test_spec:
     description: "Batch ACs and prior-phase outputs appear after the cache breakpoint marker."
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: "work_status correction (not a change of intent), 2026-08-18: reset done -> in_progress. The criterion is unchanged and was never wrong; the status was. It reads 'Given an agent prompt is assembled for a fast-lane invocation ... Then the static boilerplate appears before the cache breakpoint marker' — a statement about a real dispatched prompt. No fast-lane invocation has ever assembled a prompt this way. assemble_context_bundle exists, is pure, and has roughly 25 green tests, but every one of them exercises the function in isolation; none observes a prompt any agent actually received. The live lane (templates/workflows-js/fast-lane-ship.js) never references it. Its only production reference is in the orphaned templates/workflows-js/fast-lane-build.js, and that reference calls the module as a command-line script when it defines no argparse and no __main__ — a silent no-op (KI-BO-005), inside a file nothing invokes (KI-BO-006). So the assembler half is genuinely built and the consumption half has never run: in_progress is the honest status, not todo and certainly not done. Decomposed into BO-2400c-1-ii (a command-line entry point, the only way the filesystem-less workflow engine can reach Python per ADR-024), -iii (the prompt a dispatched agent receives IS the bundle, asserted on what the agent got rather than on the lane mentioning the layer), -iv (the cacheable prefix is byte-identical across one run's successive dispatches, which is the entire point — a prefix that varies means the cache never anchors while the feature keeps looking wired), and -v (the orphaned runner is removed once the wiring lands, together with the grep test that asserts a string inside it). Wiring authorised by BrainCandy; the alternative considered and rejected was deleting the capability outright."
+  - agent: BrainCandy
+    date: "2026-08-25"
+    reason: "Sixth child added: BO-2400c-1-vi, 'The bundle carries only what the receiving agent does not already have'. covered_by extended; this record's own criteria text is unchanged. Context is KI-BO-019 — the first real fast-lane run to reach this layer assembled a correct 148,891-byte bundle and could not get it across the agent boundary, because the E2 engine's only channel in is a return value and no agent reliably echoes 149 KB into a JSON string field. Measurement of that bundle showed 129,178 of its 148,891 bytes were a second copy of content the receiving agent already had: the conventions layer is byte-identical to the workspace CLAUDE.md the harness injects into every dispatch, and the acs layer is the five AC records sitting in the run's own workspace store. BO-2400c-1-vi cuts both, leaving roughly 20 KB. The sibling BO-2400c-1-iii is amended in the same change to make the lane-receives contract explicit and to distinguish a bundle that never arrived from one that arrived as a reference. CAP NOTE: no child_limit_override is added and none is needed — check_ac_limits._MAX_CHILDREN carries keys for L0 and L1 only and continues past every other level, so an L2 has no hard child cap. Adding the override here would be a silent no-op that reads to a future maintainer as a waiver that was granted."
 superseded_by: null
 covered_by:
   - BO-2400c-1-i
+  - BO-2400c-1-ii
+  - BO-2400c-1-iii
+  - BO-2400c-1-iv
+  - BO-2400c-1-v
+  - BO-2400c-1-vi
 implemented_by:
   - "scripts/injection_builders.py"

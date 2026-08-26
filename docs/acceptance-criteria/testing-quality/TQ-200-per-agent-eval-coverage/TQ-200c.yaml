@@ -1,0 +1,233 @@
+id: TQ-200c
+components:
+  - testing_quality
+  - ac_store
+  - llm_authoring
+title: "Work that is proved by judgment is asked for that proof as reliably as work that is proved by assertion"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  As someone who owns the pipeline's agents, I want every piece of work to be asked
+  for the KINDS of proof it actually needs — the mechanically checkable ones and the
+  judged ones — so that prompt, template and skill work stops arriving with no proof
+  demanded of it at all, and so that the demand keeps working for kinds of work
+  nobody has invented yet.
+
+  Today the pipeline asks one question — "does a coding agent build this?" — and
+  gives everything that answers no a free pass, reported as a success. That is how
+  444 requirements assigned to the prompt-authoring agent came to be built with no
+  test contract asked of them, and how 115 proofs their authors DID name were never
+  written.
+
+  The fix is not to demand ordinary unit tests of prompt work. Prompt, template and
+  skill work splits into two layers that need different kinds of proof. Some of it
+  is mechanically checkable — a declaration is well-formed, a rule is obeyed, a
+  registry agrees with a template, a step really got dispatched — and the repository
+  already writes those by hand as ordinary deterministic tests. The rest is
+  judgment: does the prompt actually elicit the intended behaviour from a model. No
+  assertion settles that; it is an eval. Most real prompt work needs BOTH.
+
+  After this, the pipeline can tell which layers a piece of work needs, can ask for
+  both at once, has words for "this proof is judged" that mean the same thing to
+  whoever writes the plan and whoever runs it, lands the judged half in the eval
+  harness that already exists, and refuses to report a proof it could not honour as
+  a pass.
+depends_on:
+  - TQ-200
+  - TQ-200a
+  - TQ-200b
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: describes
+    status: exists
+    relevance: "Where the single binary question is asked and where the free pass is granted. Verified 2026-08-18: line 2740 `is_code_ac = _computed_map_has_production_code_producer(agents)`; line 2773 records `PASS` with the message `non-code AC — no test contract required`; check #4 (would the generated Test Requirements pass the ticket guard?) is itself gated on `is_code_ac` at line 2776 and is therefore never even attempted for judged work. The classification resolves through `_agent_produces_production_code` (line 1055)."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The self-description that already exists and is already thrown away. Verified 2026-08-18: `produces` IS populated across the registry (production_code, test_artifact, documentation, review_verdict, orchestration, analysis, prompt); llm-expert (entry at line 3044) declares `produces: \"prompt\"` at line 3127. `_load_production_code_agents` (generate_ticket_from_ac.py:658) reduces that whole vocabulary to one set membership test — `agent.get(\"produces\") == \"production_code\"` at line 684 — so `prompt` lands in the same silent bucket as `orchestration`. See the ANOMALY section of these notes."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "Why a requirement cannot ask for a judged proof today even when a human wants one. Verified 2026-08-18: `test_spec[].framework` enum is [\"unittest\", \"pytest\"] (line 401), `test_spec[].angle` enum is [criterion, reachability, seam, real_artifact, deployed, boundary, failure] (line 411), and `additionalProperties: false` is set at the schema root (line 15) and again on test_spec items (line 387). Nothing in that vocabulary can say \"this proof is judged rather than asserted\", and nothing new can be smuggled in as an extra key."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The other half of the vocabulary gap. Verified 2026-08-18 by direct count: the string \"eval\" occurs ZERO times in this template. Its framework-choice section offers unittest or pytest only. It holds the Write tool so it CAN physically author an eval row, but nothing in its instructions gives it the concept."
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+    relevance: "The harness the judged half must reach — real and working, not greenfield. Verified 2026-08-18: it registers exactly THREE agents (pt-classifier with scoring_mode label / label_axes / derive_outcome / threshold 0.70; mock-data-author and flow-author with scoring_mode artifact / artifact_type / schema / sandbox_copy / tools / timeout / threshold 0.66). The per-agent key sets differ BY SCORING MODE, which is TQ-200a-2's label/artifact/markup distinction already made real in config."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+    relevance: "The shared runner a judged request must land in front of, alongside scripts/evals/eval_selector.py (the affected-set and freshness selector) and scripts/evals/results/. TQ-200b-3 is done and TQ-200b-4 in_progress against exactly this surface."
+  - path: unit_tests/agents/test_test_writer_seam_rule_scope.py
+    relationship: related
+    status: exists
+    relevance: "Existence proof for the mechanically-checkable layer. Verified present 2026-08-18. A hand-written deterministic test over prompt-surface behaviour — cheap, already works, and must NOT be converted into an eval by anything in this tree."
+  - path: unit_tests/test_bo_2100a_3_phase_order_gates.py
+    relationship: related
+    status: exists
+    relevance: "Second existence proof for the mechanically-checkable layer (phaseOrder membership). Verified present 2026-08-18. Same rule applies: this class of proof stays deterministic."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The pattern TQ-200c-2 borrows: its third-route clause is stated in the CRITERIA precisely so that a route-local fix cannot satisfy it. TQ-200c-2's newly-introduced-producer clause is the same device aimed at a list of agent names instead of a list of plan routes. Boundary: BO-2900g-1 is about WHICH ROUTE produced a plan and only ever asks for one kind of proof; TQ-200c is about WHICH KINDS of proof are asked for at all."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The existing shared vocabulary for what a proof is FOR (the seven angles). The judged/asserted distinction TQ-200c-1 introduces is orthogonal to it and must be added without disturbing it — an angle says what question a proof answers, the new word says how the answer is settled."
+documentation_triggers: []
+documentation_rationale: |
+  No separate documentation AC is authored, deliberately. The vocabulary this L1
+  introduces has exactly one reference home — docs/testing/test-angles.md, the page
+  that already defines the shared proof vocabulary — and TQ-200c-1 cannot be
+  satisfied without that page carrying the new word, because a word that is not
+  written down there is by definition not shared between the side that writes a plan
+  and the side that consumes it. A separate reference-doc AC would double-book that
+  same edit and let an implementer claim c-1 done with the vocabulary undocumented.
+  The runner-facing how-to and reference-doc obligations are already owned by
+  TQ-200b's documentation_triggers, and this L1 adds no new user-facing command
+  surface.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200c-1
+  - TQ-200c-2
+  - TQ-200c-3
+  - TQ-200c-4
+  - TQ-200c-5
+implemented_by: []
+change_target:
+  - code
+  - config
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-08-18, BrainCandy). This L1 exists because of a confirmed defect and
+  a design insight that the obvious fix would destroy. Both are recorded here so the
+  next author does not relitigate either.
+
+  THE DEFECT — VERIFIED, DO NOT RE-DERIVE.
+  generate_ticket_from_ac.py asks one question about a piece of work and branches the
+  entire proof demand on it:
+    - line 2740  is_code_ac = _computed_map_has_production_code_producer(agents)
+    - line 2068  _computed_map_has_production_code_producer -> _agent_produces_production_code
+    - line 1055  _agent_produces_production_code -> _load_production_code_agents (line 658)
+                 with a hardcoded _FALLBACK_PRODUCERS frozenset of 9 names at line 1073
+                 (python-coder, sql-coder, frontend-coder + six sql-* specialists)
+  Consequences, all read directly from the source on 2026-08-18:
+    - line 2773  the else branch records PASS with "non-code AC — no test contract
+                 required". The pipeline reports the ABSENCE of any proof demand as a
+                 SUCCESS. This is the phantom-done pattern one level up: not a missing
+                 test, but a missing REQUEST for a test, wearing a green label.
+    - line 2776  readiness check #4 ("would the generated Test Requirements pass the
+                 ticket guard?") is itself gated on `is_code_ac`, so for judged work it
+                 is not merely failed — it is never attempted.
+    - line 2783  the it_requirements check is gated the same way.
+  Measured over the real store (figures supplied with this authoring request, taken
+  from a real generation run over the real store; the two I could re-derive cheaply
+  I did): 3,061 ACs, of which 444 are assigned to llm-expert (RE-VERIFIED 2026-08-18:
+  `grep -rlc "assigned_agent: llm-expert" docs/acceptance-criteria/ --include=*.yaml`
+  returns exactly 444 files; a full-store find returns 3,062 .yaml files, one more
+  than the quoted 3,061, consistent with concurrent authoring in this worktree).
+  124 named test contracts exist on llm-expert ACs; 115 of those named tests do not
+  exist anywhere in unit_tests/; 85 of the missing ones sit on ACs already marked
+  work_status: done, across 39 distinct ACs — BO-2400a-1 is done and neither of its
+  two named tests was ever written. An authored test_spec on an llm-expert AC is
+  silently discarded even when it names five proofs.
+
+  ANOMALY — ONE PREMISE OF THE AUTHORING REQUEST IS FALSE, AND IT MAKES THE TREE
+  STRONGER. The request states that no agent in config/agent_registry.json declares a
+  `produces` field, so the registry lookup cannot override the fallback frozenset.
+  That is NOT true in this worktree. `produces` is populated broadly across the
+  registry (production_code, test_artifact, documentation, review_verdict,
+  orchestration, analysis, prompt), and llm-expert itself declares
+  `produces: "prompt"` at line 3127. The frozenset at line 1073 is therefore only the
+  unavailable-registry fallback, and appending "llm-expert" to it would change
+  nothing on the normal path. The live defect is one level up and worse: the consumer
+  collapses a genuine seven-value self-description into a single boolean
+  (`agent.get("produces") == "production_code"`, line 684), so `prompt` is treated
+  identically to `orchestration` — a value that legitimately needs no proof. The
+  material the routing decision needs is ALREADY on disk and is being discarded at
+  the point of use. TQ-200c-2 is written against that reality: it demands the
+  decision be derived from what the work says about itself, which the registry
+  already partly says, rather than from any enumeration of names — and the frozenset
+  is then merely the most visible symptom, not the disease.
+
+  THE INSIGHT THIS TREE PROTECTS — WHY "TREAT llm-expert LIKE python-coder" IS WRONG.
+  Demanding pytest of prompt work would be a second defect, not a fix. Prompt,
+  template and skill work splits into two layers:
+    (a) MECHANICALLY CHECKABLE — frontmatter validity, the requires_verification
+        rule, registry/template parity, phaseOrder membership, deploy-manifest
+        presence, a captured dispatch sequence. Ordinary deterministic tests. The
+        repository ALREADY writes these by hand: unit_tests/agents/
+        test_test_writer_seam_rule_scope.py and unit_tests/test_bo_2100a_3_phase_
+        order_gates.py are both present and both cheap. Nothing in this tree may
+        convert that class of proof into an eval.
+    (b) JUDGMENT — does the prompt actually elicit the intended behaviour from a
+        model. No deterministic assertion settles this. This is an eval.
+  Most real llm-expert ACs need BOTH. The missing capability is therefore a ROUTER,
+  not a rule: given a piece of work, decide which layer(s) of proof it needs and ask
+  for each in the right form. That is why this is a new L1 rather than a leaf under
+  TQ-200a (which owns WHICH agents get eval sets) or TQ-200b (which owns HOW the
+  runner scores them).
+
+  WHY A THIRD L1 UNDER TQ-200 AND NOT A LEAF ELSEWHERE.
+    - TQ-200 had 2 of a maximum 7 L1 children (_MAX_L1_PER_L0 = 7, templates/scripts/
+      commit_guardian/check_ac_limits.py:81; no child_limit_override present), so a
+      third needs no waiver and leaves four slots.
+    - TQ-200a and TQ-200b each stand at 4 of a maximum 5 L2s (_MAX_L2_PER_L1 = 5,
+      same file line 82), so neither could absorb five new behaviours anyway — but
+      the real reason is subject, not capacity. TQ-200a answers "which agents get an
+      eval set"; TQ-200b answers "how is a set scored and gated". Neither asks
+      "should this piece of work have been asked for an eval in the first place, and
+      what else should it have been asked for at the same time". That question sits
+      upstream of both, which is why TQ-200c depends_on TQ-200a and TQ-200b rather
+      than the reverse: the router may only emit a judged request into a harness
+      whose set-shape (a) and scoring/gating (b) already exist. Emitting requests at
+      a harness that cannot receive them is the prose-in-a-ticket failure TQ-200c-4
+      is written to prevent.
+
+  THIS L1 IS AT THE L2 CAP. Five children, limit five. A sixth behaviour needs an
+  ac-tree-split, not a quiet addition. The five are deliberately non-overlapping:
+  c-1 makes the request EXPRESSIBLE, c-2 makes the decision DERIVED, c-3 makes the
+  two layers SIMULTANEOUS, c-4 makes the judged half LAND SOMEWHERE REAL, c-5 makes
+  failure LOUD.
+
+  ORDERING — THE ONE EDGE THAT IS NOT OPTIONAL. c-1 (vocabulary) precedes c-2
+  (routing), because a router cannot emit a request the vocabulary cannot express;
+  build them the other way round and the router's only available output is the
+  existing binary, which is the defect. c-3, c-4 and c-5 also depend on c-1 for the
+  same reason and are otherwise independent of c-2 — see each child's own notes for
+  why its edge to c-2 was considered and deliberately not added.
+
+  BOUNDARY — WHAT THIS TREE DOES NOT COVER, ON PURPOSE.
+    - A NARROW, GENERATOR-LOCAL "never silently discard an authored test_spec" AC is
+      being authored concurrently under ACD-400b by another author. TQ-200c-5 must
+      NOT be read as a duplicate of it and must not be satisfied by it: theirs is a
+      single program's handling of one field, mine is the statement that the ROUTING
+      DECISION itself may not report an unhonoured proof contract as a pass. Assume
+      theirs exists, assume it stays generator-local, and do not let an implementer
+      close one and mark the other done.
+    - THE REMEDIATION AUDIT IS OUT OF SCOPE AND MUST NOT BE LOST. 39 distinct ACs are
+      already marked work_status: done while carrying 85 named tests that were never
+      written (of 115 missing named tests across 124 named contracts on 444
+      llm-expert ACs). That is an audit and a backfill, not a requirement, and no AC
+      in this tree covers it. Recording the number here so the debt is visible when
+      someone decides to schedule it.
+    - WHICH SPECIFIC AGENTS GET EVAL SETS is TQ-200a-1 and its L3s. Nothing here
+      enumerates agents.
+    - HOW THE RUNNER SCORES is TQ-200a-2 (label/artifact/markup) and TQ-200b.
+      TQ-200c-4 requires only that the judged request ARRIVES in a form the existing
+      runner can score; it says nothing about the scoring itself.
+    - CONVERTING EXISTING DETERMINISTIC PROMPT TESTS INTO EVALS is prohibited by
+      TQ-200c-2-i and is not a licence granted anywhere in this tree.

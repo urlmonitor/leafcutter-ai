@@ -34,6 +34,7 @@ criteria: |
 depends_on:
   - GE-120b
   - ACS-1200a
+  - GE-120c-1
 doc_links:
   - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
     relationship: modifies
@@ -100,10 +101,18 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-14'
+- action: depends_on extended with GE-120c-1 — the harness contract this AC already
+    declared in expects_from. goal_to_epic.py orders an epic on depends_on only and
+    never reads expects_from, so without this edge the generated epic could schedule
+    this ticket before the out-of-process harness it is verified through exists.
+    criteria untouched.
+  agent: BrainCandy
+  date: '2026-08-25'
 superseded_by: null
 covered_by:
   - GE-120b-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/13_TICKET-20260825-GE-120b-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -147,3 +156,4 @@ notes: |
   .pre-commit-config.yaml:294. Building ACD-1403 as written deletes coverage this AC
   depends on. It also carries level: null and work_status: null. Reconcile or supersede it
   in the ac-driven-dev component before this AC is scheduled.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

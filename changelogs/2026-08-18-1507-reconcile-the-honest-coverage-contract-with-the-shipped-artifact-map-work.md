@@ -1,0 +1,17 @@
+---
+title: "Reconcile the honest-coverage contract with the shipped artifact-map work"
+date: "2026-08-18"
+time: "15:07"
+type: manual
+components:
+  - ac_store
+  - knowledge_management
+  - testing_quality
+summary: "Two AC bodies covering the same idea from opposite ends are now linked, the six orphan artifact-map ACs have a parent, and a third unreconciled count of the untagged-done pile is on record."
+description: "ACS-1100 (honest coverage answers, ac-store, draft and unbuilt) states a general contract: every answer reports how much of the whole it looked at. KM-ADM-005, shipped five days later under knowledge-management, is one concrete instance of it — the artifact map's test-covers edge now declares that check-done-proof is diff-scoped, and a ratchet caps the untagged-done backlog at 244. Neither referenced the other. ACS-1100 is now marked scope: standing and KM-ADM-005 INHERITS from it rather than moving under it, matching the convention KM-200's notes already set; cross-references are bidirectional. The six orphan KM-ADM-00* records gain a retroactive parent — a new L0 KM-ADM-100 plus four L1s, each carrying a benefit that outlives its current children. Those parents deliberately carry no work_status: marking them done would push the untagged-done count to 245, past HIGH_WATER_MARK = 244, and fail main via the ratchet KM-ADM-005 itself shipped. A per-L1 non-duplication analysis is recorded so a future build of ACS-1100 does not re-implement or contradict what already shipped (a, b and d satisfied as one-offs; c and e not), and ACS-1100c's notes state explicitly that the ratchet is NOT the halt it specifies — different trigger, subject and direction. Five surgical L2 amendments follow: a join that fails on formatting variance (a quoted id against a bare token) is a denominator bug, citing the four records the ratchet mis-counted; measurement provenance and age are declared by the method record, with ACS-1100b owning staleness and ACS-1100c recording that it does not; consuming hops include human-read surfaces (a rendered rating, badge, legend, tile), which is the hop the real incident actually travelled; the contract document must quote the shipped edge note as its worked example and carry the inheritance register in one place; and the unproven-work list must declare its population and inclusion rule. Ownership of that pile is fixed in the store — the ratchet is the floor, TQ-400a the inventory, TQ-400d the drawdown. The pile turns out to have THREE recorded counts, not one: 244 of 607 (2026-08-13, all levels), 240 of 641 (2026-08-17, done L2/L3) and 259 of 641 (2026-08-17, same date and same stated rule as the 240). None cite each other, so the deltas cannot be read as progress. Rather than hand-type a fourth reconciled constant, the amended criteria require the built list to reconcile them at run time. Also adds docs/known-issues/knowledge-management.md with seven entries, two of them found while doing this work: the artifact map still rates ticket-touches as warn while files_touched_reconciliation.strict is now true on main, because the parity test reads hook registration and never the strict flag; and derive_parent_id(\"KM-ADM-100a\") returns \"KM-ADM\", so compound-prefix families are invisible to the store's own parent/child tooling and the parent links added here are documentation-grade rather than hook-enforced."
+commits:
+  - 298f77d01c6cd0e16e04e855debb3becfb40dcb4
+breaking: false
+---
+
+## Entry

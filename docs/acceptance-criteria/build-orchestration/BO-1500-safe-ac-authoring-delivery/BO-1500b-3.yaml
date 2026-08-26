@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
 criteria: |
   Given a prior authoring run left uncommitted AC YAML files in the authoring
@@ -46,6 +46,31 @@ it_requirements:
   ticket.
 - Any git invocation specified in the prose must follow the project Error Handling Policy (wrap git status/restore
   I/O; warn rather than silently swallow), matching the existing §PRR error-handling table.
+test_spec:
+- name: test_orphan_scan_is_scoped_to_the_authoring_worktree_not_the_original_checkout
+  target_dir: unit_tests/ac_store/
+  framework: unittest
+  type: integration
+  description: With stranded draft AC YAML present in BOTH the original checkout and the authoring worktree,
+    the worktree-scoped scan returns only the authoring-worktree paths.
+- name: test_uncommitted_stranded_ac_drafts_in_the_authoring_worktree_are_detected
+  target_dir: unit_tests/ac_store/
+  framework: unittest
+  type: integration
+  description: A draft AC YAML left uncommitted in the authoring worktree's AC store is reported as a recovery
+    candidate, matching the pre-isolation recovery behaviour.
+- name: test_ac_files_committed_on_the_authoring_branch_are_not_reported_as_orphans
+  target_dir: unit_tests/ac_store/
+  framework: unittest
+  type: integration
+  description: AC YAML already committed on the authoring branch produces an empty orphan set — the no-false-orphans
+    guarantee.
+- name: test_preflight_git_status_is_anchored_to_the_authoring_worktree
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a recording git shim on PATH, the pre-flight's status invocation carries a `-C <authoring-worktree>`
+    anchor and the AC-store pathspec, so the scan cannot read the user's original checkout.
 delivers_to: null
 expects_from:
   ac_id: BO-1500a-1
@@ -59,3 +84,18 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/08_TICKET-20260624-BO-1500b-3.md
 change_target: prompt
 risk_surface: internal
+notes: |
+  Test contract authored by the IT PO (2026-08-17). Although this AC is
+  assigned_agent: llm-expert / change_target: prompt, it is NOT test-free: the
+  partial-run-recovery pre-flight it constrains has two executable surfaces —
+  scripts/ac_store/scan_ac_orphans.py (scan_draft_orphans_in_worktree, which
+  takes a worktree path) and the scanOrphanedAcDrafts step in the plan-feature
+  workflow. Both can be exercised behaviourally against a fixture repo, so the
+  "no false orphans / scoped to the authoring worktree" guarantee is asserted by
+  running the scan, not by grepping prose.
+
+  Caveat for the caller: the doc_link and it_requirement referencing
+  templates/skills/create-ac/SKILL.md are stale — that skill no longer exists in
+  the tree (/create-ac was retired per ADR-012), so the "both surfaces" clause
+  now has only one prose surface. The it_requirements were left unmodified; this
+  belongs in a separate reconciliation pass.

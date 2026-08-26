@@ -1,0 +1,91 @@
+id: GE-122a-4-i
+title: "An enumeration that could not be completed yields no identifier at all"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a namespace in which one record cannot be read or cannot be parsed, so the set of
+    identifiers that record declares is unknown,
+  When a component tries to mint a new identifier for that namespace,
+  Then no identifier is returned,
+  And the caller is told that the enumeration was incomplete and which record could not be read,
+  And the count of records successfully enumerated is stated alongside the total the namespace
+    holds, so the size of the gap is visible rather than implied.
+
+  And Given the same namespace with that record readable again,
+  When a component mints a new identifier,
+  Then an identifier is returned, and it is one no record declares and no live record cites.
+
+  The property this criterion pins: a component may only mint an identifier from an enumeration
+  it knows to be COMPLETE. An enumeration that skipped an unreadable record and carried on has
+  established nothing about which identifiers are taken, and the identifier it returns is a
+  guess presented as an answer. Silence about the skip is what makes it a guess nobody can
+  detect.
+
+  This does not repeal the component's fail-open convention for a guard that hits an internal
+  defect after the collection was fully read. That permission is about not holding an unrelated
+  change hostage to a bug in a checker. It does not extend to minting a fresh identifier from an
+  admittedly partial view, because the artifact produced is durable and is published under that
+  identifier.
+
+  Coverage note: covered only by a test that makes a real record in a real on-disk namespace
+  unreadable or unparsable, executes the minting step, and asserts that no identifier came back
+  and that the unreadable record was named. A test that asserts an exception type is raised
+  somewhere inside does not cover it — the failure this criterion excludes is a run that returns
+  a plausible identifier and exits successfully.
+depends_on:
+  - GE-122a-4
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122d-3.yaml
+    relationship: context
+    status: exists
+    relevance: "Settles the cannot-run disposition for the uniqueness PASS at each of the three stages. It does not reach a component that MINTS an identifier, which is a different actor at a different moment — this criterion is the same principle applied to that actor, not a restatement of that one."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+    relationship: context
+    status: exists
+    relevance: "The sibling standing rule that a check which could not run must say so rather than report success. Read only — nothing in that tree is edited by this work."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-122a-4
+  contract: "The enumeration of taken identifiers whose completeness this criterion makes a precondition of returning anything."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD RATHER THAN A SIXTH CLAUSE ON GE-122a-4. It is the one condition
+  under which a component that passes every one of GE-122a-4's scenarios still mints a duplicate.
+  Both exclusions in the parent are about what the enumeration LOOKS AT; this is about whether
+  the enumeration finished. An implementation can walk the whole tree to any depth, honour
+  citations, and still skip the one file that raised on read — and every positive test in the
+  parent stays green while it does, because the skipped record is not the one the fixture is
+  about. That is the same shape as GE-122a-1-i's relationship to GE-122a-1, and it is kept as
+  its own record for the same reason: so the rule survives a later rewrite of the parent.
+
+  THE PROJECT NAMED THIS HAZARD BEFORE THIS AC EXISTED. GE-122d's notes state it directly — a
+  whole-collection check has more ways to be unable to run than a per-file one, so "I could not
+  read everything, therefore everything is fine" is the exact failure to design against. A
+  minting component inherits that hazard in its most damaging form, because its output is not a
+  verdict somebody reads but an identifier that gets written into a record, cited by tickets and
+  code, and then cannot be withdrawn without the renumbering blast radius GE-122e documents.
+
+  NO L4 EXISTS. The hierarchy stops at L3, so the degenerate sub-case — a namespace in which
+  every record is unreadable — is folded into the criteria above rather than split out: it is
+  the same disposition, not a different one.

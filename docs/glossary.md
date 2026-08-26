@@ -5,8 +5,9 @@ description: Authoritative glossary of leafcutter-ai project jargon and terminol
   hook.
 type: reference
 created: '2026-07-09'
-last_updated: '2026-07-09'
+last_updated: '2026-08-18'
 status: active
+components: []
 ---
 <!--
 GLOSSARY AUTHORING GUIDE (invisible in rendered docs)
@@ -55,3 +56,6 @@ A configuration field in `commit_guardian.json` under `exception_handling` that 
 
 ### driveTicketPhases
 A JavaScript loop function that orchestrates phase-dispatching for each ticket in a batch. Originally defined in `templates/workflows-js/build-ticket.js`, it dispatches each needed phase as a depth-1 `agent(agentType: phaseName)` call. In the current architecture (ADR-019), `driveTicketPhases` is inlined into `build-feature.js` to enable ticket batching at depth 0, replacing the prior pattern of dispatching a separate `ticket-supervisor` agent per ticket. `build-ticket.js` is the canonical twin and retains the reference implementation of the loop.
+
+### ac_coverage_resolver
+The single, importable, side-effect-free coverage-resolution module (`scripts/ac_store/ac_coverage_resolver.py`) that the `ac-fulfillment-gate` agent template's Step 1 calls to resolve which AC(s) a ticket's `ac_traceability` frontmatter block names, and whose `compute_verdict` makes an `ok` sign-off structurally impossible when zero ACs were resolved. It accepts both the two-key `{id, path}` form the ticket generator actually emits and the previously-accepted list form (`{l2, l3, ac_path}`, see BO-201), falling back to a ticket's `source_ac` field only when the block itself yields nothing. Added under `ACD-1900b-5-i` to close a vacuous-truth gap where the gate's "every AC in the working list passed or skipped" rule was always true over an empty list. Registered in `build_ac_store`'s `deploy_map` so the deployed gate template can invoke it via its CLI. See `docs/architecture/components/ac-driven-dev.md#coverage-resolution--ac_coverage_resolver`.

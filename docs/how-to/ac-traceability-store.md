@@ -4,7 +4,7 @@ description: "How-to guide for delivering approved ACs via the reviewed-PR path,
 type: how-to
 status: active
 created: 2026-06-04
-last_updated: 2026-06-24
+last_updated: 2026-08-25
 components:
   - build_pipeline
   - build_orchestration
@@ -302,6 +302,111 @@ that read the ticket will discover the AC path and load it automatically.
 
 ---
 
+## How do I make sure `/build-ac` names the right `files_touched`?
+
+When `/build-ac` generates a ticket from your AC, the ticket's
+`files_touched` list is what tells the coder agent, `change-scope-reviewer`,
+and the phantom-done gates which files the work is allowed to touch. A wrong
+`files_touched` is a known phantom-done vector, not a cosmetic slip.
+
+**Live on `main` today:** `BO-2400g-2` tags its own target file
+(`templates/workflows-js/fast-lane-ship.js`) `relationship: describes` — not
+an edit-surface relationship — and that tag was never corrected. Generating
+its ticket right now omits the one file the AC exists to change, and instead
+invents `scripts/build.py` and `templates/agents/change-scope-reviewer.md`
+from prose mentions — the second being a file that AC's own criteria
+explicitly forbid touching. The generated ticket authorised the coder to
+edit a file the AC banned.
+
+`_build_files_touched` in `scripts/ac_store/generate_ticket_from_ac.py`
+(lines 582–641) builds the list from exactly two sources:
+
+1. **Object-form `it_requirements`**, via its `reference_file_path` key.
+2. **`doc_links` whose `relationship` is an edit-surface relationship.**
+   The full set, defined at lines 104–106, is:
+   `constrains`, `creates`, `implements`, `modifies`, `specifies`.
+
+`describes` and `related` are **deliberately excluded** — they mark a file as
+informational context, not something the AC's work touches. This is by
+design, not a bug: do not "fix" a missing file by editing the
+`_EDIT_SURFACE_RELATIONSHIPS` constant. Fix it by re-tagging the `doc_link`
+(or by adding `reference_file_path`) instead.
+
+If neither source names a file, the generator falls back to scanning
+list-form `it_requirements` prose for path-shaped tokens — the fallback that
+let `scripts/build.py` leak in above. It cannot tell "the file this AC
+changes" from "a file this AC merely mentions."
+
+### Route 1 — object-form `it_requirements`
+
+```yaml
+it_requirements:
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+```
+
+Only the key relevant to `files_touched` is shown. For
+`assigned_agent: python-coder` + `component: build-orchestration` the
+schema's root `if/then` mandates the object form with further required keys
+(`BO-2400e-3` also carries `n_location_rule`, `required_skills`,
+`post_write_commands`) — see `config/ac_store_schema.json` before copying
+this as a complete block. `BO-2400e-3` uses this form today and already
+emits a correct single-entry `files_touched` with no fix needed.
+
+### Route 2 — `doc_links` with an edit-surface relationship
+
+```yaml
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+```
+
+### Wrong — `describes` on a file the AC edits
+
+```yaml
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes   # WRONG if this AC's work edits this file
+    status: exists
+```
+
+This is `BO-2400g-2`'s actual tag on `main`, uncorrected. `describes` excludes
+the file from `files_touched` regardless of how central it is to the AC's
+own criteria — the generator cannot recover the omission from prose alone.
+
+**Note:** `reference_pattern` (a glob, resolved elsewhere for the ticket's
+`## Implementation Notes` block) is *not* read by `_build_files_touched`.
+Only `reference_file_path` feeds `files_touched`.
+
+### Step: verify your AC before trusting it
+
+Generate the ticket without writing it:
+
+```bash
+python scripts/ac_store/generate_ticket_from_ac.py --ac <AC-ID> --verify
+```
+
+**The check is reading the `files_touched:` block yourself** — confirm every
+file your AC's work changes is listed, and nothing else is. This is
+mandatory; a green exit code does not do it for you. `--verify`'s
+`[PASS] files_touched has N path(s)` line is a **count**, not a correctness
+check — it passes as long as the surface is non-empty. Run it against
+`BO-2400g-2` above and it reports:
+
+```
+[PASS] files_touched has 4 path(s) from doc_links
+```
+
+None of those 4 is `fast-lane-ship.js`; one is the banned
+`change-scope-reviewer.md`. `--verify` is still worth running — it does
+catch other real gaps (missing criteria, an unassigned agent) and exits
+non-zero on those — just don't read its `[PASS]` on this line as
+vindication of the surface. Use `--dry-run` instead of `--verify` for a
+lighter, report-free read. If a file is missing, add `reference_file_path`
+or a `doc_links` edit-surface entry — don't rely on re-wording the prose.
+
+---
+
 ## How do I amend an existing AC?
 
 An amendment changes the `criteria:` text or corrects a field on an AC
@@ -564,5 +669,5 @@ All three commands should exit 0 with no error output.
 - `docs/how-to/ac-driven-build-loop.md` — end-to-end walkthrough of the AC-driven build loop on a consumer install.
 - `docs/how-to/approval-gate.md` — detailed explanation of the multi-stage approval gate and readiness state machine.
 - `docs/how-to/build-ac-unified.md` — auto-detection logic for leaf vs goal mode; epic-generation path for L0/L1 goal ACs.
-- `docs/README.md` — full documentation index.
+- `docs/INDEX.md` — full documentation index.
 - `templates/skills/knowledge-query/SKILL.md` — full reference for all `knowledge_query.py` flags and output modes.

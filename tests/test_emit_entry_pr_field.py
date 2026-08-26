@@ -26,6 +26,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _EMIT_ENTRY_PATH = _REPO_ROOT / "scripts" / "changelog" / "emit_entry.py"
 
 spec = importlib.util.spec_from_file_location("emit_entry", _EMIT_ENTRY_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_EMIT_ENTRY_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(_mod)
 

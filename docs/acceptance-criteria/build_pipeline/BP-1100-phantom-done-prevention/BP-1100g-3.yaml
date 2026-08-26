@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -132,14 +132,22 @@ test_rationale: |
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Assigned python-coder (load-bearing surface is done_proof.py's scanner). it_requirements in package-surface object form; both live readers of the tag surface and the deploy-manifest obligation are named under `constraints`. Added test_spec (criterion/real_artifact/failure/reachability) and contracts. The prompt half of the first Then clause is flagged as an llm-expert companion surface. criteria untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder (load-bearing surface is done_proof.py's scanner). it_requirements
+    in package-surface object form; both live readers of the tag surface and the deploy-manifest
+    obligation are named under `constraints`. Added test_spec (criterion/real_artifact/failure/reachability)
+    and contracts. The prompt half of the first Then clause is flagged as an llm-expert
+    companion surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
 superseded_by: null
 covered_by:
   - BP-1100g-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-1100g-3.md
 change_target:
   - prompt
   - code

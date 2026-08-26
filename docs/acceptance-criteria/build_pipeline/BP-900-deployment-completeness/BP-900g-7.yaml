@@ -1,0 +1,244 @@
+id: BP-900g-7
+components:
+  - build_pipeline
+title: "A registry entry naming an executable artifact that exists nowhere fails the build"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+criteria: |
+  Given any registry the package ships and its own tooling reads, whose entries name
+    an executable artifact by path or by module name and thereby advertise it as
+    present,
+  And a registry entry naming an artifact that resolves to nothing — absent from the
+    source tree, from the template tree, and from every deploy target,
+  When the build runs its reference-integrity preflight over the package tree,
+  Then the build exits non-zero and the failure names the registry file, the entry
+    within it, and the artifact that could not be resolved,
+  And the rule is stated as universal resolution over every entry of every registry
+    that names an executable artifact — every named artifact resolves, or the build
+    fails — and NOT as a list of known-missing names, so a registry written next
+    month and an entry added to it tomorrow are both already subject to it,
+  And a registry entry naming an artifact that does resolve produces no finding, so
+    the check does not have to be suppressed, allowlisted, or narrowed to keep an
+    otherwise-correct package tree building,
+  And the demonstration is an invocation of the build's real preflight entry point as
+    a subprocess over a package tree carrying a deliberately unresolvable entry, which
+    must exit non-zero — reading the guard's source and finding the rule written there
+    does not satisfy this criterion, because a rule that is written and never reached
+    passes that reading while the build stays green,
+  Because at HEAD 339b0981c config/package_boundary.json classifies
+    check_test_requirements_refs.py as a shipped portable check and
+    config/test_requirements.schema.json describes it as a live consumer that
+    "verifies schema version consistency across all consumers", while no file of that
+    name exists anywhere in the repository — and package_boundary.json is not inert
+    prose, scripts/package_audit.py reads it. To every author who consults either
+    file, an enforcement that was never written reads as an enforcement already in
+    place, which is worse than a known gap: it suppresses the work that would close it.
+depends_on:
+  - BP-900g
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
+    relationship: parent
+    status: exists
+  - path: config/package_boundary.json
+    relationship: describes
+    status: exists
+    relevance: "The registry carrying the live instance: line 21 classifies check_test_requirements_refs.py as portable. Read by scripts/package_audit.py, so the false advertisement is consumed by running code, not merely documented."
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Second surface describing the same nonexistent script as a live consumer. Two independent files agreeing about an artifact that does not exist is why absence is invisible to a reader."
+  - path: scripts/build_referential_integrity.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the existing reference-resolution guard lives; the natural home for a registry-entry resolution rule, and the entry point the negative control must run through."
+  - path: scripts/package_audit.py
+    relationship: describes
+    status: exists
+    relevance: "The live reader of package_boundary.json — evidence that the registry is load-bearing rather than documentation."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle vocabulary the acceptance demonstration is expressed in (reachability + must_block)."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO ADDITION. The process whose exit code the criterion asserts on, and the only place that can answer whether the preflight is actually reached. An implementer must confirm which build step invokes build_referential_integrity.py before adding a rule to it — a rule added to a module the build never calls is the BP-811 shape (copy tier asserted, reachability tier never)."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-6.yaml"
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Carries the negative-control tests that preserve BP-900g-5's narrowed output-root prefix bound. This rule must not re-capture host-project paths; those tests are the regression fence and must stay green."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/build_referential_integrity.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The shape of a single unresolvable-registry-entry finding emitted by the preflight. It must carry all three facts the criterion requires by name, so a consumer (report, exit message, test) reads fields rather than parsing prose."
+    required:
+      - registry_file
+      - entry_location
+      - artifact
+      - kind
+    properties:
+      registry_file:
+        type: string
+        description: "Repo-relative path of the registry that carries the entry (e.g. config/package_boundary.json)."
+      entry_location:
+        type: string
+        description: "Where inside the registry the entry sits — the key path or list index — so the author can find it without grepping."
+      artifact:
+        type: string
+        description: "The artifact name or path that resolved to nothing."
+      kind:
+        type: string
+        description: "Which of the two concerns this is. Must distinguish 'names an artifact that exists nowhere' from 'names an artifact that exists but is not deployed', because the remedies are different and BP-900g-7-i asserts they report separately."
+  constraints:
+    - "UNIVERSAL RESOLUTION, NOT A NAME LIST. The set of registries to traverse, and the fields within each that name an executable artifact, must be derived from a data source the build already reads — not hard-coded to config/package_boundary.json and config/test_requirements.schema.json, and never to the name check_test_requirements_refs.py. The criterion is deliberately written so that satisfying it for the live instance alone does not satisfy it: a registry added next month must be subject to the rule with no edit. Any exemption must derive from a data property (e.g. a registry that declares no executable-artifact fields), never from a file name."
+    - "NAME EVERY ENFORCEMENT POINT AND SAY WHICH ONE GATES. scripts/build_referential_integrity.py is the natural home, but it is only load-bearing if scripts/build.py actually invokes it on the path the criterion asserts on. Before landing, confirm and state in the sign-off which build step runs the preflight and at what point. A rule written into a module the build never reaches passes source inspection while the build stays green — that is BP-811 in docs/testing/test-angles.md, and it is the exact failure this AC exists to close."
+    - "RESOLVE THE LIVE INSTANCE IN THE SAME CHANGE, AND DO NOT PARK IT. config/package_boundary.json:21 and config/test_requirements.schema.json:6 both name check_test_requirements_refs.py, which does not exist. Turning the rule on without resolving both turns the next unrelated build red. Writing the script is NOT required — deleting both references satisfies this AC exactly as well, and BO-2900g-3 explicitly parks the build-it decision out of scope. Parking via an allowlist is not available: KNOWN_UNDEPLOYED_ALLOWLIST was emptied by BP-900g-5 and BP-900g-6 carries a test asserting it stays empty."
+    - "DO NOT WIDEN THE OUTPUT-ROOT PREFIX BOUND. BP-900g-5 narrowed BP-900g-4's over-permissive prefix so a host-project path (debugging/scripts/...) is no longer mis-normalised into a deploy key, and BP-900g-6's negative-control tests fence it. This rule must not re-capture host-project or package-dev path forms; those tests must stay green after the change."
+    - "TWO CONCERNS, TWO REPORTS. A finding for 'the artifact exists nowhere' and a finding for 'the artifact exists but is not deployed' must be distinguishable in the output, because the first is remedied by writing or deleting and the second by a deploy-map edit. An author handed the wrong one edits the deploy map, finds nothing to add, and concludes the guard is noisy."
+    - "The failure must follow the project error handling policy and must not be downgraded to a warning-and-continue. The build's exit code is the observable the criterion asserts on; a run that logs the finding accurately and exits zero is the defect, not the fix (this is the same fail-open shape BP-900g-9 addresses in the deploy loop)."
+    - "The pass must complete inside the existing build preflight's time budget: it reads config JSON and stats candidate paths. No network access and no per-entry subprocess."
+delivers_to:
+  - agent: python-coder
+    contract: "A universal registry-entry resolution pass reachable from the build's real preflight entry point (`python scripts/build.py --target-dir <target>`), plus the finding record shape defined in it_requirements.config_schema_fragment: {registry_file, entry_location, artifact, kind}, where `kind` separates 'exists nowhere' from 'exists but undeployed'. Consumed by BP-900g-7-i, which asserts the same pass, through the same entry point, discriminates declaration from prose and never-written from not-deployed."
+expects_from: null
+test_spec:
+  - name: test_bp_900g_7_unresolvable_entry_finding_names_registry_entry_and_artifact
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The resolution pass, given a registry entry naming an artifact that exists in neither the source tree, the template tree, nor any deploy target, produces exactly one finding carrying registry_file, entry_location, artifact and kind='missing' — asserted on the finding record's fields, not on a log string."
+  - name: test_bp_900g_7_build_subprocess_blocks_on_a_registry_entry_naming_a_nonexistent_artifact
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier. Copy the package tree to a temp dir, inject a registry entry naming an artifact that exists nowhere, then run `python scripts/build.py --target-dir <tmp_target>` as a SUBPROCESS from that tree. Assert a non-zero exit and that the combined stdout/stderr names the registry file, the entry location and the artifact. Importing build_referential_integrity and calling its checker directly does NOT satisfy this: the thing under test is whether the build reaches the rule at all."
+  - name: test_bp_900g_7_unmodified_package_tree_still_builds_through_the_same_subprocess
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The paired negative control, through the SAME `python scripts/build.py --target-dir <tmp_target>` subprocess, against the REAL on-disk registries (config/package_boundary.json and config/test_requirements.schema.json read from the repo, never hand-typed dicts) after the two dangling check_test_requirements_refs.py references are resolved: exit zero and zero findings. A guard that flags everything would pass the must_block test alone; this is what distinguishes it."
+test_rationale: |
+  Two failure modes have to be excluded and only one of them is about the rule's logic.
+
+  The rule can be written and never reached. The defect this AC targets is an ABSENCE —
+  there is no file to inspect, so no source-tree assertion can observe it, and a test
+  that greps build_referential_integrity.py for the new rule is green over a module the
+  build never calls. That is why the second entry is a subprocess through
+  `scripts/build.py` and why the criterion explicitly disqualifies reading the guard's
+  source. must_block rides that entry because a preflight that cannot block is inert.
+
+  The rule can also be too wide, at which point the first author to hit a false positive
+  suppresses it and the suppression is permanent. The third entry is the false-positive
+  control and is deliberately run against the real on-disk config files rather than
+  fixtures, because the parse shape of those files — declaration lists next to
+  human-readable description prose — is precisely what the rule has to survive. The
+  finer discrimination (prose vs declaration, missing vs undeployed) is pinned by
+  BP-900g-7-i against the same entry point.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; the load-bearing enforcement point and the universal-resolution-not-a-name-list
+    constraint named explicitly), delivers_to, test_spec (criterion / reachability+must_block
+    / real_artifact) and test_rationale. Added two doc_links (scripts/build.py, BP-900g-6).
+    Ruled on the BA's escalated question 2 — see notes. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by:
+  - BP-900g-7-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  HOLE A. A registry can name a check that does not exist, and nothing notices.
+
+  WHY THIS IS NOT ALREADY COVERED. BP-900e ("Build catches package capabilities
+  promised in the registry but never shipped to consumers") covers registered-but-
+  not-deployed: an artifact that exists in the package tree and fails to reach the
+  consumer. This AC covers the strictly weaker precondition — the artifact does not
+  exist at all — which every deployment check structurally cannot see, because there
+  is nothing to fail to deploy. BP-900e is also at the five-L2 cap, so this behaviour
+  could not be added there without a structural split; BP-900g's L1 statement ("every
+  invocation ... resolves to a real path") is the correct home for a reference that
+  resolves to nothing.
+
+  WHY IT IS NOT COVERED BY BP-900g-5 EITHER. BP-900g-5 emptied
+  KNOWN_UNDEPLOYED_ALLOWLIST and is readiness: approved, work_status: done. This
+  reference was never in that allowlist, so emptying it proved nothing about it. That
+  is exactly the failure this AC's criteria are written to avoid reproducing: the
+  criterion above is a resolution rule over all entries, not an inventory of the two
+  known-bad names, and it is deliberately phrased so that satisfying it for
+  check_test_requirements_refs.py alone does not satisfy it.
+
+  TEST ANGLES for it-po (docs/testing/test-angles.md). Floor: criterion +
+  reachability. reachability carries the must_block modifier — a synthesized registry
+  entry naming a nonexistent artifact, fed through the SAME preflight entry point as a
+  subprocess, must exit non-zero. Pair it with the positive control (a resolvable
+  entry produces no finding) so the guard cannot be satisfied by flagging everything.
+  real_artifact is triggered: the registry fixtures must be the real on-disk
+  config/*.json, not hand-typed dicts, because the parse shape of these files is part
+  of what the rule must survive.
+
+  BOUNDARY OF THIS AC. It says nothing about what
+  check_test_requirements_refs.py should do if written, and does not require writing
+  it. Resolving the live instance by DELETING the two false references satisfies this
+  AC exactly as well as implementing the script — and BO-2900g-3 explicitly parks the
+  build-it decision out of scope. The criterion is about detection, not remedy.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO RULING (2026-08-17) — OPEN QUESTION 2, ESCALATED BY THE BA.
+  Question: BO-2900g-3's it_requirements route Hole A to "a one-line remediation
+  plus, if needed, an L2 widening under BP-900e", which conflicts with the Stage 0
+  triage that placed it under BP-900g.
+
+  RULING: the triage is CONFIRMED. BP-900g-7 stays where it is. Two independent
+  reasons, either sufficient:
+
+  (1) Capacity. BP-900e already holds five L2 children (BP-900e-1 .. BP-900e-5) and
+      is at the cap. A widening there is not available without a structural split,
+      and a split of an approved, partly-built tree is a larger change than the
+      behaviour being added.
+
+  (2) Semantics, which is the stronger reason. BP-900e's subject is
+      registered-but-not-shipped: the artifact EXISTS in the package tree and fails
+      to reach the consumer. Hole A is the strictly weaker precondition — the
+      artifact exists nowhere — and a deployment-completeness rule is structurally
+      blind to it, because there is nothing to fail to deploy. Placing an
+      existence rule under a deployment L1 would produce exactly the conflation
+      BP-900g-7-i's third clause exists to prevent.
+
+  STATUS OF BO-2900g-3. Its constraint bullet "OUT OF SCOPE — DO NOT BUILD IT HERE"
+  remains correct and is fully compatible with this AC: BP-900g-7 does not require
+  writing check_test_requirements_refs.py, only that the dangling reference be
+  detected, and deleting the two references satisfies it. Only the destination named
+  in that bullet is stale — it was written before BP-900g-7 existed. FLAGGED, NOT
+  CHANGED: BO-2900g-3 is owned by another in-flight authoring pass and is staged;
+  no record was moved and no file outside this set was touched. Recommended
+  follow-up for whoever owns BO-2900g-3: amend that one bullet to name BP-900g-7
+  as the destination instead of "an L2 widening under BP-900e". This is a
+  one-line docs-level correction with no behavioural consequence — BP-900g-7 is
+  authored and reviewed either way.

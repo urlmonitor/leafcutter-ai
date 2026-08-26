@@ -4,9 +4,9 @@ components:
 title: "Harvester skips events with an unrecognized entry_kind without crashing"
 component: infrastructure
 level: L3
-status: active
+status: superseded_by
 req_status: active
-work_status: todo
+work_status: null
 priority: high
 readiness: reviewed
 criteria: |
@@ -25,6 +25,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
+  - "SUPERSEDED by INF-400c-2-ii. The 'mark skipped events as processed' clause below was implemented literally and causes silent, permanent loss of any event the harvester cannot route: a 2026-08-25 dry-run over the real sink found all 28 in-flight knowledge_captured events unroutable, and this rule would have burned every one on first run. INF-400c-2-ii keeps the original intent (no unbounded retry loop) by requiring the unroutable backlog be reported on every run instead of discarded. RETIRED 2026-08-26. tests/knowledge/test_harvest_learnings.py::TestSkipsUnrecognisedEntryKind::test_skips_unrecognized_entry_kind asserted the superseded behaviour ('Unknown event is marked processed', 'Both events are marked processed') and was replaced by TestUnrecognisedEntryKindStaysRetryable. CORRECTION to this note's earlier wording, which said the test 'must be rewritten in the same commit that implements INF-400c-2-ii': that is exactly what the check-contract-shrinking guard forbids. It blocks deleting a test in a commit that also touches production files and requires the test change to land first, alone. The retirement was therefore split into a test-only commit followed by the implementation commit. Anyone superseding a test-covered AC should plan for two commits, not one. work_status moved from done to null in the same change, and that is a workaround, not a considered state: check-done-proof keys on work_status == done and has no notion of supersession, so it demanded a '# covers: INF-400c-2-i' tag for a test that was deliberately retired. The schema's work_status enum offers only not_started/todo/in_progress/done or null — there is no retired value. done was no longer true (nothing verifies it), todo would be false in the other direction (it was genuinely delivered), so null is used to mean 'implementation lifecycle no longer applies, see status: superseded_by'. The store needs a real retired state, or done-proof needs to skip superseded records."
   - "Must log unrecognized entry_kind values at WARNING level with the event identifier"
   - "Must mark skipped events as processed to prevent infinite retry loops"
   - "Must exit with success status (exit code 0) even when events are skipped"
@@ -36,8 +37,10 @@ expects_from:
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: []
-superseded_by: null
-covered_by: []
-implemented_by: []
+superseded_by: [INF-400c-2-ii]
+covered_by:
+  - "tests/knowledge/test_harvest_learnings.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
 change_target: code
 risk_surface: internal

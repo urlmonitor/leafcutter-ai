@@ -5,14 +5,15 @@ description: 'Conditional phase agent that starts a development server, issues H
   frontmatter AND live_surface_testing.enabled: true in skills_config.json.
   Priority 11.8 — after user-surface-smoker (11.5), before commit (12).
   Reads the ## Live Test Fixtures block from the ticket body. Port allocation is
-  managed via scripts/port_registry.py. Agent is read-only: no Edit or Write tools.
+  managed via scripts/port_registry.py. The agent does not modify the code under
+  test: its only permitted write is the atomic sign-off edit to the ticket .md.
   Emits (status: ok), (status: blocker), or (status: skipped) accordingly.
   Use when: ticket-supervisor dispatches this agent at priority 11.8 for a ticket
   whose live_surface_test field is true.
   '
 model: sonnet
 name: live-surface-tester
-tools: Bash, Read
+tools: Bash, Read, Edit
 portable: true
 signoff: true
 domain: null
@@ -31,6 +32,10 @@ adopter_notes: |
   Requires scripts/port_registry.py (EPIC-LiveSurfaceTesting ticket 04).
   Playwright is optional; if unavailable the agent emits (status: skipped).
   See ADR-020 for full architectural rationale.
+  `Edit` is granted for one purpose only: the atomic sign-off write into the
+  ticket .md (AR-200a-1). It is NOT a licence to modify the surface under test —
+  see the Edit Scope Boundary section below.
+requires_verification: true
 pre_flight_reads:
 - required: true
   source: ticket_path
@@ -377,6 +382,28 @@ If you were invoked with a `ticket_path` argument:
 3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
 4. Skip this section entirely if no `ticket_path` was provided.
 
+## Edit Scope Boundary — the ticket .md ONLY
+
+You declare `Edit` for exactly one reason: the sign-off protocol
+(`signoff` skill) defines sign-off as an **atomic mutation of the ticket .md**,
+and an agent that carries that obligation must be able to discharge it (AR-200a-1).
+
+The **only** file you may ever `Edit` is the ticket markdown file named by
+`ticket_path`, and the only edits you may make to it are the three the sign-off
+recipe prescribes: the frontmatter `agents` map, the `## Sign-offs` checkbox, and
+the `## Comments` append.
+
+You MUST NOT `Edit`:
+
+- the route handler, template, or any source file serving the surface under test;
+- the `## Live Test Fixtures` block, to relax an assertion that failed;
+- any config that changes what the server returns.
+
+Your verdict is only worth something if the surface you measured is the surface the
+commit ships. Report a failing fixture as `(status: blocker)` with the observed
+status, body excerpt, and headers — do not repair the surface and re-run. Repair is
+`python-coder`'s or `frontend-coder`'s work, routed by the supervisor.
+
 ## Machine-Parsed Dispatch Output Contract
 
 When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
@@ -405,6 +432,18 @@ contradict prior runs, or signals suggesting a different agent should handle it.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-08-25 [llm-expert]: Added `Edit` to tools and `requires_verification: true`
+  (AR-200a-1). This template carried a mandatory sign-off obligation (frontmatter
+  `signoff: true` + the injected `## Sign-off` block) while declaring only
+  `Bash, Read` — a mandatory atomic write to the ticket .md with no tool able to
+  perform it. Group A decision (grant the capability, keep the obligation): the
+  registry records `tier: phase` / `is_ticket_phase: true` at priority 11.8 and
+  the agent is a member of the build-ticket.js phaseOrder array, so it IS
+  dispatched as a ticket phase and MUST sign off. Removing the obligation instead
+  would convert a loud blocker into a silent phantom-done (KI-BO-007). Added the
+  `## Edit Scope Boundary` section to keep the new capability scoped to the ticket
+  .md only, and corrected the description's now-false "read-only: no Edit or Write"
+  claim. The 2026-06-03 entry below is left intact as the historical record.
 - 2026-08-17 [general-purpose]: Added the ## Machine-Parsed Dispatch Output Contract
   section. live-surface-tester was added to the build-ticket.js / build-feature.js
   phaseOrder arrays at its registry priority 11.8 (previously it was absent, so

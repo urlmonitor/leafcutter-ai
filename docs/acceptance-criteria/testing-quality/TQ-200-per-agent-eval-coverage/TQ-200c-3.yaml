@@ -1,0 +1,230 @@
+id: TQ-200c-3
+components:
+  - testing_quality
+  - ac_store
+  - ticket_creation_pipeline
+title: "One piece of work can be asked for a deterministic proof and a judged proof at the same time"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one piece of work with two things to prove — that its declaration is
+    well-formed and consistent with the registry it must agree with, which an
+    assertion settles, and that it actually elicits the intended behaviour from a
+    model, which only a judgment settles,
+  When the proof it will be asked for is written down and handed on,
+  Then both demands are present in the same plan for that one piece of work,
+  And each is legible as its own kind, so the deterministic demand is not read as
+    judged and the judged demand is not read as deterministic,
+  And adding the second demand leaves the first unaltered — same proofs, same
+    wording, same order — so neither kind displaces, absorbs or reorders the other,
+  And each demand reaches the party that can satisfy it without the other being
+    dropped in transit, so a plan that carries two demands results in two proofs
+    being asked for rather than one,
+  And nothing about the work has to be split into two separate pieces in order for it
+    to carry both.
+depends_on:
+  - TQ-200c
+  - TQ-200c-1
+doc_links:
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: modifies
+    status: exists
+    relevance: "The transit path where a demand gets dropped, and the file this AC edits. Verified 2026-08-18: the whole test-contract branch is gated on `is_code_ac` (line 2740) — line 2776's check that the generated Test Requirements block would pass the ticket guard is skipped entirely for non-code work, and line 2773 records the omission as PASS. Today, a five-entry authored test_spec on an llm-expert AC is silently discarded, so the current behaviour is not merely one-demand-at-a-time but zero. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "Where the two demands have to coexist — READ, not edited here: TQ-200c-1 owns the schema change. `test_spec` is already a LIST of entries (item schema at line 387, additionalProperties: false), so carrying two entries is structurally available today — what is missing is that both entries can only say unittest or pytest (framework enum, line 401) and only name an angle (line 411), never a kind. The simultaneity this AC requires is therefore a vocabulary consequence, not a container problem, which is why it depends on c-1."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "One of the two parties the fourth clause names — READ as a destination, edited by TQ-200c-1 rather than here. Verified 2026-08-18: zero occurrences of \"eval\"; framework choice is unittest or pytest. It can be handed a deterministic demand today and would answer a judged one with a pytest file, so mixed plans must be legible per-demand rather than per-plan."
+  - path: scripts/evals/agent_eval_config.json
+    relationship: relates-to
+    status: exists
+    relevance: "The other party. Its per-agent entries already differ by scoring mode (label for pt-classifier; artifact with artifact_type / schema / sandbox_copy / tools / timeout for mock-data-author and flow-author), so the judged half of a mixed plan has a real destination — see TQ-200c-4, which owns the landing."
+  - path: unit_tests/agents/test_test_writer_seam_rule_scope.py
+    relationship: related
+    status: exists
+    relevance: "A concrete instance of the deterministic half of a mixed demand: prompt-surface behaviour proved by an ordinary hand-written test. The realistic mixed case is a requirement that needs one of these AND an eval, which is why the criteria's Given describes exactly that pair."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ac_store/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The per-demand legibility rule for the emitted plan. The container already exists — test_spec is a list — so nothing new is stored. What is constrained is that the KIND travels with each entry rather than with the plan, because a plan-level kind cannot express a mixed demand and is the shape the current code already has."
+    properties:
+      demands:
+        type: array
+        minItems: 1
+        description: "One entry per demanded proof, each carrying its own kind. The kind is a property of the ENTRY, never of the plan or of the requirement. A plan-level kind flag satisfies the single-kind cases and makes the mixed case unrepresentable."
+        items:
+          type: object
+          required:
+            - proof_mode
+          properties:
+            proof_mode:
+              type: string
+              enum:
+                - asserted
+                - judged
+              description: "Which kind this one demand is, as defined by TQ-200c-1. Read per entry by the consumer so that one plan can address two different parties."
+  constraints:
+    - "The proof kind must be a property of each demand, not of the plan or the requirement. A plan-level flag passes both single-kind cases and makes the mixed case structurally unrepresentable — the failure this AC exists to prevent."
+    - "Adding a judged demand must leave every pre-existing deterministic demand byte-identical in content, wording and ORDER. Re-deriving or normalising the plan to accommodate the new demand discards a human's authored contract to satisfy a mechanical rule; the store holds 124 named contracts on prompt work that must arrive alongside whatever routing adds, not instead of them."
+    - "Both demands must SURVIVE TRANSIT into the written plan. Two demands sitting in one record prove nothing. The current code drops the whole test-contract section at once behind the is_code_ac gate; the plausible half-fix moves the drop to the judged entries only, which looks like progress and is still a drop. Assert on the written ticket, not on the in-memory structure."
+    - "A mixed demand must be carried by ONE requirement. Splitting into two requirements, one per kind, is forbidden: it makes the number of requirements a function of how many kinds of proof a behaviour needs, fragments the store, doubles parent/child bookkeeping and lets the halves drift about what behaviour they prove."
+    - "Must not require both kinds. TQ-200c-2-i forbids over-demand, and an implementation that always emits a pair satisfies this AC and fails that L3. Every cardinality from one kind to two must be reachable on the same path."
+delivers_to:
+  agent: python-coder
+  contract: "A written plan in which each demanded proof carries its own kind, so one requirement can address two parties at once: the deterministic entries reach the test author unchanged in content and order, and the judged entries survive alongside them for TQ-200c-4 to land in the eval harness. The guarantee is on the emitted ticket, not on the in-memory answer."
+expects_from:
+  ac_id: TQ-200c-1
+  contract: "The single-sourced proof-kind vocabulary (test_spec[].proof_mode, values {asserted, judged}) attached to a test_spec ENTRY rather than to the record, which is what makes two kinds legible in one list. Without it the best available plan is two entries that both say pytest, which fails this AC's second clause by construction."
+test_required: true
+test_spec:
+  - name: test_one_requirement_yields_a_plan_carrying_both_kinds_of_demand
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    covers: [TQ-200c-3]
+    description: "A single record needing a registry-parity assertion and a model-behaviour judgment produces one written plan containing both demands, each labelled with its own kind. Asserted on the ticket the real generator wrote, over a COPY of a store."
+  - name: test_each_demand_is_legible_as_its_own_kind_in_the_written_plan
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-3]
+    description: "The deterministic entry must not read as judged and the judged entry must not read as deterministic. A plan-level kind flag passes the both-present test and fails here, which is the whole point of separating the two assertions."
+  - name: test_adding_the_judged_demand_leaves_the_deterministic_demands_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    covers: [TQ-200c-3]
+    description: "ORDER PRESERVATION. Generate the plan for a record with an authored multi-entry deterministic contract, then again with a judged demand added, and diff: the pre-existing entries must be identical in content, wording and order. An implementation that re-derives or normalises the plan passes every presence check and fails here."
+  - name: test_neither_demand_is_dropped_in_transit_to_the_written_ticket
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    covers: [TQ-200c-3]
+    description: "PRODUCTION ENTRY POINT: the real generation command line over a COPY of a store; both demands must be present in the ticket file on disk. Today the whole section is dropped behind the is_code_ac gate; the plausible half-fix drops only the judged entries, and only an on-disk assertion separates the two."
+  - name: test_a_mixed_demand_does_not_require_the_work_to_be_split_in_two
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    covers: [TQ-200c-3]
+    description: "Exactly one ticket is produced for the mixed record, and no second requirement is created in the store copy. Forbids the plausible dodge of making the requirement count a function of the number of proof kinds."
+  - name: test_a_single_kind_requirement_still_yields_a_single_kind_plan
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    covers: [TQ-200c-3]
+    description: "NEGATIVE CONTROL for TQ-200c-2-i. An implementation that satisfies simultaneity by always emitting both kinds passes every other test here and fails this one. The pair of tests is what pins 'both are possible' apart from 'both are mandatory'."
+test_rationale: |
+  Every assertion is made on the WRITTEN TICKET produced by the real generator over a copy
+  of a store, never on an in-memory routing answer. The fourth criterion clause is
+  explicitly about transit, and the failure it names — a mixed plan authored correctly whose
+  judged half evaporates because nothing downstream knows what to do with it — is invisible
+  to any test that inspects the structure before it is emitted.
+  Presence and legibility are separate tests because a plan-level kind flag satisfies the
+  first and fails the second, and it is the natural first implementation: the existing code
+  already carries exactly one plan-level boolean, so the cheapest change is to make that
+  boolean tri-state. Order preservation is a diff test rather than a set-membership test
+  because the defect it catches is a re-derivation that produces the same demands in a
+  different form — a set comparison is blind to it and 124 authored contracts are the
+  population at risk.
+  The single-kind negative control is mandatory: this AC and TQ-200c-2-i are a pair, and an
+  always-both implementation satisfies the letter of every other test in this contract while
+  making 'judged' carry no information. The no-split test guards a dodge that is a design
+  decision rather than a bug, and would otherwise be caught by nobody.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-18
+    note: "Added assigned_agent (python-coder), estimated_complexity (M), object-form
+      it_requirements naming scripts/ac_store/generate_ticket_from_ac.py as reference_file_path
+      plus the per-entry (not per-plan) kind decision, delivers_to, expects_from (TQ-200c-1), and
+      a six-entry test_spec with rationale. Retagged the generator doc_link describes -> modifies;
+      the schema and test-writer template links stay describes because TQ-200c-1 owns those edits
+      and this AC only requires the demands to survive transit between them. criteria, title and
+      notes untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN AC AND NOT A CLAUSE OF c-2. The routing decision (c-2) can be
+  perfectly derived and still be implemented as a choice between two mutually
+  exclusive outcomes — "this is deterministic work" or "this is judged work" — which
+  is the shape the existing code already has, merely with a better-informed
+  condition. That implementation satisfies every clause of c-2 and is wrong for most
+  real llm-expert requirements, because most of them need both: the frontmatter rule
+  IS mechanically checkable and the prompt's effect on a model is NOT. Stating
+  simultaneity separately means an implementer cannot ship the exclusive version and
+  claim the routing AC.
+
+  WHY THE THIRD CLAUSE (ADDING ONE LEAVES THE OTHER UNALTERED) IS LOAD-BEARING. This
+  is BO-2900g-1's order-preservation rule applied to a different axis, and for the
+  same reason it gives there: an implementation that satisfies a new demand by
+  re-deriving or normalising the existing plan has discarded a human's authored
+  contract to satisfy a mechanical rule, which is a worse defect than the one being
+  fixed. The store has 124 named test contracts on llm-expert requirements. Whatever
+  routing adds must arrive alongside them, not instead of them.
+
+  WHY THE FOURTH CLAUSE IS ABOUT TRANSIT AND NOT ABOUT STORAGE. Two demands sitting
+  in one YAML record prove nothing. The failure this clause is aimed at is the
+  plausible half-implementation where a mixed plan is authored correctly, the
+  deterministic half reaches templates/agents/test-writer.md, and the judged half
+  quietly evaporates because nothing downstream knows what to do with it — the
+  present behaviour generalised. Verified 2026-08-18: the whole test-contract branch
+  in generate_ticket_from_ac.py is gated on is_code_ac (line 2740), so today the
+  drop happens for the entire plan at once; a naive fix moves the drop to the judged
+  entries only, which looks like progress and is still a drop.
+
+  THE FIFTH CLAUSE FORBIDS THE PLAUSIBLE DODGE. "Split it into two requirements, one
+  per kind of proof" is a real and tempting answer, and it is wrong here: it makes
+  the number of requirements a function of how many kinds of proof a behaviour needs,
+  which fragments the store, doubles the parent/child bookkeeping, and leaves the two
+  halves free to drift out of agreement about what behaviour they are proving. The
+  normal BA rule that one AC carries one behaviour is untouched — this clause is
+  about ONE behaviour needing two kinds of proof, not about two behaviours.
+
+  DEPENDENCY REASONING — WHY c-1 AND DELIBERATELY NOT c-2.
+    - depends_on TQ-200c-1: two demands cannot be legible as their own kinds unless
+      two kinds are sayable. Without c-1 the best available plan is two entries that
+      both say "pytest", which fails the second clause by construction.
+    - No edge to TQ-200c-2, on purpose. This AC is about the shape and survival of a
+      mixed plan, not about how the mix was chosen. It is fully testable against a
+      hand-declared pair of demands, and holding it behind the derivation work would
+      delay a protection that stands on its own. The interaction is real but
+      one-directional and needs no edge: once c-2 lands, mixed plans will be produced
+      automatically rather than by hand, and nothing about this AC's behaviour
+      changes. Recorded explicitly so the it-po does not add the edge on aesthetic
+      grounds (the same reasoning BO-2400g-2 records for its non-edge to BO-2400g-1).
+
+  BOUNDARY. This AC does not decide which kinds any given work needs (c-2), does not
+  register the judged demand with the runner (c-4) and produces no verdict when a
+  demand cannot be honoured (c-5). It says only that two demands can travel together
+  and both arrive.

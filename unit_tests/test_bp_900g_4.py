@@ -24,11 +24,13 @@ ARCHITECTURE: Two tiers, deliberately. The extractor tests are unit-level and pi
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Path setup — make scripts/ importable regardless of working directory.
@@ -39,8 +41,32 @@ _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-import build as _build  # noqa: E402 — after sys.path setup
 import build_referential_integrity as _bri  # noqa: E402 — after sys.path setup
+
+
+def _load_build_module() -> Any:
+    """Load scripts/build.py by path rather than ``import build``.
+
+    ``scripts/build.py`` shares its module name with the installed PyPI
+    ``build`` package (the PEP 517 build frontend). At runtime the
+    ``sys.path.insert(0, ...)`` above makes the local script win, but mypy's
+    static import resolution does not execute that sys.path mutation — it
+    resolved ``import build`` to the installed package instead, so
+    ``_build.main`` / ``_build._get_source_deployable_scripts`` looked like
+    attribute errors against a module that never had them. Loading by path
+    sidesteps the name collision entirely (and removes a real runtime
+    footgun: this test no longer depends on sys.path ordering to avoid
+    silently exercising the wrong package).
+    """
+    build_py_path = _SCRIPTS_DIR / "build.py"
+    spec = importlib.util.spec_from_file_location("scripts_build_under_test", build_py_path)
+    assert spec is not None and spec.loader is not None, f"could not load spec for {build_py_path}"
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_build = _load_build_module()
 
 def _deployed_invoke_re(output_root_name: str) -> re.Pattern[str]:
     """Build the invocation matcher for a specific deployed output root.
@@ -382,6 +408,30 @@ def test_deployed_fast_lane_actually_executes(tmp_path: Path) -> None:
     deployed = output_root / "scripts" / "build_orchestration" / "fast_lane.py"
     assert deployed.is_file(), f"fast_lane.py was not deployed to {deployed}."
 
+    # The connected set is resolved against a FROZEN COPY of the GE-113c-3
+    # records, not the live store. Pointing --ac-root at the real store made
+    # this test depend on those ACs staying unbuilt: once GE-113c-3 and its
+    # children were completed (work_status: done) the resolver correctly
+    # returned [] and this test failed, even though the deployed script ran
+    # perfectly — which is the only thing BP-900g-4 is actually about.
+    # Copying the real records preserves schema fidelity; resetting
+    # work_status pins the fixture so completing real work cannot break it.
+    fixture_root = tmp_path / "ac-store"
+    fixture_dir = fixture_root / "guardrail-engine" / "GE-113c-3-fixture"
+    fixture_dir.mkdir(parents=True)
+    source_dir = (
+        _REPO_ROOT
+        / "docs"
+        / "acceptance-criteria"
+        / "guardrail-engine"
+        / "GE-113-artifacts-cant-land-in-the-wrong-place"
+    )
+    for ac_id in ("GE-113c", "GE-113c-3", "GE-113c-3-i", "GE-113c-3-ii",
+                  "GE-113c-3-iii", "GE-113c-3-iv"):
+        text = (source_dir / f"{ac_id}.yaml").read_text(encoding="utf-8")
+        text = text.replace("work_status: done", "work_status: todo")
+        (fixture_dir / f"{ac_id}.yaml").write_text(text, encoding="utf-8")
+
     result = subprocess.run(
         [
             sys.executable,
@@ -391,7 +441,7 @@ def test_deployed_fast_lane_actually_executes(tmp_path: Path) -> None:
             "--ac",
             "GE-113c-3",
             "--ac-root",
-            str(_REPO_ROOT / "docs" / "acceptance-criteria"),
+            str(fixture_root),
         ],
         capture_output=True,
         text=True,

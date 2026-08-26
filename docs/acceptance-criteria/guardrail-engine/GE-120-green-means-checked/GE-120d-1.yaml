@@ -94,7 +94,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/22_TICKET-20260825-GE-120d-1.md
 change_target: code
 risk_surface: internal
 notes: |
@@ -111,3 +112,4 @@ notes: |
   IT-PO (2026-08-14): the ADR-001 triple for setup_ticket_worktree.py is verified to exist in
   all three locations; callers run the deployed copy. The remedy for the exactly-once clause
   is to CONDITIONALIZE the pre-existing unconditional record, not to add a second one.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

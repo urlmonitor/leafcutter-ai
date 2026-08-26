@@ -1,0 +1,97 @@
+id: BO-2600b-1-ii
+components:
+  - build_orchestration
+title: "A set that is empty once structural siblings are excluded is a clean stop that says why"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a target criterion that is itself already done and whose only route to any
+    unfinished work ran through its structural parent — so the wider walk would have
+    produced a non-empty set and the tight walk produces none,
+  When an operator aims the fast lane at that criterion,
+  Then the run resolves an empty build set, stops without writing tests, changing
+    production code, or opening a pull request,
+  And the run's record states that the set is empty AND that structural-parent
+    prerequisites were excluded from the prerequisite walk, so the operator can tell an
+    empty set apart from a set the exclusion emptied,
+  And the run reports this as a completed run with nothing to build, not as a failure to
+    resolve — the failure path stays reserved for a store that could not be read or an id
+    that does not exist.
+depends_on: [BO-2600b-1]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Already distinguishes a resolution error from a genuinely empty set and returns a nothing_to_build payload; this criterion adds the reason the set is empty to that payload so the distinction survives the exclusion."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "HarnessResult.result carries the nothing-to-build payload, and dispatch_count shows that no test-writer or coder invocation followed."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Do not widen the existing resolution-error detection to cover an empty tight set. An empty set is an outcome of the run, not a fault; classifying it as an error would make a correct tight resolution look like a broken store."
+    - "The record must carry the exclusion fact on the empty path specifically. This is the one path where an operator is most likely to suspect the exclusion of eating their work, and the only place a bare 'nothing to build' message would be actively misleading."
+delivers_to: null
+expects_from:
+  ac_id: BO-2600b-1
+  contract: "The fast lane's resolver invocation with structural-parent prerequisites excluded, whose empty result this criterion specifies the reporting of."
+test_required: true
+test_spec:
+  - name: test_empty_tight_set_stops_without_building
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Executing the lane against a fixture whose tight set is empty produces a nothing-to-build terminal payload and dispatches no test-writer and no coder invocation."
+  - name: test_empty_set_payload_states_the_exclusion_was_in_force
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The nothing-to-build payload states both that the set is empty and that structural-parent prerequisites were excluded from the prerequisite walk."
+  - name: test_empty_tight_set_is_not_reported_as_a_resolution_failure
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "The empty-set run returns the completed nothing-to-build outcome, while a run against a missing id still returns the resolution-failure outcome."
+test_rationale: |
+  All three tests execute the lane under unit_tests/_workflow_engine_harness.py against
+  fixture stores and read HarnessResult.result plus the recorded agent_calls. The third
+  test deliberately exercises both branches in one place, because the cheapest way to make
+  the first two pass is to broaden the empty-set branch until it also swallows a genuinely
+  missing id — regressing a distinction the lane already draws and already needed once,
+  after a stale worktree returned a wrong store path and every id silently "resolved" to
+  nothing.
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "templates/workflows-js/fast-lane-ship.js"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the regression the always-exclude decision could plausibly introduce: a run that
+  used to build five criteria now builds none, and a bare "nothing to build" message would
+  leave the operator unable to tell whether the work is finished or the new scope rule
+  removed it. Stating the exclusion on the empty path costs one sentence and is the
+  difference between a tight scope the operator trusts and one they route around.

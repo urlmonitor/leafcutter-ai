@@ -37,6 +37,7 @@ Pure text-parsing tests reading the REAL on-disk files. No hand-typed content.
 from __future__ import annotations
 
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -371,6 +372,93 @@ class TestLifecycleWiringInWorkflow(unittest.TestCase):
             "'mark_done' was not found. (Note: 'mark_ac_done' satisfies mark_ac_done.py "
             "but NOT 'mark_done' the CLI subcommand; 'markDone' is camelCase and does "
             "not match either.)",
+        )
+
+
+class TestTestWriterSchemaNullableReason(unittest.TestCase):
+    """The test-writer schema's `reason` must accept null — KI-BO-004.
+
+    `verify_red_baseline` names a `reason` only when it HALTS; on a passing
+    gate it returns None. The schema declared `reason: { type: "string" }`,
+    so the agent coerced that None and the journal recorded the
+    four-character string "null" (observed on the TKT-600a-1 run).
+
+    Today the workflow branches on `gate_passed`, so the bad value is inert.
+    The defect is that "null" is a truthy string matching no named halt
+    reason, so the first consumer to branch on `reason` inherits a trap.
+
+    Scope note: this asserts the JS-side declaration and its agreement with
+    the Python gate's documented return contract. It does not execute the
+    workflow — the E2 engine is not drivable from a unit test — so it is
+    paired with the behavioural coverage of the gate itself in
+    unit_tests/build_orchestration/test_bo2400a_3_amended_red_baseline.py.
+    """
+
+    def test_ki_bo_004_reason_accepts_null(self) -> None:
+        # covers: KI-BO-004
+        """The declared type for `reason` includes null, not string alone."""
+        content = _read(_WORKFLOW_PATH)
+        if content is None:
+            self.fail(f"fast-lane-ship.js not found at {_WORKFLOW_PATH}.")
+
+        schema_start = content.find("const TEST_WRITER_SCHEMA")
+        self.assertGreater(
+            schema_start, -1, "fast-lane-ship.js must declare TEST_WRITER_SCHEMA."
+        )
+        schema_block = content[schema_start : content.find("};", schema_start)]
+
+        reason_match = re.search(r"reason:\s*\{([^}]*)\}", schema_block)
+        if reason_match is None:
+            self.fail(
+                "TEST_WRITER_SCHEMA must declare a `reason` property. "
+                f"Searched:\n{schema_block}"
+            )
+        reason_decl = reason_match.group(1)
+
+        self.assertIn(
+            "null",
+            reason_decl,
+            "TEST_WRITER_SCHEMA.reason must accept null (KI-BO-004): "
+            "verify_red_baseline returns reason=None on a passing gate, and a "
+            'string-only declaration makes the agent coerce it to the string "null". '
+            f"Got: reason: {{{reason_decl}}}",
+        )
+        self.assertIn(
+            "string",
+            reason_decl,
+            "TEST_WRITER_SCHEMA.reason must still accept string — the named halt "
+            "reasons are strings. Nullability is added, not substituted. "
+            f"Got: reason: {{{reason_decl}}}",
+        )
+
+    def test_ki_bo_004_python_gate_returns_none_reason_on_pass(self) -> None:
+        # covers: KI-BO-004
+        """The Python side really does emit None, so nullability is required.
+
+        Guards against 'fixing' the schema against an imagined contract: if
+        verify_red_baseline stopped returning None the schema change would be
+        unnecessary, and this test says so.
+        """
+        module_dir = _REPO_ROOT / "scripts" / "build_orchestration"
+        sys.path.insert(0, str(module_dir))
+        try:
+            from fast_lane import _red_baseline_verdict  # noqa: PLC0415
+        finally:
+            sys.path.remove(str(module_dir))
+
+        verdict = _red_baseline_verdict(gate_passed=True, reason=None)
+
+        self.assertIsNone(
+            verdict["reason"],
+            "A passing gate must emit reason=None — that None is precisely what "
+            "the JS schema has to accept. If the gate stopped emitting None, "
+            "TEST_WRITER_SCHEMA.reason would no longer need to be nullable and "
+            "KI-BO-004 should be re-examined rather than patched. "
+            f"Got: {verdict['reason']!r}",
+        )
+        self.assertTrue(
+            verdict["gate_passed"],
+            "Sanity: the verdict under test is the passing one.",
         )
 
 

@@ -1,0 +1,188 @@
+id: BO-2900f-2-ii
+components:
+  - build_orchestration
+  - supervisor_system
+  - skills_system
+title: "An agent recording an outcome for a gate it has already recorded updates that entry instead of appending a second"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a work item whose record already carries one entry for a gate, written by the
+    agent that owns that gate,
+    And that same agent is invoked again for the same gate on the same work item --
+      retried after a failure, or re-entered when the drive resumed -- and reaches an
+      outcome,
+  When it records that outcome,
+  Then the record carries exactly one entry for that gate, not two,
+    And that single entry states the later outcome and the later timestamp,
+    And that single entry also states that the gate was recorded more than once and
+      what the earlier outcome was, so the earlier attempt is not erased by the
+      update,
+    And every entry for every other gate is byte-for-byte unchanged,
+    And when the same agent records a gate that has no entry yet, one entry is
+      appended -- the rule is update-if-present, never write-nothing,
+    And an agent never alters an entry belonging to a gate it does not own,
+    And the updated record is written to disk, so the deduplicated entry is what a
+      later reader of the work item finds.
+  So the work item's record ends a drive with one entry per gate that reached an
+    outcome, and the count of entries is a usable completeness signal rather than a
+    count of dispatches.
+depends_on:
+  - BO-2900f-2
+  - BO-2900f-1-ii
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "The canonical sign-off recipe every phase agent follows. Its §3 comment-append recipe is append-only today and is the direct cause of the duplicate; the update-if-present rule and the parser-strict heading it keys on both live here."
+  - path: templates/agents/_signoff_block.md
+    relationship: modifies
+    status: exists
+    relevance: "The shared sign-off partial the template compiler injects into every phase agent template. This is the one seam where the rule reaches all recording agents at once -- a rule added to individual agent templates instead reaches only the agents someone remembered."
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "The agent observed writing the duplicate on ticket 03 of EPIC-DeploymentCompleteness. Named as the reproduction case, NOT as the scope: the fix must not be specific to this agent."
+  - path: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    relationship: describes
+    status: exists
+    relevance: "The existing behavioral surface for the shared sign-off protocol -- where a test that performs the recording action twice against a real work item belongs."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The read-side half of this behaviour. That AC keeps the verdict correct when a duplicate already exists and reports it; this AC stops the duplicate being written. Neither substitutes for the other and neither may be closed by the other's tests."
+  - path: scripts/commit_guardian/_signoff_parity_checks.py
+    relationship: describes
+    status: exists
+    relevance: "Already computes the frontmatter-to-checklist completeness relation over a work item, and enforces the parser-strict heading format an update has to preserve. An in-place update that breaks the heading schema breaks this check."
+assigned_agent: llm-expert
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "The recording rule changes from append-always to update-if-present: before recording an outcome for a gate, the agent locates its own existing entry for that gate in the work item's record and, if one exists, replaces it; only when none exists does it append. The rule lands once, in templates/skills/signoff/SKILL.md and the shared templates/agents/_signoff_block.md partial that the template compiler injects into every phase agent, never as a per-agent instruction."
+  - "MUST BE EXECUTABLE, NOT MERELY WRITTEN DOWN. The AC is satisfied only if there is a recording action a test can invoke twice against a real work-item file and then count the entries the file actually carries. A change consisting solely of prose added to SKILL.md is NOT sufficient evidence: prose is advice to a model, and the defect being fixed is a model that appended twice. The recipe must therefore be stated as a deterministic operation over the parser-strict heading schema -- locate the entry whose gate matches, replace it, otherwise append -- so it can be applied and verified mechanically. NO GREP-SHAPED TEST: a test that searches SKILL.md for the word 'update', or for the presence of the instruction, passes on a change that no agent can actually carry out."
+  - "THE UPDATE MUST PRESERVE THE EARLIER ATTEMPT'S INFORMATION. Overwriting the first entry with the second turns a duplicate-record defect into an audit-erasure defect: a gate that failed and was retried would show only the pass, and the failure would leave no trace anywhere. The surviving entry states the later outcome and additionally names that a re-record occurred and what the earlier outcome was. The requirement is one ENTRY per gate, not one FACT per gate."
+  - "THE MATCH KEY IS GATE IDENTITY AND OWNERSHIP, NOT POSITION. Locating 'the last entry' and overwriting it collapses two different gates the moment two agents record in sequence. The entry to update is the one whose gate matches the gate being recorded and whose author is the recording agent. An agent still never edits another agent's entry -- that prohibition, already stated in SKILL.md, is unchanged by this AC and is what keeps this rule compatible with BO-2900f-1-ii's read-side constraint on the driver."
+  - "DO NOT INTRODUCE THE GAP WHILE REMOVING THE DUPLICATE. BO-2900f-1-i is the sibling defect: a gate that reports success and leaves no entry at all. An implementation that de-duplicates by skipping the write whenever it is unsure whether an entry exists trades one half of the invariant for the other. The first-recording control case is a first-class descriptor, not an afterthought."
+  - "THE HEADING SCHEMA IS LOAD-BEARING. scripts/commit_guardian/_signoff_parity_checks.py and the supervisor both parse the entry heading; an in-place update that reformats it, drops the timestamp, or emits a second heading inside the body breaks the parity guard and the supervisor's next-move decision. The updated entry must satisfy the same heading regex as a freshly appended one."
+delivers_to:
+  agent: python-coder
+  contract: "A work-item record carrying exactly one entry per gate that reached an outcome, with the entry stating the latest outcome and naming any earlier attempt. This is the record shape BO-2900f-2's cardinality count is taken over, and the condition under which BO-2900f-1-ii's duplicate report is expected to be empty."
+expects_from:
+  ac_id: BO-2900f-1-ii
+  contract: "The read-side half of the same behaviour, split from it on 2026-08-18. That AC adjudicates from the latest entry when a gate carries more than one and reports the duplication as duplicate_signoff_entries; this AC stops the duplicate being written in the first place. The reported duplicate count is the observable signal that this AC has regressed, so the two must be read and reviewed together and neither may be marked done on the other's evidence."
+test_spec:
+  - name: test_recording_the_same_gate_twice_leaves_exactly_one_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Apply the recording action to a real work-item file for one gate, then apply it again for the same gate with a different outcome, and count the entries the file carries for that gate. Exactly one. This is the direct reproduction of the two `commit (status: ok)` entries on ticket 03 and must fail on an append-only recipe."
+  - name: test_the_surviving_entry_states_the_later_outcome_and_timestamp
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the second recording, assert the one remaining entry carries the second outcome and the second timestamp -- not the first, which would make the update a no-op that merely suppressed the append."
+  - name: test_the_earlier_attempt_is_still_visible_in_the_surviving_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Record a failure then a pass for the same gate and assert the single entry names both the re-record and the earlier failing outcome. Fails an implementation that satisfies the count by erasing the first attempt."
+  - name: test_a_first_recording_still_appends_exactly_one_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Control case against the BO-2900f-1-i gap defect: a gate with no prior entry gets one. A de-duplication that never writes passes the first descriptor and fails this one."
+  - name: test_recording_one_gate_does_not_disturb_another_gates_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Record gate A, record gate B, then re-record gate A, and assert gate B's entry is byte-for-byte unchanged. Fails an implementation that matches on position -- 'the last entry' -- rather than on gate identity."
+  - name: test_the_rule_holds_for_every_recording_agent_not_just_the_one_that_was_observed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the twice-recorded scenario once per agent in the canonical phase set, driven off the shared sign-off partial rather than a hand-picked agent, and assert one entry each. The observed duplicate was on the delivery gate; a fix scoped to that agent leaves every other agent able to reproduce it."
+  - name: test_the_updated_entry_satisfies_the_same_heading_schema_as_a_new_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Feed the twice-recorded work item to the sign-off parity checker and assert it parses and passes -- the in-place update must not produce a heading the parity guard or the supervisor cannot read."
+test_rationale: |
+  The whole risk on this AC is that it is a prompt-surface change and prompt-surface
+  changes are routinely 'verified' by reading the prompt. That evidence is worthless
+  here, because the thing being fixed is an agent that had the append recipe in front
+  of it and appended twice anyway. Every descriptor therefore performs the recording
+  action against a real work-item file and counts what the file ends up carrying,
+  which is also the only form of evidence that can distinguish this AC from its
+  read-side half: BO-2900f-1-ii's tests can all pass while the duplicate is still
+  being written.
+  Three descriptors exist specifically to close off cheap wrong fixes. The
+  first-recording control blocks a fix that de-duplicates by not writing, which is the
+  sibling defect BO-2900f-1-i and the single most likely regression. The other-gate
+  descriptor blocks matching on position instead of gate identity, which looks correct
+  on a one-gate test and collapses the moment two agents record in sequence. The
+  earlier-attempt descriptor blocks satisfying the count by erasing history, which
+  would trade a duplicate-record defect for an audit-erasure defect and defeat the
+  reason the write side was separated from the driver at all.
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by:
+- "2026-08-25 BrainCandy: added a closing Then clause naming the durable write ('the updated record is written to disk, so the deduplicated entry is what a later reader of the work item finds'). Main's BO-2900g-2 gate derives declares_side_effect from the Then clause and failed this record, because the clause described the entry count and the byte-stability of neighbouring entries without ever stating that the record is persisted. The effect was always real -- this AC updates an entry and appends one where none exists -- so the criteria text was incomplete rather than the declaration being wrong. declares_side_effect: true is unchanged and is now derived rather than asserted. No behavioural requirement was added, narrowed or removed."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE WRITE-SIDE HALF OF BUG-23, split out of BO-2900f-1-ii on 2026-08-18.
+
+  THE EVIDENCE. Ticket 03 of EPIC-DeploymentCompleteness ends with:
+
+      ### 2026-08-17 21:10 -- commit (status: ok)
+      ### 2026-08-17 21:20 -- commit (status: ok)
+
+  Two entries, same gate, same successful outcome, ten minutes apart. The agent that
+  wrote the second one is the commit agent, not the driver. Exactly-once recording is
+  therefore the writer's obligation; the driver's obligation is to adjudicate
+  correctly from whatever it finds, which is what BO-2900f-1-ii now says.
+
+  WHY IT IS PARENTED UNDER BO-2900f-2 RATHER THAN BO-2900f-1. BO-2900f-2 is the
+  exactly-one-recorded-outcome-per-requested-gate cardinality invariant; this AC is its
+  write-side enforcement, and the entry count BO-2900f-2 asserts is exactly what this
+  AC produces. BO-2900f-1's three L3 children are all driver-side read-back rules over
+  a record the driver did not author -- a coherent family this AC does not belong to.
+  BO-2900f is also at the five-L2 cap, so a new L2 was not available and would have
+  been the wrong shape regardless: this is an edge case of an existing invariant, not
+  a new one.
+
+  WHY assigned_agent IS llm-expert. The surface is templates/skills/signoff/SKILL.md
+  and the shared templates/agents/_signoff_block.md partial, not Python. Being an
+  llm-expert AC, it is not bound by the package-surface if/then in
+  config/ac_store_schema.json, which keys off assigned_agent: python-coder -- so
+  it_requirements is the list-of-strings form used by the other llm-expert ACs in this
+  component (see BO-2500e-6) rather than the five-field object. The parity-guard
+  descriptor lands in unit_tests/commit_guardian/ and may need a python-coder companion
+  pass if the checker itself has to change; that is flagged here rather than split,
+  because whether it changes at all depends on how the update is expressed.
+
+  THE TRAP THIS AC INHERITS. BO-2900f's notes and CLAUDE.md 'Skip-Branch
+  Side-Effects' record that the earlier gap-free-records work shipped a
+  double-recording bug -- a skip-branch call added while the pre-existing
+  unconditional call was left in place -- and that the structural test was blind to it
+  because its regex matched only one of the ways the call could be written. That is
+  the same shape as the duplicate here, one layer up in the stack, and it is why no
+  test on this AC may take the presence of an instruction as evidence that the
+  instruction is followed.

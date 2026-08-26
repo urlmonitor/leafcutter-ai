@@ -1,0 +1,177 @@
+id: GE-125d-1-ii
+components:
+  - security_scanner
+  - commit_guardian
+title: "The number announced counts only what the location-based reduction withheld, not what any other mechanism removed"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository whose staged set is three files:
+    "docs/retrospectives/2026-08-19-incident.md", under a location to which the
+    location-based reduction applies and carrying 2 opaque credential-shaped
+    values that the reduction withholds;
+    "src/config_loader.py", outside every reduced location, carrying 1
+    credential-shaped value that a ".security-allowlist" entry suppresses;
+    and "src/app.py", outside every reduced location, carrying 1
+    credential-shaped value that nothing suppresses,
+  When the staged set is checked on the path a real commit takes,
+  Then the notice states that 2 findings were withheld, names only
+    "docs/retrospectives/2026-08-19-incident.md", and attributes both to the
+    location-based reduction,
+  And the allowlist-suppressed finding is counted in no part of the notice,
+  Because at least three separate mechanisms remove a finding from a run of this
+    check — an allowlist entry written by an author, the location-based
+    reduction this goal is about, and any per-finding narrowing a sibling
+    introduces — and a number that silently pools them cannot be reviewed by
+    anyone, which is the only reason the number is printed at all.
+
+  Given the same staged set,
+  When the staged set is checked on the path a real commit takes,
+  Then the reduction is attributed by a stable name drawn from a fixed
+    vocabulary, identical between two runs over the same input, rather than by a
+    sentence composed per finding or by any rendering of the value,
+  Because two runs whose notices cannot be compared do not show anyone that the
+    reduced set has widened, and showing that is the standing purpose of this
+    L1.
+
+  Given a staged set in which one file under a reduced location carries a
+    credential-shaped value that BOTH the location-based reduction and a
+    ".security-allowlist" entry would remove,
+  When the staged set is checked on the path a real commit takes,
+  Then that finding is counted at most once in the notice, and the notice does
+    not report a total larger than the number of findings actually removed,
+  Because a count that double-reports one finding under two mechanisms is
+    unreviewable in the other direction — it makes the protection gap look
+    larger than it is, and a number that cannot be trusted upward stops being
+    read.
+depends_on:
+  - GE-125d-1
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 records the location-based reduction this record counts, and records that it gates ENTROPY_HIGH only — which is why the allowlist and the reduction are genuinely different mechanisms rather than two names for one."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The mirror image of this record. GE-123d-5 specifies the notice for the per-finding exemption in the adjacent goal and explicitly EXCLUDES from its count both allowlist suppressions and this location-based reduction; this record counts exactly the mechanism that one excludes. Read together the two notices partition the removals. A citation, NOT an edge: no depends_on into the GE-123 tree in either direction, and no GE-123 file may be edited."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: "Covers the .security-allowlist surface whose entries the first arm exercises, including the suppression-entry format."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE TWO NOTICES PARTITION THE REMOVALS AND MUST STAY PARTITIONED. The count here must include ONLY findings removed by the location-based reduction. GE-123d-5 in the adjacent goal explicitly excludes this reduction from its own count; this record counts exactly that mechanism. Do not merge the two totals, do not let either become a general 'findings removed' number, and do not close either record as a duplicate of the other. This is a prose citation only: add NO depends_on edge into the GE-123 tree, and do not edit any GE-123 file."
+  - "MEASURED IN THE CANONICAL COPIES ON 2026-08-24, and the reason the at-most-once property holds naturally: .security-allowlist suppression is applied inside scan_files in templates/skills/security-scanner/scripts/scan_secrets.py, BEFORE the hook's per-file reduction post-filter (_filter_prose_findings in templates/scripts/commit_guardian/check_secrets.py) ever sees a finding. An allowlist-suppressed finding therefore never enters the set the reduction can withhold. PRESERVE THAT ORDERING. Any implementation that re-scans with suppression disabled in order to compute the withheld set reintroduces exactly the double count the third arm forbids, and would do so while looking more thorough."
+  - "The reduction must be attributed by an identifier drawn from a closed vocabulary defined in exactly one place. Two runs over the same input must produce byte-identical attribution strings. Not a sentence composed per finding, not a rendering of the matched value, and not the raw prefix that happened to match — a stable vocabulary term is what lets two runs be compared, and comparing runs is how a widening of the reduced set becomes visible."
+  - "The announced total must never exceed the number of findings actually removed by this mechanism. A count that over-reports makes the protection gap look larger than it is; a number that cannot be trusted upward stops being read, and an unread number is the silence this L1 exists to remove."
+  - "When a sibling (GE-125a, GE-125b or GE-125c) introduces a per-finding narrowing, it must arrive with its OWN vocabulary entry rather than being folded into the location-based term. The vocabulary is the mechanism by which the notice stays reviewable as removal mechanisms multiply; collapsing two mechanisms onto one name is the same defect as pooling two counts."
+  - "The reduction name must not encode any part of the matched value, the matched line, the excerpt, or the filename of the value's source beyond the repository-relative path the notice already carries. The never-echo rule of GE-125d-1 extends to the attribution field and must not be harmonised away on the grounds that a more specific name would be more helpful."
+  - "Write .security-allowlist fixtures INSIDE the throwaway repository only. Writing one into a real project root changes the behaviour of the repository the test runs in. Note the standing hazard recorded in CLAUDE.md: the deployed hook resolves the allowlist from the workspace-root symlink target rather than the worktree root, so an allowlist file placed in the wrong root is either ignored or applied far more widely than intended — a test that does not control which allowlist is in force is measuring an unknown."
+  - "ADR-001 parity: the counting and attribution live in templates/scripts/commit_guardian/check_secrets.py, the canonical copy. Run `python scripts/build.py --target-dir .` and verify the deployed copy before trusting the tests; check_hook_parity enforces all four locations."
+delivers_to: null
+expects_from:
+  ac_id: GE-125d-1
+  contract: "The withheld-finding set and the name of the reduction that withheld each one. A decision that does not carry the granting mechanism forward cannot satisfy this record, because the count could then not be attributed."
+test_required: true
+test_spec:
+  - name: test_count_excludes_allowlist_suppressed_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The three-file staged set of the first arm, with a .security-allowlist written inside the throwaway repository, produces a notice stating 2 withheld, naming only the retrospectives file, and mentioning src/config_loader.py in no part of the notice"
+  - name: test_reduction_attributed_by_a_stable_vocabulary_term_across_two_runs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Two consecutive runs over the identical staged set emit byte-identical attribution strings drawn from the closed vocabulary — failing an implementation that composes a sentence per finding or interpolates anything run-specific"
+  - name: test_finding_removable_by_both_mechanisms_is_counted_at_most_once
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A value under a reduced location that a .security-allowlist entry also matches yields a total no larger than the number of findings actually removed — the overlap arm, which is the only way the double-count failure is reachable"
+  - name: test_attribution_field_carries_no_part_of_the_matched_value
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A distinctive marker embedded inside each withheld value appears in no attribution string and on neither stream — extending the never-echo assertion shape to the field most tempting to make more specific"
+  - name: test_allowlist_fixture_is_scoped_to_the_throwaway_repository
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The allowlist the run honours is the one written into the throwaway repository, verified by asserting the suppression takes effect there and that no allowlist outside it was read — so the first arm measures the allowlist rather than an ambient suppression"
+test_rationale: "Every arm here is about which of three removal mechanisms a number counts, so each entry must run the real pipeline where all three mechanisms are actually in force: the allowlist inside scan_files, the location-based reduction inside the hook's post-filter, and nothing else. A unit test over the counting function alone would count whatever set it was handed and could not detect the ordering defect the second it_requirement names — an implementation that re-scans with suppression disabled produces a correct-looking count from a wrong set. The two-run entry exists because stability across runs is not observable in a single run, and it is the property that makes a widening of the reduced set visible by comparison. The overlap entry is the only reachable path to the double-count failure and cannot be folded into the first. The marker entry extends GE-125d-1's negative assertion shape to the attribution field, because 'a more specific reduction name' is the most plausible way a well-meaning later change reintroduces the value. The allowlist-scoping entry is a real-artifact test because CLAUDE.md records that the deployed hook resolves .security-allowlist from the workspace-root symlink target rather than the worktree root: a test that does not pin which allowlist is in force is measuring an unknown."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at S. Authored eight it_requirements. The load-bearing one is measured rather than inferred: .security-allowlist suppression is applied inside scan_files in the scanner, before the hook's _filter_prose_findings post-filter sees anything, so an allowlist-suppressed finding never enters the withheld set — which is why at-most-once holds naturally, and why any implementation that re-scans with suppression disabled to compute the withheld set reintroduces the double count the third arm forbids. Added the vocabulary-extension rule so that a per-finding narrowing from GE-125a/b/c arrives with its own term rather than being folded into the location-based one, and extended GE-125d-1's never-echo prohibition explicitly to the attribution field, which is the most plausible route by which a later change makes the name 'more helpful' and reintroduces the value. Carried in the CLAUDE.md hazard that the deployed hook reads .security-allowlist from the workspace-root symlink target, so the fixture must be scoped to the throwaway repository. Authored a five-entry test_spec plus test_rationale. GE-123d-5 is named in prose and as a doc_link only: no depends_on edge crosses into the GE-123 tree in either direction and no GE-123 file was edited. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE TWO NOTICES MUST PARTITION THE REMOVALS, NOT OVERLAP. GE-123d-5, in the
+  adjacent goal, specifies a notice for the per-finding exemption that feature
+  introduces, and it explicitly EXCLUDES from its count both allowlist
+  suppressions and the file-level location-based reduction that this goal is
+  about. This record is the mirror image: it counts exactly the mechanism that
+  one excludes. Read together the two notices divide the removals cleanly, and
+  they must stay divided — merging them into one ambiguous total would leave a
+  reader unable to tell which mechanism to argue with.
+
+  THIS IS A CITATION, NOT AN EDGE. Six GE-123 records fence this defect as out
+  of scope, deliberately and as dated records of a decision, and the known issue
+  states plainly that no depends_on edge may be added from a GE-123 record to
+  this tree. Nothing here adds one in either direction; GE-123d-5 is named in
+  prose so the contract is legible, and neither record may be closed as a
+  duplicate of the other.
+
+  FIXTURE PLACEMENT, stated explicitly as this tree requires. The one file under
+  a reduced location ("docs/retrospectives/…") is there because the reduction is
+  the subject. Both control files are ordinary source paths outside every
+  reduced location — "src/config_loader.py" and "src/app.py" — so that the
+  allowlist arm genuinely measures the allowlist and not a second reduction
+  overlapping it. The third arm deliberately overlaps the two mechanisms on one
+  file, which is the only way the double-count failure is reachable.
+
+  ".security-allowlist" fixtures belong inside the throwaway repository only.
+  Writing one into a real project root would change the behaviour of the
+  repository the test runs in.
+
+  IT-PO NOTE, 2026-08-24 — WHY THE PARTITION IS ALREADY HALF-BUILT, and why
+  that is a trap rather than a relief. Measured in the canonical copies: the
+  allowlist is applied inside scan_files, in the scanner, before the hook's
+  per-file _filter_prose_findings post-filter is reached. So an
+  allowlist-suppressed finding is already gone by the time the reduction could
+  withhold it, and a naive implementation that simply records what
+  _filter_prose_findings removed satisfies the first and third arms without
+  trying. The trap is the more thorough-looking implementation: computing the
+  withheld set by re-scanning with suppression disabled, which produces a set
+  containing allowlist-suppressed findings and double-counts the overlap. The
+  ordering is the requirement, not an incidental property of today's code.

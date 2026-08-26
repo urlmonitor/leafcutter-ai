@@ -147,6 +147,8 @@ flowchart TD
 - ACD-1800c-4: Sequence diagram shows ticket completion derived from grouped requirement done-state
 - ACD-1900b-4: Sequence diagram shows store-first, body-fallback, and halt branches
 - ACD-1900c-5: State diagram shows the emit/enforce states and legal transitions
+- ACD-2000a-5: State diagram shows a requirement's attempt lifecycle from first try to escalation
+- ACD-2000b-3-i: State diagram shows a requirement's claim lifecycle including the reclaim path
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
 - BO-1000a-4: Sequence diagram of the start-of-step narration emission path
 - BO-1000c-3: Sequence diagram of live progress delivery from background workflow to the conversation
@@ -154,6 +156,7 @@ flowchart TD
 - BO-1300d-2: Sequence diagram: automatic end-of-build spot-check wiring
 - BO-1400a-3: Sequence diagram documents the pre-PR real-data and deployable-placement verification flow
 - BO-1500a-3: Sequence diagram of the isolated-authoring worktree lifecycle
+- BO-1500a-8: Sequence diagram shows the fail-closed isolation gate and both authoring entry points
 - BO-1500b-4: State diagram of the resumable per-stage authoring lifecycle
 - BO-1500c-5: Sequence diagram of the approval-to-PR delivery flow
 - BO-1600a-4: Sequence diagram of serialized concurrent commits into the shared worktree
@@ -178,10 +181,13 @@ flowchart TD
 - BO-2400a-8: Component diagram: fast-lane build path and its collaborators
 - BO-2500a-5: Sequence diagram: done-proof evaluation from covers tag to done verdict
 - BO-2500d-4: Component diagram: fast-lane vs heavy-pipeline phase order after review retirement
+- BO-2900a-5: Sequence diagram: from a done claim to a verdict, including the run observation and the exemption branch
+- BO-2900b-5: Component diagram: the capability surface, the automation that runs it, and the two checks between them
 - BP-1000a-4: Component diagram of the source-to-shipped parity relationship at the merge gate
 - BP-1000b-4: Sequence diagram of the parity gate firing within the finalize-feature merge flow
 - BP-1100e-3: A sequence diagram shows where the declared-vs-actual reconciliation sits before done
 - BP-1100f-6: Sequence diagram: proving a durable change by its real effect and stated intent
+- BP-1100g-7: A sequence diagram shows the promise, the claim, the refusal, and where the boundary to the observer lies
 - BP-1200b-2: Sequence diagram documents the PR-to-test-check signal flow
 - BP-1400a-3: Sequence diagram documents the web-app CI gate flow from pull request to merge decision
 - BP-1400c-2: Sequence diagram documents the web-app route-render check flow
@@ -203,6 +209,9 @@ flowchart TD
 - GE-111d-5: Sequence diagram: developer reconciles via update or confirm and re-commits
 - GE-117d-5: Sequence diagram: the commit-time declaration-enforcement interaction
 - GE-117e-4: Sequence diagram: the fix-or-opt-out route out of a declaration block
+- GE-120c-5: The new verification surface is drawn as an architecture component
+- GE-122c-4: The remediation flow is drawn once per stage, showing who can act at each
+- GE-122d-4: The three-stage arrangement is drawn, showing which stage owns which promise
 - KM-KGS-100a-4: Component diagram shows the acceptance-criteria store as a knowledge-map surface
 - KM-KGS-100b-4: Sequence diagram of a requirement-to-code traversal
 - PER-100c-4: Sequence diagram for persona capability query workflow
@@ -219,6 +228,8 @@ flowchart TD
 - TKT-500f-1: Component diagram: goal-as-dispatch-boundary architecture
 - TQ-100b-3: State diagram of a tagged test's informational-to-enforced lifecycle
 - TQ-100d-2: State diagram of an allowlist entry's added-tracked-flagged lifecycle
+- TQ-400a-6: The component diagram shows one verdict source with three checkers over three populations
+- TQ-400b-6: The lifecycle diagram shows done as an exit-able state, with the demotion edge and what it writes
 - UXP-100a-4: Component diagram showing the prototype assembly data flow
 - UXP-100b-4: Sequence diagram showing gap detection and research initiation flow
 - UXP-100c-6: Sequence diagram showing the prototype approval gate lifecycle

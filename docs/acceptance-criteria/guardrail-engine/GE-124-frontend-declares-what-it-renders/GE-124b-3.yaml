@@ -1,0 +1,113 @@
+id: GE-124b-3
+readiness: approved
+priority: high
+title: "The pin is stripped from production builds and retained in dev, test and the Atlas"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given a screen component that renders an element carrying both
+    `data-testid="stock-badge"` and `data-ac="UXP-100d-2"`
+  When the application is built for production
+  Then neither attribute appears in the emitted markup
+  And the same build-time transform removes both, configured in one place rather
+    than two
+
+  Given the same screen component
+  When the application is built for development, built for test, or served in
+    the Atlas
+  Then both `data-testid` and `data-ac` appear in the emitted markup with their
+    authored values
+depends_on:
+  - GE-124b
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f-3.yaml"
+    relationship: related
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+it_requirements:
+  - "THE TRANSFORM DOES NOT EXIST YET — THIS AC CREATES IT. leafcutter-web/next.config.mjs is an empty config object as of 2026-08-25: there is no `compiler.reactRemoveProperties`, and `data-testid` is NOT currently stripped from production. The criteria's phrase 'the same build-time transform that already strips data-testid' describes the intended end state, not an existing configuration. Build the single transform and bring data-testid under it in the same change — that is what makes 'configured in one place' true rather than aspirational."
+  - "ONE PROPERTY LIST, NOT TWO ENTRIES. The attribute names must live in a single list/pattern that the transform consumes, so adding a third inert marker later is one edit. Two independently-configured strips drift, for the same reason GE-111, GE-117 and GE-124 share one AC-id resolver."
+  - "THE RETENTION HALF IS THE LOAD-BEARING HALF AND MUST BE TESTED FIRST. GE-124f-3 derives a Playwright / Testing-Library selector from data-ac. A transform that also strips in the TEST build breaks every such selector while leaving production correct, so the failure surfaces as unexplained flaky test breakage rather than as a configuration mistake. Assert retention in dev AND in the test build explicitly, not by inference from 'production strips it'."
+  - "GATE THE TRANSFORM ON THE BUILD MODE, NOT ON AN ENVIRONMENT VARIABLE SOMEONE MUST REMEMBER. A strip that is opt-in per invocation will be missing from the one production build that matters."
+  - "SCOPE HONESTLY: leafcutter-web (Next.js + SWC, vitest) is the ONLY front-end application that exists in this repository. The storefront-vue / storefront-svelte / storefront-jsx apps in the mock-data artifact are illustrative, and Next.js `reactRemoveProperties` is React-only. Implement and verify for leafcutter-web; record in the reference doc (GE-124b-5) that a Vue/Svelte/HTML app joining the repo needs its own equivalent transform, so the gap is visible rather than assumed covered."
+  - "Do not strip data-screen (GE-124f-1) without deciding it deliberately — the Atlas reads it, and it is a different contract from the pin."
+delivers_to:
+  agent: frontend-coder
+  contract: "A single build-time property-strip configuration in leafcutter-web/next.config.mjs whose one property list covers both data-testid and data-ac: absent from the production bundle, present with authored values in dev, in the test build, and in the Atlas as served. GE-124f-3's derived selector depends on the retention half holding in the test build."
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The attribute name `data-ac` and its whitespace-separated value grammar, whose lifecycle across build environments this AC specifies"
+test_spec:
+  - name: test_ge_124b_3_data_ac_and_data_testid_are_both_absent_from_a_production_build
+    target_dir: leafcutter-web/__tests__/
+    type: integration
+    angle: deployed
+    description: "Run a real production build of leafcutter-web into a temp output directory and assert neither data-ac nor data-testid appears in the emitted markup for a component that authors both. Assert against the BUILT output bytes, never against the config object — a config assertion passes on a transform that is configured and never applied."
+  - name: test_ge_124b_3_both_attributes_survive_the_test_and_dev_builds_with_authored_values
+    target_dir: leafcutter-web/__tests__/
+    type: integration
+    angle: criterion
+    description: "Render the same component under the test build and assert data-ac equals its authored value and is locatable by the `[data-ac~=\"UXP-100d-2\"]` selector GE-124f-3 derives. This is the half that breaks silently: a transform that over-strips leaves production correct and every front-end selector broken."
+  - name: test_ge_124b_3_both_attribute_names_come_from_one_configured_list
+    target_dir: leafcutter-web/__tests__/
+    type: unit
+    angle: seam
+    description: "Adding a third marker name to the single property list causes it to be stripped in production too, with no second edit anywhere. Demonstrate the single-source property by exercising it, not by asserting the list's literal contents — a literal assertion passes on two lists that happen to agree today."
+test_rationale: |
+  Every cheap test available here is a config assertion, and a config assertion is the exact
+  shape that passes on a transform that is configured and never applied — the Neverfail Test
+  smell. So both behavioural tests read the BUILT output rather than the configuration. The
+  retention test is not symmetrical padding: it is the half that fails invisibly, because a
+  transform that strips in the test build leaves production correct while breaking every
+  selector GE-124f-3 derives, and the symptom presents as flaky tests rather than as a build
+  misconfiguration. The single-list test is written as a behavioural demonstration (add a name,
+  observe it stripped) because asserting the literal contents of one list cannot distinguish
+  one list from two that currently agree.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Recorded that the strip transform DOES NOT EXIST — leafcutter-web/next.config.mjs is an empty config and data-testid is not stripped today, so this AC creates the transform rather than extending one. Scoped honestly to leafcutter-web (the only front-end app in the repo; the storefront-* apps in the mock data are illustrative and reactRemoveProperties is React-only) and required the gap to be recorded in GE-124b-5. Tests assert built output, never config. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PRODUCTION BEHAVIOUR IS PART OF THIS L1, NOT AN AFTERTHOUGHT — the PO's
+  reasoning is that if stripping is left unspecified, the first performance
+  review deletes the attribute wholesale instead.
+
+  The retention half is the load-bearing half and is easy to lose. GE-124f-3
+  derives a Playwright / Testing-Library selector from this attribute; a
+  transform that strips it in the TEST build would break every such selector
+  while leaving production correct, so the failure would surface as flaky,
+  unexplained test breakage rather than as a configuration mistake.
+
+  "Configured in one place" is stated because two independent strip lists drift
+  — the same reason GE-111, GE-117 and GE-124 share one AC-id resolver.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25), two facts verified in the working tree.
+  (1) leafcutter-web/next.config.mjs contains `const nextConfig = {}` and
+  nothing else — there is no existing data-testid strip to extend, so the
+  criteria's "the same transform that already strips data-testid" is the target
+  state and this AC builds it. (2) leafcutter-web is the only front-end
+  application in the repository; storefront-vue, storefront-svelte and
+  storefront-jsx appear only in the mock-data artifact. Since Next.js
+  reactRemoveProperties is React-only, "one place" is achievable today and would
+  need a per-framework equivalent the day a Vue or Svelte app lands. That gap is
+  routed to GE-124b-5's reference doc rather than left implicit.

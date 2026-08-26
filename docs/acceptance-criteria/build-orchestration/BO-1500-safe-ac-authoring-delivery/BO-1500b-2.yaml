@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b.yaml
 criteria: |
   Given the product-owner stage has committed its L0/L1 files to the authoring
@@ -44,6 +44,33 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_committed_stage_files_survive_an_interrupted_run
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: integration
+  description: After the product-owner stage commits and the run is aborted before the business-analyst
+    stage commits, the L0/L1 AC YAML files are still reachable from the authoring branch HEAD with unchanged
+    content.
+- name: test_committed_stage_detection_reports_only_stages_with_a_commit
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: unit
+  description: Given an authoring branch whose origin/main..HEAD log contains only the product-owner stage
+    commit, the committed-stage scan returns exactly the product-owner stage key and not the business-analyst
+    or it-po keys.
+- name: test_resume_dispatches_the_first_stage_without_a_commit
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: Re-running the pipeline with a recording dispatch stub shows the business-analyst agent
+    dispatched first; the product-owner agent is never dispatched again.
+- name: test_resume_does_not_rewrite_or_delete_completed_stage_output
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: The resumed run adds the business-analyst commit on top of the product-owner commit; the
+    product-owner commit sha stays in the branch history and its files are unmodified.
 delivers_to: null
 expects_from:
   ac_id: BO-1500b-1

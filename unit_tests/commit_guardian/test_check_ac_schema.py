@@ -2316,6 +2316,7 @@ class TestAcAxesVocabularyContractAc3(unittest.TestCase):
         # 2. Load ALLOWED_CHANGE_TARGETS from ticket_frontmatter_guard.py
         guard_path = repo_root / "templates" / "hooks" / "ticket_frontmatter_guard.py"
         spec = importlib.util.spec_from_file_location("ticket_frontmatter_guard", guard_path)
+        assert spec is not None and spec.loader is not None, f"could not load spec for {guard_path}"
         guard_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(guard_mod)
         guard_ct: set[str] = set(guard_mod.ALLOWED_CHANGE_TARGETS)
@@ -2392,6 +2393,7 @@ class TestAcAxesVocabularyContractAc3(unittest.TestCase):
 
         guard_path = repo_root / "templates" / "hooks" / "ticket_frontmatter_guard.py"
         spec = importlib.util.spec_from_file_location("ticket_frontmatter_guard_rs", guard_path)
+        assert spec is not None and spec.loader is not None, f"could not load spec for {guard_path}"
         guard_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(guard_mod)
         guard_rs: set[str] = set(guard_mod.ALLOWED_RISK_SURFACES)

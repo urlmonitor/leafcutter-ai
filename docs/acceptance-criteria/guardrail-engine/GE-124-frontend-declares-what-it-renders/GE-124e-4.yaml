@@ -1,0 +1,178 @@
+id: GE-124e-4
+readiness: approved
+priority: high
+title: "The gate evaluates only the criteria the change touched"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+criteria: |
+  Given a change under review, compared against the branch it targets
+  And the criteria store contains the finished user-interface criterion
+    UXP-607-2, which nothing on screen declares or pins
+  And UXP-607-2's own record is one of the changed files
+  When the reverse-direction gate runs
+  Then UXP-607-2 is evaluated
+  And the gate fails for UXP-607-2
+
+  Given a change under review whose changed files include
+    `components/flows/realization-badge.tsx`
+  And that file declares UXP-607 at component level and pins UXP-607-1 on an
+    element
+  And neither criterion's own record is among the changed files
+  When the reverse-direction gate runs
+  Then both UXP-607 and UXP-607-1 are evaluated
+
+  Given a change under review
+  And the criteria store contains a finished user-interface criterion that
+    nothing on screen declares or pins
+  And that criterion's own record is not among the changed files, and no changed
+    front-end file declares or pins it
+  When the reverse-direction gate runs
+  Then the criterion is not evaluated
+  And the run does not fail on its account
+  And the criterion is not recorded as exempt, deferred, or pre-convention, and
+    appears in no count the run produces
+
+  Given the same untouched criterion
+  When the run reports which criteria satisfied the gate
+  Then the untouched criterion is not among them — not evaluated is not a pass
+depends_on:
+  - GE-124e
+  - GE-124e-1
+  - GE-124e-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124e.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111c-1.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-3.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "TWO ROUTES INTO THE DIFF, BOTH MANDATORY — THIS IS THE ONE REQUIREMENT THAT MUST NOT BE SIMPLIFIED. The evaluated set is the UNION of: (route A) selected criteria whose OWN AC YAML record is among the changed files, and (route B) selected criteria that are declared or pinned by any changed FRONT-END file. Every diff-scoping precedent in this repo scopes by file path, so 'diff-scoped' reads naturally as route A alone — and route A alone makes this gate close to inert, because the common case is a criterion whose record is stable while its screen churns. An implementation with route A only will pass a casual review, will pass any test written from route A's scenario, and will almost never evaluate anything. Route B is the reason this AC exists."
+  - "ROUTE B IS COMPUTED BY RUNNING THE SHARED READER OVER THE CHANGED FRONT-END FILES and taking the union of their declares[] and pin ac_ids[]. It is the diff-scoped counterpart of GE-124e-2's full inversion: same reader, same in-scope rule (GE-124a-3), restricted to the changed set. Do not approximate route B by grepping the diff text — a criterion declared on an unchanged line of a changed file is still route-B in scope, because the file is what changed."
+  - "THE CHANGED SET IS `git diff --name-only <base>...HEAD` AGAINST THE TARGET BRANCH, matching the existing done-proof job's `--mode ci-changed --base origin/${{ github.base_ref }}`. Include renames and additions; a renamed front-end file's criteria are in route-B scope under its new path."
+  - "NOT EVALUATED IS NOT A STATE. An untouched criterion must be absent from every collection the run produces — not exempt, not deferred, not pre-convention, not skipped, not passed, and in no count. If the run emits a structured report, the criterion's id must not appear in it at all. This is the difference between diff-scoping and the dated cutoff it replaced: there is no exempt population, nothing to size, and nothing to retire."
+  - "NO CUTOFF, NO EXEMPT LIST, NO BACKFILL COUNTER anywhere in this gate. The user decision of 2026-08-25 replaced the dated-cutoff proposal with diff-scoping precisely so that no dated population is created. Adding a counter 'for visibility' recreates the population the decision removed."
+  - "THE TWO ROUTES ARE ONE UNION, DEDUPLICATED. A criterion reachable by both routes is evaluated once and can produce at most one finding (GE-124e-3's per-(subject, code) rule)."
+  - "MATCH THE HOUSE PRECEDENT RATHER THAN INVENTING A SECOND IDIOM: check_done_proof --mode ci-changed --base origin/main (whose docstring gives this exact promotability rationale), the diff-scoped component-vocabulary CI job (diff-scoped on PRs, whole-tree on push to main), GE-111c-1, and the presence-only-assertion staged-hunks ratchet. If a whole-tree mode is added for push-to-main, it must be an explicit separate mode, never the default."
+delivers_to:
+  agent: python-coder
+  contract: "The diff-scoped evaluated set, defined as the DEDUPLICATED UNION OF TWO ROUTES and not as either one alone: (A) selected criteria whose own AC record is among the changed files, and (B) selected criteria declared or pinned by any changed front-end file, computed by running the shared reader over the changed front-end set. Route B is not optional and is not an optimisation — without it a criterion whose record is stable while its screen churns is never evaluated, which is the common case and would leave the gate close to inert. Criteria reached by neither route are absent from every collection the run produces: not exempt, not deferred, not counted, not passed. This union is what makes the gate promotable to a required check without failing on criteria the change did not touch."
+expects_from:
+  ac_id: GE-124e-1
+  contract: "The selected set of finished user-interface criteria, which this AC further narrows to the union of the two diff routes — the criterion's own record changed, OR a changed front-end file declares or pins it"
+test_spec:
+  - name: test_ge_124e_4_route_a_changed_ac_record_brings_its_criterion_into_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo with a base branch, change only UXP-607-2's own AC YAML record and run the gate with --mode ci-changed --base <base>: UXP-607-2 is evaluated and the gate fails for it. Route A alone."
+  - name: test_ge_124e_4_route_b_changed_frontend_file_brings_its_criteria_into_scope_with_no_record_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE LOAD-BEARING TEST. Change ONLY components/flows/realization-badge.tsx — leaving both UXP-607's and UXP-607-1's AC records byte-identical to base — and assert BOTH criteria are evaluated. A route-A-only implementation passes every other test in this contract and fails exactly here, so this test is the difference between a working gate and an inert one. Include a criterion declared on an UNCHANGED LINE of the changed file, to forbid approximating route B by grepping the diff text."
+  - name: test_ge_124e_4_untouched_criterion_is_absent_from_every_collection
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A finished, undeclared UI criterion reached by neither route: the run passes, and its id appears in NO collection of the structured output — not evaluated, not passed, not skipped, not exempt, not deferred, and in no count. Assert absence across the whole report, not just absence from the failures."
+  - name: test_ge_124e_4_untouched_criterion_is_not_listed_among_those_that_satisfied_the_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Explicitly assert the untouched criterion is not in the satisfied list. Not-evaluated read as passed is the friendlier face of the same defect GE-124e-1 refuses for non-UI criteria and GE-124g-3 refuses for coverage figures, and it is the single most likely way a green run becomes misleading."
+test_rationale: |
+  One test in this contract matters more than the rest, and it is the route-B test. Every
+  file-path diff-scoping precedent in this repo — check_done_proof --mode ci-changed, the
+  component-vocabulary job, GE-111c-1, the staged-hunks ratchet — selects by the changed file
+  itself, and this tier's subjects are criterion ids, so the natural translation is "criteria
+  whose own YAML record changed". That implementation is coherent, passes review, passes the
+  route-A test, and is close to inert in production, because the common case is a screen
+  churning while its criterion record sits unchanged for months. So the route-B test is written
+  to fail on exactly that implementation and on nothing else, including the sub-case that
+  forbids approximating route B with a text grep of the diff. The two absence tests exist
+  because "not evaluated" is a non-state: it must be asserted as absence from every collection,
+  not merely as absence from the failure list, or an implementation that records it as skipped
+  or exempt recreates the dated-cutoff population this AC was rebuilt to remove.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [business-analyst]: rebuilt on diff-scoping. The original version specified a dated cutoff with a pre-convention listing and a backfill counter. User decision superseded it: pre-commit and CI fire only on changed files, so the backfill happens whenever an existing file is touched. The cutoff, the pre-convention population, the count-on-its-own-line scenario and the reopen-and-refinish loophole scenario were all removed — the last of these because a changed record is now in the diff by the ordinary rule rather than by exception."
+  - "2026-08-25 [it-po]: technical enrichment. Made the two-route union the single non-negotiable requirement of this AC and carried it into the delivers_to contract verbatim, because route A alone is the natural reading of every file-path precedent in this repo and would leave the gate near-inert. Pinned route B to a shared-reader run over the changed front-end files (not a diff-text grep, so a declaration on an unchanged line of a changed file is still in scope), fixed the changed set to the done-proof job's --base form, and required absence from every collection rather than a skipped or exempt marker. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  DIFF-SCOPING, NOT A CUTOFF. This AC answers the introduction-path risk the PO
+  flagged — switching the gate on against today's store would otherwise fail on
+  every already-finished user-interface criterion at once — and it answers it the
+  way the house already does elsewhere rather than by inventing a dated
+  exemption.
+
+  HOUSE PRECEDENT, matched deliberately:
+    - `check_done_proof --mode ci-changed --base origin/main`, whose own
+      docstring gives this exact reason: it "makes it safe to promote to a
+      required gate without failing on legacy done ACs that predate the
+      covers-tag mandate". GE-124e is the declaration-shaped twin of that gate,
+      so it should be scoped the same way.
+    - the component-vocabulary CI job: diff-scoped on pull requests, whole-tree
+      only on push to main.
+    - GE-111c-1, "Only links whose source the commit staged are evaluated".
+    - the presence-only-assertion check, a staged-hunks ratchet for the same
+      reason.
+
+  THE SUBJECT-TYPE TRANSLATION IS THE SUBTLE PART. This tier's subjects are
+  criterion ids, not file paths (GE-124e-3), so "changed files" does not select
+  anything on its own. The evaluated set is therefore defined by TWO routes into
+  the diff — the criterion's own record changed, or a changed front-end file
+  declares or pins it — and scenarios 1 and 2 are those two routes. An
+  implementation that takes only the first would never evaluate a criterion
+  whose record is stable while its screen churns, which is the common case.
+
+  NOT EVALUATED IS NOT A STATE. Scenario 3's last clause is the difference
+  between this and the cutoff model it replaces: there is no exempt population,
+  no deferred list and no counter, because there is nothing to size. Coverage
+  grows monotonically as files are touched, and an untouched criterion is simply
+  absent from the run.
+
+  SCENARIO 4 GUARDS THE OTHER READING. "Not evaluated" must not be reported as
+  "passed", for the same reason GE-124e-1 refuses to record a non-user-interface
+  criterion as passing and GE-124g-3 refuses to fold declarations into a
+  coverage figure: a figure that counts the unexamined as satisfied is the
+  friendlier face of the same defect.
+
+  WHAT THE USER GAINS, in their words: "we can backfill this whenever we touch
+  existing files." Nothing is scheduled, nothing expires, and no permanent hole
+  is created — the first change to a legacy screen brings its criteria into the
+  gate, and the commit tier (GE-124c-1) makes that same change declare.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25) — WHERE AN IMPLEMENTATION WILL CUT THE
+  CORNER. Route A is what every precedent in this repo does and it is what
+  "diff-scoped" means everywhere else here. An implementer who ships route A
+  alone produces a gate that is internally consistent, well tested against
+  scenario 1, and evaluates almost nothing — because an AC record changes once
+  and its screen changes for years afterwards. The route-B test in this
+  contract is written specifically to fail on that implementation, and the
+  delivers_to contract states the union so a coder reading only the contract
+  still cannot miss it.

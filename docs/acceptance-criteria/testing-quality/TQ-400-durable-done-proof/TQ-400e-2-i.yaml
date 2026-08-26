@@ -1,0 +1,126 @@
+id: TQ-400e-2-i
+components:
+  - testing_quality
+  - ac_store
+title: "Abstention is not a blanket escape — absent evidence is still demotable"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two finished records in one store — the first carrying an unresolvable
+    coverage tag, the second carrying no coverage evidence of any kind,
+  When the whole-store honesty sweep runs over that store and applies its outcome,
+  Then the first record is reported as "evidence not trustworthy" and is left
+    finished,
+  And the second record is reported as unproven and is demoted,
+  And the two outcomes are reached in the same run, proving the abstention is
+    decided per record on the shape of the evidence rather than applied as a
+    global stand-down,
+  And no record is left finished merely because the sweep found nothing to read.
+depends_on:
+  - TQ-400e-2
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The boundary angle applied to a predicate rather than a range: the interesting cases are one-abstains-one-demotes in the same store, and the all-records-lack-evidence extreme where a global stand-down and a correct per-record decision produce visibly different results."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Where the resolution of a coverage capture actually happens, and therefore where the abstain-versus-unproven fork must be located. A fork placed further out — after the per-record verdict — cannot distinguish the two states because the information has already been lost."
+  - path: scripts/ac_store/test_enforcement.py
+    relationship: describes
+    status: exists
+    relevance: "COVERS_TAG_RE at :57. Needed to understand what 'present but unresolvable' looks like as distinct from 'absent' — the two are the same thing to any caller that only sees a resolved-ids list."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE PREDICATE IS THE SHAPE OF PRESENT EVIDENCE, NEVER THE ABSENCE OF A RESOLVED ID. 'Abstain when no valid tag was found' is one sloppy line away from the correct rule and silently exempts the entire 259-record unproven population — the exact backlog TQ-400d exists to work through. The two inputs must be distinguishable at the point the decision is made: a record with a capture that failed to resolve, and a record with no capture at all."
+  - "THE FORK MUST BE LOCATED WHERE THE INFORMATION STILL EXISTS. If the sweep consumes only a list of resolved ids, 'present but unresolvable' and 'absent' are already indistinguishable and no downstream logic can recover the difference. The per-capture resolution outcome must be carried through, not flattened."
+  - "BOTH OUTCOMES MUST BE REACHABLE IN A SINGLE RUN OVER A SINGLE STORE, with no run-level configuration distinguishing them. A global 'safe mode' or 'strict mode' switch that produces one outcome per mode satisfies both parent ACs separately while the real discrimination does not exist."
+  - "A STORE IN WHICH EVERY RECORD LACKS EVIDENCE MUST DEMOTE EVERY ONE OF THEM. This is the anti-neuter control stated as a requirement rather than only as a test: the sweep must have no threshold, ratio, or safety valve that stands down when the unproven population is large. At 259 records, a naive 'this looks wrong, abstain' guard would fire on the real store on its first run."
+  - "Must handle errors gracefully per the project error handling policy — and note the direction: an error resolving a capture abstains (TQ-400e-2), but an error is not the same as an absent capture, which demotes. Do not route both through one except branch."
+delivers_to: null
+expects_from:
+  ac_id: TQ-400e-2
+  contract: >-
+    The abstention outcome and its predicate — a capture that is present but not
+    resolvable to an AC id. This AC constrains that predicate from the other side:
+    it must not widen to cover records with no capture at all.
+test_spec:
+  - name: test_tq_400e_2_i_unresolvable_abstains_and_absent_demotes_in_one_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "ONE store, ONE run, two records: the first carrying an unresolvable capture, the second carrying no coverage evidence at all. Assert the first is reported evidence-not-trustworthy and its file is byte-identical afterwards, and the second is reported unproven AND actually demoted. Two separately-configured runs must not be used — each could pass while the discrimination does not exist."
+  - name: test_tq_400e_2_i_demotion_actually_lands_through_the_production_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT, ANTI-NEUTER CONTROL. Run the sweep as a subprocess with outcome application enabled — not a dry run — and assert the evidence-absent record's file on disk actually changed. An implementation whose abstention path is correct but whose demotion never executes passes every assertion about the abstained record and delivers nothing."
+  - name: test_tq_400e_2_i_a_store_where_every_record_lacks_evidence_demotes_every_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE ESCAPE-HATCH EXTREME. A store in which no record carries any coverage evidence must demote all of them — assert the demoted count equals the record count, with zero abstentions. This is the falsifiable form of 'abstention is not a blanket excuse': any threshold, ratio guard, or safety valve that stands down when the unproven population is large fires here, and would have fired on the real store's first run at 259 records."
+test_rationale: |
+  The failure this record exists to block is a widening of one predicate, and a widened
+  predicate is invisible to the happy-path test: an implementation that abstains on everything
+  unproven still reports the unresolvable record as abstained, exactly as required. Only a
+  store containing BOTH inputs, evaluated in ONE run, can separate them — and only a run with
+  outcome application genuinely enabled can show that the demotion half is real rather than a
+  reported intention. The all-records-lack-evidence extreme is included because it is the
+  cheapest way to expose a defensive threshold, and because it is not hypothetical: the real
+  store presents 259 unproven records on the first run, which is precisely the input that
+  tempts a safety valve.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: 'Assigned python-coder; complexity S. it_requirements state the predicate
+    positively (shape of present evidence, never absence of a resolved id), require
+    the fork to sit where the per-capture resolution outcome still exists rather than
+    downstream of a flattened id list, and add an anti-neuter requirement — no threshold
+    or safety valve may stand down on a large unproven population, which at 259 records
+    would fire on the real store''s first run. test_spec: criterion (both outcomes,
+    one run) / reachability (demotion actually lands under outcome application) /
+    boundary (all-absent store demotes everything). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The failure this blocks: "abstain when the evidence is untrustworthy" is one
+  sloppy implementation away from "abstain whenever no valid tag was found",
+  which silently exempts the entire 259-record unproven population — the exact
+  backlog TQ-400d exists to work through. Untrustworthy evidence and absent
+  evidence must reach opposite outcomes.
+
+  Both outcomes must be observed in a SINGLE run over one store, otherwise two
+  separately-configured runs could each pass while the real discrimination does
+  not exist.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17) — WHERE THE FORK HAS TO LIVE. This is an
+  architectural constraint, not a coding detail, and it is the reason the AC can
+  fail even when the intent is right: if the sweep consumes a flattened list of
+  resolved ids, 'capture present but unresolvable' and 'no capture at all' are
+  already the same input and no downstream branch can tell them apart. The
+  per-capture resolution outcome must be carried through from the reader. Second
+  addition: an explicit prohibition on any threshold or ratio-based safety valve.
+  A guard of the form "if most records look unproven, something is wrong, stand
+  down" is a plausible piece of defensive coding that would neuter the sweep on
+  its very first real run against 259 unproven records.

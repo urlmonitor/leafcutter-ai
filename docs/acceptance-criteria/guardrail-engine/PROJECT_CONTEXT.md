@@ -242,3 +242,57 @@ component's deliberate fail-open convention (GE-116a-1-iii) both apply to GE-122
 unchanged. The new hazard specific to a whole-store check is "I could not read
 the whole store, therefore it is fine" — decide block-vs-announce per stage
 explicitly at L2.
+
+## SECOND id collision, on GE-120 this time — resolved 2026-08-18
+
+`GE-120` was claimed by two unrelated records for about 24 hours: the L0 goal
+tree `GE-120-green-means-checked/` (renamed onto that id by PR #453 on
+2026-08-17) and a loose L2 at the namespace root authored by `/quick-fix` via
+`/plan-feature` in PR #466 on 2026-08-18 ("A guard enforces the document types
+the project declared..."). Same defect class as the GE-119 collision one day
+earlier, same cause: the id-allocation step did not see ids owned by feature
+FOLDERS. See `docs/known-issues/ac-driven-dev.md` KI-ACD-008.
+
+**Resolution: the loose L2 moved, and it became `GE-118c` under `GE-118`.**
+Three rules were applied and all three are reusable:
+
+1. **The number was chosen for its SHAPE, not for being free.** `GE-124` was
+   free by ADR-029's both-tests rule and was still rejected. `derive_parent_id()`
+   returns `None` for a root-shaped id, and both `check_ac_parent_covered_by.py`
+   and `scan_ac_orphans.py` derive a parent from id shape alone — neither reads
+   the documented `parent:` field. A root-shaped id therefore carries a parent
+   link that no gate can police. Take the next free suffix under the chosen
+   parent. (Inherited from GE-122e-1; this is its second application.)
+
+2. **Check whether the attractive parent is FROZEN before assuming it is
+   available.** GE-120 was the semantically right parent — a guard silently
+   substituting a narrower built-in list is textbook "green when it could not
+   check". It was mechanically forbidden:
+   `unit_tests/commit_guardian/test_ge_122e_1.py` asserts
+   `git diff origin/main -- .../GE-120-green-means-checked/` is EMPTY, so
+   neither adding a file to that folder nor appending to `GE-120.yaml`'s
+   `covered_by` is possible without turning that guard red. Every `GE-120a..e`
+   is independently at the 5-child L2 cap, closing the other route.
+   **This is the second time in two days that the semantically obvious parent
+   turned out to be a byte-frozen survivor set.** Check the guard tests over a
+   candidate parent's folder BEFORE choosing it.
+
+3. **The standing "GE-118 is not amended" rule was read for its purpose, not
+   its letter.** That rule (recorded above and in GE-120's L0 notes) exists to
+   stop the cross-cutting green-means-checked POLICY being grafted onto the
+   point-fix tree, which would put the general rule beneath a specific
+   instance. Adding a third point fix of the same shape as `GE-118b` — same
+   hand-counted `parents[2]`, same hardcoded `leafcutter` segment, same silent
+   no-op — does not invert containment. GE-118 is now 3 of 7.
+   Still true, and now more visibly so: GE-112, GE-118a-1, GE-118b and GE-118c
+   are four point patches in this area. That is the argument for building
+   GE-120, not against filing the fourth one where it belongs.
+
+**Also settled here: a test module IS a citation.** The GE-119 repair left
+`test_ge_119_contract_shrinking_rename_aware.py` under its old name. That was
+tolerable because `GE-119` is RETIRED — the stale name resolves to nothing. It
+was NOT tolerable here: `test_ge_120_*` would have resolved to a LIVE, DIFFERENT
+record, which ADR-029 calls out as worse than the ambiguity being repaired. The
+module was renamed to `test_ge_118c_doc_types_deployed_resolution.py`. Rule:
+rename when the old id still resolves to something; leave it when the old id is
+retired.

@@ -1,12 +1,13 @@
 id: GE-113c-3-iv
 components:
   - commit_guardian
+  - security_scanner
 title: "Direct unit tests for _is_suppressed cover both exploit paths"
 component: guardrail-engine
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 criteria: |
@@ -86,7 +87,9 @@ amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - templates/skills/security-scanner/scripts/scan_secrets.py
+  - unit_tests/commit_guardian/test_scan_secrets_suppression.py
 notes: "The existing test_check_secrets.py exercises _is_suppressed only transitively via prose-file exemption cases, which is how the self-comparison bug went undetected. This AC mandates direct unit-level coverage for the function."
 change_target: code
 risk_surface: contract_boundary

@@ -2,7 +2,7 @@ id: ACS-1100d-1
 components:
   - ac_store
   - testing_quality
-title: "Coverage travels with the answer across every hop that consumes it"
+title: "Coverage travels with the answer across every hop that consumes it, machine-read or human-read"
 component: ac-store
 level: L2
 status: active
@@ -27,6 +27,28 @@ criteria: |
   And crossing a serialisation boundary does not drop the figure: an answer handed over
     as JSON carries its total, its covered count and its method in that payload, so a
     consumer that only ever sees the serialised form can still read what it inherited,
+  And a consuming hop is NOT only a machine payload: a rendered trust or enforcement
+    rating, a status badge, a legend or key entry that explains what a rating means, a
+    dashboard tile, and a summary line in a generated document are each a hop that
+    consumes a coverage-bearing answer, and each displays the inherited coverage figure
+    and the scope it was earned over in the same rendered view as the rating itself,
+  And a rendered rating whose coverage figure is reachable only by opening the data
+    behind it does not satisfy this criterion, because at a human-read hop the laundering
+    happens in the reader: the one instance this repo has actually repaired was a person
+    reading an "enforced" rating on the artifact map's test-covers edge and inverting it
+    to conclude every finished record was test-proven, when that rating had been earned
+    over changed records only,
+  And a legend, key, or tooltip that explains what a rating means states the scope the
+    rating was earned over, so the explanation cannot restore the unqualified reading the
+    rating itself no longer carries,
+  And a human-read surface that cannot display the figure withholds the rating instead of
+    displaying it bare — the same withhold-rather-than-pass posture this criterion applies
+    to a machine verdict with no inherited figure, and a rating rendered as an
+    unqualified word with the scope moved to a footnote, a hover, or a linked page does
+    not satisfy it,
+  And the bug symptom this criterion forbids at a human-read hop is a reader seeing a
+    bare "enforced", "green", or "passing" rating, concluding it is store-wide, and acting
+    on an all-clear that was earned over a fraction of the store,
   And a verifier result that states a verdict with no inherited coverage figure is
     itself withheld and reported as a dropped-coverage halt that names the upstream
     answer whose figure was lost — the same withhold-rather-than-pass posture as
@@ -48,13 +70,32 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: related
     status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005.yaml
+    relationship: related
+    status: exists
+    relevance: "The SHIPPED worked example of the human-read hop, and the only one already repaired. Its chain was check-done-proof (diff scope) -> an 'enforced' rating on the test-covers edge -> a reader inverting that edge into a store-wide conclusion; the fix made the rating carry the scope it was earned over. Copy the shape; do NOT re-implement or re-assert it here — the artifact map is owned by KM-ADM-100, which inherits this standing contract rather than being governed by this record."
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: related
+    status: exists
+    relevance: "The human-readable trust table rendered from the map — a rendered-rating hop of exactly the kind this criterion enumerates, and the surface where a legend entry can silently restore an unqualified reading."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: scope-addition
+    by: business-analyst
+    at: 2026-08-18
+    note: >-
+      Extended the enumeration of consuming hops to HUMAN-READ surfaces — rendered
+      ratings, badges, legend/key entries, dashboard tiles, generated summary lines —
+      with the same-view requirement, the withhold posture, and a named bug symptom.
+      Directed by ACS-1100d's 2026-08-18 PO note ("ACS-1100d-1's enumeration of consuming
+      hops should say so explicitly rather than leaving human-read surfaces implicit").
+      Title extended; two doc_links added. No existing clause was altered or removed, and
+      the components list was deliberately NOT widened — see notes.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -96,3 +137,30 @@ notes: |
   a serialised payload; whether a durable sink is also required is the pending
   write-surface question (ticket "## Comments" versus a durable JSONL sink) and is
   deliberately left open for the IT PO.
+
+  ==========================================================================
+  HUMAN-READ HOPS ARE NAMED, NOT IMPLIED (2026-08-18, BA).
+  ==========================================================================
+  As written, the hop enumeration was machine-only: two subprocess/JSON hops and a
+  serialisation boundary. The single laundering hop this repo has ACTUALLY repaired was
+  none of those — it was a person reading a rendered rating and inverting it. Leaving
+  human-read surfaces implicit would have let this AC go done against the two machine
+  hops while the class of hop that produced the only real incident stayed unaddressed.
+
+  WHY THIS AMENDS d-1 RATHER THAN ADDING AN L3. The clause being extended IS the
+  enumeration of consuming hops — the normal path of this AC, not an exceptional input.
+  An L3 would have made "human-read surfaces are hops too" an edge case of the rule
+  instead of part of it, and an implementer reading only the L2 would still have built
+  machine-only propagation. Same reasoning the PO applied at the L1.
+
+  SAME VIEW, NOT A FOOTNOTE. The load-bearing word is that the figure renders in the same
+  view as the rating. A scope disclosure behind a hover, a footnote or a link is
+  functionally the pre-fix state: the reader who launders the rating is exactly the reader
+  who does not click through.
+
+  COMPONENTS DELIBERATELY NOT WIDENED. knowledge_management was NOT added to this
+  record's components list even though the shipped example lives on the artifact map. The
+  map is owned by KM-ADM-100, which INHERITS this standing contract; adding the component
+  here would read as ownership and contradict the non-duplication rule the PO recorded on
+  ACS-1100 and KM-ADM-100. The map appears as a cited worked example in doc_links only,
+  and nothing in this AC requires changing it — its rating already conforms.

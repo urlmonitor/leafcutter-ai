@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-06-08
+last_updated: 2026-08-18
 components:
   - agent_registry
 ---
@@ -22,6 +22,7 @@ The Agent Registry (`config/agent_registry.json`) is the authoritative catalog o
 - `is_ticket_phase` — if true, the agent may appear in a ticket's `agents:` map
 - `produces` — trait that determines TDD guardrail applicability
 - `model` — haiku, sonnet, or opus tier assignment
+- `permits_shell` — optional boolean; `true` only if the agent's registered charter permits running repository-mutating shell commands. Used by dispatch-permission gates (e.g. the `plan-feature.js` isolated-workspace setup step, see [Agent Code Delivery Workflows §6](../agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)) to refuse dispatching a read-only agent to a step that must run shell commands
 
 ## Usage
 

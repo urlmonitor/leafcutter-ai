@@ -1,0 +1,61 @@
+id: INF-400c-2-ii
+components:
+  - infrastructure
+title: "An event the harvester cannot route stays unprocessed and is surfaced, never marked done"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: critical
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-2.yaml"
+criteria: |
+  Given the harvester reads an event whose entry_kind it cannot route,
+  And the harvester's idempotency record is what decides whether an event is
+    offered to a later run,
+  When the harvester processes that event,
+  Then the event is not added to the idempotency record, so a later run reads
+    it again,
+  And the learning is not written to any knowledge surface on this run,
+  And the run's summary reports the number of unroutable events separately
+    from the number routed, naming each distinct unroutable entry_kind and
+    how many events carried it,
+  And the run's exit status distinguishes "drained cleanly" from "drained
+    with unroutable events left behind", so a caller cannot read a run that
+    routed nothing as a run that had nothing to route,
+  And when the routing rules are extended to cover that entry_kind and the
+    harvester is re-run over the same corpus, the previously unroutable event
+    is routed and written on that later run,
+  And a run over a corpus of 28 events of which 28 are unroutable writes
+    nothing, retains all 28 for a later run, and reports 28 unroutable.
+depends_on: [INF-400c-2]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CONTRADICTS INF-400c-2-i, which is work_status done and requires the opposite ('marks the event as processed so it does not retry indefinitely'). INF-400c-2-i must be superseded or amended by governance before this AC is implemented — the two cannot both hold."
+  - "Retry must not become an unbounded reprocessing loop: an unroutable event stays retryable but must be reported on every run so the backlog is visible rather than silently growing"
+  - "The distinction between 'nothing to route' and 'nothing could be routed' must be observable in both the summary and the exit status — a run that discards its whole input while reporting success is the false-green defect this AC closes"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-2
+  contract: "The harvester's per-event dispatch loop and its idempotency record, which this AC changes the update rule for"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - "tests/knowledge/test_harvest_learnings.py"
+implemented_by:
+  - "scripts/knowledge/harvest_learnings.py"
+  - "templates/agents/knowledge-harvester.md"
+change_target: code
+risk_surface: contract_boundary

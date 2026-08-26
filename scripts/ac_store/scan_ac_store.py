@@ -487,6 +487,7 @@ def traverse_ac_tree(
     root_id: str,
     ac_store_root: Path,
     *,
+    id_index: dict[str, AcRecord] | None = None,
     exclude_done: bool = True,
     exclude_superseded: bool = True,
 ) -> list[str]:
@@ -526,9 +527,23 @@ def traverse_ac_tree(
     When both flags are ``False``, all leaves are collected as before
     (backward-compatible).
 
+    ``id_index`` (BO-2400c-6): callers that already hold a full id → record
+    mapping (e.g. a resolver that built one to walk ``depends_on`` edges) may
+    pass it in directly. When supplied, the walk consumes that mapping as-is
+    and performs NO directory read / YAML parse of its own — the caller is
+    responsible for the mapping's contents (in particular, whether it is
+    drained of dependency-cycle nodes; see BO-2400c-6-i). When omitted
+    (``None``, the default), the walk builds its own pristine index by
+    globbing and parsing *ac_store_root* exactly as it always has
+    (BO-2400c-6-ii) — passing an index is an option for callers that already
+    hold one, never an obligation.
+
     Args:
         root_id: The AC id to start traversal from (may be L0, L1, or deeper).
         ac_store_root: Absolute path to the root of the AC YAML store.
+        id_index: Optional prebuilt id → record mapping. When supplied, the
+            walk uses it directly instead of re-reading *ac_store_root*. When
+            ``None`` (default), the walk builds its own index from disk.
         exclude_done: When ``True`` (default), omit leaves with
             ``work_status == "done"`` from the result.
         exclude_superseded: When ``True`` (default), omit leaves whose
@@ -539,14 +554,15 @@ def traverse_ac_tree(
         Ordered list of leaf AC ids, depth-first alphabetical-sibling order.
         Returns ``[]`` when *root_id* is not found.
     """
-    # Build a full id → record index for O(1) child lookups.
-    id_index: dict[str, AcRecord] = {}
-    for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
-        record = _load_ac(yaml_path)
-        if record is not None:
-            ac_id = record.get("id")
-            if ac_id:
-                id_index[ac_id] = record
+    if id_index is None:
+        # Build a full id → record index for O(1) child lookups.
+        id_index = {}
+        for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
+            record = _load_ac(yaml_path)
+            if record is not None:
+                ac_id = record.get("id")
+                if ac_id:
+                    id_index[ac_id] = record
 
     if root_id not in id_index:
         print(
@@ -610,7 +626,19 @@ def _dfs_collect_leaves(
         return
 
     level: str = record.get("level", "")
-    children: list[str] = record.get("covered_by") or []
+    # Hierarchy (parent → child) lives in the ``children`` field in stores that
+    # follow the ADR-007 schema, where ``covered_by`` is reserved for test-file
+    # paths. Older/leafcutter-internal stores overloaded ``covered_by`` to mean
+    # children. Prefer ``children``; fall back to ``covered_by`` only when it
+    # contains AC-id references (not test paths) — i.e. when ``children`` is
+    # absent. A test path contains a "/" or "::"; an AC id never does.
+    children: list[str] = record.get("children") or []
+    if not children:
+        candidate = record.get("covered_by") or []
+        children = [
+            c for c in candidate
+            if isinstance(c, str) and "/" not in c and "::" not in c
+        ]
     status: str = record.get("status", "")
     work_status: str = record.get("work_status", "")
 
@@ -629,9 +657,10 @@ def _dfs_collect_leaves(
         if emit:
             result.append(node_id)
 
-    # Recurse into covered_by children for any level that has them.
+    # Recurse into child AC ids for any level that has them.
     # NOTE: we always recurse even for superseded nodes so that replacement
-    # children (listed in covered_by) are still collected (ACD-1200a-10).
+    # children (listed in ``children``, or legacy ``covered_by``) are still
+    # collected (ACD-1200a-10).
     for child_id in sorted(children):
         _dfs_collect_leaves(
             child_id,

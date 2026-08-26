@@ -1,0 +1,202 @@
+id: BP-900g-7-i
+components:
+  - build_pipeline
+title: "The registry-resolution rule distinguishes a named artifact from prose, and a missing one from a merely undeployed one"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-7.yaml"
+criteria: |
+  Given the registry-entry resolution rule of BP-900g-7,
+  And a registry containing, in the same file: an entry naming an artifact that
+    exists and is deployed; an entry naming an artifact that exists in the package
+    tree but reaches no consumer; an entry naming an artifact that exists nowhere;
+    and a descriptive free-text field that happens to contain a token shaped like a
+    file name,
+  When the reference-integrity preflight runs over that registry,
+  Then exactly one finding is produced — the entry naming the artifact that exists
+    nowhere,
+  And the free-text field produces no finding, so a description mentioning a script
+    is not mistaken for a declaration that ships one,
+  And the entry naming an existing-but-undeployed artifact produces no finding from
+    THIS rule, and is instead left to the deployment-completeness rules, so the two
+    concerns report separately and an author reading a failure can tell whether the
+    remedy is to write the artifact or to deploy it,
+  And an empty registry, and a registry every one of whose entries resolves, both
+    produce zero findings,
+  And these four shapes are exercised through the same preflight entry point as the
+    blocking case in BP-900g-7, against the real on-disk registry files rather than
+    hand-built dictionaries,
+  Because a resolution rule wide enough to flag prose gets suppressed within a week
+    and a rule that conflates "was never written" with "was not shipped" sends every
+    author to the deploy map for a defect no deploy map edit can fix — either outcome
+    leaves the hole open while appearing to have closed it.
+depends_on:
+  - BP-900g-7
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-7.yaml"
+    relationship: parent
+    status: exists
+  - path: config/package_boundary.json
+    relationship: describes
+    status: exists
+    relevance: "Carries both shapes in one file: a portability classification list (declarations) and human-readable description fields (prose)."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900e-3.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The sibling false-positive control on the deployment side ('a source-only script that is neither registered nor referenced is never flagged') — this AC is its analogue for the existence rule, and the boundary between the two is what the third clause pins."
+  - path: scripts/build_referential_integrity.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO ADDITION. The module the resolution pass of BP-900g-7 lives in; this AC refines the same pass rather than adding a second one. No new enforcement location is introduced."
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: "IT-PO ADDITION. The same subprocess entry point BP-900g-7's blocking case runs through. The criterion requires these four shapes be exercised through it, so the entry point is a hard requirement here too and is not satisfied by calling the checker directly."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Angle vocabulary. Note the boundary angle's evidence base (EPIC-BOPhantomDoneRemediation T03: _check_change_target had an empty-list guard, the identically structured _check_risk_surface did not, and all 22 tests passed) — that is the exact shape of this AC's empty-registry clause."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  reference_file_path: "scripts/build_referential_integrity.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+    - "python -m pytest unit_tests/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The classification decision the pass must make per registry field, before any resolution is attempted. Making this an explicit, data-driven decision rather than an implicit regex is what keeps the prose case out of the findings without an allowlist."
+    required:
+      - field_role
+    properties:
+      field_role:
+        type: string
+        description: "Whether a registry field is a DECLARATION (its value names an executable artifact the package advertises as present, and is therefore subject to resolution) or PROSE (free-text description, not subject to resolution even when it contains a token shaped like a file name). The role must be derived from the registry's own structure — which key the value sits under — never from whether the value happens to look like a path."
+      finding_kind:
+        type: string
+        description: "For declarations that fail to resolve, which concern the finding belongs to: 'missing' (exists nowhere — this rule) or 'undeployed' (exists in the package tree, reaches no consumer — the deployment-completeness rules). The two must never be merged into one 'unresolved reference' verdict."
+  constraints:
+    - "PROSE VS DECLARATION MUST BE STRUCTURAL, NOT LEXICAL. Decide whether a field is subject to resolution from WHERE it sits in the registry (which key), never from whether its value pattern-matches a path. A lexical rule flags description text, the first author to hit that adds a suppression, and suppressions are permanent. BP-900g-4's over-permissive prefix is the in-repo precedent: it accepted any single leading segment, mis-normalised a host-project path into a deploy key, and cost BP-900g-5 an entire clause to undo."
+    - "DO NOT MERGE THE TWO CONCERNS INTO ONE VERDICT. 'Exists nowhere' and 'exists but is not deployed' must surface as distinct finding kinds with distinct remedies. This is the more expensive of the two failure modes: an author handed 'unresolved reference' for a never-written artifact edits the deploy map, finds nothing to add, and concludes the guard is noisy."
+    - "THE EMPTY-REGISTRY CASE IS A REQUIRED GUARD, NOT AN EDGE CASE TO SKIP. A registry with zero declaration entries must produce zero findings and must not raise. EPIC-BOPhantomDoneRemediation T03 is the precedent: _check_change_target carried an empty-list guard, the identically structured _check_risk_surface did not, and all 22 tests passed because none exercised the empty shape."
+    - "FIXTURES MUST BE THE REAL FILES. The four shapes are asserted against config/package_boundary.json and config/test_requirements.schema.json loaded from disk with json.load. A hand-built dict reproduces the author's mental model of the parse shape, which is the bias that hid the files_touched no-op for an entire epic (EPIC-PhantomDoneFilesTouched KI-1) and survived the first remediation spot-check."
+    - "NO NEW ENFORCEMENT POINT. This AC refines BP-900g-7's single pass; it must not add a second checker that runs somewhere else. Two passes over the same registries will drift, and the one that is not wired into scripts/build.py will be the one the tests assert on."
+    - "Exactly one finding for the four-shape fixture is the assertion, not 'at least one'. A rule that emits the correct finding plus a spurious one has failed this criterion even though the blocking case still blocks."
+delivers_to: null
+expects_from:
+  ac_id: BP-900g-7
+  contract: "The universal registry-entry resolution pass and its finding record {registry_file, entry_location, artifact, kind}, reachable from `python scripts/build.py --target-dir <target>`. This AC constrains that same pass's discrimination — the field_role classification that keeps prose out, and the kind value that keeps 'missing' separate from 'undeployed' — and reuses the same entry point rather than introducing another."
+test_spec:
+  - name: test_bp_900g_7_i_four_entry_shapes_in_one_registry_yield_exactly_one_finding
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "One registry file carrying all four shapes at once — resolvable-and-deployed, exists-but-undeployed, exists-nowhere, and a free-text description field containing a token shaped like a file name. Assert EXACTLY one finding (not 'at least one'), that it names the exists-nowhere entry, and that its kind is 'missing'. The discrimination is the assertion; the individual cases are not."
+  - name: test_bp_900g_7_i_empty_and_fully_resolving_registries_produce_zero_findings
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The zero/all shapes: a registry with no declaration entries, and a registry every one of whose entries resolves, both yield zero findings and neither raises. The empty case is the EPIC-BOPhantomDoneRemediation T03 shape — an identically structured sibling check that lacked the empty guard passed all 22 of its tests."
+  - name: test_bp_900g_7_i_four_shapes_through_the_same_build_subprocess_flag_only_the_missing_one
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT with the must_block modifier and its paired must-NOT-block control, both through the SAME `python scripts/build.py --target-dir <tmp_target>` subprocess used by BP-900g-7. Against a temp package tree carrying the four-shape registry: exit is non-zero, the output names the exists-nowhere entry, and the output does NOT name the prose token or the undeployed entry. Then remove only the exists-nowhere entry and re-run the same command: exit zero. Calling the checker function directly does not satisfy this."
+  - name: test_bp_900g_7_i_prose_vs_declaration_holds_against_the_real_on_disk_registries
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Load config/package_boundary.json and config/test_requirements.schema.json from disk with json.load — no fixture copies, no hand-typed dicts — and assert every description/free-text field in them is classified PROSE and every classification-list entry is classified DECLARATION. The distinction is a property of those files' actual structure, so a hand-built dict tests the author's model of them rather than the files."
+test_rationale: |
+  This AC is the false-positive and mis-attribution control for BP-900g-7, so the
+  tests have to be able to fail in the two directions a resolution rule dies in, and
+  a direct-import unit test can only see one of them.
+
+  Too wide. A lexical rule that flags a token in description prose gets suppressed by
+  the first author who hits it, and the suppression outlives everyone. Entry 1 puts
+  the prose field in the SAME fixture as the three declaration shapes and asserts
+  exactly one finding, so a rule that is right about the missing artifact and also
+  wrong about the prose still goes red. Entry 4 then re-runs that distinction against
+  the real config files, because the prose-vs-declaration boundary is a property of
+  their actual key structure — the hand-typed-fixture bias is what hid the
+  files_touched parser no-op for a whole epic and survived its first spot-check.
+
+  Under-specified. If 'never written' and 'not deployed' collapse into one verdict,
+  every author is sent to the deploy map for a defect no deploy map edit can fix.
+  Entry 1 asserts the kind, and entry 3 asserts the undeployed entry is NOT named in
+  the build's own failure output.
+
+  Entry 3 also re-charges reachability rather than inheriting it from BP-900g-7. The
+  BA's hand-off suggested inheritance; that is declined deliberately. The rule this AC
+  refines is a CLASSIFIER, and a classifier can be correct in isolation while the
+  build never reaches the branch that consults it — the discrimination has to be
+  observable in the build's own exit and output, which is the only thing an author
+  ever sees. Entry 2 is the empty/all guard and stays at the unit-of-behaviour level
+  because there is nothing to reach when there is nothing to classify.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, estimated_complexity, it_requirements (package-surface
+    object form; structural-not-lexical classification and the do-not-merge-the-two-concerns
+    rule named as constraints), expects_from (matching BP-900g-7's delivers_to), test_spec
+    (boundary x2 / reachability+must_block / real_artifact) and test_rationale. Added
+    three doc_links. Declined the BA's 'reachability inherited from the parent' hand-off
+    and charged it explicitly — see test_rationale. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  EDGE CASE PINNED: the two ways a resolution rule dies.
+
+  Over-wide, and it flags description prose; the first author to hit that adds a
+  suppression, and suppressions are permanent. BP-900g-4's over-permissive prefix is
+  the in-repo precedent — it accepted any single leading segment and mis-normalised a
+  host-project path into a deploy key, which cost BP-900g-5 an entire clause to undo.
+
+  Under-specified, and it merges with the deployment rules into a single "unresolved
+  reference" verdict. That is the more expensive failure: the remedy for "does not
+  exist" is to write it or delete the reference, and the remedy for "exists but is not
+  deployed" is a deploy-map change. An author handed the wrong one edits the deploy
+  map, finds nothing to add, and concludes the guard is noisy.
+
+  TEST ANGLES for it-po. `boundary` is the primary angle — zero / one / many /
+  malformed-but-parseable over registry entry shapes, all four in one fixture so the
+  discrimination is asserted rather than the individual cases. `real_artifact` is
+  triggered: the fixtures must be the real config/*.json files, because the prose-vs-
+  declaration distinction is a property of their actual structure. Reachability is
+  inherited from BP-900g-7's entry point and need not be re-charged.
+
+  ─────────────────────────────────────────────────────────────────────────────
+  IT-PO ENRICHMENT NOTE (2026-08-17). One deviation from the BA's hand-off, recorded
+  because it changes the test contract: reachability IS charged here rather than
+  inherited from BP-900g-7. The behaviour this AC adds is a classification branch, and
+  a classification branch is the specific thing that can be correct in isolation while
+  the build never consults it. An author only ever sees the build's exit and output, so
+  the discrimination has to be asserted there. It costs no slot — three distinct angles
+  are charged (boundary, reachability, real_artifact) against a cap of four.
+
+  The four-shape fixture is also the reason `boundary` appears on two entries rather
+  than one. Merging the empty/all-resolve case into the four-shape test would let a
+  rule that raises on an empty registry stay green, which is exactly the T03 shape
+  named in the constraints.

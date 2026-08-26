@@ -1,0 +1,223 @@
+id: GE-125c-1
+components:
+  - security_scanner
+  - commit_guardian
+title: "One explained value set aside and one live credential in the same file report exactly one finding and block the commit"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose ticket area holds one Markdown file staged for
+    commit,
+  And that file contains on one line a project identifier of the ticket form — a
+    value whose high entropy is explained by an identifier convention the check
+    already recognises,
+  And four lines later the same file contains an opaque credential of at least
+    thirty characters whose entropy is above the threshold and whose form carries
+    no recognised keyword and no recognised prefix,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then EXACTLY ONE finding is reported for that file — the credential, named with
+    its 1-based line number,
+  And the project identifier's line is not reported,
+  And the commit is blocked,
+  Because the allowance covers one result and never the file it sits in: a count
+    of zero means the whole-file shape survived, a count of two means the
+    allowance stopped working, and an assertion of at-least-one passes on the
+    broken behaviour and does not discharge this.
+
+  Given the same throwaway project and the same ticket area,
+  And a second staged Markdown file identical to the first except that the
+    credential line has been deleted, so the file's only high-entropy value is the
+    project identifier,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then no finding is reported for that file and the commit is not blocked by it,
+  And no suppression entry was needed to achieve that,
+  Because deciding one result at a time must not become deciding against
+    everything: the relief these locations were given for their explained
+    identifiers survives the change, and a fix that simply reports every
+    high-entropy value in a prose location would satisfy the first scenario while
+    reintroducing exactly the false positives the exemption exists to prevent.
+
+  Given a third staged file placed in the same ticket area, containing the
+    credential line only,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the credential is reported and the commit is blocked,
+  Because being in a location where explanatory identifiers are expected is not
+    itself an explanation for any particular value, and a file that happens to
+    contain no explained value must not be the only case in which the location
+    stops shielding a credential.
+depends_on:
+  - GE-125c
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The file to change is `templates/scripts/commit_guardian/check_secrets.py`. `scripts/commit_guardian/check_secrets.py` and `.leafcutter/scripts/commit_guardian/check_secrets.py` are build outputs per ADR-001, and `templates/commit-guardian/` holds the legacy manifest; `check_hook_parity` enforces all four locations. After editing the template run `python scripts/build.py --target-dir .` and re-run the commit_guardian suite, and do not claim the change until the parity check passes over the rebuilt tree."
+  - "REUSE THE EXISTING BENIGN-TOKEN MACHINERY — DO NOT WRITE A SECOND CLASSIFIER. It already exists and was located: `_TICKET_ID_RE` and `_EPIC_NAME_RE` at `templates/scripts/commit_guardian/check_secrets.py:120-121`, consumed by Rule 2 of `_is_prose_exempt` at lines 189-202, which scrubs those tokens out of the line and re-tests every residual token against `_ENTROPY_THRESHOLD`. That IS the per-value `entropy explained by a benign token` computation KI-SEC-001's third fix direction names. The instruction is to make that computation carry the whole load, not to add a parallel mechanism beside it."
+  - "THE LOAD-BEARING EDIT IS THAT A LOCATION MATCH MUST NO LONGER, ON ITS OWN, DISCARD A FINDING. Rule 1 of `_is_prose_exempt` (lines 182-187) returns True for the whole file on a path match and short-circuits Rule 2; while it does, the first scenario returns zero findings. Name every enforcement point before changing one: `_filter_prose_findings` (lines 205-224) is the only caller of `_is_prose_exempt` in the commit path (`check_secrets.py:267-272`) and `_PROSE_FILE_PREFIXES` (lines 124-133) has no other consumer in that file. If any other surface consults a path-prefix list to drop entropy findings, change that one too — a constraint added only to an inert copy is a no-op."
+  - "COORDINATE WITH THE SIBLING L1s RATHER THAN REVERTING THEM. GE-125a narrows the same path predicate to a root-anchored segment match and GE-125b gates it by file kind, both against these same lines, concurrently. Reconcile with whatever is in the file at implementation time; do not restore a substring match or delete a file-kind gate as a side effect of removing the file as the unit of the decision."
+  - "THE PER-FINDING DECISION AUTHORED HERE MUST NOT BE FED `Finding.excerpt`. `_filter_prose_findings` passes `finding.excerpt` today (line 220) and that is the defect GE-125c-3 owns; wiring this AC's decision to the excerpt would satisfy every scenario here and hard-block GE-125c-3. Take the full matched value, and the whole untruncated source line where surrounding context is needed."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file created inside a `tempfile`-backed throwaway project root, with the prose location constructed INSIDE that root (`<tmp_root>/tickets/00_inbox/<name>.md`) and the check pointed at that root. No fixture may be written under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. If the check cannot be pointed at a throwaway root, RAISE THAT INABILITY AS A DEFECT AGAINST THIS GOAL AND STOP — it is not a licence to place a fixture in a real prose tree, and it is not a licence to fall back to calling the exemption decision directly."
+  - "ASSERT THE THROWAWAY ROOT IS NOT ITSELF EXEMPT BEFORE ASSERTING ANY VERDICT. `_is_prose_exempt` substring-tests the prefix against the whole path at line 186, so a temporary root whose own path happens to contain `tickets`, `retrospectives`, `acceptance-criteria` or `skills` as a segment re-arms the exemption above the constructed fixture and every arm passes for the wrong reason. Assert that the portion of the root path ABOVE the deliberately constructed prose directory contains none of the four segment names, as a precondition of each test."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY DIRECT CALL. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers. Asserting what `_is_prose_exempt` returns is not evidence a commit was blocked, and greping the source for a per-finding call passes on dead code (CLAUDE.md, `Gate / Workflow ACs — Verify Behaviorally, Not by Grep`)."
+  - "EXACT COUNTS ONLY. Every count assertion is an equality — exactly one, exactly zero. An at-least-one assertion passes on today's broken behaviour for the third scenario and on a report-everything implementation for the first, and discharges neither."
+  - "CREDENTIAL-SHAPED FIXTURE STRINGS ARE ASSEMBLED AT RUNTIME from concatenated fragments, as `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does. Do not collapse them into source literals and do not add a `.security-allowlist` entry so that literals can be committed — needing one is the signal the fragments were collapsed."
+  - "ERROR HANDLING PER CLAUDE.md. The per-finding decision is a pure function over a string and a path: it must NOT be wrapped in try/except (Rule 4). Any new file or subprocess access added by the check or its tests is wrapped in a typed `except` that logs at WARNING or re-raises (Rules 1-3)."
+  - "PERFORMANCE — THIS RUNS ON EVERY COMMIT. The decision executes once per entropy finding per staged file inside the pre-commit path. It must add no file read, no subprocess call and no network call per finding, and every regex it uses must stay a module-level compiled constant rather than being recompiled per call. The check must remain within its current commit-time budget for a staged set of 200 files."
+test_spec:
+  - name: test_explained_value_and_live_credential_in_one_file_report_exactly_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged Markdown file in a throwaway root's ticket area holding a well-formed ticket identifier and, four lines later, a runtime-assembled opaque credential of at least thirty characters yields EXACTLY ONE finding, naming the credential's 1-based line number and not the identifier's, and the check exits non-zero. Zero findings means the whole-file shape survived; two means the benign-token recognition stopped working."
+  - name: test_explained_value_alone_reports_nothing_and_needs_no_suppression
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The same file with the credential line deleted yields zero findings and does not block the commit, with no allowlist entry in force — the negative control that fails a naive report-everything-in-prose-locations implementation."
+  - name: test_credential_alone_in_a_prose_location_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file in the same throwaway ticket area containing only the credential line yields exactly one finding and a non-zero exit — being in a location where identifiers are expected is not itself an explanation for any particular value."
+  - name: test_throwaway_root_is_not_itself_prose_exempt
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: the throwaway root path ABOVE the deliberately constructed prose directory contains none of the segment names tickets, retrospectives, acceptance-criteria or skills, so the arms measure the scanner rather than a re-armed exemption. Fails loudly if a future tempfile prefix drifts into one of those names."
+  - name: test_canonical_and_deployed_check_secrets_agree_after_build
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After running the build, the per-finding behaviour is present in the DEPLOYED scripts/commit_guardian/check_secrets.py and .leafcutter/scripts/commit_guardian/check_secrets.py, not only in the canonical template — the ADR-001 revert hazard, asserted by running the deployed copy rather than by comparing bytes."
+test_rationale: |
+  Five descriptors, and the shape is forced by the two directions in which this
+  criterion fails. A single "the credential is reported" assertion is satisfied by
+  today's code for a non-prose path and by a report-everything implementation for a
+  prose one, so the first two descriptors are a matched pair over one location that
+  no file-level rule can satisfy together: same file, same identifier, the only
+  difference being whether a real credential is also present. Equality counts rather
+  than floors are what make the pair discriminating.
+
+  The last two descriptors exist because the first three can all pass for reasons
+  unrelated to the change. A fixture whose temporary root happens to contain one of
+  the four exempt segment names measures the exemption rather than the scanner —
+  KI-SEC-001 records that the match is a substring test, so this is reachable by
+  accident — hence the precondition asserted before any verdict. And a fix applied to
+  the canonical template alone leaves the deployed hook unchanged until the next
+  build, so the deployed arm runs the built copy rather than trusting the template.
+  A weaker shape — importing the exemption decision and asserting its return value —
+  was rejected: a decision answering "not exempt" is not evidence that a commit was
+  blocked, and it cannot distinguish a wired change from dead code.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001, third fix direction — make the exemption per finding rather than per file, discarding only findings whose entropy is explained by a benign token, which the module already computes for TICKET- / EPIC- identifiers. Also records the substring-match measurement that makes a badly placed fixture pass for the wrong reason."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why templates/scripts/commit_guardian/ is canonical and the two deployed copies are build outputs that the next build.py overwrites."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "A per-finding exemption decision point in templates/scripts/commit_guardian/check_secrets.py: _filter_prose_findings evaluates each ENTROPY_HIGH finding individually and a path match no longer discards findings on its own. Consumed by GE-125c-2, which settles what the decision is made ON, and by GE-125c-3, which settles that it is made on the whole value rather than on Finding.excerpt."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity L, twelve it_requirements,
+      five test_spec descriptors, test_rationale, five doc_links and a delivers_to contract
+      to GE-125c-2 / GE-125c-3; set readiness reviewed. The it_requirements name the
+      canonical template path and the ADR-001 revert hazard; locate the existing
+      benign-token machinery (_TICKET_ID_RE / _EPIC_NAME_RE at check_secrets.py:120-121,
+      consumed by _is_prose_exempt Rule 2 at 189-202) so it is extended rather than
+      duplicated; identify Rule 1 at lines 182-187 as the load-bearing enforcement point
+      and _filter_prose_findings at 205-224 as its only caller; forbid feeding the new
+      decision Finding.excerpt; make the throwaway root a hard requirement whose absence
+      is a defect to raise rather than a waiver, with a precondition that the root is not
+      itself substring-exempt; and add the sibling-L1 coordination constraint against
+      GE-125a and GE-125b. criteria, title, level and work_status unchanged.'
+superseded_by: null
+covered_by:
+  - GE-125c-1-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE CRITERION THAT PROVES THE UNIT OF THE DECISION CHANGED, and it is
+  the one the parent L1 calls load-bearing. The first and second scenarios are one
+  pair in one location: the same explained identifier is set aside in both, and the
+  only difference between a clean result and a blocked commit is whether a real
+  credential is also present. No arrangement of a file-level rule produces that
+  pair — a per-file rule gives zero findings for both files or two for both.
+
+  THE COUNTING ARM FAILS IN BOTH DIRECTIONS AND BOTH ARE REACHABLE. Zero means the
+  file-level shape survived; two means the per-result judgement stopped recognising
+  the identifier. GE-123d-3 already fixed this exact counting shape for the
+  adjacent keyword rule and its reasoning is reused here rather than re-derived.
+  Do NOT close either as a duplicate of the other: GE-123d-3 governs a PROPOSED
+  exemption for the keyword-based rule, this governs the EXISTING exemption for the
+  shapeless-value rule, and six GE-123 records fence the two apart deliberately.
+
+  MANDATORY NEGATIVE CONTROL, STATED AS A SCENARIO RATHER THAN A CAVEAT. The
+  second scenario is the control that stops the first being satisfied by removing
+  the exemption altogether. The parent's promise is that an allowance covers a
+  single result — not that there is no allowance. Both directions must be red
+  before the fix lands: the first scenario against today's whole-file exemption,
+  the second against a naive "report everything in prose locations" implementation.
+  A suite that cannot distinguish those two wrong implementations has not
+  discharged this criterion.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED, AND SHARPER HERE THAN ANYWHERE ELSE
+  IN THIS GOAL. Every fixture must be a real file created inside a tempfile-backed
+  throwaway project root, with the prose location constructed INSIDE that root
+  (for example `<tmp_root>/tickets/00_inbox/<name>.md`) and the check run against
+  that root. No fixture may be created under this repository's own `tickets/`,
+  `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees.
+  The L0 records why: a fixture under one of those paths measures the exemption
+  rather than the scanner and passes for the wrong reason. This criterion is the
+  most exposed of the four L1 subtrees to that trap, because unlike its siblings it
+  NEEDS its fixture to sit in a prose location — so the location must be one the
+  test constructed and controls, never one the repository happens to provide. The
+  test module itself belongs under `unit_tests/commit_guardian/`, which matches
+  none of those four names. If the check cannot be pointed at a throwaway root,
+  that inability is itself a defect to raise against this goal — it is not a
+  licence to place a fixture in a real prose tree.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Per CLAUDE.md, an AC about a
+  hook is discharged only by a test that executes the behaviour. Every arm here
+  runs the real pre-commit secrets check over real staged files and asserts the
+  process exit status and the reported findings. Calling the exemption decision
+  directly and asserting what it returns does not discharge any arm: a decision
+  answering "not exempt" is not evidence that a commit was blocked. Greping the
+  scanner source for a per-result call discharges nothing at all — it passes on
+  dead code.
+
+  CREDENTIAL-SHAPED FIXTURE STRINGS must be assembled at runtime from concatenated
+  fragments rather than written as source literals, so this repository continues to
+  need no suppression for the module that holds them. The existing suppression test
+  module does this deliberately; do not collapse the fragments back into literals
+  and do not add an allowlist entry so that literals can be committed.

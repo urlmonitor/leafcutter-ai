@@ -1,0 +1,123 @@
+id: GE-124g-1-i
+readiness: approved
+priority: high
+title: "No configuration anywhere can turn a declaration into coverage"
+component: guardrail-engine
+components:
+  - ac_store
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
+criteria: |
+  Given the configuration surfaces of the store writer, the reverse-direction
+    gate, the coverage reports, and the test-coverage check
+  When each is loaded
+  Then none of them exposes a setting that lets a declaration count as coverage,
+    satisfy a proof obligation, or be written into `covered_by`
+  And none of them reads such a setting from the environment or from a
+    per-repository override
+
+  Given a configuration file that supplies a key asking for a declaration to
+    count as coverage
+  When the configuration is loaded
+  Then the key is refused and the refusal names the key and states that this
+    rule has no configurable form
+
+  Given a path that has been placed on GE-124d's warn list, and a file that
+    carries an accepted GE-124d opt-out reason
+  When the four places in GE-124g are evaluated for the criteria those files
+    declare
+  Then neither escape changes any of the four outcomes
+depends_on:
+  - GE-124g-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124d.yaml"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/phantom-done-prevention.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SCOPE IS ALL FOUR PLACES, NOT THE STORE. This L3 is filed under GE-124g-1 because a parent had to be chosen. Its configuration surfaces are: the store writer (GE-124g-1), the reverse-direction gate (GE-124g-2 / check_ui_ac_declared.py's frontend_ac_declaration config), the reports (GE-124g-3 — build output, proof-of-done report, and the Atlas), and the test-coverage check (GE-124g-4 / the done-proof surface). Do NOT narrow it to the store when implementing."
+  - "A REFUSED KEY, NOT AN ABSENT FEATURE. Each of those four config loaders must REJECT an unknown substitution-shaped key by name rather than ignore it. Absence is indistinguishable from 'nobody has asked yet', and the first person to ask will add it; a refusal that names the key turns the attempt into a conversation. This requires the loaders to reject unknown keys in their own section at all — a permissive loader that silently ignores extras cannot implement this AC."
+  - "ENVIRONMENT AND PER-REPOSITORY OVERRIDES ARE PART OF THE SURFACE. The criteria say 'from the environment or from a per-repository override', and a loader that rejects a JSON key while honouring an equivalent environment variable satisfies the letter and none of the intent. Enumerate every input each of the four loaders reads."
+  - "THE REFUSAL MUST NOT DISABLE THE AFFECTED CHECK. After refusing the key the check continues with the rule in force. Aborting on bad configuration would turn the refused key into the bypass it was refused for — the same over-correction GE-124d-1-i guards against on the other configuration surface."
+  - "THE GE-124d BOUNDARY IS A BEHAVIOURAL CLAIM AND MUST BE TESTED AS ONE: a warn-listed path and an accepted opt-out reason change nothing about what a declaration is worth. Those escapes govern whether a FILE MUST DECLARE; they never reach these four outcomes. This is the third scenario and it is the boundary the PO drew explicitly."
+  - "This AC is a cross-cutting constraint over four other ACs, so it can only be verified once all four surfaces exist. Sequence it last within GE-124g, or accept that it is partially red until they land — and say which."
+delivers_to: null
+expects_from:
+  ac_id: GE-124g-1
+  contract: "The four no-substitution rules whose absence of a configurable form this edge case establishes across every configuration surface — the store writer, the reverse-direction gate, the reports, and the test-coverage check"
+test_spec:
+  - name: test_ge_124g_1_i_no_substitution_key_exists_in_any_of_the_four_config_surfaces
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Enumerate the accepted configuration keys of all four loaders and assert none of them permits a declaration to count as coverage, satisfy a proof obligation, or reach covered_by. Enumerate from each loader's own accepted-key surface rather than from a literal list in the test, so a key added later is caught."
+  - name: test_ge_124g_1_i_a_substitution_shaped_key_is_refused_by_name_and_the_check_continues
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Supply each of the four loaders with a key asking for a declaration to count as coverage: each refuses it, names it, and then runs with the rule in force. Assert both halves — a loader that aborts turns the refused key into the bypass it was refused for."
+  - name: test_ge_124g_1_i_an_environment_variable_equivalent_is_also_refused
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Set an environment variable equivalent of the substitution setting and assert every one of the four surfaces still enforces the rule. A loader that rejects a JSON key while honouring an env var satisfies the letter and none of the intent, and the criteria name the environment explicitly."
+  - name: test_ge_124g_1_i_warn_listed_and_opted_out_files_change_none_of_the_four_outcomes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "For a criterion declared by a warn-listed file and for one declared by a file with an accepted opt-out reason, assert all four GE-124g outcomes are identical to the un-escaped case: covered_by untouched, the done gate unmoved, the report axis unchanged, and the existence-only test still rejected. The GE-124d boundary is a behavioural claim, so it is asserted behaviourally across all four."
+test_rationale: |
+  This AC's subject is the absence of a feature, and absence is the hardest thing to test
+  honestly — a test asserting 'the key is not in the config file' passes on a loader that reads
+  the same setting from somewhere else. So every test drives a real loader: enumerate what it
+  ACCEPTS rather than what a file contains, feed it the forbidden key and watch it refuse by
+  name, and feed it the environment-variable equivalent because the criteria name that route
+  explicitly and it is the one a letter-of-the-law implementation leaves open. The fourth test
+  turns the GE-124d boundary from prose into four behavioural assertions, which is the only form
+  in which a boundary between two ACs stays true after either one is refactored.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Raised complexity S->M: this is a cross-cutting change across four config loaders, each of which must reject unknown substitution-shaped keys by name (a permissive loader cannot implement it) and must enumerate every input including environment and per-repository overrides. Added the over-correction guard shared with GE-124d-1-i — refusing a key must not abort the check — and made the GE-124d boundary a behavioural assertion across all four outcomes. Flagged that this AC is only fully verifiable once all four surfaces exist. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The PO's instruction: "NO OPT-OUT, DELIBERATELY ... Say so explicitly at L2
+  rather than leaving it to be inferred from silence." Each of GE-124g-1 through
+  GE-124g-4 says it in its own criteria; this L3 is the one place it is tested
+  as a property of the configuration surfaces themselves, across all four.
+
+  It is filed under GE-124g-1 because a parent had to be chosen and the store is
+  the first place the substitution would be attempted. Its scope is all four —
+  do not narrow it to the store when implementing.
+
+  A REFUSED KEY, NOT AN ABSENT FEATURE. Absence is indistinguishable from
+  "nobody has asked yet", and the first person to ask will add it. A refusal
+  that names the key turns the attempt into a conversation.
+
+  The third scenario is the boundary with GE-124d that the PO drew explicitly:
+  those escapes apply to whether a FILE MUST DECLARE, never to what a
+  declaration is worth.
+
+  IT-PO NOTE (2026-08-25). Sequencing: this is the only AC in the tree that
+  cannot be finished before its four siblings, because it asserts a property of
+  their configuration surfaces. Build it last within GE-124g, or accept a
+  partially red test contract in the interim and record which parts.

@@ -1,0 +1,105 @@
+id: ACD-2100b
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "A check that could not run says so instead of blaming your setup"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  You are told what could not be checked -- never sent to fix a correct setting.
+
+  When a safety check at the start of a run cannot reach what it needs to look
+  at it stops the run as before but reports what actually happened. You can tell
+  at a glance whether something is genuinely misconfigured or whether the check
+  simply did not get to look and the run is worth retrying.
+depends_on: [ACD-2100]
+doc_links:
+  - docs/known-issues/ac-driven-dev.md
+  - docs/reference/false-green-mechanisms.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100b-1
+  - ACD-2100b-2
+  - ACD-2100b-3
+  - ACD-2100b-4
+  - ACD-2100b-5
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - reference-doc
+notes: |
+  COVERS: the SECOND and separable cause of KI-ACD-009 -- a lookup failure
+  rendered as a specific permissions verdict. This is deliberately NOT merged
+  into ACD-2100a. ACD-2100a makes the check able to run; this one makes the
+  check honest about the times it still cannot. Fixing only the path would hide
+  this defect rather than close it, because the misleading message would simply
+  stop appearing in the one case anybody had reproduced.
+
+  THE DEFECT (verified in templates/workflows-js/plan-feature.js:1745-1791,
+  2026-08-25):
+    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+    permitsShell = !!(match && match.permits_shell === true);
+  `permitsShell` is false for FOUR different reasons -- the agent dispatch
+  failed, its output was unparseable, the file was unreadable, or the id was
+  genuinely absent -- and all four print one message asserting a permissions
+  problem and directing the operator to `config/agent_registry.json`'s
+  `permits_shell` field. In the observed run that field was already correct
+  (`worktree-agent` has `permits_shell: true`, agent_registry.json:1368), so the
+  remedy in the message led to a field with nothing to fix.
+
+  FAILING CLOSED IS CORRECT AND MUST NOT BE TRADED AWAY. The objection is to the
+  diagnosis, not to the caution. Any child that relaxes the halt to a warning is
+  the wrong fix and reintroduces the exact hazard the BO-1500f-1 gate was built
+  for (that AC is `work_status: done` -- this L1 REFINES its reporting, it does
+  not supersede it).
+
+  THE FOURTH CAUSE IS AVOIDABLE, NOT JUST REPORTABLE. The observed run recorded
+  `[resolve-workspace-setup-permission] failed: API Error: Connection lost
+  mid-response`. The step gates startup on a live agent round-trip in order to
+  read a STATIC LOCAL FILE. That round-trip is itself a failure source: a
+  network hiccup closes the mandated entry point and is indistinguishable in the
+  output from a real mis-assignment. Removing the round-trip removes a whole
+  class of false halt, so at least one child should address it rather than only
+  labelling its failures better.
+
+  PATTERN: docs/reference/false-green-mechanisms.md M8, inverted -- not a check
+  reporting a success it did not establish, but a check reporting a specific
+  FAILURE CAUSE it did not establish. Same distinction GE-120 draws about
+  "green means checked".
+
+  SIZING FOR THE BA: the L2 cap is 5. A shape that fits with one slot spare:
+    1. an unreadable source is reported as unreadable and names what it tried
+       to read;
+    2. an unparseable source is reported as unparseable;
+    3. an agent that is genuinely absent from the registry is reported as
+       absent -- distinct from an agent that is present and not permitted;
+    4. the run still halts in every one of those cases (a fail-closed
+       regression guard, asserted behaviourally rather than by inspection).
+  A behaviour covering "the check no longer depends on a live dispatch" is the
+  natural fifth. Keep the four messages distinguishable by their observable
+  output; a test that asserts only that SOME message was printed restates the
+  bug.
+
+  2026-08-25 (business-analyst): decomposed into five L2s on the suggested shape,
+  with one departure. Suggestions 3's two verdicts -- absent versus present and
+  not permitted -- are held in a SINGLE record (ACD-2100b-3) whose subject is the
+  discrimination between them, because split across two records each half is
+  satisfiable by one shared message and the defect survives. That freed the slot
+  for the fifth behaviour (ACD-2100b-5, no live dispatch). A fifth outcome the
+  four-way enumeration does not cover -- a registry that parses but holds no agent
+  entries, which lands in the "absent" branch and asserts a cause it did not
+  establish -- is pinned as ACD-2100b-3-i. Cap is FULL at 5: the reference-doc
+  trigger on this L1 is served by ACD-2100d-4.

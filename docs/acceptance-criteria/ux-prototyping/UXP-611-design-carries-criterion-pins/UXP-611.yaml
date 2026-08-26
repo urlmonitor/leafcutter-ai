@@ -1,0 +1,125 @@
+id: UXP-611
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "An approved design says which criteria it shows, so built-to-the-design is checked rather than claimed"
+component: ux-prototyping
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The design names the criteria it shows, so built-to-design is checkable.
+
+  As a person reviewing a screen, I want the approved design to state which
+  acceptance criteria it puts on screen — in the same words the built page
+  uses — so that "this page matches the design we approved" can be answered by
+  comparing the two rather than by taking someone's word for it. The design
+  becomes the other half of a comparison that already has a built half, and a
+  screen that quietly drifts from what was approved stops being invisible.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/schemas/mockup.schema.json
+    relationship: specified-by
+    status: exists
+  - path: templates/agents/mockup-author.md
+    relationship: implemented-by
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f-2.yaml
+    relationship: related
+    status: exists
+  - path: docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+documentation_triggers:
+  - how-to
+  - reference-doc
+delivers_to:
+  ac_id: GE-124f-2
+  contract: "The design side of the design-versus-built comparison: rendered mockup markup carrying element pins in the SAME attribute (`data-ac`) and the SAME whitespace-separated multi-value grammar as the built side, a page root carrying `data-screen` equal to the mockup record's registered `screen` id, and the same per-criterion mapping recorded as data in the *.mockup.json record. Without this, GE-124f-2 compares against an empty set on every screen."
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The settled attribute name and value grammar for an element pin (`data-ac`, whitespace-separated, order-preserving, never comma-separated), and the shared reader that reads pins — this L1 emits into that grammar rather than defining a second one."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-612
+  - UXP-613
+  - UXP-614
+  - UXP-615
+  - UXP-616
+implemented_by: []
+change_target:
+  - prompt
+  - schema
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EXISTS — A GAP FOUND WHILE ENRICHING SOMEONE ELSE'S FAMILY. GE-124
+  makes built frontend source declare the criterion it renders, and GE-124f-2
+  compares a built page against the approved design. That comparison assumes
+  "the design's own rendered markup carries the same element pins". It does
+  not. Verified on disk 2026-08-25: docs/product-truth/mockups/fern-and-fig/
+  holds five rendered .html files and NONE contains a single `data-ac`
+  attribute; the *.mockup.json records carry `screen`, `renders` and `entities`
+  and no per-criterion element mapping at all. Annotating mockups is
+  mockup-author's surface, not the guardrail's, so nothing in GE-124 creates
+  it. GE-124f-2 has been written to degrade safely — an empty design side reads
+  as "no pins in the design", never as a total mismatch — so it is not broken
+  today, it is simply inert. This L1 is what makes it deliver anything.
+
+  ONE VOCABULARY OR NOTHING. The single most important constraint is that this
+  side emits into the grammar GE-124b-1 already settled, rather than inventing
+  a parallel one: attribute name exactly `data-ac`, values whitespace-separated
+  and order-preserving. The reason is mechanical and unforgiving — the selector
+  the built side derives is `[data-ac~="<id>"]`, and the CSS `~=` operator
+  matches whitespace-separated tokens only. A single comma inside a value makes
+  every derived selector match nothing, silently, on both sides. The
+  comma-tolerant grammar of the `@ac` comment line is a DIFFERENT grammar and
+  must not leak into the attribute.
+
+  THE SCREEN NAME IS THE FIRST HOP AND IT ALREADY HAS A HOME. `data-screen` on
+  the page root is not a new identifier — it is the `screen` id the mockup
+  record already registers and that flow steps already resolve against. Putting
+  the same value in the markup is what lets a comparison start from a rendered
+  file. Only the page root carries it; a leaf carries the criterion pin alone,
+  or the file claims to be two screens.
+
+  AND STILL NOT COVERAGE — THE LIMIT THAT CARRIES OVER. A pin is on-screen
+  presence evidence and nothing more. An annotated mockup proves the design
+  shows a criterion; it can never prove the criterion works, is tested, or is
+  done. GE-124g owns that guarantee for the built side and it is restated as a
+  negative in UXP-615 so it survives as a testable clause rather than as prose
+  someone can overlook. Anyone tempted to fold "pinned in the design" into a
+  coverage figure has misread this L1.
+
+  EXISTING MOCKUPS DO NOT BECOME INVALID OVERNIGHT — DIFF-SCOPING, THE HOUSE
+  PATTERN. The user confirmed this shape on GE-124 on 2026-08-25 and it is
+  reused here deliberately: only what a change touches is evaluated, so an
+  untouched legacy mockup is absent from every collection a run produces — not
+  exempt, not deferred, not counted, not passed. Coverage grows as mockups are
+  edited. No dated cutoff, no backfill backlog, no permanent exemption list,
+  and no "for visibility" counter — a counter recreates the dated population
+  the decision removed. Precedents: check_done_proof --mode ci-changed, the
+  diff-scoped component-vocabulary CI job, GE-124e-4.
+
+  PARENT CHOICE. Attached to UXP-490 ("A product owner can review flows, mock
+  data, and mockups and see which steps are built") rather than UXP-100. UXP-490
+  is the L0 whose promise is that product-truth artifacts hang off acceptance
+  criteria and that a reviewer can see which steps are BUILT — and today that
+  built/spec/mock label is self-declared, which is exactly the phantom-done
+  pattern. This L1 supplies the evidence that makes UXP-490's promise honest.
+
+  documentation_triggers [how-to, reference-doc] — how-to because a mockup
+  author has to know when and where to pin; reference-doc because the attribute
+  grammar and the new record field are a contract two independent surfaces
+  (mockup-author and the guardrail reader) must agree on exactly, and the
+  comma-versus-whitespace trap needs somewhere authoritative to live.

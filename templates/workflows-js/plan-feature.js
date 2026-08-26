@@ -1730,6 +1730,66 @@ const sessionSlug = component
   ? component.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 20)
   : null;
 
+// -------------------------------------------------------------------------
+// Pre-Stage-0 — Workspace-Setup Dispatch Permission Gate (AC BO-1500f-1).
+// -------------------------------------------------------------------------
+// The isolated-workspace setup step below runs repository-mutating commands
+// (fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
+// be dispatched only to an agent whose registered charter (config/agent_registry.json)
+// permits running repository/shell commands — resolved from the registry
+// itself, never from a hardcoded agent name, so the guarantee survives an
+// agent rename (and so a read-only reporting agent like status-checker,
+// the mis-assigned target of the original incident, can never receive it).
+const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
+
+let permissionResult;
+try {
+  permissionResult = await agent(
+    "Run the following command and return ONLY the raw stdout output:\n" +
+    "cat {{config.output_root}}/config/agent_registry.json\n" +
+    "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }",
+    { agentType: "status-checker", label: "resolve-workspace-setup-permission" }
+  );
+} catch (_permErr) {
+  permissionResult = null;
+}
+
+let permitsShell = false; // fail closed — missing/false/unresolvable all deny.
+try {
+  const registryParsed = parseAgentJson(
+    permissionResult,
+    { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
+  );
+  if (registryParsed && typeof registryParsed.output === "string") {
+    const registryJson = JSON.parse(registryParsed.output);
+    const entries = (registryJson && Array.isArray(registryJson.agents)) ? registryJson.agents : [];
+    const match = entries.find((e) => e && e.id === workspaceSetupAgentId);
+    permitsShell = !!(match && match.permits_shell === true);
+  }
+} catch (_parseErr) {
+  permitsShell = false; // fail closed on any parse error
+}
+
+if (!permitsShell) {
+  await agent(
+    "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
+    workspaceSetupAgentId + "', but that agent's registered charter (config/agent_registry.json) " +
+    "does not permit running repository-mutating shell commands. Halting before any authoring " +
+    "agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', " +
+    "agent='" + workspaceSetupAgentId + "'.",
+    { agentType: "status-checker", label: "workspace-setup-mis-assignment" }
+  );
+  return {
+    status: "error",
+    message:
+      "Workspace-setup step 'worktree-setup' is configured to dispatch to agent '" +
+      workspaceSetupAgentId + "', whose registered charter does not permit running " +
+      "repository/shell commands. Halting before any authoring agent is dispatched. " +
+      "Fix the workspace_setup_agent configuration or config/agent_registry.json's " +
+      "permits_shell field for that agent.",
+  };
+}
+
 let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
@@ -1740,7 +1800,7 @@ try {
     "python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree" +
     (sessionSlug ? ` "${sessionSlug}"` : "") + "\n" +
     "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
-    { agentType: "status-checker", label: "worktree-setup" }
+    { agentType: workspaceSetupAgentId, label: "worktree-setup" }
   );
 } catch (wtErr) {
   return {
@@ -1754,7 +1814,7 @@ try {
 
 let wtParsed;
 try {
-  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: "status-checker" });
+  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: workspaceSetupAgentId });
 } catch (_parseErr) {
   wtParsed = null;
 }
@@ -1869,7 +1929,23 @@ if (route === "covered" && !force) {
       ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_covGateResult.status)) {
     return _covGateResult;
   }
-  const userChoice = _covGateResult || { choice: "cancel" };
+  // Fail CLOSED, not destructively. A null result here means the gate could not
+  // be answered at all — the agent died, refused the role it was handed, or
+  // returned unparseable text (KI-ACD-005). Defaulting that to "cancel" made a
+  // transport failure indistinguishable from the user genuinely choosing to
+  // cancel, and silently discarded the request. Surface it instead.
+  if (!_covGateResult) {
+    return {
+      status: "undetermined",
+      message:
+        "The covered-route confirmation gate returned no usable answer, so no " +
+        "decision was recorded and nothing was changed. This is a gate failure, " +
+        "NOT a user cancellation — re-run /plan-feature and answer the gate.",
+      stage: "covered-route-gate",
+      covered_by: existing_acs,
+    };
+  }
+  const userChoice = _covGateResult;
   const choice = (userChoice.choice || userChoice.action || "cancel").toLowerCase();
 
   if (choice === "cancel") {
@@ -2023,7 +2099,23 @@ if (ptRunSet.skip) {
             ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_ptGateResult.status)) {
           return _ptGateResult;
         }
-        const ptGate = _ptGateResult || { action: "cancel" };
+        // Fail CLOSED, not destructively — see the covered-route gate above.
+        // A null reply is a gate failure, not the user asking to cancel, and
+        // cancelling here throws away the drafted product-truth work.
+        if (!_ptGateResult) {
+          return {
+            status: "undetermined",
+            message:
+              `The product-truth gate (${ptStep.agent}, stage ${ptStep.stage}) ` +
+              `returned no usable answer, so no decision was recorded. This is a ` +
+              `gate failure, NOT a user cancellation. Prior committed ` +
+              `product-truth stages are preserved and the current ${ptStep.stage} ` +
+              `draft is left uncommitted on disk — re-run /plan-feature and ` +
+              `answer the gate.`,
+            stage: `pt-gate-${ptStep.stage}`,
+          };
+        }
+        const ptGate = _ptGateResult;
         const ptAction = ptGate.action.toLowerCase();
 
         if (ptAction === "cancel") {
@@ -2317,7 +2409,25 @@ for (const step of pipeline) {
           ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_midGateResult.status)) {
         return _midGateResult;
       }
-      const gateDecision = _midGateResult || { action: "cancel" };
+      // Fail CLOSED, not destructively — see the covered-route gate above.
+      // This is the most costly of the three: cancelling here discards ACs that
+      // have already been authored. A null reply means the gate could not be
+      // answered (KI-ACD-005), which is not the user asking to throw that work
+      // away, so it must never be routed into the cancel branch.
+      if (!_midGateResult) {
+        return {
+          status: "undetermined",
+          message:
+            `The confirmation gate after ${step.agent} returned no usable ` +
+            `answer, so no decision was recorded. This is a gate failure, NOT a ` +
+            `user cancellation. Committed ACs are preserved and drafted ACs are ` +
+            `left on disk — re-run /plan-feature and answer the gate.`,
+          stage: `gate-${step.stage}`,
+          committed_acs: committedAcs,
+          acs_as_drafts: written,
+        };
+      }
+      const gateDecision = _midGateResult;
 
       const action = gateDecision.action.toLowerCase();
 

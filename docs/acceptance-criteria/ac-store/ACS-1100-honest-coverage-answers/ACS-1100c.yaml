@@ -31,7 +31,14 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: ownership-negative
+    by: business-analyst
+    at: 2026-08-18
+    note: >-
+      notes-only amendment. Records that this L1 does NOT own measurement staleness —
+      ACS-1100b does (see the ruling in ACS-1100b-1's notes). criteria, title, covered_by
+      and every other field untouched.
 superseded_by: null
 covered_by:
   - ACS-1100c-1
@@ -71,3 +78,49 @@ notes: |
   (ACS-1100b), so the arithmetic still reconciles against the store total and no
   halt fires. Had this not been settled, the halt would have fired on every single
   commit against ~2,783 out-of-scope records.
+
+  NOT SATISFIED BY THE SHIPPED PRIOR ART — DO NOT LET ANYONE CLAIM OTHERWISE
+  (2026-08-18, PO). KM-ADM-005 shipped a ratchet that FAILS THE BUILD when the
+  untagged-done backlog grows past 244. It will be tempting to cite that as "the
+  halt already exists". It is not this L1, and conflating them would close the AC
+  on work that was never done:
+    - Trigger: the ratchet fires when a POPULATION GROWS. This L1 fires when an
+      ANSWER'S ARITHMETIC FAILS TO RECONCILE. A store could reconcile perfectly and
+      still breach the ratchet, and vice versa.
+    - Subject: the ratchet judges the store's state. This L1 judges the answer's
+      completeness.
+    - Direction: the ratchet is a threshold on a known, declared number — which is
+      the happy path this L1 explicitly lets through (ACS-1100c-2).
+  The honest relationship is the reverse of what it looks like: the ratchet is only
+  trustworthy BECAUSE its denominator happens to be filter-free. Give it a
+  filter-bearing enumeration and it would ratchet a number nobody computed, with no
+  halt to catch it.
+
+  ==========================================================================
+  THIS L1 DOES NOT OWN MEASUREMENT STALENESS (2026-08-18, BA). ACS-1100b DOES.
+  ==========================================================================
+  Recorded here because the question sat unowned between ACS-1100b and this L1 for
+  five days, and an unowned question between two L1s is how it stayed unowned. The
+  ruling and its full justification live in ONE place, ACS-1100b-1's notes; this is
+  the negative half of it, and it is deliberately the only other place it appears.
+
+  The rule: an answer whose figure is a recorded constant measured some time ago is
+  DECLARED stale by its method record (ACS-1100b-1) and is still returned. It does
+  NOT halt here. Age is not a trigger of this L1 and must not be added as one.
+
+  Why, in one line each:
+    - This L1's trigger set is exactly ONE trigger — the reconciliation arithmetic
+      (covered + declared exclusions != total). Age has no arithmetic to fail.
+    - The same widening was proposed once already and rejected: ACS-1100d-1 raises
+      its OWN dropped-coverage halt for a missing figure rather than widening
+      ACS-1100c-1, precisely to keep the reconciliation contract that ACS-1100c-2
+      mirrors intact. A time-based trigger would reopen that.
+    - A stale figure is not a violation. This L1's posture is halt on a REAL
+      violation; a five-day-old, fully reconciled, correct answer is not one.
+    - A time threshold has no defensible value and no clearing path for a reader of
+      a recorded figure, so it becomes noise and gets switched off — the same
+      argument ACS-1100c-1-i makes for keeping the could-not-classify bucket narrow.
+
+  If a future requirement wants an OLD figure to limit what a downstream verdict may
+  claim, that is an ACS-1100d concern (the verdict cap), not this one. It is not
+  authored anywhere yet — do not assume it exists.

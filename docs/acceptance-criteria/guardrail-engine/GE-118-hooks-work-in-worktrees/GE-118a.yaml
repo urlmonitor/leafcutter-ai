@@ -1,6 +1,7 @@
 id: GE-118a
 components:
   - commit_guardian
+  - security_scanner
 title: "check-secrets resolves its scanner scripts dir from the deployed (.leafcutter) layout"
 component: guardrail-engine
 level: L1

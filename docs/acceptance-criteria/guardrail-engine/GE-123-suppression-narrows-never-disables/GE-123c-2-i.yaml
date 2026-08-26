@@ -1,0 +1,132 @@
+id: GE-123c-2-i
+components:
+  - commit_guardian
+  - security_scanner
+title: "A suppression naming a rule the scanner cannot report is told so, instead of waiting silently for a finding that will never arrive"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the security allowlist contains, on separate lines, three entries whose
+    rule id is not one the scanner can report:
+    - a first line beginning with a byte-order mark before "ENTROPY_HIGH", left
+      there by an editor that saved the allowlist with one,
+    - "ENTROPY-HIGH:secrets.py:*", written with a hyphen instead of an underscore,
+    - "ENTROPY_HIGH :secrets.py:*", with a space before the first separator,
+  And "secrets.py" contains a high-entropy token the ENTROPY_HIGH rule reports,
+  When the allowlist is loaded and the file is scanned through the multi-file
+    entry point,
+  Then the finding is reported — none of the three entries suppressed it,
+  And each of the three lines produces its own warning on the error stream naming
+    the allowlist file, its own 1-based line number, and its own verbatim text,
+  And each of the three entries is skipped,
+  Because a rule id that is neither the wildcard nor a rule the scanner can report
+    can never equal the rule id of any finding, and all three of these read as
+    something other than what their author typed.
+
+  Given the security allowlist contains one well-formed entry for each rule the
+    scanner can report — the sensitive-filename rule, the private-key rule, the
+    cloud-access-key rule, the api-key rule, the generic-secret rule and the
+    high-entropy rule — and one entry whose rule id is the literal wildcard,
+  When the allowlist is loaded,
+  Then no warning is emitted for any of those lines and every one of them is
+    loaded and applied,
+  Because every rule the scanner can report, and the wildcard that stands for all
+    of them, must remain writable without complaint.
+depends_on:
+  - GE-123c-2
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The canonical source of the scanner is the templates/ copy; every other copy on disk is a build output."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Defines the angle vocabulary used in this AC's test_spec."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The set of reportable rule ids currently has no single home: some are declared in the module's rule table and the rest are emitted directly by the per-file scan. Establish ONE canonical set inside the scanner, derived from those declarations rather than hand-copied, and make it the set both the load-time check and the test read. A hand-written second copy is a duplicated source that will drift the moment a rule is added, and the drift shows up as valid new suppressions being rejected."
+  - "Reject by data property — the value is not in the canonical reportable set, and is not the wildcard — never by enumerating the specific mis-spellings observed. A branch that names the hyphen variant, the byte-order mark or the trailing space by hand leaves the next variant to escape."
+  - "No case-insensitive, whitespace-tolerant or fuzzy matching of the rule id, and no invisible-character stripping: a mis-cased or byte-order-mark-prefixed id is reported and skipped, not quietly repaired."
+  - "Reuse the single allowlist-diagnostic convention — error stream, allowlist file path, 1-based line number, verbatim line text, one message per offending line — and do not add a second shape."
+  - "Classification is never fatal and never alters the scan's exit status."
+  - "Edit the canonical template at templates/skills/security-scanner/scripts/scan_secrets.py and propagate with build.py; never edit a deployed copy (ADR-001)."
+  - "Tests must never create, modify or delete a .security-allowlist at any real project root, workspace root or worktree root; every fixture allowlist lives under tmp_path/tempfile."
+  - "Fixture files must use ordinary source filenames — the per-file scan short-circuits environment-named files and never reads their content."
+test_spec:
+  - name: test_unreportable_rule_ids_each_warn_and_are_skipped
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A tempfile-backed allowlist carrying the byte-order-mark-prefixed line, the hyphen variant and the trailing-space variant leaves the high-entropy finding reported, produces one warning per line with its own 1-based line number and verbatim text, and loads none of the three."
+  - name: test_every_reportable_rule_id_and_the_wildcard_load_silently
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "One entry per rule the scanner can report, plus one wildcard entry, all load with an empty error stream — the ids enumerated from the scanner's own canonical set, never from a literal list written in the test."
+  - name: test_accepted_rule_id_set_equals_the_rules_the_scanner_can_report
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The set the load-time check accepts is exactly the set of rule ids the scanner can emit, so adding a rule without extending the accepted set turns this test red instead of silently rejecting valid new suppressions."
+test_rationale: |
+  The positive arm is the load-bearing one and it is only load-bearing if it reads
+  the scanner's own rule set: enumerated by hand it would pass forever while the
+  check quietly rejected every suppression written for a newly added rule. The
+  third descriptor makes that coupling explicit as a parity assertion rather than
+  leaving it as a property of how the second was written. The negative arm runs
+  through the multi-file scan entry point with real files, per the tree-wide
+  verification standard, because the claim includes that the finding survives.
+delivers_to: null
+expects_from:
+  ac_id: GE-123c-2
+  contract: "The unmatchable-entry warn-and-skip announcement, extended here to the rule-id field so that all three fields of an entry are covered by one rule and one message shape."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS COMPLETES THE FIELD SWEEP. With the line-number field and the file-path
+  field covered by the two sibling criteria, the rule-id field is the last place an
+  entry can parse cleanly into something unmatchable. Kept as an edge case rather
+  than promoted to its own behaviour because it shares the predicate shape and the
+  entire announcement with its parent; it earns a place only because the byte-order
+  mark and the trailing space are invisible on screen, which makes them the hardest
+  instances of this whole class for an author to diagnose unaided.
+
+  THE POSITIVE ARM IS LOAD-BEARING AND MUST TRACK THE RULE SET. The check compares
+  against the rules the scanner can actually report, so adding a rule without
+  adding it to that comparison would start rejecting valid new suppressions. The
+  second arm exists to fail the moment the two drift apart, and it must enumerate
+  the rules from the scanner's own rule set rather than a copy written here.
+
+  A LOWER-CASE OR OTHERWISE MIS-CASED RULE ID IS INTENTIONALLY LEFT AS A REJECTION,
+  not a case-insensitive match: quietly accepting "entropy_high" would be another
+  instance of guessing at intent, which is the habit this L1 removes.
+
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-18. The BA's "enumerate from the scanner's own
+  rule set" instruction has a concrete obstacle worth naming: there is no such set
+  today. Some rule ids are declared in the module's rule table; the sensitive-filename
+  and high-entropy ids are emitted inline by the per-file scan and appear nowhere as
+  data. Creating that single canonical set is part of this AC's work, not an
+  assumption it can make — hence the first it_requirement.

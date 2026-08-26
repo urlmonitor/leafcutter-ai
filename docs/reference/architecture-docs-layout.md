@@ -15,7 +15,6 @@ related_docs:
   - templates/skills/write-c4-diagram/SKILL.md
   - templates/docs/architecture/README.md
   - scripts/next_diagram_seq.py
-  - templates/scripts/commit_guardian/check_identifier_uniqueness.py
 ---
 
 # Architecture Docs Folder Layout

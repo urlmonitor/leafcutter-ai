@@ -1,0 +1,93 @@
+id: TKT-500g-1-ii
+components:
+  - ticket_creation_pipeline
+  - testing_quality
+readiness: draft
+priority: medium
+title: "An authored demand is taken as authored — nothing trimmed, nothing topped up"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an approved requirement that authors a proof demand of exactly one
+    statement, and that statement answers only "the stated behaviour holds",
+  When a work item is generated from that requirement,
+  Then the work item's proof section lists exactly that one statement,
+  And no further statement is appended on the author's behalf — in particular no
+    reachability statement is added to an authored demand,
+  And generating the work item a second time from the same requirement produces
+    the same single statement.
+depends_on: [TKT-500g-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "States the rule this criterion pins: the criteria-derived fallback tags its own descriptors and appends one mandatory reachability descriptor, while an authored demand is taken as-is and gets no generator-added entries. The two routes must not be blended."
+  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relationship: constrains
+    status: exists
+    relevance: "The authored route and the derive-from-criteria route meet here. The top-up belongs to the derive route only."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The reachability floor described here is exactly the statement that must NOT be appended to an authored demand. Read the floor's scope before implementing: it is a property of the derived route, and applying it to an authored demand puts a promise in the author's name that the author did not make."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The two routes must stay separable at the point of observation: for any record it must be answerable from the generated work item alone whether its statements were authored or derived. A blended output makes the no-top-up rule unfalsifiable."
+  - "Generation is deterministic for an unchanged record: two runs over the same inputs produce the same statement list, in the same order, byte for byte. Verify by running twice and diffing, not by asserting a count."
+  - "A top-up added on the author's behalf is a promise the downstream commit-time refusal will hold them to. Any future change that appends to an authored demand must fail this criterion loudly rather than degrade to a warning."
+test_spec:
+  - name: test_a_single_authored_statement_is_not_topped_up_with_a_reachability_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A record authoring exactly one behaviour-holds statement generates a work item whose proof section lists exactly that one statement and no appended reachability entry."
+  - name: test_generation_is_idempotent_for_an_authored_single_statement_demand
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/ac_store/generate_ticket_from_ac.py --ac <id> --ac-root <store> --dry-run (subprocess, run twice)"
+    description: "Runs the real entry point twice over the same unchanged record and asserts the emitted proof sections are identical — the second-run claim is only meaningful through the entry point that real callers use."
+  - name: test_the_derived_route_still_appends_its_reachability_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The one-versus-many companion control: a record with no authored demand still receives the derived route's mandatory reachability entry. Without it, 'no top-up' could be satisfied by disabling the floor for everyone."
+test_rationale: |
+  A no-top-up rule is trivially satisfiable by breaking the derived route's reachability
+  floor, so the contract carries a companion control (descriptor 3) that keeps the floor
+  alive. Idempotence is asserted through the subprocess entry point rather than an
+  in-process call because a second in-process call reuses warmed module state and can
+  mask exactly the kind of accumulate-on-each-call defect the clause is written against.
+delivers_to: null
+expects_from:
+  ac_id: TKT-500g-1
+  contract: "The authored-demand survival rule, pinned in the subtractive direction (nothing lost) and the additive direction (nothing invented on top)."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THIS IS A SEPARATE CRITERION AND NOT AN "AND" ON ITS PARENT. TKT-500g-1
+  asserts that nothing authored is lost. This asserts the opposite direction:
+  that nothing unauthored is gained. Both directions are needed to make the
+  proof section an honest record of what was asked for — a route that silently
+  adds a reachability statement to an authored demand puts the author's name on
+  a promise they did not make, and the downstream refusal check (BP-1100g-4)
+  will hold them to it.
+
+  NOT YET KNOWN TO BE COVERED. The schema reference already states the rule, and
+  the shipped behaviour is believed to follow it, but none of the seven tests in
+  the authored-demand suite asserts the no-top-up direction. Treat this as
+  specified-and-unproven rather than built.

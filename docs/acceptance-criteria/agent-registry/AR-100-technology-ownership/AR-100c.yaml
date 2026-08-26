@@ -1,0 +1,36 @@
+id: AR-100c
+title: "No kind of work is left without an owner"
+component: agent-registry
+components:
+  - agent_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Unclaimed technologies are visible and fixable, not silently guessed at.
+
+  Every kind of work leafcutter can be asked to do is claimed by exactly one
+  specialist, and where nothing claims it, that gap is surfaced plainly instead
+  of being resolved by whoever seems closest. Nobody has to infer ownership by
+  copying what was done last time.
+depends_on:
+  - AR-100
+doc_links:
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The catalogue in which ownership gaps become visible."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc

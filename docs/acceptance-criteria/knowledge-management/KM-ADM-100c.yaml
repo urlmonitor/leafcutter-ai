@@ -1,0 +1,54 @@
+id: KM-ADM-100c
+components:
+  - knowledge_management
+title: "The connections that tell you what a change will break are ones you can actually follow"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+criteria: |
+  The relationships you reach for when planning a change are traversable, not summarised.
+
+  A relationship that answers "what else does this touch?" is shown as a link you can
+  follow and inspect, rather than being folded into a count or a footnote — because a
+  relationship you cannot traverse cannot inform the decision it exists to inform.
+parent: KM-ADM-100
+depends_on:
+  - KM-ADM-100
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: specifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-ADM-004
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  No new concept is introduced. KM-ADM-004 changes how an existing view draws a
+  relationship that the map's reference documentation already defines, and the
+  relationship's own trust record — reachable by clicking it — is the documentation
+  the reader needs. The map reference itself is kept correct by KM-ADM-100d.
+change_target: ui
+risk_surface: internal
+notes: |
+  One child today, deliberately. The user named requirement-to-requirement dependency
+  one of the two most load-bearing relationships in the whole map, "because they would
+  tell us what to (not) touch and watch out for when refactoring or enhancing a
+  feature" — that is a benefit worth its own L1 even at one child, and it is the
+  natural home for the next relation that gets promoted from summary to traversal.
+
+  CARRY THIS CAVEAT FORWARD (from KM-ADM-004): making a relationship visible must not
+  make it trusted. The dependency link is enforced but AMBIGUOUS — it multiplexes
+  parent, pattern and dependency references, and target existence is unchecked. It
+  keeps its "reconcile first" verdict. Sibling KM-ADM-100a owns the rating; this L1
+  owns only whether you can follow the link.

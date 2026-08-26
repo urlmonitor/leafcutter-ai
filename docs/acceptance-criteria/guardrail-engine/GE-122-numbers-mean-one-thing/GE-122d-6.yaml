@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -54,7 +54,7 @@ depends_on:
   - GE-122d-1
   - GE-122d-3-ii
   - GE-122e-3
-  - BP-900h-4
+  - BP-900h-6
 doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
@@ -79,7 +79,7 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The whole-collection uniqueness check this criterion wires up. Verified 2026-08-25: its name appears in neither commit_guardian.json nor the deployed pre-commit registry, so it has never run."
-  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-6.yaml
     relationship: context
     status: exists
     relevance: "IT-PO 2026-08-25 — the empirical detector for the fresh-install regression this registration risks. It is a depends_on: the consumer-install commit job must EXIST and be green before this registration lands, and must be RE-RUN and still green after it. That re-run is the third leg of the required order (scaffold, register, re-run)."
@@ -103,8 +103,8 @@ it_requirements:
   - "The two negative clauses are the deliverable, not decoration. A test that only exercises the positive path passes identically on a check registered in the wrong file, because the positive path can be made to pass by invoking the script from the test. Deregistering and rebuilding, then observing the commit succeed, is the only construction that fails when the wiring is in the file the install ignores."
   - "DEPLOY MANIFEST: every module the check imports must appear in the matching deploy list in scripts/build_phases.py, or the deployed hook raises an import error at commit time while the source-tree unit tests pass. This is the done_proof.py precedent and it applies to every module _uniqueness_scanners.py pulls in as well as to the check itself."
   - "ORDERING IS LOAD-BEARING, and it is the same ordering GE-122d-2 records for the build stage: do not register this check until GE-122e's repair has landed. A whole-collection uniqueness check registered over a collection that still holds the GE-119 collision and the five twice-held work items blocks every commit in the repository from the moment it is wired."
-  - "BUILD ORDER IS NOW ENCODED IN depends_on AND IS NOT ADVISORY (IT-PO 2026-08-25). Three items must be landed and green BEFORE this registration is committed: GE-122d-3-ii (the base install scaffolds every namespace root, and every root resolves through declared path configuration), GE-122e-3 (the collection itself passes the guard with nothing excused), and BP-900h-4 (the consumer-install commit job that can observe the regression). Measured 2026-08-25 on both documented install paths, INCLUDING --seed-docs: build.py creates neither docs/architecture/adrs/ nor docs/architecture/diagrams/. Under GE-122d-3's fail-closed contract those are unresolvable roots, so a registration that lands first blocks EVERY commit in EVERY fresh install — the guard would ship as a denial of service on new adopters. Required order: scaffold, register, re-run."
-  - "RE-RUN THE CONSUMER-INSTALL COMMIT JOB AFTER REGISTRATION, and treat its green as part of this AC's evidence. BP-900h-4's use-the-install step must be executed against a from-empty install built AFTER this registration lands, with no opt-in documentation-seeding step, and the adopter's first commit must still complete. Signing this AC off on the positive and negative in-repo commits alone accepts exactly the evidence class that let four guards ship registered nowhere: it proves the wiring, not that the wiring is safe to ship."
+  - "BUILD ORDER IS NOW ENCODED IN depends_on AND IS NOT ADVISORY (IT-PO 2026-08-25). Three items must be landed and green BEFORE this registration is committed: GE-122d-3-ii (the base install scaffolds every namespace root, and every root resolves through declared path configuration), GE-122e-3 (the collection itself passes the guard with nothing excused), and BP-900h-6 (the consumer-install commit job that can observe the regression). Measured 2026-08-25 on both documented install paths, INCLUDING --seed-docs: build.py creates neither docs/architecture/adrs/ nor docs/architecture/diagrams/. Under GE-122d-3's fail-closed contract those are unresolvable roots, so a registration that lands first blocks EVERY commit in EVERY fresh install — the guard would ship as a denial of service on new adopters. Required order: scaffold, register, re-run."
+  - "RE-RUN THE CONSUMER-INSTALL COMMIT JOB AFTER REGISTRATION, and treat its green as part of this AC's evidence. BP-900h-6's use-the-install step must be executed against a from-empty install built AFTER this registration lands, with no opt-in documentation-seeding step, and the adopter's first commit must still complete. Signing this AC off on the positive and negative in-repo commits alone accepts exactly the evidence class that let four guards ship registered nowhere: it proves the wiring, not that the wiring is safe to ship."
   - "FILE SCOPE — READ THIS BEFORE TRUSTING THE GENERATED TICKET'S files_touched. The edit surface of this AC is templates/scripts/commit_guardian/commit_guardian.json (the operative manifest — the registration is authored here), scripts/build_phases.py (deploy manifest, if the check pulls in a module not already listed), and the new test module. templates/commit-guardian/commit_guardian.json is named throughout these requirements ONLY as the wrong-file negative case and MUST NOT be edited — generate_ticket_from_ac.py extracts path tokens from prose bullets, so if that path appears in the ticket's files_touched it is a generator artefact: correct the ticket, do not edit the file. scripts/commit_guardian/commit_guardian.json and .pre-commit-config.yaml are BUILD OUTPUTS under ADR-001 — regenerate them with build.py, never hand-edit."
   - "Error handling per CLAUDE.md Rules 1-4. The dispositions on the cannot-establish and internal-defect conditions are GE-122d-3's and GE-122d-3-i's and are not re-decided here; this criterion concerns only whether the check is reached at all."
 test_spec:
@@ -137,7 +137,7 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: failure
-    description: "A project built from an EMPTY directory with no opt-in documentation-seeding step, using the build that carries this registration, still lets an adopter's first ordinary commit complete — the fail-closed unresolvable-root regression this registration would otherwise ship. Invokes the same entry point BP-900h-4's CI step uses rather than reimplementing it."
+    description: "A project built from an EMPTY directory with no opt-in documentation-seeding step, using the build that carries this registration, still lets an adopter's first ordinary commit complete — the fail-closed unresolvable-root regression this registration would otherwise ship. Invokes the same entry point BP-900h-6's CI step uses rather than reimplementing it."
 test_rationale: "Every clause of this AC is about what the COMMIT PATH does, and no assertion over the check script's return value can reach that question — the script already works, has a green suite and six adversarial reviews, and has never run. Asserting that a hook identifier appears in commit_guardian.json, or that a YAML block appears in .pre-commit-config.yaml, is the same evidence class that certified four guards as covered while none of them executed; per CLAUDE.md 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep' it covers nothing here. The contract is therefore four real `git commit` invocations in real built working copies. The two negative runs are load-bearing rather than thorough: the positive run passes identically on a registration written into the manifest the install ignores, so only deregister-and-rebuild and register-in-the-wrong-file can distinguish a real wiring from the silent no-op. The fifth test exists because this registration is the one change in the tree that can turn a fail-closed guard into a repo-wide commit block for every new adopter, and it must be shown not to."
 delivers_to:
   agent: python-coder
@@ -151,11 +151,13 @@ amended_by:
   - reason: it-po-technical-enrichment
     agent: it-po
     date: '2026-08-25'
-    changed: "readiness draft->reviewed; depends_on gained GE-122d-3-ii, GE-122e-3 and BP-900h-4 to make the scaffold/register/re-run order machine-enforced; doc_links gained scripts/build_phases.py as a modifies edge plus context edges to GE-122d-3-ii and BP-900h-4; three it_requirements added (build order, post-registration re-run, file scope); test_spec and test_rationale authored as five behavioural real-commit descriptors. criteria unchanged."
+    changed: "readiness draft->reviewed; depends_on gained GE-122d-3-ii, GE-122e-3 and BP-900h-6 to make the scaffold/register/re-run order machine-enforced; doc_links gained scripts/build_phases.py as a modifies edge plus context edges to GE-122d-3-ii and BP-900h-6; three it_requirements added (build order, post-registration re-run, file scope); test_spec and test_rationale authored as five behavioural real-commit descriptors. criteria unchanged."
 superseded_by: null
 covered_by:
   - GE-122d-6-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/08_TICKET-20260825-GE-122d-6.md
+declares_side_effect: true
 change_target:
   - code
   - pipeline
@@ -192,9 +194,10 @@ notes: |
   IT-PO (2026-08-25) — ON THE ORDERING, AND WHY IT IS THREE PREDECESSORS AND NOT TWO.
   The user-stated required order is scaffold, register, re-run the deployed-consumer test. The
   first two legs are directly expressible as depends_on (GE-122d-3-ii, GE-122e-3) and are now
-  encoded. The third is an ACT on BP-900h-4's job, not a build of a later artifact — and a job
-  that does not yet exist cannot be re-run. BP-900h-4 is therefore ALSO a predecessor here:
+  encoded. The third is an ACT on BP-900h-6's job, not a build of a later artifact — and a job
+  that does not yet exist cannot be re-run. BP-900h-6 is therefore ALSO a predecessor here:
   build the detector, scaffold the roots, then register, then re-run the detector against the
   registered build. That is a strict superset of the stated order and is the only arrangement
   in which the registration is guarded at the moment it lands rather than afterwards.
-  BP-900h-4 itself gains no dependency on this AC, so it stays buildable and green today.
+  BP-900h-6 itself gains no dependency on this AC, so it stays buildable and green today.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

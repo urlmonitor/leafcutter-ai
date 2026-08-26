@@ -1,0 +1,57 @@
+id: KM-ADM-100b
+components:
+  - knowledge_management
+title: "A connection the project does not have shows up as a gap you can see"
+component: knowledge-management
+level: L1
+status: active
+req_status: draft
+readiness: draft
+priority: medium
+criteria: |
+  Missing connections are recorded and drawn as gaps, never quietly left out.
+
+  A relationship the project needs but does not yet have is written down as a known
+  gap and shown as one, so "considered and absent" can be told apart from "never
+  thought about" — and a gap can never be mistaken for a working link.
+parent: KM-ADM-100
+depends_on:
+  - KM-ADM-100
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: specifies
+    status: exists
+  - path: docs/known-issues/knowledge-management.md
+    relationship: context
+    status: exists
+    relevance: "KI-KM-001 is the highest-value recorded gap (source file -> the ACs that govern it); it is escalated from 'drawn as absent' to 'needs a design decision'."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-ADM-002
+  - KM-ADM-003
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target:
+  - docs
+  - ui
+risk_surface: internal
+notes: |
+  These two are a matched pair and must never be split across releases. KM-ADM-002
+  records the four absent relations in the map; KM-ADM-003 makes the view draw them
+  distinctly. KM-ADM-003's own notes state the trap plainly: recording them WITHOUT
+  the distinct treatment made the rendered map WORSE than before, because four
+  relations that do not exist were drawn as if they did. Any future work that adds a
+  new absent relation inherits that ordering obligation.
+
+  Boundary against sibling KM-ADM-100a: 100a is about how far a link that EXISTS can
+  be trusted; 100b is about a link that does not exist at all. An absent relation is
+  rated unenforced by definition and gets no trust discussion — do not let a future
+  child blur the two axes.

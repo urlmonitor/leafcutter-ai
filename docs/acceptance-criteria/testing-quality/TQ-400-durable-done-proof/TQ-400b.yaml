@@ -1,0 +1,54 @@
+id: TQ-400b
+components:
+  - testing_quality
+  - ac_store
+title: "Work whose proof has lapsed loses its done badge, and the record says why"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Done becomes reversible — when the evidence goes, the badge goes with it.
+
+  A finished item that no longer has proof behind it returns to the pile of work
+  still to be done, carrying the reason it was knocked back and the date it
+  happened. Nobody has to argue about whether it is really finished: the record
+  itself says what stopped holding, and it reappears as work you can pick up.
+depends_on:
+  - TQ-400
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-17
+amended_by:
+  - reason: "child_limit_override raised 5 -> 7 to admit TQ-400b-6 and TQ-400b-7, the two documentation ACs this L1's documentation_triggers ([state-diagram, reference-doc]) require. This L1 was already AT the default cap of 5 with its behavioural children alone, so the triggers could not be satisfied without an override; two it-po passes withheld promotion for exactly that reason. A split was rejected: the state diagram documents the demotion transition introduced by TQ-400b-1/b-2/b-4 and the reference entry documents the two fields TQ-400b-2 introduces, so both belong beside the behaviour they describe. Note the reference-doc obligation itself is already owned by TQ-400b-2's it_requirements; TQ-400b-7 states the standard that entry must meet and deliberately does not create a second documentation task. REMOVE THIS OVERRIDE when a PO-owned split rebalances the TQ-400 tree — this parent is the most overcrowded of the five and is the first candidate for that split."
+    by: business-analyst
+    at: 2026-08-17
+superseded_by: null
+covered_by:
+  - TQ-400b-1
+  - TQ-400b-2
+  - TQ-400b-3
+  - TQ-400b-4
+  - TQ-400b-5
+  - TQ-400b-6
+  - TQ-400b-7
+implemented_by: []
+child_limit_override: 7
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+documentation_triggers:
+  - state-diagram
+  - reference-doc

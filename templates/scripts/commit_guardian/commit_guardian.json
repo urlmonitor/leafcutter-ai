@@ -968,6 +968,19 @@
                 "_comment": "ACS-500f-1: (1) Validates every staged AC YAML file against config/ac_store_schema.json (JSON Schema draft-07). (2) Blocks commits where a consuming AC's pattern_bindings is missing at least one slot declared by the referenced pattern AC — error names the missing binding key and the pattern AC id. (3) Blocks commits where implements_pattern was present in HEAD but is absent in the staged modification — error identifies the file and states that implements_pattern was dropped. Fail-open on unexpected errors. Scoped to docs/acceptance-criteria/ staged files."
             },
             {
+                "id": "check-package-surface-declaration",
+                "tier": "judgment",
+                "name": "Check Package Surface Declaration (ACS-100i-8)",
+                "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_package_surface_declaration.py",
+                "language": "system",
+                "stages": [
+                    "commit-msg"
+                ],
+                "pass_filenames": true,
+                "always_run": true,
+                "_comment": "ACS-100i-8 / ACS-100i-8-i: refuses a change that adds a NEW entry to a package registry (config/agent_registry.json, config/skill_registry.json, config/paths.json, templates/scripts/commit_guardian/commit_guardian.json) unless at least one acceptance criterion the change cites carries `package_surface: true`. This is what keeps ACS-100i-6's trigger narrowing from being a switch-off: the declaration is under the author's control and can simply be omitted, but the registration cannot be. Editing or removing an existing entry needs no declaration — the obligation attaches to bringing a surface into existence, not to maintaining one. A change touching no watched registry exits 0 reporting NOTHING TO EVALUATE, never a pass. commit-msg stage, because the AC citations are parsed from the commit message; requires `pre-commit install --hook-type commit-msg` (or default_install_hook_types) to fire."
+            },
+            {
                 "id": "check-surface-components-e2",
                 "tier": "judgment",
                 "name": "Check Surface Components — Tickets and Docs (KM-KGS-100e-2)",
@@ -1171,6 +1184,10 @@
     },
     "done_proof": {
         "_comment": "check_done_proof.py — Mechanical proof-of-done gate (BO-2500b). Pre-commit mode: static covers-tag presence check for staged done ACs (fast, no pytest). CI mode: full verify_done_eligible run over every done AC in the store (authoritative). Hook is bypassable via SKIP=check-done-proof or --no-verify; CI backstop (BO-2500b-1-i) then catches bypassed proofs.",
+        "enabled": true
+    },
+    "package_surface_declaration": {
+        "_comment": "check_package_surface_declaration.py — ACS-100i-8. Reconciles the package-registry entries a change ADDS against the `package_surface` declarations of the acceptance criteria it cites. The watched-registry enumeration itself lives in _package_surface_registry.WATCHED_REGISTRIES, because each registry also needs its entry-container paths; CONCESSION 3 on ACS-100i-8 records that the enumeration can go stale, so a new kind of registry must be added there in the same change that introduces it. Setting enabled:false disables the gate — do that only with the same deliberation the declaration itself demands.",
         "enabled": true
     },
     "ticket_ac_status_parity": {

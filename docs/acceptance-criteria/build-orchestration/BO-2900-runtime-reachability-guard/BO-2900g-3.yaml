@@ -8,45 +8,62 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
-readiness: reviewed
+work_status: done
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given two independent definitions of how a required proof is described, which
-      disagree today:
-      one permits a set of kinds that includes an older name for the
-        reached-the-real-way proof, and requires the way in to be named only for
-        that kind,
-      and the other permits a different set of kinds altogether and carries the
-        reached-the-real-way name on a separate axis of its own,
-  When the two are reconciled into the project's single definition,
-  Then exactly one statement of the permitted kinds remains, and every producer
-    and every reader of a required-proof description resolves to it,
+  Given exactly two definitions are in scope — the two that disagree today about
+      WHICH KIND OF PROOF a required proof is:
+      the ticket-facing one, whose permitted kinds are a single muddled list that
+        mixes how heavy a test is with one kind-of-proof value, an older name for
+        the reached-the-real-way proof, and which requires the way in to be named
+        only for that one value,
+      and the store-facing one, which already keeps the two apart and carries the
+        kind-of-proof names, the reached-the-real-way name among them, on an axis
+        of its own,
+    And a THIRD, DIFFERENT thing that is NOT one of those two and is NOT in scope:
+      the store-facing separate axis for how heavy a test is and where it runs,
+      whose values name test levels and never name kinds of proof — the two
+      definitions in scope do not disagree about it, and nothing here asks for it
+      to change,
+  When the two definitions in scope are reconciled into the project's single
+    definition of the kind of proof being asked for,
+  Then exactly one statement of the permitted kinds of proof remains, and every
+    producer and every reader of a required-proof description resolves to it,
     And the reached-the-real-way kind is called by the name the test-angle
       taxonomy uses for it,
     And a described proof of that kind is required to name the way in, keeping the
-      field the older definition already used for that purpose,
+      field the ticket-facing definition already used for that purpose,
     And the older name for that kind is absent from the permitted kinds, with no
       translation layer that accepts it as a synonym,
-    And the kinds one definition permits and the other does not are each either
-      carried into the single definition or dropped from it — none is left
-      permitted on one side only.
+    And the how-heavy-and-where axis comes through untouched — its own values, its
+      own meaning, and in particular not overwritten with a second copy of the
+      permitted kinds of proof, so that saying how heavy a test is and where it
+      runs remains sayable and goes on meaning what it meant before,
+    And the kinds that one of the TWO DEFINITIONS IN SCOPE permits and the other
+      does not are each either carried into the single definition or dropped from
+      it — none is left permitted on one side only — where "dropped" reaches only
+      the kinds of those two definitions and never a value of the third axis,
+    And no value is dropped while records already held in the store still carry
+      it: those records are found and moved onto a surviving value in the same
+      change that narrows the permitted kinds, so that the narrowing breaks
+      nothing and defers no failure onto whoever next touches such a record.
 depends_on:
   - BO-2900g
 doc_links:
   - path: config/test_requirements.schema.json
     relationship: describes
     status: exists
-    relevance: "One of the two definitions: kinds unit / integration / manual / live_dispatch, with surface_invoked required when the kind is live_dispatch. Outside docs/, the string live_dispatch occurs in exactly one file in the repository — this one; nothing reads it."
+    relevance: "One of the two definitions IN SCOPE (the ticket-facing one): kinds unit / integration / manual / live_dispatch, with surface_invoked required when the kind is live_dispatch. Outside docs/, the string live_dispatch occurs in exactly one file in the repository — this one; nothing reads it."
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
-    relevance: "The other definition: test_spec[].type is unit / integration / e2e / behavioral, and the seven-value taxonomy sits on a separate test_spec[].angle axis. The two disagree on the permitted kinds and on which facts are mandatory."
+    relevance: "Holds the OTHER definition in scope AND the third, out-of-scope axis — do not confuse them. IN SCOPE: test_spec[].angle, the seven-value taxonomy, which is where this file states the kind of proof and where the reached-the-real-way name already lives. OUT OF SCOPE: test_spec[].type, unit / integration / e2e / behavioral, which states the test LEVEL — how heavy the test is and where it runs. The two definitions in scope disagree about the kind of proof; neither disagrees about the level axis, and it must survive this AC unchanged."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
-    relevance: "The taxonomy that supplies the surviving name, and the source of the recommendation this AC makes binding: retire the older name in favour of 'reachability', keep the entry-point field."
+    relevance: "The taxonomy that supplies the surviving name, and the source of the recommendation this AC makes binding: retire the older name in favour of 'reachability', keep the entry-point field. Note it is an ANGLE taxonomy throughout — it never proposes replacing test levels, which is why the level axis is out of this AC's scope."
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
@@ -83,17 +100,19 @@ it_requirements:
         minLength: 1
         description: "The entry-point field, kept under the name the retiring definition already used. Required when the described proof is of the reached-the-real-way kind; may hold the single unresolved sentinel."
   constraints:
+    - "THE TWO DEFINITIONS IN SCOPE, NAMED. They are (1) config/test_requirements.schema.json's test_entry.type enum, and (2) config/ac_store_schema.json's test_spec[].angle enum. Those two, and nothing else, are what this AC reconciles."
+    - "THE THIRD AXIS IS OUT OF SCOPE AND MUST NOT BE TOUCHED: config/ac_store_schema.json's test_spec[].type enum (unit / integration / e2e / behavioral) is the test-LEVEL axis — how heavy the test is and where it runs — and is orthogonal to the kind-of-proof question this AC settles. It is not one of the two definitions, its values are not disputed kinds, and it must come out of this change with its enum, its meaning and its description intact. Redefining it to the seven angle values makes it a duplicate of test_spec[].angle, deletes the project's only way to say 'this is an integration test', and instantly invalidates every record in the store: at 2026-08-18 all 1,923 test_spec entries that carry a type carry a LEVEL value (behavioral 891, unit 653, integration 352, e2e 15, component 12) and ZERO carry an angle value. Note also that a second key mirroring the same enum is itself a second statement of the permitted kinds and so fails this AC's first Then clause."
     - "ENFORCE ON THE GATE THAT ACTUALLY RUNS. Of the two definitions only one is load-bearing today: config/ac_store_schema.json is read by scripts/commit_guardian/check_ac_schema.py through jsonschema, and since the 2026 rework that verdict is authoritative (validate_manually() runs only when the schema is absent or jsonschema/PyYAML are unimportable). config/test_requirements.schema.json — the file named in reference_file_path — has NO reader at all: outside docs/, the string live_dispatch occurs only in that file. A reconciliation applied only to the inert definition is a no-op. Change BOTH, and state in the sign-off which one gates."
-    - "THERE ARE THREE COPIES OF THE ENUM, NOT TWO. The _TEST_ANGLES frozenset in scripts/ac_store/generate_ticket_from_ac.py is a hand-maintained duplicate of the schema's angle enum. It must either read from the single source, or be covered by a cross-source set-equality contract test that reads both real files from disk. Leaving a hard-coded duplicate is exactly EPIC-ComputedQualityGates FP-1 layer 3 — a hook's allow-list and the config it mirrored were disjoint vocabularies, each tested against its own copy. n_location_rule: 'all' covers every one of these locations, not only the reference file."
+    - "THERE ARE THREE COPIES OF THE ENUM, NOT TWO. The _TEST_ANGLES frozenset in scripts/ac_store/generate_ticket_from_ac.py is a hand-maintained duplicate of the schema's angle enum. It must either read from the single source, or be covered by a cross-source set-equality contract test that reads both real files from disk. Leaving a hard-coded duplicate is exactly EPIC-ComputedQualityGates FP-1 layer 3 — a hook's allow-list and the config it mirrored were disjoint vocabularies, each tested against its own copy. n_location_rule: 'all' covers every one of these locations, not only the reference file. It does NOT extend the change to the out-of-scope level axis."
     - "No translation layer and no synonym: the retired name must be rejected, not rewritten. A mapping that accepts the old name and converts it preserves the two vocabularies with a converter in between that has to be kept correct."
     - "The entry-point field must survive under exactly one name. Note the store-side test_spec item schema is additionalProperties: false and has no entry-point property today, so carrying surface_invoked across is an explicit property addition, not an implicit one; without it the entry point can only be stated inside description prose, which no consumer can read reliably."
-    - "Each disputed kind (manual, e2e, behavioral, live_dispatch) must be explicitly carried into the single definition or explicitly dropped, and the decision recorded. Taking the union produces a definition that permits everything and constrains nothing."
-    - "Any records already carrying a retired value must be enumerated before the enum narrows. Narrowing an enum that live records still satisfy turns the next unrelated commit into a store-wide failure."
+    - "Each disputed kind must be explicitly carried into the single definition or explicitly dropped, and the decision recorded. The disputed kinds are the ticket-facing values with no counterpart on the angle axis — 'manual' and 'live_dispatch' — plus 'unit' and 'integration' where the ticket side uses them as kinds of proof rather than as levels. 'e2e' and 'behavioral' are NOT disputed kinds: they are values of the out-of-scope level axis and are not up for a carry-or-drop decision here. Taking the union produces a definition that permits everything and constrains nothing."
+    - "MIGRATE, DO NOT DEFER. Before an enum narrows, enumerate every record in the store that already carries a value being removed, and move those records onto a surviving value IN THE SAME CHANGE. 'The hook validates staged files only, so existing records are not invalidated in bulk' is not a mitigation — it converts an immediate, visible breakage into a landmine that fires on whoever next edits an untouched record for an unrelated reason. If the count of affected records makes migration impractical, that is evidence the value must NOT be dropped; say so and keep it."
     - "OUT OF SCOPE — DO NOT BUILD IT HERE. config/package_boundary.json:21 advertises check_test_requirements_refs.py as a shipped portable check and the file does not exist. Per the parent L1 that is a one-line remediation plus, if needed, an L2 widening under BP-900e. Building it under this AC would freeze a vocabulary into an enforcement point in the same change that is meant to settle the vocabulary."
     - "docs/reference/ac-schema.md must be updated in the same change. A machine schema that changes while the authoring-facing page still states the old vocabulary has produced a third definition rather than removing one."
 delivers_to:
   - agent: python-coder
-    contract: "One authoritative statement of the permitted kinds for a required-proof description, resolvable from a single file path, together with the single name of the entry-point field and the rule that a reachability-kind description must carry it. Consumed by BO-2900g-4 (the producer must conform) and BP-1100g-1 (the taught set must equal it)."
+    contract: "One authoritative statement of the permitted kinds for a required-proof description, resolvable from a single file path, together with the single name of the entry-point field and the rule that a reachability-kind description must carry it. The test-level axis is NOT part of this contract and is unchanged by it. Consumed by BO-2900g-4 (the producer must conform) and BP-1100g-1 (the taught set must equal it)."
 expects_from: null
 test_spec:
   - name: test_bo_2900g_3_single_permitted_kind_set_resolves_from_the_real_config_files
@@ -114,6 +133,12 @@ test_spec:
     type: unit
     angle: seam
     description: "Cross-source set-equality between the real producer's _TEST_ANGLES and the real schema enum, both read from where they live. The FP-1 layer-3 control: a comparison against a convenience copy reproduces the defect it is checking for."
+  - name: test_bo_2900g_3_test_level_axis_is_unchanged_by_the_reconciliation
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "NEGATIVE CONTROL for the out-of-scope third axis: read config/ac_store_schema.json from disk and assert test_spec[].type still permits the test-LEVEL values and is NOT equal to the permitted-kind set — and that every test_spec entry in the real store still validates against it, so the reconciliation invalidated no existing record."
   - name: test_bo_2900g_3_deployed_ac_schema_gate_rejects_a_retired_kind
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -121,22 +146,88 @@ test_spec:
     angle: reachability
     description: "PRODUCTION ENTRY POINT with the must_block modifier: run `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_ac_schema.py <AC yaml>` as a subprocess on a real AC file whose test_spec declares a retired kind, and assert a non-zero exit naming the offending value — proving the reconciled vocabulary is enforced on the gate that runs, not only in the inert schema."
 test_rationale: |
-  Two things can go wrong here that a schema-shaped unit test cannot see. First, the
+  Three things can go wrong here that a schema-shaped unit test cannot see. First, the
   change can be applied to the definition nothing reads, leaving the live gate on the
   old vocabulary — hence the deployed-hook test with a known-bad input (must_block).
   Second, the third copy of the enum inside the generator can drift, which is the exact
   shape of the ComputedQualityGates layer-3 incident — hence the cross-source set-equality
-  test that reads both real sources rather than a fixture.
+  test that reads both real sources rather than a fixture. Third, and found the hard way
+  on 2026-08-18, the reconciliation can over-reach onto the out-of-scope test-LEVEL axis
+  and invalidate the whole corpus while every schema-shaped test stays green — hence the
+  negative control that reads the real store back through the changed schema.
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
-  - reason: technical-enrichment
-    by: it-po
-    at: 2026-08-17
-    note: "Added assigned_agent, complexity, it_requirements (package-surface object form; load-bearing gate and the third enum copy named under `constraints`), test_spec (real_artifact/criterion/seam/reachability) and delivers_to. declares_side_effect deliberately NOT set — see notes. criteria untouched."
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Added assigned_agent, complexity, it_requirements (package-surface object
+    form; load-bearing gate and the third enum copy named under `constraints`), test_spec
+    (real_artifact/criterion/seam/reachability) and delivers_to. declares_side_effect
+    deliberately NOT set — see notes. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-17'
+- reason: clarification
+  by: business-analyst
+  at: 2026-08-18
+  note: >-
+    The criteria named neither definition in scope, referring to them only as
+    "one" and "the other", and the closing clause read as licence to merge every
+    permitted-value list in sight. An implementer bound "the other definition" to
+    config/ac_store_schema.json's test_spec[].type — the test-LEVEL axis, a THIRD
+    and orthogonal thing — and replaced its enum with the seven angle values,
+    making type a duplicate of angle, making "this is an integration test"
+    unsayable, and invalidating all 1,923 test_spec entries in the store (behavioral
+    891, unit 653, integration 352, e2e 15, component 12; zero carry an angle
+    value), rationalised as safe because the hook validates staged files only.
+    Now pinned in three places. The Given names the two definitions in scope by
+    role (ticket-facing kind list; store-facing kind-of-proof axis) and declares
+    the how-heavy-and-where axis a third thing explicitly out of scope; a new Then
+    clause requires that axis to come through untouched and forbids overwriting it
+    with a copy of the permitted kinds; the carry-or-drop clause is bounded to the
+    two definitions in scope, and dropping a value the corpus still carries now
+    requires migrating those records in the same change rather than deferring the
+    failure. Matching pins added under it_requirements.constraints (two new
+    constraints naming the in-scope pair and the out-of-scope axis; the
+    disputed-kind constraint corrected — it had listed e2e and behavioral, which
+    are level values, as disputed kinds, and that listing is a direct source of
+    the mis-binding), the ac_store_schema.json doc_link relevance rewritten to
+    separate the in-scope axis from the out-of-scope one, and a boundary-angle
+    negative-control test added to test_spec. Substantive note, not merely
+    editorial - under the previous wording the store-side contribution was the
+    LEVEL enum, which made the reconciliation self-defeating (merging it with the
+    ticket list would have reproduced the level/kind muddle this AC exists to
+    remove); the store-side contribution is now stated to be the kind-of-proof
+    axis, which is the reading the parent L1's GAP C recommendation and
+    docs/testing/test-angles.md already imply.
+- reason: store-reconciliation
+  by: testing-expert
+  at: 2026-08-25
+  note: >-
+    RECORD CORRECTED, NO CRITERIA CHANGE. The work shipped on 2026-08-19 in
+    ac564814 (PR #505) and the record went on saying work_status: todo with
+    empty covered_by and implemented_by for six days. The store was lying in
+    the direction that hides completed work, which is the mirror image of
+    phantom-done and just as corrosive: a prioritiser reading the store would
+    re-dispatch settled work, and BO-2900g-4, which depends on this AC, would
+    read its dependency as unmet. Flipped to done and linked to the commit and
+    the covering test. VERIFIED BEFORE FLIPPING, not inferred from the commit
+    subject - all five test_spec entries exist as real test functions, all six
+    tests in the file pass under AC_ENFORCE_STRICT=1 (which disables the
+    xfail-masking that would otherwise let a failing not-done AC report green),
+    and the two claims the criteria actually turn on were checked against the
+    files on disk rather than through the tests: config/test_requirements.schema.json
+    states the LEVEL enum and config/ac_store_schema.json's test_spec[].angle
+    states the seven kinds, so the two are not shadows of each other, and the
+    out-of-scope level axis survived intact. Cause of the drift: PR #505 landed
+    as a direct-commit drive rather than a per-ticket one, and the AC-store
+    reconciliation step CLAUDE.md prescribes for that case was skipped.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/ac_store/test_bo_2900g_3.py
+implemented_by:
+  - ac564814
 change_target: schema
 risk_surface: contract_boundary
 notes: |
@@ -147,12 +238,16 @@ notes: |
   THE OBSERVED DISAGREEMENT, stated concretely so a reader does not have to
   re-derive it. The ticket-facing definition permits unit / integration / manual
   / live_dispatch and makes the entry-point fact conditional on live_dispatch.
-  The store-facing definition permits unit / integration / e2e / behavioral and
-  puts the seven-value angle taxonomy on a second, independent axis with no
-  entry-point field at all. They agree on two kinds out of four and disagree on
-  where the reached-the-real-way concept lives. This is EPIC-ComputedQualityGates
-  FP-1 layer 3 in a different registry: two vocabularies, each tested against its
-  own copy, with no cross-source contract between them.
+  The store-facing definition states the kind of proof on the seven-value angle
+  axis, with no entry-point field at all, and states the test LEVEL — how heavy
+  the test is and where it runs — separately on its own axis (unit / integration
+  / e2e / behavioral). The disagreement is about the kind of proof: the ticket
+  side muddles level and kind into one list and uses an older name for the
+  reached-the-real-way kind. The LEVEL axis is a third thing, is not in
+  disagreement, and is out of scope — see the 2026-08-18 amendment. This is
+  EPIC-ComputedQualityGates FP-1 layer 3 in a different registry: two
+  vocabularies, each tested against its own copy, with no cross-source contract
+  between them.
 
   WHY 'NO TRANSLATION LAYER' IS IN THE CRITERIA. A mapping that accepts the old
   name and rewrites it is the cheapest way to make both sides pass, and it
@@ -161,10 +256,12 @@ notes: |
   recommendation, carried from docs/testing/test-angles.md, is one vocabulary,
   not a translation layer.
 
-  WHY THE LAST CLAUSE EXISTS. Reconciling two enums by taking their union
-  produces a single definition that permits everything and constrains nothing.
-  Requiring each disputed kind to be explicitly carried or dropped forces the
-  decision to be made rather than avoided.
+  WHY THE CARRY-OR-DROP CLAUSE EXISTS. Reconciling two enums by taking their
+  union produces a single definition that permits everything and constrains
+  nothing. Requiring each disputed kind to be explicitly carried or dropped
+  forces the decision to be made rather than avoided. It is bounded to the two
+  definitions in scope precisely because an unbounded version of it was read as
+  licence to delete a third, orthogonal axis.
 
   BOUNDARY. This AC settles WHAT THE WORDS ARE. It describes no gate, no block
   and no done-state consequence, and it says nothing about whether any proof was

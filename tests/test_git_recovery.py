@@ -35,6 +35,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _MODULE_PATH = _REPO_ROOT / "templates" / "scripts" / "git_recovery.py"
 
 spec = importlib.util.spec_from_file_location("git_recovery", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["git_recovery"] = _mod
 spec.loader.exec_module(_mod)
@@ -360,6 +361,7 @@ class TestDryRunFirstBehavior(unittest.TestCase):
         self, mock_stdin, mock_input, mock_subprocess_run, mock_print_plan
     ):
         """In default mode, print_recovery_plan must be called at least once."""
+        # covers: BO-1600d-2
         mock_stdin.isatty.return_value = True
         mock_subprocess_run.return_value = self._make_probe_result()
 
@@ -1089,6 +1091,7 @@ class TestGitVersionGuard(unittest.TestCase):
 
     def test_git_version_parses_standard_output(self):
         """_git_version must parse 'git version 2.41.0' → (2, 41, 0)."""
+        # covers: BO-1600d-3-i
         _git_version = getattr(_mod, "_git_version", None)
         self.assertIsNotNone(_git_version, "_git_version not found in module")
 

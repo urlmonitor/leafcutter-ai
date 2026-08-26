@@ -1,0 +1,64 @@
+id: ACS-100i-6-ii
+components:
+  - ac_store
+title: "How a record spells its component no longer changes whether the spec obligation applies"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two records that are byte-identical except that one carries
+    `component: build_pipeline` and the other carries `component: build-pipeline`,
+    both assigned to `python-coder`, and neither carrying `package_surface: true`,
+  When the AC-record validator evaluates both,
+  Then both are accepted, and the two verdicts are identical.
+
+  And given the same pair, both now carrying `package_surface: true` and both
+    supplying implementation requirements as a list of strings,
+  When both are validated,
+  Then both are refused, and the two refusal messages are identical apart from
+    the file path.
+
+  And given a record carrying `package_surface: true` whose `component` is a
+    namespace unrelated to the build — for example `ac-store` — and whose
+    implementation requirements are a list of strings,
+  When it is validated,
+  Then it is refused: the obligation follows the declaration into any namespace,
+    because a package surface can be registered from any component.
+depends_on: [ACS-100i-6]
+doc_links:
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: describes
+    status: exists
+    relevance: "Declares the AC-store namespace keys. `build-pipeline` (kebab) is the declared key; `build_pipeline` (underscore) is a docs/components.json graph id on a different axis. The present trigger conflates the two."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-6
+  contract: "The declaration-keyed trigger, which must not read `component` at all."
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  Measured at 9b16d013: 440 records carry `component: build-pipeline`, 65 carry
+  `component: build_pipeline`. Only the 65 are reachable by the current trigger.
+  239 records are `python-coder` in the kebab namespace and 215 of those carry no
+  structured spec — the gate has never fired on a single one. The third scenario
+  is the positive half of the same point: once the trigger is a declaration,
+  `component` stops being consulted in either direction, so a package surface
+  registered from a non-build namespace is covered for the first time.

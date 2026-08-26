@@ -1,0 +1,83 @@
+id: UXP-614
+components:
+  - ux_prototyping
+readiness: draft
+priority: medium
+title: "The design's criterion mapping is reviewable as data, not only as markup"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a rendered mockup carrying element pins for UXP-100d-2 and UXP-100d-3
+  When its *.mockup.json record is written
+  Then the record carries a per-criterion element mapping naming each criterion
+    the screen shows and where in the rendering it is shown
+  And a reviewer can read which criteria the design claims without opening the
+    rendered HTML file
+
+  Given a *.mockup.json record whose mapping and whose rendered markup name the
+    same set of criteria
+  When the record is checked against its rendering
+  Then the two agree and no finding is produced
+
+  Given a criterion listed in the record's mapping with no matching pin in the
+    rendered markup, or a pin in the markup absent from the record's mapping
+  When the record is checked against its rendering
+  Then the disagreement is reported, naming the screen, the criterion, and
+    which of the two sides is missing it
+  And it is not resolved by silently preferring the record or the markup
+
+  Given a screen registered with `renders: null`, or a screen whose design
+    shows no criterion yet
+  When its record is written
+  Then the mapping is empty
+  And an empty mapping is recorded as "this design pins nothing", never as a
+    missing or invalid record
+depends_on:
+  - UXP-611
+doc_links:
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-611-design-carries-criterion-pins/UXP-611.yaml
+    relationship: parent
+    status: exists
+  - path: docs/product-truth/schemas/mockup.schema.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mockups/fern-and-fig/cart.mockup.json
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - schema
+  - prompt
+risk_surface: contract_boundary
+declares_side_effect: true
+notes: |
+  WHY BOTH SURFACES AND NOT JUST THE MARKUP. The markup is what a comparison
+  reads; the record is what a person reviews and approves. A design whose
+  criterion claims live only inside a rendered HTML file cannot be reviewed as
+  data, cannot be queried, and cannot be diffed in a pull request without
+  reading a wall of style rules. The record is also the surface the existing
+  schema already governs — `screen`, `renders`, `entities` are all there and a
+  per-criterion mapping is the field that is conspicuously absent.
+
+  TWO SURFACES MEANS THEY CAN DISAGREE, AND THE DISAGREEMENT IS THE POINT. The
+  third scenario refuses the tempting shortcut of designating one side
+  authoritative and regenerating the other from it. Silent regeneration turns a
+  detectable drift into an undetectable one: an author edits the markup, the
+  record is rewritten to agree, and the fact that the approved record changed
+  is never surfaced to the person who approved it.
+
+  THE FOURTH SCENARIO IS TODAY'S REALITY FOR EVERY SCREEN IN THE STORE. Ten
+  registered screens, five of them not yet drawn (`renders: null`). An empty
+  mapping must be an ordinary state or this AC makes the whole existing store
+  invalid on its first run — which is precisely what UXP-616's diff-scoping
+  exists to prevent.

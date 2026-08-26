@@ -4,20 +4,12 @@ GENERIC_SECRET:scripts/commit_guardian/check_diagram_naming.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
-# False positive: a sentinel string constant (not a credential)
-GENERIC_SECRET:scripts/registry_validator.py:22
-# False positive: second registry_validator sentinel constant for skills_invoked xref check (line 27)
-GENERIC_SECRET:scripts/registry_validator.py:27
-ENTROPY_HIGH:templates/hooks/auto_commit_inbox_ticket.py:8
-ENTROPY_HIGH:docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400a-3.yaml:9
 ENTROPY_HIGH:docs/agents/README.md:429
 ENTROPY_HIGH:docs/agents/README.md:430
 ENTROPY_HIGH:docs/agents/README.md:431
 ENTROPY_HIGH:docs/agents/README.md:432
 ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63
 ENTROPY_HIGH:templates/skills/ticket-authoring/SKILL.md:42
-ENTROPY_HIGH:scripts/commit_guardian/check_build_drift.py:256
-ENTROPY_HIGH:templates/scripts/commit_guardian/check_build_drift.py:256
 ENTROPY_HIGH:templates/agents/llm-expert.md:39
 ENTROPY_HIGH:templates/agents/llm-expert.md:104
 # False positives: guardrail config path constant passed as kwarg in unit tests (not a secret)
@@ -31,3 +23,78 @@ ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
+
+# ---------------------------------------------------------------------------
+# GE-113c-3 backfill (2026-08-18)
+#
+# Before GE-113c-3, _is_suppressed compared the finding path's own segments
+# against a slice of ITSELF rather than against the allowlist path. Any entry
+# with N segments therefore suppressed its rule for EVERY file at depth <= N,
+# repo-wide. The entries below were silently covered by that bug and are now
+# re-added path-qualified, so each suppresses exactly the file it names.
+#
+# All 1064 newly-surfaced findings were triaged for credential material:
+# swept for AKIA*, PEM private-key headers, ghp_/github_pat_, sk-*, xox[baprs]-,
+# AIza*, JWTs, bearer tokens, and DB connection URIs, plus secret-assignment
+# shape. Zero hits. Every entry below suppresses a verified false positive.
+#
+# Each entry names exactly ONE rule, so AWS_KEY / PRIVATE_KEY / GENERIC_SECRET /
+# ENV_FILE still fire on these files. No entry uses "*" in the rule or path field.
+# ---------------------------------------------------------------------------
+
+# Generated artifact: npm lockfile "integrity": "sha512-..." SRI digests (631 findings).
+# Properly wants a path-exclusion mechanism, which scan_secrets.py does not have;
+# a path-qualified single-file entry is the narrowest correct form available.
+ENTROPY_HIGH:leafcutter-web/package-lock.json:*
+# Generated artifact: build dataflow graph — "path": "docs/acceptance-criteria/..." slugs (26)
+ENTROPY_HIGH:docs/build-dataflow.json:*
+
+# Sentinel string constants, not credentials. Replaces the stale line-22/27 entries
+# whose target (_SPECIAL_TOKEN) has since drifted to line 29 — glob per the
+# "use globs not line numbers for drifting targets" rule in CLAUDE.md.
+GENERIC_SECRET:scripts/registry_validator.py:*
+ENTROPY_HIGH:scripts/registry_validator.py:*
+
+# Doc-path / identifier strings in source and prompt text
+ENTROPY_HIGH:scripts/ac_store/generate_ticket_from_ac.py:*
+ENTROPY_HIGH:scripts/proposals/agent_self_description_llm-expert.yaml:*
+ENTROPY_HIGH:templates/doc-compliance/generator.py:*
+ENTROPY_HIGH:templates/doc-compliance/scanner.py:*
+
+# Agent templates: PROJECT_CONTEXT.md paths and TODO/PLACEHOLDER marker lists
+ENTROPY_HIGH:templates/agents/documentation-verifier.md:*
+ENTROPY_HIGH:templates/agents/sql-function-creator.md:*
+ENTROPY_HIGH:templates/agents/sql-index-creator.md:*
+ENTROPY_HIGH:templates/agents/sql-procedure-creator.md:*
+ENTROPY_HIGH:templates/agents/sql-view-creator.md:*
+
+# Repo prose: doc-path strings in markdown
+ENTROPY_HIGH:BOOTSTRAP.md:*
+ENTROPY_HIGH:CLAUDE.md:*
+ENTROPY_HIGH:changelogs/2026-05-27-1120-ticket-20260526-pullrequestearlyremotecheck-pull-request-agent-detects-missing-git-remote-early.md:*
+ENTROPY_HIGH:reports/build_pipeline-implementation-audit-2026-07-14.md:*
+
+# Test files: long kwarg names, CamelCase class names, fake fixture paths.
+# Glob (:*) per CLAUDE.md "Use Glob Patterns for Test Files" — per-line entries
+# rot silently as tests grow (registry_validator.py:22/27 above is live proof).
+ENTROPY_HIGH:unit_tests/ac_driven_dev/test_acd_1200a_14.py:*
+ENTROPY_HIGH:unit_tests/ac_store/test_bp_1100f_5.py:*
+ENTROPY_HIGH:unit_tests/build_guards/test_bp100_drift_docs_compile.py:*
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_119_contract_shrinking_rename_aware.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200b_4.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200b_5.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200b_5_i.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200d_1.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200d_1_i.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200d_2.py:*
+ENTROPY_HIGH:unit_tests/test_bo_2200d_2_i.py:*
+ENTROPY_HIGH:unit_tests/test_bp_1100f_5.py:*
+ENTROPY_HIGH:unit_tests/test_setup_ticket_worktree.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_bo2400c_context_bundle.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_finalize_feature_preflight.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_workflow.py:*
+# ACS-100i-7 baseline fixture: a recorded list of AC file paths and their
+# validator messages. The long hyphenated store paths trip the entropy
+# heuristic. Glob rather than per-line, since the file is regenerated when the
+# store legitimately changes and line numbers would shift silently.
+ENTROPY_HIGH:tests/fixtures/acs_100i_7/pre_change_refusal_baseline.json:*

@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given build-epic.js returns a result object with `message`, `worktree_path`, and `manual_tests` fields,
   When build-feature.md processes the "On ok" block for epic completion,
@@ -26,6 +26,18 @@ estimated_complexity: S
 it_requirements:
   - "The preferred JS path must render result.message verbatim — no re-formatting"
   - "If result.message is empty or missing, fall through to the inline fallback template"
+test_rationale: |
+  No covers-tagged test can be authored: the surface this AC names no longer
+  exists. templates/workflows/build-feature.md was deleted in its entirety
+  (504 lines) by commit 63a846ac0, "feat(build): guardrail for template
+  deploy-path collisions + de-conflict /build-feature (#228)", after this AC was
+  implemented by TICKET-20260604-StandardizeBuildCompletionOutput. There is no
+  file to parse, no "On ok" block to resolve, and nothing to execute. Retargeting
+  the test at the successor, templates/workflows-js/build-feature.js, would
+  assert a different contract from the one these criteria state — that script's
+  own epic-completion return (around line 768) carries worktree_path and message
+  but no manual_tests field and no four-section message, so a test written
+  against it would be testing behaviour the AC never specified.
 delivers_to: null
 expects_from:
   agent: python-coder
@@ -39,3 +51,16 @@ implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
 change_target: code
 risk_surface: internal
+notes: |
+  STALE SURFACE — raised by the IT PO for BA/PO reconciliation, not resolved here.
+  This AC's target file was removed by 63a846ac0 during the markdown-to-JS
+  workflow migration, so the AC is unfalsifiable as written while still carrying
+  work_status: done. Two follow-ups belong to the requirement owners, not to the
+  test contract: (1) decide whether this AC should be superseded/retired now that
+  the prose workflow layer is gone, and (2) decide whether the four-section
+  completion contract should be re-asserted against
+  templates/workflows-js/build-feature.js, whose epic-completion return currently
+  emits neither manual_tests nor a four-section message — i.e. the user-visible
+  behaviour this AC bought appears to have regressed on the epic path in the
+  migration. If (2) is wanted it needs a NEW AC against the JS surface, which can
+  then be covered behaviorally via the E2 workflow harness.

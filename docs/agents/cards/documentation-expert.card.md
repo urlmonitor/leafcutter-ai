@@ -161,6 +161,7 @@ flowchart TD
 - ACD-1600d-3: Reference doc for the canonical-source pointer rule
 - ACD-1600e-3: Reference doc for the behaviour-only criteria rule
 - ACD-1600f-3: Reference doc for the AC-vs-supporting-artifact consistency gate
+- ACD-1600g-5: Reference doc describes the requirement boundary and its bundle composition rule
 - ACD-1700a-4: Reference doc for role-scoped context delivery
 - ACD-1700b-3: Reference doc for the surface-to-specialist assignment rule
 - ACD-1700c-5: How-to guide for previewing an agent's brief before a build
@@ -168,12 +169,18 @@ flowchart TD
 - ACD-1800b-3: Reference doc describes per-deliverable sign-off and requirement-level done
 - ACD-1800c-3: Reference doc describes the ticket-as-grouping model
 - ACD-1800d-2: Reference doc describes per-deliverable traceability back-references
+- ACD-1800f-5: Reference doc describes how a requirement declares an observable promise and states its proof
 - ACD-1900a-4: Reference doc describes schema_version and the new optional fields
 - ACD-1900c-4: How-to guide covers operating the flag and its kill-switches
 - ACD-1900d-5: How-to guide covers the advisory-to-required gate rollout
 - ACD-1900e-5: How-to guide covers running the opt-in backfill safely
 - ACD-1900f-4: How-to guide covers upgrade and the compatibility-window lifecycle
 - ACD-1900g-4: How-to guide covers the dogfood proof and the go/no-go checklist
+- ACD-2000a-4: Reference doc describes the requirement's adjudication trail and its retry budget
+- ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
+- ACS-1200a-3: The written back-link rule matches the enforced one
+- ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
+- ACS-500g-2-ii: A how-to guide walks a reader from a noticed repetition to a referenced pattern
 - ACS-900a-3: How-to guide and sequence diagram for the retirement-detection trigger
 - ACS-900b-3: How-to guide and sequence diagram for the retirement-blocks-commit behavior
 - ACS-900c-2: How-to guide documents the block message and how to act on it
@@ -202,11 +209,20 @@ flowchart TD
 - BO-2500b-4: How-to: local pre-commit proof-of-done feedback and the required CI gate
 - BO-2500c-4: How-to: author real-artifact fixtures and round-trip tests
 - BO-2500c-5: Reference: fixture policy and real-producer fixture rules
+- BO-2600b-3: How-to: what a fast-lane run picks up when you aim it at one criterion
+- BO-2900a-4: How-to: prove a criterion done through the real way in, and what to do when the guard refuses
+- BO-2900b-4: How-to: keep capabilities and their automation connected in both directions
+- BO-2900c-3: How-to: the reverse-direction content of the connection guide — stale calls, renames and removals
+- BO-2900d-4: How-to: decide whether to wire code in or exempt it, and record the exemption
+- BO-2900d-5: Reference: the exemption contract — what is recorded, what it covers, and how it appears in output
+- BO-2900e-4: How-to: one table mapping every refusal the guard can emit to the action that clears it
+- BO-2900f-5: Reference documentation states the skipped-gate record contract and its boundary with the workflow-step record
 - BP-1000c-2: How-to guide for reading a parity failure and resolving the drift it names
 - BP-1000d-2: Reference doc defining which scripts are in scope for the parity check and which are exempt
 - BP-100b-10: Drift hook docs include a developer checklist for adding new template categories
 - BP-100b-8: Build pipeline diagram includes the workflow scripts phase
 - BP-100b-9: Consolidated output root doc lists .claude/workflows/ as a shimmed output
+- BP-1100a-5: The guidance on getting a generated ticket's surface right describes the derivation that actually runs
 - BP-1200a-2: The CI test command is documented as the single authoritative way to run the suite from a clean checkout
 - BP-200c-4: Agents README documents llm-expert in the phase agents table
 - BP-300a-7: debug.md falls back to prose skill for older Claude Code runtimes
@@ -220,6 +236,7 @@ flowchart TD
 - BP-800d-4: How-to guide for legacy agent retirement
 - BP-800e-4: How-to guide for upgrading from legacy agent layout
 - BP-800f-4: Reference documentation for database paradigm support
+- BP-900g-8-iii: The written deploy-dependency rule names data and configuration files, not only imported modules
 - CR-100a-4: Reference doc: the code-smell finding anatomy and named catalogue
 - CR-100d-3: Reference doc: severity rubric and consolidated report format
 - CR-100e-2: How-to guide: running /code-smell-review on a file, folder, or snippet
@@ -236,6 +253,20 @@ flowchart TD
 - GE-117c-2: How-to guide: the extended decision-history tail-tag with ticket and AC references
 - GE-117d-4: How-to guide: understanding and clearing a declaration-guardrail block
 - GE-117e-3: How-to guide: fixing a missing declaration or deliberately opting out
+- GE-120a-5: The no-silent-pass rule is written where the next check author will find it
+- GE-120b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
+- GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
+- GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
+- GE-122a-3: The numbering rules for all four namespaces are written down in one place
+- GE-122b-3: An author with no prior knowledge can find out how to get a number
+- GE-122b-4: Which locations must carry a number, and which need not, is written down
+- GE-122c-3: A person blocked where nobody can be brought in has a procedure to follow
+- GE-122d-5: Which stage you can skip, and what still catches you, is written down
+- GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
+- GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
+- GE-123c-4: Someone writing their first suppression can find out how to write one instead of copying a neighbouring line
+- GE-123c-5: The document that lists the accepted suppression forms also says what is rejected and why
+- GE-123d-4-ii: The reference states where the exemption applies, in one place, as a closed list
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
 - KM-KGS-100c-3: How-to guide for declaring a new knowledge surface
@@ -246,6 +277,11 @@ flowchart TD
 - PER-100b-5: Reference doc for persona_for AC field
 - PER-100c-3: How-to guide for querying capabilities by persona
 - PER-100e-4: How-to guide for creating and refining personas with the persona expert
+- TQ-400a-5: Someone who has never run the store-wide sweep can run it and read its verdict unaided
+- TQ-400b-7: The field reference answers type, nullability, writer and never-rewritten for both demotion fields
+- TQ-400c-5: A reader can change the cadence and find the latest published verdict from the guide alone
+- TQ-400d-5: A first-time triager can work a record from the pile to a recorded decision using the guide alone
+- TQ-400e-6: The exemption reference states when a declaration is honoured, when refused, and which records may carry one
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view

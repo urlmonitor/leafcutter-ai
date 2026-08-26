@@ -1,0 +1,114 @@
+id: BO-2400f-12-i
+components:
+  - build_orchestration
+title: "A refusal leaves the store exactly as it found it, and holds no claim to release"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run that refused its resolved set because one or more members
+    declare a deliverable no phase in its roster produces,
+  When the store is read after the run has ended,
+  Then every member of the resolved set carries exactly the work_status it carried
+    before the run — none is done, none is in_progress, none has been removed from the
+    store or from its parent's coverage,
+  And the acceptance criterion the operator named is still outstanding, so the next
+    run resolves the same set rather than a set silently reduced by the refusal.
+
+  Given the same refusing run,
+  When its ending is inspected,
+  Then it releases nothing, because it claimed nothing: the release step that returns
+    in_progress to todo (BO-2400f-10) is not invoked by this path,
+  And a concurrent run holding its own claims on any of these acceptance criteria still
+    holds them after the refusal.
+
+  Given the same store and the same target, run twice,
+  When both runs refuse,
+  Then both refusals name the same members for the same reasons, and the store after
+    the second run is byte-identical to the store after the first — a refusal is not a
+    state transition and repeating it costs nothing but the resolution.
+depends_on: [BO-2400f-12]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The refusal must be observed from an executed run; the store assertions are made against the real on-disk fixture store the run was pointed at."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_refusal_is_inert:
+      type: object
+      description: "The refusing branch performs no store write of any kind. It does not call the claim writer, the done marker, or the release writer, and it does not rewrite any acceptance-criteria file. Its only outputs are the terminal refusal payload and the process exit status."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The refusing branch must not invoke the release step. Releasing on a run that never claimed would flip acceptance criteria a concurrent run legitimately holds in_progress back to todo (BO-2400f-8), handing the same work to two runs."
+    - "The store assertion is made against real files on disk, before and after the run, not against an in-memory record set the run happened to hand back."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-12
+  contract: "The refusal branch — the point at which the run ends on an unproducible resolved set, before the claim step."
+test_required: true
+test_spec:
+  - name: test_refused_run_leaves_every_work_status_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "An on-disk fixture store is snapshotted, the lane is run against a target whose set contains an unproducible member, and every acceptance-criteria file in the resolved set is byte-identical afterwards."
+  - name: test_refused_run_does_not_dispatch_the_release_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Executed under the E2 harness, a refusing run records no release dispatch and no claim dispatch — it neither takes nor returns a claim."
+  - name: test_refusal_is_repeatable_and_inert
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Running the same refusing target twice against the same fixture store produces the same named refusal both times and leaves the store byte-identical after each run."
+test_rationale: |
+  The whole point of this criterion is a negative — that nothing happened. A test that
+  greps the refusing branch for the absence of a call proves nothing, because the write
+  can happen in a helper the grep never sees. Prove it the only way that holds: execute
+  the run under the harness for the dispatch assertions, and diff a real on-disk store
+  before and after for the state assertions. The repeatability test is what catches the
+  half-fix in which the refusal writes something small — a status stamp, a marker file —
+  and only diverges on the second run.
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This exists because "refuse" has a plausible-looking wrong implementation: refuse,
+  but first mark the offending member done or drop it from the set so the next run
+  gets further. Either would make the lane appear to recover and would put a criterion
+  nobody built into the done column — phantom-done through the front door, which
+  KI-BO-013 names explicitly as the thing not to do.
+
+  The release assertion is the subtler half. Every other pre-commit halt branch in this
+  family MUST release (BO-2400f-10); this branch must NOT, because it precedes the
+  claim. An implementer following the sibling pattern will add the release call, and it
+  will look correct in review — it is only wrong in the presence of a concurrent run,
+  which is exactly the case no reviewer simulates.

@@ -1,0 +1,122 @@
+id: GE-124b-1
+readiness: approved
+priority: high
+title: "An element pin is read from the data-ac attribute and is optional"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+criteria: |
+  Given a staged screen component file containing the element
+    `<span className={styles.badgeLive} data-ac="UXP-607-1 UXP-607">` on line 51
+  When the element-pin reader evaluates the file
+  Then one pin is recorded for that element with the criteria
+    ["UXP-607-1", "UXP-607"], the line number 51, and the opening tag as written
+  And the recorded attribute name is `data-ac`
+
+  Given a staged screen component file containing two pinned elements
+  When the element-pin reader evaluates the file
+  Then two separate pins are recorded, each with its own line number and
+    criteria list
+
+  Given a staged screen component file that carries a component-level
+    declaration and contains no `data-ac` attribute anywhere
+  When the element-pin reader evaluates the file
+  Then no pins are recorded for the file
+  And the absence of pins produces no finding of any kind
+depends_on:
+  - GE-124b
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124b.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE PIN READER LIVES IN THE SAME SHARED MODULE AS THE DECLARATION READER (templates/scripts/commit_guardian/_frontend_declaration_reader.py plus its deployed twin, deploy_map entry in scripts/build_phases.py) and emits pins[] as a collection SEPARATE from declares[], never unioned with it (GE-124a-1-ii). Both the commit tier and the CI tier read pins from this one place."
+  - "ATTRIBUTE VALUE GRAMMAR IS SPACE-SEPARATED, ORDER-PRESERVING. Split the data-ac value on runs of whitespace; keep the authored order; do not de-duplicate distinct ids. Note this grammar deliberately differs from the comma-tolerant @ac line grammar in GE-124a-1, because the value must also be consumable by the CSS attribute-membership selector `[data-ac~=\"<id>\"]` that GE-124f-3 derives — and `~=` matches whitespace-separated tokens only. Document the difference where both grammars are specified (GE-124b-5)."
+  - "EACH PIN RECORDS {id, file, line, element, attribute, ac_ids[], state} — a 1-based line number for the opening tag and the opening tag verbatim. A pin known only as 'somewhere in this component' cannot be argued with in a review, and the line number is what GE-124c-2's unresolved-pin finding points at. The stable slug `id` is what a criterion's pinned_by list stores (GE-124g-1), so it must be deterministic for a given file, line and value rather than a run-ordinal."
+  - "ONE PIN PER ELEMENT, EVEN WHEN MULTI-VALUED. `data-ac=\"UXP-607-1 UXP-607\"` is ONE pin carrying two ids, not two pins. Cardinality matters downstream: GE-124c-3's pass record counts pinned elements, and GE-124e-2 reports the file and line of the pinned element."
+  - "OPTIONALITY IS A POSITIVE BEHAVIOUR. A file that declares at component level and pins nothing must produce zero findings of any kind — no advisory, no 'consider pinning' note, no warn. An implementation that nudges here makes the optional surface compulsory in practice and contradicts GE-124b-2 scenario 2."
+  - "Read the attribute only in the framework's markup, not in arbitrary strings. Pure text scanning is required (no JS AST in a Python hook), so anchor the match to an attribute occurrence inside an opening tag rather than to the bare substring `data-ac`, or a comment or string literal mentioning the attribute will be read as a pin."
+  - "Must handle errors gracefully per the project error handling policy; an unparseable file is GE-124c-3-i's named-and-skipped path."
+delivers_to:
+  agent: python-coder
+  contract: "Per-element pin records {id, file, line, element, attribute, ac_ids[], state} — emitted by the shared reader module alongside, and never merged with, the component-level declaration record — consumed by the commit-tier verdicts (GE-124c), the reverse-direction CI gate (GE-124e-2), the derived test selector (GE-124f-3) and the store's pinned_by field (GE-124g-1). `id` is a deterministic slug, because pinned_by persists it."
+expects_from: null
+test_spec:
+  - name: test_ge_124b_1_multi_valued_pin_is_one_record_with_ordered_ids_line_and_tag
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "`<span ... data-ac=\"UXP-607-1 UXP-607\">` on line 51 yields exactly ONE pin with ac_ids ['UXP-607-1','UXP-607'] in that order, line == 51, attribute == 'data-ac', and element equal to the opening tag as written. Assert the count is 1 — a splitter that emits one pin per id passes every other assertion here."
+  - name: test_ge_124b_1_two_pinned_elements_yield_two_records_with_their_own_line_numbers
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Two pinned elements in one file produce two records whose line numbers are the real 1-based lines of their opening tags, verified against the fixture's own line positions rather than against hard-coded integers."
+  - name: test_ge_124b_1_declared_file_with_no_pins_produces_no_finding_through_the_real_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Stage a fully declared, unpinned component in a temp git repo and run the commit-tier hook via subprocess: it must exit 0 with no finding mentioning that file. Optionality is only observable at the entry point — an in-process assertion that pins == [] passes on a hook that then nudges the author anyway."
+  - name: test_ge_124b_1_pin_slug_is_deterministic_across_runs_and_reader_instances
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Reading the same file twice, and reading it after an unrelated pin is added earlier in the file, yields the same slug for the unchanged pin. pinned_by persists this slug (GE-124g-1), so a run-ordinal slug would silently rewrite every criterion's pinned_by on any edit above it."
+test_rationale: |
+  Three of this AC's failure modes are invisible to a plain parse test. A reader that emits one
+  pin per id passes every field assertion while breaking the counts GE-124c-3 and GE-124e-2
+  depend on, so the cardinality is asserted explicitly. Optionality cannot be proven in process
+  — the interesting failure is a hook that computes zero pins and then prints an advisory
+  anyway — so it is tested by running the real hook and asserting silence. And the slug's
+  determinism only matters because pinned_by persists it; a run-ordinal slug is a plausible
+  first implementation that would churn the store on every unrelated edit, which no
+  parse-shaped test would ever notice.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Placed the pin reader in the same shared module as the declaration reader with pins[] strictly separate from declares[]; pinned the whitespace-only value grammar and recorded WHY it differs from the @ac line grammar (the [data-ac~=] selector GE-124f-3 derives matches whitespace tokens only); fixed one-pin-per-element cardinality; and required a deterministic slug because GE-124g-1's pinned_by persists it. criteria untouched."
+superseded_by: null
+covered_by:
+  - GE-124b-1-i
+  - GE-124b-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE SURFACE IS SETTLED — `data-ac`, space-separated for multiple criteria.
+  Not relitigated here; the rejected alternative (a CSS class) is stated as a
+  negative in GE-124b-1-i so that the reason survives as a test rather than as
+  prose someone can overlook.
+
+  OPTIONAL IS A BEHAVIOUR, NOT AN ABSENCE OF ONE — the third scenario is the
+  testable form of "nothing requires an element-level pin". Without it, an
+  implementation that reports "component declared but nothing pinned" would
+  satisfy every other AC in this L1 while making the optional pin compulsory.
+
+  Line number and verbatim opening tag are recorded because the reviewer-facing
+  finding has to point at a place in a file; a pin known only as "somewhere in
+  this component" cannot be argued with.
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). Two grammars coexist in this tree and the
+  difference is deliberate: the @ac comment line tolerates commas (GE-124a-1),
+  the data-ac attribute value does not, because the CSS attribute-membership
+  operator `~=` that GE-124f-3's selector relies on splits on whitespace only.
+  A comma inside a data-ac value would produce a selector that matches nothing.

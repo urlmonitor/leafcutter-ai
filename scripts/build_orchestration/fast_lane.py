@@ -24,17 +24,34 @@ ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
     release_claim, filter_already_claimed, mark_done_built_acs, and
     check_no_stale_todo perform status-only YAML mutations (work_status field only)
     via _update_ac_work_status; all file I/O is wrapped per the Error Handling
-    Policy (Rule 1).  A CLI entry point (main()) wraps each function for
-    subprocess-based pipeline invocation.
+    Policy (Rule 1).  _update_ac_work_status commits its edit via
+    _atomic_write_text (BO-2400e-3), a write-to-temp-in-the-same-directory then
+    os.replace so a reader always sees either the whole old or whole new content
+    and an interrupted/failed write never truncates the on-disk record; the CLI's
+    "claim" subcommand (BO-2400e-3-i) reads claim_build_set's own success/error
+    fields and exits non-zero with the error announced on stderr rather than
+    silently reporting success when a write could never be made.  A CLI entry
+    point (main()) wraps each function for
+    subprocess-based pipeline invocation.  compute_changelog_requirement (KI-BO-001)
+    imports scripts/release/check_changelog_presence.py as a module and reads its
+    EXEMPT_PREFIXES attribute at call time so the fast lane's "does this run owe a
+    changelog entry" decision can never drift from the CI gate's own rule;
+    build_changelog_payload assembles the scripts/changelog/emit_entry.py payload
+    from run state, always with breaking=False (never inferred from AC metadata).
+    Both are exposed via the changelog_requirement / changelog_payload CLI
+    subcommands for the fast-lane-ship.js Changelog phase.
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import logging
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -45,8 +62,11 @@ import yaml
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 _AC_STORE_DIR = _SCRIPTS_DIR / "ac_store"
+_RELEASE_DIR = _SCRIPTS_DIR / "release"
 if str(_AC_STORE_DIR) not in sys.path:
     sys.path.insert(0, str(_AC_STORE_DIR))
+if str(_RELEASE_DIR) not in sys.path:
+    sys.path.insert(0, str(_RELEASE_DIR))
 
 from done_proof import (  # noqa: E402
     _TEST_DEF_RE,
@@ -69,6 +89,17 @@ from scan_ac_store import (  # noqa: E402
     traverse_ac_tree,
 )
 from ac_parent_id import derive_parent_id  # noqa: E402
+
+# KI-BO-001 (BO-2400f-4-i): the module itself is imported (never
+# `from check_changelog_presence import EXEMPT_PREFIXES`) so that
+# compute_changelog_requirement() below re-reads
+# ``check_changelog_presence.EXEMPT_PREFIXES`` at CALL time rather than
+# freezing a private copy at import time. A `from ... import` here would
+# defeat the single-source property this AC exists to guarantee: widening
+# the gate's exempt set would then require a second edit in this file to
+# take effect, which is exactly the silently-diverging duplicate list the
+# criterion is written to prevent.
+import check_changelog_presence  # noqa: E402
 
 _LOG = logging.getLogger(__name__)
 
@@ -105,12 +136,107 @@ def _build_ac_id_to_path_index(ac_root: Path) -> dict[str, Path]:
     return index
 
 
-def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
-    """Overwrite only the *work_status* field of an AC YAML file on disk.
+def _atomic_write_text(target_path: Path, text: str) -> None:
+    """Replace *target_path*'s content with *text* atomically from a reader's
+    point of view (BO-2400e-3 / BO-2400e-3-i).
 
-    Status-only change: reads the full YAML (via yaml.safe_load so no extra
-    metadata is injected), sets work_status to *new_status*, and writes back
-    with yaml.safe_dump so every other field is preserved unchanged.
+    The previous implementation opened *target_path* with ``"w"``, which
+    TRUNCATES the file to zero bytes the instant it is opened — before a
+    single byte of the new content has been written. Any failure after that
+    point (a write that fails partway, a process interruption) left the
+    on-disk record empty or short: real data loss on the build system's
+    source of truth.
+
+    This instead writes the new content to a temp file created in the SAME
+    directory as *target_path* (so the final swap is a same-filesystem
+    rename), then calls :func:`os.replace` to atomically swap it into place.
+    ``os.replace`` is a single filesystem rename operation — a concurrent
+    reader opening *target_path* at any point sees either the complete OLD
+    content or the complete NEW content, never a partial mixture, and the
+    ORIGINAL file is never truncated or otherwise touched by a write that
+    later fails. This is the single extra filesystem metadata operation
+    (the rename) added to the read/write pair the function already performed.
+
+    On any failure — creating the temp file, writing to it, or the final
+    rename — the temp file is removed on a best-effort basis (a cleanup
+    failure is logged, never allowed to mask or replace the original error)
+    and the triggering ``OSError`` is re-raised. The caller MUST NOT treat a
+    caught-and-logged failure here as anything but a failed write (per this
+    repo's Error Handling Policy Rule 3: "log at WARNING and return" is not
+    an acceptable substitute for propagating the failure) — *target_path* is
+    guaranteed unchanged whenever this raises.
+
+    Args:
+        target_path: Absolute path of the file to replace.
+        text: Full new file content.
+
+    Raises:
+        OSError: The temp file could not be created, written, or renamed
+            into place (e.g. a read-only directory/file, or a write that
+            fails partway through, such as under ``RLIMIT_FSIZE``).
+    """
+    tmp_fd: int | None = None
+    tmp_name: str | None = None
+    try:
+        tmp_fd, tmp_name = tempfile.mkstemp(
+            dir=str(target_path.parent),
+            prefix=f".{target_path.name}.",
+            suffix=".tmp",
+        )
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+            tmp_fd = None  # ownership transferred to the context manager
+            fh.write(text)
+        os.replace(tmp_name, target_path)
+        tmp_name = None  # swapped into place -- nothing left to clean up
+    except OSError as exc:
+        _LOG.warning("_atomic_write_text: cannot write %s: %s", target_path, exc)
+        raise
+    finally:
+        if tmp_fd is not None:
+            try:
+                os.close(tmp_fd)
+            except OSError as cleanup_exc:
+                _LOG.warning(
+                    "_atomic_write_text: failed to close leaked temp fd for %s: %s",
+                    target_path,
+                    cleanup_exc,
+                )
+        if tmp_name is not None:
+            try:
+                os.unlink(tmp_name)
+            except OSError as cleanup_exc:
+                _LOG.warning(
+                    "_atomic_write_text: failed to remove temp file %s for %s: %s",
+                    tmp_name,
+                    target_path,
+                    cleanup_exc,
+                )
+
+
+def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
+    """Overwrite only the *work_status* line of an AC YAML file on disk.
+
+    KI-BO-003 fix: this used to round-trip the whole document through
+    ``yaml.safe_load`` -> ``yaml.safe_dump``, which is true of VALUES but
+    false of FORMATTING — it alphabetises every top-level key, reflows
+    hand-authored ``criteria: |`` / ``notes: |`` block scalars into
+    folded/quoted strings, and drops comments (a one-field change produced a
+    161-line diff on a real AC file). This instead performs a targeted text
+    edit of exactly the column-0 ``work_status:`` line, so every other byte
+    of the file — formatting, comments, and key order — is preserved
+    byte-identically; only the value on that one line changes.
+
+    The match is anchored at column 0 (start of line, no leading
+    whitespace) so an indented occurrence of the literal string
+    ``work_status`` inside a block-scalar's prose (e.g. an ``amended_by``
+    reason narrating "Reset to work_status todo:") is never mistaken for the
+    real key.
+
+    BO-2400e-3: the new bytes reach disk via :func:`_atomic_write_text`
+    rather than a truncating ``open("w")``, so an interrupted or partially
+    failed write can never leave the record zero-length or half-written —
+    the targeted single-line text edit above is unchanged; only how the
+    resulting bytes are committed to disk changed.
 
     Args:
         yaml_path: Absolute path to the AC YAML file.
@@ -118,21 +244,61 @@ def _update_ac_work_status(yaml_path: Path, new_status: str) -> None:
             or ``"done"``.
 
     Raises:
-        OSError: When the file cannot be read or written.
+        OSError: When the file cannot be read, or the new content cannot be
+            written and swapped into place (BO-2400e-3-i: the original file
+            is guaranteed unchanged whenever this is raised — the caller
+            must treat it as a failed update and MUST NOT proceed as though
+            the status had been recorded).
+        ValueError: When the file contains more than one column-0
+            ``work_status:`` line. Which of them is the real key is genuinely
+            ambiguous, so this raises rather than editing the first and
+            leaving a contradictory record behind. Zero matches is NOT an
+            error: the key is created (see below).
+
+    A file with no ``work_status:`` line gains one, appended as a single new
+    line. That is not a guess — satisfying the contract "work_status is now
+    *new_status*" has exactly one meaning when the line is missing — and it
+    matches what the pre-KI-BO-003 round-trip did. 143 of the 3012 real ACs
+    in this repo's store have no such key, so refusing them would crash the
+    fast lane on 4.7% of the store.
     """
     try:
         with yaml_path.open(encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            original = fh.read()
     except OSError as exc:
         _LOG.warning("_update_ac_work_status: cannot read %s: %s", yaml_path, exc)
         raise
-    data["work_status"] = new_status
-    try:
-        with yaml_path.open("w", encoding="utf-8") as fh:
-            yaml.safe_dump(data, fh, allow_unicode=True)
-    except OSError as exc:
-        _LOG.warning("_update_ac_work_status: cannot write %s: %s", yaml_path, exc)
-        raise
+
+    lines = original.splitlines(keepends=True)
+    match_indices = [
+        i for i, line in enumerate(lines) if line.startswith("work_status:")
+    ]
+    if len(match_indices) > 1:
+        msg = (
+            f"_update_ac_work_status: expected at most one column-0 "
+            f"'work_status:' line in {yaml_path}, found {len(match_indices)}"
+        )
+        raise ValueError(msg)
+
+    if match_indices:
+        index = match_indices[0]
+        newline_suffix = "\n" if lines[index].endswith("\n") else ""
+        lines[index] = f"work_status: {new_status}{newline_suffix}"
+    else:
+        # Key absent: create it. This is not a guess — the function's whole
+        # contract is "work_status is now *new_status*", and appending is the
+        # single way to satisfy it when no such line exists. 143 of the 3012
+        # real ACs in this repo's store carry no work_status (the /quick-fix
+        # authored records, e.g. ACD-1400); the pre-KI-BO-003 round-trip added
+        # the key silently, so refusing here would crash the lane on 4.7% of
+        # the store. Appending keeps the edit minimal — one added line, every
+        # existing byte untouched.
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] = lines[-1] + "\n"
+        lines.append(f"work_status: {new_status}\n")
+    updated = "".join(lines)
+
+    _atomic_write_text(yaml_path, updated)
 
 
 def claim_build_set(
@@ -442,6 +608,130 @@ def check_no_stale_todo(
 
 
 # ---------------------------------------------------------------------------
+# Changelog helpers (KI-BO-001 / BO-2400f-4-i, -iii, -iv)
+# ---------------------------------------------------------------------------
+
+
+def compute_changelog_requirement(changed_paths: list[str]) -> dict:
+    """Decide whether the run's delivered change owes a changelog entry.
+
+    Reuses the changelog-presence merge check's own exempt-path rule
+    (``check_changelog_presence.EXEMPT_PREFIXES``) rather than a
+    hand-copied prefix tuple, so this run's decision and the merge check's
+    verdict can never disagree (BO-2400f-4-i). ``EXEMPT_PREFIXES`` is read
+    from the imported module at CALL time (not frozen via a
+    ``from ... import`` at module load), so widening the gate's exempt set
+    changes this function's answer in the very same edit — there is no
+    second copy of the list to keep in step.
+
+    Args:
+        changed_paths: Every file path the run's delivered change touches
+            (repo-relative, e.g. from the coder's ``files_modified`` report
+            or a real ``git diff --name-only``).
+
+    Returns:
+        Dict with keys:
+
+        ``required`` (bool)
+            True exactly when the changelog-presence merge check would fail
+            this diff for want of an added entry — i.e. at least one changed
+            path falls outside every exempt prefix.
+
+        ``releasable_paths`` (list[str])
+            The subset of *changed_paths* that are NOT exempt — the files
+            that drove the ``required`` decision.
+    """
+    releasable_paths = [
+        path
+        for path in changed_paths
+        if not any(
+            path.startswith(prefix)
+            for prefix in check_changelog_presence.EXEMPT_PREFIXES
+        )
+    ]
+    return {
+        "required": bool(releasable_paths),
+        "releasable_paths": releasable_paths,
+    }
+
+
+def build_changelog_payload(
+    *,
+    target_ac: str,
+    built_ac_ids: list[str],
+    files_modified: list[str],
+    branch: str,
+    ac_root: Path,
+) -> dict:
+    """Assemble the scripts/changelog/emit_entry.py payload for one fast-lane run.
+
+    Every field is derived from facts the run already holds — the operator
+    named *target_ac*, the run built *built_ac_ids*, the coder reported
+    *files_modified*, and the run is on *branch* — so the operator writes
+    nothing (BO-2400f-4-iii).
+
+    Args:
+        target_ac: The AC id the operator pointed the fast lane at. Its own
+            ``title`` field becomes the entry's title.
+        built_ac_ids: Every AC id the run actually built (dependency order).
+        files_modified: The files the coder reported modifying.
+        branch: The worktree branch the work is on.
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict payload ready for :func:`scripts.changelog.emit_entry.emit_entry`
+        (or its CLI): ``title``, ``date``, ``time``, ``type`` ("manual"),
+        ``components`` (union of every built AC's own ``components`` list),
+        ``summary``, ``description`` (names every built AC id and every
+        modified file), and ``breaking`` — ALWAYS ``False``, a hardcoded
+        default never derived from any AC's ``risk_surface`` or other
+        metadata (BO-2400f-4-iv: a wrongly-true flag auto-cuts an
+        unrecoverable MAJOR release; a wrongly-false flag is caught in
+        review while the entry is still an unmerged PR file).
+    """
+    id_to_path = _build_ac_id_to_path_index(ac_root)
+
+    target_record: dict = {}
+    target_path = id_to_path.get(target_ac)
+    if target_path is not None:
+        target_record = _load_ac(target_path) or {}
+    title = str(target_record.get("title") or target_ac)
+
+    components: list[str] = []
+    for ac_id in built_ac_ids:
+        ac_path = id_to_path.get(ac_id)
+        if ac_path is None:
+            continue
+        record = _load_ac(ac_path)
+        if record is None:
+            continue
+        for component in record.get("components") or []:
+            if component not in components:
+                components.append(component)
+
+    now = datetime.datetime.now()  # noqa: DTZ005 — matches changelog-agent's local-time convention
+    built_ids_text = ", ".join(built_ac_ids)
+    files_text = ", ".join(files_modified)
+    description = (
+        f"Fast-lane build of {target_ac} (branch {branch}). "
+        f"Built acceptance criteria: {built_ids_text}. "
+        f"Files modified: {files_text}."
+    )
+    summary = f"Fast-lane delivery of '{title}'."
+
+    return {
+        "title": title,
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M"),
+        "type": "manual",
+        "components": components,
+        "summary": summary,
+        "description": description,
+        "breaking": False,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -560,6 +850,16 @@ def resolve_connected_build_set(
             all_records.append(record)
 
     id_index = _build_id_index(all_records)
+    # BO-2400c-6 correctness trap: _drain_cycles() below mutates id_index IN
+    # PLACE, deleting cycle nodes, so it can produce a deterministic order for
+    # the depends_on closure walk further down. Snapshot an UNDRAINED shallow
+    # copy first — the tree walk (traverse_ac_tree) must see every record as
+    # it stands on disk, including cycle members, or any subtree hanging off
+    # a cycle-adjacent node silently vanishes from the build set with no
+    # error (BO-2400c-6-i). The depends_on closure walk below intentionally
+    # keeps using the drained `id_index` — that is the pre-existing,
+    # unchanged behaviour this AC does not touch.
+    undrained_id_index = dict(id_index)
     _drain_cycles(id_index, all_records)
 
     if ac_id not in id_index:
@@ -570,7 +870,9 @@ def resolve_connected_build_set(
         raise ValueError(msg)
 
     # 1. Subtree leaves (not-done L2/L3 descendants via covered_by).
-    build_set: set[str] = set(traverse_ac_tree(ac_id, ac_root, exclude_done=True))
+    build_set: set[str] = set(
+        traverse_ac_tree(ac_id, ac_root, id_index=undrained_id_index, exclude_done=True)
+    )
 
     # 2. Transitive unmet depends_on closure. A done prerequisite is already met
     #    and is not pulled in; a not-done composite dep expands to its leaves.
@@ -591,7 +893,9 @@ def resolve_connected_build_set(
                     build_set.add(dep)
                     worklist.append(dep)
             else:
-                for leaf in traverse_ac_tree(dep, ac_root, exclude_done=True):
+                for leaf in traverse_ac_tree(
+                    dep, ac_root, id_index=undrained_id_index, exclude_done=True
+                ):
                     if leaf not in build_set:
                         build_set.add(leaf)
                         worklist.append(leaf)
@@ -1306,6 +1610,47 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         help="Root of test tree to scan for covers-tagged tests.",
     )
 
+    # --- changelog_requirement ---
+    cr_p = subparsers.add_parser(
+        "changelog_requirement",
+        help=(
+            "Decide whether the run's delivered change owes a changelog entry, "
+            "reusing check_changelog_presence's own exempt-path rule. Prints "
+            "JSON {required, releasable_paths}."
+        ),
+    )
+    cr_p.add_argument(
+        "--files",
+        required=True,
+        metavar="PATHS",
+        help="Comma-separated repo-relative file paths the run's change touches.",
+    )
+
+    # --- changelog_payload ---
+    cp_p = subparsers.add_parser(
+        "changelog_payload",
+        help=(
+            "Assemble the scripts/changelog/emit_entry.py payload for one "
+            "fast-lane run. Prints the JSON payload on stdout."
+        ),
+    )
+    cp_p.add_argument("--target-ac", required=True, metavar="ID", help="Operator-named target AC id.")
+    cp_p.add_argument(
+        "--built-ac-ids",
+        required=True,
+        metavar="IDS",
+        help="Comma-separated AC ids the run built (dependency order).",
+    )
+    cp_p.add_argument(
+        "--files-modified",
+        required=False,
+        default="",
+        metavar="PATHS",
+        help="Comma-separated files the coder reported modifying.",
+    )
+    cp_p.add_argument("--branch", required=True, metavar="BRANCH", help="Worktree branch.")
+    cp_p.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+
     return parser
 
 
@@ -1399,8 +1744,21 @@ def main(argv: list[str] | None = None) -> int:
             "claimed": claim_result["claimed"],
             "excluded_claimed": excluded_claimed,
             "target_refused": False,
+            "success": claim_result["success"],
+            "error": claim_result["error"],
         }
         print(json.dumps(claim_payload))
+        if not claim_result["success"]:
+            # BO-2400e-3-i: a write that could never be made must never be
+            # reported as a success. claim_result["error"] already names
+            # both the failing AC id and the underlying OS reason (see
+            # claim_build_set), so it is printed here rather than
+            # discarded -- "log at WARNING and return 0" (this repo's
+            # forbidden anti-pattern, CLAUDE.md Error Handling Policy Rule
+            # 3) would tell the caller it is safe to dispatch test-writer/
+            # coder against ACs that were never actually claimed.
+            print(claim_result["error"], file=sys.stderr)
+            return 1
         return 0
 
     if args.subcommand == "release":
@@ -1429,6 +1787,25 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(mark_done_payload))
         return 0 if stale_result["all_done"] else 1
 
+    if args.subcommand == "changelog_requirement":
+        changed_paths = [p.strip() for p in args.files.split(",") if p.strip()]
+        requirement = compute_changelog_requirement(changed_paths)
+        print(json.dumps(requirement))
+        return 0
+
+    if args.subcommand == "changelog_payload":
+        built_ac_ids = [i.strip() for i in args.built_ac_ids.split(",") if i.strip()]
+        files_modified = [p.strip() for p in args.files_modified.split(",") if p.strip()]
+        payload = build_changelog_payload(
+            target_ac=args.target_ac,
+            built_ac_ids=built_ac_ids,
+            files_modified=files_modified,
+            branch=args.branch,
+            ac_root=Path(args.ac_root),
+        )
+        print(json.dumps(payload))
+        return 0
+
     return 1  # unreachable with argparse required=True, but satisfies mypy
 
 
@@ -1438,3 +1815,64 @@ if __name__ == "__main__":
     except (OSError, ValueError) as exc:
         print(f"[fast-lane] unexpected error: {exc}", file=sys.stderr)
         sys.exit(1)
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-08-18 18:00 [python-coder]: Replaced the yaml.safe_load ->
+#   yaml.safe_dump round-trip in _update_ac_work_status with a targeted
+#   single-line text edit of the column-0 `work_status:` line (KI-BO-003:
+#   the round-trip was true of VALUES but false of FORMATTING -- it
+#   alphabetised every top-level key, reflowed hand-authored `criteria: |`
+#   / `notes: |` block scalars into folded/quoted strings, and dropped
+#   comments, producing a 161-line diff for a one-field change on a real
+#   AC file). The new implementation reads the file as text, finds the
+#   line that starts with `work_status:` at column 0 (never an indented
+#   occurrence of the same literal string inside block-scalar prose, e.g.
+#   an `amended_by` reason narrating "Reset to work_status todo:"), and
+#   raises ValueError rather than guessing when that line is absent or
+#   appears more than once -- silently adding the key or silently editing
+#   the first of several matches is exactly the failure class this fix
+#   closes. Trailing-newline presence is preserved from the original
+#   line. Docstring updated to name the byte/formatting/comment/key-order
+#   guarantee actually tested, replacing the prior overclaim ("every
+#   other field is preserved unchanged", true of values, false of
+#   formatting). (#TICKETLESS reason=known-issue-fix-no-ticket-KI-BO-003)
+# - 2026-08-18 19:15 [review correction]: The first cut of the above raised
+#   ValueError on ZERO matches as well as on many. A real-artifact
+#   spot-check over the whole store found 143 of 3012 AC files carry no
+#   column-0 `work_status:` key at all (the /quick-fix authored records,
+#   e.g. ACD-1400 — `status: active`, reachable by claim_build_set). The
+#   round-trip being replaced added the key silently, so raising would have
+#   converted a working path into a crash on 4.7% of the store — a
+#   regression invisible to the unit suite, whose fixtures all happened to
+#   have the field. Zero matches now APPENDS the key as one new line;
+#   only the ambiguous many-matches case still raises. Covered by
+#   TestWorkStatusKeyAbsent.
+#   (#TICKETLESS reason=known-issue-fix-no-ticket-KI-BO-003)
+# - 2026-08-18 20:30 [python-coder]: Added compute_changelog_requirement()
+#   and build_changelog_payload() (KI-BO-001: the fast lane committed and
+#   opened a PR but never wrote a changelogs/ entry, so every PR it opened
+#   failed the required "Changelog entry present" CI check — observed live
+#   on PR #465, fixed by hand in b3124ff25). compute_changelog_requirement()
+#   imports scripts/release/check_changelog_presence.py as a MODULE (never
+#   `from ... import EXEMPT_PREFIXES`) so its exempt-prefix rule is re-read
+#   at call time -- widening the gate's exempt set changes this function's
+#   answer in the same edit, with no second copy of the list to drift
+#   silently (BO-2400f-4-i). build_changelog_payload() assembles the
+#   scripts/changelog/emit_entry.py payload from run state (target AC
+#   title, built AC ids' union of components, description naming every
+#   built AC and modified file) and ALWAYS emits breaking: False --
+#   hardcoded, never derived from any AC's risk_surface or other metadata
+#   (BO-2400f-4-iv): compute_next_version.py maps breaking=true to a MAJOR
+#   bump that release.yml cuts automatically on merge, so a wrong true
+#   burns a version permanently while a wrong false is caught in review.
+#   Two CLI subcommands (changelog_requirement, changelog_payload) expose
+#   both functions to the fast-lane-ship.js Changelog phase, which runs
+#   between Coder and Commit so the entry is staged and committed as part
+#   of the same change the PR is opened from (BO-2400f-4-iii), with a new
+#   Review phase (BO-2400f-11, pr-reviewer dispatch) ahead of it gating the
+#   commit dispatch on a fail-closed verdict read. (#TICKETLESS
+#   reason=known-issue-fix-no-ticket-KI-BO-001)
+# ====================================================================

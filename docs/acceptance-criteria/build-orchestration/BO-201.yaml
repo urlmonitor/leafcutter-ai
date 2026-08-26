@@ -45,6 +45,65 @@ implemented_by:
   - "config/agent_registry.json"
 covered_by:
   - "tests/test_ac_fulfillment_gate.py"
+  # Added by ACD-1900b-5-i, which requires BO-201 to gain its first EXECUTING
+  # coverage. The entry above is a read_text() + regex suite over the gate
+  # template that asserts only frontmatter fields -- it could never have
+  # detected the producer/consumer shape divergence, which is how this AC sat
+  # at work_status: done while the gate it specifies resolved zero ACs. The
+  # test below carries a "# covers: BO-201" tag and asserts the list form still
+  # yields a verified-AC count equal to the number the block named.
+  - unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestListFormRegression
+test_spec:
+  - name: test_ac_fulfillment_gate_registered_as_ticket_phase_agent
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "config/agent_registry.json parses to an ac-fulfillment-gate entry with is_ticket_phase true, tier phase, role quality, and ticket-supervisor in spawned_by — the data that makes the gate dispatchable at all."
+  - name: test_ac_fulfillment_gate_priority_orders_between_ac_validator_and_commit
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "Reading all three priorities from the registry, ac-validator (11.5) < ac-fulfillment-gate (11.7) < commit (12), asserted as a relation between the looked-up values rather than as literals in prose."
+  - name: test_rendered_phase_ordering_places_gate_between_ac_validator_and_commit
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    description: "Calling build_agent_priority_table() from scripts/injection_builders.py — the function that actually renders the canonical phase ordering injected into the supervisor prompt — yields rows whose order puts ac-fulfillment-gate after ac-validator and before commit."
+  - name: test_phase_agent_selection_table_lists_gate_with_default_not_needed
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    description: "Calling build_registry_block() renders a selection-table row for ac-fulfillment-gate whose default status is not_needed, which is the mechanism by which a ticket with no ac_traceability never triggers the gate."
+  - name: test_ac_fulfillment_gate_template_declares_tools_needed_to_verify_and_fix
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    description: "The template's YAML frontmatter parses to tools containing Read (load AC YAML), Bash (inspect the branch diff) and Edit (apply the auto-fix), plus signoff true — the declared capabilities the criteria's verification steps require."
+test_rationale: |
+  Scope boundary, stated explicitly so this contract is not mistaken for full
+  coverage. This AC has two halves. The WIRING half — that the gate exists, is a
+  ticket phase, and is ordered after ac-validator and before commit — is
+  mechanically provable, and the descriptors above prove it by executing the
+  real consumers (build_agent_priority_table / build_registry_block in
+  scripts/injection_builders.py), which is what the supervisor prompt is
+  actually rendered from. That is deliberately chosen over the SKILL.md
+  substring/regex assertions currently in tests/test_ac_fulfillment_gate.py
+  (TestBuildingEpicsSkillIncludesAcFulfillmentGate), which are grep-only and
+  would pass against dead prose.
+  The VERDICT half — loading each referenced AC, checking work_status /
+  implemented_by-intersected-with-diff / covered_by, and returning ok vs
+  blocker with per-AC details — is authored entirely as natural-language
+  procedure in templates/agents/ac-fulfillment-gate.md. There is no importable
+  module implementing it, so no unit test can execute it; only an end-to-end
+  agent run could. That residual gap is NOT covered by this test_spec and
+  should not be read as covered.
+
+  Note (post-merge): origin/main independently added
+  unit_tests/ac_driven_dev/test_acd_1900b_5_i.py::TestListFormRegression to
+  covered_by as BO-201's first EXECUTING coverage, reaching the same conclusion
+  about the grep-only suite from the other direction. That test narrows the
+  VERDICT gap described above; it does not close it, because it exercises the
+  list-form resolution path rather than the full ok/blocker verdict.
 change_target: prompt
 risk_surface: internal
 product_truth:

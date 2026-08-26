@@ -1,0 +1,136 @@
+id: ACS-1100b-4
+components:
+  - ac_store
+title: "An exclusion grounded only in a record's age is no ground at all"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b.yaml
+criteria: |
+  Given a registry of 45 component entries, of which 9 declare a field a rule
+    requires and 36 do not,
+  And a validator that examines only the entries appearing in the change being
+    committed, enforces the rule on those, and accepts the remaining 36 on the
+    stated ground that they pre-date the rule,
+  When the validator reports its result,
+  Then the 36 entries are reported as an exclusion carrying no legitimate ground,
+    and therefore as an unexplained shortfall under ACS-1100c-1, rather than as a
+    legitimate exclusion,
+  And "the record pre-dates the rule", "legacy state is accepted", and every other
+    ground whose whole content is the record's age or its position relative to the
+    rule's introduction are absent from the published list of legitimate grounds,
+    so a run naming one of them reconciles no better than a run naming nothing,
+  And the one honest route open to that validator is the ground already published
+    for a scoped caller: it declares its scope and reports the scope total and the
+    registry total together, reading "1 of 1 in scope, scope = entries appearing in
+    the change; registry = 45, 44 excluded as outside the requested scope",
+  And a run that reports only that the entry it examined complies, naming no
+    registry total and no count of the entries it did not examine, does not satisfy
+    this criterion whatever exit status it returns,
+  And an exclusion under "outside the requested scope" states which records this
+    run looked at and never states that the excluded records comply, so the same 36
+    are still counted as unexamined on every later run until a run examines them,
+  And the bug symptom this criterion forbids is a rule described as holding for
+    every entry in a registry while 36 of the 45 entries break it and every run of
+    the validator that governs it reports success.
+
+  Coverage note: exercise this against a fixture registry in which the entry
+  present in the change complies and 36 unchanged entries do not, and assert on the
+  reported figures — the registry total, the covered count, and the count carried as
+  unexamined. A test that asserts only the exit status cannot tell an honest scoped
+  verdict from a silent one, because both may legitimately exit 0.
+depends_on:
+  - ACS-1100b
+  - ACS-1100b-1
+doc_links:
+  - path: docs/components.json
+    relationship: related
+    status: exists
+    relevance: "BINDING in-component grounding failure. Counted directly against the file on 2026-08-25: 45 entries, 9 declaring agent_affinity, 9 declaring exposed_interfaces, so 36 of 45 break each rule."
+  - path: templates/scripts/commit_guardian/check_components_integrity.py
+    relationship: related
+    status: exists
+    relevance: "The validator whose stated posture this criterion rules out: it checks only components appearing in the diff and records that existing components with no diff are not checked, legacy state accepted."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: related
+    status: exists
+    relevance: "KI-CG-001 is the class (a guardrail evaluating the change rather than the population); KI-CG-007 point 3 records the consequence of grandfathering — zero of the pre-existing entries carry the validated fields, so a new author has no precedent to copy."
+  - path: docs/acceptance-criteria/ac-store/ACS-300-component-governance/ACS-300h-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Cited as the worked example ONLY. Repairing the registry is owned there and by ACS-300i-2, not here — this criterion governs the ground list, not the backfill."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: "M3, the change-scoped blind spot this ground list closes off as a laundering channel."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1100b-4-i
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT ALREADY IN ACS-1100b-1. ACS-1100b-1 requires every exclusion to
+  carry a ground and rules that a ground outside the published list counts as no
+  ground. It does not say what is on that list beyond four entries recorded in
+  ACS-1100b's notes (deprecated, superseded, non-AC YAML, outside the requested
+  scope), and the list itself is written by ACS-1100e-1, which has not been built.
+  Grandfathering is therefore not currently forbidden — it is unaddressed, and the
+  next author writing the list could admit it in good faith as a fifth ground. This
+  criterion closes that door before the list is written. It adds one entry to the
+  NEGATIVE side of the list and changes nothing else in ACS-1100b-1.
+
+  WHY AGE IS DIFFERENT FROM SCOPE, stated so the two are not conflated. "Outside
+  the requested scope" is a claim about which records a run looked at; it is
+  self-limiting, because the excluded records stay unexamined and keep showing up
+  in the count. "It pre-dates the rule" is a claim about which records the rule
+  applies to; it is permanent, it shrinks the governed population rather than the
+  examined one, and the excluded records never reappear. The first keeps the
+  denominator honest, the second quietly redefines it. That is the whole distinction
+  this record exists to fix in writing.
+
+  DIFF-SCOPING IS NOT THE DEFECT AND IS NOT REPEALED HERE. The AC-store CI job
+  states the product decision plainly (ACS-200g-2): a whole-store gate applied per
+  pull request would fail every contributor on day one and be switched off. Nothing
+  in this criterion requires a per-change validator to widen its scan. It requires
+  the validator to say how wide its scan was. Read together with ACS-1100c-1, a
+  scoped run that declares its scope and reports both totals reconciles and does not
+  halt; it is the run that says nothing about the 44 that halts. The measured
+  observation behind that decision has drifted and should be re-cited when used:
+  the CI comment says 57 orphaned children; scan_ac_orphans.py reports 53 on
+  2026-08-25.
+
+  ADJACENT, NOT DUPLICATED.
+    - ACS-200h owns the separate whole-store re-check on the protected branch, and
+      is honestly open (work_status todo, covered_by empty), by the same stated
+      reasoning. This criterion does not overlap it: ACS-200h widens a scan, this
+      one constrains what a narrow scan may claim.
+    - GE-120a-4 deliberately carves the empty-scope commit-time run OUT of its rule
+      ("an invocation given no targets at all ... still reports an ordinary pass").
+      That carve-out is correct for its subject and is exactly why the diff-scoped
+      case needed a home somewhere else. This is that home.
+    - TQ-400a (whole-store done-proof sweep), GE-122a-1 and GE-122d-3 (whole-
+      collection numbering pass) and BP-1500a (whole-artifact-set build drift) are
+      four further surfaces that each widened a scan for themselves. They are
+      instances of the standing contract, not competitors to it; cite them, do not
+      fold them in.
+
+  THE NON-DUPLICATION RULE STILL HOLDS. docs/components.json is cited here as the
+  binding grounding failure because the component registry is governed by ac-store
+  records (ACS-300), so the grounding stays in-component as ACS-1100's notes
+  require. Repairing the 36 entries is owned by ACS-300h-1 and ACS-300i-2 and is
+  not a completion condition for this criterion.

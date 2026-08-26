@@ -359,30 +359,23 @@ Any item that did not complete cleanly MUST expand to the nested object form wit
 
 ## When Tests Fail at Pre-Commit
 
-If the pre-commit test hook (`run-tests-with-baseline`) blocks the commit
-because tests fail:
+There is no known-failing-tests baseline mechanism today. Any earlier
+instruction to run `scripts/commit_guardian/known_failing_tests.py` is
+obsolete — the script has been removed. **`--no-verify` remains forbidden**;
+the baseline going away does not weaken that prohibition.
 
-1. **Check whether the failures are new or pre-existing:**
-   ```bash
-   python scripts/commit_guardian/known_failing_tests.py
-   ```
-   If the output says "baseline-known failure(s) present — not blocking", the
-   test suite is already green for your purposes. Rerun the commit.
+If a pre-commit test hook blocks the commit:
 
-2. **If new failures are detected:** Investigate whether they are caused by
-   your change. Fix the regression before committing.
+1. **Determine whether the failure is caused by this change:** `git stash`,
+   run the suite, `git stash pop`, and compare.
+2. **Caused by this change:** fix it before committing.
+3. **Genuinely pre-dates this change:** do not bypass the gate. Surface it to
+   the user as a blocker and stop.
 
-3. **If the failing tests pre-existed your change** (and you can confirm this
-   via `git stash`, then `pytest`, then `git stash pop`): update the baseline and commit
-   both changes together:
-   ```bash
-   python scripts/commit_guardian/known_failing_tests.py --update
-   git add scripts/commit_guardian/known_failing_tests.json
-   COMMIT_AGENT_MODE=1 git commit -m "chore(tests): update known-failing baseline — <reason>"
-   ```
-
-**Never use `--no-verify` to skip test failures.** The baseline mechanism is
-the correct escape path. See `docs/how-to/known-failing-tests-baseline.md`.
+The replacement capability — a failing test on a valid, unexpired allowlist
+entry not blocking the run, with expiry dates, ticket references, and
+stale-entry detection — is specified and approved but not yet built. See
+TQ-100d-1.
 
 ## Staging moved tickets (rename tracking)
 

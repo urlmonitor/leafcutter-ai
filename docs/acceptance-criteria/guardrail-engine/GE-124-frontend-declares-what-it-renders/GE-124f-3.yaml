@@ -1,0 +1,132 @@
+id: GE-124f-3
+readiness: approved
+priority: high
+title: "A test's selector and the criterion it claims to cover are checked against each other"
+component: guardrail-engine
+components:
+  - testing_quality
+  - frontend_coding
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+criteria: |
+  Given an element pinned to the criterion UXP-100d-2
+  When the selector for that element is derived
+  Then the derived selector matches elements whose criterion pin includes
+    UXP-100d-2, and matches no element that does not carry that pin
+  And the derived selector is the same string for every element pinned to that
+    criterion
+
+  Given a front-end test that declares it covers UXP-100d-2 and locates its
+    element with the selector derived from UXP-100d-2
+  When the test and the element are checked against each other
+  Then they are reported as agreeing
+
+  Given a front-end test that declares it covers UXP-100d-2 and locates its
+    element with the selector derived from UXP-607
+  When the test and the element are checked against each other
+  Then a finding is reported naming the test, the criterion it claims, and the
+    criterion its selector actually reaches
+depends_on:
+  - GE-124f
+  - GE-124b-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124f.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/product-truth/mock-data/guardrails/frontend-ac-declarations.mock.json"
+    relationship: related
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-4.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE SELECTOR IS THE MEMBERSHIP FORM `[data-ac~=\"<id>\"]`, EXACTLY AS THE MOCK-DATA INVARIANT STATES. The `~=` operator matches a whitespace-separated token within the attribute value; an exact-match `[data-ac=\"<id>\"]` selector silently fails on every multi-valued pin such as `data-ac=\"UXP-607-1 UXP-607\"`, which is the common case. This is also why GE-124b-1's value grammar is whitespace-only — a comma in the value would make every derived selector match nothing."
+  - "DERIVATION IS A PURE FUNCTION OF THE ID, exposed as ONE function that both the check and the documentation (GE-124b-5) read. Same id in, same string out, every time, for every element pinned to that criterion. A per-element or per-file selector would defeat the whole point, which is that the selector a test writes and the id in its coverage tag are the same thing."
+  - "THE CLAIMED CRITERION COMES FROM THE TEST'S EXISTING COVERAGE TAG. Reuse the repo's established covers-tag convention and its existing parser (COVERS_TAG_RE, shared between scripts/ac_store/done_proof.py and test_enforcement.py) rather than introducing a second way for a front-end test to declare what it covers. Two coverage-tag conventions would be a new drift surface in a tree whose entire point is removing them."
+  - "AGREEMENT IS CHECKED STATICALLY, NOT BY RUNNING THE TEST. Extract the selector literals a test uses and compare their embedded ids against the ids in its coverage tag. This is a text-level comparison of two declared things and does not require a browser, a test run, or a rendered DOM — keeping it static is what makes it affordable to run over every front-end test."
+  - "THE FINDING NAMES THREE THINGS: the test, the criterion it claims, and the criterion its selector actually reaches. A finding that says only 'mismatch' leaves the author to work out which of the two is wrong, and either could be."
+  - "HARD BOUNDARY — THIS AC CHECKS AGREEMENT ONLY. It says nothing about whether the test asserts anything. An existence-only test that locates the element and stops AGREES perfectly and must still not count as covering the criterion; that is GE-124g-4, which guards this outcome directly. Do not let agreement be recorded anywhere as coverage."
+  - "A test that uses a non-derived selector (a CSS class, a text matcher, a testid) is NOT a finding — this check applies to tests that use the derived selector form. Reporting every front-end test that does not use data-ac would make the pin compulsory by the back door."
+delivers_to:
+  agent: test-writer
+  contract: "One pure derivation function id -> `[data-ac~=\"<id>\"]` (the membership form, so multi-valued pins match), shared by the agreement check and by the reference doc; plus a static agreement check between the ids in a front-end test's existing covers tag and the ids embedded in the derived selectors it uses. Agreement is NEVER recorded as coverage — an existence-only test agrees perfectly and covers nothing (GE-124g-4)."
+expects_from:
+  ac_id: GE-124b-1
+  contract: "The element pin and its whitespace-separated ac_ids list, from which the membership-form selector is derived and against which a test's claimed criterion is checked"
+test_spec:
+  - name: test_ge_124f_3_derived_selector_matches_a_multi_valued_pin
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The selector derived for UXP-607 matches an element carrying `data-ac=\"UXP-607-1 UXP-607\"` and does not match an element carrying only UXP-100d-2. The multi-valued case is the one an exact-match selector silently fails, and it is the common case."
+  - name: test_ge_124f_3_derivation_is_stable_for_the_same_id_across_elements_and_calls
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The same id yields the same selector string for every element pinned to it and on repeated calls. A per-element selector would break the identity between the selector and the covers tag that this whole outcome rests on."
+  - name: test_ge_124f_3_agreeing_test_is_reported_as_agreeing_and_mismatched_test_names_all_three_facts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A test whose covers tag and selector both say UXP-100d-2 agrees; a test claiming UXP-100d-2 while selecting UXP-607 produces a finding naming the test, the claimed criterion and the reached criterion. Assert all three appear — 'mismatch' alone leaves the author unable to tell which side is wrong."
+  - name: test_ge_124f_3_covers_tag_is_read_with_the_repo_s_existing_parser_over_real_test_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the agreement check over real on-disk front-end test files carrying real covers tags, parsed with the SAME regex done_proof.py and test_enforcement.py use. A second tag parser would drift from the one the done-proof gate honours, and a hand-typed tag fixture reproduces the formatting bias that hid the files_touched parser no-op for an entire epic."
+  - name: test_ge_124f_3_a_test_using_a_non_derived_selector_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A front-end test locating its element by class or by text produces no finding. Reporting every test that does not use data-ac would make the optional pin compulsory by the back door, contradicting GE-124b-1."
+test_rationale: |
+  Two implementation choices decide whether this AC works, and neither is visible in a
+  happy-path test. The first is the selector operator: `[data-ac="id"]` looks correct, passes any
+  single-valued fixture, and fails silently on every multi-valued pin — so the first test uses a
+  multi-valued pin specifically. The second is the covers-tag parser: writing a new one is easy
+  and would drift from the one check_done_proof honours, so the fourth test runs over real test
+  files with the repo's existing regex rather than typed fixtures. The last test is the
+  back-door guard: an over-eager check that reports every front-end test not using the attribute
+  would make the optional pin compulsory, which contradicts GE-124b-1 and is not visible from
+  any positive scenario.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Pinned the membership-form selector `[data-ac~=]` and tied it back to GE-124b-1's whitespace-only value grammar (a comma would make every derived selector match nothing), required reuse of the repo's existing covers-tag parser (COVERS_TAG_RE, shared by done_proof.py and test_enforcement.py) rather than a second convention, kept the agreement check static, and added the back-door guard that a test using a non-derived selector is not a finding. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  OUTCOME 3 of three. The selector falls out of the attribute mechanically, so
+  it is identical to the id the test already names in its coverage tag — which
+  makes the usual silent mismatch checkable: a test claiming one criterion while
+  exercising another.
+
+  The first scenario's second clause matters because pins are multi-valued. A
+  selector built as an exact attribute match would silently fail on
+  `data-ac="UXP-607-1 UXP-607"`, so the derived selector has to match on
+  membership within the value, not equality of the whole value.
+
+  THE HARD BOUNDARY: this AC checks that a test and an element AGREE about
+  which criterion is under test. It says nothing about whether the test asserts
+  anything. An existence-only test that locates the element and stops would pass
+  this check and must still not count as covering the criterion — that is
+  GE-124g-4, which guards this outcome directly.
+
+  IT-PO NOTE (2026-08-25). The covers-tag convention already exists and is
+  already shared between scripts/ac_store/done_proof.py and test_enforcement.py
+  via a common regex. Front-end tests must use that same convention — inventing
+  a second one would put this tree in the position GE-124c-2-i is written to
+  fix, one namespace along.

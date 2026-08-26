@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -435,10 +436,40 @@ def install_shims(
     return results
 
 
+def _relative_symlink_target(canonical: Path, source: Path) -> str:
+    """Return the symlink target to record for ``canonical`` -> ``source``.
+
+    Computed relative to ``canonical``'s own parent directory (ADR-004 /
+    ADR-016) — not the process's working directory — so a rebuild from any
+    cwd, and a relocation/copy of the whole tree, still resolves. Falls back
+    to an absolute target when no relative path can be expressed (e.g. the
+    canonical location and the output root sit on different drives/mounts
+    with no common ancestor); the caller still completes in that case.
+
+    Args:
+        canonical: Absolute path where the shim link will be created.
+        source: Absolute path inside the output root the link must resolve to.
+
+    Returns:
+        The string to pass to ``Path.symlink_to()`` — a relative path when
+        one can be expressed, otherwise the absolute ``source`` path.
+    """
+    try:
+        return os.path.relpath(str(source), str(canonical.parent))
+    except ValueError:
+        return str(source)
+
+
 def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
     """Create a directory shim (symlink or copy) at canonical pointing to source.
 
-    Returns the method used ("symlink" or "copy").
+    Args:
+        canonical: Absolute path where the shim is created (e.g. `.claude/agents`).
+        source: Absolute path inside the output root the shim must resolve to.
+        strategy: ``"symlink"``, ``"copy"``, or ``"auto"`` (see ``install_shims``).
+
+    Returns:
+        The method used: ``"symlink"``, ``"copy"``, or ``"copy (symlink failed)"``.
     """
     import shutil
 
@@ -446,8 +477,9 @@ def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
         shutil.copytree(source, canonical, dirs_exist_ok=True)
         return "copy"
 
+    target = _relative_symlink_target(canonical, source)
     try:
-        canonical.symlink_to(source, target_is_directory=True)
+        canonical.symlink_to(target, target_is_directory=True)
     except (OSError, PermissionError):
         if strategy == "symlink":
             raise
@@ -460,7 +492,13 @@ def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
 def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
     """Create a file shim (symlink or copy) at canonical pointing to source.
 
-    Returns the method used ("symlink" or "copy").
+    Args:
+        canonical: Absolute path where the shim is created (e.g. `.gemini`).
+        source: Absolute path inside the output root the shim must resolve to.
+        strategy: ``"symlink"``, ``"copy"``, or ``"auto"`` (see ``install_shims``).
+
+    Returns:
+        The method used: ``"symlink"``, ``"copy"``, or ``"copy (symlink failed)"``.
     """
     import shutil
 
@@ -468,8 +506,9 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
         shutil.copy2(source, canonical)
         return "copy"
 
+    target = _relative_symlink_target(canonical, source)
     try:
-        canonical.symlink_to(source)
+        canonical.symlink_to(target)
     except (OSError, PermissionError):
         if strategy == "symlink":
             raise

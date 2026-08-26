@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given docs/components.json contains N component entries (where N >= 20),
   When a validator checks the registry for completeness,
@@ -33,6 +33,35 @@ delivers_to:
   agent: python-coder
   contract: "Validation logic ensuring agent_affinity is a present JSON array on every component entry"
 expects_from: null
+test_spec:
+  - name: test_acs_300h_1_every_registry_entry_declares_agent_affinity
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Load the REAL docs/components.json and assert every entry declares agent_affinity as a JSON array. Measured 2026-08-25: 45 entries, 9 declaring — so this test must be RED on HEAD. A fixture-based test is structurally blind here, because the defect is the state of the actual registry, not the validator's logic on a synthetic entry."
+  - name: test_acs_300h_1_validator_reports_the_registry_total_not_just_its_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Run check_components_integrity.py over a change containing one compliant entry in a registry where others are non-compliant, and assert its output states both the count it examined and the registry total. Today it examines the diff and reports nothing about the rest, which is precisely how this AC reached done while 36 entries violated it (KI-CG-001; the requirement is stated generally in ACS-1100b-1)."
+  - name: test_acs_300h_1_null_and_absent_are_both_rejected
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "must_block negative control: an entry with agent_affinity set to null and an entry omitting it entirely are each rejected by name. Without this the criterion is satisfiable by a validator that accepts everything."
+test_rationale: |
+  This AC was marked done on a validator that is correct and a registry that is not.
+  The covering test asserted the validator's logic against synthetic entries, which
+  passes today and would pass with 45 of 45 entries non-compliant — so the test could
+  never have detected the condition the criteria describe.
+
+  The first descriptor is therefore pinned to the real artifact and is expected RED on
+  HEAD. If it is green on first authoring, the count has changed or the test is not
+  reading docs/components.json. The second descriptor is what stops the AC being closed
+  again on a truthful-but-narrow verdict; it is the local instance of ACS-1100b-1.
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by: [it-po-v3]
@@ -43,3 +72,15 @@ implemented_by:
   - templates/scripts/commit_guardian/check_components_integrity.py
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  REOPENED 2026-08-25 (was work_status: done, readiness stays approved — the requirement is
+  right, the implementation does not meet it). The criteria quantify over EVERY component
+  entry. docs/components.json has 45 entries; 9 carry agent_affinity. The validation was
+  added to check_components_integrity.py as required, but that script only checks components
+  appearing in the current diff and explicitly accepts pre-existing drift, so the invariant
+  is enforced for new entries and false for the registry as a whole.
+
+  This is an instance of KI-CG-001 (guardrails evaluate the change, not the population), not
+  an independent defect. Closing it means either backfilling the 36 entries or narrowing the
+  criteria to new entries only — the first preserves the stated guarantee, the second admits
+  the weaker one. Do not close it by re-running the existing validator and observing silence.

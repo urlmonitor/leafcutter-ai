@@ -3,15 +3,14 @@ title: 'Agent Reference: documentation-expert'
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-08-25
 components:
-- infrastructure
 - infrastructure
 related_docs:
 - docs/agents/conventions.md
 - docs/architecture/adrs/ADR-033-agent-model-tiers.md
-- docs/README.md
-- tickets/09_done/EPIC-CodingAgents/20_documentation_expert.md
+- config/doc_types.json
+- docs/known-issues/documentation-system.md
 related_code:
 - .claude/agents/documentation-expert.md
 - .claude/commands/documentation.md
@@ -168,7 +167,7 @@ feature") also auto-triggers the agent via its `description` field.
 - [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream policy: three-tier ladder (§2.1), Multi-Skill Dispatcher pattern (§2.4),
   strict-research-delegation (§2.6), nesting depth (§2.7).
-- [`docs/README.md`](../../README.md) — Diataxis index; loaded by the orchestrator
+- [`config/doc_types.json`](../../../config/doc_types.json) — Diataxis genre mapping; loaded by the orchestrator
   on every run.
 - [`.claude/agents/documentation-expert.md`](../../../.claude/agents/documentation-expert.md) —
   the agent file itself: frontmatter + system prompt.

@@ -18,6 +18,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 spec = importlib.util.spec_from_file_location("build_helpers", _MODULE_PATH)
+assert spec is not None and spec.loader is not None, f"could not load spec for {_MODULE_PATH}"
 _mod = importlib.util.module_from_spec(spec)
 sys.modules["build_helpers"] = _mod
 spec.loader.exec_module(_mod)

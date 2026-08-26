@@ -91,7 +91,12 @@ def _run_main(payload: dict | str, env_override: dict | None = None) -> tuple[in
             _hook.main()
             exit_code = 0
         except SystemExit as exc:
-            exit_code = exc.code if exc.code is not None else 0
+            code = exc.code
+            assert code is None or isinstance(code, int), (
+                f"hook called sys.exit() with a non-int code {code!r}; "
+                "this test's (int, str) contract assumes exit codes, not messages."
+            )
+            exit_code = code if code is not None else 0
 
     return exit_code, stdout_capture.getvalue()
 

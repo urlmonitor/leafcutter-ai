@@ -29,6 +29,9 @@ created: 2026-06-05
 amended_by:
   - "split: INF-400g -> INF-400g + INF-400h, 2026-06-05"
   - "split: INF-400 -> INF-400 + INF-700, 2026-06-05"
+  - reason: "child_limit_override set to 8 to record the EXISTING L1 count (one over the cap of 7), not to admit a new child. Same cause as the sibling override on INF-400g: these eight L1s have been in place since 2026-06-05, and the cap was never tripped because no commit had staged a descendant until INF-400g-1 was reconciled on 2026-08-25. The ancestor walk then surfaced both levels at once. Deliberately NOT split here — a two-level rebalance of the agent-learning tree is PO/BA-owned restructuring, and doing it inside a one-field status reconciliation is precisely how this tree drifted in the first place. This override is a HOLD recording known debt, not an endorsement. REMOVE IT when a PO-owned split rebalances INF-400, and do not raise it further to admit additional children."
+    by: main-loop-reconciliation
+    at: 2026-08-25
 superseded_by: null
 covered_by:
   - INF-400a
@@ -40,5 +43,6 @@ covered_by:
   - INF-400g
   - INF-400h
 implemented_by: []
+child_limit_override: 8
 change_target: prompt
 risk_surface: contract_boundary

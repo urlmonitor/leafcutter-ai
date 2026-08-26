@@ -1,0 +1,164 @@
+id: GE-123b-1-i
+components:
+  - commit_guardian
+  - security_scanner
+title: "The author is told which line was declined and which file it would have left unprotected, without the commit being stopped"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the allowlist file's fourth line is an entry naming every rule, the path
+    "secrets.py", and every line,
+  And "secrets.py" contains four lines the scanner's content rules recognise,
+  When the file is scanned through the scanner's multi-file entry point — the
+    same entry point the pre-commit secrets check calls,
+  Then exactly one warning about that entry is emitted, on the error stream and
+    not on the stream that carries the findings report the pre-commit secrets
+    check consumes,
+  And the warning names the allowlist file it came from, states the 1-based line
+    number 4, and quotes the offending line verbatim,
+  And it additionally names "secrets.py" as the file the entry would have left
+    with nothing able to report on it.
+
+  Given the same allowlist, whose remaining lines are well-formed entries naming
+    other rules and other paths,
+  When the run completes,
+  Then every one of those other entries is still loaded and still applied,
+  Because declining one over-broad line must not withdraw the author's other
+    suppressions.
+
+  Given the same allowlist and the same file,
+  When the run completes,
+  Then the run completes normally and raises nothing,
+  And its exit status is determined by the findings that were reported and by
+    nothing else — the declined line by itself neither blocks the commit nor
+    changes the exit status,
+  Because this check runs on every commit, so treating a too-broad suppression
+    line as fatal would turn one author's mistake into a repository-wide commit
+    outage, whereas declining the line already fails closed: the author
+    immediately sees the findings they were trying to hide.
+depends_on:
+  - GE-123b-1
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The scanner is a packaged template. templates/skills/security-scanner/scripts/scan_secrets.py is the canonical edited copy; build.py propagates it to the materialized copies. Edit the template only."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. It established the warning contract this criterion REUSES — error stream, allowlist file path, 1-based line number, verbatim offending text, per-line and never per-file skipping, silence on blank and comment lines, and warn-rather-than-raise so a typo cannot become a commit outage. What is new here is the trigger (a well-formed entry declined for its effect, not a malformed entry rejected for its shape) and one extra piece of information (the file whose coverage the entry would have emptied), for which -v's message has no place. A second warning convention in the same file would be a defect in its own right; -v's scenarios are not restated."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "PROVENANCE PLUMBING IS THE REAL WORK HERE, and it is why this is not a one-line print. `_load_allowlist` returns `set[tuple[str, str, str]]` today: the allowlist file path, the 1-based line number and the verbatim line text are all discarded at parse time, and the container is unordered. The warning this criterion requires cannot be produced at the decline point without the loader carrying that provenance through. Changing the loader's return shape is a signature change: audit and update EVERY call site in the same change — `scan_files` in the same module, and `unit_tests/commit_guardian/test_scan_secrets_suppression.py`, which calls both `_load_allowlist` and `_is_suppressed` directly with 3-tuples — per the CLAUDE.md call-site-audit convention."
+  - "REUSE GE-113c-3-v's WARNING CONTRACT EXACTLY, do not start a second one: error stream, allowlist file path, 1-based line number, verbatim offending line text, warn-never-raise, per-line and never per-file. Exactly one piece of information is new here — the name of the file the entry would have left with nothing able to report on it. Two warning conventions in the same module would be a defect in their own right."
+  - "STREAM DISCIPLINE: the warning goes to the error stream only. The other stream carries the findings report that `check_secrets` and the module's CLI entry point print, and the warning must never enter the list `scan_files` returns — a warning that arrives as a finding would corrupt the count every sibling criterion asserts."
+  - "EXACTLY ONCE: at most one warning per (declined entry, affected file) pair per run. Not one per finding, not one per line of the scanned file, not one per rule the entry silenced. The obvious wrong shape is a warning emitted inside the per-finding suppression loop."
+  - "NON-FATAL, and prove BOTH directions. The run completes and raises nothing, and its exit status is a function of the reported findings alone. Test it in both directions: findings-present exit when the declined entry restores findings, and clean exit when the same declined line is in force but the scanned set has nothing to report. Asserting only the first direction cannot distinguish 'exit follows the findings' from 'a declined line sets a failure exit'."
+  - "Declining one line must not withdraw the author's other suppressions: every other well-formed entry in the same allowlist file is still loaded and still applied. Assert this by observing a second file actually being suppressed in the same run, not by inspecting the loaded entry set."
+  - "ASSERT THE INFORMATION, NOT THE WORDING: capture the error stream around the `scan_files` call (`contextlib.redirect_stderr`, matching the convention the existing suppression test module already uses for `_load_allowlist`) and assert the allowlist file path, the 1-based line number, the verbatim offending text and the affected file name as SEPARATE substrings — never as one formatted string. Message wording must stay free to change."
+  - "THE ANTI-PRECEDENT THAT MAKES THE END-TO-END TEST MANDATORY: this component already contains a guard documented as dispatching a specialist that does no such thing — the path is a placeholder and it always reports success. A documented-but-dead correction path is worse than none, because authors believe they are covered. A test that only asserts the message string exists in the source, or that calls the emitting helper directly, does not discharge this criterion. The warning must be observed arriving on the error stream through `scan_files`, with real files on disk and a real `.security-allowlist` in the same temporary root."
+  - "Fixture reachability: ordinary `.py` filenames only. `scan_file` short-circuits an environment-named path to a single name-based finding and returns before any content rule runs, so the four-recognised-lines fixture is unreachable at such a path."
+  - "ADR-001 parity: edit the canonical `templates/skills/security-scanner/scripts/scan_secrets.py` only and let `build.py` propagate. Never hand-edit the copies under `.claude/`, `.gemini/`, `.leafcutter/`, `EPIC-*/` or `worktrees/**`."
+  - "RED-FIRST LABELLING: all three arms are red today. The measured collapse produces NO output on the error stream and none on the findings stream — the file is silently unprotected. No descriptor below is a regression guard, so any green result before the implementation lands is a TDD-order violation here, unlike in the parent."
+delivers_to: null
+expects_from:
+  ac_id: GE-123b-1
+  contract: "The per-file decision helper in templates/skills/security-scanner/scripts/scan_secrets.py that scan_files calls once per scanned file, returning the rule ids still able to report on that file and the entries declined for it. Each declined entry must carry its source allowlist file path, its 1-based line number and its verbatim line text — that provenance is the raw material of the warning specified here, and the loader discards all three of them today. This criterion specifies what is said at that point, on which stream, how many times, and what it must not do to the run."
+test_spec:
+  - name: test_declined_entry_warning_names_allowlist_file_line_number_and_text
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 1, RED today (no output on any stream). With the collapsing entry written as the fourth line of a real allowlist, the error stream captured around scan_files contains the allowlist file path, the 1-based line number 4, and the offending line verbatim, asserted as three separate substrings"
+  - name: test_declined_entry_warning_names_the_file_it_would_have_emptied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 1's new information, the one piece GE-113c-3-v's message has no place for: the same captured warning also names the scanned file the entry would have left with nothing able to report on it"
+  - name: test_declined_entry_warning_goes_to_the_error_stream_only
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Arm 1's stream clause: capturing both streams around the same scan_files call shows the warning on the error stream and nothing of it on the stream the pre-commit check consumes, and no element of the returned findings list carries the warning text"
+  - name: test_declined_entry_is_announced_exactly_once
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Arm 1's cardinality clause: with four findings on four separate lines of the scanned file, the captured error stream mentions the declined line exactly once — not once per finding, not once per silenced rule"
+  - name: test_other_entries_in_the_same_allowlist_are_still_applied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Arm 2: with well-formed entries naming other rules and other paths on the allowlist's remaining lines, a second fixture file in the same run is still suppressed as those entries direct — observed through the reported findings, not by inspecting the loaded entry set"
+  - name: test_declined_entry_does_not_raise_and_exit_status_follows_findings_only
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Arm 3, both directions through the module's CLI entry point with the temporary root as the working directory: the run raises nothing, exits findings-present when the declined entry restores findings, and exits clean when the same declined line is in force over a fixture that has nothing to report. Working directory restored in cleanup"
+test_rationale: "The parent asserts what the scan REPORTS; this asserts what the author is TOLD and what the run does not do, and the two fail independently — an implementation can decline the entry and report all four findings while saying nothing at all. The end-to-end shape is mandatory rather than stylistic: this component already contains a guard documented as dispatching a specialist that in fact always reports success, so a test asserting only that a message string exists would reproduce exactly the failure mode that anti-precedent represents. Every descriptor therefore captures the real error stream around a real scan_files call. The warning content is asserted as separate substrings so the contract is the information and the wording stays free, following the convention the existing suppression test module already uses. Two descriptors exist that a thinner reading would omit: the exactly-once descriptor, because the obvious wrong implementation emits from inside the per-finding suppression loop and would pass a mere presence assertion four times over; and the both-directions exit-status descriptor, because asserting only the findings-present direction cannot distinguish an exit driven by the findings from an exit driven by the declined line, which is the failure that would turn one author's typo into a repository-wide commit outage."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): complexity S->M, because the announcement is not a print statement — `_load_allowlist` returns an unordered set of 3-tuples and discards the allowlist path, line number and verbatim text, so the loader's return shape must change and every call site (scan_files, and the existing unit_tests/commit_guardian/test_scan_secrets_suppression.py which builds 3-tuples directly) must be audited in the same change. Authored it_requirements reusing GE-113c-3-v's warning contract rather than a second one, naming the stream discipline, the exactly-once cardinality, and the both-directions exit-status proof; tightened expects_from to name the provenance the parent must carry. Authored a 6-entry test_spec plus test_rationale, every descriptor driving scan_files with real files and a real allowlist. No descriptor is a regression guard: all three arms measured red (no output on either stream). Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS ITS OWN RECORD RATHER THAN AN ARM OF GE-123b-1. Its parent asserts
+  what the scan REPORTS; this asserts what the author is TOLD and what the run
+  does not do. They fail independently: an implementation can decline the entry
+  and report all four findings while saying nothing at all, and one can announce
+  correctly while escalating to a hard error. The second failure is the more
+  expensive of the two, because it fires on every commit in the repository.
+
+  THE ANTI-PRECEDENT THAT MAKES THE TEST MANDATORY, carried through from GE-123c
+  and the component context note. This component already contains a guard
+  documented as dispatching a specialist that does no such thing — the path is a
+  placeholder and it always reports success. A documented-but-dead correction
+  path is worse than none, because authors believe they are covered. This
+  criterion claims the author is told something, so it needs a test proving the
+  message actually reaches them on the real path a commit takes, not a test that
+  the message string exists.
+
+  MEASURED TODAY (2026-08-18): the collapse described in the parent produces NO
+  output on the error stream and none on the findings stream — the file is
+  silently unprotected. All three arms are red.
+
+  ASSERT THE WARNING AS SEPARATE SUBSTRINGS — the allowlist path, the 1-based
+  line number, the verbatim offending text, and the affected file name — rather
+  than as one formatted string, so the contract is the information and the
+  wording stays free to change. That is the convention -v's tests already use;
+  follow it rather than starting a second one.
+
+  IT-PO NOTE ON WHERE THE WORK ACTUALLY IS (2026-08-18): the loader discards
+  every piece of provenance this warning needs. `_load_allowlist` returns an
+  unordered `set` of (rule, path, line) 3-tuples — no allowlist file path, no
+  1-based line number, no verbatim text — so the announcement cannot be produced
+  at the decline point until the loader carries them. That return-shape change
+  is the reason this record was re-estimated from S to M, and it is a signature
+  extension with existing call sites in the module and in the existing
+  suppression test module.

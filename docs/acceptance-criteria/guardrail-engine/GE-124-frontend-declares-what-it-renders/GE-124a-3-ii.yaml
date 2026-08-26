@@ -1,0 +1,104 @@
+id: GE-124a-3-ii
+readiness: approved
+priority: high
+title: "Stories, tests and generated files are excluded by a named rule, not by directory guesswork"
+component: guardrail-engine
+components:
+  - frontend_coding
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
+criteria: |
+  Given the staged set contains `components/coverage/gaps-callout.stories.tsx`,
+    `components/coverage/gaps-callout.test.tsx` and
+    `components/generated/icon-set.tsx` whose first line is the generated-file
+    marker comment
+  And each of the three files contains rendered markup
+  When the frontend declaration reader decides which staged files are screen
+    components
+  Then all three files are out of scope
+  And no declaration verdict of any kind is recorded for any of them
+  And each file's recorded reason names the exclusion rule that matched —
+    story-file suffix, test-file suffix, or generated-file marker
+
+  Given the staged set contains `components/atlas/detail-drawer.tsx`, which
+    lives in a directory that also contains excluded files
+  When the frontend declaration reader decides which staged files are screen
+    components
+  Then `components/atlas/detail-drawer.tsx` is in scope
+depends_on:
+  - GE-124a-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a-3.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml"
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EXCLUSIONS ARE PER-FILE, NEVER PER-DIRECTORY. Match on the file's own name suffix (`.stories.<ext>`, `.test.<ext>`, `.spec.<ext>`) or on the generated-file marker in its own first line. A directory-level exclusion silently exempts real components sitting beside a story, and a silent exemption is indistinguishable from the check not running — GE-120's standing rule for this component."
+  - "THE THREE EXCLUSIONS ARE THREE DISTINCT REASON CODES ('story-file', 'test-file', 'generated-file'), matching the enum GE-124a-3 defines. Collapsing them into one 'excluded' code destroys the clustering signal the PO requires for judging whether the scope rule needs narrowing."
+  - "The generated-file marker must be the marker convention the repo's generators already emit; adopt the existing one rather than minting a new string, and record which one was adopted. Two competing markers would leave one generator's output permanently in scope."
+  - "Test-directory conventions must be covered as well as suffixes: files under a `__tests__/` directory (the convention leafcutter-web/__tests__ already uses) are test files. This is the one place a path segment is legitimate, because the segment IS the file's own test identity rather than a neighbouring file's."
+delivers_to: null
+expects_from:
+  ac_id: GE-124a-3
+  contract: "The in-scope decision this edge case narrows with three named exclusion rules, each returning its own reason code from GE-124a-3's enum"
+test_spec:
+  - name: test_ge_124a_3_ii_story_test_and_generated_files_are_each_excluded_by_their_own_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "All three markup-bearing files are out of scope with reason codes 'story-file', 'test-file' and 'generated-file' respectively, and none produces a declaration verdict. Assert the three reasons are distinct values — a single collapsed 'excluded' code passes a boolean-only assertion."
+  - name: test_ge_124a_3_ii_a_real_component_beside_excluded_files_stays_in_scope
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "detail-drawer.tsx in a directory that also contains .stories.tsx and .test.tsx files is in scope. This is the guard against directory-level exclusion, which would silently exempt every real component sitting beside a story."
+  - name: test_ge_124a_3_ii_tests_directory_convention_is_excluded_and_does_not_leak
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A markup-bearing file under a __tests__/ directory is excluded with reason 'test-file', while a file in the parent directory of that __tests__/ folder remains in scope."
+test_rationale: |
+  The second scenario is the whole point of this AC, and it is the one a directory-glob
+  implementation fails — so it gets its own test rather than riding along in a parameterised
+  case. Asserting three distinct reason codes rather than a shared boolean is what stops the
+  exclusions being collapsed into one bucket, which would destroy the clustering evidence the
+  PO asked GE-124a-3 to collect. No entry-point run is added: the commit tier's wiring is
+  charged once at GE-124c-1, and everything specific to this AC is observable in the
+  classification decision itself.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [it-po]: technical enrichment. Made the exclusions strictly per-file (with __tests__/ as the single legitimate path-segment case), required three distinct reason codes, and required adopting the repo's existing generated-file marker rather than minting a second one. criteria untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  These three survive GE-124a-3's markup test — a story and a test both render
+  markup, and a generated component file renders the most markup of all — so
+  they need naming. Each exclusion is a stated rule with a stated reason, which
+  is what lets a reviewer argue with it.
+
+  The second scenario is the guard against the shortcut a hurried implementation
+  reaches for: excluding a whole directory because it happens to contain
+  stories. Directory-level exclusion would silently exempt real components that
+  sit beside them, and a silent exemption is indistinguishable from the check
+  not running (GE-120's standing rule for this component).
+
+  IT-PO ENRICHMENT NOTE (2026-08-25). One legitimate path-segment exception is
+  named: a file under __tests__/ (the convention leafcutter-web/__tests__
+  already uses) is a test file by virtue of its own location, not a neighbour's.
+  That is not the directory-exclusion shortcut the second scenario forbids, and
+  the distinction is stated so an implementer does not have to guess.

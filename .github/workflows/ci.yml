@@ -1,26 +1,37 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Three jobs:
+# Runs on every push to main and every PR targeting main. Seven jobs — six
+# BLOCKING (the required status checks named in the branch-protection ruleset)
+# and one informational:
 #
 #   lint       — ruff check over scripts/, tests/, unit_tests/ (config: ruff.toml).
 #                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
 #
-#   test       — full pytest suite over tests/ and unit_tests/. INFORMATIONAL
-#                ONLY (continue-on-error) FOR NOW. The build step
+#   component-vocab — every `components` value is a canonical id in
+#                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
+#                on push to main.
+#
+#   test       — full pytest suite over tests/ and unit_tests/. BLOCKING: there
+#                is no continue-on-error on this job, so a PR carrying a failing
+#                test cannot merge. The build step
 #                (python scripts/build.py --target-dir .) runs before pytest
 #                because build.py's install_shims() creates symlinks at
 #                scripts/commit_guardian/, scripts/doc_compliance/, and
 #                scripts/feedback/ pointing into .leafcutter/scripts/. Tests
 #                import from those paths at startup; without the build step they
-#                fail at import on a fresh clone (ADR-016). The shim fix (this
-#                job's reason for existing) is complete, but the suite is NOT yet
-#                green on a fresh checkout: ~4 collection errors (test files for
-#                unbuilt modules: check_test_fixture_bloat, link_feedback,
-#                transform_decision_history, known_failing_tests) plus pre-existing
-#                failures keep it red. Until those are resolved, this job runs
-#                informationally so it surfaces results without blocking merges.
-#                Promote to BLOCKING (drop continue-on-error) once the suite is
-#                green — that is the BP-1200b deliverable, tracked separately.
+#                fail at import on a fresh clone (ADR-016). The suite runs under
+#                AC_ENFORCE_STRICT=1 so AC-enforcement xfail-masking is off and
+#                genuinely-failing tests surface as real failures. Promoting this
+#                job to blocking WAS the BP-1200b deliverable; it is done, and the
+#                job name "Test suite (pytest)" is the stable contract referenced
+#                by the required-status-checks list (BP-1200c) — do NOT rename it.
+#
+#   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
+#
+#   ac-store-valid — the AC store passes its schema and governance hooks.
+#                BLOCKING.
+#
+#   changelog-presence — a changelogs/ entry accompanies the change. BLOCKING.
 #
 #   typecheck  — mypy over the .py files changed in a PR (non-strict,
 #                --ignore-missing-imports, since the codebase has no type config

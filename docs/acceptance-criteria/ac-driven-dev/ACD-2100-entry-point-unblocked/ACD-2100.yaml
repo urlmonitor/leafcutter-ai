@@ -1,0 +1,131 @@
+id: ACD-2100
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Starting new work the proper way always succeeds"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  The mandated route into new work is open from wherever you are working.
+
+  Every new piece of work is supposed to begin the same way: describe what it
+  must do, have that reviewed, and only then build it. When that route will not
+  start, the work does not stop -- it simply goes around, and the triage, the
+  approval points and the safe staging that the route exists to provide are all
+  skipped. Nobody notices, because going around still produces something. This
+  goal is met when starting new work succeeds from any working location; when a
+  check that could not run says so plainly instead of blaming a setting that is
+  already correct; when every decision the route records as yours is one you
+  actually made; and when all of that holds in the copy installed in a project
+  rather than only in the source it was fixed in.
+depends_on: []
+doc_links:
+  - docs/known-issues/ac-driven-dev.md
+  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+  - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100a
+  - ACD-2100b
+  - ACD-2100c
+  - ACD-2100d
+  - ACD-2100e
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-08-25, product-owner): this L0 exists because three
+  blocker-severity known issues against /plan-feature -- KI-ACD-004,
+  KI-ACD-005, KI-ACD-009 -- had never been converted into acceptance criteria.
+  Verified by grepping the whole AC store for those three ids: zero hits before
+  this folder. Together they make the surface unable to complete a run, and
+  /plan-feature is the MANDATED entry point for all new work (CLAUDE.md, "New
+  Work Goes Through ACs"; ADR-012 retires /create-ticket). While they hold, the
+  only alternative is hand-dispatching the PO/BA/IT-PO agents, which skips
+  triage, the approval gates, and the staged-commit invariant.
+
+  WHY THE L0 IS NOT NAMED AFTER /plan-feature. The value is "the mandated route
+  into new work is open", not "one command works". If the route were served by
+  some other automation tomorrow, the outcome would matter identically. The
+  command name lives at L1 and below.
+
+  VERIFIED STATE AT AUTHORING TIME (2026-08-25, re-checked against the code in
+  this worktree -- do NOT re-investigate these four, they are facts):
+    1. plan-feature.js:1800 shells a RELATIVE
+       `{{config.output_root}}/scripts/setup_ticket_worktree.py`; output_root
+       defaults to the bare name `.leafcutter`.
+    2. setup_ticket_worktree.py `_git_toplevel()` (~line 116, anchor at 134-135)
+       defaults its anchor to `Path(__file__).resolve().parent` with NO
+       fallback. Its own docstring names the self-hosting layout as the thing it
+       protects against and then asserts "the script always lives physically
+       inside the repository it operates on" -- false for the deployed copy.
+    3. plan-feature.js:1749 reads
+       `{{config.output_root}}/config/agent_registry.json` -- also relative, and
+       that file does NOT exist inside a worktree.
+    4. plan-feature.js:1745-1791 computes `permitsShell` false for four distinct
+       reasons and prints one message asserting a permissions problem for all
+       four. The gate was introduced by AC BO-1500f-1, which is
+       `work_status: done`.
+
+  TWO FINDINGS OF MY OWN THAT ARE IN NO KNOWN ISSUE -- both change the shape of
+  the work and are the reason this L0 has four children rather than three:
+
+    A. THE RELATIVE-PATH DEFECT HAS FIVE SITES, NOT TWO. Besides the two named
+       in the known issues, `{{config.output_root}}/scripts/pause_store.py` is
+       read or written at plan-feature.js 1552, 1625 and 1642. That matters
+       because the pause store is the mechanism ACD-2100c depends on: if the
+       pause record cannot be written from a worktree, the fix for the gate
+       defect degrades to `pause_persist_failed`. Fixing the sites one at a time
+       is how this recurs. See ACD-2100a.
+
+    B. KI-ACD-005 IS WORSE THAN FILED AND ITS STATED FIX WOULD NOT WORK. The
+       known issue says any reply the parser cannot map resolves to `cancel`.
+       That is no longer the live behaviour: resolveGate (1571-1582) already
+       pauses on a null or unparseable answer. The real defect is that the
+       observed refusal was WELL-FORMED JSON carrying `action: "cancel"`, so it
+       passed the "valid explicit decision" test at 1577-1579 and was accepted
+       as a user choice. Hardening the parser therefore fixes nothing. The only
+       thing that closes it is that a human-decision gate must not be routed to
+       an agent for its answer at all. See ACD-2100c.
+
+  DELIBERATELY OUT OF SCOPE (named so the BA does not absorb them):
+    - KI-ACD-006 (a run that authors zero ACs reports status: ok) -- severity
+      high, not a blocker, and a separate false-success concern. It is adjacent
+      to ACD-2100c's cancel path; do NOT let an L2 quietly annex it.
+    - KI-ACD-007 (product-truth artifacts written to the main checkout).
+    - KI-ACD-008 (id allocation) and KI-ACD-010 (commas in titles) -- both
+      constrain HOW we author here, but neither is a blocker on reaching an
+      authoring agent.
+
+  DO NOT AUTHOR OVER: two commits fixing ADJACENT gate defects (pause-persist
+  verification; dropped `edit` feedback) sit unmerged on worktrees/pf-gate-fix
+  (c6087fae, 5a3eae6d). They fix none of these three, but they touch the same
+  gate machinery. Assume they land.
+
+  SUCCESS TEST FOR THIS TREE: an AC here is good if a coder could take it and
+  know they were done, and bad if closing it would still leave the route unable
+  to reach an authoring agent. ACD-2100d exists because a+b+c can all be closed
+  in templates/ and every installed project stays broken until a build lands.
+
+  FIFTH CHILD ADDED 2026-08-25 (product-owner), with the user's approval:
+  ACD-2100e homes the sequence-diagram and how-to documentation triggers that
+  ACD-2100c declares and cannot house -- c is full at five L2 children and every
+  slot holds a blocker behaviour on the critical path. Both the business-analyst
+  and the it-po declined to displace a blocker or to raise the cap, and both
+  recommended a sibling. ACD-2100e adds no new requirement: it delivers the
+  documentation ACD-2100c already asked for, and it is fenced against
+  ACD-2100d-4, which is the separate reference page about which copy runs where.
+  The L1 cap under an L0 is 7, so the tree remains within limits.

@@ -1,0 +1,54 @@
+id: INF-400c-5-i
+components:
+  - infrastructure
+title: "Separator and case variants of one entry_kind normalise to a single canonical value"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-5.yaml"
+criteria: |
+  Given the events on disk contain both "component_convention" and
+    "component-convention", and both "agent_memory" and "agent-memory" —
+    the same concept written two ways, counted as four distinct kinds,
+  When an entry_kind is accepted by the emission helper or read by the
+    harvester,
+  Then the value is normalised before it is compared against the vocabulary,
+    by lower-casing it and treating an underscore and a hyphen as the same
+    separator,
+  And "component_convention", "component-convention", "Component-Convention"
+    and "COMPONENT_CONVENTION" all resolve to one canonical member,
+  And the canonical spelling — the one form written into the sink and used in
+    every report — is the hyphenated lower-case form,
+  And normalisation never invents a member: a normalised value that is still
+    not in the vocabulary stays out of the vocabulary and is handled as an
+    out-of-vocabulary value.
+depends_on: [INF-400c-5]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Normalisation must be applied at both the emission helper and the harvester read path, from one shared function"
+  - "Normalisation must not strip or collapse other characters — only case and the underscore/hyphen separator are in scope"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to: null
+expects_from:
+  ac_id: INF-400c-5
+  contract: "The declared vocabulary and its canonical spellings, against which a normalised value is checked"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

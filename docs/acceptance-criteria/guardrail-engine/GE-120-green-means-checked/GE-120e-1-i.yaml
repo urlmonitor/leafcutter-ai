@@ -73,7 +73,8 @@ created: 2026-08-17
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/29_TICKET-20260825-GE-120e-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -89,3 +90,4 @@ notes: |
   same words as "could not inspect" would trade a false positive for the false negative
   GE-120a exists to close. If the implementation of that distinction turns out to belong in
   GE-120a-1's output vocabulary, say so rather than defining a second vocabulary here.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

@@ -22,6 +22,10 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: related
     status: exists
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    relationship: related
+    status: exists
+    relevance: "The test-covers edge note is the best existing example of a method record in this repo: it declares the scope (diff-scoped, new work only), the measurement date, the enforcing test, and an explicit 'do not read this as store-wide'. Reuse its wording; do not invent a second vocabulary."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -33,6 +37,7 @@ superseded_by: null
 covered_by:
   - ACS-1100b-1
   - ACS-1100b-2
+  - ACS-1100b-4
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: >-
@@ -67,3 +72,27 @@ notes: |
   legitimate when the scope is DECLARED and the store total is reported alongside
   the scope total — otherwise it becomes the laundering channel it was added to
   prevent.
+
+  AGE IS NOT A GROUND (added 2026-08-25, BA, via ACS-1100b-4). The NEGATIVE half of
+  the list above had one entry missing, and it is the one a validator in this
+  repository is relying on today: check_components_integrity.py checks only the
+  components appearing in the diff and records that existing components with no
+  diff are not checked, legacy state accepted. That is an exclusion of 36 of 45
+  registry entries whose only ground is that the records pre-date the rule.
+  ACS-1100b-4 rules it out before ACS-1100e-1 writes the published list, and
+  ACS-1100b-4-i supplies the honest alternative for a backfill actually in progress
+  — a declared, dated, owned count that may fall and may not rise.
+
+  ALREADY SATISFIED, FOR ONE SURFACE ONLY (2026-08-18, PO). KM-ADM-005's shipped
+  edge note is a method record in all but name, and it is the SAME exclusion ground
+  as the paragraph above ("outside the requested scope") applied to a gate rather
+  than a query: check-done-proof's scope is the diff, the note declares that scope,
+  and it reports the store population alongside it. Two consequences for L2:
+    - Use it as the worked example when specifying the method record's fields;
+      scope / inclusion rule / exclusion grounds / measurement provenance are all
+      present in it already.
+    - It is missing one thing this L1 requires and should be treated as the gap:
+      the AGE of the figure is declared but nothing acts on it. A method record
+      whose measurement date is stale is still a declared method — decide at L2
+      whether staleness is a b-concern (declare it) or a c-concern (halt on it).
+      Do not leave that unassigned.

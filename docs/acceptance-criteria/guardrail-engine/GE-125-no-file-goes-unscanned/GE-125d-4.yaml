@@ -1,0 +1,201 @@
+id: GE-125d-4
+components:
+  - security_scanner
+  - commit_guardian
+title: "You can ask the check what it declines to look at, and the answer describes what it does rather than what it meant to do"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given nothing is staged and no scan is running,
+  When the check is asked to state what it declines to examine,
+  Then it answers with one entry for each reduction in force, and each entry
+    names the detection rule that is removed, the condition under which it is
+    removed, and which detection rules still apply where the reduction applies,
+  And the answer is obtained without the reader opening the check's source,
+  Because the exemption this goal exists to close was discoverable only by
+    reading the source, from the day the check shipped until the day somebody
+    happened to read it — and a reviewer can only agree with a suppression they
+    can see.
+
+  Given two repository-relative paths whose treatment differs today — the check
+    applies reduced scrutiny to "src/vendor/tickets/handler.py", which is
+    measured as exempt and was never intended to be, and does not apply it to
+    "src/app.py", which is measured as reported,
+  When each of those two paths is classified using only the conditions the
+    check's own answer states, and each is then actually checked on the path a
+    real commit takes with an opaque credential-shaped value in it,
+  Then the classification derived from the answer agrees with the observed
+    treatment for both paths,
+  Because an inventory that reported the INTENT would have described this
+    reduction as four prose directories on the day it was measured to cover any
+    path containing one of those four names at any depth, in any subtree — and
+    that discrepancy is the entire reason the inventory is worth publishing. An
+    answer that cannot be checked against behaviour is a second copy of the
+    documentation that is already wrong.
+
+  Given the answer above,
+  When it is read,
+  Then it contains no credential-shaped value, no matched line and no content
+    from any file,
+  And asking the question does not change the exit status of anything and does
+    not block a commit,
+  Because this is a description of policy, not a report of findings: it is safe
+    to print anywhere, and it is a question a person asks rather than a gate a
+    person trips.
+depends_on:
+  - GE-125d
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "Supplies both the measured path pair the second arm uses (src/vendor/tickets/handler.py exempt and never intended, src/app.py reported) and the intent-vs-behaviour gap the answer must describe: the reduction gates ENTROPY_HIGH only, and the location test is a substring test rather than a root-anchored one, so the four intended prefixes behave as four directory names at any depth. Carry these at the confidence KI-SEC-001 records them at."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The query surface is added to templates/scripts/commit_guardian/check_secrets.py, the canonical copy; the copies under scripts/ and .leafcutter/scripts/ are build.py outputs held identical by check_hook_parity."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: "Describes how this check is invoked in practice, which is the context the new query surface must not disturb."
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "The reference material GE-125d-5 requires is written against this answer and compared to it entry for entry."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "MEASURED ON 2026-08-24, and it sizes the work: templates/scripts/commit_guardian/check_secrets.py has NO command-line surface at all. main() takes no arguments, there is no argparse and no sys.argv handling, and the pre-commit framework invokes it with the staged set discovered from `git diff --cached`. Asking the check what it declines to examine therefore requires ADDING a query surface. Adding one must not change the behaviour of the existing zero-argument invocation path, which must keep discovering the staged set and returning the same integer exit code it returns now."
+  - "The answer must be DERIVED from the same data the reduction consults, never from a hand-written list maintained beside it. GE-125d-4-i makes drift unreachable in both directions and is the constraint child of this requirement; satisfying this AC with a printed paragraph that happens to be accurate on the day it is written fails that child by construction."
+  - "Each entry must name three things, and the third is not decoration: the detection rule removed, the condition under which it is removed, and WHICH DETECTION RULES STILL APPLY where the reduction applies. Measured today the reduction gates ENTROPY_HIGH only — AWS_KEY, PRIVATE_KEY, EXCHANGE_API_KEY and GENERIC_SECRET still fire in reduced locations — so the surviving-rules field is what tells a reader exactly how much protection is left, and an answer omitting it overstates the gap."
+  - "The answer must describe what the check DOES, not what it was meant to do. Measured today the location test is a substring test against the whole path — `(\"/\" + prefix) in path_str` — so the four intended directory prefixes behave as four directory NAMES matching at any depth in any subtree. An answer stating 'four prose directories' describes the intent and the second arm must correctly fail it. If GE-125a lands first and anchors the match at the repository root, the answer must then describe the anchored behaviour — the requirement is fidelity to the behaviour in force, not fidelity to today's specific wording."
+  - "Asking the question must be free of side effects: no change to any exit status, no commit blocked, no file written, no scan performed. It is a question a person asks, not a gate a person trips."
+  - "The answer must contain no credential-shaped value, no matched line and no content from any file. It describes policy rather than reporting findings, which is exactly what makes it safe to print anywhere — and that property must not be eroded by adding an illustrative example drawn from real content."
+  - "The agreement arm must EXECUTE both halves. Obtain the answer, classify the two paths using only the conditions it states, then actually check each path on the path a real commit takes with an opaque credential-shaped value in it, and compare. Reading the source to confirm the answer and the decision agree reproduces the exact verification method this whole goal exists to replace — the original exemption was perfectly visible to anyone reading the source, and that was not enough."
+  - "Keep the path pair a pair that genuinely differs at the time the test runs. src/vendor/tickets/handler.py (measured exempt, never intended) and src/app.py (measured reported) are today's pair; if GE-125a anchors the match the first stops being exempt, in which case choose another pair that still differs. The arm asserts AGREEMENT, not a fixed verdict, and MUST NOT be weakened to a single path — any answer classifies a single path correctly half the time by accident."
+  - "The query surface must work in the DEPLOYED layout, not only in the source tree. Per CLAUDE.md, any module the hook imports must be present in the build deploy manifest, or the deployed hook raises ModuleNotFoundError at commit time — and this hook is a required gate, so that crash blocks every commit. Run `python scripts/build.py --target-dir .` and exercise the deployed copy before trusting the tests, which import from the source tree and mask the gap."
+  - "ADR-001 parity: edit the canonical copy under templates/ and verify through the build round trip. check_hook_parity enforces all four locations; a deployed-copy-only change is reverted by the next build."
+  - "CLAUDE.md error-handling policy applies. Producing the answer is pure derivation over the reduction's own data and must NOT be wrapped in try/except (Rule 4); only the I/O that renders it is wrapped, with a typed except that logs at WARNING or higher and never silently swallows."
+delivers_to:
+  agent: python-coder
+  contract: "A self-description of every reduction the check applies — the detection rule removed, the condition applied, and the rules that survive — answerable on demand and comparable, entry for entry, against the reference material that GE-125d-5 requires."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_answer_lists_one_entry_per_reduction_with_rule_condition_and_survivors
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Asking the deployed check what it declines to examine, with nothing staged, returns one entry per reduction in force, each naming the removed detection rule, the condition, and the rules that still apply — including that ENTROPY_HIGH is the only rule removed and the four regex rules survive"
+  - name: test_answer_is_obtainable_without_reading_the_source
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "The answer is obtained by invoking the check through its own query surface as a subprocess — proving a reader can reach it without opening the file, which is the failure mode the original exemption embodied"
+  - name: test_classification_from_the_answer_agrees_with_observed_treatment_for_both_paths
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "src/vendor/tickets/handler.py and src/app.py are each classified using only the conditions the answer states, then each is actually checked in a throwaway repository with an opaque credential-shaped value in it; the derived classification matches the observed treatment for both. THE LOAD-BEARING ENTRY: it fails an answer that reports the intent ('four prose directories') rather than the substring behaviour"
+  - name: test_answer_carries_no_credential_shaped_value_line_or_file_content
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The answer contains no credential-shaped value, no matched line and no content from any file, so it stays safe to print into a terminal, a CI log or a documentation build"
+  - name: test_asking_the_question_has_no_side_effects_on_exit_status_or_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Asking the question exits without blocking, writes no file, performs no scan, and leaves a subsequent ordinary commit in the throwaway repository behaving exactly as it did before"
+  - name: test_zero_argument_invocation_path_is_unchanged_by_the_new_query_surface
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Invoking the check with no arguments, as pre-commit does, still discovers the staged set and returns the same integer exit code as before the query surface existed — the regression the addition of a CLI most easily causes"
+  - name: test_query_surface_works_in_the_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After `python scripts/build.py --target-dir .`, the deployed scripts/commit_guardian/check_secrets.py answers the same question with the same entries and imports nothing missing from the deploy manifest"
+test_rationale: "Asking a check to describe itself is cheap and is usually satisfied by printing a hand-written paragraph, so the coverage has to be shaped around the ways that fake passes. The agreement entry is the load-bearing one and is a seam test rather than a criterion test: the producer is the answer and the consumer is the classification of a real path, and the only evidence that matters is the real producer's real output driving the real consumer to a verdict that matches what the check actually does. Both halves must be executed — obtain the answer, then scan the path — because verifying by reading the source reproduces the exact method this goal exists to replace: the original exemption was fully visible in the source and stayed unnoticed for the life of the check. The zero-argument entry exists because check_secrets.py has no CLI today; adding one is the change most likely to break the pre-commit invocation, and no other entry would see it. The deployed entry exists because CLAUDE.md records a hook dependency omitted from the build deploy manifest crashing the deployed hook with ModuleNotFoundError while the source-tree tests stayed green, and this hook is a required gate. Fixture credential content is assembled at runtime from fragments, following unit_tests/commit_guardian/test_scan_secrets_suppression.py, and the path pair is chosen to differ at the time the test runs rather than hard-coded to a verdict a sibling may change."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at M — M rather than S because the check has no command-line surface at all today and one must be added without disturbing the pre-commit invocation. Authored eleven it_requirements. Measured rather than assumed: main() takes no arguments and there is no argparse or sys.argv handling, so the query surface is new; the reduction gates ENTROPY_HIGH only while the four regex rules survive, which is why the surviving-rules field is load-bearing rather than decorative; and the location test is a substring test against the whole path, which is precisely the intent-versus-behaviour gap the second arm exists to catch. Added the deployed-layout requirement because CLAUDE.md records a hook dependency omitted from the build deploy manifest crashing the deployed hook with ModuleNotFoundError while source-tree tests stayed green, and this hook is a required gate. Preserved the BA's instruction that the path pair must remain a pair that differs and must never be weakened to a single path. Authored a seven-entry test_spec plus test_rationale, including a zero-argument-invocation regression entry that no other entry would catch. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by:
+  - GE-125d-4-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHAT THIS ADDS OVER GE-125d-1, WHICH IS NOT OBVIOUS AND IS THE REASON THE
+  RECORD EXISTS. GE-125d-1 announces a reduction that actually withheld
+  something. That is per-run, and it only fires once a credential-shaped value
+  has already been pasted into a reduced location. This record makes the shape
+  of the reduction visible BEFORE that happens, and it is the arm that would
+  have shortened the life of the original defect: nobody had to paste a token
+  into "templates/skills/" for the exemption to be a problem — the problem was
+  that its extent could not be inspected. It is also the arm that catches a
+  widening which has not yet withheld anything, which no per-run notice can do.
+
+  THE SECOND ARM IS THE LOAD-BEARING ONE. Asking a check to describe itself is
+  cheap and is usually satisfied by printing a hand-written paragraph. Requiring
+  the answer to CLASSIFY two real paths correctly, and checking that
+  classification against what the check actually does to those paths, is what
+  stops the answer being a second piece of prose that is free to be wrong. The
+  chosen pair comes from the known issue's measurements:
+  "src/vendor/tickets/handler.py" is exempt and was never intended to be;
+  "src/app.py" is reported. Both are measured facts today, carried at the
+  confidence the known issue records them at and not upgraded.
+
+  THIS ARM SURVIVES ITS SIBLINGS BY CONSTRUCTION. If GE-125a anchors the match
+  at the repository root, "src/vendor/tickets/handler.py" stops being exempt —
+  and the arm still holds, because it asserts AGREEMENT between the answer and
+  the behaviour, not a particular verdict. Whoever implements it after a sibling
+  lands should keep the agreement assertion and choose a path pair that still
+  differs; they must not weaken it to a single path, which any answer classifies
+  correctly by accident half the time.
+
+  FIXTURE PLACEMENT, stated as this tree requires. The pair is deliberately one
+  path under a reduced location and one outside it, and both are ordinary source
+  paths rather than prose, because the sharpest form of the defect is executable
+  code that inherits a prose exemption from a directory name somewhere in its
+  path. No fixture in this record needs to be under
+  "docs/acceptance-criteria/" or "docs/retrospectives/".
+
+  NOT A BLOCKING PROMISE. Asking the question changes nothing and stops nothing,
+  which is stated explicitly in the third arm as this goal requires the
+  block-or-announce decision to be made per case.
+
+  IT-PO NOTE, 2026-08-24 — THERE IS NO WAY TO ASK THE CHECK ANYTHING TODAY.
+  Measured in the canonical copy: templates/scripts/commit_guardian/
+  check_secrets.py has no command-line surface whatsoever. main() takes no
+  arguments, there is no argparse and no sys.argv handling, and pre-commit
+  invokes it with the staged set discovered from git. So this record is not a
+  matter of adding a flag to an existing parser — the query surface is new, and
+  the regression it most easily causes is to the zero-argument path pre-commit
+  depends on. That is why the complexity is M and why a zero-argument
+  invocation entry appears in the test contract.

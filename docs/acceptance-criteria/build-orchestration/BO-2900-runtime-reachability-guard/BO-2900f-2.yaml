@@ -100,6 +100,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - BO-2900f-2-i
+  - BO-2900f-2-ii
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

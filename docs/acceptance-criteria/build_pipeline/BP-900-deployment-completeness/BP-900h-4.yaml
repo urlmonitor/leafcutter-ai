@@ -1,197 +1,262 @@
 id: BP-900h-4
 components:
   - build_pipeline
-  - commit_guardian
-title: "The simulation uses the install, not just builds it — a first commit is attempted"
-component: build_pipeline
+title: "The install under test is a vendoring consumer, so a guardrail's data file cannot pass by borrowing the package's own tree"
+component: build-pipeline
 level: L2
 status: active
-req_status: draft
-readiness: reviewed
+req_status: active
+readiness: approved
 priority: critical
-work_status: not_started
+roadmap_phase: phase_1
+work_status: todo
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
 criteria: |
-  Given the consumer-simulation project from BP-900h-1 — built into a directory that started
-    empty and held only a minimal skills_config.json, never a copy of this repository,
-  And with no opt-in documentation-seeding step performed, so the project holds only what a
-    plain install leaves behind,
-  And that project initialised as a git repository with the deployed commit-time guards active,
-  When the job stages an ordinary change a new adopter would make and attempts a commit through
-    the ordinary commit path — no skip flag, no environment override, no direct invocation of
-    any guard script,
-  Then the commit completes,
-  And the job fails, naming the guard that blocked and the content it demanded, if any deployed
-    guard blocks that commit over an artifact a brand-new project legitimately does not yet
-    have,
+  Given the consumer-simulation install of BP-900h-1, which builds into a scratch
+    project holding only a minimal skills_config.json,
+  And a guardrail the package deploys that reads a declaring file it does not itself
+    contain — a schema that defines its rule, a vocabulary of permitted values, a
+    registry of records it looks up, or a helper module it loads,
+  When the install is inspected after the build,
+  Then every declaring file that a deployed guardrail reads is present under that
+    scratch project's deployed output root,
+  And each declaring file is resolved ONLY from the scratch project's deployed output
+    root — never from the package checkout beneath it, never from a parent directory,
+    and never from the invoking process's working directory — so a file that would
+    resolve only because the target happens to be the package's own workspace is
+    reported as missing,
+  And the inspection names each missing declaring file together with the guardrail
+    that reads it and the deployed location it was expected at,
+  And a file the guardrail obtains from outside the install — an operating-system
+    path, or data owned by an external tool the package does not ship — is not
+    reported as missing, so the check does not manufacture failures for things the
+    install was never responsible for,
+  And the inspection is demonstrated to FAIL when one declaring file is deleted from
+    the deployed output root after a successful build, because an inspection that
+    stays green on a deliberately incomplete install proves nothing.
 
-  And the job records which guards actually executed during that commit and reports that record
-    as part of its output,
-  And a commit that completed because no guard ran is reported differently from a commit that
-    completed because every guard that ran passed,
-  And the job fails when no guard executed at all, so a simulation in which the guards were
-    never wired is not reported as a successful adopter experience,
-
-  And the job carries no continue-on-error, is not skipped on pull request events, and fails the
-    pull request when the commit step fails.
-
-  Coverage note: this is the clause that separates building an install from using one. A job
-  that runs the install and inspects the resulting file tree cannot observe a guard that blocks
-  an adopter, because that guard only speaks when a commit is attempted — and the repository has
-  shipped seven consumer-install defects and four unregistered guards while every static
-  deployment check stayed green. Covered by performing the commit and asserting on what the
-  commit path did, plus a negative case: a deliberately adopter-hostile guard fixture must be
-  shown to turn this job red, or the job is a green step that proves nothing.
+  Because on 2026-08-18 five declaring files were confirmed absent from a deployed
+  output root while every build test passed: two type vocabularies read by the
+  document-frontmatter guardrail, the schema read by the AC-schema guardrail, the
+  agent registry read by the planning workflow, and a component-migration helper
+  module. None of these was detectable, because every build test to date installs
+  into leafcutter's own self-hosted workspace, where the package source tree sits
+  beside the deployed output root and each of those files resolves anyway. The layout
+  under test, not the check, is what made the gap invisible.
 depends_on:
   - BP-900h
   - BP-900h-1
 doc_links:
-  - path: .github/workflows/ci.yml
-    relationship: modifies
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h.yaml"
+    relationship: parent
     status: exists
-    relevance: "Where the consumer-simulation job lives. This AC adds a use-the-install step to it rather than a second job, so the built project is exercised where it was built."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-1.yaml"
+    relationship: describes
+    status: exists
+    relevance: "Supplies the empty-project consumer-simulation install this AC inspects. h-1 already forbids building from a copy of the repository; this AC adds the resolution rule that stops an ancestor directory from satisfying a lookup, and extends the inspected set from script references to declaring files."
+  - path: .github/workflows/ci.yml
+    relationship: implements
+    status: exists
   - path: scripts/build.py
     relationship: describes
     status: exists
-  - path: docs/reference/architecture-docs-layout.md
-    relationship: context
+    relevance: "Produces the deployed output root the inspection reads. Not modified by this AC."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
     status: exists
-    relevance: "Records which namespace roots a plain install leaves behind and which it does not, and states that a gate must be safe to register for every consumer, including one who never runs the opt-in seeding step. That is the condition this job puts to the test."
-  - path: docs/known-issues/build-orchestration.md
-    relationship: context
+    relevance: "The self-hosting boundary is exactly what makes the package's own workspace an unrepresentative install target — the reason this AC exists."
+  - path: docs/testing/test-angles.md
+    relationship: describes
     status: exists
-    relevance: "KI-BO-4 — the install does not scaffold two of the four namespace roots. This job is what would have caught it before release."
-  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122d-3-ii.yaml
-    relationship: context
+    relevance: "Angle vocabulary: deployed + real_artifact + failure, with the deliberately-incomplete-install negative control as the load-bearing entry."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4-i.yaml"
+    relationship: describes
     status: exists
-    relevance: "The behaviour this job proves for a real install: a new adopter's first commit completes, and an absent namespace root blocks rather than passing as an empty one. This AC is the empirical half; that one is the behavioural half."
-  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122d-6.yaml
-    relationship: context
+    relevance: "IT-PO ADDITION, and the scope line for this AC. h-4-i owns the LAYOUT MATRIX - package-directory name independence, the real-git-worktree layout, per-layout verdicts, the no-narrower-built-in-list prohibition, and the assert-the-file-not-the-reader rule. This AC must build the fixture h-4-i parameterises, not a second one, and must not re-specify any of those clauses."
+  - path: templates/scripts/commit_guardian/doc_type_validators.py
+    relationship: describes
     status: exists
-    relevance: "IT-PO 2026-08-25 — the registration this job is the detector for. GE-122d-6 declares THIS AC in its depends_on: the required order is scaffold (GE-122d-3-ii), register (GE-122d-6), re-run this job. So this job must exist and be green BEFORE that registration lands, and must be re-run against the registered build afterwards. This AC gains no dependency in return, so it stays buildable and green on the tree as it stands today."
-  - path: docs/architecture/components/commit-guardian.md
-    relationship: related
+    relevance: "IT-PO ADDITION. The reader behind the 2026-08-25 reproduction: its two-candidate ancestor walk resolves to .leafcutter/scripts/commit_guardian/config/doc_types.json, which does not exist in a genuine adopter install. Named as the regression instance the fixture must be shown to catch, not as the deliverable."
+  - path: scripts/ac_store/_ac_components.py
+    relationship: describes
     status: exists
+    relevance: "IT-PO ADDITION. The helper-module half of the same reproduction - validate_ac_schema.py IS deployed and this sibling is not, so the deployed executable raises ModuleNotFoundError. Confirms that a declaring file can be a module, which is why the inventory must not be limited to non-code files."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Carries the field reports and the ancestor-walk probe evidence for this defect class. Read before building the fixture, so the fixture reproduces the reported condition rather than a convenient approximation of it."
+  - path: unit_tests/test_bp_900g_4.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Prior art for standing up a consumer install inside a test. Reuse the construction; do not reuse any assertion that resolves against the package tree."
+  - path: unit_tests/test_bp_900g_6_paths.py
+    relationship: describes
+    status: exists
+    relevance: "IT-PO ADDITION. Second prior-art fixture for the same construction, and the source of the output-root prefix discipline this inspection's resolution rule extends."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  config_schema_fragment: null
-  reference_file_path: .github/workflows/ci.yml
-  n_location_rule: "1 — a use-the-install step inside the existing consumer-simulation job"
+  reference_file_path: ".github/workflows/ci.yml"
+  n_location_rule: "1 — one declaring-file inspection step in the consumer-simulation job, iterating a DERIVED inventory. The number of files inspected must come from that inventory, never from hand-written per-file steps; a step per known file is the hand-maintained list this AC exists to remove, wearing YAML."
   required_skills:
     - python-coder
-  post_write_commands: []
+  post_write_commands:
+    - "python scripts/build.py --target-dir /tmp/lc-consumer-probe"
+    - "env -u PYTHONPATH python /tmp/lc-consumer-probe/.leafcutter/scripts/commit_guardian/check_doc_frontmatter.py docs/known-issues/build-pipeline.md"
+    - "env -u PYTHONPATH python /tmp/lc-consumer-probe/.leafcutter/scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-4.yaml"
+    - "python -m pytest unit_tests/portability/ -q"
+  config_schema_fragment:
+    type: object
+    description: "The declaring-file inventory record the inspection walks, one entry per (guardrail, declaring file) pair. It is a record rather than a bare path list because the criterion demands a missing file be named together with the guardrail that reads it and the location it was expected at, and because the ownership classification - ours to ship versus the operating system's - must be an asserted property rather than a rule buried in a filter."
+    required:
+      - declaring_file
+      - read_by
+      - expected_at
+      - ownership
+      - derivation
+    properties:
+      declaring_file:
+        type: string
+        description: "The file the guardrail reads. May be non-code or a helper module; both halves of the 2026-08-25 reproduction are in scope and an inventory limited to JSON misses the module half."
+      read_by:
+        type: string
+        description: "The deployed guardrail that reads it. Required by the criterion's naming clause and by the fact that a bare missing-path report tells the author nothing about who broke."
+      expected_at:
+        type: string
+        description: "The path under the scratch install's deployed output root where it must be found, and the only path a resolution may return. Asserting on this rather than on exit code is what distinguishes an inspection that failed for the right reason from one that failed while pointing at the package checkout."
+      ownership:
+        type: string
+        description: "ours_to_ship or external. The classification the does-not-manufacture-failures clause turns on. An entry with no ownership value is a filter decision made silently, and a filter that excludes everything satisfies the exclusion clause exactly as well as a correct one."
+      derivation:
+        type: string
+        description: "How this entry was derived from the deployed guardrail rather than typed in. Present so a hand-written inventory is visible as such in the report instead of passing as a derived one."
   constraints:
-    - "ATTEMPT A REAL COMMIT. Invoking a guard script directly, or running the hook framework against a file list, does not cover this: both prove the script works and neither proves the commit path reaches it. Initialise a git repository in the built project, stage a real file, and run the ordinary commit."
-    - "The staged change must be something a new adopter would actually have — the project's own skills_config.json, or a README the adopter writes. Do not stage an artifact from one of the numbered namespaces; that tests the guard's subject rather than the adopter's first commit."
-    - "The project must be built from an empty directory and must NOT have the opt-in documentation-seeding step run. Copying this repository, or seeding it, reintroduces exactly the content whose absence is the condition under test."
-    - "THE EXECUTED-GUARD RECORD IS NOT OPTIONAL AND IS THE HARD PART. A commit that completes because every guard is unregistered looks identical to a commit that completes because every guard passed, and that is the state four guards in this repository are in today. Capture which guards the commit path actually ran — the hook framework's own per-hook reporting is the natural source — and fail the job on an empty record."
-    - "Demonstrate the job can go red before accepting it green: introduce a guard fixture that blocks over content a new project lacks and confirm a non-zero result. A green step that would stay green on an adopter-blocking guard is the phantom-done failure this branch exists to prevent, and the repository has shipped that exact shape in its own gate code."
-    - "No continue-on-error, and no condition that skips the step on pull_request events. Registering this job among the required checks is BP-900h-3's scope and is not re-decided here; this AC only requires that the new step cannot pass while the commit fails."
-    - "ONE ENTRY POINT FOR THE JOB AND ITS TEST (IT-PO 2026-08-25). The workflow step must not inline the logic as a shell block: put the stage-and-commit-and-record behaviour in a single invocable script (scripts/ci/ is the established home for merge-gate-only tooling and is correctly source-only per BP-1000d-1), and have the ci.yml step call it with no logic of its own beyond arguments. Otherwise every unit test written for this AC exercises a COPY of the job rather than the job, and the step itself stays unverified — which is the same one-surface-tested-other-surface-shipped shape as a guard registered in the manifest the install ignores. The workflow step and the test must reach the same code."
-    - "THE EXECUTED-GUARD RECORD IS A CAPTURED OBSERVATION, NOT A DERIVED ONE. Read which guards ran from what the commit path itself reported during the commit — never by re-parsing the deployed registry and assuming everything listed executed. A record derived from the registry is exactly as green on an unwired install as on a wired one, which reproduces the defect the record exists to detect. If the hook framework's per-hook reporting is unavailable in the job's environment, that is a blocker to raise, not a licence to derive the record."
-    - "REPORT THE RECORD, AND MAKE THE EMPTY CASE LOUD. The three outcomes — every guard that ran passed, no guard ran at all, and a guard blocked — must be three visibly distinct job outputs, with the guard names printed in the first two cases. A job that prints only a pass/fail verdict satisfies the failure condition and loses the diagnostic the criterion is actually asking for."
-    - "IDEMPOTENT AND SELF-CLEANING. The step runs inside the same job and workspace BP-900h-1 built into, and BP-900h-2 asserts install idempotency over that tree. Git-initialising the project and committing into it must not leave state that makes a re-run of the surrounding job behave differently, and must not be mistaken by BP-900h-2's idempotency comparison for install drift. Sequence the step after the idempotency assertions or isolate its artefacts explicitly — do not leave the interaction unstated."
-    - "RE-RUN OBLIGATION, RECORDED HERE SO IT SURVIVES THE TICKET. GE-122d-6 declares this AC in its depends_on and is not signed off until this job has been re-run green against a build that carries the commit-time uniqueness registration. Do not weaken this step to make that later registration pass — if the registration turns this job red, the registration is what is wrong."
-  notes: |
-    Added 2026-08-25. BP-900h-1 and BP-900h-2 stand the install UP and inspect the resulting
-    tree; nothing in this branch yet USES it. The distinction is not academic: the guards a
-    consumer install deploys only speak when a commit is attempted, so a defect in which a guard
-    blocks an adopter over content a plain install never creates is invisible to every static
-    check in BP-900a..BP-900h-2.
-
-    Two known conditions this step is sized against, both already filed: KI-BO-4 (the install
-    does not scaffold two of the four namespace roots) and the four commit-guardian checks that
-    are deployed and registered nowhere. The first would surface here as a blocked first commit;
-    the second as an empty executed-guard record.
-test_spec:
-  - name: test_bp900h4_adopter_first_commit_completes_in_a_from_empty_install
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: behavioral
-    angle: deployed
-    description: "A project built into an EMPTY directory holding only a minimal skills_config.json, with no opt-in documentation-seeding step, is git-initialised and an ordinary adopter change is committed through the ordinary commit path — no skip flag, no environment override, no direct guard invocation — and the commit completes. Runs the same entry point the ci.yml step invokes."
-  - name: test_bp900h4_executed_guard_record_is_captured_from_the_commit_itself
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: behavioral
-    angle: reachability
-    description: "The record of which guards ran is read from what the commit path reported during that commit, and is non-empty. Goes red if the record is derived by re-reading the deployed registry, because a derived record is identical on a wired and an unwired install."
-  - name: test_bp900h4_empty_executed_guard_record_fails_the_job
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: behavioral
-    angle: failure
-    description: "A simulated commit in which no guard executed produces a non-zero job result, so an install in which nothing was wired is never reported as a successful adopter experience. Must-block case."
-  - name: test_bp900h4_adopter_hostile_guard_fixture_turns_the_job_red
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: behavioral
-    angle: criterion
-    description: "A guard fixture that blocks over content a brand-new project legitimately lacks makes the job fail, naming the guard that blocked and the content it demanded. This is the can-it-go-red demonstration: without it the step is a green box that would stay green on the exact defect it exists to catch."
-  - name: test_bp900h4_nothing_ran_is_reported_differently_from_everything_passed
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: behavioral
-    angle: boundary
-    description: "The output of a commit that completed because every guard that ran passed is compared with the output of a commit that completed because no guard ran, and the two are visibly distinct, with guard names printed. Both commits succeed, so exit status alone cannot separate them."
-  - name: test_bp900h4_ci_step_has_no_continue_on_error_and_no_pull_request_skip
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: unit
-    angle: real_artifact
-    description: "The consumer-simulation job's use-the-install step is read from the actual .github/workflows/ci.yml the runner parses: it carries no continue-on-error and no condition that skips it on pull_request events. Asserted against the real on-disk workflow, never a hand-typed fixture."
-  - name: test_bp900h4_workflow_step_and_test_invoke_the_same_entry_point
-    target_dir: unit_tests/portability/
-    framework: unittest
-    type: unit
-    angle: seam
-    description: "The command the ci.yml step runs resolves to the same script these tests invoke, and the step carries no logic of its own beyond arguments. Goes red if the job's behaviour is inlined into the workflow, in which case every other descriptor here would be testing a copy of the job rather than the job."
-test_rationale: "The whole branch has shipped seven consumer-install defects while every static deployment check stayed green, and the reason is structural: a guard only speaks when a commit is attempted, so a job that builds an install and inspects the tree cannot see it. The contract is therefore a real `git commit` in a real from-empty install, not a guard invocation and not a tree inspection. Two descriptors exist purely because a green result here is worth nothing on its own — the adopter-hostile fixture proves the step CAN go red, and the empty-record case proves it fails when nothing was wired, which is the likeliest first implementation and precisely the state four guards in this repository occupy today. The captured-not-derived descriptor is separate because deriving the executed-guard record from the deployed registry produces an identically green job on a wired and an unwired install, silently converting this AC back into the static check it was created to replace. The last two descriptors are asserted against the real ci.yml rather than a fixture, because the failure mode they guard — a step that is skipped on pull_request, or whose logic lives inline where no test reaches it — is a property of the file the runner actually parses."
-delivers_to: null
+    - "THE INSTALL MUST BE A GENUINE ADOPTER LAYOUT, AND ITS DEFINING PROPERTY IS AN ABSENCE. On 2026-08-25 a real consumer install was built at a scratch root with the package checked out at leafcutter-ai/ (the directory name CLAUDE.md documents) and `python scripts/build.py --target-dir <consumer root>` run against it. In that install neither `<consumer>/config/` nor `<consumer>/leafcutter/` exists - confirmed by direct listing - and that absence is precisely why the two hardcoded candidates in the doc-types ancestor walk both miss. A fixture in which either directory exists is not this layout and is green on the install that shipped broken. Assert the absence as a fixture precondition, not as an incidental property."
+    - "THE TWO REPRODUCED BLOCKERS ARE THE FIXTURE'S ACCEPTANCE SET, AND BOTH MUST BE RED BEFORE ANY FIX. From that install: `python .leafcutter/scripts/ac_store/validate_ac_schema.py <ac>.yaml` raises ModuleNotFoundError for _ac_components (validate_ac_schema.py IS deployed; its helpers _ac_components.py and _component_migration_map.py are not), and `python .leafcutter/scripts/commit_guardian/check_doc_frontmatter.py <doc>.md` raises FileNotFoundError naming .leafcutter/scripts/commit_guardian/config/doc_types.json. If the fixture is green on either before the implementation lands, the fixture is resolving against the package tree and every assertion built on it is worthless."
+    - "COLD PROCESS, PACKAGE SOURCE TREE OFF sys.path. Every existing unit test in this family imports from the source tree, which contains every module and every config by construction - that is why five prior instances of this class stayed green. A test that imports from scripts/ does not satisfy this AC. Launch the inspection and every probe as a subprocess whose working directory is not the package tree and whose interpreter search path contains no path under the package checkout, and assert that property of the child process rather than assuming it."
+    - "ADDING THE NAMED FILES IS NECESSARY AND NOT SUFFICIENT. The register's rule applies verbatim: treat adding the module or the config to the deploy list as a fix for the instance, never for the defect. The same deploy list has been patched four times for this class, five of its eleven entries carry a warning comment about that specific module, and a sixth instance surfaced on 2026-08-25 - check_ac_parent_covered_by.py cannot import derive_parent_id in a deployed layout and exits 0 silently. Reachability must hold by construction or by a gate that fails, never by someone remembering. The inspection must be shown to go red on a tree where any inventory entry is withheld, whichever entry that is."
+    - "IDENTIFY THE ENFORCEMENT POINT THAT ACTUALLY GATES, AND NAME EVERY ONE THE CHANGE TOUCHES. This inspection is only as strong as the CI step that consumes its exit code. Name in the sign-off every place the verdict is surfaced and state which one is load-bearing; a verdict routed only through a step that logs, or through a step carrying continue-on-error, is a no-op with a report attached. The same trap exists on the build side, where the deploy_map skip branch logs at WARNING and continues."
+    - "WHATEVER THE INSPECTION SURFACES ON FIRST RUN MUST BE ENUMERATED, NOT SKIPPED. Turning this on will reveal a pre-existing set of unreachable declaring files larger than the five in the 2026-08-18 record and the two reproduced on 2026-08-25. That is the intended effect. List the full set in the sign-off and resolve each entry or defer it explicitly with a date. A skip list reintroduces the hand-maintained list inside the mechanism built to remove it."
+    - "STAY LOUD - DO NOT RESOLVE A MISSING DECLARING FILE BY NARROWING THE RULE. The fail-closed posture on the document type vocabulary was established deliberately by GE-118c, which removed exactly such a fallback; the sibling diagram-types walk still returns None and degrades silently to a built-in constant and is the next instance waiting. A change that makes the inspection green by restoring a narrower built-in list is a regression even though the error disappears. BP-900h-4-i owns this prohibition in full; it is repeated here only as a bound on what an acceptable fix for THIS AC may do."
+    - "PACKAGE-DIRECTORY NAME INDEPENDENCE IS BP-900h-4-i's, NOT THIS AC's - BUT DO NOT FORECLOSE IT. h-4-i owns the layout matrix and the rule that no candidate path may spell a package-directory name, because the same lookup fails differently under different adopter names: with the package at `leafcutter/` the second candidate resolves in a main checkout and fails inside a git worktree, and with it at `leafcutter-ai/` it fails everywhere. Both adopter reports were correct. Build this fixture so h-4-i can parameterise it by layout - the package-directory name and the deployed output root must be inputs to the fixture, not constants inside it - and do not stand up a second fixture there."
+delivers_to:
+  agent: python-coder
+  contract: "A consumer-layout install fixture whose declaring-file resolution is anchored to the deployed output root alone, plus the per-guardrail declaring-file inventory it inspects. BP-900h-5 invokes the guardrails inside this same fixture rather than standing up a second one."
 expects_from:
   ac_id: BP-900h-1
-  contract: "A consumer-simulation project built into an empty directory, present in the job's workspace and ready to be used rather than only inspected."
-origin_agent: BrainCandy
-created: 2026-08-25
+  contract: "The empty-project consumer-simulation install and its build invocation, which this AC constrains further rather than replacing."
+test_spec:
+  - name: test_bp_900h_4_every_declaring_file_of_every_deployed_guardrail_is_present_under_the_scratch_deployed_root
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Build the real scripts/build.py --target-dir into a tmp scratch project that holds only a minimal skills_config.json and that is NOT a descendant of the package checkout, then assert that for every guardrail the package deploys, every declaring file it reads exists and its os.path.realpath is under that scratch deployed output root. TWO NON-VACUITY ASSERTIONS ARE MANDATORY, because a for-each over an empty inventory is green on a broken install: assert the per-guardrail declaring-file inventory is non-empty, and assert it contains the five files confirmed absent on 2026-08-18 - the two type vocabularies read by the document-frontmatter guardrail, config/ac_store_schema.json read by the AC-schema guardrail, config/agent_registry.json read by the planning workflow, and the component-migration helper module. This entry is expected to be RED at authoring time; if it is green before any implementation exists, the inventory is empty or the fixture is resolving against the package tree."
+  - name: test_bp_900h_4_ci_inspection_runs_through_its_real_entry_point_and_its_nonzero_verdict_is_not_swallowed
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Invoke the declaring-file inspection as a SUBPROCESS through the same command line the CI job runs - never by importing the inspection function - against the scratch install, and assert exit 0 on a complete install. Then assert the consumption half by parsing .github/workflows/ci.yml as YAML: the step that runs this inspection invokes that identical command and does NOT carry continue-on-error true, so a non-zero verdict actually fails the job. Parse the workflow into a data structure and assert on the step's fields; a grep for the script name in the file text is green on a step that is continue-on-error, which is the TQ-100 L-4 defect."
+  - name: test_bp_900h_4_inspection_goes_red_when_one_declaring_file_is_deleted_from_the_deployed_root_after_a_green_build
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "THE NEGATIVE CONTROL THE CRITERION DEMANDS, and the load-bearing entry of this contract. Three runs of the SAME subprocess entry point against the SAME scratch install: (1) after a successful build, exit 0; (2) delete exactly one declaring file from the deployed output root and re-run - assert non-zero AND that the output names all three of the deleted file, the guardrail that reads it, and the deployed location it was expected at; (3) restore the file and re-run - exit 0 again. Run 3 is what makes the red in run 2 attributable to the deletion rather than to a fixture that had already broken. An inspection that stays green on a deliberately incomplete install proves nothing, so a contract without this triple would be worse than none."
+  - name: test_bp_900h_4_a_declaring_file_present_only_outside_the_deployed_root_is_still_reported_missing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "THE RESOLUTION RULE, which is the clause the whole AC turns on. With one declaring file ABSENT from the scratch deployed output root, plant a readable decoy copy of it in each of the three places that made the original defect invisible - the parent directory of the scratch install, the package checkout, and the working directory the subprocess is launched from - and assert the inspection STILL reports the file missing and names the expected location under the deployed output root, never any decoy path. Assert on the reported expected location, not merely on the exit code: an inspection that fails for the right reason and one that fails while pointing at the package checkout are indistinguishable by exit code. A plain does-this-path-exist check passes this test only if the scratch install is genuinely outside the package tree - hence the fixture constraint in entry 1."
+  - name: test_bp_900h_4_a_file_owned_by_the_operating_system_or_an_external_tool_is_not_reported_as_missing
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The does-not-manufacture-failures half. Give the inventory a guardrail whose reads include an absolute operating-system path and a path owned by an external tool the package does not ship, neither of which is present under the deployed output root, and assert the inspection reports neither as missing and still exits 0 for an otherwise complete install. Pair it with the control that a package-owned declaring file at a comparable location IS reported missing - otherwise the exclusion can be satisfied by an inspection that excludes everything."
+test_rationale: |
+  The layout under test is the whole subject of this AC, so the fixture is load-bearing
+  in a way the assertions are not. Every build test to date installs into leafcutter's
+  own self-hosted workspace, where the package source tree sits beside the deployed
+  output root and each of the five missing files resolves anyway. Any of these five
+  entries, run against that layout, is green on the exact install that shipped broken.
+  The scratch project must therefore be created outside the package checkout, and the
+  subprocess must be launched with a working directory that is not the package tree —
+  those two properties, not the assertion text, are what make the tests falsifiable.
+
+  Entry 4 is the one that cannot be replaced by a cheaper test. A presence check
+  (does this path exist) satisfies entries 1, 2 and 3 and is precisely the
+  implementation the criterion rules out, because in the self-hosted workspace it
+  passes for the wrong reason. Only planting a decoy at each of the three resolution
+  sources — ancestor directory, package checkout, process working directory — and
+  asserting the file is still reported missing distinguishes an anchored resolution
+  from an accidental one.
+
+  Entry 3 carries the criterion's own demand that the inspection be demonstrated to
+  fail, and it is written as a three-run sequence rather than a single red assertion.
+  A two-run delete-and-fail pair cannot separate a working guard from a fixture that
+  had already broken; the restore-and-pass third run is what attributes the red to the
+  deletion. This is the same discipline BP-900g-8 applies to its build subprocess entry
+  and BP-900h-1 applies to its unresolved-reference case.
+
+  The non-vacuity assertions in entry 1 are not defensive padding. The failure shape
+  this AC exists against is a check that has no opinion about data files at all, and a
+  derived inventory that comes back empty produces a passing for-each loop over nothing
+  — a success-shaped result from a run that checked nothing, the same shape as the
+  bare-directory validator no-op recorded in CLAUDE.md. Asserting the inventory is
+  non-empty and contains the five named regression files is what closes it.
+
+  Angles: criterion, reachability, deployed, failure — at the cap of four. seam and
+  real_artifact are not charged: this AC has no producer-consumer signature boundary,
+  and its input is a directory tree rather than a serialized artifact another tool
+  writes. boundary is not charged because the criterion names no range, count or limit.
+origin_agent: business-analyst
+created: 2026-08-18
 created_by_ticket: null
 amended_by:
-  - reason: it-po-technical-enrichment
-    agent: it-po
-    date: '2026-08-25'
-    changed: "readiness draft->reviewed; five constraints added to the structured package-surface it_requirements (one entry point shared by the ci.yml step and its tests, captured-not-derived executed-guard record, three visibly distinct outcome reports, idempotency against BP-900h-2's comparison, and the post-registration re-run obligation); doc_links gained a context edge to GE-122d-6 recording the scaffold/register/re-run order; test_spec and test_rationale authored as seven descriptors, five behavioural real-commit and two against the real on-disk ci.yml. The five machine-checked package-surface keys are unchanged and reference_file_path still resolves. criteria unchanged."
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-25
+    note: >-
+      Added it_requirements in package-surface object form (the declaring-file
+      inventory record with its ownership and derivation fields, plus eight
+      constraints) and five IT-PO doc_links - the h-4-i scope line, the two readers
+      behind the 2026-08-25 reproduction, the known-issues register, and the two
+      prior-art consumer-install fixtures. The AC previously carried no it_requirements
+      at all, so generate_ticket_from_ac.py --verify emitted no Implementation Notes
+      section and the coder had only the criteria to work from. Anchored to a genuine
+      adopter install built on 2026-08-25 with the package at leafcutter-ai/, in which
+      neither <consumer>/config/ nor <consumer>/leafcutter/ exists and both the
+      ModuleNotFoundError and the FileNotFoundError reproduce. criteria, title,
+      depends_on and req_status untouched.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by: [BP-900h-4-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260825-BP-900h-4.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
-  WHY THIS IS A FOURTH CHILD RATHER THAN AN AMENDMENT TO BP-900h-1. BP-900h-1's criteria are
-  about the build exiting zero and the deployed tree resolving its references; BP-900h-2's are
-  about idempotency; BP-900h-3's are about the job blocking a merge. All three are satisfiable
-  by a job that never runs anything the install deployed. "Uses it" is the third verb in the
-  L1's own promise — "clone, build, use it" — and it is the one with no child.
+  A FIFTH deployment-gap axis, and the first that is not about scripts at all.
+  Keep it distinct from the four already in this component (see
+  memory/feedback_ba_bp1000_source_template_parity.md and
+  memory/feedback_itpo_bp900f_tracked_source_axis.md):
+    - BP-1000 (a-d): byte-equality of scripts present in BOTH scripts/ and templates/.
+    - BP-900b: build preflight, template SCRIPT references vs the deployable manifest.
+    - BP-900e: a registered or referenced SCRIPT has a deploy-source copy at all.
+    - BP-900f: a deployable SCRIPT's source is tracked in git.
+    - THIS (h-4 + g-8-ii): the DATA and CONFIGURATION files a deployed guardrail
+      reads. Every one of the four above is expressed in terms of scripts, so a
+      configuration JSON is not a dependency as far as any of them can tell.
 
-  THE EXECUTED-GUARD RECORD IS THE CLAUSE THAT WILL BE DROPPED FIRST, so it is written into the
-  criteria rather than left to it_requirements. Without it this AC is satisfied by a green
-  commit in a project where nothing was wired, which is both the likeliest outcome of a first
-  implementation and the precise defect the guardrail-engine branch is currently repairing four
-  instances of.
+  The division of labour with BP-900g-8-ii is deliberate and should not be collapsed:
+  g-8-ii makes the BUILD refuse to ship an install whose declaring files are not in
+  the deploy manifest; this AC proves EMPIRICALLY, in a real install, that they
+  arrived. They fail independently — a derived closure can miss a read it cannot see
+  statically, and an empirical inspection cannot tell you which manifest entry was
+  forgotten.
 
-  SCOPE BOUNDARY WORTH STATING: this job proves that a plain install lets an adopter commit. It
-  does not prove that any particular guard is correct, and it must not grow into a second place
-  where guard behaviour is asserted — that belongs to the guards' own ACs. The question here is
-  narrow and empirical: can a new adopter make their first commit, and did anything actually
-  check it.
-
-  IT-PO (2026-08-25) — WHERE THIS SITS IN THE EPIC'S ORDER. GE-122d-6 (register the commit-time
-  uniqueness check) now declares this AC in its depends_on, alongside GE-122d-3-ii (scaffold the
-  namespace roots) and GE-122e-3 (repair the collection). The user-stated order is scaffold,
-  register, re-run the deployed-consumer test; a job that does not exist cannot be re-run, so
-  this AC is a predecessor of the registration rather than a successor of it. It takes no
-  dependency in return and is buildable and expected green against the tree as it stands.
-
-  IT-PO — THE ONE-ENTRY-POINT CONSTRAINT IS NOT STYLE. If the stage-commit-and-record behaviour
-  is inlined into the ci.yml step, every test written for this AC exercises a reimplementation
-  of the job and the step itself is covered by nothing. That is the same defect shape as a guard
-  registered in the manifest the install ignores: one surface verified, a different surface
-  shipped. The step calls a script; the tests call the same script.
+  The load-bearing clause is the resolution rule, not the presence assertion. An
+  inspection that simply checks "does this path exist" will pass in the self-hosted
+  workspace for exactly the same reason the original defect was invisible there.

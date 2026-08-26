@@ -1,0 +1,109 @@
+id: TQ-400c-3-i
+components:
+  - testing_quality
+title: "The first report has no predecessor and says so rather than inventing one"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given no earlier sweep report exists,
+  When the first report is produced,
+  Then it presents its own figures in full,
+  And it states that there is no previous run to compare against,
+  And it does not present a change figure — neither a zero-change claim nor an
+    improvement measured against an assumed empty population,
+  And the run immediately following it does produce a comparison, against that
+    first report.
+depends_on:
+  - TQ-400c-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The boundary angle: empty / one / many. This AC is the empty case of the report-history sequence, and the taxonomy's warning that boundary defects are usually never specified in advance is why it exists as its own record."
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "The sweep behind the first report. Nothing in the current code has any notion of a previous run, so the empty-history path is genuinely new control flow, not a guard on existing logic."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "NO-PREDECESSOR IS A DISTINCT REPRESENTED STATE, NOT A NULL DELTA. The report must carry a positive statement that no previous run exists. Representing it as a zero delta, an absent field, or a null value is a violation: the first two are the exact wrong answers the criteria forbid, and the third is indistinguishable from a comparison that failed."
+  - "NEVER DIFFERENCE AGAINST AN ASSUMED-EMPTY PREVIOUS POPULATION. With ~641 finished records in the store, an empty-predecessor difference reports the entire finished population as newly proven or newly lapsed — a spectacular false signal on the very first report the team sees. This is the single most likely cheap implementation and must be explicitly excluded."
+  - "The no-predecessor branch must be reached by the same production path as the normal branch, decided on whether a readable predecessor inventory exists. A separate 'bootstrap' entry point invoked once by hand leaves the real path untested."
+  - "The empty-history state must be transient: the immediately following run must produce a real comparison against the first report. An implementation that latches the no-predecessor state (or permanently disables comparison after failing to find one) satisfies the first three clauses and fails the product."
+  - "Must handle errors gracefully per the project error handling policy: 'no predecessor exists' and 'the predecessor exists but could not be read' are different states and must not collapse into one — the second must be reported as a failure, not as a first run."
+delivers_to: null
+expects_from:
+  ac_id: TQ-400c-3
+  contract: >-
+    The trend computation and its two-sided signed delta, plus the rule that the
+    delta is derived by differencing two stored inventories. This AC supplies the
+    empty-history branch of that same computation and must not fork it.
+test_spec:
+  - name: test_tq_400c_3_i_first_report_states_no_predecessor_and_carries_no_delta
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Run the sweep over a store with an EMPTY report history. Assert three things separately: full figures are present; a positive no-previous-run statement is present; and NO change figure of any kind is present — assert specifically that there is no zero-valued delta field and no delta equal to the full population size. Both wrong answers are plausible cheap implementations and each must fail its own assertion."
+  - name: test_tq_400c_3_i_second_run_compares_against_the_first_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Immediately after the first report, run again and assert a real comparison is produced, naming the first occurrence as its predecessor. This is the latch check: an implementation that permanently disables comparison after finding no predecessor passes the boundary test and fails here."
+  - name: test_tq_400c_3_i_empty_history_path_is_reached_through_the_scheduled_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "PRODUCTION ENTRY POINT. Fire the scheduled entry point against a temp workspace containing no prior report and read the artifact actually written to disk. A bootstrap helper invoked only from the test leaves the real first-run path — the one that will actually execute in production exactly once — unexercised."
+test_rationale: |
+  This is a one-shot code path: it executes exactly once in the product's lifetime, on the
+  most-read report the team will ever see, and after that it is unreachable without deleting
+  history. That asymmetry is the whole argument for testing it through the real entry point
+  rather than by calling the trend function with an empty argument. The boundary test asserts
+  the ABSENCE of two specific wrong answers rather than the presence of a right one, because
+  both wrong answers are cheaper to write than the correct one and neither is visible to a
+  test that only checks the figures that are present.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-17
+  note: Assigned python-coder; complexity S. it_requirements forbid null-as-state
+    and empty-population differencing, and require the no-predecessor state to be
+    transient (the latch failure). test_spec is boundary-led with a criterion latch
+    check and a reachability entry, because this path executes exactly once in production.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The empty-history boundary. Two wrong answers are both plausible cheap
+  implementations and both are actively misleading on the very first real run: a
+  zero-change claim implies the backlog is stable when nothing is yet known, and
+  differencing against an assumed empty previous population reports the entire
+  641-record finished set as newly proven or newly lapsed — a spectacular false
+  signal on the report the team sees first.
+
+  The follow-on clause confirms the no-predecessor path is a genuine special case
+  and not a permanently disabled comparison.
+
+  IT-PO ENRICHMENT NOTE (2026-08-17). Added a third failure mode to it_requirements
+  that the criteria do not name and that would otherwise land silently: "no
+  predecessor exists" and "the predecessor exists but is unreadable" must not
+  collapse into the same branch. If they do, a corrupted inventory renders as a
+  first run, which resets the trend and hides the corruption at the same time.

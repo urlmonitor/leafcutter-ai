@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 created_by: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500c.yaml
 criteria: |
   Given the authoring pull request has been opened against main,
@@ -34,6 +34,26 @@ it_requirements:
 - 'Follow the project Error Handling Policy (CLAUDE.md): wrap all external I/O (git subprocess, gh CLI/REST
   calls) in explicit error handling; no bare except; surface a user-visible warning/error rather than
   silently swallowing.'
+test_spec:
+- name: test_lint_and_ac_schema_gates_trigger_on_a_pull_request_from_an_authoring_branch
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  description: Parsing .github/workflows/ci.yml and schema_diff.yml, the lint job and the AC schema/diff
+    job both run on the pull_request event with no head-branch filter that would exclude an ac-authoring/*
+    branch.
+- name: test_delivery_never_pushes_to_main
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a recording git shim on PATH, a full approved delivery run issues no push whose refspec
+    targets main and no push that is not to the authoring branch.
+- name: test_delivery_uses_no_privileged_merge_or_check_bypass
+  target_dir: unit_tests/workflows/
+  framework: unittest
+  type: behavioral
+  description: With a recording gh shim on PATH, the delivery step invokes no `gh pr merge`, no `--admin`,
+    and no force-push, so the only route to main is the reviewed PR merge that the required checks gate.
 delivers_to: null
 expects_from:
   ac_id: BO-1500c-1
@@ -47,3 +67,12 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-SafeAcAuthoring/12_TICKET-20260624-BO-1500c-2.md
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Test-contract scope caveat (IT PO, 2026-08-17): the second Then clause — "the
+  pull request cannot be merged until those required checks pass" — is enforced
+  by the GitHub branch-protection ruleset on main, which lives outside the
+  repository and cannot be asserted by a unit test. The test_spec covers the two
+  clauses that ARE in-repo and behaviourally checkable: (1) the required gate
+  workflows fire for a PR from an authoring branch, and (2) the delivery code
+  path opens no bypass (no push to main, no privileged merge, no force-push).
+  Ruleset configuration itself remains a manual/ops assertion.

@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given build-feature.md defines an inline fallback completion message template
     (used when build-epic.js does not return a structured result),
@@ -26,6 +26,16 @@ estimated_complexity: S
 it_requirements:
   - "Fallback template must use WORKTREE_PATH and EPIC_NAME as literal placeholder tokens"
   - "The template must be maintained in sync with the JS-generated format — same 4 sections, same order"
+test_rationale: |
+  No covers-tagged test can be authored: the inline fallback template this AC
+  describes lived in templates/workflows/build-feature.md, which was deleted in
+  full (504 lines) by commit 63a846ac0, "feat(build): guardrail for template
+  deploy-path collisions + de-conflict /build-feature (#228)". A parse-and-resolve
+  test of the kind used for BO-300b-1 needs a document to parse; here there is
+  none, and no other file in the tree defines a fallback completion template with
+  WORKTREE_PATH and EPIC_NAME placeholder tokens. The it_requirement about keeping
+  the fallback in sync with the JS-generated format is likewise moot with only one
+  of the two formats still present.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
@@ -37,3 +47,11 @@ implemented_by:
   - tickets/99_done/TICKET-20260604-StandardizeBuildCompletionOutput.md
 change_target: code
 risk_surface: internal
+notes: |
+  STALE SURFACE — raised by the IT PO for BA/PO reconciliation, not resolved here.
+  Same root cause as BO-300a-3: the markdown workflow layer was replaced by
+  templates/workflows-js/build-feature.js and the target file no longer exists,
+  so this AC is unfalsifiable as written while carrying work_status: done. The
+  fallback concept itself may no longer be meaningful under the JS engine, where
+  the completion object is returned structurally rather than rendered from a
+  prose template. Retirement or supersession is a requirement-owner decision.

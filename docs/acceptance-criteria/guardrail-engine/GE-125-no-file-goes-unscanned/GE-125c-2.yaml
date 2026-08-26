@@ -1,0 +1,229 @@
+id: GE-125c-2
+components:
+  - security_scanner
+  - commit_guardian
+title: "A value is set aside only when something recognised explains it, and anything unexplained is reported wherever it sits"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose retrospectives area holds one Markdown file
+    staged for commit,
+  And that file's only high-entropy content is a single opaque credential of at
+    least thirty characters that matches no recognised explanation,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the credential is reported, named with its 1-based line number, and the
+    commit is blocked,
+  Because being written in a place where prose is expected is not a reason for
+    any particular value to be treated as prose, and today this exact file is
+    passed over in silence.
+
+  Given the same throwaway project,
+  And a staged Markdown file in its ticket area containing two lines: a project
+    identifier of the ticket form and a project identifier of the epic form, both
+    above the entropy threshold and both matching a recognised explanation,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then no finding is reported for that file,
+  And the two values are set aside as two separate decisions, each carrying the
+    recognised explanation that accounts for that value,
+  Because a reason attaches to a value and not to a file: two set-aside values
+    produce two reasons, and an implementation that records one verdict for the
+    file has kept the shape this goal exists to remove even when its output for
+    this file happens to be identical.
+
+  Given the same throwaway project,
+  And a staged Markdown file in its ticket area containing one high-entropy value
+    whose form is described by no entry in the recognised list of explanations,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the value is reported and the commit is blocked,
+  Because the list of explanations is closed and the default for an unrecognised
+    value is to report it: an open list means the next value form anyone invents
+    arrives already exempt, and unrecognised must fail towards being seen.
+depends_on:
+  - GE-125c
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "CANONICAL SOURCE — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The file to change is `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and `templates/commit-guardian/` holds the legacy manifest. `check_hook_parity` enforces all four locations. Run `python scripts/build.py --target-dir .` after editing the template and re-run the commit_guardian suite before claiming the change."
+  - "EXTEND THE EXISTING RECOGNITION, DO NOT ADD A SECOND ONE BESIDE IT. The recognised-explanation machinery already exists and was located: `_TICKET_ID_RE` and `_EPIC_NAME_RE` at `templates/scripts/commit_guardian/check_secrets.py:120-121`, consumed by Rule 2 of `_is_prose_exempt` at lines 189-202, which scrubs the recognised tokens from the line and re-tests residual tokens against `_ENTROPY_THRESHOLD`. Making that computation the whole of the decision is the ask. A parallel recogniser would give the store two lists that can disagree, and the one that is not consulted is the one that gets maintained."
+  - "THE LIST OF EXPLANATIONS MUST BE A CLOSED, ENUMERABLE CONSTANT WITH REPORT-BY-DEFAULT. It is a single named module-level collection that the decision iterates; an unrecognised form takes the report branch with no fallback that lets it through. Do not special-case any value, file or path by name — an exemption must derive from a data property of the value, so that a new form arrives reported rather than already exempt. This shape is inherited from GE-123d-2 for the adjacent rule; if a reason to depart from it is found, record the reason in the implementation rather than departing silently."
+  - "A PER-VALUE REASON MUST EXIST AS A DISCRETE DATUM, ONE PER SET-ASIDE VALUE. Each value the check sets aside carries its own reason naming which entry of the closed list accounted for THAT value. Two set-aside values in one file produce two reason records; a single file-level verdict, a boolean, or a reason attached to the file rather than to the value does not satisfy this even when the reported findings for that file happen to be identical."
+  - "THE REASON MUST BE OBSERVABLE THROUGH A DIAGNOSTIC SEAM OF THE SAME EXECUTED RUN, AND THAT SEAM IS NOT THE HUMAN-FACING NOTICE. Expose the per-value reasons as a structured emission from the executed check (for example a machine-readable diagnostic mode) so this criterion can be discharged behaviourally without inventing a user-facing notice. Whether, how loudly and at what granularity a reason is SHOWN to the person committing is GE-125d's subject and MUST NOT be decided here. This record's job is to guarantee the datum exists; GE-125d's job is to decide what is done with it."
+  - "DO NOT ADD A `depends_on` EDGE TO GE-125d, AND DO NOT MERGE THE TWO. The relationship is a delivery contract recorded in this record's `delivers_to`. GE-125d may be built before, after or alongside this record; coupling the two by dependency would make a visibility promise wait on a detection change for no reason that survives the datum existing."
+  - "THE DECISION MUST NOT BE FED `Finding.excerpt`. `_filter_prose_findings` passes `finding.excerpt` today (line 220), and `excerpt` is set to `line.strip()[:120]` at `templates/skills/security-scanner/scripts/scan_secrets.py:248` and `:254`. GE-125c-3 owns that constraint in full; it is named here because a closed list matched against a truncated line is a closed list whose closure depends on line length. Keep every fixture line in THIS record comfortably under 120 characters so the arms measure recognition alone."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file inside a `tempfile`-backed throwaway project root with the prose locations constructed INSIDE it (`<tmp_root>/docs/retrospectives/<name>.md` and `<tmp_root>/tickets/00_inbox/<name>.md`) and the check pointed at that root. No fixture under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. The first scenario is the one this trap silently inverts. Assert as a precondition that the root path ABOVE each constructed prose directory contains none of the four segment names — the match is a substring test, so a temporary root can re-arm the exemption by accident."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY DIRECT CALL. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers. Greping the source for the recognised-explanation list discharges nothing: a list that exists and is never consulted passes that test."
+  - "LABEL THE RED BASELINE HONESTLY SO A TDD-ORDER CHECK DOES NOT MISREAD IT. Scenarios one and three are RED today. Scenario two is GREEN on its no-finding half today — for the wrong reason, because the whole file is exempt — and RED on its load-bearing half, the requirement that two values be two decisions each with its own reason. Record that split wherever the red baseline for this tree is captured, and do not cite the no-finding half alone as evidence the fix landed."
+  - "CREDENTIAL-SHAPED FIXTURE STRINGS ARE ASSEMBLED AT RUNTIME from concatenated fragments, as `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does. Do not collapse them into source literals and do not add a `.security-allowlist` entry so that literals can be committed."
+  - "ERROR HANDLING PER CLAUDE.md: the recognition decision is a pure function over a string and must NOT be wrapped in try/except (Rule 4); file and subprocess access is wrapped in a typed except that logs at WARNING or re-raises (Rules 1-3). The reason datum must never be produced by swallowing an exception and defaulting to set-aside — an error in the recognition path fails towards reporting the value."
+  - "PERFORMANCE — THIS RUNS ON EVERY COMMIT. The recognition executes once per entropy finding per staged file. Every pattern in the closed list stays a module-level compiled constant; no file read, subprocess call or network call may be added per value. The check must remain within its current commit-time budget for a staged set of 200 files."
+test_spec:
+  - name: test_unexplained_credential_in_a_prose_location_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged Markdown file in the throwaway root's retrospectives area whose only high-entropy content is a runtime-assembled opaque credential of at least thirty characters yields exactly one finding, named with its 1-based line number, and a non-zero exit. RED today: KI-SEC-001 measures a value of this shape in this location as exempt and unreported."
+  - name: test_two_explained_identifiers_produce_two_distinct_per_value_reasons
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "A staged file holding a ticket-form and an epic-form identifier yields zero findings AND, read from the same executed run's structured diagnostic emission, exactly two set-aside records — one per value, each naming the closed-list entry that accounted for that value. A single file-level verdict fails even though the finding count matches. This is the load-bearing half; the zero-findings half alone is green today for the wrong reason."
+  - name: test_unrecognised_high_entropy_form_is_reported_by_default
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file holding one high-entropy value whose form matches no entry of the closed list yields exactly one finding and a non-zero exit — closure is observable only because an unrecognised form is reported rather than waved through."
+  - name: test_a_newly_invented_form_is_reported_without_touching_the_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A second, differently shaped unrecognised high-entropy value — one no entry of the list describes and that resembles none of them — is also reported, proving the default is report rather than a single hard-coded rejection. Fails an implementation that closes the list by naming known-bad forms instead of by enumerating known-good ones."
+  - name: test_prose_fixture_roots_are_not_themselves_exempt
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: for each constructed prose location, the throwaway root path ABOVE it contains none of the segment names tickets, retrospectives, acceptance-criteria or skills, and every fixture line is under 120 characters. Without this the first scenario can report or stay silent for a reason unrelated to the change."
+test_rationale: |
+  Five descriptors. Three are the criterion's arms; the fourth guards the direction
+  in which "closed list" is most often faked, and the fifth is the fixture contract.
+
+  The second descriptor is where this criterion actually lives, and it is the one a
+  naive reading would drop. Its finding-count half is GREEN today — the whole file is
+  exempt, so zero findings is what today's broken code already returns — so a test
+  that asserts only "no finding is reported" would pass before any work was done and
+  would be cited as coverage. What is red is that two set-aside values produce two
+  reasons. That is why the descriptor reads the structured diagnostic emission of the
+  same executed run rather than only the exit status: it is the only observable that
+  distinguishes two per-value decisions from one file-level verdict. Reading a
+  diagnostic seam rather than the human-facing notice is deliberate — the notice is
+  GE-125d's subject, and discharging this record must not pre-empt it.
+
+  The fourth descriptor exists because "the list is closed" is easy to satisfy on
+  paper. An implementation that reports one specific unrecognised shape passes the
+  third descriptor; only a second, differently shaped unrecognised value shows that
+  the DEFAULT is report rather than that one form was blacklisted.
+
+  Direct-call shapes were rejected throughout: a list that exists and is never
+  consulted passes a grep, and a recognition function asserted in isolation is not
+  evidence that a commit was blocked.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 measures the first scenario's exact file as exempt and unreported today, and its third fix direction names the benign-token computation this criterion makes load-bearing."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to:
+  agent: python-coder
+  contract: "A per-value set-aside REASON: for every value the check sets aside, a discrete record naming which entry of the closed recognised-explanation list accounted for that value, one record per value rather than one verdict per file, readable from a structured diagnostic emission of the executed check. This is the datum GE-125d consumes if its decomposition needs a per-value reason to announce. This record guarantees the reason EXISTS and deliberately does not decide whether, how loudly or at what granularity it is surfaced to the committer — that is GE-125d's subject. The relationship is a delivery contract only: no depends_on edge to GE-125d is created in either direction."
+expects_from:
+  ac_id: GE-125c-1
+  contract: "A per-finding exemption decision point in templates/scripts/commit_guardian/check_secrets.py, where each ENTROPY_HIGH finding is evaluated individually and a path match no longer discards findings on its own. This record settles what that decision is made ON."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity M, thirteen
+      it_requirements, five test_spec descriptors, test_rationale, five doc_links, an
+      expects_from contract on GE-125c-1 and a delivers_to contract carrying the
+      per-value reason to GE-125d; set readiness reviewed. The delivers_to records the
+      BA flag that this record guarantees a per-value reason exists while deliberately
+      not deciding how it is surfaced, and an it_requirement forbids adding a depends_on
+      edge to GE-125d or merging the two. Further it_requirements name the canonical
+      template path and the ADR-001 revert hazard, locate the existing recognition
+      machinery (check_secrets.py:120-121 and _is_prose_exempt Rule 2 at 189-202) so it
+      is extended rather than duplicated, require the closed list to be a data-driven
+      enumerable constant with report-by-default and no special-casing by name, require
+      the reason to be observable through a diagnostic seam that is NOT the human-facing
+      notice, forbid feeding the decision Finding.excerpt, make the throwaway root a
+      hard requirement whose absence is a defect to raise, and carry the BA red-baseline
+      split forward (scenario two is green on its no-finding half for the wrong reason).
+      criteria, title, level and work_status unchanged.'
+superseded_by: null
+covered_by:
+  - GE-125c-2-i
+  - GE-125c-2-ii
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHAT THIS ADDS OVER GE-125c-1. That criterion proves the file stopped being the
+  unit of the decision. This one settles what the decision is made ON: a value is
+  set aside only when a recognised explanation accounts for THAT value, and
+  everything else is reported. Either can be satisfied while the other is broken —
+  a per-result rule that sets aside every value in a prose location satisfies the
+  counting shape of GE-125c-1's second scenario and fails the first scenario here.
+
+  THE MECHANISM ALREADY EXISTS IN PART, per the parent L1: the check already
+  recognises project identifiers of the ticket and epic forms as explanations
+  rather than credentials. This criterion is the instruction to make that same
+  per-value judgement carry the whole load, not to invent a second one beside it.
+
+  CLOSED LIST, REPORT BY DEFAULT — the shape is inherited, not chosen fresh.
+  GE-123d-2 chose closed-list-with-report-by-default for the adjacent rule and
+  GE-125b's notes ask the same of the file-kind decision. Follow it here unless
+  there is a reason not to, and record the reason if there is. The third scenario
+  is what makes the closure observable: an unrecognised form must be reported
+  rather than waved through.
+
+  WHAT THIS DOES NOT DECIDE. The second scenario requires that a reason exists per
+  set-aside value; it deliberately says nothing about whether, how loudly or at
+  what granularity that reason is shown to the person committing. That is GE-125d's
+  subject and it must not be pre-empted here. If a sibling's decomposition needs a
+  per-value reason to announce, this is the record that guarantees one exists.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED. Every fixture must be a real file
+  created inside a tempfile-backed throwaway project root, with the prose location
+  constructed INSIDE that root (for example `<tmp_root>/docs/retrospectives/<name>.md`
+  and `<tmp_root>/tickets/00_inbox/<name>.md`) and the check run against that root.
+  No fixture may be created under this repository's own `tickets/`,
+  `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees:
+  a fixture under one of those measures the exemption rather than the scanner and
+  passes for the wrong reason. The first scenario is the one this trap would
+  silently invert — placed in the real retrospectives tree it could report for a
+  reason unrelated to the change, or stay silent for one. The test module belongs
+  under `unit_tests/commit_guardian/`, which matches none of the four names.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Per CLAUDE.md, every arm runs
+  the real pre-commit secrets check over real staged files and asserts the process
+  exit status and the reported findings. Asserting what an exemption decision
+  returns when called directly does not discharge any arm, and greping the source
+  for the recognised-explanation list discharges nothing — a list that exists and is
+  never consulted passes that test.
+
+  CREDENTIAL-SHAPED FIXTURE STRINGS must be assembled at runtime from concatenated
+  fragments rather than written as source literals, so this repository continues to
+  need no suppression for the module that holds them.
+
+  RED BASELINE, HONESTLY LABELLED so a later TDD-order check does not misread it.
+  The first and third scenarios are RED today — KI-SEC-001 measures a value of this
+  shape in these locations as exempt and unreported. The second scenario is GREEN on
+  its no-finding half today, because the whole file is exempt for the wrong reason;
+  its load-bearing half is the requirement that the two values be two decisions
+  each with its own explanation, which is red. Do not cite the no-finding half alone
+  as evidence the fix landed.

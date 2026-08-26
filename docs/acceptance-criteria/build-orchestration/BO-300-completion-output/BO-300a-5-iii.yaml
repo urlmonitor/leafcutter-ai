@@ -1,0 +1,214 @@
+id: BO-300a-5-iii
+components:
+  - build_orchestration
+title: "Work that vanished from the epic is judged against what the drive actually completed, so no output calls the same work both completed and not built"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a drive whose completion-time re-read of the epic's set of work affirmatively
+    confirms it read that set, and finds no work added after planning, but finds that
+    one or more planned pieces of work are no longer present in the epic,
+    And in the first case every piece that is no longer present is one the drive
+      itself completed during this drive, and the drive's own record of completed
+      work names it,
+    And in the second case at least one piece that is no longer present is one the
+      drive did not complete, and the drive's record of completed work does not
+      name it,
+    And in the third case both kinds are present in the same drive,
+    And in the fourth case nothing is missing and the epic genuinely finished,
+  When the drive produces its completion output -- whether by the return it takes
+    when there were no batches to run or by the return it takes at the end of the
+    last batch,
+  Then in the first case the output names each such piece as no longer present, does
+    not describe it as unbuilt or as work that was not done, and still leads with a
+    success value and an affirmative epic-complete verdict, because the drive's own
+    completed record establishes that the work was done before the piece disappeared,
+    And in the second case the output withholds the epic-complete claim exactly as it
+      does for work discovered after planning: the leading outcome value is not a
+      success value, the epic-complete verdict is not affirmative, the piece that
+      neither completed nor remains is named, and the output states what the operator
+      should do about it,
+    And in the third case the withholding is driven only by the pieces the drive did
+      not complete, and the pieces it did complete are still reported as no longer
+      present rather than as unbuilt,
+    And in the fourth case the output leads with a success value and an affirmative
+      epic-complete verdict, with nothing named as missing,
+    And in every case no single output ever names the same piece of work both as one
+      the drive completed and as one that was not built,
+    And in every case the leading outcome value, the epic-complete verdict, and the
+      sentence the output states about the epic all agree with one another: none of
+      the three reports completion while another denies it,
+    And in every case where the output does contradict itself, the suite's own
+      epic-outcome contradiction check reports the disagreement rather than passing,
+      including when the contradiction is worded as work that was not built rather
+      than as an epic that is not complete,
+  So a piece of work that moved or was deleted after the drive finished it is
+    reported as gone and nothing more, planned work that neither finished nor remains
+    still blocks the completion claim, and the completion output can never assert a
+    piece of work was both done and not done.
+depends_on:
+  - BO-300a-5
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The epic driver, and the only place this applies. The completion-time re-check that partitions the two sets, and BOTH epic completion returns it feeds -- the early one taken when there are no batches to run, and the final one -- must judge a missing piece against the drive's own record of completed work before describing it as unbuilt or withholding the completion claim for it. build-ticket.js drives a single piece of work and has no epic path, so it carries no counterpart."
+  - path: unit_tests/prompt_assembly/_driver_harness.py
+    relationship: describes
+    status: exists
+    relevance: "The suite's epic-outcome contradiction check. It recognises a contradiction only by the phrases 'not complete' and 'incomplete', so an output that certifies success while stating that a named piece of work was NOT BUILT passes it unnoticed. Its coverage must extend to the wording the driver actually emits for a removal, or the whole class stays undetectable by the very check written to catch it."
+  - path: unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
+    relationship: describes
+    status: exists
+    relevance: "The behavioral harness. It must be able to drive an epic in which a planned piece disappears between the two reads AND the drive's completed record does or does not name that piece, independently, so all four cases here are reachable and the returned payload can be asserted on."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling this extends, and the change that created this defect. It establishes the three-way agreement between the leading outcome value, the epic-complete verdict and the message, but enumerates only the additions case and the unconfirmed-read case. Making the success path assert the epic-complete verdict affirmatively turned the removals-only branch from silent into authoritative, which is where the contradiction now appears."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling that first required a removal to be reported as no longer present rather than as unbuilt. That requirement was written for the reporting wording; this record makes the same distinction decide the completion claim itself, by partitioning removals against the drive's completed set."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "1 -- build-feature.js ONLY (epicRecheckReport and both epic completion returns); build-ticket.js drives a single ticket and has no epic path"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m unittest discover -s unit_tests/prompt_assembly -p test_epic_removed_work_verdict.py"
+  constraints:
+    - "A REMOVAL AND A COMPLETION ARE INDEPENDENT FACTS, AND THE PAYLOAD ALREADY KNOWS BOTH. The live defect is that every missing piece is treated as unbuilt, when the drive's own completed record often proves the opposite. Partition the missing set by that record before saying anything about it. An implementation that keeps one undifferentiated missing list and only softens the wording has not fixed this: the completion claim still turns on the wrong fact."
+    - "DO NOT WITHHOLD UNCONDITIONALLY. The cheapest way to remove the contradiction is to withhold the completion claim whenever anything is missing. That makes every ordinary lifecycle move -- a ticket file relocated to its done folder by the drive that finished it -- report the epic as unfinished, which is a worse and far more frequent regression than the one being fixed. The removed-and-completed case must still report success, and the control case must stay green."
+    - "DO NOT SUPPRESS THE MISSING LIST EITHER. Reporting nothing about a piece that disappeared satisfies the no-contradiction invariant and destroys the information BO-300a-5-i was authored to add. The piece is still named as no longer present in every case; what changes is whether it is described as unbuilt and whether it blocks the claim."
+    - "BOTH RETURNS, NOT JUST THE LAST ONE. The epic path has two completion returns and the re-check report feeds both. The early no-batches return is the one where the completed record is emptiest, so a partition written only against the final return's data shape is most likely to misclassify exactly there."
+    - "THE CONTRADICTION MUST BE DETECTABLE, NOT MERELY ABSENT. The suite's epic-outcome disagreement check recognises only 'not complete' and 'incomplete', so the phrase this branch actually emits slips past it and a green suite over this defect already exists. The coverage must extend to the wording the driver emits for removals, so that any future output pairing a success verdict with a not-built statement is caught by the check rather than by a reviewer. Assert that the check FAILS on a contradictory payload, not only that it passes on a corrected one -- a check that never fires proves nothing."
+    - "VERIFY BY EXECUTION, NOT BY GREP. Per CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep', the partition happens before a merge that assembles the payload, and reading the source cannot tell which classification survives that merge. Drive the real build-feature.js through unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on the payload the run returned."
+delivers_to:
+  agent: python-coder
+  contract: "An epic completion payload in which every piece of work no longer present in the epic is classified against the drive's own completed record, so the completion claim is withheld only for work that neither completed nor remains, and no payload describes one piece of work as both completed and not built"
+expects_from:
+  ac_id: BO-300a-5
+  contract: "The completion-time re-read and the by-identity comparison that produces the set of work no longer present in the epic"
+test_spec:
+  - name: test_removed_work_the_drive_completed_still_reports_a_successful_epic
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive an epic in which every piece missing at completion time is one the returned payload's completed record names. Assert the payload leads with a success value, carries an affirmative epic-complete verdict, names the piece as no longer present, and nowhere describes it as unbuilt or not done."
+  - name: test_removed_work_the_drive_did_not_complete_withholds_the_completion_claim
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drive an epic in which a planned piece is missing at completion time and is absent from the completed record. Assert the leading outcome value is not a success value, the epic-complete verdict is not affirmative, the piece is named, and the output states what the operator should do -- the same treatment work discovered after planning receives."
+  - name: test_both_kinds_of_removal_in_one_drive_are_judged_separately
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "One missing piece the drive completed and one it did not, in the same drive. Assert the claim is withheld, that the withholding names only the uncompleted piece, and that the completed piece is still reported as no longer present and not as unbuilt -- so the partition is per piece rather than a single flag over the whole missing set."
+  - name: test_a_finished_epic_with_nothing_missing_still_reports_success
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "CONTROL. Nothing removed, nothing added, the re-read confirmed, the epic genuinely complete. Assert a success outcome value, an affirmative epic-complete verdict and no missing-work entries -- so a fix that withholds whenever anything looks unusual cannot pass, and the negative cases above are attributable to their conditions."
+  - name: test_the_early_no_batches_return_partitions_removals_the_same_way
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Reach the epic completion return taken when there are no batches to run, with a piece missing and no completed record naming it. Assert the same withholding, at the site where the completed record is emptiest and a partition written against the final return's data shape is most likely to misclassify."
+  - name: test_no_payload_names_one_piece_of_work_as_both_completed_and_not_built
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Across every scenario in this suite, assert the intersection of the payload's completed work and the work it describes as not built is empty, and that the leading outcome value, the epic-complete verdict and the message agree -- the invariant stated directly, so any future branch that reintroduces the contradiction is caught wherever it is added."
+  - name: test_the_contradiction_check_fires_on_a_not_built_wording_disagreement
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Present the suite's epic-outcome contradiction check with a payload that certifies success while stating a named piece of work was not built, and assert the check reports the disagreement. Today it recognises only not-complete wording and passes this payload silently, so without this the whole class remains invisible to the suite."
+test_rationale: |
+  Every descriptor drives the real epic workflow and asserts on the returned payload
+  because the classification this record specifies happens before the merge that
+  assembles that payload, and the merge is where the contradiction was produced last
+  time. Reading the branch that builds the missing list cannot show which of its two
+  meanings reaches the operator.
+
+  The suite is deliberately built around a four-way partition -- removed-and-completed,
+  removed-and-not-completed, both together, and nothing removed -- because the two
+  cheapest wrong fixes each pass three of the four. Withholding whenever anything is
+  missing passes both negative cases and the control but fails the removed-and-completed
+  case; treating every removal as harmless passes the control and the completed case but
+  fails the uncompleted one. Only the full set separates them, and the mixed case is the
+  one that forces the decision to be made per piece rather than once per drive.
+
+  The last descriptor asserts on the check rather than on the driver, which is unusual
+  and intentional. The reason this defect reached a reviewer at all is that the suite's
+  contradiction detector matches only two phrasings of not-complete and is blind to the
+  not-built phrasing the removals branch emits, so the suite was green over a payload
+  that plainly contradicted itself. A fix that corrects the driver while leaving the
+  detector blind restores the green suite and leaves the next variant of this defect
+  just as undetectable, which is exactly how this one arrived.
+origin_agent: BrainCandy
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE THIRD REMEDIATION-INDUCED DEFECT IN THREE CONSECUTIVE ROUNDS, AND ALL THREE HAVE
+  THE SAME SHAPE. A remedy makes a previously inert or silent path active or
+  authoritative, and the guard is not extended to that path. BO-300a-5 added the
+  completion-time re-read; BO-300a-5-i had to add the fail-closed and no-false-alarm
+  boundary the re-read opened. BO-300a-5-ii made the success path assert the
+  epic-complete verdict affirmatively, where previously it said nothing; that turned
+  this record's branch -- removals with no additions -- from an absent field into an
+  authoritative claim on a payload that already contradicted itself. Each remedy was
+  correct in what it changed and incomplete in what it reached. The reusable lesson is
+  to enumerate the branches a remedy newly makes load-bearing, not only the branch it
+  was written for.
+
+  THE OBSERVED PAYLOAD. A reviewer drove a real two-ticket epic and captured a single
+  completion output that reported both tickets completed by name, then reported one of
+  those same tickets as planned work that was not built, and certified the whole thing
+  with a success outcome value and an affirmative epic-complete verdict. One piece of
+  work, two opposite statements, one certification over both.
+
+  WHY THE PARTITION IS THE FIX AND WORDING IS NOT. The driver treats every removal as
+  unbuilt work, and that is the actual error: a removal and a completion are independent
+  facts, and the payload already holds both. The ordinary cause of a removal is a
+  lifecycle move made by the drive that finished the ticket, so under the current
+  treatment a perfectly successful epic looks unfinished the moment it tidies up after
+  itself -- which is why withholding unconditionally is not an acceptable fix. What
+  remains genuinely alarming is planned work that neither completed nor still exists:
+  nothing anywhere can assert it was done, and the claim must be withheld for it exactly
+  as it is for work discovered after planning.
+
+  WHY THE SUITE COULD NOT SEE IT. The contradiction detector recognises a disagreement
+  only by the phrases not complete and incomplete. The removals branch says the work was
+  not built. That is the same contradiction in different words, and the check written to
+  catch this exact class waved it through. The check's coverage is therefore part of this
+  record and not an implementation aside -- a guard that only recognises the wording it
+  was born with will keep being outrun by the code it guards.
+
+  WHY IT IS EPIC-ONLY. The single-ticket driver has no epic path, no completion-time
+  re-read and no epic completion return, so there is nothing to partition in the twin.
+  That is stated explicitly because sibling records in this batch require changes in both
+  drivers, and an implementer carrying that pattern here would search for code that does
+  not exist.

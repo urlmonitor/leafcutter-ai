@@ -101,7 +101,8 @@ amended_by:
   date: '2026-08-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/06_TICKET-20260825-GE-120a-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -130,3 +131,4 @@ notes: |
   the existing field the three-state model maps onto — reuse it rather than adding a
   parallel indicator. check_ac_schema.py is confirmed to be in the un-migrated set that
   still carries a private root walk.
+target_epic: EPIC-TrustThatAGreenCheckActuallyChecked

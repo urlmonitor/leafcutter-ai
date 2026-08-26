@@ -355,6 +355,46 @@ the same commit. Skipping this produces a failure that is invisible on the branc
 surfaces once `origin/main`'s stricter parity test merges in.
 (Source: EPIC-DocumentationCoverageGuarantee FP-3, 2026-08-10.)
 
+### AC-store commits — stage the parent alongside the child
+
+When a commit changes an AC's place in the tree — adding a child, changing `covered_by`,
+flipping a child's `work_status` — **stage the parent AC file in the same commit**, even
+when the parent's own content is unchanged.
+
+The commit-guardian AC hooks validate only the files present in **that commit's index**.
+They do not read the store. So any fact that is true of the store but not of the staged set
+is structurally unreachable: you edit children, never stage the parent, and the hooks that
+exist to check parents never look at one. Their silence is not a pass — it means they were
+never given the file.
+
+Two consequences follow, and both are phantom-done vectors:
+
+- **Stale `covered_by`.** A parent keeps listing the children it had when it was last
+  staged. `check_ac_parent_covered_by` cannot notice, because it compares only what is in
+  the index.
+- **A falsely `done` composite.** A parent claims `work_status: done` while its children
+  are still `todo`. `check_done_proof` cannot notice for the same reason.
+
+**Why this matters:** `ACD-400a` carried both defects simultaneously. Its `covered_by` read
+`[a-1, a-2]` while `a-3` and `a-4` had existed on disk since 2026-08-12 — stale by two for
+five days — and it claimed `work_status: done` with `a-1` and `a-2` both still `todo`.
+Every commit in that window passed every AC hook. Both surfaced in one shot on 2026-08-18,
+the first time the parent happened to be staged.
+
+`ACD-400a` is not special. A store-wide sweep of all 3,146 records at `439b9076f` found
+**20** composites marked `done` with at least one unfinished child — `ACD-300a`, `ACD-400b`
+and `ACD-600a` each with 3-4 `todo` children. Sixteen of the twenty are L2; in thirteen of
+those, *every* unfinished child is a Roman-suffixed technical-constraint sibling
+(`-i`/`-ii`/`-iii`). So the dominant shape is marking an L2 done once its behaviour works
+while its `-i` constraints stay `todo` — check those before flipping any L2.
+
+Related trap: several of these hooks ignore `argv` entirely and read the index or
+`HOOK_TEST_FILES`, so passing a path on the command line does **not** make them check that
+path. If you are testing a hook, verify it actually saw your file before trusting the exit
+code. For the out-of-band store-wide sweep, see "AC-store hygiene" below — and note the
+bare-directory no-op documented there.
+(Source: ACD-400a drift, found 2026-08-18.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -423,16 +463,20 @@ run. 23 `submit-failed` events occurred without detection — the drive complete
 telemetry was captured, making the retrospective impossible.
 (Root cause ticket: TICKET-20260527-FeedbackSinkPreDriveCheck)
 
-**Also verify `feedback_categories.yaml` is accessible.** The `submit_feedback.py` script requires this file in the worktree's `.leafcutter/` directory. When absent, all agent feedback calls fail silently with `(submit-failed)`, making the retrospective's quantitative category breakdown unavailable.
+**Also verify `feedback_categories.yaml` is accessible.** The `submit_feedback.py` script requires this file. When it cannot be read, agent feedback calls fail with `(submit-failed)`, making the retrospective's quantitative category breakdown unavailable.
 
-Check:
+It is deployed under `config/`, **not** at the root of `.leafcutter/`:
+
 ```
-ls <worktree-root>/.leafcutter/feedback_categories.yaml
+ls <worktree-root>/.leafcutter/config/feedback_categories.yaml
 ```
+
 If the command fails (`No such file or directory`), the file is missing.
 
-Fix: symlink or copy from the main tree's `.leafcutter/` alongside the `.pre-commit-config.yaml` fix in the section below.
-(Source: EPIC-ComputedQualityGates FP-5, 2026-07-07.)
+Fix: run `python scripts/build.py --target-dir <workspace-root>`, which deploys it, or symlink the worktree's `.leafcutter` to the main tree's alongside the `.pre-commit-config.yaml` fix in the section below.
+
+**The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
+(Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)
 
 ### Worktree pre-commit config (MANDATORY for worktree-based drives)
 
@@ -645,6 +689,26 @@ serial per-commit hook cascade — child-limit caps, missing parent `covered_by`
 and schema-invalid fields (e.g. a list-valued `test_rationale` that must be a string):
 
 ```bash
-python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>/
+python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria/<component>
 ```
-(Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10.)
+
+A directory argument is walked **recursively**, so this reaches AC YAML at every depth —
+records directly under a component directory and records inside a feature folder alike.
+`index.yaml` is skipped, being the component registry rather than an acceptance criterion.
+
+A run that resolves to **zero** files now **exits non-zero**. That matters more than it
+sounds: until 2026-08-19 the script did no globbing of its own, so a bare directory matched
+nothing, printed `No YAML files to validate.` and exited **0** — a success-shaped result
+from a run that checked nothing. This very instruction prescribed the bare-directory form
+from 2026-08-10 until 2026-08-18, so the documented defence against store rot was itself a
+no-op for eight days, and reported clean the whole time.
+
+Two habits survive the fix, because they are about *your* command rather than the script:
+
+- Avoid a fixed-depth shell glob like `*/*.yaml` — it silently skips whole directories.
+  Pass the directory and let the script walk it, or use `find -exec`.
+- Before believing a pass, confirm the run actually named some files. `OK: all N ... valid`
+  states N for exactly this reason.
+
+(Source: EPIC-DocumentationCoverageGuarantee FP-4, 2026-08-10; bare-directory no-op found
+2026-08-18, fixed 2026-08-19 — KI-ACS-001.)

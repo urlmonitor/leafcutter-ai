@@ -1,0 +1,52 @@
+id: TQ-400e
+components:
+  - testing_quality
+  - ac_store
+title: "You can trust what the check takes away — it never cries wolf"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Only genuinely unproven work is knocked back; genuine exceptions stay settled.
+
+  Work that really is proven is never demoted by mistake, and work that
+  legitimately needs no test can be declared as such, with a stated reason, so it
+  is not re-flagged every cycle. The check earns the authority to take "done"
+  away by being right about who deserves to keep it.
+depends_on:
+  - TQ-400
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-17
+amended_by:
+  - reason: "child_limit_override raised 5 -> 6 to admit TQ-400e-6, the reference-doc AC this L1's documentation_triggers ([reference-doc]) requires. This L1 was already AT the default cap of 5 with its behavioural children alone, so the trigger could not be satisfied without an override; two it-po passes withheld promotion for exactly that reason. A split was rejected: the exemption path is documented as one thing and its rules are set by TQ-400e-3, TQ-400e-4 and TQ-400e-5 together, so the reference entry cannot sit under a different parent from the three ACs that define what it must state. REMOVE THIS OVERRIDE when a PO-owned split rebalances the TQ-400 tree, or when any behavioural child is superseded and frees a slot back to 5."
+    by: business-analyst
+    at: 2026-08-17
+superseded_by: null
+covered_by:
+  - TQ-400e-1
+  - TQ-400e-2
+  - TQ-400e-3
+  - TQ-400e-4
+  - TQ-400e-5
+  - TQ-400e-6
+implemented_by: []
+child_limit_override: 6
+change_target:
+  - code
+  - config
+risk_surface: internal
+documentation_triggers:
+  - reference-doc

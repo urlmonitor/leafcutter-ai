@@ -1,0 +1,136 @@
+id: GE-123a-1
+components:
+  - commit_guardian
+  - security_scanner
+title: "A file recognised by its sensitive filename is also read line by line for its contents"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file named ".env" exists on disk and contains four separate lines that
+    the scanner's content rules recognise — a cloud access key in the AWS_KEY
+    form, a private-key header line, a quoted twelve-character value assigned to
+    a field named password, and a high-entropy token of at least twenty
+    characters,
+  And no suppression entries are in force,
+  When the file is scanned through the scanner's multi-file entry point (the same
+    entry point the pre-commit secrets check calls),
+  Then five findings are reported for that file: one filename finding recording
+    that the name itself marks the file as sensitive, plus one finding for each
+    of the four content rules,
+  And the filename finding and the four content findings are all present in the
+    same result — recognising the name adds a finding, it does not replace the
+    content scan.
+
+  Given a second file named "secrets.py" contains the identical four lines,
+  And both files are scanned in the same run with no suppression entries in
+    force,
+  When the run completes,
+  Then "secrets.py" is reported for exactly the same four content rules as
+    ".env",
+  And the only difference between the two files' results is the extra filename
+    finding on ".env",
+  Because a file's contents must be judged the same way whatever the file is
+    called.
+
+  Given the same two files and no suppression entries in force,
+  When the run completes,
+  Then the run's exit status reports findings present,
+  Because nine findings across two files is not a clean result.
+depends_on:
+  - GE-123a
+doc_links:
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+    relevance: "The canonical edited copy of the scanner is the one under templates/; the deployed copies are build.py outputs. Any fix for this criterion is made in templates/ and propagated, never edited in a deployed copy."
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: "Supplies the angle vocabulary used in this record's test_spec. The reachability angle is the formal name for the verification standard this whole tree carries — start at the production entry point, not at the unit."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "A per-file scan in which filename recognition contributes a finding without terminating the content scan, so that every downstream AC in this tree can assume an env-named file has more than one suppressible finding."
+expects_from: null
+it_requirements:
+  - "The canonical edited source is templates/skills/security-scanner/scripts/scan_secrets.py per ADR-001. The deployed copies are build.py outputs and must never be edited directly; verify source-to-deployed parity with a build.py round-trip before sign-off."
+  - "templates/skills/security-scanner/SKILL.md must be updated in the same change. Its Secrets Detection Rules table presents the rules as applied in order and says nothing about the filename rule ending the scan, so after this change the skill body must state that a filename match ADDS a finding and the content rules still run."
+  - "Every arm must be exercised through the multi-file entry point scan_files, with real files written into a tempfile-backed directory. Coverage of the per-file scan called directly, or of the filename-matching logic in isolation, does not discharge any arm of this criterion."
+  - "Exit-status arms must run the scanner's CLI entry point in a fresh subprocess with the fixture directory as the working directory, and must assert the process exit code. A returned list of findings is not an exit status."
+  - "Test fixtures must assemble every credential-shaped string at runtime from concatenated fragments rather than writing it as a source literal. unit_tests/commit_guardian/test_scan_secrets_suppression.py already does this deliberately so that no PRIVATE_KEY or AWS_KEY suppression is needed anywhere in this repository. Do not collapse the fragments back into literals, and do not add an allowlist entry so that literals can be committed — suppressing the two highest-signal detectors on a real source file would create a genuine blind spot in exactly the file most likely to accumulate credential-shaped fixture data."
+  - "Each of the four content-rule lines in a fixture must produce exactly one finding. Verify the chosen values do not cross-trigger a second rule: a token shorter than twenty characters cannot reach the entropy threshold, and the quoted value on the password line must stay long enough for the keyword rule while staying short enough to avoid the entropy rule."
+  - "The module under test must be loaded from the canonical templates/ path via importlib.util.spec_from_file_location, never from a deployed copy, which can be stale."
+  - "No test may write a .security-allowlist to any real project root. Allowlist fixtures live only inside tempfile-backed directories."
+  - "Fixture files must not be placed under tickets/, docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/. The pre-commit consumer check_secrets.py post-filters entropy findings for those path prefixes, so a fixture under one of them would measure the exemption rather than the scanner."
+  - "The set of filename forms the sensitive-filename rule recognises must not change as a side effect of this work. Any narrowing is a regression, and it is guarded by GE-123a-3."
+  - "Content-scan results for ordinary source files must not regress. The existing end-to-end arm in unit_tests/commit_guardian/test_scan_secrets_suppression.py that asserts four findings on an ordinary .py fixture must stay green."
+test_spec:
+  - name: test_env_named_file_reports_filename_finding_plus_four_content_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Through scan_files over a real on-disk env-named fixture carrying the four recognised lines, exactly five findings are returned for that file — the filename rule plus one finding per content rule — all present in the same returned result."
+  - name: test_env_named_and_ordinary_file_report_the_same_content_findings
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An env-named fixture and an ordinary .py fixture holding byte-identical content are scanned in one scan_files call; the set of content-rule ids reported is equal for both files and the only difference is the extra filename finding on the env-named one."
+  - name: test_cli_exit_status_reports_findings_for_the_two_file_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    description: "The scanner CLI, run in a fresh subprocess with the fixture directory as its working directory, exits non-zero over the same two fixtures and its report accounts for nine findings across the two files."
+test_rationale: "The verification standard for this whole tree is the reason for the shape of this contract. A sibling audit in the GE-113c-3 family found two criteria that passed unit-level tests while describing situations the real entry point can never produce — precisely because the per-file scan short-circuits env-named paths. Every descriptor here therefore drives scan_files (or the CLI above it) against real files on disk; none calls the per-file scan or the filename matcher directly, and a suite that did would not discharge this criterion however green it ran. RED-VS-GREEN HONESTY, so a later TDD-order check does not misread the baseline: test_env_named_file_reports_filename_finding_plus_four_content_findings and test_env_named_and_ordinary_file_report_the_same_content_findings are RED today (an env-named file currently yields one finding, never five, and reports zero content findings). test_cli_exit_status_reports_findings_for_the_two_file_run is SPLIT — its nine-findings assertion is RED today (the current run produces five), but its exit-code assertion alone is GREEN on arrival, because the ordinary .py file already produces four findings and so the run already exits non-zero. Assert both halves; do not cite the exit code alone as evidence the fix landed. The second descriptor is the negative control that stops the first from being satisfied by inflating findings on env-named files specifically: it pins the two files to the SAME content-rule set, so the only permitted difference is the filename finding."
+origin_agent: business-analyst
+created: 2026-08-18
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-18): kept assigned_agent python-coder and complexity M (the behavioural change is small but it carries a SKILL.md addendum and a new multi-file end-to-end test surface); authored it_requirements pinning ADR-001 templates-is-canonical parity, the skill-body addendum, the mandatory scan_files/CLI-subprocess verification standard, the runtime-assembled credential-fixture rule that keeps this repo free of any PRIVATE_KEY or AWS_KEY suppression, the one-finding-per-line fixture constraint, and the check_secrets prose-prefix trap; added ADR-001 and test-angles doc_links; authored a 3-entry test_spec plus test_rationale flagging the exit-code half of the CLI arm as green on arrival. Criteria, depends_on, delivers_to and notes unchanged."
+superseded_by: null
+covered_by:
+  - GE-123a-1-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  This is the coverage FLOOR criterion — the single behavioural change that makes
+  the measured collapse in GE-123a's notes unreachable. Today the per-file scan
+  appends one filename finding and returns immediately, so the contents of an
+  env-named file are never read and the filename finding is the ONLY finding such
+  a file can produce.
+
+  MEASURED RED BASELINE for this criterion, to be reproduced before any fix:
+  five env-named files each carrying the four secret shapes above reported ZERO
+  problems and exited clean with one suppression line present; the identical
+  content in an ordinary source file reported four. Against THIS criterion (no
+  suppressions at all) the current baseline is one finding for the env-named file
+  and four for the source file — the fix must take the env-named file to five.
+
+  ENV FILENAMES ARE THE SUBJECT HERE, DELIBERATELY. The tree-wide authoring
+  constraint forbids env filenames as casual illustrative examples elsewhere,
+  precisely because they are short-circuited; this criterion is about that
+  short-circuit, so it must name them. Siblings in this tree use "secrets.py".
+
+  VERIFICATION STANDARD: a sibling audit in this family found two criteria
+  verified only against the matching logic in isolation that described situations
+  the real entry point can never produce. This criterion must be exercised
+  through the multi-file entry point with real files on disk. Coverage of the
+  per-file scan in isolation does not discharge it.
+
+  The filename finding is still wanted — GE-123a-3 is the positive arm that
+  guards it against being deleted rather than de-privileged.

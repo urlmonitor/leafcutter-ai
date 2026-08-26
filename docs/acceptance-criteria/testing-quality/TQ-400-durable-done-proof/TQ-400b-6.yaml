@@ -1,0 +1,292 @@
+id: TQ-400b-6
+components:
+  - testing_quality
+  - ac_store
+title: "The lifecycle diagram shows done as an exit-able state, with the demotion edge and what it writes"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a record's work state has until now only ever moved one way — into
+    finished, never out of it — and the demotion path adds the reverse edge,
+  When a reader who has not seen the code opens the state diagram for a record's
+    work state,
+  Then the diagram shows every state a record can occupy and every transition
+    between them, including the edge from finished back to work-still-to-be-done,
+  And each transition is labelled with what triggers it and what performs it, so a
+    reader can say which moves are made by a person, which by the promotion path,
+    and which by the sweep,
+  And the demotion edge is labelled with what the transition records on the record
+    — the reason and the date — and with the fact that applying it a second time
+    to an already-demoted record changes nothing,
+  And the diagram shows which sweep outcomes move a record and which do not, so a
+    reader can say that a proven, an exempt, and an untrustworthy-evidence record
+    all stay where they are,
+  And a reader can answer from the diagram alone, for a record in any given state,
+    which states it can reach next and what would have to happen for it to get
+    there,
+  And the transitions that already exist are drawn as they actually behave rather
+    than as an idealised lifecycle — including that promotion refuses a record
+    that is not active and does nothing to one already finished,
+  And the edge this work introduces is distinguishable from the ones already
+    running, so the diagram is not read as a record of behaviour that has not
+    shipped.
+depends_on:
+  - TQ-400b
+  - TQ-400b-1
+  - TQ-400b-2
+  - TQ-400b-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The normative statement of the work-state values the diagram's states must
+      match, and of the two fields the demotion edge writes. LINK for the field
+      definitions; do not restate them — TQ-400b-2 owns that entry and TQ-400b-7
+      is its acceptance standard.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Component home for the done-proof machinery that drives the new
+      transition. The new diagram must be cross-linked from here.
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where a record's progression through the build loop is documented today;
+      the lifecycle diagram must agree with it about the states that already
+      exist.
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The promotion side as it actually behaves — the refusals and the
+      already-finished no-op the diagram must depict rather than smooth over.
+  - path: config/ac_store_schema.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. THE STATE VOCABULARY, MACHINE-READABLE. The work_status
+      enum declared here is the authoritative set of states; the diagram's state
+      set must equal it in both directions. This is the file the seam test reads,
+      and it is what turns "shows every state a record can occupy" from a
+      judgement into a check.
+  - path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. THE EXISTING STATE DIAGRAM IN THIS STORE — and it covers the
+      READINESS axis, not the work_status axis. Read it before authoring: the new
+      diagram must be visibly a different axis and must cross-link, or a reader
+      will take one for a stale version of the other.
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      IT-PO ADDITION. The promotion half as it actually behaves, including its
+      refusals and the already-finished no-op. The current-behaviour clause is a
+      claim about this module, so the transitions drawn for promotion must be read
+      off it rather than off the intended lifecycle.
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - >-
+    TARGET FILE — a NEW diagram under docs/architecture/diagrams/, named to the
+    enforced convention c{level}-{seq:03d}-{slug}.md. Allocate the sequence number
+    at authoring time with `python scripts/next_diagram_seq.py 3` (6 was free on
+    2026-08-18 and TQ-400a-6 is expected to claim it, so this file is likely
+    c3-007-*.md — allocate, do not assume). Suggested slug:
+    ac-work-status-lifecycle. Frontmatter must carry type: architecture,
+    diagram_type: state (a value from config/diagram_types.json) and
+    flight_level: L3-Component; check_diagram_naming.py rejects a c-prefix that
+    disagrees with flight_level.
+  - >-
+    THE STATE SET MUST EQUAL THE work_status ENUM IN config/ac_store_schema.json,
+    IN BOTH DIRECTIONS. No invented state, no omitted state. This is the single
+    machine-checkable core of "shows every state a record can occupy", and a
+    diagram whose states are a plausible-sounding subset is exactly the
+    disjoint-vocabulary defect this repo has shipped before (hook allow-list
+    versus guardrail config keys, EPIC-ComputedQualityGates layer 3).
+  - >-
+    DISTINGUISH THIS AXIS FROM THE READINESS AXIS EXPLICITLY.
+    docs/architecture/diagrams/c2-003-ac-readiness-states.md already exists and is
+    a state diagram over readiness. State in the new diagram's opening line which
+    axis it covers, and cross-link both ways, or the two will be read as competing
+    versions of one lifecycle.
+  - >-
+    LABEL THE DEMOTION EDGE WITH BOTH FIELDS AND THE RE-ENTRY NO-OP. The edge from
+    finished back to work-still-to-be-done must name demotion_reason and
+    demotion_date as what the transition records, and must state that a second
+    application to an already-demoted record changes nothing and does not refresh
+    the date (TQ-400b-4). Name the fields; do NOT restate their type, nullability
+    or semantics — link to docs/reference/ac-schema.md.
+  - >-
+    THE NON-MOVING OUTCOMES MUST BE DRAWN, NOT LEFT IMPLICIT. Proven, exempt and
+    evidence-not-trustworthy all leave a record where it is. An absent edge is
+    indistinguishable from an edge the author forgot; state the non-moving
+    outcomes explicitly (a note, an annotated self-transition, or a labelled
+    list), so a reader can say these three do not move a record rather than
+    infer it from silence.
+  - >-
+    DRAW PROMOTION AS scripts/ac_store/mark_ac_done.py ACTUALLY BEHAVES —
+    including that it refuses a record that is not active and does nothing to one
+    already finished. A single clean arrow into finished misdescribes live
+    behaviour in the same artifact that introduces new behaviour, which is how a
+    diagram stops being trustworthy.
+  - >-
+    EACH TRANSITION MUST NAME ITS ACTOR AS WELL AS ITS TRIGGER — person,
+    promotion path, or sweep. "Which moves are made by whom" is a labelled-edge
+    property; a trigger without an actor leaves the reader unable to answer the
+    criterion's question.
+  - >-
+    LIVE VERSUS INTRODUCED MUST BE A DECLARED LEGEND CONVENTION WITH A DATE, not
+    an implication. Only the demotion edge is new; everything else already runs.
+  - >-
+    Cross-link bidirectionally from
+    docs/architecture/components/phantom-done-prevention.md, and keep
+    check_doc_frontmatter, check_doc_links and check_diagram_naming passing in the
+    same commit.
+  - >-
+    SEQUENCE AFTER TQ-400b-1, TQ-400b-2 AND TQ-400b-4 LAND. The demotion edge, the
+    two fields it writes, and the re-entry no-op are all claims about shipped
+    behaviour; drawn ahead of delivery the diagram documents an intention.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-400b-1
+    contract: >-
+      The demotion transition as delivered — which records it applies to, what
+      it leaves untouched, and the entry point that performs it.
+  - ac_id: TQ-400b-2
+    contract: >-
+      The two fields the transition records, which label the demotion edge.
+  - ac_id: TQ-400b-4
+    contract: >-
+      The re-entry behaviour: a second demotion of an already-demoted record is
+      a no-op and does not refresh the recorded date. This is the self-edge (or
+      its documented absence) the diagram must be explicit about.
+test_spec:
+  - name: test_tq400b6_demotion_edge_names_both_fields_and_the_reentry_noop
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Parse the mermaid state block and assert an edge exists from the finished
+      state back to work-still-to-be-done, that its label names demotion_reason
+      and demotion_date, and that the no-op-on-second-application rule is stated
+      on or beside that edge. Also assert every transition label names an actor
+      (person / promotion path / sweep), not only a trigger.
+  - name: test_tq400b6_diagram_states_equal_the_schema_work_status_enum
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      TWO SOURCES, ONE VOCABULARY. Load the work_status enum from
+      config/ac_store_schema.json and assert set-equality with the states parsed
+      from the diagram, in BOTH directions — no state drawn that the schema does
+      not declare, no declared state missing from the diagram. A one-directional
+      assertion passes on a diagram that omits a state.
+  - name: test_tq400b6_non_moving_outcomes_match_the_outcomes_a_real_sweep_produces
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Build a temp store with the project's real serializer containing one proven,
+      one exempt and one evidence-not-trustworthy done record, run the sweep with
+      outcome application enabled, and assert none of the three changed
+      work_status — then assert the set of outcomes the diagram declares
+      non-moving is exactly the set observed not to move. Reads the real emitted
+      outcome vocabulary rather than the author's expectation of it.
+  - name: test_tq400b6_new_diagram_passes_the_real_naming_and_frontmatter_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      PRODUCTION ENTRY POINT, BOTH POLARITIES. Run
+      scripts/commit_guardian/check_diagram_naming.py and
+      scripts/commit_guardian/check_doc_frontmatter.py as subprocesses over the new
+      file and assert they pass; then over a copy with diagram_type set to a value
+      absent from config/diagram_types.json and assert they block (must_block).
+test_rationale: >-
+  change_target is docs, but the two clauses that carry this diagram's value are
+  both falsifiable against live artifacts, and both are the clauses an idealised
+  drawing gets wrong. The state set is a shared vocabulary between the picture and
+  config/ac_store_schema.json, so it gets the seam entry with two-directional
+  set-equality — a diagram missing a state passes any one-directional check and
+  looks complete. The non-moving outcomes are an assertion about the sweep's real
+  behaviour, so they get a real_artifact entry that runs the sweep rather than
+  trusting the label. NOT MECHANICALLY TESTABLE: "a reader can answer from the
+  diagram alone, for a record in any given state, which states it can reach next"
+  is a comprehension claim; its proxy is the completeness of the transition set
+  (schema set-equality) plus the requirement that every edge label names an actor,
+  because an edge set that is complete and actor-labelled is the condition under
+  which the question is answerable — while a reader's success at answering it is
+  not something a test can observe. Likewise "the introduced edge is
+  distinguishable" is proxied by requiring a declared legend convention.
+origin_agent: business-analyst
+created: 2026-08-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-18
+  note: 'Confirmed architecture-diagram-author; complexity M. Named the target path
+    and conventions (docs/architecture/diagrams/, c{level}-{seq:03d}-{slug}.md allocated
+    via scripts/next_diagram_seq.py 3, diagram_type state, flight_level L3-Component).
+    Two findings added to doc_links and it_requirements: (1) the work_status enum
+    in config/ac_store_schema.json is the machine-readable state vocabulary the diagram
+    must equal in both directions, which converts the "shows every state" clause from
+    judgement into a check; (2) docs/architecture/diagrams/c2-003-ac-readiness-states.md
+    already exists on the READINESS axis, so the new diagram must declare its axis
+    and cross-link or the two will be read as competing lifecycles. Also required
+    the non-moving outcomes to be drawn explicitly rather than left as absent edges,
+    and promotion to be drawn as mark_ac_done.py behaves. test_spec: criterion (demotion
+    edge labels and actor-labelled transitions) / seam (state set == work_status enum,
+    both directions) / real_artifact (non-moving outcomes verified by running the
+    sweep) / reachability (the real diagram gates, both polarities). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-08-18'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the state-diagram entry in TQ-400b's documentation_triggers.
+
+  The load-bearing fact is that today the lifecycle has no exit from finished:
+  the promotion path writes one direction only and nothing anywhere writes a
+  record back. The diagram's value is entirely in making the new edge — and its
+  conditions — legible, so nobody has to read the sweep to learn that "done" is
+  now revocable.
+
+  Written as reader outcomes rather than "a diagram exists" because a state
+  diagram is the artifact most easily satisfied by drawing an obvious happy path.
+  The clauses that carry the weight are the ones an idealised drawing gets wrong:
+  which outcomes do NOT move a record, what the demotion edge writes, and the
+  no-op on re-entry. A diagram that omits those is technically a state diagram
+  and answers none of the questions a reader arrives with.
+
+  The current-behaviour clause is deliberate. The promotion half already exists
+  and already has refusals; drawing it as a clean single arrow would misdescribe
+  live behaviour in the same artifact that introduces new behaviour, which is how
+  a diagram stops being trustworthy.
+
+  IT-PO ENRICHMENT NOTE (2026-08-18) — TWO AXES, ONE STORE, AND A DIAGRAM
+  ALREADY EXISTS FOR THE OTHER ONE. docs/architecture/diagrams/
+  c2-003-ac-readiness-states.md is a live state diagram over the READINESS axis.
+  A second state diagram over the WORK_STATUS axis is correct and necessary — the
+  demotion edge belongs to work_status, not readiness — but unless the new file
+  says so in its first line and links to the old one, a reader who finds one will
+  reasonably assume the other is stale. That is a documentation-layer version of
+  the same two-readers problem TQ-400a-3 prevents in code.

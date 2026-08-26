@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -177,7 +177,8 @@ amended_by:
     changed: "readiness draft->reviewed; doc_links gained check_identifier_uniqueness.py and _uniqueness_scanners.py as modifies edges and templates/docs/architecture/diagrams/README.md as a planned creates edge; five it_requirements added (the exact config/paths.json key, delete-the-hardcoded-root, the four-roots-one-mechanism boundary including tickets/, scaffold idempotency, file scope); test_spec and test_rationale authored as nine behavioural descriptors, all in one module against a from-empty install. criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/05_TICKET-20260825-GE-122d-3-ii.md
 change_target:
   - code
   - pipeline
@@ -211,7 +212,7 @@ notes: |
   the unacceptable one. GE-122d-3-i is written the same way and for the same reason.
 
   WHAT THIS AC DOES NOT COVER: whether the CI consumer simulation actually exercises an
-  adopter's first commit. That is BP-900h-4, and it is the proof that this behaviour holds for
+  adopter's first commit. That is BP-900h-6, and it is the proof that this behaviour holds for
   a real install rather than only in a fixture.
 
   IT-PO (2026-08-25) — THE DUPLICATED SOURCE IS THE PART THE CRITERIA IMPLY BUT NEVER NAME.
@@ -227,3 +228,4 @@ notes: |
   depends_on. Registering the commit-time uniqueness hook before this scaffold lands blocks
   every commit in every fresh install, measured on both documented install paths including
   --seed-docs. Nothing in this AC may be deferred out of the registration's critical path.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

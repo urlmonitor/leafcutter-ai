@@ -1,7 +1,7 @@
 id: BP-600a-2
 components:
   - build_pipeline
-title: "Quick-fix workflow does not invoke worktree-agent or feature skill"
+title: "Quick-fix never uses worktree-agent, the feature skill, or a hand-rolled git worktree add"
 component: build-pipeline
 level: L2
 status: active
@@ -13,8 +13,20 @@ criteria: |
   When it processes a user-provided diagnosis,
   Then it never dispatches the worktree-agent,
   And it never invokes the feature skill,
-  And it never calls git worktree add,
-  And no isolation infrastructure from the full build pipeline is used.
+  And it never creates a worktree by calling git worktree add itself.
+
+  And when the isolation decision of BP-600a-1 takes Case B and a worktree is
+    required, the only way the workflow obtains one is by invoking the
+    repository's canonical worktree-setup script in its create-only mode,
+  And it reads the worktree path and the branch name out of that script's own
+    reported output rather than constructing either itself,
+  And it refuses to substitute a bare git worktree add for that script even
+    though the script calls git worktree add internally — the script also runs
+    the build and installs the pre-commit configuration into the new worktree,
+    and a worktree made without that bootstrap silently skips every package
+    pre-commit hook for the entire run, so the two are not interchangeable,
+  And when the script cannot be located, the workflow halts and names the paths
+    it tried, rather than falling back to creating a worktree another way.
 depends_on:
   - BP-600a
   - BP-600a-1
@@ -28,22 +40,70 @@ doc_links:
   - path: templates/skills/feature/SKILL.md
     relationship: contrast
     status: exists
+  - path: scripts/setup_ticket_worktree.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The canonical script. create-only is the required subcommand; it is also
+      the one subcommand that roots the new branch at LOCAL main rather than
+      origin/main, which is why BP-600a-1 Case B is gated on a staleness check
+      first.
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: >-
+      Phase 0 Step 0.4.3 and the "Isolation is conditional, not absolute"
+      constraint carry this prohibition and its reason.
 assigned_agent: workflow-architect
 estimated_complexity: S
 it_requirements:
   - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
+  - >-
+    The prohibition on worktree-agent and the feature skill is absolute and
+    applies on both paths of BP-600a-1. The prohibition on git worktree add is
+    on the workflow calling it DIRECTLY; the canonical script calling it
+    internally is the sanctioned route.
+  - >-
+    The instruction given to the observing/isolation phases must state the
+    prohibition explicitly, including to the observe-only step, so that step
+    cannot create a worktree ahead of the decision.
 delivers_to: null
 expects_from:
   ac_id: BP-600a-1
-  contract: "Workflow script (templates/workflows-js/quick-fix.js) that operates in-place without worktree creation"
+  contract: "The isolation decision — whether a worktree is needed at all, and on Case B the worktree root and branch the canonical script reported"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: behaviour-change-restatement
+    by: business-analyst
+    at: '2026-08-24'
+    note: >-
+      Two of the four original clauses are kept verbatim and remain true: the
+      workflow still never dispatches worktree-agent and never invokes the
+      feature skill. The clause "it never calls git worktree add" is narrowed
+      rather than deleted — a hand-rolled bare git worktree add is still
+      forbidden; only the canonical setup_ticket_worktree.py create-only route
+      is permitted, and only when BP-600a-1 Case B applies. The clause "no
+      isolation infrastructure from the full build pipeline is used" is
+      withdrawn, since the canonical script IS that infrastructure and is now
+      the required tool. The distinction is load-bearing, not pedantic: the
+      script bootstraps build.py and the .pre-commit-config.yaml symlink, and a
+      bare worktree gets neither, so every package pre-commit hook is silently
+      skipped for the whole run — the failure documented in CLAUDE.md under
+      "Worktree pre-commit config". Title amended to match. work_status left
+      done.
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+notes: |
+  Amendment provenance (2026-08-24): amended in place, not superseded, per
+  docs/how-to/ac-traceability-store.md.
+
+  Read this record together with BP-600a-1: that one decides WHETHER a worktree
+  is needed, this one constrains HOW it may be obtained. Neither permits
+  worktree-agent or the feature skill.

@@ -1,28 +1,29 @@
 id: GE-113c-3-i
 components:
   - commit_guardian
+  - security_scanner
 title: "A path-qualified allowlist entry does not suppress findings at a different directory with the same basename"
 component: guardrail-engine
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 criteria: |
-  Given the security allowlist contains the entry "ENTROPY_HIGH:src/config/.env:*",
-  And the secrets scanner detects an ENTROPY_HIGH finding in the file "deploy/prod/.env",
+  Given the security allowlist contains the entry "GENERIC_SECRET:src/foo.py:*",
+  And the secrets scanner detects a GENERIC_SECRET finding in the file "deploy/foo.py",
   When the scanner evaluates whether the allowlist entry suppresses the finding,
-  Then the finding at "deploy/prod/.env" is NOT suppressed,
-  Because the allowlist path segments ["src", "config", ".env"] are not a suffix
-    of the finding path segments ["deploy", "prod", ".env"]
-  And basename equality (".env" == ".env") is not sufficient when the allowlist
+  Then the finding at "deploy/foo.py" is NOT suppressed,
+  Because the allowlist path segments ["src", "foo.py"] are not a suffix
+    of the finding path segments ["deploy", "foo.py"]
+  And basename equality ("foo.py" == "foo.py") is not sufficient when the allowlist
     entry is path-qualified.
 
-  Given the security allowlist contains the entry "ENTROPY_HIGH:src/config/.env:*",
-  And the secrets scanner detects an ENTROPY_HIGH finding in the file "src/config/.env",
+  Given the security allowlist contains the entry "GENERIC_SECRET:src/config/secrets.py:*",
+  And the secrets scanner detects a GENERIC_SECRET finding in the file "src/config/secrets.py",
   When the scanner evaluates whether the allowlist entry suppresses the finding,
-  Then the finding at "src/config/.env" IS suppressed,
+  Then the finding at "src/config/secrets.py" IS suppressed,
   Because the allowlist path segments match the finding path segments exactly.
 depends_on:
   - GE-113c-3
@@ -39,9 +40,10 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "Covers exploit Path A — basename collision across directories. Test fixture: allowlist entry `ENTROPY_HIGH:src/config/.env:*` vs finding at `deploy/prod/.env`."
+  - "Covers exploit Path A — basename collision across directories. Test fixture: allowlist entry `GENERIC_SECRET:src/foo.py:*` vs finding at `deploy/foo.py`."
   - "Corresponding test function: `test_basename_collision_not_suppressed` in `unit_tests/commit_guardian/test_scan_secrets_suppression.py`."
-  - "Positive arm: the same allowlist entry DOES suppress `src/config/.env` (exact match)."
+  - "Positive arm: `test_exact_path_match_suppresses` — allowlist `GENERIC_SECRET:src/config/secrets.py:*` DOES suppress `src/config/secrets.py` (exact match)."
+  - "Filenames and rule_id in the criteria are the literal fixtures the two named tests use, so the sign-off is evidenced rather than inferred. Do NOT reintroduce `.env` paths here — see notes."
 delivers_to: null
 expects_from: null
 test_spec:
@@ -59,9 +61,12 @@ origin_agent: business-analyst-v3
 created: 2026-08-11
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-11): assigned python-coder / test-writer; recorded test module at unit_tests/commit_guardian/test_scan_secrets_suppression.py; wired the L2⟷L3-iv red-test contract; ADR-001 template/build-output parity note. Criteria unchanged."
+  - reason: "Reachability correction (2026-08-18): the criteria named ENTROPY_HIGH findings in .env files, which scan_file can never produce — it short-circuits env-filename paths to a single ENV_FILE finding and returns without scanning content. Both arms were therefore unreachable end-to-end, and the positive arm ('src/config/.env IS suppressed') was empirically false: the surviving ENV_FILE finding is not matched by an ENTROPY_HIGH allowlist entry. Swapped to the scannable filenames and rule_id that the two covering tests actually use. The path-matching behaviour under test is unchanged and was already implemented and green; only the illustrative fixtures were dead."
 superseded_by: null
 covered_by: []
-implemented_by: []
-notes: "Exploit Path A from the bug report: the current code compares fp_parts against a suffix of itself (not al_parts), causing the guard to always trigger True and fall through to a basename-only fallback. Any file sharing the basename of an allowlisted path-qualified entry is incorrectly suppressed regardless of directory."
+implemented_by:
+  - templates/skills/security-scanner/scripts/scan_secrets.py
+  - unit_tests/commit_guardian/test_scan_secrets_suppression.py
+notes: "Exploit Path A from the bug report: the current code compares fp_parts against a suffix of itself (not al_parts), causing the guard to always trigger True and fall through to a basename-only fallback. Any file sharing the basename of an allowlisted path-qualified entry is incorrectly suppressed regardless of directory. — .env-family filenames are deliberately excluded from this scenario space: scan_file matches them against _ENV_FILENAME_RE, appends a single ENV_FILE finding and returns before any content rule runs, so no ENTROPY_HIGH / GENERIC_SECRET finding can exist for such a path. Any future author illustrating this AC must use a scannable filename. The ENV_FILE short-circuit itself, including the fact that one allowlist line can collapse .env coverage to zero, is uncovered by this family and needs its own AC."
 change_target: code
 risk_surface: contract_boundary
