@@ -59,7 +59,24 @@ _USER_FACING_CATEGORIES = [
 # (e.g. .gemini/, .agents/rules/). These only need manifest coverage.
 _INTERNAL_CATEGORIES = [
     ("workflows", ".claude/commands", None),
-    ("rules", ".agents/rules", None),
+]
+
+# Categories whose deployed location is NOT a shimmed path directly under the
+# repo root, so the drift gate reaches them by deriving its scan set from the
+# manifest rather than from a fixed list.
+#
+# "rules" used to sit in _INTERNAL_CATEGORIES above as ".agents/rules", and
+# this test therefore required the gate to scan a directory the build has never
+# written. build_rules() is registered in build.py's ``internal_phases``, which
+# invokes every phase with ``output_root`` — so rules land at
+# ``<output_root>/.agents/rules/``, and ``shim_map`` deliberately has no
+# ``.agents`` entry to bridge them back up. The manifest carried the same wrong
+# path, which is how 16 real deployed rule files ended up scanned by no gate
+# while the run reported clean (BP-100k-2). Asserting the wrong path in a third
+# place would have kept that hole open, so the expectation is corrected here
+# rather than restored.
+_MANIFEST_DERIVED_CATEGORIES = [
+    ("rules", ".leafcutter/.agents/rules", None),
 ]
 
 
@@ -220,7 +237,13 @@ class TestOutputDriftCoversAllShimmedDirs(unittest.TestCase):
             "the drift gate would scan nothing.",
         )
 
-        repo_root = fake_manifest.parent.parent
+        # repo_root == the manifest's OWN directory. The gate previously used
+        # manifest_path.parent.parent, which assumed the manifest sits one level
+        # below the tree it describes — true only in the self-host layout. Every
+        # output_mappings key is computed relative to the build's target_root,
+        # and the manifest is written into that same directory, so its parent IS
+        # the base (BP-100k-3-i).
+        repo_root = fake_manifest.parent
         drift_suffixes = {
             d.relative_to(repo_root).as_posix()
             for d in captured["output_dirs"]
@@ -246,7 +269,14 @@ class TestTemplateDirectoriesHaveCategories(unittest.TestCase):
         if not templates_dir.exists():
             self.skipTest("templates/ not found")
 
-        known_categories = {cat for cat, _, _ in _USER_FACING_CATEGORIES + _INTERNAL_CATEGORIES}
+        known_categories = {
+            cat
+            for cat, _, _ in (
+                _USER_FACING_CATEGORIES
+                + _INTERNAL_CATEGORIES
+                + _MANIFEST_DERIVED_CATEGORIES
+            )
+        }
         # Also allow non-artifact template dirs that don't produce shimmed outputs
         non_artifact_dirs = {
             "acceptance-criteria",

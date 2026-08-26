@@ -20,6 +20,7 @@ origin_agent: BrainCandy
 created: 2026-06-08
 amended_by:
   - "split: BP-100b -> BP-100j + BP-100k + BP-100l, 2026-06-08"
+  - "covered_by: added BP-100k-4..BP-100k-8 (five verified defects from the adversarial review of EPIC-BuildPipelinePhantomRemediation), 2026-08-25"
 superseded_by: null
 covered_by:
   - BP-100b-5
@@ -28,6 +29,11 @@ covered_by:
   - BP-100k-1
   - BP-100k-2
   - BP-100k-3
+  - BP-100k-4
+  - BP-100k-5
+  - BP-100k-6
+  - BP-100k-7
+  - BP-100k-8
 implemented_by:
   - templates/scripts/commit_guardian/check_output_drift.py
   - templates/commit-guardian/commit_guardian.json

@@ -1,0 +1,127 @@
+id: BP-100k-4
+components:
+  - build_pipeline
+title: "A registered commit gate whose activation condition can never match anything the repository is able to stage is reported as unreachable and blocks — a gate that cannot fire is not protection"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a commit gate is registered in the guardian registry with an activation
+    condition that selects which staged paths cause it to run,
+  And no path this repository is able to stage can ever match that condition —
+    because it names a location that exists in no layout this repository is ever
+    checked out in, or because every location it names is excluded from version
+    control,
+  When the registry's own reachability check runs,
+  Then it names that gate, states which part of its activation condition nothing
+    can match, and fails,
+  And given a gate that inspects the whole tree rather than the staged file list,
+  When the same check runs,
+  Then a path-based activation condition is rejected as that gate's trigger,
+    because a gate that never consults the staged file list must not have its
+    execution decided by one — it is required to declare that it always runs,
+  And given every registered gate's activation condition matches at least one
+    path the repository actually tracks,
+  When the check runs,
+  Then it reports zero unreachable gates and permits the commit,
+  And a registry that contains even one unreachable gate cannot produce a
+    passing commit — the reachability verdict is part of the commit outcome, not
+    an advisory note.
+depends_on:
+  - BP-100k
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: modifies
+    status: exists
+    relevance: "the authoritative registration surface — holds hooks_manifest and every per-hook activation condition, including the two dead drift-gate triggers this AC exists to make impossible. NOTE: templates/commit-guardian/commit_guardian.json is a different, much smaller file and is NOT the registration surface; correcting a trigger there changes nothing."
+  - path: "templates/scripts/commit_guardian/check_build_drift.py"
+    relationship: describes
+    status: exists
+    relevance: "one of the two gates proven never to have fired; it scans the whole tree by hash and ignores the staged file list entirely, so its path filter was always the wrong mechanism"
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: describes
+    status: exists
+    relevance: "the second gate proven never to have fired; every location its trigger names is either gitignored or absent from the repository root"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    hook_trigger_reachability:
+      type: object
+      description: "Registry-wide reachability verdict for every registered gate's activation condition: for each gate, whether at least one path the repository tracks can match its trigger, and whether a whole-tree gate has been given a path filter it never consults. Makes a gate that can never fire a reported, blocking condition instead of a silent pass."
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "REGISTRATION SURFACE: templates/scripts/commit_guardian/commit_guardian.json is the authoritative registration surface. templates/commit-guardian/commit_guardian.json is a different, much smaller file and is NOT it — editing a trigger there produces no behaviour change in any layout."
+    - "A build.py re-run is required after editing anything under templates/; the gates run from their DEPLOYED copies, so a template-only edit leaves the running hook unchanged and the fix unverified."
+    - "The check must cover the WHOLE hooks_manifest, not the two gates named in the finding. The defect class is 'a registered trigger that nothing stageable can match'; a fix that corrects two triggers and adds no registry-wide check leaves the class intact and will recur on the next hook added."
+    - "Reachability must be evaluated against the set of paths this repository actually tracks and against its ignore rules — a trigger every one of whose named prefixes is gitignored is unreachable even though the prefixes are syntactically well formed."
+    - "Both drift gates declare that they do not consume the staged file list and scan the whole tree by hash. For such gates the correct activation condition is the always-run form their siblings in the same manifest already use; leaving a path filter on a whole-tree gate is what produced this defect and must itself be a reported condition."
+    - "The check must NOT be satisfiable by asserting that a particular trigger string is present in the registry. A string assertion stays green on a trigger that matches nothing — that is the exact defect. Establish instead that the trigger MATCHES something stageable."
+    - "The reachability check must be unable to pass when it cannot obtain the tracked-path set; an inability to determine reachability is a failure, not a default pass (see BP-100k-4-i)."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
+    - "Landing this correctly will cause the two revived drift gates to fire for the first time on the commit that revives them. Their findings are real and must be resolved, not suppressed by re-disabling the triggers."
+test_spec:
+  - name: test_trigger_matching_no_tracked_path_is_named_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Executing the reachability check as a process over a registry containing a gate whose activation condition matches no path the repository tracks names that gate, states the unmatched part of its condition, and terminates with a non-zero exit status."
+  - name: test_trigger_whose_every_named_location_is_ignored_is_unreachable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A gate whose activation condition names only locations excluded from version control is reported unreachable by the executed check, proving ignore rules are consulted and not just path syntax."
+  - name: test_whole_tree_gate_carrying_a_path_filter_is_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A gate that declares it does not consume the staged file list yet carries a path-based activation condition is reported by the executed check as having its execution decided by a filter it never consults."
+  - name: test_the_two_drift_gates_actually_run_on_a_staged_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With the real registry, staging a change the drift gates are meant to police and running the commit-time gate set causes each drift gate to execute and emit its own run summary — establishing that its activation condition matches something stageable, rather than that a corrected pattern string appears in the registry."
+  - name: test_unreachable_gate_in_the_registry_blocks_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A commit-time run over a registry containing one unreachable gate exits non-zero; the same run over a registry in which every gate is reachable exits zero — the verdict affects the commit outcome rather than being advisory."
+  - name: test_real_registry_reports_zero_unreachable_gates_after_the_fix
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The executed check over the repository's real registry reports an unreachable-gate count of exactly zero, read from the check's own summary rather than from an allowlist of gate names."
+test_rationale: "The incumbent defect is a registered gate whose trigger is syntactically valid and semantically dead: both drift gates were registered, both appeared configured, and neither had ever run in this repository. Every test that could have caught this by reading the registry would have passed — the pattern strings are all present and well formed. Per the repo's standing rule (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'), a test that greps the hook source or the JSON registry for a string is forbidden here and would be rejected: it stays green on exactly the dead configuration being fixed. Each descriptor therefore executes the reachability check, or the commit-time gate set, as a process and asserts on the emitted summary and the exit status — and the drift-gate descriptor asserts the gate actually RAN on a staged change, which no assertion over registry text can establish."
+delivers_to:
+  agent: python-coder
+  contract: "A registry-wide trigger-reachability verdict — per gate, whether any trackable path can activate it, and whether a whole-tree gate has been given a path filter it never consults — with a non-zero exit when any gate is unreachable."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-100k-4-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Verified defect, 2026-08-25, found by adversarial review of this epic's own work. check-build-drift is registered with an activation condition rooted at a templates location that exists only in a CONSUMER install layout; in this package's self-host layout templates live elsewhere, and the consumer-layout prefix matches no tracked file at all — the gate has therefore NEVER fired here. check-output-drift names six locations: five are gitignored, and the sixth does not exist at the repository root (this epic's own BP-100k-2 work proved the build writes those rules under the output root, never to the repository root). Both gates declare that they do not consume the staged file list and scan the whole tree by hash, so a path filter was the wrong activation mechanism for either of them in the first place; their siblings in the same manifest use the always-run form. Consequence: roughly 3,000 lines of drift-gate hardening, including everything this epic built, sit behind two gates that cannot fire — and the review confirmed check-build-drift would have blocked the very commit that introduced this finding, had it been able to run. This AC is deliberately written for the DEFECT CLASS rather than the two gates: a registered gate whose trigger cannot match any path the repository can ever stage is a gate that reports a pass it never earned."

@@ -369,26 +369,88 @@ class TestWaiverWithEmptyReasonDoesNotSuppress(unittest.TestCase):
 
 
 class TestFixtureExemptPathIsNotScanned(unittest.TestCase):
-    """BP-1100b-5 (self-maintenance): added lines in a file listed under
-    ``fixture_exempt_paths`` are not scanned, so this guard's own test file —
-    which must contain literal examples of the pattern the guard detects — does
-    not block its own maintenance.
+    """BP-1100b-5 (self-maintenance): this guard's own test file must be able
+    to contain literal examples of the pattern the guard detects, WITHOUT a
+    path-exemption escape hatch.
 
-    Found live: this guard blocked the very commit that introduced it, flagging
-    ten of its own synthetic diff fixtures. The ``# presence-only:`` waiver
-    cannot address that case, because a waiver placed inside a fixture is
-    consumed by the scanner under test and inverts what the fixture asserts.
+    A ``fixture_exempt_paths`` config key was briefly added for this, justified
+    on the claim that a ``# presence-only:`` waiver could not help because a
+    waiver placed inside a synthetic diff fixture would be consumed by the
+    scanner under test. That claim describes a placement nobody needs: the
+    scanner only ever receives the ``diff`` STRING, so a waiver written in this
+    module's own Python source — outside the fixture literal — is invisible to
+    it and waives normally. The exemption was therefore unnecessary, and it was
+    strictly worse: an exempt path skipped scanning entirely and emitted NO
+    output, where the waiver route prints the accepted exception and its
+    reason, which is exactly what the criteria require.
     """
 
-    def test_added_lines_in_an_exempt_path_produce_no_violation(self):
+    def test_a_waiver_in_the_diff_suppresses_the_violation_and_is_reported(self):
         # covers: BP-1100b-5
-        exempt_path = "unit_tests/commit_guardian/test_bp_1100b_5.py"
+        # The waiver route must work for this guard's own fixtures, making the
+        # removed path-exemption unnecessary. Note this asserts BOTH halves:
+        # exit 0 AND the waiver appearing in the output. A suppression that
+        # produces no output is the silent-suppression-list failure the
+        # criteria rule out, so "exit 0" alone would not be a pass.
+        own_path = "unit_tests/commit_guardian/test_bp_1100b_5.py"
+        # presence-only: synthetic diff fixture data for the guard under test
         diff = textwrap.dedent(
             f"""\
-            diff --git a/{exempt_path} b/{exempt_path}
+            diff --git a/{own_path} b/{own_path}
             index abc..def 100644
-            --- a/{exempt_path}
-            +++ b/{exempt_path}
+            --- a/{own_path}
+            +++ b/{own_path}
+            @@ -10,6 +10,9 @@ class TestSomething(unittest.TestCase):
+                 def test_fixture(self):
+            +        content = Path("templates/workflows-js/finalize-feature.js").read_text()
+            +        # presence-only: synthetic fixture data for the guard under test
+            +        assert 'doSomething(' in content
+            """
+        )
+
+        result = _run_hook(diff, config=dict(_DEFAULT_TEST_CONFIG))
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "A waiver with a non-empty reason must suppress the violation "
+                "even in this guard's own test file — no path exemption needed."
+                f"\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            ),
+        )
+        self.assertIn(
+            "doSomething(",
+            result.stdout,
+            msg=(
+                "The waived assertion must still be REPORTED. An accepted "
+                "exception that produces no output is a silent suppression "
+                "list, which is the thing the waiver design exists to prevent."
+                f"\nstdout:\n{result.stdout}"
+            ),
+        )
+
+    def test_no_path_exemption_key_can_disable_the_guard(self):
+        # covers: BP-1100b-5
+        # Regression pin: setting the removed key must NOT restore the
+        # exemption. fnmatch over whole paths meant one entry like
+        # "unit_tests/*" would have switched the guard off repo-wide.
+        #
+        # The fixture below must stay UNWAIVED *inside* the diff string, or
+        # this test stops testing anything — it asserts the guard still
+        # blocks. The waiver therefore lives in this module's own source,
+        # outside the string: the scanner-under-test only ever receives the
+        # `diff` argument, so a marker here is invisible to it and cannot
+        # invert the assertion. This is the route that made the removed
+        # `fixture_exempt_paths` key unnecessary.
+        own_path = "unit_tests/commit_guardian/test_bp_1100b_5.py"
+        # presence-only: synthetic diff fixture data for the guard under test
+        diff = textwrap.dedent(
+            f"""\
+            diff --git a/{own_path} b/{own_path}
+            index abc..def 100644
+            --- a/{own_path}
+            +++ b/{own_path}
             @@ -10,6 +10,9 @@ class TestSomething(unittest.TestCase):
                  def test_fixture(self):
             +        content = Path("templates/workflows-js/finalize-feature.js").read_text()
@@ -396,16 +458,17 @@ class TestFixtureExemptPathIsNotScanned(unittest.TestCase):
             """
         )
         config = dict(_DEFAULT_TEST_CONFIG)
-        config["fixture_exempt_paths"] = [exempt_path]
+        config["fixture_exempt_paths"] = [own_path, "unit_tests/*"]
 
         result = _run_hook(diff, config=config)
 
         self.assertEqual(
             result.returncode,
-            0,
+            1,
             msg=(
-                "Added lines in a fixture_exempt_paths file must not be scanned. "
-                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                "A stale or hand-added fixture_exempt_paths key must be inert. "
+                "An unwaived presence-only assertion must still block."
+                f"\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             ),
         )
 

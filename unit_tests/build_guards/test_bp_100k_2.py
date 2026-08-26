@@ -212,10 +212,18 @@ def _run_hook(hook_path: Path, cwd: Path) -> subprocess.CompletedProcess:
 def _deploy_agents_and_write_manifest(workspace: Path, pkg_root: Path):
     """Run the REAL build_agents phase + install_shims + write_build_manifest.
 
-    Deploys only the "agents" family (single-platform, ``claude`` only, to
-    keep the fixture fast) into ``<workspace>/.claude/agents`` via a real
-    symlink/copy shim, then writes the real manifest. This gives the tests
-    a genuinely deployed output file to inspect — not a hand-crafted stand-in.
+    Deploys the "agents" family for every platform the build itself declares
+    active — i.e. whatever ``config["platforms"]`` resolves to (BP-100k-8: a
+    fixture must never pin a platform off internally, since that silently
+    withholds that platform's whole output family from any equality
+    assertion built on top of this manifest, regardless of what the build's
+    own configuration says). ``config`` is used exactly as
+    ``config_loader.load_config`` returns it — no ``"platforms"`` override is
+    applied here, so the SAME fallback default ``build_agents()`` itself uses
+    (``{"claude": True, "antigravity": True, "cursor": False, "copilot":
+    False, "cline": False}``) is what actually governs this fixture, read
+    from the production code's own default rather than a literal duplicated
+    in the test.
 
     Args:
         workspace: The synthetic workspace/target root.
@@ -226,13 +234,6 @@ def _deploy_agents_and_write_manifest(workspace: Path, pkg_root: Path):
     """
     build_helpers_mod, build_phases_mod, config_loader_mod = _load_pkg_modules(pkg_root)
     config = config_loader_mod.load_config(None, workspace)
-    config["platforms"] = {
-        "claude": True,
-        "antigravity": False,
-        "cursor": False,
-        "copilot": False,
-        "cline": False,
-    }
     output_root = workspace / config.get("output_root", ".leafcutter")
 
     build_phases_mod.build_agents(output_root, config, dry_run=False, force=True)
@@ -243,15 +244,20 @@ def _deploy_agents_and_write_manifest(workspace: Path, pkg_root: Path):
 
 
 def _load_manifest(pkg_root: Path) -> dict:
-    """Read and parse the manifest written at ``pkg_root/.build_manifest.json``.
+    """Read and parse the manifest for this fixture's synthetic install.
+
+    The manifest is written to the build's ``target_root`` — here the workspace,
+    ``pkg_root.parent`` — not into the package directory. That is the same root
+    the deployed outputs go to, and it is what the gates use as their comparison
+    base, so every key in the manifest is relative to it (BP-100k-3).
 
     Args:
-        pkg_root: The synthetic package root the manifest was written into.
+        pkg_root: The synthetic package root. The manifest sits in its parent.
 
     Returns:
         The parsed manifest dict.
     """
-    manifest_path = pkg_root / ".build_manifest.json"
+    manifest_path = pkg_root.parent / ".build_manifest.json"
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
@@ -434,20 +440,38 @@ class TestOutputMappingCoversEveryDeployPhaseOutput(unittest.TestCase):
         # covers: BP-100k-2
         build_helpers_mod, build_phases_mod, config_loader_mod = _load_pkg_modules(self.pkg_root)
         config = config_loader_mod.load_config(None, self.workspace)
-        config["platforms"] = {
-            "claude": True,
-            "antigravity": False,
-            "cursor": False,
-            "copilot": False,
-            "cline": False,
-        }
+        # No "platforms" override here (BP-100k-8): the build's own default
+        # (claude + antigravity both active) governs which families this
+        # fixture exercises, rather than a literal pinned inside the test
+        # that would silently withhold a whole platform's output family from
+        # the equality assertion below regardless of what the build itself
+        # declares.
         output_root = self.workspace / config.get("output_root", ".leafcutter")
 
-        # Exercise THREE distinct deploy phases (not just one) so the
-        # invariant is proven phase-agnostic, not a special case for agents.
+        # Exercise deploy phases from BOTH of build.py's phase families, so
+        # the invariant is proven phase-agnostic rather than a special case
+        # for the shimmed .claude/* families.
+        #
+        # build_rules is the load-bearing addition. It belongs to build.py's
+        # ``internal_phases`` list, which -- like artifact_phases -- is invoked
+        # with output_root, but unlike them has NO shim_map entry bridging its
+        # output back up to target_root. Omitting it from this test is how a
+        # manifest that recorded 16 .agents/rules/* keys under target_root,
+        # while build_rules wrote to <output_root>/.agents/rules/, passed a
+        # green suite: the one phase whose deploy target contradicted the
+        # author's mental model was the one phase never invoked here.
+        # Every family _compute_output_mappings claims to record must actually
+        # be deployed here, or the equality check below compares the manifest
+        # against a tree that was only partly built and reports phantom
+        # "unresolvable" keys for families this test simply never ran.
+        config.setdefault("workflows", {})["enabled"] = True
         build_phases_mod.build_agents(output_root, config, dry_run=False, force=True)
         build_phases_mod.build_commands(output_root, config, dry_run=False, force=True)
+        build_phases_mod.build_workflows(output_root, config, dry_run=False, force=True)
         build_phases_mod.build_hooks(output_root, config, dry_run=False, force=True)
+        build_phases_mod.build_skills(output_root, config, dry_run=False, force=True)
+        build_phases_mod.build_workflow_scripts(output_root, config, dry_run=False, force=True)
+        build_phases_mod.build_rules(output_root, config, dry_run=False, force=True)
 
         build_helpers_mod.install_shims(
             self.workspace, output_root=output_root, config=config, dry_run=False, force=True
@@ -457,28 +481,69 @@ class TestOutputMappingCoversEveryDeployPhaseOutput(unittest.TestCase):
         manifest = _load_manifest(self.pkg_root)
         output_mappings = manifest.get("output_mappings", {})
 
-        deployed_dirs = [self.workspace / ".claude" / d for d in ("agents", "commands", "hooks")]
+        deployed_dirs = [
+            self.workspace / ".claude" / d
+            for d in ("agents", "commands", "hooks", "skills", "workflows")
+        ]
+        deployed_dirs.append(output_root / ".agents" / "rules")
         actual_files: set[str] = set()
         for d in deployed_dirs:
             if not d.is_dir():
                 continue
             for f in d.rglob("*"):
-                if f.is_file():
+                if f.is_file() and "__pycache__" not in f.parts:
                     actual_files.add(f.relative_to(self.workspace).as_posix())
 
         self.assertTrue(actual_files, "setup bug: no real deployed output files found to test against")
 
+        # ---- Direction 1: every real deployed file is recorded. ----
         missing = actual_files - set(output_mappings.keys())
         self.assertFalse(
             missing,
             msg=(
                 f"{len(missing)} of {len(actual_files)} real deployed output "
-                "file(s) across 3 distinct deploy phases (agents, commands, "
-                "hooks) are not recorded in output_mappings, so "
+                "file(s) across 4 distinct deploy phases (agents, commands, "
+                "hooks, rules) are not recorded in output_mappings, so "
                 "check_output_drift.py would report them as unregistered "
                 f"rather than comparing them. Missing sample: {sorted(missing)[:10]}. "
                 "output_mappings coverage must equal the set of files the "
                 "deploy phases actually wrote (BP-100k-2)."
+            ),
+        )
+
+        # ---- Direction 2: every recorded key resolves to a real file. ----
+        #
+        # This direction did not exist, and its absence is precisely why the
+        # .agents/rules defect survived. The assertion was
+        # ``actual_files - mappings.keys()`` alone -- a one-directional subset
+        # check. A manifest key pointing at a path nothing ever writes is
+        # structurally invisible to that: it is not in actual_files, so it can
+        # never appear in the difference.
+        #
+        # The consequence was worse than an ordinary missing entry, because it
+        # was silent at BOTH ends. check_output_drift's _collect_output_files
+        # skips directories that do not exist, so 16 dead keys were never
+        # looked up and 16 real files were never scanned -- no GAP, no EXEMPT,
+        # no warning, and a clean RESULT line. AC BP-100k-2's own test_spec
+        # descriptor asked for set EQUALITY ("the set of paths recorded ...
+        # EQUALS the set of files the deploy phases actually wrote"); only half
+        # of it was implemented.
+        unresolvable = sorted(
+            key for key in output_mappings
+            if not (self.workspace / key).exists()
+        )
+        self.assertFalse(
+            unresolvable,
+            msg=(
+                f"{len(unresolvable)} of {len(output_mappings)} recorded "
+                "output_mappings key(s) do not resolve to any file on disk "
+                "after the deploy phases ran. A manifest that names a path the "
+                "build never produces is not coverage -- it is a claim of "
+                "coverage that no gate can act on, because a gate scanning for "
+                "these files finds an absent directory and silently skips it. "
+                f"Unresolvable sample: {unresolvable[:10]}. "
+                "output_mappings must EQUAL what the deploy phases write, in "
+                "both directions (BP-100k-2)."
             ),
         )
 

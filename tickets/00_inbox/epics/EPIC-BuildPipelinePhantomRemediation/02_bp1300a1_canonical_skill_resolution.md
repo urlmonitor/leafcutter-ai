@@ -258,3 +258,59 @@ remain `needed` while `commit` is now `signed_off`, out of the frontmatter's
 listed agent order — I proceeded per this dispatch's explicit instruction and
 did not treat that as blocking, but flagging it for `ticket-supervisor`/
 `pull-request` awareness.
+
+### 2026-08-25 12:42 — python-coder (status: ok)
+feedback-id: fb_2026-08-25_d3909244
+completion_manifest:
+  registry_leg_added_to_validate_agent_self_description: true
+  literal_ac_wording_matched: true
+  regression_tests_added: true
+  full_scoped_test_run_green: true
+  ruff_clean: true
+Follow-up round on this same ticket, closing the gap pr-reviewer's 2026-08-18
+15:29 comment flagged as informational-only. My own earlier sign-off (and
+pr-reviewer's) left `validate_agent_self_description` resolving
+`skills_invoked` `skill_id`s against `templates/skills/<id>/` ONLY, never
+`config/skill_registry.json` — even though BP-1300a-1's criteria define the
+canonical source as "templates/skills plus the registry", and
+`skill_registry.schema.json` explicitly permits a `portable: false` skill
+with no `template_path` (a domain-specific skill with no
+`templates/skills/<id>/` dir by design). An adversarial review surfaced a
+concrete case (`skills_invoked` naming a registry-declared, template-less
+skill) that this narrower check would falsely flag as dangling. I chose
+**Option A** — implement the criterion literally: resolve against
+`templates/skills/<id>/` OR a matching `id` in `config/skill_registry.json`
+— over Option B (document + pin the templates-only behavior), because the
+schema explicitly invites the shape the old check rejected and the AC text
+is unambiguous; narrowing further would just re-hide the same gap behind a
+comment. Added `skill_registry_ids` loading (wrapped in
+`try/except (OSError, json.JSONDecodeError)`, WARNING-logged, non-fatal) and
+changed the resolution to `in_package or in_skill_registry` in
+`scripts/build_phases.py`'s `validate_agent_self_description` only —
+`check_command_reachability` and all other functions in that shared file
+are untouched (verified via `git diff` hunk boundaries against the other
+in-flight sibling edits in this worktree). Added three tests to
+`unit_tests/build_guards/test_self_description_descriptive_only.py` under
+`TestRegistryDeclaredWithoutTemplateResolves`:
+`test_registry_declared_skill_without_template_resolves` (the literal gap:
+`error_count == 0` for a `portable: false`/no-`template_path` registry
+entry with no template dir), `test_skill_absent_from_both_templates_and_registry_still_fails`
+(regression guard against an over-broad OR), and
+`test_missing_skill_registry_file_does_not_crash_and_still_flags` (absent
+`skill_registry.json` must not fail open). Ran
+`AC_ENFORCE_STRICT=1 python -m pytest unit_tests/build_guards/ -q`: 104
+passed, 4 subtests passed, no regressions in the pre-existing
+`descriptive_only` / mistyped-marker / canonical-source-only test classes.
+`ruff check` on both touched files: clean. I did not personally re-run the
+full 4447-test suite the coordinator reported green, but independently
+verified the real `scripts/build.py` call site (line ~1648) still calls
+`validate_agent_self_description` correctly with the new `package_root`
+parameter left at its default, and re-read `BP-1300a-1.yaml` directly to
+confirm `covered_by` now lists my `TestRegistryDeclaredWithoutTemplateResolves`
+class before signing off. One thing flagged but NOT fixed: `check_skills_invoked_xref`
+in `scripts/registry_validator.py` (the advisory, non-build-failing
+cross-reference checker) still resolves only against template-body text and
+`descriptive_only` markers — it may need the same registry-only special-case
+so it doesn't emit a spurious "declared but no reference found" advisory for
+a registry-declared, template-less skill. Advisory-only, so I left it for a
+follow-up ticket rather than expanding this one's scope.

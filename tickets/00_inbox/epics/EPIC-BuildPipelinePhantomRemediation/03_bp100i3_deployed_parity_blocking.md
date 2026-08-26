@@ -235,3 +235,54 @@ pathspec-scoped commit, never git add -A. Note: test-runner is still needed on
 this ticket ahead of commit in the agents list; pr-reviewer's sign-off already
 recorded an independent full green run, and I re-confirmed it myself, but the
 supervisor should still ensure test-runner completes its own sign-off pass.
+
+### 2026-08-25 15:40 — test-writer (status: ok)
+feedback-id: fb_2026-08-25_9b1dd287
+completion_manifest:
+  wiring_gap_tests_added: true
+  mutation_verified: true
+  ac_fully_satisfied_in_production: false
+Follow-up pass closing the specific gap an adversarial review found: every existing
+test in `TestDeployedParity*` calls `check_deployed_parity(...)` directly and
+inspects the returned list, so nothing asserted on the real process exit code —
+discarding the `all_violations.extend(check_deployed_parity(...))` result in
+`_run_checks()`, or removing that call entirely, both left the full suite green
+(38 passed, 1 skipped). Added
+`TestDeployedParityProcessInvocation::test_ac_bp100i3_process_exits_1_and_names_missing_scripts_and_dir`
+and `..._process_exits_0_when_deployed_has_all_scripts` to
+`unit_tests/commit_guardian/test_check_hook_parity.py` — both invoke
+`check_hook_parity.py` as a real `subprocess.run([sys.executable, str(_CANONICAL)],
+cwd=project_root)` against a fixture with the AC's literal 5-canonical/3-deployed
+scenario, asserting `returncode == 1` plus both missing filenames and the deployed
+dir in `stderr`, and a discriminating all-5-deployed case asserting `returncode == 0`.
+Full file: 41 passed. `ruff check` clean. Mutation check (mandatory, run against
+throwaway copies under `/tmp`, production file untouched): copied
+`check_hook_parity.py` to `/tmp/bp100i3_mutation_a` and `/tmp/bp100i3_mutation_b`,
+applied exactly the two wiring breaks the reviewer described (drop the `.extend(...)`
+result; remove the `check_deployed_parity(...)` call entirely), and re-ran the new
+test's fixture logic against both mutated copies via a throwaway harness script — both
+mutations produced `returncode == 0` on the missing-scripts fixture, i.e. the new test
+correctly FAILED (`expected returncode 1, got 0`, stderr empty of both filenames and
+the deployed dir) against both mutated copies, and correctly PASSED against the
+unmutated production file for both the missing-scripts and all-present fixtures. The
+wiring gap I was asked to close is verifiably closed.
+
+Residual, explicitly NOT closed by this pass: KI-CG-013 (already filed, out of my
+scope per the coordinator's dispatch) — `hook_parity.canonical_template_dir` is
+cwd-relative, so in a real consumer install the canonical dir does not resolve,
+`_collect_hook_scripts` returns an empty set, and the hook exits 0 with undeployed
+scripts present. My new tests build their own `project_root` fixture where the
+canonical/deployed paths are constructed to resolve correctly by design (mirroring
+the ticket's own `TestIntegrationMain` idiom) — they prove the wiring from
+"check_deployed_parity finds violations" to "process exits 1" is intact, but they do
+NOT exercise, and cannot detect, the path-resolution defect KI-CG-013 describes. BP-
+100i-3's Gherkin explicitly frames the deployed dir as "where build.py writes commit
+guardian files for the consumer project" — given KI-CG-013, the guard as deployed is
+vacuous in exactly that real-world context, so I do not consider the AC's full
+real-world guarantee met by any test coverage that exists today (mine included). I am
+recording my own phase (the wiring-gap regression tests I was dispatched to write) as
+complete and verified — `agents.test-writer` was already `signed_off` from the prior
+round (2026-08-18) and I am leaving it as-is, not re-flipping it — but I am not
+asserting BP-100i-3 is fully satisfied end-to-end; that determination, and any
+decision to reopen this AC's test coverage pending a KI-CG-013 fix, belongs to
+whoever owns AC-level sign-off (ac-validator / pr-reviewer / the epic owner).

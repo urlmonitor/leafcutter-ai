@@ -324,7 +324,15 @@ class TestNameFormRegistryTargetPasses:
             registered_workflow_names=["build-feature"],
         )
 
-        verdicts = check_command_reachability(output_root)
+        # BP-100k-7: the skip decision is taken from the declared
+        # config["workflows"]["enabled"] value, not from filesystem presence.
+        # An explicit enabled=True declaration is required here so this
+        # assertion actually exercises registry-membership resolution rather
+        # than passing vacuously because the reference was skipped before
+        # ever being checked against the registry.
+        verdicts = check_command_reachability(
+            output_root, {"workflows": {"enabled": True}}
+        )
 
         matching = [v for v in verdicts if v.get("target") == "build-feature"]
         assert not matching, (
@@ -354,7 +362,15 @@ class TestNameFormRegistryTargetPasses:
             registered_workflow_names=["build-feature"],  # a different name registered
         )
 
-        verdicts = check_command_reachability(output_root)
+        # BP-100k-7: the skip decision is taken from the declared
+        # config["workflows"]["enabled"] value, not from filesystem presence.
+        # An explicit enabled=True declaration is required here so this
+        # negative case actually reaches registry-membership resolution
+        # instead of being skipped (and therefore unflagged) before the
+        # registry is ever consulted.
+        verdicts = check_command_reachability(
+            output_root, {"workflows": {"enabled": True}}
+        )
         matching = [
             v for v in verdicts
             if v.get("target") == "totally-unregistered-workflow-name"
@@ -518,4 +534,271 @@ class TestNonEmptyVerdictRepresentsBuildFailure:
         assert "build-feature" not in targets_flagged, (
             "The resolvable name-form target in the SAME command body must "
             f"not be flagged. Flagged targets: {targets_flagged}"
+        )
+
+
+# ===========================================================================
+# BP-900g-1 remediation coverage (epic review, 2026-08-25)
+#
+# Every test below pins a clause the original suite left unprotected. Each was
+# written after a reviewer demonstrated the corresponding hole against the
+# REAL deployed tree, not against a fixture.
+# ===========================================================================
+
+class TestBuildExitsNonZeroOnUnresolvableTarget:
+    """The AC's operative clause: "the build exits with a non-zero status".
+
+    The original suite asserted only that ``check_command_reachability()``
+    returns a non-empty list. Deleting the two-line wiring in build.py's
+    main() -- ``if not args.dry_run and _check_command_reachability_guard(...)``
+    -- left all six tests green, because the guard runs POST-deploy: a failing
+    build still writes every file, so file-existence assertions cannot tell a
+    0 exit from a 1 exit. This test asserts the exit code itself.
+    """
+
+    def test_build_returns_nonzero_when_a_deployed_command_has_a_bad_target(
+        self, tmp_path
+    ):
+        # covers: BP-900g-1
+        target_dir = tmp_path / "deploy_target"
+        target_dir.mkdir()
+        config_path = tmp_path / "skills_config.json"
+        config_path.write_text(
+            json.dumps({"workflows": {"enabled": True}}), encoding="utf-8"
+        )
+
+        base_cmd = [
+            sys.executable,
+            str(_SCRIPTS_DIR / "build.py"),
+            "--target-dir",
+            str(target_dir),
+            "--config",
+            str(config_path),
+            "--self-description-enforcement",
+            "warning",
+        ]
+
+        first = subprocess.run(
+            base_cmd, cwd=str(_REPO_ROOT), capture_output=True, text=True, timeout=180
+        )
+        assert first.returncode == 0, (
+            "Sanity check failed: a clean build of the real tree must exit 0 "
+            "before this test can attribute a non-zero exit to the injected "
+            f"bad target. stderr (last 800): {first.stderr[-800:]}"
+        )
+
+        # Inject a path-form target into the REAL deployed command tree. This
+        # is the exact artifact shape BP-900g-1 describes.
+        output_root = target_dir / ".leafcutter"
+        probe = output_root / "commands" / "zz-reachability-probe.md"
+        probe.write_text(
+            "# Probe\n\n"
+            'Workflow("scripts/workflows/build-feature.js", { target: $ARGUMENTS })\n',
+            encoding="utf-8",
+        )
+
+        second = subprocess.run(
+            base_cmd, cwd=str(_REPO_ROOT), capture_output=True, text=True, timeout=180
+        )
+
+        assert second.returncode != 0, (
+            "build.py must exit non-zero when a deployed command carries an "
+            "unresolvable path-form handoff target. Exit was "
+            f"{second.returncode}. This is the clause that stayed phantom "
+            "while the guard function itself was correct: the function found "
+            "the problem and nothing acted on it.\n"
+            f"stdout (last 800): {second.stdout[-800:]}\n"
+            f"stderr (last 800): {second.stderr[-800:]}"
+        )
+
+        combined = second.stdout + second.stderr
+        assert "scripts/workflows/build-feature.js" in combined, (
+            "The failure must name the unresolvable target. "
+            f"Output: {combined[-800:]}"
+        )
+        assert "zz-reachability-probe.md" in combined, (
+            f"The failure must name the offending command. Output: {combined[-800:]}"
+        )
+
+
+class TestEveryHandoffCallFormIsSeen:
+    """The regex must see every call form present in the real command corpus.
+
+    A reviewer wrote a probe carrying three unmistakably bogus targets in the
+    kwarg, named-arg and backtick forms into the real deployed tree and the
+    guard returned ZERO verdicts: 5 of 9 live call sites were invisible,
+    because the pattern required a quote immediately after "(". That also
+    meant a "full-tree scan found 0 problems" result was partly the scanner
+    failing to look.
+    """
+
+    BOGUS = "scripts/workflows/definitely-not-deployed.js"
+    BOGUS_SKILL = "scripts/skills/definitely-not-a-skill"
+
+    def test_positional_double_quote_form_is_flagged(self, tmp_path):
+        # covers: BP-900g-1
+        self._assert_flagged(tmp_path, f'Workflow("{self.BOGUS}")', self.BOGUS)
+
+    def test_positional_single_quote_form_is_flagged(self, tmp_path):
+        # covers: BP-900g-1
+        self._assert_flagged(tmp_path, f"Workflow('{self.BOGUS}')", self.BOGUS)
+
+    def test_backtick_form_is_flagged(self, tmp_path):
+        # covers: BP-900g-1
+        self._assert_flagged(tmp_path, f"Workflow(`{self.BOGUS}`)", self.BOGUS)
+
+    def test_keyword_equals_form_is_flagged(self, tmp_path):
+        # covers: BP-900g-1
+        self._assert_flagged(
+            tmp_path,
+            f'Skill(skill="{self.BOGUS_SKILL}", args="--x")',
+            self.BOGUS_SKILL,
+        )
+
+    def test_keyword_colon_form_is_flagged(self, tmp_path):
+        # covers: BP-900g-1
+        self._assert_flagged(
+            tmp_path,
+            f'Workflow(name: "{self.BOGUS}", args: {{ a }})',
+            self.BOGUS,
+        )
+
+    def _assert_flagged(self, tmp_path, call_text, expected_target):
+        check_command_reachability = _require_checker()
+        output_root = _make_output_root(
+            tmp_path, "probe.md", f"# Probe\n\n{call_text}\n"
+        )
+        verdicts = check_command_reachability(output_root)
+        flagged = {v.get("target") for v in verdicts}
+        assert expected_target in flagged, (
+            f"The call form {call_text!r} carries an unresolvable target and "
+            f"must be flagged. A form the regex cannot see is a silent hole: "
+            f"the guard reports a clean scan having never looked. "
+            f"Flagged targets: {flagged}"
+        )
+
+
+class TestGuardFailsClosedWhenItCannotInspect:
+    """"I could not check" must never be reported as "everything resolves"."""
+
+    def test_absent_command_directory_yields_a_verdict(self, tmp_path):
+        # covers: BP-900g-1
+        check_command_reachability = _require_checker()
+        empty_root = tmp_path / "output_root"
+        empty_root.mkdir()
+
+        verdicts = check_command_reachability(empty_root)
+
+        assert verdicts, (
+            "With no deployed command directory the guard inspected zero "
+            "commands and cannot vouch for any handoff target, so it must "
+            "NOT return an empty (== all clear) list."
+        )
+        assert any(v.get("kind") == "scan" for v in verdicts), (
+            f"Expected a scan-level verdict explaining the guard could not "
+            f"inspect anything. Got: {verdicts}"
+        )
+
+    def test_unreadable_command_yields_a_verdict(self, tmp_path):
+        # covers: BP-900g-1
+        check_command_reachability = _require_checker()
+        output_root = _make_output_root(
+            tmp_path,
+            "locked.md",
+            '# Locked\n\nWorkflow("scripts/workflows/bogus.js")\n',
+        )
+        locked = output_root / "commands" / "locked.md"
+        locked.chmod(0o000)
+        try:
+            verdicts = check_command_reachability(output_root)
+        finally:
+            locked.chmod(0o644)
+
+        assert verdicts, (
+            "A command the guard could not open must not count as a command "
+            "with no problems. chmod 000 on a file holding a known-broken "
+            "target previously produced zero verdicts and an exit-0 build."
+        )
+
+
+class TestEveryPlatformCommandSurfaceIsScanned:
+    """build_workflows() deploys prose commands to five platform surfaces.
+
+    Globbing only ``commands/`` left 23 real files under ``gemini/workflows/``
+    unscanned -- two of them carrying live Skill() handoffs -- so the guard
+    degraded toward a no-op for Antigravity / cursor / copilot / cline users.
+    """
+
+    def test_bad_target_under_gemini_workflows_is_flagged(self, tmp_path):
+        # covers: BP-900g-1
+        check_command_reachability = _require_checker()
+        output_root = _make_output_root(
+            tmp_path, "clean.md", '# Clean\n\nWorkflow("build-feature")\n',
+            registered_workflow_names=["build-feature"],
+        )
+        gemini_dir = output_root / "gemini" / "workflows"
+        gemini_dir.mkdir(parents=True)
+        (gemini_dir / "ported.md").write_text(
+            '# Ported\n\nWorkflow("scripts/workflows/bogus.js")\n', encoding="utf-8"
+        )
+
+        verdicts = check_command_reachability(output_root)
+        flagged = {v.get("target") for v in verdicts}
+        assert "scripts/workflows/bogus.js" in flagged, (
+            "A command deployed to a non-Claude platform surface is still a "
+            f"deployed command. Flagged targets: {flagged}"
+        )
+
+
+class TestWorkflowsDisabledDoesNotBreakTheBuild:
+    """``workflows.enabled: false`` is a supported, schema-documented toggle.
+
+    The shipped command templates reference workflows by name unconditionally.
+    Treating a name-form reference as unresolvable when the operator switched
+    the feature off turned a supported configuration into an unconditionally
+    broken build with no escape hatch. A reference to a disabled feature is a
+    disabled feature, not a broken reference -- but a PATH-form target still
+    cannot resolve either way, so it must still be flagged.
+    """
+
+    def test_name_form_reference_is_not_flagged_when_workflows_absent(self, tmp_path):
+        # covers: BP-900g-1
+        check_command_reachability = _require_checker()
+        output_root = tmp_path / "output_root"
+        commands_dir = output_root / "commands"
+        commands_dir.mkdir(parents=True)
+        (commands_dir / "build-feature.md").write_text(
+            '# Build\n\nWorkflow("build-feature", { target: $ARGUMENTS })\n',
+            encoding="utf-8",
+        )
+        # No workflows/ directory at all -- exactly what build.py leaves behind
+        # when workflows.enabled is false.
+
+        verdicts = check_command_reachability(output_root)
+        flagged = {v.get("target") for v in verdicts}
+        assert "build-feature" not in flagged, (
+            "A name-form workflow reference must not abort the build merely "
+            "because the optional workflows feature is switched off. "
+            f"Flagged targets: {flagged}"
+        )
+
+    def test_path_form_reference_is_still_flagged_when_workflows_absent(
+        self, tmp_path
+    ):
+        # covers: BP-900g-1
+        check_command_reachability = _require_checker()
+        output_root = tmp_path / "output_root"
+        commands_dir = output_root / "commands"
+        commands_dir.mkdir(parents=True)
+        (commands_dir / "legacy.md").write_text(
+            '# Legacy\n\nWorkflow("scripts/workflows/build-feature.js")\n',
+            encoding="utf-8",
+        )
+
+        verdicts = check_command_reachability(output_root)
+        flagged = {v.get("target") for v in verdicts}
+        assert "scripts/workflows/build-feature.js" in flagged, (
+            "A path-form target can never resolve regardless of the workflows "
+            "toggle -- that is the case BP-900g-1 exists to catch, so the "
+            f"disabled-workflows branch must not swallow it. Flagged: {flagged}"
         )

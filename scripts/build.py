@@ -1095,16 +1095,21 @@ def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
     return 1
 
 
-def _check_command_reachability_guard(output_root: Path) -> int:
+def _check_command_reachability_guard(output_root: Path, config: dict) -> int:
     """Post-deploy guard: abort the build when a command handoff target does not resolve (BP-900g-1).
 
     Runs AFTER the deploy phases have written real files to ``output_root``
     (unlike ``_check_deploy_collision_guard``, which runs on planned mappings
-    before any write). Calls ``check_command_reachability(output_root)`` to
-    scan every deployed command's ``Workflow(...)``/``Skill(...)`` handoff
-    targets against the TRUE post-deploy layout: name-form targets resolve
-    via the deployed workflow/skill registry (BP-900g-1-i), path-form targets
-    resolve only as a literal relative path against output_root (BP-900g-1).
+    before any write). Calls ``check_command_reachability(output_root,
+    config)`` to scan every deployed command's ``Workflow(...)``/
+    ``Skill(...)`` handoff targets against the TRUE post-deploy layout:
+    name-form targets resolve via the deployed workflow/skill registry
+    (BP-900g-1-i), path-form targets resolve only as a literal relative path
+    against output_root (BP-900g-1). Whether a name-form workflow reference
+    is skipped is decided from the declared ``config["workflows"]["enabled"]``
+    value, not from whether the workflows output happens to exist on disk
+    (BP-100k-7) — ``config`` must be the SAME configuration object the build
+    itself used to decide whether to produce that output.
 
     This is the COMMAND-SIDE analogue of the BP-811 ``.claude/workflows``
     shim guardrail; it does not modify or re-parent BP-811.
@@ -1112,12 +1117,15 @@ def _check_command_reachability_guard(output_root: Path) -> int:
     Args:
         output_root: Absolute path to the consolidated, already-deployed
             output directory (e.g. ``<target>/.leafcutter``).
+        config: The build's merged configuration dict — the same object used
+            to decide whether ``build_workflow_scripts()`` produced output,
+            so the guard and the producer can never disagree.
 
     Returns:
         0 if every extracted target resolves (build may proceed).
         1 if one or more targets are unresolvable (build must abort).
     """
-    verdicts = check_command_reachability(output_root)
+    verdicts = check_command_reachability(output_root, config)
     if not verdicts:
         return 0
 
@@ -1678,7 +1686,7 @@ def main(argv: list[str] | None = None) -> int:
     # post-deploy layout and abort the build if any target does not resolve.
     # Skipped under --dry-run, where no files were actually written to
     # output_root to scan.
-    if not args.dry_run and _check_command_reachability_guard(output_root):
+    if not args.dry_run and _check_command_reachability_guard(output_root, config):
         return 1
 
     uptodate = get_uptodate_count()

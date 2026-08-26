@@ -28,7 +28,6 @@ ARCHITECTURE: Reads the staged diff via `git diff --cached` (or HOOK_TEST_DIFF
 
 from __future__ import annotations
 
-import fnmatch
 import json
 import os
 import re
@@ -180,18 +179,27 @@ def main() -> int:
     waiver_marker: str = config.get("waiver_marker", _DEFAULT_WAIVER_MARKER)
     marker_re = re.compile(rf"^\s*#\s*{re.escape(waiver_marker)}:\s*(.*)$")
 
-    # Paths whose added lines are exempt from scanning. This guard's own tests
-    # must contain literal examples of the pattern it detects — synthetic diff
-    # fixtures with lines like `+ assert 'doSomething(' in content`. Those are
-    # test DATA, not assertions the test performs, but they are textually
-    # indistinguishable from the real thing, so scanning them makes the guard
-    # block its own maintenance: every future edit to its test file fails the
-    # hook. The `# presence-only:` waiver cannot help — placing a waiver inside
-    # a fixture would waive it for the scanner under test and invert what the
-    # test asserts. Exemption by path is the only route that keeps both the
-    # guard and its tests honest. Read from config so the list is DATA, not a
-    # hardcoded copy in this file.
-    exempt: list[str] = config.get("fixture_exempt_paths", []) or []
+    # NOTE: there is deliberately no path-exemption list here.
+    #
+    # One was added — `fixture_exempt_paths` — so this guard would not block
+    # its own test file, on the reasoning that a `# presence-only:` waiver
+    # placed inside a synthetic diff fixture would be consumed by the scanner
+    # under test and invert what the test asserts. That reasoning describes a
+    # placement nobody needs. The scanner receives only the `diff` STRING; a
+    # waiver comment written in the test module's own Python source, outside
+    # the fixture literal, is invisible to it and waives normally.
+    #
+    # The exemption was also strictly weaker than the waiver it replaced: it
+    # `continue`d before scan_file_block, so an exempt path produced no output
+    # whatsoever — no violation, no waiver line, no reason. The waiver design
+    # exists so every accepted exception is listed in the check's output and
+    # readable in one place; a silent path list is the "silent suppression
+    # list" the criteria explicitly rule out. And because it matched with
+    # fnmatch over whole paths, a single entry like "unit_tests/*" would have
+    # disabled the guard repo-wide.
+    #
+    # If this guard's own fixtures trip it, waive them in the test source with
+    # a stated reason, like every other caller has to.
 
     diff = _get_staged_diff()
     if not diff.strip() or not globs:
@@ -200,12 +208,12 @@ def main() -> int:
     all_violations: list[Violation] = []
     all_waivers: list[Waiver] = []
 
-    for new_path, added_lines in split_diff_into_file_blocks(diff):
+    for new_path, added_lines, hunk_starts in split_diff_into_file_blocks(diff):
         if not is_test_file_path(new_path) or not added_lines:
             continue
-        if any(fnmatch.fnmatch(new_path, pattern) for pattern in exempt):
-            continue
-        violations, waivers = scan_file_block(new_path, added_lines, globs, marker_re)
+        violations, waivers = scan_file_block(
+            new_path, added_lines, globs, marker_re, hunk_starts
+        )
         all_violations.extend(violations)
         all_waivers.extend(waivers)
 

@@ -25,8 +25,19 @@ created: 2026-07-10
 amended_by:
   - reason: it-po-v3-split-covered-by-update
     note: "Appended split children BO-1000c-1a, BO-1000c-1b to covered_by (BO-1000c-1 superseded by IT-PO). Composite L1 otherwise unenriched."
+  - reason: "child added — in-flight pollability split out of BO-1000c-1a"
+    by: BrainCandy
+    at: 2026-08-25
+    note: >-
+      Appended BO-1000c-4 to covered_by. BO-1000c-1a was re-scoped on 2026-08-25
+      to what its unit-level coverage genuinely proves (durability after process
+      exit, dispatch order, absence of the dead require()/appendJournal
+      mechanism). Its in-flight pollability clause was not dropped — it moved to
+      BO-1000c-4 so it stays open and visible rather than being absorbed by a
+      narrowed parent. BO-1000c-4 is deliberately not satisfiable at the current
+      unit layer and needs an integration harness.
 superseded_by: null
-covered_by: [BO-1000c-1, BO-1000c-2, BO-1000c-3, BO-1000c-1a, BO-1000c-1b]
+covered_by: [BO-1000c-1, BO-1000c-2, BO-1000c-3, BO-1000c-1a, BO-1000c-1b, BO-1000c-4]
 implemented_by: []
 documentation_triggers: [sequence-diagram]
 change_target: pipeline

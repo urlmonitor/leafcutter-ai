@@ -1,0 +1,105 @@
+id: BP-100k-7
+components:
+  - build_pipeline
+title: "A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the build's reachability guard may skip checking references to a
+    capability that a project has deliberately turned off,
+  When the guard decides whether to skip those references,
+  Then the decision is taken from the declared configuration value for that
+    capability, and from nothing else,
+  And given the configuration declares the capability enabled while the build
+    produced none of its output,
+  When the guard runs,
+  Then it reports every reference to that capability as unreachable and fails the
+    build, rather than skipping — this is the combination the guard exists to
+    catch,
+  And given the configuration declares the capability disabled,
+  When the guard runs,
+  Then it skips those references and states in its output that it skipped them
+    because the configuration declares the capability off,
+  And every skip the guard performs carries a stated reason, so a skipped check
+    is never indistinguishable in the build's output from a check that ran and
+    passed.
+depends_on:
+  - BP-100k
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
+  - path: "scripts/build_phases.py"
+    relationship: modifies
+    status: exists
+    relevance: "the command-reachability guard currently infers 'the capability is off' from whether its output directory exists on disk, and skips name-form targets on that basis while stating the configuration as its justification; it never reads the declared value"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    guard_skip_justification:
+      type: object
+      description: "Per-skip record naming the configuration value that authorised the skip, so a guard's decision not to check is traceable to a declaration rather than inferred from the presence or absence of an artifact on disk."
+  reference_file_path: "scripts/build_phases.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The two states the current code conflates are opposite in meaning: (a) the capability is deliberately disabled, where skipping is correct; (b) the capability is enabled but the build failed to produce its output, where every reference to it is now broken and the guard must fire. Any implementation that continues to branch on the presence of the output directory reproduces the defect regardless of what its message says."
+    - "The declared configuration value must be read from the same configuration object the build itself uses to decide whether to produce the capability's output, so the guard and the producer can never disagree about whether the capability is enabled."
+    - "An absent or malformed declaration must not silently mean 'off'. The default must match what the build's own producer defaults to, and a value that cannot be read is a reported condition, not a skip."
+    - "Every skip must state its reason in the guard's emitted output. A silent skip is indistinguishable from a passing check, which is the defect class this epic exists to close."
+    - "Verify behaviorally — drive the build with the configuration declaring the capability enabled while its output is absent, and assert the guard reports and fails; then with the configuration declaring it disabled, and assert the guard skips and says why. Do not grep build_phases.py for the configuration key."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O and around configuration access, log at WARNING or higher or re-raise; no bare or blind excepts."
+    - "Audit every call site of the guard when its inputs change: a guard whose signature gains the declared configuration value but whose callers still invoke the old form silently exercises the legacy filesystem-inference path (CLAUDE.md, 'Function Signature Extension — Call-Site Audit Required')."
+test_spec:
+  - name: test_enabled_but_output_absent_reports_unreachable_and_fails
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Running the build with the configuration declaring the capability enabled while none of its output was produced causes the guard to report every reference to that capability as unreachable and the build to fail — the case the guard exists for."
+  - name: test_disabled_capability_is_skipped_with_a_stated_reason
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Running the build with the configuration declaring the capability disabled causes the guard to skip those references and to state in its emitted output that the skip was authorised by the declared configuration value."
+  - name: test_skip_decision_does_not_change_when_only_the_output_presence_changes
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "With the declared configuration value held constant, adding or removing the capability's output directory does not change whether the guard skips — proving the decision is taken from the declaration and not from the filesystem."
+  - name: test_unreadable_declaration_is_reported_rather_than_treated_as_off
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "When the declared value cannot be read, the executed build reports that the guard could not establish whether the capability is enabled and does not silently skip the check."
+  - name: test_every_skip_the_guard_performs_names_its_reason
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Across an executed build run, each skip the guard emits carries a stated reason in the output, so no skipped check is indistinguishable from a check that ran and passed."
+test_rationale: "The incumbent guard skips name-form targets whenever the capability's output directory is absent, and justifies the skip by claiming the capability is disabled — a claim it never verifies, because it never reads the declared value. The guard is therefore silent in exactly the failure case it was built for: the capability enabled but undeployed. A test that greps for the configuration key, or that asserts the skip branch exists, stays green on that behaviour; per the standing rule in CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep') such a test is forbidden here and will be rejected. Each descriptor therefore drives the real build under a specific combination of declared value and output presence and asserts on the guard's emitted output and the build's outcome — including the decisive descriptor that holds the declaration constant while varying only the filesystem, which no source-reading test can express."
+delivers_to:
+  agent: python-coder
+  contract: "A skip decision derived from the declared configuration value, paired with a stated reason emitted for every skip, consumed by the build's command-reachability guard."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Verified defect, 2026-08-25. The command-reachability guard determines whether the workflows capability is 'on' by testing whether the workflows output directory exists, then skips every name-form workflow target when it does not, stating that workflows are disabled as the justification. It never reads the declared enabled value. The two states it conflates are opposite in meaning: deliberately disabled (skipping correct) versus enabled but not deployed (every command referencing a workflow by name is now unreachable — precisely when the guard must fire). The guard is silent in exactly the failure case it exists for, and the skip is indistinguishable in the build output from a check that passed."

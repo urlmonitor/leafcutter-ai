@@ -80,6 +80,22 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _TEMPLATES_DIR = _REPO_ROOT / "templates"
 _CG_TEMPLATES_SRC = _TEMPLATES_DIR / "scripts" / "commit_guardian"
+
+# Top-level manifest keys that are METADATA, not template-path -> hash entries.
+# The manifest is a flat dict of template keys plus a few reserved names, so a
+# coverage comparison has to subtract the reserved ones or it counts metadata as
+# a missing template. Keep this in step with write_build_manifest().
+# Top-level manifest keys that are METADATA, not template-hash entries. Any new
+# key added to the manifest by write_build_manifest() must be listed here or it
+# is mistaken for a recorded template path.
+_MANIFEST_METADATA_KEYS = frozenset(
+    {
+        "output_mappings",
+        "package_root",
+        "output_mappings_error",
+        "output_mappings_skipped_sections",
+    }
+)
 _RESOLVE_ROOT_SRC = _CG_TEMPLATES_SRC / "_resolve_root.py"
 _CHECK_BUILD_DRIFT_SRC = _CG_TEMPLATES_SRC / "check_build_drift.py"
 
@@ -223,7 +239,10 @@ class TestManifestRecordsNonAgentTemplateFingerprint(unittest.TestCase):
         )
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-        repo_root = self.pkg_root.parent
+        # Keys are relative to the manifest's own directory. This test calls
+        # write_build_manifest(pkg_root) with no target_root, so the manifest
+        # falls back to pkg_root and that is the base (BP-100k-3).
+        repo_root = self.pkg_root
         expected_key = target_tpl.relative_to(repo_root).as_posix()
 
         self.assertIn(
@@ -270,7 +289,10 @@ class TestDriftGateEmitsMatchThenDrift(unittest.TestCase):
         build_helpers.write_build_manifest(self.pkg_root, dry_run=False)
         hook_path = _deploy_hook(self.workspace, _CHECK_BUILD_DRIFT_SRC)
 
-        repo_root = self.pkg_root.parent
+        # Keys are relative to the manifest's own directory. This test calls
+        # write_build_manifest(pkg_root) with no target_root, so the manifest
+        # falls back to pkg_root and that is the base (BP-100k-3).
+        repo_root = self.pkg_root
         key = target_tpl.relative_to(repo_root).as_posix()
 
         # --- Leg 1: unmodified staged copy must yield a MATCH verdict ---
@@ -367,9 +389,12 @@ class TestManifestCoverageEqualsBuildCopySet(unittest.TestCase):
 
         manifest_path = self.pkg_root / ".build_manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        recorded_keys = {k for k in manifest if k != "output_mappings"}
+        recorded_keys = {k for k in manifest if k not in _MANIFEST_METADATA_KEYS}
 
-        repo_root = self.pkg_root.parent
+        # Keys are relative to the manifest's own directory. This test calls
+        # write_build_manifest(pkg_root) with no target_root, so the manifest
+        # falls back to pkg_root and that is the base (BP-100k-3).
+        repo_root = self.pkg_root
         expected_keys: set[str] = set()
         for f in (self.pkg_root / "templates" / "agents").rglob("*.md"):
             expected_keys.add(f.relative_to(repo_root).as_posix())

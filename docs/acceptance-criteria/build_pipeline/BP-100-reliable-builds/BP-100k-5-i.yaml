@@ -1,0 +1,112 @@
+id: BP-100k-5-i
+components:
+  - build_pipeline
+title: "The unexamined deployed population reaches zero by registering the deploy surface, never by exempting it, and the newly covered files are provably drift-checked"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed files the drift gate could not previously examine have been
+    brought under coverage,
+  When the gate runs over a freshly built, unmodified project,
+  Then the number of deployed files it did not compare is zero,
+  And the number it compared equals the number of files the build recorded as
+    having written,
+  And no file the build produced is accounted for by an exemption that covers a
+    whole directory of build-produced outputs — an exemption applies to a named
+    hand-maintained artifact with a stated ground, never to the deploy surface in
+    bulk,
+  And given any one of the newly covered deployed files is hand-edited,
+  When the gate runs again,
+  Then that file is reported as drifted and the run fails — the coverage is
+    exercised, not merely declared.
+depends_on:
+  - BP-100k-5
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-5.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: describes
+    status: exists
+    relevance: "the gate this guard runs end to end over the full freshly built tree; a bulk exemption added to make the not-compared count reach zero must fail here rather than pass. Its own deployed copy is one of the 181 script files currently policed by nothing, so it is the sharpest available subject for the hand-edit leg."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    drift_exemption_bulk_rejection:
+      type: object
+      description: "Rule rejecting any exemption entry that would cover a directory of build-produced outputs rather than a named hand-maintained artifact, so the unexamined-population count cannot be driven to zero by suppression instead of registration."
+  reference_file_path: "templates/scripts/commit_guardian/check_output_drift.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "This is the paired negative case for BP-100k-5. The cheapest way to satisfy BP-100k-5 is to declare the whole deploy tree exempt, which makes the not-compared count zero while checking nothing — precisely the silent suppression list BP-100k-3 removed. This guard must fail on that implementation."
+    - "The hand-edit leg must target a deployed commit-guardian gate script — ideally the output-drift gate's own deployed copy. Those 181 script files are the largest previously uncovered group and are policed by nothing today; a gate that still cannot detect a change to itself has not closed this gap, whatever its counts say."
+    - "The zero-unexamined assertion must be count-based over the gate's own summary and cross-checked against the build's record of what it wrote, never against an allowlist of today's file names; an allowlist would pass while a newly deployed output escaped coverage."
+    - "The drift-detection leg must hand-edit a file drawn from the newly covered population specifically — not one of the 275 files the gate already compared before this work — otherwise it proves nothing about the new coverage."
+    - "Cross-check the denominator against the corrected deployed-file population, not the retracted one: 528 deployed files with __pycache__ excluded, of which 253 were unrecorded before this work. Symlinked agent-platform directories resolve to their canonical keys and must be counted once, so a run reporting a total materially above 528 indicates double-counting rather than wider coverage."
+    - "The zero-unexamined result must be reached with no remaining unrecorded-but-silent files: a file that moves from silent to reported-as-a-gap has not been covered, it has only become visible. Both the not-compared count and the gap count must be zero on a freshly built tree."
+    - "Run over the full real freshly built tree, not a synthesized subset: the omitted files are exactly the ones a hand-picked fixture would leave out."
+    - "Exercise the DEPLOYED gate copy after build.py, not only the templates source tree; a template-only run leaves the running hook unproven."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
+test_spec:
+  - name: test_freshly_built_tree_yields_zero_unexamined_deployed_files
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "After a real build over an unmodified checkout, the gate executed as a process reports a not-compared count of exactly zero, read from its own summary rather than from an allowlist of expected names."
+  - name: test_compared_count_equals_the_build_recorded_write_count
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The executed run's compared count equals the number of files the build recorded as having written, so the denominator and the numerator agree on a clean tree; symlinked deploy locations resolve to one canonical entry and are counted once."
+  - name: test_no_build_produced_file_is_covered_by_a_directory_wide_exemption
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "No file the build produced is accounted for by an exemption spanning a directory of build-produced outputs; an attempt to register such an exemption is rejected by the executed gate rather than honoured."
+  - name: test_hand_edit_to_a_deployed_gate_script_is_reported_as_drift
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Hand-editing a deployed commit-guardian gate script — a file drawn from the population that was previously never collected — causes the executed gate to report that file as drifted and to exit non-zero, proving the gates now police the gates."
+  - name: test_no_deployed_file_remains_merely_visible_rather_than_covered
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "On the freshly built tree the executed gate reports both a not-compared count and a gap count of zero, so no file has been moved from silent to reported without also being brought under comparison."
+  - name: test_clean_tree_still_passes_after_the_wider_population
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "On the freshly built unmodified tree the executed gate reports no drifted file, describes the run as clean and exits zero — the widened population raises no false alarm."
+test_rationale: "Three shortcuts satisfy BP-100k-5 on paper and none is visible in the gate's source: bulk-exempting the deploy tree so the not-compared count reads zero; registering records the gate never consults; and merely widening the scan set so the 251 silent files become 251 reported gaps, which makes them visible without making them checked. All three produce a gate whose summary looks correct and whose protection is nil. Per the standing rule in CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep'), a grep over the gate or the configuration is forbidden here and would be rejected. Each descriptor therefore runs the real build and executes the gate as a process over the full real tree — and the load-bearing descriptor hand-edits a deployed commit-guardian gate script and requires a drift verdict, which is both the sharpest instance of the previously uncovered population and the only direct evidence that a gate can now detect a change to itself."
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-5
+  contract: "The compared / not-compared / total-written run summary whose zero-unexamined case, and whose resolution by registration rather than exemption, this edge case pins down."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: "corrected-measurement"
+    entry: "Corrected the H-1 evidence, which overcounted. The original notes claimed roughly 512 deployed files had to move from invisible to covered; that double-counted the symlinked agent-platform directories, which are already covered under their canonical keys. Accurate figure: 253 of 528 deployed files unrecorded, of which only 2 produce a gap line today and 251 are silent, the largest group being all 181 deployed script files — every commit-guardian hook, both drift gates included. Rewrote notes; retargeted the hand-edit leg from any newly covered file to a deployed commit-guardian gate script specifically, and renamed that descriptor accordingly; added three it_requirements constraints (gate-script hand-edit target, corrected 528/253 denominator with the symlink single-count rule, and the visible-is-not-covered rule requiring both the not-compared and gap counts to be zero); added one test_spec descriptor asserting no file was merely moved from silent to reported; added the third shortcut (widen-the-scan-set-without-covering) to test_rationale. criteria, id, title, level, assigned_agent, estimated_complexity, priority, readiness, work_status, depends_on, delivers_to and expects_from unchanged."
+    by: business-analyst
+    date: 2026-08-25
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: "Paired negative case for BP-100k-5, with the measurement corrected on 2026-08-25 after the first figure was found to double-count symlinked directories. 253 of 528 deployed files must move from unrecorded to covered — not the ~512 first reported — and the shape matters more than the count: only 2 of the 253 are reported as gaps today, while 251 are silent, and the largest silent group is all 181 deployed script files, which include every commit-guardian hook and both drift gates. Three shortcuts must fail here. A blanket exemption over the deploy tree would satisfy the count while restoring the silent suppression list BP-100k-3 was written to remove. Records the gate never consults would satisfy the manifest while changing no verdict. And simply widening the scan set would convert 251 silent files into 251 reported gaps — visible, but still unchecked. Only a whole-tree end-to-end run, plus a drift verdict on a deployed commit-guardian gate script, separates registration from suppression and from mere visibility."

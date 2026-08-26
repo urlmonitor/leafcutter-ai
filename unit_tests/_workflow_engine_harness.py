@@ -690,10 +690,26 @@ def run_workflow_under_e2(
     agent_calls: list[AgentCall] = []
     contract_violations: list[dict] = []
 
+    parse_error = ""
     if stdout.strip():
         try:
             raw_output = json.loads(stdout)
         except json.JSONDecodeError as exc:
+            # Record the failure on the RESULT, not only in a log line.
+            #
+            # `console` is contextified into the sandbox and writes to the same
+            # stdout this parser reads, so a single console.log() in a workflow
+            # body corrupts the JSON payload. Leaving `error` empty made that
+            # outcome — dispatch_count=0, error="", returncode=0 — byte-for-byte
+            # identical to a clean run that dispatched no agents. Zero-dispatch
+            # is the precise failure this harness exists to detect (see the
+            # module docstring), and test_workflow_dual_engine.py already
+            # asserts error == "" and dispatch_count == 0 together, so a parse
+            # crash would have satisfied that guard rather than tripping it.
+            parse_error = (
+                f"failed to parse harness output as JSON: {exc}. "
+                f"stdout begins: {stdout[:200]!r}"
+            )
             logger.warning(
                 "Failed to parse harness output for %s: %s\nstdout: %.200s",
                 script_path,
@@ -729,6 +745,7 @@ def run_workflow_under_e2(
         stdout=stdout,
         stderr=stderr,
         returncode=proc.returncode,
+        error=parse_error,
     )
 
 

@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -193,9 +193,13 @@ amended_by:
     entry: "Filled the fields that made this AC non-ticket-generatable and fixed the mis-derived edit surface. assigned_agent was null -> python-coder (the generator was emitting a literal '- [ ] None' Sign-offs line that the parity guard rejects, and computing a docs-shaped agents map with no coder). estimated_complexity was null -> L (new hook script + two locations in the guardian config + hook doc index + calibration against three in-tree examples and one named non-target). it_requirements was absent -> structured package-surface spec keyed on templates/scripts/commit_guardian/commit_guardian.json with n_location_rule '2' (config key AND hooks_manifest entry). Resolved the 'deliberately left open for it-po' question in the notes in favour of a MECHANICAL staged-hunk pre-commit gate over a pr-reviewer checklist item, on the grounds the criteria already assume a diff-aware checker and the incumbent instances survived human review. Added doc_links naming the real surfaces — check_presence_only_assertions.py (creates/planned), commit_guardian.json (modifies), docs/pre-commit-hooks.md (modifies), create-hook SKILL.md — so files_touched no longer derives to a test file or to nothing; files_touched was EMPTY before this pass. Corrected the registration path: config/commit_guardian.json does not exist in this repo. Added 11 behavioral test_spec descriptors plus test_rationale, every one executing the hook against a synthesized staged diff — including a config-driven-globs descriptor and a deployed-hook descriptor to catch the two ways a passing implementation can still be a no-op. Recorded the SERIALIZATION constraint against BP-100k-3, which edits the same guardian config. criteria, readiness (draft), req_status and work_status left unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_1100b_5.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/09_bp1100b45_presence_only_assertions_stop_counting.md
+  - templates/scripts/commit_guardian/check_presence_only_assertions.py
+  - templates/scripts/commit_guardian/_presence_only_scanner.py
+  - templates/scripts/commit_guardian/commit_guardian.json
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

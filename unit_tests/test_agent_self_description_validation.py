@@ -141,6 +141,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -162,6 +167,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -183,6 +193,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -205,6 +220,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -226,6 +246,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -246,6 +271,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -266,6 +296,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -287,6 +322,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
             # Should not raise; warning_count > 0
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="warning",
@@ -321,6 +361,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",
@@ -345,6 +390,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
             # CLI flag says 'error' — should override registry config
             error_count, warning_count = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
                 enforcement_level="error",  # CLI override wins
@@ -364,6 +414,11 @@ class TestValidateAgentSelfDescription(unittest.TestCase):
 
             result = validator(
                 target_root=tmp_dir,
+                # The fixture package IS tmp_dir. Passed explicitly because the
+                # validator no longer derives template/registry paths from
+                # target_root — doing so made its verdict depend on how the
+                # build was invoked (BP-1300a-1).
+                package_root=tmp_dir,
                 config={},
                 dry_run=False,
             )

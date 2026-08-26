@@ -12,6 +12,7 @@ TICKET: TICKET-20260602-FixWorkflowNestedClaudeDir
 
 from __future__ import annotations
 
+import shutil
 import sys
 from pathlib import Path
 
@@ -202,23 +203,62 @@ def test_compute_output_mappings_workflow_js_uses_correct_output_key(
     exposes it at `.claude/workflows/`. Do not re-invert this without first
     re-reading `_OUTPUT_DIRS` in check_output_drift.py.
     """
-    fake_target = tmp_path / ".leafcutter"
-    fake_target.mkdir(parents=True)
-
-    package_root = tmp_path / "leafcutter"
+    # Consumer-install layout: the package sits UNDER the target root, which is
+    # the only arrangement that occurs in practice (self-host has
+    # package_root == target_root; a consumer has target_root/leafcutter-ai).
+    # The previous fixture put the package at tmp/leafcutter and the target at
+    # tmp/.leafcutter — siblings, a layout that exists nowhere. It only worked
+    # while output_mappings keys were computed relative to package_root.parent;
+    # keys are now relative to target_root, since that is what every output
+    # path is actually built from and therefore the only base they can be
+    # correctly relative to.
+    target_root = tmp_path
+    package_root = target_root / "leafcutter-ai"
     package_root.mkdir()
     (package_root / "config").mkdir()
-    (package_root / "scripts").mkdir()
+    # A real package always ships a full scripts/ tree alongside templates/ —
+    # _compute_output_mappings() dynamically loads scripts/build_phases.py
+    # (via _load_build_phases_module) to enumerate the agents/commands/
+    # workflows/hooks family, so an empty scripts/ dir here is unrealistic
+    # and previously made that load fail with
+    # "No such file or directory: '.../scripts/build_phases.py'" — the
+    # try/except around it silently degraded to skipping that whole section
+    # rather than raising, which is exactly the failure mode this fixture
+    # must NOT paper over: copy the REAL scripts/ tree (mirroring
+    # unit_tests/build_guards/test_bp_100k_2.py's
+    # _build_synthetic_full_package()) so the fixture exercises the same
+    # dynamic-load path a real package does.
+    shutil.copytree(
+        _SCRIPTS_DIR, package_root / "scripts", ignore=shutil.ignore_patterns("__pycache__")
+    )
 
     tpl_dir = package_root / "templates"
     wf_js_dir = tpl_dir / "workflows-js"
     wf_js_dir.mkdir(parents=True)
     (wf_js_dir / "build-feature.js").write_text("// wf", encoding="utf-8")
 
+    # The workflow-js section of _compute_output_mappings() is gated on the
+    # PRE-shim output_root/workflows/<name> path already existing on disk
+    # (BP-100k-6 interaction fix: a fixture that never deployed a family must
+    # not get a phantom manifest entry for it). A real build always runs
+    # build_workflow_scripts() before write_build_manifest(), so that file is
+    # already there; simulate that here rather than invoking the real deploy
+    # phase (which also runs a `claude --version` floor-gate subprocess probe
+    # this unit test should not depend on).
+    output_root = target_root / ".leafcutter"
+    (output_root / "workflows").mkdir(parents=True)
+    (output_root / "workflows" / "build-feature.js").write_text("// wf", encoding="utf-8")
+
     mappings = build_helpers._compute_output_mappings(
         package_root=package_root,
-        target_root=fake_target,
-        config={},
+        target_root=target_root,
+        # workflows.enabled must be true here. build_workflow_scripts() writes
+        # nothing when the toggle is off, so the manifest must not predict
+        # workflow-js outputs in that case — claiming an output the build would
+        # not produce is the same phantom-coverage defect in the other
+        # direction. Asserting these keys exist under config={} was asserting
+        # the pre-fix behaviour.
+        config={"workflows": {"enabled": True}},
     )
 
     # Collect all output keys that relate to workflow JS

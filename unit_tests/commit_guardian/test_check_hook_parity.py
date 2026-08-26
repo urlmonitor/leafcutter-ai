@@ -16,6 +16,7 @@ ARCHITECTURE: Imports check_hook_parity from the canonical template path.
 
 import importlib.util as _ilu
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -1105,6 +1106,178 @@ class TestDeployedParityContentHash(unittest.TestCase):
         self.assertIsNotNone(hash_a)
         self.assertIsNotNone(hash_b)
         self.assertNotEqual(hash_a, hash_b)
+
+
+# ---------------------------------------------------------------------------
+# BP-100i-3: Process-level (real subprocess exit code) coverage
+# ---------------------------------------------------------------------------
+#
+# GAP THIS CLASS CLOSES: every test above calls check_deployed_parity(...)
+# directly and inspects the returned Python list. Nothing in the suite runs
+# the hook as an actual OS process and asserts its returncode. An adversarial
+# review demonstrated that BOTH (a) discarding the result of the
+# `all_violations.extend(check_deployed_parity(...))` call in _run_checks(),
+# and (b) removing that call entirely, leave the full suite green (38 passed,
+# 1 skipped) -- the function-return-value tests cannot see a break in the
+# wiring between "check_deployed_parity finds violations" and "the process
+# exits 1". These tests close that gap by invoking check_hook_parity.py via
+# subprocess, exactly as pre-commit does, and asserting on the real
+# returncode and real captured stderr.
+
+
+class TestDeployedParityProcessInvocation(unittest.TestCase):
+    """BP-100i-3: process-level exit-code coverage for check_deployed_parity.
+
+    AC (docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100i-3.yaml):
+        Given the canonical template directory contains 5 hook scripts:
+          check_alpha.py, check_beta.py, check_gamma.py, check_delta.py, run_hook.py
+        And the deployed output directory contains only 3 of those scripts:
+          check_alpha.py, check_beta.py, run_hook.py
+        (check_gamma.py and check_delta.py were not deployed)
+        When the parity check runs at pre-commit time
+        Then the commit is blocked with exit code 1
+        And the error message lists "check_gamma.py" and "check_delta.py" as
+          scripts present in the canonical template but absent from the
+          deployed output
+        And the error message names the deployed output directory that was
+          checked
+    """
+
+    def setUp(self) -> None:
+        """Build a full project_root fixture tree that check_hook_parity.py's
+        _load_config()/_run_checks() will read purely from cwd -- no mocking,
+        no direct function calls into the module under test.
+        """
+        _require_mod(self)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.project_root = Path(self._tmp.name)
+
+        self.runtime_dir = self.project_root / "scripts" / "commit_guardian"
+        self.canonical_dir = (
+            self.project_root / "templates" / "scripts" / "commit_guardian"
+        )
+        self.deployed_dir = (
+            self.project_root / ".leafcutter" / "scripts" / "commit_guardian"
+        )
+
+        self.runtime_dir.mkdir(parents=True)
+        self.canonical_dir.mkdir(parents=True)
+        self.deployed_dir.mkdir(parents=True)
+
+        # Point the manifest paths at files that do not exist so
+        # check_manifest_parity fails open (skips with a warning) rather than
+        # participating in the pass/fail outcome this test is targeting.
+        parity_cfg = {
+            "runtime_dir": "scripts/commit_guardian",
+            "canonical_template_dir": "templates/scripts/commit_guardian",
+            "legacy_template_dir": "templates/commit-guardian",
+            "deployed_output_dir": ".leafcutter/scripts/commit_guardian",
+            "manifests": {
+                "canonical": "does_not_exist_canonical.json",
+                "legacy": "does_not_exist_legacy.json",
+            },
+            "excluded_scripts": [],
+            "hook_script_patterns": ["check_*.py", "run_hook.py", "regenerate_*.py"],
+        }
+        (self.runtime_dir / "commit_guardian.json").write_text(
+            json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
+        )
+
+        self._all_five = (
+            "check_alpha.py",
+            "check_beta.py",
+            "check_gamma.py",
+            "check_delta.py",
+            "run_hook.py",
+        )
+
+    def tearDown(self) -> None:
+        """Remove the temporary project tree."""
+        self._tmp.cleanup()
+
+    def _run_hook_as_process(self) -> subprocess.CompletedProcess:
+        """Invoke check_hook_parity.py as a real OS subprocess with cwd=project_root.
+
+        This is the real-effect invocation this AC requires: no function is
+        called directly, no return value is inspected in-process. Only the
+        process's own returncode and captured stdout/stderr are observed --
+        exactly what pre-commit itself sees.
+        """
+        return subprocess.run(
+            [sys.executable, str(_CANONICAL)],
+            cwd=str(self.project_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+
+    def test_ac_bp100i3_process_exits_1_and_names_missing_scripts_and_dir(
+        self,
+    ) -> None:
+        """BP-100i-3: subprocess returncode is 1; stderr names both missing
+        scripts AND the deployed output directory checked.
+        """
+        # covers: BP-100i-3
+        for name in self._all_five:
+            (self.canonical_dir / name).write_text("", encoding="utf-8")
+        for name in ("check_alpha.py", "check_beta.py", "run_hook.py"):
+            (self.deployed_dir / name).write_text("", encoding="utf-8")
+        # check_gamma.py and check_delta.py intentionally NOT deployed.
+
+        result = self._run_hook_as_process()
+
+        self.assertEqual(
+            result.returncode,
+            1,
+            msg=(
+                "BP-100i-3: the commit must be BLOCKED (exit code 1) when the "
+                "canonical template has scripts absent from an existing deployed "
+                f"output dir. stdout={result.stdout!r} stderr={result.stderr!r}"
+            ),
+        )
+        self.assertIn(
+            "check_gamma.py",
+            result.stderr,
+            msg="BP-100i-3: process stderr must name check_gamma.py as missing.",
+        )
+        self.assertIn(
+            "check_delta.py",
+            result.stderr,
+            msg="BP-100i-3: process stderr must name check_delta.py as missing.",
+        )
+        self.assertIn(
+            str(self.deployed_dir),
+            result.stderr,
+            msg="BP-100i-3: process stderr must name the deployed output "
+            "directory that was checked.",
+        )
+
+    def test_ac_bp100i3_process_exits_0_when_deployed_has_all_scripts(self) -> None:
+        """BP-100i-3 (discrimination): all 5 canonical scripts present in the
+        deployed dir -> subprocess exits 0.
+
+        Without this test, an always-fail hook (unconditionally exiting 1)
+        would satisfy the "exits 1" test above. This test forces the hook to
+        actually discriminate between the missing-scripts case and the
+        in-sync case.
+        """
+        # covers: BP-100i-3
+        for name in self._all_five:
+            (self.canonical_dir / name).write_text("", encoding="utf-8")
+            (self.deployed_dir / name).write_text("", encoding="utf-8")
+
+        result = self._run_hook_as_process()
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=(
+                "BP-100i-3 discrimination: when the deployed dir already has "
+                "every canonical script, the process must exit 0, not block. "
+                f"stdout={result.stdout!r} stderr={result.stderr!r}"
+            ),
+        )
 
 
 if __name__ == "__main__":
