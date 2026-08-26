@@ -1,0 +1,120 @@
+id: BO-3100b-4
+title: "A sequence diagram shows the exit-time judgement and the retry it forces"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader trying to understand why a step ran twice,
+  When they open the sequence diagram for the exit-time judgement,
+  Then it shows, in order: the step being dispatched, the project's working state being
+    captured before it runs, the specialist returning a reply, the state being compared
+    again, the judgement being made from that comparison rather than from the reply, the
+    attempt to finish being prevented, and the step running again.
+
+  Given the diagram,
+  When it is compared against a real build in which a step produced nothing and was re-run,
+  Then every interaction the diagram shows occurred in that build, in the order shown, and
+    the diagram shows no interaction that did not occur.
+depends_on:
+  - BO-3100b
+  - BO-3100b-1
+  - BO-3100b-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
+    relationship: describes
+    status: exists
+    relevance: "The adjacent artifact-layer sequence; this one is its orchestration-layer counterpart and must not be confused with it."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new diagram must be reachable from."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert. A dispatch to documentation-expert that then dispatches a leaf author is the defect BO-3100c forbids."
+  - "THE TWO STATE CAPTURES MUST BE SEPARATE INTERACTIONS, one before the specialist runs and one after. That pair IS the fix, and it is the only thing that distinguishes this diagram from a drawing of the broken arrangement — a diagram showing the reply arriving and a verdict following looks identical whether or not the verdict was read from the reply."
+  - "The verdict arrow must originate from the comparison, not from the reply. The reply's arrow must terminate without feeding the verdict."
+  - "The coherence claim in the second scenario must be enforced by an executable test that compares the diagram's declared interaction sequence against the ordered build-record trace of a REAL re-run, in both directions: no drawn interaction absent from the run, no run interaction absent from the drawing."
+  - "The diagram page must declare its interaction sequence in a machine-readable form (front-matter list or equivalent structured block) so the coherence test compares data with data rather than parsing a rendered picture."
+  - "The real run used by the coherence test must be a genuine re-run driven end to end, not a hand-authored trace. A fixture trace reproduces the author's assumption about the ordering, which is exactly the assumption under test."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100b-2
+    contract: "The ordered build-record trace of a real build in which a step produced nothing and was re-run — the sequence of {step_id, attempt, outcome} entries plus the dispatch and state-capture events — obtainable programmatically so the diagram can be compared against it."
+  - ac_id: BO-3100b-1
+    contract: "The fact that the state capture happens at dispatch and again at the attempt to finish, and that the verdict derives from their comparison, so the diagram draws the ordering that actually holds."
+test_spec:
+  - name: test_bo_3100b_4_diagram_declares_the_required_ordering
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the diagram's declared interaction sequence and assert it contains, in order: dispatch, pre-run state capture, reply returned, post-run state capture, verdict formed from the comparison, finish prevented, step re-run — with the verdict's source being the comparison and not the reply."
+  - name: test_bo_3100b_4_diagram_matches_a_real_re_run_both_directions
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Drive a real build in which a step produces nothing and is re-run, capture its ordered trace, and assert set-and-order equality with the diagram's declared sequence in both directions. A drawn interaction that never occurs, or an occurring interaction that is not drawn, fails."
+  - name: test_bo_3100b_4_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  The claim this diagram makes — that the verdict follows the state comparison rather than the
+  reply — is invisible in a rendered picture and equally invisible to a reviewer, because both
+  arrangements draw the same boxes in nearly the same order. The only test that can distinguish
+  them compares the declared sequence against the ordered trace of a REAL re-run, in both
+  directions.
+  Deliberately NOT covered: whether the diagram is clear or well laid out. That is human
+  judgement and no test here claims it.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the sequence-diagram entry in BO-3100b's documentation_triggers.
+
+  The diagram's job is to make the evidence-not-reply ordering visible, because that ordering
+  is the whole fix and it is invisible in the code path: a diagram that shows the reply
+  arriving and the verdict following looks identical whether or not the verdict was read from
+  it. Showing the before-and-after state capture as separate interactions is what
+  distinguishes the two.
+
+  The second scenario is what stops this being decoration — the diagram is checked against a
+  real re-run rather than against the author's intention.
+
+  Sequenced after b-1 and b-2 because it depicts both the judgement and its consequence.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The coherence test needs the build record to be
+  programmatically readable as an ORDERED trace, which is a real obligation on BO-3100b-2 and is
+  written into this AC's expects_from rather than assumed. Without it the check degrades to a
+  hand-authored comparison, which reproduces the author's assumption about the ordering — the
+  assumption the diagram exists to record and the test exists to falsify.

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - ac_driven_dev
 related_docs:
@@ -80,8 +80,8 @@ the fix is in what gets *fed* to it, not in the sort.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-26
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `## Agent Contracts` →
   `### documentation-expert` emitter
 
@@ -111,13 +111,54 @@ target_path)". Repaired by hand on that branch — naming the two docs
 `documentation-expert` actually wrote — so the phase could run; the generator itself is
 unchanged and will reproduce this on the next generated ticket.
 
-**Fix direction.** Emit the contract format the verifier documents, and source
-`target_path` from the docs the change *requires* (the `creates`/`modifies` doc_links, or
-the `requires_documentation` types) rather than from `describes` back-references. Whatever
-lands should be covered by a test that runs the generator and then runs the verifier's
-Step 2 parser over the output — the two sides have disagreed silently, which is the same
-producer/consumer divergence class as the `ac_traceability` shape mismatch that
-`ACD-1900b-5-i` fixes.
+**Occurrence 2 — 2026-08-26, `TICKET-20260825-BP-900g-8.md:263`, during PR #578.** The
+generator reproduced the malformed line exactly as predicted above, and the drive played
+out precisely as the first occurrence describes: `documentation-verifier` fail-closed,
+the blocker was classified `cross_agent`, and the phase was skipped. Repaired by hand on
+that branch again. Two things this occurrence adds:
+
+**A third defect in the same line: the contract is emitted even when the AC says no
+documentation exists.** `_resolve_doc_genres` (`:1841-1849`) reads the parent L1's
+`documentation_triggers`; when that list is **empty** it logs a WARNING and returns the
+`["(unspecified genre)"]` marker — then the caller emits the contract line anyway. But an
+empty `documentation_triggers` is not a missing value. It is the AC store's way of saying
+*this change requires no documentation*, and `BP-900g.yaml:23-24` says exactly that, with
+a written rationale that the change introduces no user-facing surface. So the generator
+takes a deliberate "no docs" declaration, converts it to a marker meaning "genre unknown",
+and emits a documentation obligation the parent AC explicitly disclaims.
+
+That turns the malformed-line defect into a compounding one. `documentation-verifier`
+blocks on the missing pipes; repair the pipes and it blocks again, this time demanding a
+document the governing AC states must not exist. There is no form of the line that both
+parses and is satisfiable. On BP-900g-8 the only correct resolution was to record the
+verifier as `not_needed` — verified against its own dispatch condition
+(`requires_documentation_verification`, absent from the ticket) rather than against the
+line it was choking on.
+
+**The warning is real but goes nowhere.** Unlike the pipe defect, this one *does* log at
+WARNING naming the AC. It is emitted at ticket-generation time, into the generator's
+stderr, hours or days before the drive that trips over it — nothing carries it forward to
+the drive, and no gate reads it. A warning whose only consumer is a human watching a
+one-off command is, in practice, silence.
+
+**Fix direction.** Three changes, in increasing order of value:
+
+1. Emit the pipe-delimited format the verifier documents.
+2. Source `target_path` from the docs the change *requires* (the `creates`/`modifies`
+   doc_links, or the `requires_documentation` types) rather than from `describes`
+   back-references.
+3. **Distinguish "no documentation required" from "genre unknown."** An empty
+   `documentation_triggers` on the parent should suppress the `### documentation-expert`
+   subsection entirely — and, correspondingly, should stop the generator marking
+   `documentation-expert: needed` in the agents map. Only a parent that is genuinely
+   *unresolvable* warrants the `(unspecified genre)` marker. Distinguishing these is what
+   stops the pipe fix from converting one blocker into another.
+
+Whatever lands should be covered by a test that runs the generator and then runs the
+verifier's Step 2 parser over the output — the two sides have disagreed silently, which is
+the same producer/consumer divergence class as the `ac_traceability` shape mismatch that
+`ACD-1900b-5-i` fixes. Add a second case for the empty-`documentation_triggers` parent,
+asserting that **no** contract line is emitted at all.
 
 ---
 
@@ -870,12 +911,12 @@ it cannot represent faithfully, so removing it is the cheaper correct answer.
 
 ---
 
-### KI-ACD-017 — Epic generation re-scans the whole AC store per ticket: ~30 minutes for 37 tickets
+### KI-ACD-017 — Epic generation re-scans the whole AC store per ticket, so its cost is tickets × store size and the store only grows
 
-- **Severity:** low
+- **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
 - **Where:** `scripts/goal_to_epic.py` → per-ticket `generate_ticket_from_ac.py`, plus
   `_translate_ticket_depends_on` and the Master_Plan dependency map
 
@@ -885,16 +926,53 @@ the same 37-leaf set in about a second. Time is spent re-loading and re-walking 
 store (3,000+ records) once per ticket, then again during dependency translation and
 Master_Plan assembly.
 
-**Why it is worth recording despite being only slow.** The run produces no incremental
-output — `tail` buffers everything to the end — so for half an hour there is no way to
-distinguish progress from a hang. During this run the loose tickets sat in
+**Second occurrence, 2026-08-26 — and it is why this was re-rated from low to high.**
+`goal_to_epic.py --ac ACD-2100` generated **25** tickets and was still running at **~40
+minutes**. Set against the first run, the direction is the wrong one:
+
+| Run | Tickets | Wall clock | Per ticket | Store size |
+|---|---|---|---|---|
+| `--ac GE-120`, 2026-08-25 | 37 | ~30 min | ~49 s | ~3,000 records |
+| `--ac ACD-2100`, 2026-08-26 | 25 | ~40 min (unfinished) | ~96 s | 3,546 records |
+
+**Fewer tickets, more time, one day apart.** Roughly twice the per-ticket cost for a
+smaller epic. The store grew ~18% between the two runs, which does not by itself account
+for a 2× move — the exact constant is not established here and the entry does not claim
+one — but the shape is not in doubt: the work is `tickets × store size`, and one of those
+factors is monotonically increasing. 25 tickets against 3,546 records is on the order of
+**89,000 YAML parses of the same files**.
+
+**Why this is high and not merely slow.** Severity here is not about the wait.
+
+- **It gets worse on its own.** Every AC anyone authors makes every future epic
+  generation slower, forever. No one changes the generator and no one notices the
+  regression, because the code is unchanged and only the input grew. A defect that
+  degrades without anyone touching it, on a store this project exists to grow, does not
+  belong in the same band as a cosmetic annoyance.
+- **It taxes the path the project wants people to take.** `/build-ac` is the mandated
+  route for new work (ADR-012, CLAUDE.md). Making the sanctioned entry point the slowest
+  one pushes people toward hand-written tickets, which is the exact behaviour the AC-first
+  rule exists to prevent.
+- **The fix is not proportionate to the cost.** One scan held in memory would serve all
+  tickets — 3,546 parses instead of 89,000. The shared store index with an mtime cache
+  that the commit-guardian AC hooks already use exists for precisely this; the generator
+  simply does not use it. This is a low-effort fix carrying an unbounded, compounding cost,
+  which is the combination that argues for raising the number rather than lowering it.
+
+**The silence compounds it, and that part is unchanged.** The run produces no incremental
+output — `tail` buffers everything to the end — so for the whole run there is no way to
+distinguish progress from a hang. During the first run the loose tickets sat in
 `tickets/00_inbox/` for ~20 minutes before being moved into the epic folder, and that
 intermediate state was misread as a duplicate-ticket defect. A long silent run invites
 wrong conclusions about its own correctness, and invites a user to kill it partway, which
-would leave exactly the half-assembled state that was feared.
+would leave exactly the half-assembled state that was feared. The longer the run gets, the
+more likely that kill becomes.
 
 **Fix direction.** Load the store once and pass it down rather than re-reading per ticket,
-and emit a per-ticket progress line so the run is legible while it is happening.
+reusing the existing shared store index rather than adding a third reader of the same data.
+Emit a per-ticket progress line so the run is legible while it is happening. A regression
+test should assert the store is read a bounded number of times independent of ticket count
+— asserting a wall-clock budget would encode today's store size and rot immediately.
 
 ---
 
@@ -1171,3 +1249,81 @@ written" passes here, since five of the eight edges were correct.
 
 **Pattern:** one fact rendered twice by two code paths, agreeing in the surface a human reads
 and disagreeing in the surface a machine reads.
+
+---
+
+### KI-ACD-022 — Conditional phase agents are written into the agents map without the frontmatter fields they are conditional on, and one of the two fields is written under a different name
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `scripts/ac_store/generate_ticket_from_ac.py` → `_build_agents_map`;
+  `templates/agents/user-surface-smoker.md` (reads `user_facing_surface`);
+  `templates/agents/documentation-verifier.md` (reads `requires_documentation_verification`)
+
+**Symptom.** The generator marks `user-surface-smoker` and `documentation-verifier` as `needed`
+in a generated ticket's `agents:` map while writing **neither** of the frontmatter fields those
+agents key on. Both templates state the contract explicitly — *"Only emitted in agents: map when
+`<field>` != null"* — so the generator produces exactly the state each agent is documented never
+to be dispatched in.
+
+**Evidence.** `generate_ticket_from_ac.py --ac BP-1100g-4`, 2026-08-26. Generated frontmatter:
+
+```yaml
+agents:
+  documentation-verifier: needed      # reads requires_documentation_verification
+  user-surface-smoker: needed         # reads user_facing_surface
+documentation_required: true          # <- the only field written
+```
+
+`grep` for `user_facing_surface` and `requires_documentation_verification` in the generated
+ticket returns nothing. Both had to be added by hand before dispatch.
+
+**The near-miss is the interesting part.** The generator writes `documentation_required: true`.
+The agent reads `requires_documentation_verification`. These are **different fields**, and the
+first is close enough to the second that a grep for "documentation" in the frontmatter looks
+satisfied while the condition is unset. A reviewer scanning for "did the generator wire the doc
+verifier" sees a plausible field and moves on.
+
+**Consequence.** `documentation-verifier` is documented fail-closed — *"an ambiguous parse or
+exception emits `status: blocker`, never `status: ok`"* — so the likely outcome is a halted
+drive. The milder outcome is worse: a phase that cannot complete leaves itself `needed`, which is
+exactly the outstanding-phase blocker the `BP-1100g-3` drive hit after nine hours of work, and
+which reports as a build failure rather than as a generator defect. Either way the cost is paid
+at the end of a long drive, by which time the cause is far away.
+
+**The routing lever cannot express the case it is being used for.** `user-surface-smoker` is
+selected from the AC's `declares_side_effect`, which `check-ac-schema` derives from the Then
+clause via a durable-effect phrase list (*written to disk*, *persisted*, *leaves the system in a
+different state*). `BP-1100g-4`'s deliverable is a commit-time **refusal**, whose entire point is
+that the system is left **unchanged** — so the derivation correctly returns `False`, and the
+authored `true` had to be corrected to match. But the AC's own note says the refusal message is
+*"exactly the kind of user-facing output user-surface-smoker's placeholder negative control
+exists to check."* Both statements are right: it is user-facing output, and it is not a durable
+effect. `declares_side_effect` is the only lever the generator has, and it cannot distinguish
+"produces no user-facing surface" from "produces a user-facing surface that is a refusal".
+
+**Fix direction.** Two separable pieces; do the first even if the second is deferred.
+
+1. **Never emit a conditional agent without its condition.** When `_build_agents_map` adds
+   `user-surface-smoker` or `documentation-verifier`, write the field the agent reads in the same
+   step, and derive the field name from one place so the `documentation_required` /
+   `requires_documentation_verification` split cannot recur. A generated ticket that names a
+   conditional phase and omits its condition should fail the generator's own `--verify`, not the
+   drive nine hours later.
+2. **Give the smoker its own routing signal.** `user_facing_surface` is the field it actually
+   reads and it already has a vocabulary (`slash_command | pre_commit_hook | agent_orchestrated |
+   cron`). Route on an AC-level equivalent rather than borrowing `declares_side_effect`, whose
+   derivation is deliberately narrow and calibrated for a different question. Overloading it
+   would either widen the durable-effect phrase list until it marks everything — which the
+   BO-2900g-2 constraints reject as indistinguishable from marking nothing — or keep mis-routing
+   gates whose output is a refusal.
+
+**Related.** `KI-ACD-002` (documentation-verifier fail-closing on every generated ticket for a
+different generator-shape reason — same agent, same fail-closed posture, and the two should be
+fixed together). `KI-ACS-009` (the `declares_side_effect` derivation and where its rule actually
+lives).
+
+**Pattern:** a dispatcher that selects a conditional consumer on one field while the consumer
+reads another, with a similarly-named third field present to make the omission look handled.

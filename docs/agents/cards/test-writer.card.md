@@ -181,6 +181,7 @@ flowchart TD
 - GE-120c-2: The harness is shown to fail against the behaviour that was actually observed
 - GE-120c-3: Every registered check is exercised by the harness, and a new check cannot opt out by omission
 - GE-120c-4: The unverified count of files that only looked clean is replaced with a measured one
+- GE-120c-6: A guard cannot ship unregistered — a deployed check that nothing invokes is named and fails the sweep
 - GE-120d-4: A working copy created by set-up passes the parity sweep with no manual repair
 - GE-120e-2-i: A check whose recorded change-set source disagrees with what it actually inspects is named by running it, not by believing it
 - GE-120e-3: The same authored content reaches the same verdict whether it is committed ordinarily or brought in alongside a mainline merge

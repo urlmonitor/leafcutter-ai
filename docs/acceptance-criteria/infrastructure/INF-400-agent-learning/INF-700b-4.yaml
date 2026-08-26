@@ -1,0 +1,86 @@
+id: INF-700b-4
+components:
+  - infrastructure
+  - knowledge_system
+  - documentation_system
+title: "A sequence diagram shows the capture path end to end, including the branch taken when capture cannot complete"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
+criteria: |
+  Given the knowledge-capture path spans a phase agent finishing a piece of
+    work, the shared sign-off capture step, the durable knowledge record it
+    produces, and the failure record written when capture cannot complete,
+  When a reader opens the architecture documentation for the agent knowledge
+    system,
+  Then a sequence diagram shows that path end to end, with one participant per
+    actor and one message per hand-off between them,
+  And the diagram shows the success path and the cannot-complete path as two
+    distinct branches, so a reader can see where an incomplete capture leaves
+    its trace,
+  And the diagram marks the boundary at which the agent's obligation ends and
+    the routing step's begins, without asserting when the routing step runs,
+  And every participant, message and artefact the diagram names exists in the
+    package under the name given,
+  And the diagram names no retired step.
+depends_on:
+  - INF-700b
+  - INF-700b-1
+  - INF-700b-1-ii
+doc_links:
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - "TARGET SURFACE: the diagram belongs in docs/architecture/agent_knowledge_system.md, which currently documents the Option A pipeline ADR-034 rejected. Adding a correct diagram beside stale prose leaves the document self-contradicting; the prose amendment is INF-700b-5's, so the two must land together or the diagram must be placed after the amendment."
+  - "The two branch outcomes the diagram must show are now concrete: the success branch ends at a knowledge record carrying `text` (INF-700b-1), the cannot-complete branch ends at a failure record naming the missing target on the operational telemetry stream (INF-700b-1-ii). They terminate at DIFFERENT artefacts on DIFFERENT streams — a diagram that shows one sink for both would contradict INF-400c-4-iii's two-stream split."
+  - "The retired names route-learning and capture-learning must not appear as participants, messages, notes or artefacts (ADR-034 section 2 item 3). Note that a Mermaid participant name is prose and is NOT reachable by scripts/check_skill_refs.py even after INF-700b-2 wires it — that guard scans imperative skill-path references, not diagram labels. The 'names no retired step' clause is therefore enforced by review here, not by the gate."
+  - "The routing-step boundary must be drawn as the end of the agent's obligation, with no arrow, note or activation implying when routing runs. ADR-034: 'Until the harvester has a caller, capture is not automatic and any documentation implying otherwise is wrong.' The trigger is INF-700a's and is unsettled."
+  - "Must satisfy the repository's existing diagram gates: the mermaid-complexity hook and the diagram-naming hook both run at commit time on docs/*.md. Keep participant count within the complexity budget rather than discovering it at commit."
+test_required: false
+test_rationale: |
+  A Mermaid sequence diagram in a Markdown document produces no executable
+  behaviour, so there is nothing for test-writer to make fail. The mechanically
+  checkable clauses of the criteria are already covered by gates rather than by
+  tests: the mermaid-complexity and diagram-naming pre-commit hooks check the
+  diagram's form, and the 'every artefact exists under the name given' clause is
+  a review obligation because diagram labels are prose that no reference guard
+  parses. test_required is set explicitly rather than left absent so test-writer
+  skips with an accurate reason rather than the omission being read as an
+  unauthored contract.
+delivers_to: null
+expects_from:
+  - ac_id: INF-700b-1
+    contract: "The settled capture path and the knowledge record shape (including `text`) that the success branch terminates at"
+  - ac_id: INF-700b-1-ii
+    contract: "The failure record and the stream it lands on, which the cannot-complete branch terminates at"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Named the target document and the sequencing hazard against INF-700b-5's prose amendment. Recorded that the 'names no retired step' clause is NOT covered by the INF-700b-2 gate — check_skill_refs.py scans imperative skill-path references in template prose, and a Mermaid participant label is neither — so it is a review obligation and must not be assumed mechanically enforced. Added the second expects_from entry for the failure-record branch, which the criteria require but the contract did not name."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the sequence-diagram entry in INF-700b's documentation_triggers.
+  The "names no retired step" clause exists because the current architecture
+  documentation for this system still describes the Option A pipeline that
+  ADR-034 rejected, so a diagram drawn from it would reproduce the dangling
+  reference in picture form.
+change_target: docs
+risk_surface: internal

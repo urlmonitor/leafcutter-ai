@@ -1,0 +1,154 @@
+id: GE-126c-1-i
+title: "The copy the build produces does not inherit the refusal"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the build-source copy of the parent-back-link check now refuses to answer,
+  And the build produces the deployed copy from that build-source copy,
+  When the build is run and the deployed copy it produced is invoked against one record
+    that genuinely violates the parent-back-link rule,
+  Then the deployed copy blocks naming the record and the missing back-link rather than
+    refusing,
+  And when the deployed copy is invoked against a clean record it reports an ordinary pass,
+  And a commit staging a record with a valid parent back-link completes with this check
+    reporting the ordinary success value,
+  And the same holds for every location the build writes a copy of this check to so no
+    location that is meant to enforce is left carrying the refusal.
+
+  Coverage note: covered by running the build and then executing the copy at each location
+  the build wrote against both a violating and a clean record. Asserting only that the
+  build-source copy refuses does not cover this criterion, and it is the arm whose absence
+  would be discovered by every commit in the repository at once.
+depends_on:
+  - GE-126c-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "The build-source copy is canonical and the build copies it verbatim. A guard added at the top of the canonical copy is therefore a guard added to every deployed copy unless something distinguishes them."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Names the build phases that write deployed copies. The 'every location' clause is unanswerable without it - the set of locations must come from the build's own deploy map, not from a list in the test."
+  - path: docs/architecture/components/build-pipeline.md
+    relationship: describes
+    status: planned
+    relevance: "IT PO. No component-level description of the deploy map exists at authoring time. Recorded as planned so the gap is visible rather than inferred; the coder reads scripts/build_phases.py instead."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The set of locations the build writes this check to must be derived from the build's own deploy map at test time, not enumerated in the test. A hardcoded list silently omits the location added next, which is the exact drift GE-126d is closing on a different enumeration."
+  - "The coverage must run the real build into a temporary target and then exercise the produced copies. A test that reads the source and reasons about what the build would do cannot detect a deploy map that does not do it."
+  - "The distinction between refusing and enforcing must be drawn from something the two copies do not share - their location - rather than from text present in both. Text present in both is copied verbatim by the build, which is what makes this hazard total and immediate."
+  - "A real commit must be exercised, not only a direct invocation: the third clause is about the pre-commit chain and this repository has shipped hook changes that passed direct invocation and broke the chain."
+  - "Every module the deployed copy imports must be present at every location the build writes it to. This check's whole defect is a helper the build places beside one copy and not the other, so a location the build writes without the helper reintroduces the original bug at a new address."
+  - "Error handling must follow the four rules in CLAUDE.md."
+test_spec:
+  - name: test_every_location_the_build_writes_is_derived_from_the_deploy_map
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/build.py --target-dir <temp>"
+    description: "The build is run into a temporary target and the set of written copies of this check is read back from the build's own deploy map; the test enumerates nothing itself, so a newly added location is covered automatically."
+  - name: test_each_built_copy_blocks_the_violating_record_rather_than_refusing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Every copy the build wrote is run by subprocess against a child record whose parent omits it and each blocks, naming the record and the missing back-link. A copy that returns the refusal outcome fails here."
+  - name: test_each_built_copy_passes_a_record_with_a_valid_parent_back_link
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Every built copy returns the ordinary success value for a child record its parent genuinely lists, serialised by the store's real writer - the control against a copy that blocks unconditionally."
+  - name: test_a_real_commit_of_a_valid_record_completes_through_the_hook_chain
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "git commit in a scratch repository with the built pre-commit chain installed"
+    description: "A commit staging a record with a valid parent back-link completes in a scratch repository running the just-built chain - the failure this record fences is total and immediate and only a real commit reproduces it."
+test_rationale: |
+  This record fences a hazard that a criterion test on its parent cannot see at all:
+  the parent's fix is a guard in a file the build copies verbatim, so satisfying the
+  parent can break every commit in the repository. Detecting that requires running the
+  real build and exercising what it produced, which is why every descriptor here is
+  build-then-execute rather than import-and-call. The first descriptor deliberately
+  derives the location set from the deploy map instead of listing locations, because a
+  hardcoded list is a second enumeration that drifts — the same defect GE-126d exists to
+  close, reintroduced in a test. The e2e commit is separate because a direct invocation
+  of a hook does not reproduce how the pre-commit chain invokes it, and this repository
+  has shipped that gap before.
+delivers_to: null
+expects_from:
+  ac_id: GE-126c-1
+  contract: "The refusal outcome carried by the build-source copy. This record's content is the boundary of that outcome: it must not appear from any copy the build writes to an enforcing location."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE FAILURE MODE THE OBVIOUS FIX PRODUCES. The natural way to satisfy GE-126c-1's
+  first arm is a guard at the top of the build-source copy that refuses immediately. The
+  build copies that file verbatim to the locations that are meant to enforce, so the guard
+  ships to all of them and every commit in the repository is refused by a check that used
+  to work. The distinction has to be drawn from something the two copies do not share —
+  their location — rather than from text present in both.
+
+  IT IS AN L3 BECAUSE IT PINS THE BLAST RADIUS of GE-126c-1 rather than adding a behaviour.
+  It earns its own record because the failure is total and immediate and because the
+  parity enforcement in this component checks that the copies MATCH which is exactly the
+  pressure that produces this bug.
+
+  THE EVERY-LOCATION CLAUSE IS NOT PADDING. This check exists at more than one deployed
+  location and the parity guard enforces consistency across them. A fix verified at one
+  location only is the template-only no-op this component has shipped before.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it is a boundary on where GE-126c-1's refusal may appear. A prohibition has no
+  downstream consumer, and the deployed copies' enforcing behaviour is pre-existing rather
+  than something this record produces. DO NOT REFILL.
+
+  A DOC GAP RECORDED RATHER THAN GUESSED. There is no component-level architecture page
+  describing the build deploy map; the only description of which phase writes which file
+  is in scripts/build_phases.py, which the IT PO stage does not read. The doc_link above
+  is marked status: planned so the gap is visible. This does not block the record - the
+  coder reads the build source - but a reviewer should know the 'every location' clause
+  has no documentation surface behind it today.
+
+  THE DERIVE-THE-LOCATIONS REQUIREMENT IS THE SUBTLE ONE. A test that lists the deployed
+  locations is a second enumeration of a set the build already owns, and it will drift the
+  first time a location is added - which is GE-126d's defect reintroduced inside GE-126c's
+  test suite. Read the set from the deploy map.
+
+  AGENT AND SIZE. python-coder, M rather than S: running the real build into a temp target
+  and reading its deploy map is most of the work, and none of it is reachable from a unit
+  test that imports the check.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -4,13 +4,54 @@ components:
 title: "Knowledge events already stranded in the telemetry sink are recovered, not abandoned"
 component: infrastructure
 level: L3
-status: active
-req_status: active
+status: superseded_by
+req_status: superseded
 work_status: todo
 priority: high
 readiness: draft
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
 criteria: |
+  WITHDRAWN -- do not build. Superseded by INF-700c-2. Reason recorded below
+  and in amended_by; the original text is retained verbatim underneath it so
+  the decision can be audited against what was actually specified.
+
+  Why withdrawn (BA re-decision, 2026-08-26, on the evidence the PO recorded
+  in INF-700c). This criterion carries the 28 retained knowledge_captured
+  events across into the knowledge-emission sink so that they can be drained.
+  Both halves of that purpose have gone.
+
+  First, the drain is off the table. The 28 events carry six keys each --
+  event, timestamp, agent, component, destination, entry_kind -- and no
+  learning text, because the emitter contract in signoff section 7 step 4
+  specifies exactly those six fields. INF-700c-1 forbids writing a record with
+  no learning text to any knowledge surface, so there is nothing for a carried
+  copy to become. Nine of the ten destinations these events name already hold
+  the learnings the agents wrote inline.
+
+  Second, its declared prerequisite no longer exists. Its depends_on names
+  INF-400c-5-ii, which the PO withdrew on 2026-08-26, and its own
+  it_requirements state that the ordering is load-bearing: "the entry_kind
+  mapping (INF-400c-5-ii) must be in place before the recovered events are
+  drained, or the drain discards them."
+
+  What remains after removing both is a copy operation that moves 28
+  permanently unroutable records into the file the backlog is counted from --
+  which manufactures exactly the permanently non-empty backlog INF-700c
+  forbids, in a new location. The successor, INF-700c-2, requires the opposite
+  outcome: the retained body reaches a resting state that contributes zero to
+  the waiting count, on every run, without writing anything. INF-700c-2-i
+  preserves the audit and replay property this AC was also serving -- the
+  records survive with their original field values and the reason for their
+  disposition is recorded.
+
+  Not affected by this withdrawal: INF-400c-4 (one declared sink) and
+  INF-400c-4-i (no template names the telemetry sink) remain valid, and
+  INF-400c-4-iii (the harvester drains only its own stream) remains valid and
+  is what keeps the two streams apart once the sink is repointed.
+
+  ---------------------------------------------------------------------------
+  ORIGINAL CRITERIA (retained for audit, no longer to be implemented):
+
   Given 28 knowledge_captured events have accumulated in
     debugging/logs/agent_telemetry.jsonl because the emitters and the
     harvester never agreed on a sink,
@@ -40,6 +81,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
+  - "WITHDRAWN -- no implementation is expected. Retained requirements below describe what would have been built."
   - "Ordering is load-bearing: the entry_kind mapping (INF-400c-5-ii) must be in place before the recovered events are drained, or the drain discards them"
   - "Must be idempotent — a second run carries across nothing and appends nothing"
   - "Must not delete or rewrite records in the telemetry sink; recovery is a copy, not a move"
@@ -50,8 +92,12 @@ expects_from:
   contract: "The declared knowledge-emission sink path to recover the stranded events into"
 origin_agent: BrainCandy
 created: 2026-08-25
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: "Superseded by INF-700c-2 and withdrawn from the build (BA re-decision, 2026-08-26, on the open question the PO recorded in INF-700c's governance note). The premise was that the 28 retained knowledge_captured events are recoverable knowledge; they are honoured receipts carrying six keys and no learning text, and 9 of the 10 destinations they name already hold the learnings. With INF-700c-1 forbidding a write from a record with no learning text, and with the declared prerequisite INF-400c-5-ii itself withdrawn, what is left is a copy of 28 permanently unroutable records into the file the backlog is counted from — manufacturing in a new location exactly the permanently non-empty backlog INF-700c forbids. INF-700c-2 requires the opposite outcome (a resting state contributing zero, written nothing) and INF-700c-2-i preserves the audit and replay property this AC also served."
+    by: business-analyst
+    at: 2026-08-26
+superseded_by:
+  - INF-700c-2
 covered_by: []
 implemented_by: []
 change_target: code

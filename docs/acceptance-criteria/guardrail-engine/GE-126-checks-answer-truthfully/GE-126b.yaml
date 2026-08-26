@@ -1,0 +1,97 @@
+id: GE-126b
+title: "A check states what it inspected before it reports any result"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every answer a check gives arrives with what it looked at.
+
+  A run that examined nothing is told apart from a run that examined everything
+  and found it clean — and the two reasons for examining nothing are told apart
+  from each other too. Nothing a check can report leaves you guessing which of
+  the three happened.
+depends_on:
+  - GE-126
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's root cause: main() has two early returns at :633 and :638, and the HOOK_COUNT_PARSED introspection counter added to prove the check did work sits at :641, after both. It is unreachable on precisely the two paths where it saw nothing."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: "The variant KI-CG-018 names and this L1 closes: the instrumentation meant to defeat M8, placed where the M8 path cannot reach it."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126b-1
+  - GE-126b-2
+  - GE-126b-3
+  - GE-126b-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE DEFECT IS PLACEMENT, NOT ABSENCE, AND THAT IS THE WHOLE POINT. The
+  instrument already exists. HOOK_COUNT_PARSED was added specifically so a caller
+  could confirm the check saw its files, and it is downstream of both silent
+  exits. So setting it and getting silence is ambiguous between "the variable is
+  unset", "the check is an older copy" and "the check inspected nothing" — and
+  only the third is true. An L2 that adds a second diagnostic somewhere else has
+  not fixed this; the requirement is that no exit path can be reached without
+  passing the statement first.
+
+  THREE OUTCOMES, NOT TWO. Both of the current early exits are legitimately a
+  zero exit and they are not the same fact:
+    - no store of the kind this check governs was found at the root it resolved
+    - the store was found and nothing in scope was staged
+  The second is an ordinary clean run. The first means the check answered a
+  question about a place it never located, and it is reachable every single time
+  from the workspace parent, which carries a CLAUDE.md but no acceptance-criteria
+  store. Not intermittent — deterministic on that working directory. Whichever
+  wording is chosen, the resolved root must appear in it, because the root is the
+  fact that explains the difference.
+
+  THE ACCEPTANCE SHAPE IS THE OBSERVED PAIR, AND IT IS ALREADY WRITTEN DOWN.
+  KI-CG-018 records the two invocations verbatim: same check, same file, same
+  exit code, only the working directory differs, and only one run inspected
+  anything. Reproduce that pair and require the two outputs to differ in a way
+  that names WHY. That is the criterion. Do NOT accept "a diagnostic line is
+  emitted" as the criterion — a check can print a count and have counted the
+  wrong thing.
+
+  DO NOT LET THIS BE SATISFIED BY MAKING THE ROOT RESOLUTION CORRECT. Repairing
+  _find_project_root so the workspace-parent case stops arising is worth doing and
+  KI-CG-018 lists it third, but it removes one way of reaching the silent exit
+  rather than the silence. The statement obligation must hold even when the root
+  resolves perfectly. If decomposition folds the root repair in, keep it as a
+  separate L2 with its own observable, or GE-126e will find the same shape
+  untouched in the next check along.
+
+  RELATIONSHIP TO GE-120a-1 — INSTANCE, NOT RIVAL. GE-120a-1 states the policy
+  ("a check that could not perform its inspection reports a degraded outcome, not
+  a clean pass") across the family. This L1 applies it to a check GE-120 never
+  names: check_ac_governance appears in the GE-120 tree exactly once, inside
+  GE-120b-2's inventory of nineteen files still carrying a private root walk, and
+  no GE-120 criterion governs its behaviour. It is filed here because the GE-120
+  folder is byte-frozen by unit_tests/commit_guardian/test_ge_122e_1.py and every
+  GE-120 L1 is at the five-L2 cap — see the L0 notes. If GE-120a-1 lands first,
+  this record's L2s must be re-read against it before building, and any clause it
+  has genuinely satisfied should be recorded as satisfied rather than rebuilt.

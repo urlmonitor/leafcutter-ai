@@ -1,0 +1,144 @@
+id: INF-400b-2-ii
+components:
+  - infrastructure
+  - knowledge_system
+title: "Every shipped description of the knowledge-capture record agrees with every other and with the records actually written"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+priority: high
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400b-2.yaml"
+criteria: |
+  Given the shipped package contains more than one place that tells an agent
+    what a knowledge-capture record looks like,
+  When a reader compares each of those places against every other one, and
+    against the records the system has actually written,
+  Then all of them describe the same set of fields, with the same names,
+  And the records already on disk are conformant to that set rather than to
+    a shape no shipped description matches,
+  And exactly one of those places is identified as the one the others follow,
+    so a future change to the shape has a single place to be made,
+  And each restating place points a reader to that one place, by a reference
+    that resolves,
+  And a divergence introduced into any single one of those places is reported
+    before the package is released, rather than surviving unnoticed as this
+    one did.
+depends_on:
+  - INF-400b-2
+doc_links:
+  - path: docs/known-issues/knowledge-management.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "THE DIVERGENCE IS ALREADY SHIPPED — this AC repairs an existing violation, it does not prevent a future one. Verified 2026-08-26 at this branch: templates/skills/signoff/SKILL.md line 691 documents a record keyed on `ticket` and omitting `agent` and `component`; templates/agents/product-owner.md line 473, templates/agents/business-analyst.md line 911 and templates/agents/it-po.md line 812 each document `agent` + `component` and omit `ticket`. All 28 knowledge_captured records in debugging/logs/agent_telemetry.jsonl share exactly one key set — (event, timestamp, agent, component, destination, entry_kind) — so the v3 shape is the only one any emitter has ever produced and `ticket` has never appeared in a real record. INF-400b-2's own clause requiring v3 emissions to be structurally identical to section 7 step 4's therefore does not hold in the shipped artefacts and never has."
+  - "FOUR SURFACES, ONE CHANGE. The reconciled shape must be written into all four places in a single change: templates/skills/signoff/SKILL.md section 7 step 4, and the S9 knowledge-emission blocks of templates/agents/product-owner.md, templates/agents/business-analyst.md and templates/agents/it-po.md. A package that ships with two surfaces reconciled and two not is strictly worse than today's state, because the parity check this AC installs would then be red on a released package."
+  - "RECOMMENDED RESOLUTION, and the burden of proof if it is rejected: require `agent` and `component` of every producer, and make `ticket` OPTIONAL — present when the emitter has a ticket in hand (phase agents), absent when it does not (the v3 authoring agents, which run outside any ticket). This is the only direction under which the 28 existing records are already conformant and every current emitter is already correct. A reconciliation that instead makes `ticket` required must state how those 28 records and all three v3 emitters become conformant; do not adopt it without that answer."
+  - "OPTIONAL MUST MEAN OPTIONAL TO THE CONSUMER TOO. If `ticket` is retained as an optional field, no consumer may key, group, count or deduplicate on it — that is precisely the defect INF-400b-2-i exists to remove, and re-introducing the dependency in a new consumer would restore it under a different name."
+  - "SEQUENCING WITH INF-700b-1 (do not change the schema twice incompatibly). INF-700b-1 adds an additive `text` field to the same four surfaces and already carries a test descriptor, test_v3_agent_emission_shape_matches_section_7, that asserts key-set parity across them. That descriptor cannot pass until this AC lands. This AC must therefore land BEFORE, or in the same change as, INF-700b-1 — never after. The two changes are compatible in that order: this AC settles the identifier keys, INF-700b-1 then adds `text` on top of an already-consistent shape. Treat INF-700b-1's descriptor as the same parity test this AC installs, extended to cover `text`, not as a second independent test."
+  - "THE DETECTION OBLIGATION MUST NOT BE SATISFIED BY A GREP. Per this repository's standing rule on gate ACs, the parity check must PARSE the JSON object documented in each of the four surfaces and compare key sets. A test that greps for the presence of the string `agent` or `ticket` passes on a surface whose object is malformed, on a commented-out example, and on a fifth surface nobody added it to. It must also fail — not pass — when a surface's object cannot be parsed at all, so an unparseable template is never read as a clean one."
+  - "THE PARITY CHECK MUST BE SURFACE-DISCOVERING, NOT SURFACE-ENUMERATING, or it inherits the same blindness. A check hard-coded to four file paths cannot see a fifth emission surface added later, which is the exact shape of the failure being repaired. Derive the surface set from a declared source (the agent registry's v3 agents plus the sign-off skill), and fail when a declared surface has no parseable emission object."
+  - "NAMING THE NORMATIVE SOURCE IS PART OF THE DELIVERABLE, not a documentation nicety. The criteria require exactly one authoritative place; without it the next change has four equally-plausible homes and the divergence recurs. The three agent templates are restatements and must reference the authoritative surface by a path that resolves in BOTH layouts — templates/... in the package checkout and the deployed equivalent in a consumer install. Do not introduce a reference to route-learning or capture-learning under any spelling; ADR-034 section 2 item 3 retired both names."
+  - "DO NOT REWRITE THE 28 EXISTING RECORDS to conform. They are the evidence for the recommended resolution and are the subject of INF-700c's disposition; rewriting them would destroy both. Conformance of existing records is achieved by choosing the shape they already have, not by editing them."
+test_spec:
+  - name: test_all_documented_emission_shapes_declare_the_same_key_set
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Parses the JSON object out of signoff SKILL.md section 7 step 4 and out of the S9 emission block of each v3 agent template as shipped, and asserts every required key set is identical — the assertion that is red on this branch today."
+  - name: test_the_28_shipped_records_conform_to_the_documented_shape
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Every record in tests/fixtures/harvest_learnings/unroutable_corpus_28.json carries every field the reconciled shape requires, proving the reconciliation chose a shape real emitters already produce rather than one only the documents describe."
+  - name: test_a_divergence_planted_in_one_surface_is_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A copy of one template with a single emission key renamed makes the parity check fail and name the offending file and key; the unmodified set passes. Proves the check discriminates rather than always passing."
+  - name: test_an_unparseable_emission_object_fails_rather_than_passes
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A surface whose documented object is not valid JSON, or whose emission block is absent entirely, is reported as a failure and never counted as conformant — silence is not a pass."
+  - name: test_a_newly_declared_emission_surface_is_discovered_not_ignored
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Adding a fifth declared emission surface with a divergent key set makes the check fail, proving the surface set is derived from a declaration rather than hard-coded to today's four paths."
+  - name: test_each_restating_surface_references_the_normative_source_resolvably
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "The reference each agent template gives for the authoritative shape resolves to an existing file in the package checkout and to its deployed counterpart, so a reader following it never lands on a missing target."
+test_rationale: |
+  The first descriptor is deliberately red on the current branch: it is the
+  defect, stated as an assertion. If it passes before any change is made, the
+  parser is not reading the shipped artefacts and the whole descriptor set is
+  vacuous — check that first.
+
+  The third, fourth and fifth descriptors exist because a parity check is the
+  easiest kind of test to write vacuously. One that always passes, one that
+  cannot parse and shrugs, and one blind to a surface it was not told about
+  would each satisfy the first two descriptors while detecting nothing — and
+  a parity check that detects nothing is how this divergence survived from
+  the day both artefacts were written until 2026-08-26.
+
+  The second descriptor is the reason the recommended resolution is the one
+  it is: it can only pass if the reconciliation chose the shape the emitters
+  already produce. A reconciliation in favour of `ticket` fails it against
+  the real corpus, which is the correct and informative outcome.
+delivers_to:
+  agent: python-coder
+  contract: "The single reconciled knowledge-capture record shape, and the name of the one surface that is authoritative for it. Required of every producer: event, timestamp (ISO-8601), agent, component, destination, entry_kind. Optional, and never to be keyed/grouped/deduplicated on by any consumer: ticket. INF-400b-2-i re-keys the harvester's idempotency digest on the required set only; INF-700b-1 then adds `text` to this same shape additively."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Filed from KI-KM-010 (severity high, 2026-08-26), fix direction item 2:
+  "Reconcile section 7 step 4 against the v3 templates so `ticket` versus
+  `agent`+`component` is settled one way. This is INF-400b-2's to own."
+
+  Scope boundaries. INF-400b-2 owns the parity requirement itself and its
+  enumerated field list; this AC makes that requirement true in the shipped
+  artefacts and installs the check that keeps it true. INF-700b-1 owns the
+  addition of `text` and must land after this AC. INF-400b-2-i owns the
+  consequence for the harvester's idempotency digest. INF-400c-4 owns which
+  file the records land in, so no sink path is decided here. Nothing in this
+  AC changes what an agent captures or when — only how the record is
+  described and by whom authoritatively.
+
+  Reproduced independently on 2026-08-26 at branch
+  fix/inf400-h1-h4-knowledge-loop: four surfaces, two shapes, 28 records all
+  of one shape, zero detection.
+change_target: prompt
+risk_surface: contract_boundary

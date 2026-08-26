@@ -1,0 +1,155 @@
+id: BO-3200a-1
+title: "A fact the build depends on is still obtained when no specialist can be dispatched at all"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build that must know a recorded fact about the project before it can decide what to
+    do next,
+    And an environment in which dispatching a specialist is impossible,
+  When the build resolves that fact,
+  Then it obtains the correct value and proceeds, so the value did not come through a
+    specialist.
+
+  Given the same fact recorded in a source larger than the size at which a relayed reply is
+    shortened — at least 130 kilobytes,
+  When the build resolves that fact,
+  Then the value it obtains is complete and usable, and the decision it makes from it matches
+    the decision it would make from the source read whole.
+
+  Given a fact whose recorded value would cause the build to permit an action,
+  When the build resolves it,
+  Then the build permits that action, and does not refuse it.
+depends_on:
+  - BO-3200a
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — the anchor case: 129,787-byte source, relay truncated at 75,000 characters mid-escape-sequence, fail-closed into a false permission verdict."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry that carries the fact in the anchor case."
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Why the halt was total: /plan-feature is the canonical entry path and has no fallback."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THE READ MUST BE PERFORMED BY THE LAYER THAT NEEDS THE VALUE, from the recorded source, with no dispatch in the path. This is testable only by removing the ability to dispatch — an assertion on the returned value cannot distinguish a direct read from a relay that happened to return the right thing."
+  - "THE FIXTURE MUST BE AT OR ABOVE THE REAL FAILING SIZE (130 KB), per CLAUDE.md 'Real-artifact behavioral spot-check'. A smaller fixture passes on an implementation that still relays, because the truncation only appears above the transport's limit. Prefer exercising the repository's ACTUAL registry file over a synthetic one of the same size."
+  - "The fixture must contain a value that survives only if the whole source is read — placed beyond the truncation point and, ideally, immediately after an escape sequence, because the anchor case failed by splitting one."
+  - "THE ASSERTION MUST REACH THE OUTCOME, not stop at the parsed value. The third criterion is about the build PERMITTING the action; a test that asserts the value parsed correctly passes on a downstream branch that still refuses."
+  - "A read that fails must produce BO-3200e's `undetermined` outcome, not a substantive verdict. This is the other half of KI-BO-018 and it is not fixed by reading directly — a direct read can also fail."
+  - "The source location must be resolved the way BO-3200a-1-i requires (see that AC), not by an upward walk from the process's starting directory."
+  - "No new caching layer between the source and the reader. A cache is a second copy, and a value read from the wrong copy is the same defect as a truncated one."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py so the no-specialist-available environment can be produced by withholding the dispatch surface from the real workflow."
+delivers_to:
+  - agent: python-coder
+    contract: "A direct source-read resolver for project facts: given a fact identifier, returns {value: Any, outcome: 'read' | 'undetermined', source_path: str, looked_in: list[str]} with no dispatch in its call path. BO-3200a-1-i constrains how source_path is resolved and what `looked_in` must contain; BO-3200a-2's sweep asserts every fact-resolving path uses a resolver of this kind."
+expects_from: null
+test_spec:
+  - name: test_bo_3200a_1_fact_resolves_with_dispatch_impossible
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DISCRIMINATOR. Run the real entry workflow under the harness with the dispatch surface withheld entirely; assert the fact is obtained, its value is correct, and the workflow proceeds. Only a build that no longer relays can pass."
+  - name: test_bo_3200a_1_value_beyond_the_truncation_point_is_read_whole
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Source of at least 130 KB with the needed value placed after the 75,000-character mark and immediately following an escape sequence; assert the resolved value is complete and the decision made from it matches the decision made from the source read whole."
+  - name: test_bo_3200a_1_permitting_value_produces_a_permit_not_a_refusal
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Assert the OUTCOME, not the parsed value: a recorded value that should permit the action results in the workflow permitting it. Ties the AC to the observed damage — a false refusal that halted the canonical entry path."
+  - name: test_bo_3200a_1_unreadable_source_is_undetermined_not_a_refusal
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the source unreadable, assert the outcome is `undetermined` and that the workflow does not emit a substantive claim about the permission. The other half of KI-BO-018, which reading directly does not fix."
+  - name: test_bo_3200a_1_resolver_has_no_dispatch_in_its_call_path
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert zero agent() calls are recorded by the harness while the fact is resolved. A resolver that falls back to a dispatch when the direct read is slow or fails would otherwise pass every value assertion."
+test_rationale: |
+  "Reads the fact directly" is a claim about HOW, and no assertion on the returned value can
+  distinguish it from a relay that returned the right thing — which a relay does most of the
+  time. Removing the ability to dispatch and requiring success is the only shape that can only
+  be passed by a build that no longer relays. It is the same technique BO-3100c-4 applies to
+  the dispatch-mode option.
+  The 130 KB fixture size is not a round number: it is the real failing size from KI-BO-018,
+  and a smaller fixture would pass on the broken implementation because the truncation only
+  appears above the transport's limit. Placing the needed value after an escape sequence past
+  the truncation point reproduces the exact way parsing failed.
+  Asserting the permit outcome rather than the parsed value is what ties this AC to the damage —
+  a halted canonical entry path with no fallback.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3200a-1-i
+implemented_by: []
+notes: |
+  THE FIRST SCENARIO IS THE DISCRIMINATING TEST and it is the reason this AC is testable at
+  all. "Reads the fact directly" is a claim about how, which no assertion on the returned value
+  can distinguish — a relayed read returns the right value most of the time. Removing the
+  ability to dispatch a specialist and requiring the build to still succeed can only be passed
+  by a build that no longer relays. It is the same technique as BO-3100c-4's removed dispatch
+  option, applied to the other half of the goal.
+
+  THE SIZE IN THE SECOND SCENARIO COMES FROM THE ANCHOR CASE, not from a guess. KI-BO-018: the
+  registry file is 129,787 bytes, the relay truncated at exactly 75,000 characters, splitting
+  an escape sequence, and parsing raised. A fixture at or above 130 KB reproduces the real
+  failing size rather than a synthetic one, per CLAUDE.md "Real-artifact behavioral
+  spot-check" — a smaller fixture passes on an implementation that still relays.
+
+  THE THIRD SCENARIO ENCODES THE OBSERVED CONSEQUENCE, which is what makes this a blocker
+  rather than an inconvenience: the truncation was caught fail-closed and became the
+  substantive claim that an agent lacked a permission it actually had, halting the canonical
+  entry path for all new work with no fallback. Asserting the permit outcome, not just the
+  parsed value, ties this AC to the damage.
+
+  SCOPE, from the parent L1: this covers facts the build DEPENDS ON — values it branches on. A
+  specialist summarising a file as part of forming a judgement is exactly what specialists are
+  for and is out of scope.
+
+  BOUNDARY: the other half of KI-BO-018 belongs to BO-3200e — a check that could not perform
+  its inspection must not emit a substantive verdict. A direct read can also fail, and must
+  then report uncertainty. Fixing only one leaves the other class open.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The zero-dispatch test is the one addition worth naming.
+  Withholding the dispatch surface proves the value can be obtained without a specialist; it
+  does not prove a specialist is not consulted when one IS available. A resolver with a
+  dispatch fallback on slow or failing reads would pass the first scenario in the test
+  environment and relay in production, which is the worst of both.

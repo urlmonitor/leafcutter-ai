@@ -1,11 +1,11 @@
 ---
 title: "Known issues — testing-quality"
-description: "Open, observed defects in the testing-quality component: the agent eval harness, its scoring and threshold gates, and the CI job that runs them. Recorded on sight so they are not lost, and read before adding new capability to this component."
+description: "Open, observed defects in the testing-quality component: the agent eval harness with its scoring and threshold gates, plus the test-isolation and verification-method defects that make a suite report the wrong answer — stale-module shadowing, incomplete fixtures, self-mirroring oracles, and verification that never asks what invokes the code. Recorded on sight so they are not lost, and read before adding new capability to this component."
 type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-26
 components:
   - testing_quality
 related_docs:
@@ -119,3 +119,413 @@ documentation defect that costs the next person a confused minute, not a correct
 
 **Fix direction.** Reword the message to "re-run the eval so the on-disk result is fresh";
 drop the staging instruction.
+
+---
+
+> **Entries `KI-TQ-004` … `KI-TQ-009` are recovered from an unmerged branch.** They were
+> written between 2026-08-19 and 2026-08-25 while driving
+> `EPIC-GE122UniquenessPassAndRepair`, into the parallel known-issues register PR #495
+> invented (`KI-TQ-1` … `KI-TQ-7`), which lost every reconciliation conflict against this file
+> and was discarded. The two registers turned out to be disjoint in subject matter — this file
+> is entirely about the agent eval harness, that one entirely about test-isolation and
+> verification-method defects — so the analysis below would have been lost with the branch.
+> Every entry was re-verified against `main` at `37655862`, and each `Status` line says whether
+> the code it describes is on `main` or only on the unmerged branch.
+>
+> One entry from that set was **dropped as no longer true**: it reported
+> `test_ge_122e_1.py::test_goal_record_claims_a_new_id_and_its_folder_matches_origin_main`
+> failing as a function of branch staleness, because it required `git diff origin/main --
+> <folder>` to be empty. That assertion was amended on 2026-08-18 (before the entry was
+> written) to a one-directional set difference — `missing = baseline_ids - current_ids`
+> (`test_ge_122e_1.py:514`) — which tolerates `origin/main` growing ahead by design, and the
+> baseline ref is now resolved from the first of `origin/main`, `main`, `HEAD^2` that exists.
+> Both halves of the reported failure mode are gone.
+
+---
+
+### KI-TQ-004 — Bare-name `sys.modules` caching lets a stale deployed copy shadow the canonical module for a whole pytest session
+
+- **Severity:** high — it can hide a real fix *and* a real bug, and it bit twice in one epic
+- **Status:** open — code is on `main` and live
+- **Occurrences:** 2 (same epic)
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `unit_tests/commit_guardian/test_commit_guardian_imports.py:85-105`
+  (`_import_module_from_dir`), used at `:237`, `:334`, `:413`
+
+**Symptom.** The helper caches modules in `sys.modules` under their **bare name**
+(`_uniqueness_scanners`, not a package-qualified path):
+
+```python
+if module_name in sys.modules:
+    return sys.modules[module_name]
+...
+sys.modules[module_name] = mod
+```
+
+Because `sys.modules` is process-global, the **first** load of that bare name in a pytest
+session pins whichever copy existed at that moment for the rest of the run. Every later test
+file doing `importlib.import_module("_uniqueness_scanners")` silently gets the pinned copy.
+
+This repository keeps a canonical source tree (`templates/scripts/commit_guardian/`) and
+deployed copies (`scripts/commit_guardian/`, `.leafcutter/scripts/commit_guardian/`) that
+`build.py` regenerates. If the deployed copy is stale when the suite starts, the stale code is
+what the whole session tests.
+
+**Evidence — observed twice.**
+
+1. A stale deployed copy raised `TypeError: Finding.__init__() got an unexpected keyword
+   argument 'declared_states'` against source that had the field.
+2. A correct fix to `_fast_scan_top_level_id` appeared not to work — the full suite reproduced
+   the *old* bug — because a pre-`build.py` deployed copy had been pinned first.
+
+Both cost real diagnosis time, and the second nearly produced a wrong conclusion about a fix
+that was in fact correct.
+
+**Why it is worse than an ordinary flake.** The failure direction is not consistent. A stale
+deploy can make a good fix look broken (wasted effort) or a broken module look fixed (a false
+green that ships).
+
+**Detection.** If a fix verifies green in isolation but fails in the full suite — or vice versa
+— suspect this before suspecting the fix. Compare the canonical and deployed copies directly:
+
+```bash
+diff templates/scripts/commit_guardian/<mod>.py scripts/commit_guardian/<mod>.py
+```
+
+**Workaround, and treat it as a standing rule.** Always run `build.py` before the full
+`unit_tests/commit_guardian/` suite:
+
+```bash
+python3 scripts/build.py --target-dir <worktree_root> --force
+```
+
+**Fix direction.** Import sibling modules under a package-qualified or path-derived unique name
+so two copies cannot collide in `sys.modules`, or clear the cached entry in a fixture teardown.
+Per this repo's own guidance, fix it in the test files rather than a root `conftest.py` — a
+global conftest has too wide a blast radius — and `importlib.reload()` is **not** a substitute,
+because it masks cold-import bugs.
+
+**Related:** `supervisor-system.md`'s `KI-SS-004` is the same hazard one layer up, at the
+workflow runtime.
+
+---
+
+### KI-TQ-005 — Fixtures that never built the collection they assert over, three times in one epic
+
+- **Severity:** high as a pattern
+- **Status:** open as a pattern — the specific test files named below are **not on `main`**
+  (they live on unmerged PR #495); the pattern and its diagnostic signature are what this entry
+  is for
+- **Occurrences:** 3 (one epic)
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-25
+- **Where:** PR #495's `test_ge_122a_1.py` and `test_ge_122a_1_i.py`
+
+**Symptom.** Three test files asserted properties of "a collection" while their fixtures never
+created two, three, or four of its namespaces. They passed only because the fail-open they
+should have caught was masking their own incompleteness:
+
+| File | What the fixture omitted |
+|---|---|
+| `test_ge_122a_1.py::test_repaired_collection_passes_with_per_namespace_counts` | `tickets/` root and `ticket_lifecycle.json` |
+| `test_ge_122a_1_i.py` (three tests) | `docs/architecture/adrs/`, `docs/architecture/diagrams/`, `ticket_lifecycle.json` |
+
+The first of these was asserting *"a repaired collection passes"* over a collection that was
+never there.
+
+**Root cause / diagnostic signature.** Each was exposed only when the fail-open was closed —
+which is the signature: **fixing a fail-open turns incomplete fixtures red.** Those failures
+look exactly like a regression in the fix, and the tempting response is to weaken the new
+assertion. That is backwards. In all three cases the assertions were correct as written and the
+setup was short.
+
+Note also how the second instance was mis-diagnosed at first. Only the work-items scanner logs
+a warning on an unresolvable root (see `commit-guardian.md`'s `KI-CG-031`), so the visible
+symptom named one missing file when three namespaces were actually unresolved. A silent failure
+made an incomplete fixture look like a smaller problem than it was.
+
+**Detection.** After closing any fail-open, expect newly-red tests and triage each with one
+question: *is the assertion wrong, or was the fixture never complete?* Complete the fixture
+without touching a single assertion and re-run. Green means the fixture was short. Still red
+means the fix is wrong. **Wanting to change an assertion is the signal that you are about to
+paper over a real defect.**
+
+**Fix direction (pattern).** A shared fixture builder that constructs **all** of a collection's
+namespaces by default, so a test must opt out of one explicitly rather than omit it by accident.
+PR #495's `test_ge_122a_1_i.py` grew a `_resolve_non_ac_namespaces` helper doing exactly this,
+with a comment warning against tidying it away.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a test passing for the wrong reason,
+where the bug and the test's blind spot are the same bug.
+
+---
+
+### KI-TQ-006 — A matcher widening measured by its own author's grep: estimated one false positive, actual twenty-three
+
+- **Severity:** high as a pattern — the flawed measurement and the flawed code shared one author
+  and one blind spot
+- **Status:** open as a pattern. The specific instance is fixed and is recorded in
+  `build-orchestration.md`'s `KI-BO-003`; **the general rule below has no enforcement** and that
+  is why this stays open. `main` has since committed the same shape a second time — see
+  `commit-guardian.md`'s final entry, whose own text records a per-marker cost generalised from
+  the one marker that was measured.
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
+- **Where:** `scripts/build_placeholder_detection.py` (`_is_marker_at_line_start`,
+  `_LEADING_MARKER_PREFIX`)
+
+**Symptom.** A matcher was widened. Its cost was estimated with a grep, and the estimate said
+"one instance". The true cost was **23 false positives across 4,815 files**. The grep searched
+for *bulleted* markers; the rule that shipped also accepted *bare indentation*:
+
+```python
+_LEADING_MARKER_PREFIX = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*")
+```
+
+The bullet is **optional**, so bare indentation qualifies too — and in YAML block scalars and
+wrapped markdown, *every* continuation line is indented. Any prose line beginning with the word
+"placeholder" was flagged. **The shape that was never searched for is exactly the shape that was
+wrong.**
+
+**Evidence — three independent safety nets were green the whole time:**
+
+| net | why it missed |
+|---|---|
+| 84 unit tests across two tripwire files | corpus authored from the same mental template as the grep |
+| a canary asserting one file scans clean | that file happened to have no indented prose starting with the word |
+| a full 3,729-test suite | nothing in it scans the AC store or agent templates |
+
+A repo-wide before/after diff of the committed scanner against the working tree, over 4,815
+files, is what actually measured it: 72 hits before, 94 after, **24 new — of which 23 were false
+positives**, spanning 12 AC YAML files, 4 agent templates, a generated agent card, 4 tickets and
+2 skill docs.
+
+**Detection.** After changing any matcher, run it over the **whole repository** before and after
+and diff the hit sets. Not a count — the actual set, with enough context to judge each new hit.
+`git show HEAD:<file>` gives the baseline implementation, so this needs no branch juggling:
+
+```python
+before = load_module_from(git_show("HEAD:scripts/<matcher>.py"))
+after  = load_module_from(worktree_path)
+new    = after_hits - before_hits      # judge every element
+```
+
+**Fix direction (pattern).** For every matcher with a false-positive cost, keep a **repo-scale
+canary** asserting zero hits over a large real corpus, not a handful of hand-picked files.
+`test_ge122b_acceptance_criteria_tree_placeholder_hits_are_zero` scans all 3,092 AC YAML files
+in ~1.3s. Scope it to the marker under test — that tree has legitimate `todo` hits which a naive
+zero-hits assertion would have gone red on, pushing the next author to break `TODO` instead.
+And measure **per marker**, never in aggregate: the second occurrence tightened the marker
+responsible for 2 of 55 hits and left untouched the one responsible for 42.
+
+**The generalisation, since this keeps being rediscovered:** an estimate produced by the person
+who wrote the rule tests their model of the rule, not the rule. Only running it over data nobody
+curated can falsify it.
+
+---
+
+### KI-TQ-007 — Six review rounds verified a component without once asking what invokes it
+
+- **Severity:** critical as a pattern — the largest miss in the GE-122 review, and the one every
+  other finding was standing on
+- **Status:** open as a pattern. The **instance** is `commit-guardian.md`'s `KI-CG-021`. The
+  **class** overlaps `build-orchestration.md`'s `KI-BO-011` (an unreachable file serving as a
+  criterion's proof) and `KI-BO-028`, but is not the same: those are about a *test* pointed at
+  dead code, this is about a *review method* that never leaves the source tree. Filed separately
+  and cross-referenced rather than folded in, because the remedy below — a registration test on
+  every hook AC — is not implied by either.
+- **Occurrences:** 1 (six rounds)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the adversarial review method itself; instance at PR #495's
+  `check_identifier_uniqueness.py`
+
+**Symptom.** Rounds one through five of adversarial review each found real defects under a green
+suite, and each verified the fix by importing the module or running the script directly. Round
+six asked a different question — *what calls this in production?* — and the answer was **nothing**
+(see `KI-CG-021`). Five rounds of increasingly careful verification had been measuring a
+component that could not fire.
+
+Every individual verification was accurate. **None of them was the question.**
+
+**Detection.** For any gate, hook, or runner, verification is not complete until you have
+answered, with a grep and not from memory:
+
+1. What config registers this? (`commit_guardian.json`, `.pre-commit-config.yaml`, a CI workflow
+   — name the file and the line.)
+2. Does it survive `build.py` into a consumer layout? Build one in `/tmp` and run it.
+3. Does the **production entry point** produce the observable effect — the exit code, the block,
+   the message? Not the function. The entry point.
+4. Is the output actually *seen*? A passing `pre-commit` hook's stdout is discarded
+   (`KI-CG-026`).
+
+**Fix direction (pattern).** Every hook AC should carry a registration test: assert the hook's id
+appears in the deployed `.pre-commit-config.yaml` and that its script resolves. That is a
+three-line test which would have failed on day one of the epic and saved six rounds.
+
+**The general form:** *"does the code work"* and *"is the code reachable"* are different
+questions, and a test suite answers only the first. Nothing in 3,772 passing tests could
+distinguish this gate from a gate that had never been wired up, because nothing in it looked
+outside the source tree.
+
+---
+
+### KI-TQ-008 — A repository-global tree-purity guard false-positives under concurrent agents
+
+- **Severity:** medium — it manufactures failures indistinguishable from real ones
+- **Status:** open — **the test file is NOT on `main`**; it lives on unmerged PR #495. Filed
+  because the guard is good practice and will be copied, and the scoping defect should be fixed
+  before it is.
+- **Occurrences:** 3 (one session)
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** PR #495's `test_ge_122e_3.py` — `tearDownModule`
+
+**Symptom.** The module has a `tearDownModule` that proves it never wrote to the real repository
+— it snapshots `git status --porcelain` before the module runs and compares afterwards. The
+guard itself is good practice: every fixture operates on a `shutil.copytree`'d tempdir, and this
+catches a bug in the test file's own fixture code escaping the tempdir.
+
+The problem is that `git status --porcelain` is **repository-global**. The guard cannot
+distinguish "this module escaped its tempdir" from "some other process touched the tree", so
+**any** concurrent activity trips it:
+
+```
+RuntimeError: The real repository working tree changed during this test
+module's run.
+BEFORE: ... (12 modified files)
+AFTER:  ... + tickets/.../03_TICKET-20260818-GE-122a-2.md
+```
+
+That diff is a *different* agent editing a *different* ticket. Nothing was wrong.
+
+**Evidence.** Observed three times in one session while several agents worked in one worktree.
+Each occurrence cost an agent a diagnostic detour and a re-run. Two agents correctly identified
+it as spurious; the danger is the third that does not — the failure is loud, alarming, and points
+at the wrong thing. The mirror-image risk is an agent learning to dismiss this error and thereby
+missing a real escape.
+
+**Detection.** Compare the BEFORE and AFTER strings in the error. If the only difference is a
+file this test module has no business touching, it is interference.
+
+**Workaround.** Do not run the suite while another agent is writing to the worktree, and do not
+write to the worktree while a suite is running. One writer at a time.
+
+**Fix direction.** Narrow the guard's scope: snapshot only the paths this module could plausibly
+touch (`docs/acceptance-criteria/`, `docs/architecture/`, `tickets/`), or diff only against paths
+under `_REPO_ROOT` that the module's own fixtures reference. **Keep the guard** — it is the right
+idea, just too wide.
+
+---
+
+### KI-TQ-009 — A test-local oracle that duplicated the production bug it was written to detect
+
+- **Severity:** medium as a pattern, even where the instance is fixed
+- **Status:** open as a pattern — **the instance is NOT on `main`** (PR #495's
+  `test_ge_122e_3.py`) and is fixed on the branch; the pattern has no enforcement anywhere
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** PR #495's `test_ge_122e_3.py` (`_read_lifecycle_folder_names`) against its
+  `_work_items_scanner.py`
+
+**Symptom.** The test file defined its own local `_read_lifecycle_folder_names` helper carrying
+the **identical basename-collapse defect** as the production function it was verifying. The exit
+gate's oracle shared the blind spot of the code it was written to check.
+
+It passed for exactly the reason the production bug was invisible: every real lifecycle folder
+happens to sit one level under `tickets/`.
+
+**Why this is a class, not an incident.** This is the same bias that once let a `files_touched`
+parser defect survive an entire epic in this repository — synthetic fixtures and hand-written
+oracles reproduce the implementation's assumptions, so they cannot falsify them. It is also
+`KI-TQ-006` in miniature: a check authored from the same mental template as the thing it checks.
+The branch committed it *inside the entry describing the fix for it*, which is the sharpest
+available demonstration that knowing about the pattern does not prevent it.
+
+**Detection.** When a test computes an expected value, ask whether it derives that value
+**independently** or re-implements the logic under test. An oracle that mirrors the
+implementation proves only self-consistency.
+
+**Fix direction (pattern, not instance).** Derive oracles from the data, not from a
+reimplementation — read the config's full declared paths rather than recomputing folder
+discovery. Where a helper must be shared between a test and production code, **import the
+production one**, so a bug shows up as a failure rather than as agreement.
+
+---
+
+### KI-TQ-010 — Nothing in the build pipeline asks whether a passing test is able to fail, and for a negative control that is the only question that matters
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/agents/test-writer.md` (red-baseline protocol);
+  `templates/agents/test-runner.md`; `templates/workflows-js/build-feature.js` `phaseOrder`;
+  `CLAUDE.md` → "TDD Order — test-writer Must Precede python-coder"
+
+**Symptom.** The pipeline's only evidence that a test constrains anything is the **red baseline**:
+the suite must fail before the coder runs. That check is structurally unavailable to a whole class
+of test, and for that class nothing replaces it — a test that can never fail passes every phase,
+every gate, and CI.
+
+**The class.** A *negative control* asserts an **absence**: that some new input changes no
+outcome. If the implementation is correct, the test is **green on arrival by construction**. There
+is no red phase to capture. `CLAUDE.md`'s rule that a green `test-writer` phase is a TDD-order
+violation inverts here — green is the expected pass — so the one mechanism that would have asked
+"can this fail?" is not merely absent, it is documented to mean the opposite.
+
+**Evidence.** `BP-1100g-3-i` (merged 2026-08-26, `8f55fd25`), four tests asserting that the
+`# angle:` proof-kind tag feeds no pass, done, or eligibility decision. `test-writer` reported
+all four green; `test-runner` re-ran and confirmed; `python-coder` signed off a correct no-op.
+All three were accurate and none had reason to ask the next question.
+
+A mutation proof run afterwards injected the exact leak the AC forbids — plumb `angles` through
+`_scan_single_test_file`, then treat angle-carrying records as passing in `_classify_outcomes` —
+and one of the four did not notice:
+
+| test | angle | consumption leak | + plumbing leak | deployed leak |
+|---|---|---|---|---|
+| 1 | `criterion` | RED | RED | — |
+| 2 | `seam` | green | RED | — |
+| 3 | `real_artifact` | green | **GREEN** | — |
+| 4 | `reachability` | green *(correct — deployed path)* | green *(correct)* | RED |
+
+Test 3 carried **AC-5, the AC's headline clause** (*"removing every kind tag from the suite
+changes no run outcome and no completion decision anywhere"*). Its only *failing* fixture test
+carried no angle tag, and the likeliest real leak — "an angle-tagged test proves what it claims,
+so count it passing" — is observable **only** on a test that is both tagged and failing. The
+whole-suite strip test could not observe the leak it existed to forbid. Fixed in-flight by tagging
+that fixture; the point of recording it is that nothing in the pipeline would have found it.
+
+**Why the usual defences do not cover this.** The test had every mark of quality: real on-disk
+fixtures, `yaml.safe_dump` rather than hand-typed YAML, the real production entry point, and
+explicit anti-vacuity assertions (*"otherwise the equality assertion above is vacuous"*, *"otherwise
+this test proves nothing"*). Those assertions guard against the fixture being empty or trivial.
+**None of them can detect that the fixture, while non-trivial, does not span the failure mode.**
+Self-certified non-vacuity is not falsifiability.
+
+**Why high.** The repository's founding concern is work marked done that never runs. A negative
+control that cannot fail is that defect *inside the instrument built to detect it*, and it is
+self-concealing in the worst way: it is green, it stays green, and its greenness is later cited
+as proof the invariant holds. `BP-1100g-4` will shortly consume this same axis in a commit-time
+refusal, so the invariant `g-3-i` asserts is about to become load-bearing for merges.
+
+**Fix direction.** Do not try to detect the class automatically from the AC text — `n_location_rule:
+0`, an absence-shaped Then clause, and the word "negative control" in the notes are all
+suggestive and none is reliable. Instead:
+
+1. **Make the obligation explicit at the contract layer.** Where a red baseline is structurally
+   unavailable, require a **mutation proof** in its place: name the mutation, show the test red
+   under it, show it green after revert. That is the same evidence a red baseline provides —
+   *this test discriminates* — obtained the only way available for an absence.
+2. **Have `test-writer` say which it captured**, red baseline or mutation proof, and treat "green
+   on arrival, no mutation proof" as an incomplete phase rather than a pass. It already records
+   `red_baseline_verified: false` for these; that field currently means "correctly not applicable"
+   and should mean "and here is what replaced it".
+3. **Prefer per-mutation results over a single pass/fail.** The table above is what located the
+   defect — three tests caught the leak and the aggregate looked fine. A mutation proof reported
+   as one boolean would have said "the suite catches it" and test 3 would still be inert today.
+
+**Related.** `KI-TQ-009` (a test-local oracle reproducing the production bug — same family: the
+test agrees with the code instead of constraining it). `KI-TQ-005` (fixtures that never built the
+collection they assert over).
+
+**Pattern:** a quality bar enforced by one mechanism, applied to the class of work that mechanism
+cannot see, where the absence of the check is documented as correct.

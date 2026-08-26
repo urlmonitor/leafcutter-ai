@@ -1,0 +1,161 @@
+id: BO-3100b-2
+title: "A step judged to have produced nothing is re-run, and cannot be recorded as completed"
+component: build-orchestration
+components:
+  - supervisor_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step that has been judged to have produced nothing,
+  When it attempts to finish,
+  Then it is prevented from finishing, the same step runs again, and no completed step is
+    recorded for the attempt that produced nothing.
+
+  Given that the re-run produces changes to the project's working state,
+  When the step attempts to finish again,
+  Then it finishes, exactly one completed step is recorded for it, and the build proceeds
+    to the step that follows.
+
+  Given a step judged to have produced nothing whose attempt to finish is prevented,
+  When the build's record of what happened is read afterwards,
+  Then the prevented attempt appears in it as an attempt that produced nothing, rather than
+    being absent from the record.
+depends_on:
+  - BO-3100b
+  - BO-3100b-1
+doc_links:
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the silent exit this veto converts into a re-run."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The hook substrate a veto at the attempt-to-finish runs on."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: modifies
+    status: exists
+    relevance: "The phase-completion record this AC changes: an attempt that produced nothing must appear in it without becoming a completed phase."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE VETO MUST BE ENFORCEMENT, NOT ADVICE. It must sit at the point that decides whether a step counts as complete, so a 'produced nothing' verdict cannot be logged-and-continued. A design in which the verdict is emitted and a separate consumer chooses whether to honour it re-creates the discarded-reply defect KI-BO-020 records."
+  - "EXACTLY ONE COMPLETED STEP PER STEP, ON EVERY PATH. Follow CLAUDE.md 'Skip-Branch Side-Effects — Conditionalize, Don't Add': when the retry branch is added, the pre-existing unconditional completion record after the branch MUST be conditionalised in the same change, or the successful re-run double-records. The invariant is one completion record per step per non-halt path, zero only on a halt."
+  - "The prevented attempt must reach the build record as its own entry, distinct in kind from a completed step and from a failure. It must carry the step identity, the attempt number, and the verdict's evidence summary so a chronic parker is visible by reading the record."
+  - "The re-run must be the SAME step with the same inputs, not a substituted or degraded variant, and must be attributable to the same step identity so the attempt count in BO-3100b-2-i is countable."
+  - "This is not BO-210. A re-dispatch triggered here must be distinguishable in the record from a pre-commit-hook-failure re-dispatch, because the two have different causes and different diagnoses."
+  - "DEPLOY-MANIFEST RULE (CLAUDE.md): the veto runs from the DEPLOYED layout. Any module it imports must be in the build deploy list in the same change, verified by running the deployed hook rather than only the source-tree tests."
+  - "Idempotency: reading the build record twice must yield the same counts. A record appended from more than one place is how the double-count arrives."
+delivers_to:
+  - agent: python-coder
+    contract: "A step-lifecycle record entry per attempt: {step_id: str, attempt: int, outcome: 'completed' | 'produced_nothing_retried' | 'produced_nothing_failed' | 'legitimate_no_op', evidence: {...}}. BO-3100b-2-i counts `attempt` and terminates on the bound; BO-3100b-3 adds `legitimate_no_op`; BO-3100b-4's sequence diagram is checked against the ordered sequence of these entries from a real re-run."
+  - agent: architecture-diagram-author
+    contract: "The ordered interaction trace of a real build in which a step produced nothing and was re-run, obtainable from the build record, so BO-3100b-4's diagram can be compared against it interaction by interaction."
+expects_from:
+  - ac_id: BO-3100b-1
+    contract: "The work verdict {step_id, verdict: 'produced_work' | 'produced_nothing' | 'undetermined', evidence, snapshot_taken_at_dispatch}. This AC vetoes on `produced_nothing`; `undetermined` must NOT be treated as `produced_nothing` — it halts per BO-3200e-2 rather than triggering a retry."
+test_spec:
+  - name: test_bo_3100b_2_empty_step_is_vetoed_and_re_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the real step lifecycle with a specialist that produces nothing on attempt 1; assert the finish is prevented, a SECOND execution of the same step actually occurs, and no completed step is recorded for attempt 1."
+  - name: test_bo_3100b_2_successful_rerun_records_exactly_one_completion
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE DOUBLE-COUNT GUARD. Specialist produces nothing on attempt 1 and real changes on attempt 2. Assert the completed-step count for that step is exactly 1 (not 0, not 2) and the build proceeds to the following step."
+  - name: test_bo_3100b_2_prevented_attempt_appears_in_the_record
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Read the build record after the run and assert the vetoed attempt is present as an attempt that produced nothing, carrying the step id and attempt number — not absent, and not recorded as a completion."
+  - name: test_bo_3100b_2_undetermined_verdict_does_not_trigger_a_retry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "When BO-3100b-1 returns `undetermined` (snapshot unavailable), assert the run halts per the fail-closed rule rather than entering the retry loop — an unknown is not an empty result."
+  - name: test_bo_3100b_2_veto_is_consumed_in_control_flow_not_only_logged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Assert on the value the CALLER branches on, not only on emitted text: with a produced_nothing verdict the workflow's terminal payload must not report the phase as completed. A report that names the problem while the machine-readable outcome still reads success is the false-success shape this repository has hit repeatedly."
+  - name: test_bo_3100b_2_veto_runs_from_deployed_layout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Build into a temporary target directory and drive the lifecycle through the deployed hook path; assert the veto still fires and no ModuleNotFoundError occurs."
+test_rationale: |
+  A test that asserts a veto call appears in the source passes on a veto whose return value is
+  discarded — the exact shape of KI-BO-020, where a well-formed refusal was simply not read. So
+  the covering tests run the real step lifecycle and observe that a SECOND execution occurred
+  and what the record contains.
+  The exactly-one-completion test is not redundant with the first: the natural implementation of
+  a retry re-enters the step while leaving the pre-existing unconditional completion record in
+  place, producing two completions for one piece of work. That is a documented failure in this
+  repository (EPIC-InFlightVisibility, BO-1000b-1-i), and a static test for the presence of the
+  record call was blind to it because it matched only one quote style.
+  The seam test exists because the workflow's terminal payload is what a caller branches on;
+  asserting only on the log leaves the false-success path open.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, delivers_to/expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface, declares_side_effect.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3100b-2-i
+implemented_by: []
+notes: |
+  BO-3100b-1 establishes the verdict; this AC establishes that the verdict has teeth. The
+  parent L1 is explicit that the empty result is "stopped from finishing quietly and is made
+  to try again" — so a judgement that only logs, or that records the step as complete while
+  noting a concern, does not satisfy it. The criterion is written against the attempt to
+  finish because that is the moment at which a veto is the difference between an advisory
+  observation and enforcement.
+
+  THE SECOND SCENARIO GUARDS AGAINST DOUBLE-COUNTING. A retry implemented by re-entering the
+  step without discarding the first attempt's record produces two completed steps for one
+  piece of work — the same skip-branch double-recording shape CLAUDE.md records from
+  EPIC-InFlightVisibility. "Exactly one" is the load-bearing word.
+
+  THE THIRD SCENARIO KEEPS THE RETRY VISIBLE. A retry that leaves no trace turns a chronic
+  parking problem into an invisible slowdown; the record is what lets anyone notice that a
+  particular step parks every time.
+
+  BOUNDARY: BO-210's pre-commit safety net re-dispatches a coder after a hook FAILURE and
+  assumes the coder ran. This covers the case where it never ran at all. The two must not be
+  merged, and a re-dispatch triggered here is not a hook-failure re-dispatch.
+
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", the covering test
+  must run the real step lifecycle and observe that a second execution occurred and what the
+  record contains, not assert that a veto call appears in the source.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). One boundary the BA could not have set: an `undetermined`
+  verdict from BO-3100b-1 (the snapshot could not be taken) must NOT enter this retry loop.
+  Retrying on an unknown burns the attempt budget on a condition retrying cannot fix, and would
+  convert a diagnosable transport fault into a chronic-parker failure pointing at the wrong
+  thing — the misdirection cost KI-BO-018 records. It halts per BO-3200e-2 instead.

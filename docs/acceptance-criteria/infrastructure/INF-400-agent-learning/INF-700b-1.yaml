@@ -1,0 +1,134 @@
+id: INF-700b-1
+components:
+  - infrastructure
+  - knowledge_system
+title: "An agent that finishes with a learning leaves a durable record of it by following the capture step verbatim"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
+criteria: |
+  Given a fresh install of the package in which nobody has hand-created any
+    directory the knowledge-capture step asks for,
+  And a phase agent has just finished a piece of work and holds one learning
+    about this project that it did not hold when it started,
+  When that agent executes the shared sign-off knowledge-capture step exactly
+    as written, taking no initiative beyond the literal instructions,
+  Then every artefact the step names — each directory, file or helper it tells
+    the agent to load or run — is present at the location the step names, so
+    no instruction resolves to a missing target,
+  And the step's "if unavailable, log a warning and proceed" branch is not the
+    branch taken,
+  And a durable knowledge record exists once the agent's process has ended,
+  And that record carries the learning as the agent wrote it, in prose a reader
+    who was not present in that run can understand from the record alone,
+  And a reader can recover the learning without opening the agent's console
+    output and without opening any other file.
+depends_on:
+  - INF-700b
+  # INF-400b-2-ii reconciles the four shipped descriptions of the emission
+  # record (signoff SKILL.md:691 keys on `ticket`; the three v3 agent
+  # templates key on `agent` + `component`). This AC's own descriptor
+  # test_v3_agent_emission_shape_matches_section_7 asserts key-set equality
+  # across those surfaces, so it CANNOT pass until that reconciliation
+  # lands. Without this edge the AC sits in the ready queue carrying a test
+  # that is red for a reason outside its own scope.
+  - INF-400b-2-ii
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - "SCHEMA CHANGE (resolves the INF-400b-2 contradiction the BA escalated). The knowledge-capture record gains one additive field, `text`, carrying the learning body as the agent wrote it. The field is REQUIRED OF THE PRODUCER (an emitting agent must populate it with non-empty prose) and OPTIONAL TO THE CONSUMER (a reader must accept a record without it). This asymmetry is the whole backward-compatibility story: the 28 six-field records already in debugging/logs/agent_telemetry.jsonl stay structurally valid on read, and a missing `text` is a CLASSIFICATION (ineligible-to-write, per INF-700c-1) rather than a parse error or a validation failure."
+  - "GOVERNANCE — INF-400b-2 requires amendment and must NOT be edited by the implementer of this AC. Its enumerated field list (event, timestamp, agent, component, destination, entry_kind) becomes incomplete the moment `text` ships. Its separate clause 'structurally identical to the events emitted by phase agents via signoff section 7 step 4' does NOT need amendment and must keep holding — which is why the field must be added to BOTH emission surfaces in one change (see next requirement). Raise the amendment to the BA/PO; do not resolve it silently in code or prose."
+  - "The `text` field must be added to all four emission surfaces in a single change so no install ever runs a mixed contract: templates/skills/signoff/SKILL.md section 7 step 4, and the S9 knowledge-emission blocks of templates/agents/product-owner.md, templates/agents/business-analyst.md and templates/agents/it-po.md."
+  - "PRE-EXISTING DIVERGENCE, flag do not fix here: section 7 step 4 documents a record keyed on `ticket`, while the three v3 templates document `agent` + `component`; all 28 records on disk carry the v3 shape and none carries `ticket`. The harvester's idempotency hash keys on `ticket` among other fields (scripts/knowledge/harvest_learnings.py `_event_hash`), so it hashes an always-empty field. Reconciling the two shapes belongs to INF-400b-2, not to this AC; this AC must not pick a winner unilaterally, and must not make the divergence worse."
+  - "The record is one JSONL line. `text` must be a JSON string that survives a json.loads round trip with embedded newlines escaped — no multi-line pretty-printing, no unescaped control characters, no raw markup fragments. Precedent: line 19 of the live sink is a bare `</content>` fragment left by a hand-composed append."
+  - "The replacement step must name ONLY artefacts that resolve in BOTH layouts: templates/skills/<name>/ in the package checkout and .claude/skills/<name>/ in a consumer install. The names `route-learning` and `capture-learning` are retired by ADR-034 section 2 item 3 and must not be reintroduced under any spelling; scripts/check_skill_refs.py currently reports 10 dangling imperative references to the two of them across six files, and INF-700b-2 turns that report into a refusal."
+  - "Must not introduce a sink-path literal. Which file the record lands in is INF-400c-4's decision and is currently unsettled (the harvester defaults to debugging/logs/knowledge_emissions.jsonl, which has never existed; the live records are in debugging/logs/agent_telemetry.jsonl). Reference the sink through the single declared path, never a second competing literal."
+  - "Fail-open is retained — a knowledge step must never block an agent's primary output or its sign-off — but the proceed-anyway branch must leave a countable artefact. That obligation is specified by INF-700b-1-ii and must not be re-specified or contradicted here."
+test_spec:
+  - name: test_capture_step_names_only_resolvable_skill_targets
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Executes scripts/check_skill_refs.py over the template tree and asserts zero dangling imperative references originate from the signoff section 7 capture step or the three v3 agent S9 blocks."
+  - name: test_section_7_emission_shape_declares_a_learning_text_field
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Parses the JSON object documented in templates/skills/signoff/SKILL.md section 7 step 4 as shipped and asserts it declares a `text` key alongside the existing descriptive keys."
+  - name: test_v3_agent_emission_shape_matches_section_7
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Parses the emission JSON from product-owner.md, business-analyst.md and it-po.md S9 and asserts each key set equals section 7 step 4's, holding the INF-400b-2 structural-identity clause."
+  - name: test_existing_six_field_records_remain_readable_without_text
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Feeds the real 28-record corpus (tests/fixtures/harvest_learnings/unroutable_corpus_28.json) to the reader and asserts no record is rejected as invalid for lacking `text`."
+test_rationale: |
+  Three of the four descriptors assert against the shipped artefact rather than
+  a fixture, because the artefact under change IS prose: a test that builds its
+  own template string proves nothing about what ships. The first descriptor
+  executes the checker rather than grepping for the absence of a name, per the
+  project's "verify behaviorally, not by grep" rule — a grep for
+  "route-learning" passes the moment someone renames the reference while
+  leaving it dangling. The fourth descriptor is the backward-compatibility
+  proof and must use the real corpus, not a hand-written six-field stub, since
+  the point is that records written by real agents in June still parse.
+delivers_to:
+  agent: python-coder
+  contract: "The knowledge-capture record shape, one JSON object per line: { event: \"knowledge_captured\", timestamp: string (ISO-8601), agent: string, component: string, destination: string, entry_kind: string, text: string (non-empty, newlines escaped) }. `text` carries the learning body and is the ONLY field a writer or counter may treat as content; every other field is descriptive. Consumers must tolerate `text` being absent on pre-existing records and classify such a record as ineligible-to-write rather than rejecting it."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Resolved the INF-400b-2 contradiction the BA escalated in notes: `text` is an additive field, required of the producer and optional to the consumer, so the 28 existing six-field records stay valid and become classified rather than invalid. Named INF-400b-2 as requiring amendment (field list only, not the structural-identity clause) without editing it. Recorded the pre-existing section-7 vs v3-template key divergence as INF-400b-2's to settle. Did not split: the four surfaces this AC changes are all Markdown templates, so llm-expert covers the whole declared surface."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by:
+  - INF-700b-1-i
+  - INF-700b-1-ii
+implemented_by: []
+notes: |
+  Scope boundaries honoured. INF-400b-1 owns that a mandatory capture step
+  exists in the v3 templates and fires before exit; this AC owns that the step
+  it fires resolves to something and produces content. INF-400b-2 owns the
+  event's field schema as it stands; this AC adds the requirement that the
+  record carry the learning text, which today's six-field receipt does not —
+  flag for governance rather than a silent contradiction. INF-400c-4 owns
+  which file the record lands in, so no sink path appears here. INF-400c-5
+  owns the entry_kind vocabulary, so no kind values appear here.
+
+  Current state (verified 2026-08-26): the step's steps 2 and 3 direct the
+  agent to load route-learning and capture-learning, neither of which exists
+  in templates/ or .claude/, so the warning branch is the only reachable path.
+  ADR-034 section 2 item 3 retired both names; satisfying this AC requires
+  that strike, and must not reintroduce either name.
+change_target: prompt
+risk_surface: contract_boundary
