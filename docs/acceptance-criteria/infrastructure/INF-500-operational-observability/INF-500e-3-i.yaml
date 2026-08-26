@@ -1,0 +1,100 @@
+id: INF-500e-3-i
+components:
+  - infrastructure
+  - ac_store
+title: "An age the report cannot establish is left out of the cycle time rather than entered as zero days"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a criterion closed during the period whose first appearance cannot be
+    established from the recorded history,
+  When the ages of the criteria closed in that period are collected,
+  Then no age is reported for that criterion,
+  And in particular it does not contribute an age of 0 days,
+  So that an unknown history cannot pull the median cycle time down and present the
+    system as faster than it is.
+
+  Given a criterion closed during a period ending 2026-08-26 whose recorded first
+    appearance is 2026-08-30, four days after the period ends,
+  When the ages of the criteria closed in that period are collected,
+  Then its reported age is 0 days rather than a negative number,
+  So that a clock skew or an out-of-order record cannot produce a negative cycle time
+    that silently offsets the real ages it is averaged with.
+depends_on:
+  - INF-500e-3
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "Calls the age collection with an empty birth index and with a birth date after the period end, asserting the returned list of ages in both cases."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Both branches live in scripts/agent-health/weekly_health.py::collect_cycle_times. An identifier absent from the births index must be SKIPPED — the loop continues and appends nothing — and must never fall back to the period start, the period end, or any other default. A default would report a fresh 0-day cycle for every record the history cannot account for, which is the flattering direction and the reason this record is an L3."
+  - "The two unknown treatments in this feature are deliberately different and must not be unified. An unestablishable age is OMITTED from the population, because the cycle figure is an aggregate; the dash owned by INF-500e-2 applies to a single named figure that was asked for and could not be obtained. Do not add a None entry to the returned list to make the two look alike — the list is list[int] and a None in it would break the median."
+  - "A birth date later than the period end must clamp to 0, not produce a negative age and not raise. One out-of-order or clock-skewed record must not be able to cancel out several honest ages inside the median."
+  - "The function must remain pure over its four arguments — no git call, no clock read — so both branches are executable from literal inputs; the birth index is supplied by INF-500e-3's ac_birth_dates."
+  - "Whatever count of criteria is skipped, the median must be computed over the surviving ages only, and an empty list must render as unknown through INF-500e-2's formatter rather than as 0."
+test_spec:
+  - name: TestCollectCycleTimes::test_criterion_with_no_known_birth_is_skipped_not_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A criterion closed in the period with an empty births index yields an empty age list — it contributes no age at all, and specifically not a 0."
+  - name: TestCollectCycleTimes::test_birth_after_period_end_clamps_to_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A birth of 2026-08-30 against a period ending 2026-08-26 yields the single age 0 rather than a negative number, and raises nothing."
+test_rationale: |
+  Asserting the returned LIST rather than an aggregate is what makes the first
+  descriptor meaningful: a skipped criterion and a criterion entered as 0 produce
+  medians that can coincide, so a test on the median alone would pass on the
+  defect this record exists to prevent. The empty-list assertion distinguishes
+  them unambiguously. Both descriptors are direct-import unit tests because
+  collect_cycle_times is pure over its arguments — the births index is injected,
+  so the unknown-history branch is reachable deterministically without
+  constructing a repository whose log happens to be missing a record.
+delivers_to: null
+expects_from:
+  ac_id: INF-500e-3
+  contract: "The birth index as dict[str, date] mapping criterion identifier to first-appearance date, produced by weekly_health.py::ac_birth_dates. An identifier the history could not account for is ABSENT from the mapping — it is never present with a placeholder or sentinel date — which is what makes the skip branch reachable and correct."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds both criteria to the real passing tests in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale, the births-index expects_from contract, and the scripts/agent-health/README.md doc link. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+change_target: code
+risk_surface: internal
+notes: |
+  These two branches sit either side of the same trap. Defaulting an unknown
+  first-appearance to the period start would report a fresh 0-day cycle for every
+  record the history cannot account for, which is the flattering direction; and
+  admitting a negative age would let one bad date quietly cancel out several
+  honest ones in the median.
+
+  Skipping is the right answer for the unknown case rather than reporting the
+  criterion with a dash, because the cycle figure is an aggregate over a
+  population: a criterion with no establishable age is not part of the
+  population being measured, whereas INF-500e-2's dash applies to a single named
+  figure that was asked for and could not be obtained.

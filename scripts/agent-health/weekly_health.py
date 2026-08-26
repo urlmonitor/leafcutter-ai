@@ -1121,7 +1121,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--no-gh", action="store_true",
-        help="Skip the GitHub query; PR columns report zero.",
+        help="Skip the GitHub query; PR columns report unknown, never zero.",
     )
     parser.add_argument(
         "--today", default=None,

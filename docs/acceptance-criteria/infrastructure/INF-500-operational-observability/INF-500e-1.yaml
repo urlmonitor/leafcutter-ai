@@ -1,0 +1,194 @@
+id: INF-500e-1
+components:
+  - infrastructure
+  - agent_telemetry
+title: "Delivery is scored on what was retracted, not only on what was claimed"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store held four criteria across one reporting period — "a" unfinished at
+    the start and closed by the end, "b" closed at the start and unfinished by the
+    end, "c" closed at both ends, and "d" absent at the start and unfinished at the
+    end,
+  When the period's criterion movement is computed,
+  Then the period reports filed 1, done 1, reopened 1, net verified 0, and a store
+    size of 4,
+  So that a criterion going back from closed to unfinished subtracts from the week's
+    verified total instead of leaving the earlier claim standing.
+
+  Given a criterion that did not exist at the start of the period and is closed by the
+    end of it,
+  When the period's criterion movement is computed,
+  Then it is counted once as filed and once as done, and the net verified total is 1,
+  And it is not counted twice, nor excluded for having no starting state.
+
+  Given a criterion that was closed at the start of the period and is absent from the
+    store at the end of it,
+  When the period's criterion movement is computed,
+  Then the reopened count is 0,
+  So that deleting records during a store cleanup cannot be read as the system
+    retracting its own completed work.
+
+  Given a period that closed 40 criteria and reopened none,
+  When the period's discounted delivery score is computed,
+  Then the score equals the net verified total of 40.
+
+  Given a period that closed 40 criteria and reopened 40 of them, leaving a net
+    verified total of 0,
+  When the period's discounted delivery score is computed,
+  Then the score is 0.
+
+  Given a period that closed 36 criteria and reopened 47, leaving a net verified total
+    of -11,
+  When the period's discounted delivery score is computed,
+  Then the score is negative,
+  So that a week which retracted more than it closed cannot present as progress.
+
+  Given a period in which nothing at all was closed,
+  When the period's reopen rate and discounted delivery score are computed,
+  Then both are reported as unknown rather than as 0,
+  And computing them raises no error,
+  So that "we closed nothing" is never rendered as a perfect trust reading.
+depends_on:
+  - INF-500e
+doc_links:
+  - path: scripts/agent-health/weekly_health.py
+    relationship: implements
+    status: exists
+  - path: scripts/agent-health/README.md
+    relationship: describes
+    status: exists
+  - path: unit_tests/agent_health/test_weekly_health.py
+    relationship: related
+    status: exists
+    relevance: "Executes the criterion-movement and discounted-score computations directly against literal before/after snapshots — no fixture repository is required, so every scenario here is verifiable without git."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The criterion-movement computation is scripts/agent-health/weekly_health.py::ac_deltas(before, after). It takes two id -> work_status snapshots and returns exactly the five keys filed, done, reopened, net_done and store_size. It must stay a pure function over the two dicts — no git call, no store read, no clock — so every scenario above is executable from literal inputs and the report's most-trusted figure remains testable without a fixture repository."
+  - "The reopen branch must require the identifier to be PRESENT in the end snapshot as well as done in the start snapshot. Counting an absent identifier as a reopen would make every routine store cleanup read as the system retracting its own completed work, and would spike the one metric the whole trust tier is built on."
+  - "net_done must be done minus reopened and must be permitted to go negative. Clamping it at zero would erase exactly the weeks this metric exists to expose."
+  - "Every division in the trust tier must route through weekly_health.py::safe_ratio, which returns None on a zero denominator instead of raising or substituting 0. composite_score(net_done, done, reopened) must therefore return None — never 0.0 — when nothing was closed, because net_done / (1 + reopen_rate) is undefined there and a 0 would render as a measured perfect-trust week."
+  - "Snapshot keys must be criterion identifiers, never store paths. Reuse the identifier derivation specified by INF-500e-3 (weekly_health.py::ac_key, consumed via work_status_at) rather than re-deriving it here; a path-keyed snapshot inflates both filed and done on every folder move."
+  - "Must not introduce a raw done-count shortcut alongside the discounted score. Per scripts/agent-health/README.md the tier is deliberately built on reopens because a reopen is only ever recorded against the system's own prior claim of completion, and the store's work_status field has a documented phantom-done history."
+test_spec:
+  - name: TestAcDeltas::test_counts_filed_done_and_reopened
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Four criteria a/b/c/d across one period yield filed 1, done 1, reopened 1, net_done 0 and store_size 4."
+  - name: TestAcDeltas::test_criterion_filed_and_closed_in_the_same_period_counts_once_as_done
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A criterion absent at the start and done at the end counts once as filed and once as done, giving net_done 1."
+  - name: TestAcDeltas::test_deleted_criterion_is_not_counted_as_reopened
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A criterion done at the start and absent at the end yields reopened 0, so a store cleanup is not read as a retraction."
+  - name: TestAcDeltas::test_empty_snapshots_are_all_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Two empty snapshots yield net_done 0 and store_size 0 without raising."
+  - name: TestCompositeScore::test_clean_week_scores_its_full_net
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A period closing 40 criteria and reopening none scores its full net verified total of 40."
+  - name: TestCompositeScore::test_fully_retracted_week_scores_zero
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A period closing 40 and reopening 40, leaving net 0, scores 0."
+  - name: TestCompositeScore::test_negative_net_produces_a_negative_score
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "36 closed against 47 reopened, net -11, produces a negative score, so a retracting week cannot present as progress."
+  - name: TestCompositeScore::test_no_closures_returns_none
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A period that closed nothing returns None from composite_score rather than 0, and raises no error."
+  - name: TestSafeRatio::test_zero_denominator_returns_none
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The reopen rate over a zero closure count is None rather than 0 or a ZeroDivisionError."
+  - name: TestSafeRatio::test_zero_numerator_is_zero_not_none
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A genuinely-zero numerator over a non-zero denominator is 0.0, not unknown — the measured-zero half of the same rule."
+  - name: TestSafeRatio::test_normal_division
+    target_dir: unit_tests/agent_health/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "safe_ratio(1, 4) is 0.25, so the None branch is a genuine special case and not the only path the function can take."
+test_rationale: |
+  Every descriptor names a test that already exists and passes in
+  unit_tests/agent_health/test_weekly_health.py; this contract binds the criteria
+  to that shipped evidence rather than commissioning new coverage. The shape is a
+  direct-import unit test because ac_deltas, safe_ratio and composite_score are
+  pure functions over literal snapshots — the scenarios are fully executable
+  without a fixture repository, so a heavier integration test would add setup cost
+  without adding proof. The two measured-value descriptors
+  (test_zero_numerator_is_zero_not_none, test_normal_division) are load-bearing
+  rather than decorative: without them an implementation that returned None for
+  every ratio would satisfy the unknown-when-nothing-closed scenario and quietly
+  destroy the metric.
+delivers_to:
+  agent: python-coder
+  contract: "Per-period trust figures consumed by build_report and the two renderers (INF-500e-2): ac_deltas(before: dict[str, str], after: dict[str, str]) -> dict with int keys filed, done, reopened, net_done, store_size, where net_done may be negative; safe_ratio(numerator: float, denominator: float) -> float | None with None on a zero denominator; composite_score(net_done: int, done: int, reopened: int) -> float | None with None when done is 0. Every None in this contract means unknown and must never be coerced to 0 downstream."
+expects_from:
+  ac_id: INF-500e-3
+  contract: "Two work_status snapshots as dict[str, str] mapping the criterion IDENTIFIER (weekly_health.py::ac_key output, e.g. BO-2400f-13) to its work_status value at the period boundary. Keys are identifiers, never store paths, and non-criterion store files (index.yaml, prose) are already excluded from the mapping."
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. The capability had already shipped (scripts/agent-health/weekly_health.py, merged as d0fa881c / PR #608), so the test contract binds each criterion to the real passing test in unit_tests/agent_health/test_weekly_health.py rather than commissioning new coverage. Added assigned_agent, estimated_complexity, it_requirements, test_spec, test_rationale and the ac_deltas/safe_ratio/composite_score contracts. Criteria unchanged; work_status deliberately left todo for a separate evidence-bound step."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by: []
+implemented_by:
+  - d0fa881ca111665a8ae10b3bb46773c73325c85c
+  - scripts/agent-health/weekly_health.py
+change_target: code
+risk_surface: internal
+notes: |
+  A reopen is the one signal in this report the delivery system cannot award
+  itself: it is only ever recorded against the system's own prior claim of
+  completion. That is why the trust tier is built on it rather than on the raw
+  count of criteria marked done, which has a documented history of being wrong.
+
+  The deletion scenario and the filed-and-closed-in-one-period scenario are the
+  two ways this metric would silently drift. Counting a deleted record as a
+  reopen would spike the reopen rate on every routine cleanup; refusing to count
+  a criterion that was born and closed inside the same period would understate a
+  fast week. Both are stated as scenarios so a future change to the movement
+  computation has to break a test rather than a reviewer's memory.
+
+  The unknown-when-nothing-closed scenario is deliberately duplicated in spirit
+  with INF-500e-2 but not in mechanism: here it is the trust computation itself
+  refusing to divide by zero, there it is the rendering layer refusing to print
+  an unobtained figure as a digit.
