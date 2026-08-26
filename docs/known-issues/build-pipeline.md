@@ -784,7 +784,7 @@ version of something the source has moved on from.
 **Related.** KI-BP-010 is the cleanup-side counterpart for this same `workflows/` directory:
 its `--clean` entry has never executed, so nothing reaps what this phase declines to rewrite.
 
-KI-BP-021 is the **write-side twin**: the identical stale-workflow symptom (same file, same
+KI-BP-20260826-1331 is the **write-side twin**: the identical stale-workflow symptom (same file, same
 missing review and changelog phases) reached on 2026-08-25 by a build whose install phase ran
 fail-open and wrote older bytes from a stale worktree, rather than by this entry's skip
 branch. Counted separately because a skipped-phase alarm would not fire on it — but the
@@ -1733,7 +1733,7 @@ written. Do **not** fix this by adding to `deploy_map`.
 **Pattern:** a build whose report is a count of what it wrote, in a system where the failure
 mode is not writing something.
 
-**Related.** KI-BP-021 is a different defect with the same consequence: many worktrees write a
+**Related.** KI-BP-20260826-1331 is a different defect with the same consequence: many worktrees write a
 shared `.leafcutter/` output root last-writer-wins, so a deployed file may carry any worktree's
 revision. This entry explains why an *absent* artifact is never noticed; that one explains why a
 *present* artifact cannot be attributed to a commit. Together they mean the deployed tree does
@@ -1775,22 +1775,41 @@ BP-900g-9's fail-closed principle but worth fixing on sight; it is one line.
 **Pattern:** an exception handler that makes a missing dependency indistinguishable from a
 satisfied one.
 
-*The changelog-entry validation gap first drafted here as KI-BP-021 was refiled as KI-CL-001 in
-`docs/known-issues/changelog.md`: the `changelog` component owns entry emission and the
-`changelogs/` corpus, whereas this register covers the template compiler. That draft was never
-published, so the number was free — and **it has since been used**, by the shared-output-root
-entry immediately below. A citation of `KI-BP-021` resolves to that entry and to nothing else;
-the changelog gap is `KI-CL-001`.*
+*The changelog-entry validation gap first drafted here as `KI-BP-021` was refiled as
+`KI-CL-001` in `docs/known-issues/changelog.md`: the `changelog` component owns entry emission
+and the `changelogs/` corpus, whereas this register covers the template compiler. That draft
+was never published. **Do not read a citation of `KI-BP-021` as pointing here** — the number
+was later taken on `main` by an unrelated closure-guard entry. The changelog gap is
+`KI-CL-001`.*
 
 ---
 
-### KI-BP-021 — a shared deployed `.leafcutter/` is a per-file collage of whatever each writing worktree last wrote — no single commit produces the tree the gates actually run
+### KI-BP-20260826-1331 — a shared deployed `.leafcutter/` is a per-file collage of whatever each writing worktree last wrote — no single commit produces the tree the gates actually run
 
-> **Numbered 021, not 018.** This entry was authored as `KI-BP-018` against an `origin/main`
-> that had no 018, and collided on rebase with the 018/019/020 other sessions landed while
-> PR #568 was open. Renumbered here along with its inbound references. Counted as
-> `KI-BO-024`'s collision shape, not filed separately. 021 was verified free at the point of
-> renumbering — it had been reserved-then-released by the `KI-CL-001` refiling noted above.
+> **This id is a timestamp, not a sequence number — and that is deliberate.**
+> `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time.
+>
+> This entry was first authored as `KI-BP-018`, renumbered to `KI-BP-021` when 018/019/020
+> were taken mid-review, and would have had to move a **third** time: `KI-BP-021` was itself
+> claimed on `main` before this PR could land. Across two rounds, **four ids collided twice**
+> — eight collisions in one day, all while the PR sat open being reviewed. Renumbering is a
+> race the reviewer always loses, because review is exactly the interval during which `main`
+> moves.
+>
+> `KI-BO-024` predicted this and proposed a duplicate-heading check. That check is still worth
+> building, but it detects collisions rather than preventing them. A timestamp prevents them:
+> two entries collide only if authored in the same component register in the same minute,
+> which no observed workflow does. Cost is a longer id; the benefit is that an id, once
+> written down and cited, never has to move.
+>
+> **Existing sequential ids are not being renumbered.** Mass-renaming would break every
+> citation in the repo to fix a problem only new entries have. The convention is
+> forward-only: sequential ids stay valid and stay cited, new entries are timestamped. Both
+> forms will coexist indefinitely, and that is fine — the id's only job is to be unique and
+> stable.
+>
+> Worth an ADR rather than a note buried in one entry; recorded here because the convention
+> was adopted to unblock this PR.
 
 - **Severity:** high
 - **Status:** open — no AC

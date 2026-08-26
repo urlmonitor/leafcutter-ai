@@ -1166,7 +1166,7 @@ a model.
 `origin/main` still reads `todo`. So deleting the worktree discards the strand, and this entry's
 "aborted runs strand their claims" is true only for as long as that worktree survives. The
 flip side is worse than the strand: a claim that never reaches shared state cannot exclude
-anything. See KI-BO-030, where that is the primary finding.
+anything. See KI-BO-20260826-1332, where that is the primary finding.
 
 **Verified, not inferred.** After run `wf_bd4984e8-438` halted, all five claimed ACs were
 still `work_status: in_progress` in the run's worktree store, with `BO-2400f-13` and
@@ -1605,7 +1605,7 @@ consumer (`BO-2200c-5`) — comes from the 2026-08-25 triage's own working notes
 register, and counting a fourth against a set this entry never stated was retro-fitting.
 
 Stated properly: `BO-1000c-1a` exhibits a concentration **not among those three**, filed as
-**`KI-BO-031`** — a test file where nine of ten tests are presence-only against one source
+**`KI-BO-20260826-1333`** — a test file where nine of ten tests are presence-only against one source
 file, so the shape is close to the file's whole design rather than one weak test among stronger
 ones, and the AC looked comprehensively covered precisely because coverage was measured by
 count. Nine of the ten fail against the corrected source, each demanding the dead mechanism be
@@ -1701,12 +1701,13 @@ duplicate of 016, so 016 is the one to fix).
 
 ---
 
-### KI-BO-030 — The fast lane reads `work_status: todo` as "nobody has built this", but it only means "not on main", so it silently rebuilds work that already exists on an unmerged branch
+### KI-BO-20260826-1332 — The fast lane reads `work_status: todo` as "nobody has built this", but it only means "not on main", so it silently rebuilds work that already exists on an unmerged branch
 
-> **Numbered 030, not 029.** This entry was authored as `KI-BO-029` against an `origin/main`
-> that had no 029, and collided on rebase with the `git add -A` entry another session landed
-> at 029 while PR #568 was open. Renumbered here along with its inbound reference in
-> `KI-BO-020`. Counted as `KI-BO-024`'s occurrence, not filed separately.
+> **Timestamped id** — `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time. This
+> entry was authored as `KI-BO-029`, renumbered to `KI-BO-030` when 029 was taken mid-review,
+> and 030 was then taken too. See the convention note on
+> `KI-BP-20260826-1331` in `build-pipeline.md` for why sequential numbering was abandoned for
+> new entries. This is `KI-BO-024`'s predicted failure, observed eight times in one day.
 
 - **Severity:** medium
 - **Status:** open — no AC
@@ -1764,7 +1765,7 @@ from **any** source — unmerged branches, sibling worktrees, or another concurr
 
 **How it surfaced, and why that is the concerning part.** It was not caught by the lane. It
 was caught incidentally, while diffing the deployed `commit_guardian/` directory against a
-scratch build for an unrelated reason (KI-BP-021) — `check_presence_only_assertions.py`
+scratch build for an unrelated reason (KI-BP-20260826-1331) — `check_presence_only_assertions.py`
 appeared in the deployed tree and on no merged branch, which is what prompted the search. Had
 that diff not been run for other reasons, the lane would have opened a PR duplicating six-day-old
 work and nothing in the pipeline would have said so. The reviewer would have had no signal
@@ -1793,13 +1794,13 @@ observed, not because it is confined there.
 **Pattern:** a field that answers one question precisely, consumed as though it answered a
 broader one — the store is not wrong, the reading is.
 
-**Related.** KI-BP-021 (the deployed-tree collage, whose evidence surfaced this).
+**Related.** KI-BP-20260826-1331 (the deployed-tree collage, whose evidence surfaced this).
 KI-BO-015 and KI-BO-017 (other cases of the lane reasoning incorrectly about worktree and
 branch state).
 
 ---
 
-### KI-BO-031 — Nine of a file's ten tests asserted only that strings were present in the source they covered — so the AC looked comprehensively covered because coverage was measured by count
+### KI-BO-20260826-1333 — Nine of a file's ten tests asserted only that strings were present in the source they covered — so the AC looked comprehensively covered because coverage was measured by count
 
 - **Severity:** high
 - **Status:** **closed in source** — fixed and merged 2026-08-26, PR #573 (squash `d97eb399`).
@@ -1831,7 +1832,7 @@ grep -c "appendJournal\|require(" .leafcutter/workflows/finalize-feature.js  -> 
 The source is fixed; the tree that actually runs is not. Any finalize run launched from this
 workspace still executes the `require('fs')` version.
 
-This is `KI-BP-021` demonstrating itself on the very fix that closed this entry, filed in the
+This is `KI-BP-20260826-1331` demonstrating itself on the very fix that closed this entry, filed in the
 same pull request — which is a sharper illustration than either entry could give alone. It
 also sets a precedent worth adopting: in this repository, **"fixed and merged" is not
 sufficient grounds to call a defect closed**, because the deployed surface is not derived from
@@ -1884,7 +1885,7 @@ passes. There is nothing for a behavioural test to observe. The only available s
 text of the source, and the only useful thing to assert about it is that the pattern is gone.
 
 This is the same class `BP-1100b-5` exists to catch mechanically — presence-only assertions
-ceasing to count as coverage. `BP-1100b-5` is still `todo` on `main`, and per `KI-BO-030` a
+ceasing to count as coverage. `BP-1100b-5` is still `todo` on `main`, and per `KI-BO-20260826-1332` a
 complete unmerged implementation of it has existed on a local branch since 2026-08-19. Until it
 lands, absence assertions are hand-written per defect.
 
@@ -1902,5 +1903,5 @@ itself the thing that makes the gap invisible.
 
 **Related.** `KI-BO-028` (the triage this extends; `BO-1000c-1a` is recorded in its addendum as
 the sweep's nineteenth phantom-done). `KI-BO-008` (a structural test making code comments
-load-bearing — the individual-test form of the same mechanism). `KI-BO-030` (why the
+load-bearing — the individual-test form of the same mechanism). `KI-BO-20260826-1332` (why the
 `BP-1100b-5` implementation that would catch this mechanically is invisible to the store).

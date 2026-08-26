@@ -834,7 +834,7 @@ exit: 0
 ```
 
 This was initially filed as a **separate** defect — a missing schema causing a downgrade to a
-weaker check. That diagnosis is wrong and was withdrawn; see the retracted `KI-CG-021` at the
+weaker check. That diagnosis is wrong and was withdrawn; see the retracted `KI-CG-20260826-1334` at the
 end of this file for the A/B that disproves it (with the schema *removed* the hook is
 **stricter**, catching an extra id-format error).
 
@@ -1704,7 +1704,20 @@ purpose was to bound false positives.
 
 ---
 
-### KI-CG-021 — RETRACTED: "a missing schema makes `check-ac-schema` fail open" — tested and disproved; the real cause is the `KI-CG-012` at line 800
+### KI-CG-20260826-1334 — RETRACTED: "a missing schema makes `check-ac-schema` fail open" — tested and disproved; the real cause is the `KI-CG-012` at line 800
+
+> **Timestamped id** — `KI-<COMPONENT>-<YYYYMMDD>-<HHMM>`, minted at authoring time. Authored
+> as `KI-CG-016`, renumbered to `KI-CG-021` when 016 was taken mid-review, then 021 was taken
+> too. Sequential numbering has been abandoned for new entries in this register; see the
+> convention note on `KI-BP-20260826-1331` in `build-pipeline.md`.
+>
+> This register is the worst affected: `KI-CG-012`, `KI-CG-016` and `KI-CG-017` each currently
+> resolve to **two unrelated defects** on `main`. Those are not renumbered here — they are
+> cited elsewhere and picking a winner is the owner's call — but they are the reason a
+> retracted entry landing on a live id would have been actively harmful. Before this change,
+> `KI-CG-021` on `main` is an open defect ("the whole-collection uniqueness pass is registered
+> in no hook config and has never run"); merging a **RETRACTED** entry onto that number would
+> have told every reader the real defect had been withdrawn.
 
 - **Severity:** n/a — retracted before merge
 - **Status:** **closed — hypothesis disproved by experiment.** Kept as a record so the same
