@@ -1,0 +1,316 @@
+id: ACS-100i-11
+components:
+  - ac_store
+title: "The 24 records the new rule would refuse are corrected in the same change that introduces the rule, and before it"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the 24 records the producer-name rule would refuse — every one of them
+    naming something that is not an agent at all: 23 reading
+    `finalize-feature-workflow`, which is a workflow script, and 1 reading
+    `create-ticket`, a slash command retired by ADR-012,
+  When the correction is applied,
+  Then each of those 24 records is written to disk carrying a producer that the
+    agent registry lists, chosen to match the surface that record changes,
+  And no other record's producer value is written at all — in particular the 16
+    records whose producer is written with surrounding quote characters are NOT
+    rewritten, because their parsed value is already a registered agent name and
+    changing them would be a cosmetic edit dressed as a correction.
+
+  And given the corrected store,
+  When every record in it is validated in one pass,
+  Then no record is refused for naming a producer the registry does not list,
+    and the pass states how many records it examined, so the result cannot be
+    an empty run reported as a clean one.
+
+  And given the correction and the rule are part of one change,
+  When the rule is applied to the store as it stood before the correction,
+  Then it refuses 24 records — which is why the correction is applied first
+    within that change, and why the rule is never introduced against a store it
+    would immediately reject.
+
+  And given the store-wide sweep that the project's own instructions prescribe
+    before a finalization drive,
+  When it is run after this change lands,
+  Then it reports clean on this rule, and it did so without any record being
+    exempted from the rule.
+depends_on:
+  - ACS-100i
+  - ACS-100i-9
+  - ACS-100i-9-i
+doc_links:
+  - path: config/agent_registry.json
+    relationship: governs
+    status: exists
+    relevance: "The 60 registered ids the 24 corrected values must be drawn from."
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Retired /create-ticket. The single record naming `create-ticket` as its producer is a fossil of that retirement."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "Decision 3, prerequisite 1 — no producer joins the fast lane's roster until assigned_agent is validated against the registry. ADR-035 section 1 already counts these same 23 + 1 records."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "The non-diff-scoped store-wide sweep whose verdict defines the correction set and proves the result. Its examined-count line ('OK: all N AC YAML files are valid') is the anti-vacuous-pass assertion this criterion requires."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    assigned_agent_repair:
+      type: object
+      description: "The repair's own per-record contract, applied to the 24 records the membership rule refuses: {file_path: str, current_value: str (the unregistered name, verbatim), corrected_value: str (an id present in config/agent_registry.json), basis: str (the surface this record changes, which is why this producer was chosen)}. A record for which no producer can be inferred is emitted to a review report with corrected_value null and is NOT written. Records the rule accepts are never members of this set — including the 16 whose value is a registered name written with surrounding quotes."
+  reference_file_path: "docs/acceptance-criteria"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "ORDER WITHIN THE CHANGE IS LOAD-BEARING AND MUST BE MECHANICAL, NOT A COMMENT. The 24 corrections are written and committed FIRST; the rule (ACS-100i-9) and its deploy_map entry land SECOND, in the same change. At the moment the rule becomes live, `python scripts/ac_store/validate_ac_schema.py docs/acceptance-criteria` must exit 0 with a non-zero examined count. If the rule lands first, that sweep is red from its first run on 24 records the runner did not author — and a permanently-red hygiene tool gets skipped, then removed, then documented as known noise. That is the recorded history of KI-ACS-001 and the reason the ACS-200h whole-store gate is still unimplemented."
+    - "THE CORRECTION SET IS THE RULE'S OWN VERDICT, NOT A HAND-COPIED LIST. Run the new shared helper over the store, take the set of records it refuses, and correct exactly those. A hand-maintained list drifts between authoring and implementation and cannot be re-derived at review time. Because the rule accepts a quoted-but-registered name, that verdict yields 24 records, not 40."
+    - "THE 16 QUOTED RECORDS ARE OUT OF SCOPE AND MUST COME OUT BYTE-IDENTICAL. `assigned_agent: \"python-coder\"` is ordinary YAML double-quoting; yaml.safe_load returns exactly `python-coder`, which is a registered agent, so the rule accepts those records and there is nothing to correct. Do not unquote them as a drive-by tidy: it would change no parsed value, would inflate the change's blast radius by 16 files, and would present a cosmetic edit as a correction. The reader inconsistency they expose is fixed in ACS-100i-9-i, at the fallback parser, not by rewriting records."
+    - "THE BLAST-RADIUS ASSERTION HAS TWO HALVES, AND THEY ARE DIFFERENT SHAPES. Capture parsed producer values AND raw `assigned_agent:` source lines before and after. Assert: the set of records whose PARSED value changed is exactly the 24 refused records; the raw source lines of the 16 quoted records are UNCHANGED; and no other field on any record is altered. A single parsed-value comparison cannot see the second half, which is the half that catches an over-eager repair."
+    - "NEVER CORRECT BY DELETING THE FIELD OR SETTING IT NULL. That moves a known-bad value into the roughly 748-record no-producer population ACS-100i-10 exists to measure, laundering a defect into an unremarkable silence and corrupting that criterion's baseline in the same change that establishes it."
+    - "CHOOSE PER RECORD, NOT PER GROUP. Each corrected value is a registered agent id matching the surface THAT record changes. The 23 finalize-feature-workflow records describe work on templates/workflows-js/finalize-feature.js, and workflow-architect is a registered agent covering that surface — but confirm against each record's own criteria rather than applying one value to all 23, since some may describe a Python or documentation surface instead. create-ticket is a retired slash command (ADR-012), not an agent, so that record likewise takes the agent for the surface it actually changes."
+    - "DO NOT MAKE THE SWEEP GREEN BY WIDENING THE VOCABULARY. Adding finalize-feature-workflow (or create-ticket) to config/agent_registry.json would turn the sweep green without correcting a single record, and would put a workflow script into the vocabulary the fast lane's roster will later be drawn from. The criterion's 'no record is exempted' clause covers this in spirit; it is written out because it is the cheapest wrong answer available under time pressure."
+    - "UNINFERABLE VALUES GO TO A REVIEW REPORT, NEVER TO A GUESS. A record whose surface cannot be determined from its own criteria is listed for human decision and left uncorrected; it is not defaulted to python-coder, which would silently make it a code ticket by omission."
+    - "IDEMPOTENT AND SURGICAL. The repair must be re-runnable: a second run makes no edit and every file is byte-identical (verify by running twice and diffing). Insert or replace ONLY the assigned_agent line in each record — never rewrite a file through a YAML round-trip, which reflows every other field, destroys the blast-radius evidence, silently re-quotes or unquotes scalars (which would touch the 16 records this criterion must leave alone), and can mangle the block scalars in notes and test_rationale."
+    - "PROVE THE RULE STILL BITES AFTER THE REPAIR. A store-wide green with no negative control cannot tell a repaired store from a disabled rule. In the same test run, inject one record with an unregistered producer into a COPY of the corrected store and assert the pass refuses exactly that one record, by file path."
+    - "RE-MEASURE THE 24 AT THE IMPLEMENTING COMMIT. Verified at enrichment time: 24 records carry a value the registry does not list (23 finalize-feature-workflow + 1 create-ticket) among 3,385 records. Separately, 16 records write a registered name with surrounding quotes (10 python-coder, 5 test-failure-triage, 1 documentation-expert) — those are the not-to-be-touched set, and 14 of the 23 finalize-feature-workflow records are ALSO quoted, so quoting and membership are independent properties. Both counts drift as other work lands; a test hard-coding either without re-measuring fails for the wrong reason and then gets deleted."
+delivers_to:
+  agent: python-coder
+  contract: "A store in which the ACS-100i-9 rule refuses zero records — the precondition for enabling that rule without turning the prescribed store-wide sweep red. Delivered as corrected assigned_agent lines on exactly the refused set (24 at enrichment time), the 16 quoted-but-valid records left byte-identical, plus a review report for any record whose producer could not be inferred. Applied BEFORE the rule within the same change; the rule's own commit depends on this state existing."
+expects_from:
+  ac_id: ACS-100i-9
+  contract: "The rule whose refusal set defines exactly which records this correction must touch. The correction is scoped by the rule's own verdict, not by a hand-copied list."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - "2026-08-25 [claude]: corrected the record count from 40 to 24, same day, before any implementation. The 40 double-counted: 24 records genuinely name a non-agent (23 `finalize-feature-workflow`, 1 `create-ticket`), while the other 16 merely write a valid agent name with surrounding quotes — `assigned_agent: \"python-coder\"` is ordinary YAML double-quoting and parses to exactly `python-coder`. Verified against FIN-100c-5/-6/-9 and confirmed independently by the IT PO. Left uncorrected, this criterion would have sent a repair task at 16 records that are not broken, and the rewrite would have been a cosmetic edit presented as a correction. The parse-path inconsistency those 16 DO expose is real but belongs to ACS-100i-9-i, which was amended in the same pass to cover it; it is not repaired by rewriting the records. The blast-radius assertion is correspondingly 24, not 40."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_store_wide_pass_is_clean_with_a_nonzero_examined_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "validate_ac_schema.py is executed as a real subprocess over docs/acceptance-criteria/ at the implementing commit; the test asserts exit 0 AND a stated non-zero examined count, and FAILS if the reported count is zero — a zero-file run is exactly the shape a 'the store is clean now' test would otherwise take (KI-ACS-001)."
+  - name: test_rule_still_refuses_an_injected_bad_record_in_a_copy_of_the_corrected_store
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "One record with an unregistered producer is added to a COPY of the corrected store; the pass refuses exactly that record, by file path. The negative control that distinguishes a repaired store from a disabled rule."
+  - name: test_blast_radius_is_exactly_the_refused_set
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Parsed producer values captured before and after: the set whose parsed value changed is exactly the records the rule refused (24 at enrichment time, re-measured at the implementing commit), and no other field on any record is altered."
+  - name: test_the_quoted_records_are_not_rewritten
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The raw `assigned_agent:` source lines of the 16 records that write a registered name with surrounding quotes are byte-identical before and after the repair. The criterion names this explicitly, and a parsed-value comparison cannot see it — an over-eager unquoting tidy passes every other test in this list and fails only here."
+  - name: test_pre_correction_store_from_git_is_refused_by_the_rule
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The rule is run against the pre-correction store checked out from git (not a reconstruction) and refuses exactly the re-measured refusal set — 24 records, none of them a quoted-but-registered name. Turns the ordering claim from a prose comment into a tested property."
+  - name: test_repair_is_idempotent_and_byte_stable_on_a_second_run
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The repair is run twice over a fixture store; the second run edits nothing and every file is byte-identical to after the first."
+  - name: test_no_record_is_corrected_to_null_or_has_the_field_deleted
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Every corrected record still declares a producer and that producer is a registered id — none was resolved by removing the field or setting it null, which would launder the defect into the no-producer population ACS-100i-10 measures."
+test_rationale: |
+  This is a data correction, so the temptation is to verify it by reading the
+  diff. That is not evidence — a diff shows what was edited, not whether the
+  store now satisfies the rule, and it cannot show that nothing else moved.
+
+  The covering test must EXECUTE the validator over the real
+  `docs/acceptance-criteria/` tree at the implementing commit and assert a zero
+  exit with a stated non-zero count of records examined. Asserting the exit code
+  alone is insufficient and specifically dangerous here: until 2026-08-19 this
+  validator printed success and exited 0 when its arguments resolved to zero
+  files, which is exactly the shape a "the store is clean now" test would take
+  (KI-ACS-001). The test must fail if the reported examined-count is zero.
+
+  Prove the rule still bites after the correction, or a correction that worked
+  by weakening the rule passes: in the same test run, add one record carrying an
+  unregistered producer to a COPY of the corrected store and assert the pass
+  refuses exactly that one record, by file path. A store-wide green with no
+  negative control cannot distinguish a repaired store from a disabled rule.
+
+  Prove the blast radius, and note it has two halves of different shapes.
+  Capture every record's PARSED producer value before and after, and assert the
+  set of records whose parsed value changed is exactly the 24, with no other
+  field on any record altered. Then, separately, capture the RAW
+  `assigned_agent:` source lines of the 16 records written with surrounding
+  quotes and assert they are byte-unchanged. A parsed-value comparison cannot
+  see that second half, and it is the half that catches an over-eager repair
+  tidying quotes it was never asked to touch — a YAML round-trip would do
+  exactly that as a side effect, which is the strongest argument for editing
+  those 24 lines surgically rather than re-serialising records.
+
+  Re-measure the 24 at the implementing commit rather than pinning the number:
+  it drifts as other work lands, and a test that hard-codes it without
+  re-measuring fails for the wrong reason.
+
+  Prove the ordering claim rather than asserting it in prose: run the rule
+  against the pre-correction store (from git, not a reconstruction) and assert
+  it refuses 24 records. Without that, the "correction first" instruction is a
+  comment, not a tested property.
+declares_side_effect: true
+notes: |
+  WHY THIS IS THE SAME CHANGE AS THE RULE, NOT A SEPARATE ONE.
+
+  The naive argument — "the rule cannot land green while invalid records exist"
+  — is not quite true here, and the real argument is better. The required CI
+  check "AC store valid" is DIFF-SCOPED to the pull request (ci.yml, job
+  `ac-store-valid`, which runs `pre-commit run check-ac-schema` and five
+  siblings after a `reset --soft` to the base ref). It is a forward ratchet. So
+  a rule added to the commit-guardian path would in fact land green with all 40
+  bad records still in the store; they would only bite whoever next touched one
+  of them.
+
+  The store-wide entry point is where it matters. `validate_ac_schema.py` over
+  `docs/acceptance-criteria/` is the sweep CLAUDE.md prescribes before a
+  finalization drive, and it is not diff-scoped. Introduce the rule without the
+  correction and that sweep is red from the first run on 24 records the runner
+  did not author and cannot be expected to fix. A permanently-red hygiene tool
+  gets skipped, then removed, then documented as "known noise" — which is the
+  exact history of KI-ACS-001, and of the ACS-200h whole-store CI gate that is
+  deliberately still unimplemented because 57 pre-existing orphans would make it
+  red on day one.
+
+  So: one change, correction applied first within it. Splitting them gives you
+  either a correction with no regression guard (it rots immediately) or a rule
+  with a red sweep (it gets switched off). Neither half is worth landing alone.
+
+  WHAT THE CORRECTED VALUES SHOULD BE is left to enrichment, but the rule for
+  choosing them is not: each of the 24 takes a registered agent id matching the
+  surface that record changes. No record is corrected by deleting the field or
+  setting it null — that would move it from "wrong producer" into the 743-record
+  "no producer declared" population and launder a known-bad value into an
+  unremarkable silence. `finalize-feature-workflow` is a workflow script, not an
+  agent; the 23 records naming it describe work on that script and want the
+  agent that actually writes it.
+
+  MEASURED ON THIS BRANCH at 2026-08-25 (the brief's figures, re-verified):
+  `finalize-feature-workflow` 23 records (14 quoted, 9 unquoted); `create-ticket`
+  1 record (quoted); quote-wrapped duplicates of registered names
+  `"python-coder"` x10, `"test-failure-triage"` x5, `"documentation-expert"` x1.
+  24 fail on registry membership; 16 more fail only on quoting; 40 in total.
+  `test-failure-triage` IS a registered agent — only its quoted spelling is
+  wrong.
+
+  ORDERING BEYOND THIS CHANGE: nothing here should be read as clearing the way
+  for the fast lane to dispatch on the field. ADR-035 Decision 3 names this
+  criterion's parent rule as prerequisite 1 of three, the other two being
+  BO-2400f-12's up-front refusal and a lane that can finish one run end to end.
+  Deciding which registered agents may legally be a build phase is likewise a
+  separate change, and ADR-035 Decision 1 has already settled that it will be a
+  hand-written closed roster rather than the registry's 60 or its 24
+  `is_ticket_phase` agents.
+
+  ---
+  IT-PO TECHNICAL ENRICHMENT, 2026-08-25.
+
+  ALL COUNTS RE-VERIFIED INDEPENDENTLY AND THEY HOLD. Parsing every record under
+  docs/acceptance-criteria/ and checking against the 60 registry ids: exactly 24
+  records carry a value the registry does not list — 23 finalize-feature-workflow
+  and 1 create-ticket. Counting raw assigned_agent source lines: 14 of the 23
+  finalize-feature-workflow lines are quoted and 9 are not; the create-ticket line
+  is quoted; and there are 16 quote-wrapped spellings of registered names
+  (python-coder x10, test-failure-triage x5, documentation-expert x1). 40 in
+  total, as the criterion states.
+
+  THE 16 ARE A SOURCE-TEXT EDIT, NOT A VALUE EDIT, and this changes how the
+  blast-radius test must be written. The quoted spelling is ordinary YAML
+  double-quoting, so yaml.safe_load already returns the correct bare name. A
+  parsed-value diff of the whole store before and after the repair therefore shows
+  24 changes, not 40, and a test asserting "40 records changed" against parsed
+  values will FAIL on a correct repair. The constraint above splits the assertion:
+  raw source lines for the 16, parsed values for the 24. This is the same finding
+  recorded on ACS-100i-9-i, where it determines that the quote rule must read raw
+  source at all.
+
+  A PRACTICAL CONSEQUENCE FOR THE ORDERING TEST: because the 16 are invisible to
+  a parsed-value rule, the pre-correction refusal count depends on whether
+  ACS-100i-9-i's raw-source seam is in place when the count is taken. With the
+  membership rule alone the pre-correction store yields 24 refusals; with the
+  quote rule as well it yields 40. The ordering test must state which rules were
+  active when it counted, or it will look flaky.
+
+  ---
+  IT-PO SECOND PASS, 2026-08-25, AFTER THE CRITERIA WERE AMENDED. Everything in
+  this notes field ABOVE this line predates the amendment recorded in amended_by
+  and is retained only as history. Where it conflicts with what follows, this
+  section governs; where it conflicts with the criteria, the criteria govern.
+
+  THE SET IS 24, AND THE 16 ARE NOT IN IT. My first pass framed the 16 as
+  "a source-text edit rather than a value edit" — still in scope, just a
+  different kind of edit. The amendment settles it the other way and is right:
+  they are not edited at all. Their parsed value is already a registered agent
+  name, so the rule accepts them, so they are not in the refusal set, so the
+  correction never reaches them. Rewriting them would change no parsed value and
+  would be a cosmetic edit presented as a correction.
+
+  WHAT THAT CHANGES IN THE TESTS, now reflected in test_spec:
+  - The blast-radius test asserts parsed-value changes on exactly the 24. It no
+    longer expects raw-source changes on the 16.
+  - A NEW test asserts the opposite for those 16 — that their raw
+    `assigned_agent:` source lines are byte-identical before and after. This is
+    the only assertion that catches an implementer who "tidies" the quotes while
+    in the neighbourhood, and it is worth its own test because the criterion
+    calls the exclusion out explicitly.
+  - The ordering test asserts a flat 24 refusals. The "which rules were active
+    when it counted" caveat in my first pass is gone: it existed only because a
+    quote-refusing rule would have changed the count from 24 to 40. No such rule
+    is being built, so the pre-correction count is 24 under any combination of
+    ACS-100i-9 and ACS-100i-9-i.
+
+  RESOLVED 2026-08-25, after the IT PO flagged them. The IT PO was not permitted
+  to edit `title` or `test_rationale` in its pass and correctly recorded that both
+  still carried the pre-amendment count of 40 rather than silently leaving the
+  contradiction. Both have since been corrected to 24 by the same hand that made
+  the criteria amendment, along with the stale `doc_links` relevance line and two
+  further occurrences in these notes. `test_rationale` additionally gained the
+  two-halves blast-radius shape — parsed values changed for exactly the 24, raw
+  source lines of the 16 byte-unchanged — because a single parsed-value comparison
+  cannot see the second half, which is the half that catches an over-eager repair.
+  No field now disagrees with the criteria; the earlier "test_spec is
+  authoritative" instruction is retired rather than left standing.
+
+  AN IDEMPOTENCY DETAIL THE NEW EXCLUSION MAKES SHARPER: a YAML round-trip repair
+  would silently re-serialise scalars and could unquote all 16 records as a side
+  effect, failing the new not-rewritten test without the implementer ever
+  intending to touch them. That is now the strongest argument for the
+  line-surgical constraint, not merely a preference about diff noise.

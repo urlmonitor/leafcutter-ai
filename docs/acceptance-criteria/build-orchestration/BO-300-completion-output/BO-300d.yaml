@@ -1,0 +1,111 @@
+id: BO-300d
+title: "Work a run left unbuilt is counted and named, never left for you to notice"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A run that did part of the job says how much is left and what to do about it.
+
+  When a run ends with work still unbuilt, its closing report states how many
+  pieces were not built, names them, and says for each one why it was left — a
+  cause only where the run can establish that cause from what it holds, and an
+  explicit "cause not determined" where it cannot — together with the action that
+  finishes it. A run that built part of the work can never read as one that
+  finished it, and you never have to compare what ran against what exists to find
+  out the difference.
+depends_on:
+  - BO-300
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-025 (the run built 17 of 37 and said nothing about the other 20) and KI-BO-026 (the work that WAS surfaced was attributed to a cause the run cannot actually establish)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The completion guard, already done: it re-reads the work at the end and withholds the finished claim. This criterion does not restate that behaviour — it adds the count, the honest attribution, and the next action on top of it."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: product-owner
+created: 2026-08-26
+amended_by:
+  - reason: "Criteria body corrected 2026-08-26 during L2 decomposition. It enumerated three causes for unbuilt work -- never taken on, arrived after the run started, stopped part-way -- while this record's own notes required an undetermined bucket wherever the distinction cannot be made. Those two halves disagreed, and the criteria half demanded an attribution the run cannot make: nothing in the data flow records what the body of work contained at the moment the plan was fixed, so 'never selected' and 'arrived mid-run' are indistinguishable from what the run holds. That is precisely the specification defect KI-BO-026 records, restated inside the record that exists to fix it. The notes were taken as authoritative and the criteria body now reads 'a cause only where the run can establish that cause from what it holds, and an explicit cause not determined where it cannot'. No obligation was removed: the count, the naming, the per-piece action and the withheld completion claim are all unchanged, and the undetermined bucket is an obligation to be explicit rather than a licence to say nothing. Aligned with the concurrent BO-300a-5 amendment, whose clause reads 'a cause is stated for a piece of unbuilt work only where the drive can establish that cause from what it holds'."
+    by: business-analyst
+superseded_by: null
+covered_by:
+  - BO-300d-1
+  - BO-300d-2
+  - BO-300d-3
+  - BO-300d-4
+  - BO-300d-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  ORIGIN. KI-BO-025 (severity high) and its companion KI-BO-026 (medium), both
+  2026-08-25. A run built 17 of 37 pieces of work. It did not claim to have
+  finished — the completion guard behind BO-300a-5 caught the shortfall and
+  withheld that claim, which is the part that already works and must be kept. What
+  the run did not do was say how many pieces it had not built, and the pieces it
+  did surface were filed under a cause it has no way to establish: they were
+  described as having been added after the run started, when in fact they had been
+  there all along and were simply never taken on. The operator who follows that
+  sentence goes looking for a change that never happened.
+
+  DO NOT RE-SPECIFY THE COMPLETION GUARD. BO-300a-5 is done and correct: the work
+  is re-read before the run reports, the unbuilt pieces are named, the finished
+  claim is withheld. Three things are missing and are what this L1 buys:
+    1. THE COUNT — how many pieces were left, stated by the run rather than
+       arrived at by the operator comparing two lists by hand.
+    2. THE HONEST REASON — the run must not assert a cause it cannot establish. If
+       a distinction cannot be made from what the run knows, the honest output says
+       the cause is undetermined and gives the action that is safe in either case.
+       An unfounded explanation that sounds complete is worse than an acknowledged
+       gap, because it stops the reader looking.
+    3. THE NEXT ACTION — stated per reason, in the operator's terms.
+
+  WHAT IS AND IS NOT ESTABLISHABLE, settled 2026-08-26 alongside the BO-300a-5
+  amendment and binding on the L2s:
+    - A piece the plan WAS built from that has no completed record — establishable
+      as planned and not finished, because plan membership and the completed record
+      are both in hand.
+    - A piece the plan was built from for which the run holds a recorded outcome
+      saying the work stopped short — establishable as stopped part-way, because
+      that outcome is in hand.
+    - A piece the plan was NOT built from — CAUSE NOT DETERMINED. Splitting "never
+      selected" from "arrived after the run started" needs a snapshot of the body
+      of work taken at plan time, and no such value exists anywhere in the data
+      flow. No L2 may require that distinction.
+
+  BINDING CONSTRAINT — ABSENCE OF EVIDENCE IS NOT SUCCESS. A run that leaves work
+  behind and says nothing must be a failure of this criterion, not a pass. Silence
+  is the defect being fixed; coverage that only checks the wording of a report
+  that was emitted cannot see the case where none was. The BA must include the
+  case where the run's own view of what it did is EMPTY or PARTIAL and assert that
+  something is still said.
+
+  DECOMPOSITION WARNING for the BA. A control case is mandatory: a run that
+  genuinely built everything must still report cleanly, with no residual-work
+  section — otherwise the cheapest way to satisfy every other scenario is to warn
+  on every run, which trains the operator to ignore the warning and puts us back
+  where we started. Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not
+  by Grep", assert on the text the run actually emits, not on an internal
+  structure that knows the right answer while the output still reads finished.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, this L1's full child
+  cap: BO-300d-1 (the count), BO-300d-2 (a cause only where establishable, with an
+  explicit undetermined bucket; + BO-300d-2-i, exactly one reason per piece and the
+  reasons summing to the count), BO-300d-3 (the next action per reason),
+  BO-300d-4 (the empty/partial self-view case and the mandatory clean-run control),
+  BO-300d-5 (the reference entry). The phrase "discovered after planning" is stale
+  terminology surviving in BO-300a-5-i and BO-300a-5-iii and is deliberately not
+  used in any of them.

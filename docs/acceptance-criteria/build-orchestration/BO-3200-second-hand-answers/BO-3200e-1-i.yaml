@@ -1,0 +1,120 @@
+id: BO-3200e-1-i
+title: "The advice on an undetermined outcome points at the inspection that failed, not at the subject"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check that could not perform its inspection, where the subject is in fact in order,
+  When it reports that it could not tell,
+  Then the advice it gives describes restoring the inspection, and does not instruct the reader
+    to change the subject.
+
+  Given a reader who follows that advice,
+  When they act on it,
+  Then the action they are directed to take is one that could restore the inspection, and no
+    correct part of the subject is altered.
+
+  Given the same check when its inspection succeeds and it reports a real problem,
+  When it reports that finding,
+  Then the advice it gives describes changing the subject, and differs from the advice given on
+    the undetermined outcome.
+depends_on:
+  - BO-3200e-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — the remediation text sent the reader to fix a permission that was already correct; the misdirection was the expensive part."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+  - pipeline
+risk_surface: internal
+it_requirements:
+  - "THE ADVICE MUST BE SELECTED BY THE OUTCOME, structurally — a distinct advice string per outcome kind, so adopting the undetermined outcome cannot leave the old remediation text in place. That is the exact half-fix this AC exists to catch: the right outcome value with the wrong advice, which every test written against the outcome passes."
+  - "THE UNDETERMINED ADVICE MUST DESCRIBE RESTORING THE INSPECTION and must not instruct the reader to change the subject. Someone following misdirected advice changes a setting that was right, the run still fails, and the real cause is further away than when they started."
+  - "THE ADVICE MUST BE ACTIONABLE ON THE INSPECTION: it must name what could not be inspected and what to do about it, not merely say the check failed."
+  - "THE TWO ADVICE TEXTS MUST DIFFER SUBSTANTIVELY. A single generic line covering both cases is the other common 'fix' and it tells the reader nothing about which situation they are in — which is the whole cost being removed."
+  - "This applies to EVERY check that gains the undetermined outcome under BO-3200e-1 and BO-3200e-3, not only to the one that caused KI-BO-018. Advice bound per-outcome rather than per-check is what makes that automatic."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200e-1
+    contract: "The three-valued check outcome including its `advice` field. This AC constrains what `advice` may say for each outcome and requires it to be selected by the outcome rather than fixed per check."
+test_spec:
+  - name: test_bo_3200e_1_i_undetermined_advice_points_at_the_inspection
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Check whose inspection fails while the subject is in fact in order: assert the advice describes restoring the inspection and contains no instruction to change the subject."
+  - name: test_bo_3200e_1_i_following_the_advice_alters_no_correct_part_of_the_subject
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Execute the action the advice directs the reader to; assert it is one that could restore the inspection and that the subject is byte-for-byte unchanged afterwards. This is the criterion's second scenario made mechanical rather than read."
+  - name: test_bo_3200e_1_i_finding_advice_and_undetermined_advice_differ
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the same check into both states, capture both advice strings, and assert they differ substantively and that the finding advice describes changing the subject. Stops the two being merged into one generic line."
+  - name: test_bo_3200e_1_i_advice_is_bound_to_the_outcome_not_to_the_check
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Assert that adopting the undetermined outcome at a check automatically changes its advice — i.e. advice is selected per outcome. A check that keeps one fixed remediation string fails here, which is the exact half-fix this AC catches."
+test_rationale: |
+  A check can carry the right outcome and the wrong advice, and every test written against the
+  outcome value passes on it — that is why this AC is written against the advice and why the
+  binding test exists. Adopting the undetermined outcome while leaving the old remediation string
+  in place is the most likely partial implementation, not a hypothetical one.
+  The second test executes the advised action and asserts the subject is unchanged. That is
+  stronger than reading the advice for forbidden phrases, and it is the only form that survives
+  a rewording.
+  The differ test prevents the other common "fix": one generic line that covers both cases and
+  leaves the reader unable to tell which situation they are in — the cost KI-BO-018 actually paid.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE MISDIRECTION IS THE EXPENSIVE PART, and it is the half of KI-BO-018 that is easiest to
+  leave unfixed. The false verdict did not merely halt the run: the remediation text sent the
+  reader to fix a permission that was already correct. Someone following that advice changes a
+  setting that was right, the run still fails, and the real cause — a transport truncation — is
+  now further away than when they started.
+
+  A CHECK CAN CARRY THE RIGHT OUTCOME AND THE WRONG ADVICE. Adopting the undetermined outcome
+  from BO-3200e-1 while leaving the existing remediation string in place produces exactly that,
+  and every test written against the outcome value passes. This AC is written against the advice
+  because that is what the reader acts on.
+
+  The third scenario keeps the two messages from being merged into one generic line, which is
+  the other way this is commonly "fixed" — advice that covers both cases tells the reader
+  nothing about which one they are in.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). Binding the advice to the OUTCOME rather than to the check
+  is the structural form of this criterion, and it is what makes BO-3200e-3's sweep able to cover
+  it: every check that gains the undetermined outcome gains the right advice with it, so the
+  correction does not have to be repeated per site and cannot be forgotten at one.

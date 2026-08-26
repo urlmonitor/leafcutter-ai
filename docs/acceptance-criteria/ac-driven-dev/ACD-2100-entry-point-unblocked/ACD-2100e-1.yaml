@@ -1,0 +1,233 @@
+id: ACD-2100e-1
+components:
+  - ac_driven_dev
+  - documentation_system
+readiness: approved
+priority: medium
+title: "A sequence diagram shows every point where the route stops to ask and what follows from each answer"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to know where the route stops to ask for a decision and
+    what follows from each answer,
+  When they open the project's architecture diagrams,
+  Then a sequence diagram depicts each point at which the route asks for a
+    decision -- approving a drafted product-truth artifact; approving the
+    mid-pipeline authoring stage; giving final approval; choosing how to proceed
+    when the request looks already covered; and deciding what to do with stranded
+    drafts from an earlier run -- and depicts no decision point the route does not
+    present,
+  And each of them is shown as a question put to the person running the route with
+    no exchange in which an agent supplies the answer,
+  And each of them is shown with all three of its exits: an answer from the person
+    and the run continuing; no person reachable and the run waiting on a record
+    that outlives the process; and an answer that cannot be attributed to the
+    person refused with the run still waiting,
+  And exactly one path in the diagram ends in the drafted work being discarded and
+    it is the path the person chooses,
+  And each path depicted names the criterion whose delivered behaviour it depicts,
+  And the diagram is reachable from the documentation index and declares the same
+    component as this criterion.
+depends_on: [ACD-2100e, ACD-2100c-1, ACD-2100c-2, ACD-2100c-4, ACD-2100c-5]
+doc_links:
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "THE TARGET FILE. ACD-2100c-1, c-2, c-4 and c-5 already link this exact path as planned; publishing under any other name leaves all four dangling and check-doc-links cannot catch a target that never appears."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause and resume contract that gives a decision point somewhere to go when no person is reachable -- the second of the three exits."
+  - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    relationship: related
+    status: exists
+    relevance: "ADJACENT DIAGRAM WITH A DIFFERENT SUBJECT -- the substrate's message-level pause/persist/resume exchange, tagged build_orchestration. This one depicts the route's decision points and their exits. Link to it rather than restating it."
+  - path: docs/architecture/diagrams/c3-001-interactive-pause-resume-run-lifecycle.md
+    relationship: related
+    status: exists
+    relevance: "SECOND ADJACENT DIAGRAM -- FOUND BY THE IT PO, NOT IN THE BA's NOTE. The same ADR-024 substrate as a state diagram (running -> paused_awaiting_input -> resumed / nothing_to_resume / unresumable_stale), tagged build_orchestration with interactive-pause-resume-substrate.md as parent. Same instruction as c3-002: link rather than restate."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the route whose decision points the diagram depicts and the component the diagram must declare. NOTE it is itself flight_level L3-Component so it cannot serve as this diagram's parent -- see the requirements."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: related
+    status: exists
+    relevance: "NOT THE SOURCE FOR THIS DIAGRAM. ACD-2100c-1's contract is that the diagram depicts the delivered set of decision points rather than re-derives them from this file; the file is changing underneath the page."
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+    relevance: "The index the last clause requires the diagram to be reachable from. It is generated."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+  - "TARGET FILE -- a NEW sequence diagram at exactly docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md. ACD-2100c-1, c-2, c-4 and c-5 all link that exact path as planned. c3-005 is the highest c3 number in the directory so c3-006 is free, and the name satisfies check_diagram_naming's ^c[1-4]-NNN-[a-z0-9-]+.md filename pattern."
+  - "NOTHING IN THIS REPOSITORY WILL CATCH A WRONG PATH -- check-doc-links IS NOT THE NET THE STORE NOTES ASSUME. check_doc_links validates DOC_LINKS declared in Python and SQL files only, and it is advisory: its own docstring states every failure is a warning and it always exits 0. No hook validates a markdown-to-markdown link at all. So the four inbound planned links and every outbound link this diagram carries are unguarded in both directions. Publishing at the exact path above is the entire defence."
+  - "MERMAID COMPLEXITY IS THE BINDING CONSTRAINT AND IT WILL BITE -- DECIDE THE COMPOSITION BEFORE DRAWING. check_mermaid_complexity caps a sequence diagram at 8 participants, 25 interactions and 4 boundaries. Five decision points each shown with three exits is at least fifteen arrows before a single setup or return message. The cap must NOT be met by dropping an exit or a decision point: the closed-set clause and the three-exits clause are the whole criterion. If the depiction cannot be expressed within the cap, raise it as a finding -- a second diagram would need its own record, and four inbound links point at this one."
+  - "THE PARENT LINK IS A BLOCKING BIDIRECTIONAL COMMIT-TIME REQUIREMENT AND NO ELIGIBLE PARENT EXISTS TODAY. check_mermaid_parent_link (exit 1 on violation) requires every doc under docs/architecture/ to declare parent: or root: true, the parent file to exist, the parent's flight_level to be STRICTLY higher than the child's, the parent's children: list to contain this file, and a markdown link to the parent below the first mermaid fence. docs/architecture/components/ac-driven-dev.md is itself flight_level L3-Component, so it is NOT eligible as the parent of an L3 diagram. Resolve this before authoring rather than at commit time: either declare a strictly-higher parent and add this file to that parent's children: list in the SAME commit (docs/architecture/components/interactive-pause-resume-substrate.md is the precedent shape at L2-Container but is tagged build_orchestration), or declare root: true (docs/architecture/diagrams/c3-005-artifact-knowledge-graph.md is the precedent inside this component)."
+  - "FRONTMATTER components: MUST BE THE UNDERSCORE GRAPH ID ac_driven_dev -- NOT the kebab ac-driven-dev. check_doc_frontmatter validates every components entry against the keys of docs/components.json, which are the underscore ids. That declaration is the mechanically checkable half of the last Then clause. ACD-2100d-4's equivalent requirement states the kebab form; that wording is wrong and must not be copied."
+  - "docs/INDEX.md IS GENERATED. Register the diagram by running the build and committing the regenerated index -- do not hand-edit it. A hand-edited index is reverted by the next build."
+  - "LENGTH IS A REAL CONSTRAINT -- check_doc_length caps a non-ADR document at 300 lines and 25 sections. Link out to ADR-024 and to the adjacent diagrams rather than absorbing either."
+  - "TWO ADJACENT DIAGRAMS EXIST AND BOTH MUST BE LINKED RATHER THAN RESTATED. c3-002-interactive-pause-resume-sequence.md is the ADR-024 substrate at message level -- resolveGate, the persist/read exchange, the pending-question store, resumeFromRunId -- and c3-001-interactive-pause-resume-run-lifecycle.md is the same substrate as a state diagram. Both are tagged build_orchestration and both hang off interactive-pause-resume-substrate.md. Neither depicts which decisions the route stops at or what each exit costs, which is this diagram's subject: they document how a pause is mechanically effected. If on reading them the author concludes c3-006 would duplicate them, that is a finding to raise -- not a licence to merge, because four inbound links point here."
+  - "DO NOT DRAW ANY PART OF THIS FROM KI-ACD-005's FIX DIRECTION. That known issue's stated root cause and stated fix are both out of date -- resolveGate already pauses on an unparseable answer and the observed loss came from a well-formed one -- so a path drawn from it is wrong on the day it is published. templates/workflows-js/plan-feature.js is likewise not the source: it is being replaced underneath this page by the very records in depends_on. The source for every depicted path is the delivered behaviour of ACD-2100c-1, c-2, c-4 and c-5."
+delivers_to:
+  - agent: documentation-expert
+    ac_id: ACD-2100e-2
+    contract: "ORDERING GAP -- SEE NOTES. The published diagram at docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md. ACD-2100e-2's how-to links that exact path as planned and sends an operator there to learn how their run came to be waiting, so this record is that link's target. The link is plain markdown and no hook in this repository validates a markdown-to-markdown link, so if the how-to is published first the link is dead and nothing reports it."
+expects_from:
+  - ac_id: ACD-2100c-1
+    contract: "The final set of decision points and the channel each is put on, which the sequence diagram depicts rather than re-derives from the source."
+  - ac_id: ACD-2100c-2
+    contract: "The unreachable-channel exit: no step after the decision point runs, a record naming the run and that decision point survives the process, and the run reports that it is waiting. This is the second of the three exits the diagram shows on every decision point."
+  - ac_id: ACD-2100c-4
+    contract: "The refused-answer exit: an answer that cannot be attributed to the person is not carried out and the run stays at the decision point still waiting. This is the third exit."
+  - ac_id: ACD-2100c-5
+    contract: "The closed set of ways a run ends holding drafted work -- which of them discard it and which do not -- so the diagram can show discarding on exactly one path and attribute that path to the person."
+test_required: false
+test_rationale: >-
+  The deliverable is a mermaid sequence diagram with no executable surface a test could
+  drive. Every path it depicts is owned and enforced elsewhere by tests that execute: the
+  closed set of decision points and the human-only channel by ACD-2100c-1, the
+  unreachable-channel exit by ACD-2100c-2, the refused-answer exit by ACD-2100c-4 and the
+  single-discard-path invariant by ACD-2100c-5. A test over this page could only assert
+  that certain labels appear in it, which is the presence-shaped proof this whole tree
+  exists to discredit -- it would pass on a diagram that shows all five decision points in
+  the wrong relationship, or that gives a gate one exit instead of three, or that depicts a
+  decision point the route no longer presents. The two mechanically checkable clauses in
+  the criteria are already covered by live commit gates rather than being untested: the
+  component declaration by check-doc-frontmatter and the index reachability by the
+  generated docs/INDEX.md, with check_diagram_naming guarding the filename and
+  check_mermaid_parent_link guarding reachability from the diagram tree. A bespoke unit
+  test would duplicate a running gate rather than add coverage. Recorded explicitly so
+  test-writer skips with an accurate reason rather than silently.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/24_TICKET-20260826-ACD-2100e-1.md
+change_target: docs
+risk_surface: internal
+notes: |
+  THE ID AND THE TARGET PATH ARE FIXED FROM THE OTHER SIDE. Four sibling records --
+  ACD-2100c-1, c-2, c-4 and c-5 -- already carry a planned doc_link to
+  docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md naming
+  ACD-2100e-1 as its author, and ACD-2100c-1 additionally carries a delivers_to
+  contract to this id and to architecture-diagram-author. Authoring under a different
+  id or at a different path silently dangles all of it: check-doc-links reports a
+  broken link, never a target that was never created.
+
+  THE CLOSED-SET CLAUSE IS THE POINT OF THE FIRST THEN. "Depicts no decision point
+  the route does not present" is what stops the diagram going stale in the direction
+  that matters. KI-ACD-005 lists three decision points; the PO verified five on
+  2026-08-25, and the two the known issue omits include the stranded-draft decision,
+  which can delete drafts. A diagram drawn from the known issue would be missing the
+  destructive one on the day it was published. Sites are named by what they decide
+  rather than by line number so the criterion survives the file moving.
+
+  THREE EXITS ON EVERY DECISION POINT, NOT ONE HAPPY PATH. The failure this diagram
+  exists to prevent is a reader who believes the only way past a gate is an answer.
+  Each of the three exits is owned by a different sibling -- answered by the person
+  (c-1), nobody reachable (c-2), answer refused for provenance (c-4) -- which is why
+  all three appear in depends_on. The one-discard-path clause is c-5's invariant made
+  visible: if a reader can find a second way out of the diagram that loses work, the
+  invariant has not been delivered.
+
+  RESUME IS DELIBERATELY NOT DEPICTED HERE. Re-entering a paused run at the decision
+  it stopped at is ACD-2100c-3's behaviour and ACD-2100e-2's subject. Adding it would
+  pull ACD-2100c-3 into this record's ordering for a single arrow and would put the
+  operator's procedure into a diagram drawn for a different reader. The two children
+  cross-link instead.
+
+  BOUNDARY WITH ACD-2100d-4 -- HELD IN BOTH DIRECTIONS. Nothing here depicts which
+  copy of a route file runs where or what the startup checks report; that is the
+  reference page for a reader holding a message about a file that could not be found.
+  This diagram must not be retargeted at
+  docs/reference/plan-feature-layout-and-startup-checks.md.
+
+  BOUNDARY WITH AN EXISTING DIAGRAM -- FOUND WHILE DECOMPOSING, NOT IN THE PO's NOTE.
+  docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md already
+  exists and covers the ADR-024 substrate at message level -- resolveGate, the
+  persist/read exchange, the pending-question store, resumeFromRunId -- tagged
+  build_orchestration. It is not this diagram and does not serve this trigger: it
+  documents how a pause is mechanically effected, not which decisions the route stops
+  at or what each exit costs. The overlap is real enough to be worth naming, so it is
+  linked as related with an explicit instruction to link rather than restate. If the
+  author concludes on reading it that c3-006 would duplicate it, that is a finding to
+  raise rather than a licence to merge them -- four inbound links point here.
+
+  DELIVERED BEHAVIOUR ONLY. Every path depicted must name the criterion that delivers
+  it, and none of it may be drawn from KI-ACD-005's fix direction: that known issue's
+  stated root cause and its stated fix are both out of date -- resolveGate already
+  pauses on an unparseable answer and the observed loss came from a well-formed one --
+  so a diagram drawn from it would be wrong on the day it was published. The whole
+  gate flow is being replaced underneath this page, which is why depends_on names four
+  leaves rather than the composite.
+
+  DEPENDS_ON CARRIES THE ORDERING AND NOTHING ELSE DOES. The build sequencer reads
+  depends_on only; expects_from edges are invisible to it (KI-ACD-015, open), which is
+  the gap ACD-2100d-4 hit and had to recommend explicit edges for after the fact. So
+  the four leaf edges are mirrored here rather than left to the composite edge on
+  ACD-2100e. The expects_from contracts below record what each leaf owes this page;
+  they are documentation of the contract, not the ordering mechanism.
+
+  FOR THE IT PO: assigned_agent is architecture-diagram-author per ACD-2100c-1's
+  delivers_to contract. This is a diagram deliverable with no executable surface, so
+  test_required: false with an explicit test_rationale is the likely correct call --
+  permitted because change_target is docs, with ACD-2100d-4 the precedent in this same
+  tree. Do not let that become a grep-for-words test: a test asserting that five
+  labels appear in a diagram passes on a diagram that shows them in the wrong
+  relationship, and presence-shaped proof is what this tree exists to discredit. The
+  two mechanically checkable clauses -- index reachability and the component
+  declaration -- are already covered by the generated docs/INDEX.md and
+  check-doc-frontmatter.
+
+  2026-08-25 (it-po): CONFIRMED architecture-diagram-author rather than chosen. The
+  assignment was already fixed from the other side by ACD-2100c-1's delivers_to
+  contract, which names both this id and that agent; the registry carries the agent and
+  documentation-expert dispatches it as the diagram specialist. Sized M -- one new
+  diagram file plus a parent-doc children: edit plus the regenerated docs/INDEX.md, so
+  three files, with the composition rather than the volume being the work. Test contract
+  is test_required: false with the reason recorded in test_rationale rather than left to
+  inference, following ACD-2100d-4 in this same tree; permitted because change_target is
+  docs, which the schema validator allows.
+
+  THREE CONSTRAINTS THE BA COULD NOT SEE, ALL FOUND IN THE LIVE GATES AND ALL RECORDED
+  ABOVE. They are the reason this record is not simply "draw the diagram":
+    - check_mermaid_complexity caps a sequence diagram at 8 participants, 25
+      interactions and 4 boundaries. Five decision points times three exits is fifteen
+      arrows before any setup, so the cap is genuinely close and the temptation under it
+      is to drop an exit -- which would delete the criterion. Named as a
+      raise-a-finding, never a silent thinning.
+    - check_mermaid_parent_link is BLOCKING and bidirectional, and there is no eligible
+      parent today: docs/architecture/components/ac-driven-dev.md is itself
+      L3-Component and the hook requires the parent to be strictly higher. The author
+      has to choose an L2 parent and edit its children: list in the same commit, or
+      declare root: true as c3-005 does. Discovering this at commit time costs a cycle.
+    - check_doc_frontmatter validates components entries against docs/components.json,
+      whose keys are the underscore ids -- so the frontmatter must read ac_driven_dev.
+      ACD-2100d-4's corresponding requirement says the kebab ac-driven-dev, which would
+      fail that gate; flagged there rather than copied here.
+
+  ONE CHECK THE STORE LEANS ON DOES NOT DO WHAT THE NOTES ASSUME. Four records in this
+  tree cite check-doc-links as the reason a wrong target path matters. The hook validates
+  DOC_LINKS declared in Python and SQL files only and its docstring states it always
+  exits 0 -- no hook in this repository validates a markdown-to-markdown link. The
+  conclusion the notes draw is still right (publish at the exact path) but the stated
+  reason understates it: a wrong path is not "reported as a broken link", it is not
+  reported at all, on either side.
+
+  ORDERING GAP RECORDED AND NOT EDITED (depends_on is BA-owned). ACD-2100e-2's how-to
+  links this diagram and sends the operator here, so this record is upstream of it, but
+  ACD-2100e-2's depends_on does not name ACD-2100e-1. The build sequencer reads
+  depends_on only (KI-ACD-015, open) and nothing validates the markdown link, so building
+  e-2 first publishes a live page pointing at a file that does not exist and nothing
+  reports it. Recorded as a delivers_to contract above and mirrored as an expects_from on
+  ACD-2100e-2. The recommended edit before approval is to append ACD-2100e-1 to
+  ACD-2100e-2's depends_on. Left to the BA rather than applied here.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

@@ -1,0 +1,195 @@
+id: GE-125d-2
+components:
+  - security_scanner
+  - commit_guardian
+title: "A caller can tell a reduced run from a clean one without reading the message or the exit code"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway git repository whose staged set is exactly two files —
+    "docs/retrospectives/2026-08-19-incident.md" carrying 2 opaque
+    credential-shaped values and
+    "templates/skills/example-skill/scripts/helper.py" carrying 1, both under
+    locations to which the check applies reduced scrutiny, placed there
+    deliberately because the reduction is the subject — and no other file,
+  When the staged set is checked on the path a real commit takes,
+  Then the run's result carries a reduction record that a caller reads without
+    parsing English: a total of 3 findings withheld, and for each of the 2 files
+    its repository-relative path, its own withheld count, and the stable name of
+    the reduction that applied,
+  And the run's exit status is success — indistinguishable from the exit status
+    of a run over the same two files with no credential-shaped content in them,
+  Because the exit status structurally cannot carry this distinction: the whole
+    point of the reduction is that it produces no findings, so a reduced run and
+    a clean run both succeed. A caller holding only the exit code cannot tell
+    them apart, and a caller matching the message text is reading prose that is
+    free to be reworded.
+
+  Given a staged set of two files on locations where no reduced scrutiny applies
+    — "src/app.py" and "leafcutter-web/app/page.tsx", chosen because both are
+    measured today as ordinary reported paths — containing no credential-shaped
+    content,
+  When the staged set is checked on the path a real commit takes,
+  Then the run's result carries the same reduction record, with a total of 0 and
+    an empty list of files,
+  Because the record must be present on every run, not only on reduced ones: a
+    caller that sees no record cannot tell "nothing was withheld" from "this
+    check does not report withholding", and treating absence as a reading is how
+    a caller silently keeps trusting a check that stopped answering. The
+    human-facing counterpart is the opposite and is governed by GE-125d-3 —
+    a person is shown nothing on a run where nothing was withheld.
+
+  Given the 30-file reduced run described in GE-125d-3, in which the printed
+    notice lists only some of the affected files,
+  When a caller reads the reduction record from the same run,
+  Then the record carries every affected file and the full total, with nothing
+    truncated,
+  Because the abbreviation in the printed notice is a choice about what a person
+    can read, and it must never become a loss of information for anything that
+    consumes the result.
+depends_on:
+  - GE-125d
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001 is the measured record of the reduction whose effect this record exposes to a caller."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "Makes the same structural argument — a caller must distinguish an outcome from a clean pass without reading prose, and the exit status cannot carry the distinction when the degraded case still exits zero — and its wording is worth reusing at implementation time. A CITATION ONLY. It governs a check that CANNOT run, not one that runs and declines to look; no depends_on edge exists or may be added in either direction, and the GE-120 folder is byte-frozen by unit_tests/commit_guardian/test_ge_122e_1.py and must not be edited."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is the canonical copy; the copies under scripts/ and .leafcutter/scripts/ are build.py outputs held identical by check_hook_parity."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE RECORD IS PRESENT ON EVERY RUN, carrying an explicit total of 0 and an empty file list when nothing was withheld. Absence must never be a reading. This is DELIBERATELY THE OPPOSITE of the human-facing rule in GE-125d-3, which requires that nothing at all is printed on a clean run: a person is shown nothing, a caller is always given an explicit zero. The two are a resolved tension, not a contradiction, and must not be harmonised in either direction — do not suppress the zero record for symmetry with the silence, and do not print a zero line for symmetry with the record."
+  - "The record must be readable without parsing English and without consulting the exit status. A caller matching message text is reading prose that is free to be reworded; a caller reading the exit code cannot tell a reduced run from a clean one, because both succeed by construction — the reduction's whole effect is that it produces no findings."
+  - "The record must be COMPLETE where the printed notice is abbreviated: every affected file and the full exact total, with nothing truncated, even on the run where GE-125d-3 caps the notice at ten per-file lines plus a remainder. The bound is a display choice for a person and must never become a loss of information for a consumer."
+  - "The record must NOT be delivered by printing structured text onto either stream. That would collide with GE-125d-1-i's stream discipline and with GE-125d-3's requirement that nothing at all is written on a clean run. It must be reachable from the check's own result in-process. If a serialised form is added later — a file, an exit artefact, a summary emitted under an explicit flag — it is additional, never a replacement, and it must not fire on the default pre-commit invocation."
+  - "Define the record's shape in exactly ONE place and let both the notice (GE-125d-1) and the record read it, so a field can never be present in one and absent from the other. If a shared outcome vocabulary already exists in this component when this is built, express the record in it rather than minting a parallel one; that is an implementation judgement, but minting a second vocabulary when one exists is not."
+  - "The record must reuse the same closed reduction-name vocabulary the notice uses (GE-125d-1-ii), term for term. A caller comparing two runs and a person comparing two notices must be comparing the same identifiers."
+  - "The record must never carry the matched value, the matched line, or the finding excerpt. Being machine-readable is not a licence to include more: a structured field holding a candidate credential is worse than a printed one, because it is the form most likely to be serialised into a build artefact or a log aggregator and retained."
+  - "Exit status is untouched. Attaching the record must not change the check's verdict on any input, and the always-present zero record in particular must not turn a clean run into a non-zero one."
+  - "MEASURED ON 2026-08-24: main() in templates/scripts/commit_guardian/check_secrets.py returns a bare int and returns 0 early at the `if not findings` guard, before any output. There is no result object to attach a record to today, so this AC requires introducing one — and the pre-commit entry point must keep returning the same integer exit code it returns now, since the hook framework reads only that."
+  - "CLAUDE.md error-handling policy applies. Building the record is pure accounting over the already-scanned findings and must NOT be wrapped in try/except (Rule 4); any I/O added to expose it is wrapped in a typed except that logs at WARNING or higher and never silently swallows."
+  - "ADR-001 parity: edit templates/scripts/commit_guardian/check_secrets.py, then run `python scripts/build.py --target-dir .` and verify the deployed copy. check_hook_parity enforces all four locations, and any new module the hook imports must be in the build deploy manifest or the deployed hook raises ModuleNotFoundError at commit time."
+delivers_to:
+  agent: python-coder
+  contract: "A reduction record on every run — total withheld, per-file paths and counts, and the stable reduction name — readable without parsing prose and independent of the exit status, so that any later gate, sweep or report can distinguish a reduced run from a clean one."
+expects_from:
+  ac_id: GE-125d-1
+  contract: "The set of withheld findings and the reduction that withheld each one. This record does not re-derive that set; it requires the same set to be exposed in a form a program reads."
+test_required: true
+test_spec:
+  - name: test_reduced_run_result_carries_total_and_per_file_paths_counts_and_names
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The two-file reduced staged set yields a reduction record with total 3 and, for each of the two files, its repository-relative path, its own withheld count and the stable reduction name — read as structured data, never by parsing the printed notice"
+  - name: test_clean_run_result_carries_an_explicit_zero_and_an_empty_file_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A staged set of src/app.py and leafcutter-web/app/page.tsx with no credential-shaped content still carries the record, with total 0 and an empty list — the negative control that fails an implementation attaching the record only when something was withheld"
+  - name: test_reduced_run_and_clean_run_are_indistinguishable_by_exit_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The reduced run and a run over the same two files with the credential-shaped content removed produce the same exit status, so the record is demonstrably the only thing carrying the distinction"
+  - name: test_record_is_complete_when_the_printed_notice_is_abbreviated
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "On the 30-file / 412-withheld run of GE-125d-3, the notice lists ten files plus a remainder line while the record carries all 30 files and the exact total 412 — abbreviation is a display choice and never a loss of information"
+  - name: test_record_carries_no_matched_value_line_or_excerpt
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A distinctive marker embedded inside each withheld value appears in no field of the record and on neither stream — the never-echo rule extended to the structured form, which is the one most likely to be serialised and retained"
+  - name: test_record_is_not_emitted_as_text_on_either_stream_on_a_clean_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "On the clean run the record is readable in-process while both streams stay empty for this check, proving the record was not delivered by printing structured text and does not collide with GE-125d-3's silence"
+test_rationale: "The record's failure modes are absence, derivability only from the exit code, and being a string a caller must match — none of which a test over a formatter's return value can see. Each entry therefore runs the check on the path a real commit takes and reads the record as structured data from the result, not from the printed output. The clean-run zero entry is a negative control of its own kind: an implementation that attaches the record only when something was withheld reads as correct until the day a caller has to distinguish an old check from a quiet one, and no other entry fails it. The exit-status entry is what proves the claim in the AC's own reasoning — that the exit code structurally cannot carry the distinction — by showing the two runs are identical on that channel. The completeness entry crosses into GE-125d-3's 30-file run deliberately, because truncation is only observable where the notice is abbreviated. The marker entry extends GE-125d-1's absence-based assertion to the structured form, which is the shape most likely to be serialised into a build artefact and retained. The last entry is a seam test because the record and the two streams are separate consumers of the same run, and the requirement is precisely that satisfying one does not contaminate the other."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24)"
+    detail: "Criteria untouched. Assigned python-coder at M. Authored eleven it_requirements. The BA's resolved tension is carried explicitly: the always-present machine zero and GE-125d-3's total human silence are deliberately opposite and neither may be harmonised toward the other. Added the constraint that the record must NOT be delivered by printing structured text on either stream, because that is the obvious implementation and it would collide with both GE-125d-1-i's stream discipline and GE-125d-3's silence; and the constraint that the record must never carry the matched value, since a structured field is the form most likely to be serialised into a build artefact and retained. Measured rather than assumed: main() returns a bare int and returns 0 early at the `if not findings` guard, so there is no result object to attach a record to today and one must be introduced while the pre-commit entry point keeps returning the same integer. Carried in the CLAUDE.md deploy-manifest rule for any new module the hook imports. GE-120a-1 is cited as a doc_link and in prose only, with an explicit statement that no depends_on edge exists or may be added and that the byte-frozen GE-120 folder must not be edited. Authored a six-entry test_spec plus test_rationale. readiness draft->reviewed; work_status and priority untouched."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THE MACHINE-READABLE ARM IS SEPARATE FROM THE PRINTED NOTICE. They have
+  different consumers and they fail differently. The notice fails by being
+  unreadable or by leaking; the record fails by being absent, by being derivable
+  only from the exit code, or by being a string a caller has to match. Folding
+  them together produces the common shape where the only machine-readable signal
+  is the presence of a line of English on a stream.
+
+  RELATIONSHIP TO GE-120a-1, WHICH IS DELIBERATELY NOT A DEPENDENCY. GE-120a-1
+  makes the same structural argument — a caller must distinguish an outcome from
+  a clean pass without reading prose, and the exit status cannot carry the
+  distinction when the degraded case still exits zero — and its wording is worth
+  reusing when this is implemented. It is nevertheless a different goal about a
+  check that CANNOT run: a missing prerequisite, an unreachable helper. This
+  check runs perfectly and declines to look, by policy, on purpose. No
+  depends_on edge is created here, and none should be added: the GE-120 folder
+  is byte-frozen by a guard test, so an edge in that direction is not even
+  mechanically available, and an edge in this direction would imply a
+  prerequisite that does not exist.
+
+  IF A SHARED OUTCOME VOCABULARY EXISTS BY THE TIME THIS IS BUILT, this record
+  should express itself in it rather than mint a parallel one. That is an
+  implementation judgement for the IT PO and the coder; the behavioural
+  requirement here is only that the distinction is machine-readable, always
+  present, and not the exit code.
+
+  FIXTURE PLACEMENT, stated as this tree requires. The reduced arm uses two
+  paths under exempt locations by design. The clean arm deliberately uses
+  "src/app.py" and "leafcutter-web/app/page.tsx" — both recorded in the known
+  issue as measured, reported (non-exempt) paths — so that the zero it asserts
+  is a real zero and not a second reduction being counted as none.
+
+  THE ALWAYS-PRESENT-ZERO ARM IS ALSO A NEGATIVE CONTROL of a different kind
+  from GE-125d-3's: it fails an implementation that only ever attaches the
+  record when something was withheld, which reads as correct until the day a
+  caller has to distinguish an old check from a quiet one.
+
+  IT-PO NOTE, 2026-08-24 — THERE IS NO RESULT OBJECT TO ATTACH THIS TO TODAY.
+  Measured in the canonical copy: main() in
+  templates/scripts/commit_guardian/check_secrets.py returns a bare int and
+  returns 0 at the `if not findings` guard before producing any output. So this
+  record is not a matter of populating an existing structure — one has to be
+  introduced, while the pre-commit entry point keeps returning the same integer
+  the hook framework reads. The tempting shortcut is to print the record as
+  structured text on a stream; that is ruled out above, because it would both
+  break GE-125d-1-i's stream split and break GE-125d-3's requirement that a
+  clean run says nothing at all.

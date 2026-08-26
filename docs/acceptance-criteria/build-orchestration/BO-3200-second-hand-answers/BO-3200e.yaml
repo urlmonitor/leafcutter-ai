@@ -1,0 +1,87 @@
+id: BO-3200e
+title: "A check that could not look says so, instead of guessing"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  An inspection that could not run reports uncertainty, never a false verdict.
+
+  When a check cannot actually examine what it was asked to examine, it reports
+  that it could not tell. It never converts its own inability to look into a
+  confident statement about what it would have found. You are told what could not
+  be checked and why, so you can act on a real problem instead of chasing a
+  conclusion the system was never in a position to reach.
+depends_on:
+  - BO-3200
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 records this as the reusable general lesson: a check that could not perform its inspection reported a confident substantive verdict."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Where the existing one-directional guarantee (a failed inspection must not report a clean pass) is described; this L1 adds the mirror direction."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-08-26
+    note: "Added change_target/risk_surface and one architecture doc_link. Composite — no assigned_agent. criteria untouched."
+superseded_by: null
+covered_by:
+  - BO-3200e-1
+  - BO-3200e-2
+  - BO-3200e-3
+  - BO-3200e-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  SCOPE — the vocabulary already exists; using it everywhere does not. PR #565
+  (88c6395e) introduced an `undetermined` status so a specialist can say "I could
+  not perform my task" instead of borrowing a status that means something else,
+  and made the workflow runtime refuse to count it as success. Do NOT re-specify
+  either of those. This criterion is about the CHECK sites: every place that can
+  fail to perform its inspection must distinguish "I looked and found a problem"
+  from "I could not look", and must not report the first when the second is true.
+
+  This is recorded in KI-BO-018 as "the reusable finding", and it generalises
+  past that one case. The observed shape: the inspection failed for a transport
+  reason, the surrounding error handling was fail-closed, and fail-closed was
+  implemented as a substantive negative verdict rather than an unknown. The
+  remediation text then sent the reader to fix a permission that was already
+  correct — so the false verdict cost more than a halt, it misdirected the
+  diagnosis.
+
+  A DISTINCTION THE BA MUST PRESERVE: fail-closed is correct and is not being
+  weakened here. Halting on an unknown is the right behaviour. The requirement is
+  only that the halt be REPORTED as an unknown rather than as a finding, because
+  the two lead a reader to entirely different places.
+
+  Boundary: AR-200 covers a specialist being equipped to record a verdict at all.
+  This covers what the verdict may claim when the inspection behind it did not
+  happen. Related, not the same.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). This L1's vocabulary is reused, not
+  reinvented, by three other ACs in these two trees: BO-3100b-1 (the work verdict's
+  third value when a snapshot cannot be taken), BO-3200b-2-i (an action whose
+  outcome could not be read), and BO-3200d-2-i (a result that could not be
+  obtained). Those are DIFFERENT SITES with the SAME vocabulary, and the enrichment
+  says so explicitly in each, because inventing a second spelling of "could not
+  tell" would restore the collapse this L1 exists to end.

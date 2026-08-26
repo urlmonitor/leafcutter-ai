@@ -1,0 +1,147 @@
+id: BO-3100d-3
+title: "Reference documentation states the real constraint on delegation and what it forbids"
+component: build-orchestration
+components:
+  - documentation_system
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author deciding whether a new piece of work may be delegated,
+  When they open the reference documentation for delegation,
+  Then it states the constraint as: a dispatched agent must never depend on the result of
+    anything it dispatches — if it needs the result it must do the work itself, or not be the
+    one coordinating,
+    And it states the reason: a dispatched agent has no idle state, so emitting text without
+    acting ends that agent and the text becomes its result, and there is no waiting operation
+    available to it,
+    And it does not state that delegation is constrained by how many levels deep a dispatch is.
+
+  Given the reference documentation,
+  When each statement it makes about what a dispatched agent can and cannot do is exercised
+    against the running system,
+  Then the observed behaviour matches the statement.
+
+  Given an author who follows the documentation's guidance for a piece of work that needs a
+    result,
+  When they apply it,
+  Then the guidance directs them to the coordinating layer, and the arrangement they arrive
+    at passes the sweep that BO-3100c-2 performs.
+depends_on:
+  - BO-3100d
+  - BO-3100d-1
+  - BO-3100c
+doc_links:
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the delegation reference lands."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001's corrected mechanism section is the source of the constraint and its reason."
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The topology page this reference must be reachable from and consistent with."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Carries §2.1-R1, the prompt-level rule that was correct, in force, and did not fire; this reference must not be another of those."
+assigned_agent: reference-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: reference-author, the leaf author, not documentation-expert. Writing the page that forbids depending on a spawned result by depending on a spawned result would be its own demonstration of the defect."
+  - "THE NEGATIVE CLAUSE MUST BE PRESENT AND EXPLICIT. Saying what is true is not enough: the depth story is already believed, is written into two decision records, and will be re-derived by anyone who reads them. The page must actively contradict it, not merely omit it."
+  - "EVERY STATEMENT THE PAGE MAKES ABOUT WHAT A DISPATCHED AGENT CAN AND CANNOT DO IS A BEHAVIOURAL CLAIM under BO-3100d-1 and must carry a claim identifier bound to an executable check. This page must NOT invent a second pairing mechanism."
+  - "THE SWEEP IS THE ARBITER FOR THE GUIDANCE. The page must give the author the same discriminating rule BO-3100c-2 applies, so guidance and enforcement cannot diverge, and the third scenario must be covered by actually constructing the arrangement the guidance leads to and running the sweep over it."
+  - "THE PAGE MUST NOT BE THE ENFORCEMENT. It is guidance that agrees with an enforced rule. If the only thing standing between an author and the wrong arrangement is this page, the tree has produced another building-epics §2.1-R1 — a correct rule in force that does not fire."
+  - "The page must state the constraint without reference to a harness version, a fork mode, or a depth limit, because its value is precisely that it survives changes to all three."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3100d-1
+    contract: "The claim-identifier mechanism and the three-state (confirmed / contradicted / unchecked) report, used unchanged for this page's behavioural statements."
+  - ac_id: BO-3100c-2
+    contract: "The sweep and its pass/fail rule, expressed as a discriminating question an author can apply to their own design — the arbiter this page defers to."
+  - ac_id: BO-3100d-2
+    contract: "The corrected constraint as settled in the superseding decision record, so this page restates a decision rather than re-deriving one."
+test_spec:
+  - name: test_bo_3100d_3_page_states_the_constraint_the_reason_and_the_negative
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the page's declared claim set contains the constraint claim, the no-idle-state reason claim, and an explicit claim contradicting the depth story — checked as declared claims, not by matching sentences in the body."
+  - name: test_bo_3100d_3_every_page_claim_is_bound_and_confirmed
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run BO-3100d-1's claim-check runner scoped to this page and assert every behavioural claim it makes is bound to a check and reported confirmed — none contradicted, none unchecked."
+  - name: test_bo_3100d_3_guidance_leads_to_an_arrangement_the_sweep_accepts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE PROSE-TO-ENFORCEMENT TIE. Construct the arrangement the page's guidance directs an author to for work that needs a result, then run BO-3100c-2's sweep over it and assert it passes. Guidance that leads to an arrangement the sweep rejects is worse than no guidance."
+  - name: test_bo_3100d_3_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  A test asserting this page CONTAINS the right sentences is exactly the grep on prose the goal's
+  hard constraint rejects, and it would have passed on building-epics §2.1-R1 for the entire
+  period that rule was silently not firing. So the page's statements are covered by BO-3100d-1's
+  claim-check mechanism — each one exercised against the running system — and its guidance is
+  covered by constructing the arrangement it recommends and running BO-3100c-2's sweep over it.
+  Deliberately NOT covered: whether the page is well written or persuasive. Human judgement, and
+  no test here claims it.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf reference author), complexity, it_requirements,
+    expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the reference-doc entry in BO-3100d's documentation_triggers.
+
+  The constraint is quoted in the user's own words because every child of BO-3100 is meant to
+  be traceable to it, and because its value is that it references no harness version, no fork
+  mode and no depth limit — which is exactly why it survives changes to all three.
+
+  THE NEGATIVE CLAUSE IS DELIBERATE. Saying what is true is not enough here: the depth story
+  is already believed, is written into two decision records, and will be re-derived by anyone
+  who reads them. The documentation has to actively contradict it, not merely omit it.
+
+  THE THIRD SCENARIO TIES THE PROSE TO AN ENFORCED OUTCOME. Guidance that leads an author to
+  an arrangement the sweep then rejects is worse than no guidance; making the sweep the
+  arbiter means the documentation cannot quietly diverge from what the system permits.
+
+  Sequenced after BO-3100c because the coordinating layer it directs authors to must exist and
+  be the only one, and after d-1 because the executable claim-checks are the instrument for
+  the second scenario.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). One requirement is worth stating plainly because it is
+  counter-intuitive for a documentation AC: this page must NOT be load-bearing. Its correctness
+  is checked, and its guidance is tied to the sweep, but nothing may depend on an author reading
+  and obeying it. A page that is the only thing preventing the wrong arrangement is a fourth
+  prompt-level rule, and this tree exists because the previous three did not fire.

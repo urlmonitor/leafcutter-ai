@@ -1,0 +1,243 @@
+id: ACD-2100d-3
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: approved
+priority: medium
+title: "Installing into a project where the route starts leaves the route still able to start"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a project in which a run reaches the first question the route puts to the
+    user before the installer is run,
+  When the current installer is run against that project,
+  Then a run started in that project afterwards still reaches that first question,
+  And it does not stop at any check that did not stop it before the install,
+  And the finding comes from starting a run in that project after the install
+    rather than from inspecting what the installer copied.
+depends_on: [ACD-2100d, ACD-2100d-1]
+doc_links:
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 -- the charter gate that halts the run. The deployed workflow does not carry it yet, so installing adds it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The install path this guarantee is stated over."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The installer whose run sits between this record's two measurements."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The deployed and reachability angles this record's evidence has to satisfy -- the same BP-811 case ACD-2100d-1 cites."
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 names the startup checks; this record is the guarantee that an install adds none of them to a project that had none."
+  - path: scripts/ci/check_consumer_install.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE. The existing gate that already creates a temporary target project, runs the real installer into it as a subprocess, and has its verdict consumed by a CI job. This is the deliverability decision the standing-guarantee requirement names, so the before-and-after measurement is wired here rather than into a new script nothing invokes."
+  - path: unit_tests/_installed_route_probe.py
+    relationship: modifies
+    status: planned
+    relevance: "EDIT SURFACE, CREATED BY ACD-2100d-1. Reused rather than re-authored. This record adds the two-measurement comparison and the precondition-not-met verdict to the shared probe so both records read one implementation of 'how far did the run get'."
+  - path: unit_tests/portability/test_acd_2100d_3.py
+    relationship: creates
+    status: planned
+    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below, including the boundary descriptor that makes the before-measurement mechanically load-bearing."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE VERDICT MUST BE A RELATION BETWEEN TWO RECORDED OBSERVATIONS of the same project -- one taken before the installer runs and one after. It must not be an assertion about the after-state alone. An implementation that measures only the after-state and compares it to a constant passes on a project that was already broken, which is the one outcome this record exists to exclude."
+  - "A PROJECT THAT DOES NOT REACH THE FIRST QUESTION BEFORE THE INSTALL MUST NOT PRODUCE A PASS. The Given is a precondition, so the correct verdict there is precondition-not-met, reported as such and distinguishable in the output from a pass. This is the mechanically checkable form of the requirement above -- it is the single case that separates a real before-and-after from an after-only check wearing its name."
+  - "Reuse ACD-2100d-1's harness -- install into a temporary target project and observe how far a run started there gets -- rather than writing a second one. Two harnesses observing 'how far the run got' by different means will eventually disagree, and when they do one of these two records reports green on the condition the other reports red. The temporary target must be created and torn down by the harness so the check is repeatable and leaves nothing behind; it must never be run against a developer's own project."
+  - "Both observations must be taken on the same project under the same starting directory conditions. The only variable is that the installer ran in between -- ACD-2100a's behaviours are directory-sensitive and varying two things at once makes a regression unattributable."
+  - "The observation must be the run's own recorded stopping point, not its exit code. A run can exit zero having halted at a startup check, and which check stopped it is this record's entire subject."
+  - "Both runs must complete their startup path with no network available, so a transport failure in one of the two measurements cannot be read as an install-induced regression."
+  - "The finding must be produced by starting a run in the project after the install. An assertion over what the installer copied, a file manifest or a checksum is not evidence -- the same real-artifact rule ACD-2100d-1 is held to, for the same reason."
+  - "STANDING GUARANTEE MEANS IT HAS TO KEEP RUNNING. Wire the check where a change to the startup path or to the installer will re-run it, and have its verdict read by whatever decides that change is deliverable. A script that proved the property once and is never invoked again satisfies the words and not the record -- the inert-gate shape this repo keeps rediscovering."
+  - "Must satisfy the repository error-handling policy in any harness code that ships under scripts/ or unit_tests/."
+  - "Any dependency the check needs at runtime must be in the build deploy manifest. A check that runs only from the source tree is not the check a consumer's install would run, and this record is about what happens to a consumer."
+  - "THE GATE THAT ACTUALLY RUNS ON AN INSTALLER CHANGE ALREADY EXISTS -- WIRE INTO IT RATHER THAN ADDING A SECOND ONE. scripts/ci/check_consumer_install.py already creates a temporary target project, runs the real installer into it as a subprocess, and has its exit code consumed by the consumer-install simulation job in the repository's CI workflow. That is the deliverability decision the standing-guarantee requirement above names. Extend that script with the before-and-after startup measurement so the verdict is read where an installer change is already gated. The CI workflow definition itself needs no edit, because the job already invokes this script -- and a new standalone script that nothing invokes is the inert-gate shape the requirement forbids."
+  - "THE DEPLOY-MANIFEST REQUIREMENT IS ABOUT THE ROUTE, NOT ABOUT THE CHECKER, AND THE TWO MUST NOT BE CONFLATED. Neither the CI check directory nor the test tree is deployed into a target install, and that is correct: both are package-development tooling. What must be present in a consumer install is everything THE ROUTE reads at startup, and closing that gap is ACD-2100d-1's surface. If reusing ACD-2100d-1's probe from the CI check turns out to be awkward because the probe lives under the test tree, resolve it by having the consumer-install job reach the probe through the test runner, or by relocating the single shared probe. Do NOT resolve it by writing a second probe -- that is the exact outcome the reuse requirement above exists to prevent."
+test_spec:
+  - name: test_the_route_reaches_the_first_question_before_and_after_the_install
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: >-
+      A temporary target project is measured first -- a run started there reaches the
+      first question the route puts to the user -- the installer is then run against
+      that same project and the measurement repeated. The assertion is over the PAIR of
+      recorded observations; a test that inspects only the second one does not satisfy
+      this descriptor.
+  - name: test_a_project_already_broken_before_the_install_does_not_pass_the_guarantee
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: boundary
+    description: >-
+      THE TEST THAT MAKES THE BEFORE-MEASUREMENT LOAD-BEARING. Seed a target project in
+      which a run halts at a startup check BEFORE the installer runs, install, and assert
+      the verdict is precondition-not-met and is distinguishable from a pass. Assert in
+      the same test that an after-state-only assertion over this fixture would have
+      reported a pass -- that contrast is the evidence the before-measurement is doing
+      work rather than being computed and discarded.
+  - name: test_a_startup_halt_the_project_did_not_have_before_the_install_is_reported
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: >-
+      THE LIVE HAZARD, RUN THE WRONG WAY ROUND. Install an artifact that carries a
+      startup check the project's own copy did not carry, and assert the verdict is a
+      regression that names the check that now stops the run. This is the currently-true
+      case: the deployed workflow has no charter gate and the source does.
+  - name: test_both_findings_come_from_runs_started_in_the_project_not_from_the_copy_list
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "the route invoked in the temporary target project the way a consumer invokes it, in a fresh process, once before the install and once after"
+    description: >-
+      Both measurements are taken by invoking the entry point a consumer uses, in a fresh
+      process -- so an install whose copied files are impeccable and whose deployed route
+      still cannot start fails this test.
+test_rationale: >-
+  The criteria state a before-and-after guarantee and the before half is the half that
+  can be dropped without anything noticing: "the route still starts" is unfalsifiable on
+  its own, because an install that keeps an already-broken project broken satisfies it.
+  So the contract is written to make the before-measurement mechanically necessary rather
+  than merely instructed. The criterion test asserts over the pair; the boundary test
+  seeds a project that fails the Given and requires a precondition-not-met verdict, and
+  additionally requires the test to show that an after-only assertion WOULD have passed
+  the same fixture -- which is the only assertion an after-only implementation cannot
+  fake. The failure test is the live hazard stated forwards: the deployed workflow
+  currently carries no charter gate while the source does, so installing today ADDS a
+  halt to a working project. The reachability test is separate because this record's last
+  clause forbids the cheap proof -- inspecting what the installer copied -- and a copied-
+  files assertion is indistinguishable from a real one unless something runs the artifact.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100d-1
+    contract: "A repeatable harness that installs into a temporary target project and starts a run there in a fresh process, returning that run's own recorded stopping point -- reached-the-first-question, or the named startup check that halted it. This record calls that harness twice against one project and compares the two results; the observation vocabulary must therefore be stable enough to compare."
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/22_TICKET-20260826-ACD-2100d-3.md
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE HAZARD IS LIVE AND IT RUNS THE WRONG WAY. Verified by the PO on 2026-08-25:
+  the deployed workflow at leafcutter-ai/.leafcutter/workflows/plan-feature.js
+  carries NO charter gate, while the source does. So a project where the route
+  currently starts would have the KI-ACD-009 blocker ADDED to it by the next
+  install. A source-only repair has a window in which installing makes things
+  worse, and every consumer walks into it on their next build.
+
+  STANDING GUARANTEE, NOT A ONE-OFF CHECK. It is stated in terms of before-and-after
+  behaviour of the same project, so it keeps its meaning for the next change to the
+  startup path -- which is the point of writing it as an AC rather than as a release
+  note for this repair.
+
+  THE BEFORE MEASUREMENT IS NOT OPTIONAL. "The route still starts" is unfalsifiable
+  without it: if the route was already broken in that project, an install that keeps
+  it broken passes. Measure first, install, measure again.
+
+  DELIBERATELY WEAKER THAN d-1. This does not require the installed and source
+  copies to agree -- that is ACD-2100d-1. It requires only that installing never
+  takes a working project backwards, which is the guarantee a consumer actually
+  relies on and the one the current stale artifact breaks.
+
+  2026-08-25 (it-po): sized M rather than L because the expensive part -- install into a
+  temporary target, start a run there, observe how far it got -- is ACD-2100d-1's
+  deliverable and is reused here; what is new is the two-measurement protocol, the
+  precondition-not-met verdict, and wiring the check so it keeps running. The
+  before-measurement is enforced by a test rather than by an instruction: the boundary
+  descriptor requires a fixture that an after-only implementation would pass and this
+  one must not, which is the only shape that cannot be satisfied by computing the before
+  value and discarding it.
+
+  SEQUENCING CAVEAT INHERITED FROM ACD-2100d-1 (raised to the user, not edited here).
+  This record's Given -- a project in which the route already reaches the first question
+  -- cannot be constructed until ACD-2100a-5 lands, because the source copy halts at the
+  charter gate today. depends_on carries [ACD-2100d, ACD-2100d-1], and ACD-2100d-1's own
+  depends_on carries only [ACD-2100d], so no path in the build order reaches ACD-2100a-5.
+  The build sequencer reads depends_on only (KI-ACD-015, open), so the expects_from edge
+  above does not order anything. The it-po does not own depends_on and has not edited it;
+  the recommended edit is to add ACD-2100a-5 to ACD-2100d-1's depends_on before the tree
+  is approved, which orders this record correctly by transitivity.
+
+  IT PO ENRICHMENT -- 2026-08-26 (files_touched backfill).
+
+  WHY THIS RECORD PRODUCED AN EMPTY files_touched. generate_ticket_from_ac.py derives the
+  ticket surface as the union of path tokens found in it_requirements prose that exist on
+  disk, plus doc_links whose relationship is one of constrains / creates / implements /
+  modifies / specifies. Every doc_link here was "describes" and no it_requirement named a
+  path, so the union was empty. The enrichment below fixes the cause, so a regeneration
+  reproduces the same three paths.
+
+  THE THREE PATHS, AND WHY EACH ONE IS THERE.
+
+  scripts/ci/check_consumer_install.py -- this is the answer to the standing-guarantee
+  requirement, and it was already sitting there. Verified on 2026-08-26: the script
+  creates a temporary target project, runs the real installer into it as a subprocess,
+  and inspects the deployed tree; its exit code is consumed by a dedicated CI job. In
+  other words the "install into a temporary target" half of this record's protocol
+  already exists AND is already read by a deliverability decision. What it does not do is
+  start a run afterwards. Extending it is what turns the requirement's words into a gate
+  that re-runs on every installer change, and it is strictly cheaper than authoring a new
+  script and then having to argue that something invokes it.
+
+  unit_tests/_installed_route_probe.py -- ACD-2100d-1's deliverable, listed here because
+  this record modifies it rather than merely calling it. The two-measurement comparison
+  and the precondition-not-met verdict have to live in the shared probe, not in this
+  record's test file, or the reuse requirement is satisfied in name only: two callers
+  would each carry their own notion of "how far the run got" and would eventually
+  disagree. Declaring it as a shared edit surface is also what tells a change-scope
+  reviewer that a diff to that file under this ticket is expected.
+
+  unit_tests/portability/test_acd_2100d_3.py -- the four descriptors, including the
+  boundary one that makes the before-measurement mechanically load-bearing. The generator
+  already names this exact path in the ticket's Test Requirements block.
+
+  PATHS CONSIDERED AND REJECTED.
+
+  scripts/build_phases.py -- rejected here even though this record's second criterion is
+  violated today by a missing deploy entry (the deployed route reads a charter registry
+  that no build phase deploys; see ACD-2100d-1's enrichment note for the verification).
+  That repair belongs to ACD-2100d-1, which this record depends_on. Listing the file under
+  both tickets would give two tickets authority over one file for two different reasons
+  and would make an out-of-scope deploy edit look in-scope under whichever ticket happened
+  to be open.
+
+  The CI workflow definition -- rejected. The consumer-install simulation job already
+  invokes the script named above, so extending the script needs no workflow edit. If the
+  implementer finds a workflow edit is genuinely required, that is a scope change worth
+  surfacing rather than absorbing.
+
+  A NEW STANDALONE CHECK SCRIPT -- rejected on purpose. It is the shape the
+  standing-guarantee requirement explicitly forbids: a script that proves the property
+  once and is never invoked again.
+
+  UNRESOLVED TENSION, LEFT VISIBLE RATHER THAN SILENTLY DECIDED. The last it_requirement
+  demands the check's runtime dependencies be in the build deploy manifest, but neither
+  the CI check directory nor the test tree is deployed into a target install -- verified
+  on 2026-08-26. The honest reading is that the requirement is about what THE ROUTE needs
+  at runtime (ACD-2100d-1's surface), not about the checker, which is package-development
+  tooling like every other CI gate here. An it_requirement has been added stating that
+  reading and naming the two acceptable resolutions, so the implementer does not resolve
+  it by writing a second probe.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

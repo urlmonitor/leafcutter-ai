@@ -1,0 +1,157 @@
+id: ACD-2100a-4
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "A pause record written from inside a worktree is found again by the run that resumes"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run started with the process working directory set to a git worktree of
+    the project that holds no installed copy of the route's own support files,
+  When the run records that it is waiting for a person's answer,
+  Then a pause record for that run exists on disk in the project's own store after
+    the process has exited,
+  And no pause record has been created underneath the directory the run started in,
+  And a second run started from a different working directory -- the project root
+    -- finds that same record and reports the run as waiting,
+  And the run that wrote the record reported the write as failed if and only if no
+    record is present on disk.
+depends_on: [ACD-2100a]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state where a pause record lands for each starting directory."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: related
+    status: exists
+    relevance: "The three pause-store sites are in no known issue; this record is where they are captured."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The pause store is reached at lines 1552 (read), 1625 (write) and 1642 (read-back verify), all via a cwd-relative {{config.output_root}}/scripts/pause_store.py."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause and resume contract this record must not break."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the pause store this behaviour must reach from any working directory."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/. The deployed workflow and the deployed pause-store script are both build output."
+  - "All three pause-store sites -- the read, the write and the read-back verification -- must resolve through the same repository-anchored resolution. Fixing the write alone leaves a run that writes correctly and then cannot find its own record."
+  - "The store location must be a function of the project being operated on, never of the caller's working directory, so that a writer in a worktree and a reader at the project root address the same location."
+  - "The reported write outcome must be established by observing the record after the write, not by the absence of a thrown error. A writer that reports success while writing nowhere passes every return-value assertion."
+  - "The write must be durable before the process exits -- a record buffered and lost on exit is indistinguishable from a run that never paused."
+  - "Must satisfy the repository error-handling policy: the read, the write and the read-back are external I/O and each must log at WARNING or re-raise on failure."
+  - "Must be idempotent: pausing the same run twice at the same decision point must leave one record, not two."
+test_spec:
+  - name: test_pause_record_written_from_a_worktree_lands_in_the_project_store
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The run is driven from a real worktree asserted to hold no installed support
+      directory; after the process exits, the pause record is present at the project's
+      own store location and no record exists anywhere under the worktree.
+  - name: test_pause_record_is_found_by_a_second_process_started_elsewhere
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      A second, fresh process started with the project root as its working directory
+      lists the run as waiting -- the real writer's real output read by the real reader
+      across two different working directories.
+  - name: test_reported_write_failure_matches_what_is_on_disk
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With the store location made unwritable, the run reports the write as failed and
+      no record is present; with it writable, the run reports success and the record is
+      present. The report and the filesystem agree in both directions.
+  - name: test_pause_write_is_reached_from_the_workflow_entry_point
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the plan-feature workflow driven through the workflow runner to a decision point with no answering channel available"
+    description: >-
+      The record is produced by driving the real workflow to a real pause, not by
+      calling the pause-store helper directly.
+test_rationale: >-
+  Writing and reading from the same working directory passes even when both resolve to
+  the wrong place, so the read-back has to happen in a second process started from a
+  different directory -- that is the only shape in which a cwd-relative store location
+  fails. The report-matches-disk pair is the anti-phantom assertion: a writer that
+  returns success while writing nowhere, or that writes beside the caller where the
+  resuming run will never look, satisfies every assertion made against the return value
+  alone. Asserting the absence of a stray record under the worktree is as load-bearing
+  as asserting the presence of the real one.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100c-2
+    contract: "A pause record whose on-disk location is a function of the project being operated on, written durably before process exit and readable from any working directory. Without it, ACD-2100c-2's 'pause instead of discard' degrades to a persist failure when run from a worktree."
+  - agent: python-coder
+    ac_id: ACD-2100a-5
+    contract: "A pause-store read, write and read-back that all resolve through the shared repository-anchored resolution."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/05_TICKET-20260826-ACD-2100a-4.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SITES 3 4 AND 5 OF 5 -- the three the known issues never named. Verified by the
+  PO on 2026-08-25 in templates/workflows-js/plan-feature.js: the pause store is
+  read at 1552, written at 1625 and read back at 1642, all through a cwd-relative
+  `{{config.output_root}}/scripts/pause_store.py`.
+
+  WHY THIS IS LOAD-BEARING FOR ANOTHER L1, not housekeeping. ACD-2100c replaces a
+  destructive default with "pause instead of discard". A pause that cannot be
+  written is not a pause -- it degrades to `pause_persist_failed`, and the run is
+  back to losing work, from exactly the working directory where the original
+  failure was observed. Closing only the two sites named in the known issues leaves
+  ACD-2100c half-broken and its evidence unfalsifiable.
+
+  THE SECOND AND FOURTH THEN CLAUSES ARE THE ANTI-PHANTOM PAIR. A writer that
+  reports success while writing nowhere, or that writes a record under the caller's
+  working directory where the resuming run will never look, passes any test that
+  only checks the return value. Assert the file's location on disk, assert the
+  absence of a stray record beside the caller, and assert that the report matches
+  what is actually there.
+
+  READ-BACK FROM A DIFFERENT DIRECTORY IS THE POINT. Writing and reading from the
+  same working directory passes even when both resolve to the wrong place. The
+  resume in ACD-2100c-3 is a separate process started later, quite possibly from
+  the project root rather than the worktree, so the record has to be findable from
+  either.
+
+  DO NOT AUTHOR OVER: two commits on worktrees/pf-gate-fix (c6087fae, 5a3eae6d) add
+  pause-persist verification and fix dropped `edit` feedback. They address the
+  verification step, not the path resolution underneath it. Assume they land.
+
+  2026-08-25 (it-po): this is the one cross-L1 delivery in the tree that the build
+  sequencer can actually see -- ACD-2100c-2 already carries ACD-2100a-4 in its
+  depends_on, so the expects_from edge on that side has a depends_on mirror and will
+  not be scheduled out of order (KI-ACD-015). The pf-gate-fix commits harden the
+  verification step; if they land first, the fourth Then clause here is partly served
+  and the remaining work is the resolution underneath it. That does not make this
+  record smaller -- the verification is only honest once it is verifying the right
+  location.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

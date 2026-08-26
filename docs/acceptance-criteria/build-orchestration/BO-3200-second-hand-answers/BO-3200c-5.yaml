@@ -1,0 +1,129 @@
+id: BO-3200c-5
+title: "A sequence diagram shows the question reaching the person and the pause when it cannot"
+component: build-orchestration
+components:
+  - documentation_system
+  - ac_driven_dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader asking who answers a decision point,
+  When they open the sequence diagram for it,
+  Then it shows the person as a distinct participant, shows the question travelling from the
+    layer that raises it to the person and the answer travelling back, shows no specialist in
+    the answering position, and shows the alternative path in which the question cannot reach
+    the person: the run pausing, the resumable record being written, and the authored work
+    being left in place.
+
+  Given the diagram,
+  When it is compared against a real run driven down each of the two paths,
+  Then every interaction it shows occurred on the corresponding path, in the order shown.
+depends_on:
+  - BO-3200c
+  - BO-3200c-1
+  - BO-3200c-2
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the sequence diagram lands; sequence number from scripts/next_diagram_seq.py."
+  - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    relationship: describes
+    status: exists
+    relevance: "The existing pause-resume sequence this diagram must be consistent with rather than duplicate."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the new diagram must be reachable from."
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert."
+  - "THE PERSON MUST BE A DISTINCT PARTICIPANT, and no specialist may appear in the answering position — as a declared property of the drawing, not a matter of labelling. In the arrangement this replaces, the answering position was occupied and the occupant was a specialist; every diagram of it would have looked correct because the SHAPE was right and only the identity was wrong."
+  - "BOTH PATHS MUST BE DRAWN, and the pause path drawn as an explicit alternative rather than an aside. The pause is the behaviour that was missing; a diagram showing only the answered case leaves the unanswered case to whatever the next implementer assumes, which is how it was missing in the first place."
+  - "THE PAUSE PATH MUST SHOW THREE THINGS SEPARATELY: the run pausing, the resumable record being written, and the authored work being left in place. Collapsing them loses the only element that distinguishes a pause from a discard."
+  - "The coherence claim must be enforced by an executable test comparing the diagram's declared interactions, per path and in order, against real runs driven down EACH path."
+  - "The diagram page must declare its participants, paths and ordered interactions in a machine-readable form so the coherence test reads data, not a picture."
+  - "Must be consistent with the existing interactive pause-resume sequence diagram rather than contradicting or duplicating it; if the existing one becomes wrong, say so there rather than leaving two drawings that disagree."
+  - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200c-1
+    contract: "The ordered interaction traces of both paths — question raised and answered by the person; and question unaskable, run paused, record written, authored work left in place — obtainable programmatically from real runs."
+  - ac_id: BO-3200c-2
+    contract: "The fact that a non-person reply never reaches the settle path, so the drawing's answering position can be asserted to contain only the person."
+test_spec:
+  - name: test_bo_3200c_5_diagram_declares_the_person_and_no_specialist_answering
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Parse the declared participants and interactions; assert the person is a distinct participant, the question travels from the raising layer to the person and the answer back, and no declared interaction has a specialist in the answering position."
+  - name: test_bo_3200c_5_pause_path_is_drawn_with_its_three_elements
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Assert the alternative path is declared and contains, separately: the run pausing, the resumable record being written, and the authored work being left in place."
+  - name: test_bo_3200c_5_diagram_matches_real_runs_down_both_paths
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE COHERENCE CHECK. Drive one real run down the answered path and one down the pause path, capture both ordered traces, and assert each declared path matches its corresponding run in order and in both directions."
+  - name: test_bo_3200c_5_diagram_page_passes_repo_doc_gates
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+test_rationale: |
+  The failure this diagram corrects is invisible in a picture: the interaction shape was right
+  and only the identity of the answering participant was wrong, so a reviewer comparing the old
+  drawing to the old behaviour would have found them in agreement. Making "who is in the
+  answering position" a declared, asserted property is what turns that from a matter of reading
+  into a matter of testing.
+  Driving BOTH paths for the coherence check is required, not thorough: the pause path is the
+  behaviour that was missing, and a check against the answered path alone would pass on a diagram
+  that documents only the case that already worked.
+  Deliberately NOT covered: layout and legibility, which are human judgement.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent (leaf diagram author), complexity, it_requirements, expects_from,
+    doc_links, test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies the sequence-diagram entry in BO-3200c's documentation_triggers.
+
+  Drawing the person as a participant is the whole point. In the arrangement this replaces, the
+  gate had a participant in that position and it was a specialist — and every diagram of it
+  would have looked correct, because the shape of the interaction was right and only the
+  identity was wrong. Requiring the diagram to show no specialist in the answering position
+  states the correction where a future reader will see it before repeating it.
+
+  Showing the pause path as an explicit alternative matters as much as the happy path: the
+  pause is the behaviour that was missing, and a diagram that shows only the answered case
+  leaves the unanswered case to whatever the implementer assumes.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). One consistency obligation the criteria do not mention:
+  docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md already draws a pause
+  and resume. This diagram must fit with it rather than become a second, competing picture of
+  the same substrate — and if the existing one becomes wrong once a decision point can pause, it
+  must be corrected there. Two diagrams that disagree about the same mechanism is how the
+  topology records drifted in the sibling tree.

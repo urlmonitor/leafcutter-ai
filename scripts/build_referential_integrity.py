@@ -42,10 +42,32 @@ ARCHITECTURE: Four public functions. check_referential_integrity() validates pat
     reference-extraction-pass location the AC's ``n_location_rule`` requires; wiring it
     into ``build.py``'s phase list is intentionally out of this ticket's ``files_touched``
     scope).
+    compute_intra_package_closure() and find_uncovered_closure_dependencies() (AC
+    BP-900g-8) are a DIFFERENT axis from everything above: the functions so far scan
+    TEMPLATE PROSE for invocation-style script references
+    (``python scripts/<path>``). BP-900g-8 instead performs AST-based static analysis
+    of a deployed Python SCRIPT's own code -- its ``import`` statements, relative
+    imports, ``sys.path.insert``/``sys.path.append`` mutations that redirect a
+    subsequent plain import to a non-default directory, and
+    ``importlib.util.spec_from_file_location`` dynamic-loader calls resolved
+    relative to ``__file__`` -- to derive the TRANSITIVE set of sibling modules
+    it actually resolves at runtime (Set A, ``resolved_closure``). This
+    closure is never hand-maintained: a module added to a deployed script's imports
+    tomorrow is picked up automatically because the scan reads the code, not a list.
+    ``find_uncovered_closure_dependencies()`` is the containment check: it computes
+    the closure for a named script and reports which entries are absent from a
+    caller-supplied declared set (Set B, ``deploy_declaration``), so a build-time
+    caller (``build.py``) can fail loudly when a script resolves a dependency that
+    no deploy phase ships. Both functions are root-relative: the caller passes the
+    root a returned path string is relative to, so the same functions work
+    unmodified against the SOURCE tree (root=package root) or the DEPLOYED tree
+    (root=output root) -- the latter is what proves the closure is actually shipped,
+    not merely present in source by construction.
 """
 
 from __future__ import annotations
 
+import ast
 import logging
 import re
 from pathlib import Path
@@ -389,6 +411,547 @@ def format_integrity_report(missing: list[dict[str, str]]) -> str:
     lines.append("These may cause downstream agents to fail. Run the onboard agent")
     lines.append("or create the missing files manually.")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Intra-package dependency closure (AC BP-900g-8)
+# ---------------------------------------------------------------------------
+#
+# Unlike the template-prose scan above, this scans a deployed Python SCRIPT's
+# own AST for three ways it can resolve a sibling module belonging to the same
+# package:
+#
+#   1. Static imports: ``import foo``, ``from foo import bar``, and relative
+#      imports (``from . import foo``, ``from .foo import bar``). Resolved by
+#      trying each plausible file-path candidate for the imported name and
+#      keeping the ones that exist on disk under *root* -- existence-checking
+#      is what keeps stdlib/third-party names (``import yaml``, ``import os``)
+#      out of the closure without an allowlist: they simply never resolve to a
+#      real file under the package root.
+#   2. Dynamic loads: ``importlib.util.spec_from_file_location(name, path)``
+#      where *path* is a statically-evaluable expression built from
+#      ``Path(__file__)``, chained ``.parent`` attribute access, ``.resolve()``,
+#      and ``/`` (division) against string literals -- the exact shape
+#      generate_ticket_from_ac.py's ``_load_migration_map`` and
+#      ``_load_derive_parent_id_fn`` use. When the expression is NOT reducible
+#      to a concrete path this way, the reference is logged as a WARNING naming
+#      the file and line for a human to verify -- never silently treated as
+#      external. This is the documented static-analysis blind spot;
+#      BP-900g-10 is the runtime backstop for it.
+#   3. ``sys.path.insert(0, <dir-expression>)`` / ``sys.path.append(...)``
+#      followed by a plain import that resolves against the pushed directory
+#      rather than the script's own directory or the package root --
+#      goal_to_epic.py's dual source/deployed-layout guard is the live
+#      instance: ``sys.path.insert(0, str(_sibling_dir))`` then
+#      ``from scan_ac_store import traverse_ac_tree``, where ``_sibling_dir``
+#      is itself an ``if``/``else`` ternary over two statically-known
+#      directories. Reuses the SAME statically-evaluable-expression handling
+#      as (2) (including the ternary, resolved to both candidate directories
+#      since which branch runs depends on a runtime condition) and gives an
+#      unresolvable pushed-path argument the identical WARNING treatment as an
+#      unresolvable dynamic loader argument -- there is no path through this
+#      module where an unresolved intra-package reference produces zero log
+#      output.
+#
+# The closure is TRANSITIVE: each newly-discovered dependency file is itself
+# scanned for further sibling references, with a visited-set guarding against
+# import cycles.
+
+
+def _iter_same_scope(node: ast.AST) -> Any:
+    """Yield *node* and its descendants, without crossing into a nested function/class.
+
+    Used to collect a scope's OWN local assignments without leaking in (or
+    being shadowed by) a same-named local variable in a sibling function --
+    e.g. ``generate_ticket_from_ac.py`` has TWO unrelated functions that each
+    assign a local variable named ``sibling`` for their own, different,
+    sibling-module load. A flat whole-module scan would let the later
+    function's assignment silently overwrite the earlier one in a shared dict,
+    corrupting resolution for the first call site.
+    """
+    yield node
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            continue
+        yield from _iter_same_scope(child)
+
+
+def _annotate_parents(tree: ast.AST) -> None:
+    """Attach a ``_closure_parent`` back-reference to every node in *tree*."""
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            child._closure_parent = node  # noqa: SLF001
+
+
+def _enclosing_scope(node: ast.AST, tree: ast.AST) -> ast.AST:
+    """Return the nearest enclosing Module/FunctionDef/AsyncFunctionDef for *node*.
+
+    Requires ``_annotate_parents(tree)`` to have been called first. Falls back
+    to *tree* (the module) when no parent chain is available.
+    """
+    current = getattr(node, "_closure_parent", None)
+    while current is not None and not isinstance(
+        current, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
+        current = getattr(current, "_closure_parent", None)
+    return current if current is not None else tree
+
+
+def _build_local_assignments(
+    scope: ast.AST, tree: ast.AST | None = None
+) -> dict[str, ast.AST]:
+    """Map every simple ``name = <expr>`` assignment DIRECTLY within *scope* to its value.
+
+    "Directly within" means: found by ``_iter_same_scope(scope)``, so a nested
+    function or class body defined inside *scope* does not contribute (and
+    cannot shadow) an entry here -- each call site is resolved against only
+    its own enclosing function's (or the module's top-level) assignments.
+
+    The real-world pattern this closure computation must see (e.g.
+    ``generate_ticket_from_ac.py``'s ``_load_migration_map``) never inlines the
+    ``Path(__file__)...`` expression directly as the ``spec_from_file_location``
+    argument -- it assigns it to a local variable first (``sibling = ...``) a
+    few lines earlier and passes the variable. Without resolving that
+    indirection, every real dynamic-loader reference in this codebase would be
+    misclassified as unresolvable.
+
+    When *tree* is supplied and *scope* is a function (not the module itself),
+    the function's own assignments are overlaid ON TOP OF the module's
+    top-level assignments -- mirroring Python's own local-then-global name
+    resolution. This is required for a pattern like ``goal_to_epic.py``'s
+    ``run()``: it pushes ``sys.path.insert(0, str(_sibling_dir))`` where
+    ``_sibling_dir`` is assigned at MODULE level, not inside ``run()`` itself.
+    Without the module-level fallback, that name would never resolve from
+    inside the function scope and the reference would be misclassified as
+    unresolvable. A same-named LOCAL assignment always wins over the
+    module-level one, so this cannot reintroduce the cross-function shadowing
+    bug ``_iter_same_scope`` guards against -- only true module globals are
+    merged in, never another function's locals.
+    """
+    assignments: dict[str, ast.AST] = {}
+    if tree is not None and scope is not tree:
+        assignments.update(_build_local_assignments(tree))
+    for node in _iter_same_scope(scope):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assignments[target.id] = node.value
+    return assignments
+
+
+def _eval_static_path(
+    node: ast.AST,
+    script: Path,
+    assignments: dict[str, ast.AST],
+    _seen: frozenset[str] = frozenset(),
+) -> list[Path] | None:
+    """Reduce a ``Path(__file__)``-rooted expression to concrete Path(s), if possible.
+
+    Recognises the shape used by this codebase's sibling-module loaders:
+    ``Path(__file__)``, any number of chained ``.resolve()`` calls (no-ops for
+    this purpose) and ``.parent`` attribute accesses, combined with ``/``
+    (division) against string-literal path segments -- e.g.
+    ``Path(__file__).resolve().parent / "sibling.py"`` -- and resolves through
+    one level of local-variable indirection at each step via *assignments*
+    (e.g. ``sibling = Path(__file__).resolve().parent / "x.py"`` followed by
+    a call site that passes the bare name ``sibling``). Also unwraps a bare
+    ``str(...)`` call around the expression (e.g. ``str(_sibling_dir)`` in a
+    ``sys.path.insert(0, str(_sibling_dir))`` call) since the string
+    conversion does not change which directory is meant.
+
+    Returns a LIST because one shape -- an ``if``/``else`` ternary
+    (``ast.IfExp``) over two statically-known branches, e.g.
+    ``goal_to_epic.py``'s dual source/deployed-layout guard
+    (``_sibling_dir = _scripts_dir if <cond> else _scripts_dir / "ac_store"``)
+    -- cannot be reduced to a single path without evaluating a runtime
+    condition. Accepting candidates from BOTH branches (and letting the
+    caller's existence check discard whichever one is not real) is the safer
+    reading than guessing or discarding the reference outright. Every other
+    recognised shape returns a single-element list.
+
+    Args:
+        node: The AST expression node to reduce.
+        script: Absolute path to the script being analysed (the value that
+            ``Path(__file__)`` evaluates to inside that script).
+        assignments: Map of local variable name to its assigned expression,
+            from ``_build_local_assignments``.
+        _seen: Variable names already substituted on this resolution path,
+            guarding against a circular ``a = b; b = a`` assignment chain.
+
+    Returns:
+        A list of one or more resolved absolute Paths, or None when the
+        expression is not reducible this way (e.g. it depends on a runtime
+        value this function does not recognise, or an unassigned variable).
+    """
+    if isinstance(node, ast.IfExp):
+        body_paths = _eval_static_path(node.body, script, assignments, _seen)
+        orelse_paths = _eval_static_path(node.orelse, script, assignments, _seen)
+        if body_paths is None or orelse_paths is None:
+            return None
+        return body_paths + orelse_paths
+
+    if isinstance(node, ast.Name):
+        if node.id == "__file__" or node.id in _seen or node.id not in assignments:
+            return None
+        return _eval_static_path(
+            assignments[node.id], script, assignments, _seen | {node.id}
+        )
+
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        left = _eval_static_path(node.left, script, assignments, _seen)
+        if left is None:
+            return None
+        if isinstance(node.right, ast.Constant) and isinstance(node.right.value, str):
+            return [path / node.right.value for path in left]
+        return None
+
+    if isinstance(node, ast.Attribute) and node.attr == "parent":
+        base = _eval_static_path(node.value, script, assignments, _seen)
+        return None if base is None else [path.parent for path in base]
+
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "resolve":
+            return _eval_static_path(node.func.value, script, assignments, _seen)
+        if (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "str"
+            and len(node.args) == 1
+        ):
+            return _eval_static_path(node.args[0], script, assignments, _seen)
+        if (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "Path"
+            and len(node.args) == 1
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id == "__file__"
+        ):
+            return [script]
+
+    return None
+
+
+def _is_spec_from_file_location_call(node: ast.Call) -> bool:
+    """Return True when *node* calls ``importlib.util.spec_from_file_location``.
+
+    Matches both the attribute form (``importlib.util.spec_from_file_location``)
+    and the bare-name form (``spec_from_file_location`` after
+    ``from importlib.util import spec_from_file_location``).
+    """
+    func = node.func
+    if isinstance(func, ast.Attribute) and func.attr == "spec_from_file_location":
+        return True
+    return bool(isinstance(func, ast.Name) and func.id == "spec_from_file_location")
+
+
+def _extract_dynamic_loader_paths(tree: ast.AST, script: Path) -> list[Path]:
+    """Return candidate paths from every resolvable ``spec_from_file_location`` call.
+
+    Unresolvable calls (the ``location`` argument does not reduce via
+    ``_eval_static_path``) are logged as a WARNING and skipped -- per AC
+    BP-900g-8's constraint, an unknown must be surfaced for a human rather
+    than silently treated as external.
+    """
+    _annotate_parents(tree)
+    candidates: list[Path] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not _is_spec_from_file_location_call(node):
+            continue
+        location_node: ast.AST | None = None
+        if len(node.args) >= 2:
+            location_node = node.args[1]
+        else:
+            for kw in node.keywords:
+                if kw.arg == "location":
+                    location_node = kw.value
+                    break
+        if location_node is None:
+            continue
+        # Resolve name indirection against this call's own enclosing
+        # function/module scope, plus module-level fallback (see
+        # _build_local_assignments) -- a same-named local variable in an
+        # unrelated function must never be substituted in.
+        scope = _enclosing_scope(node, tree)
+        assignments = _build_local_assignments(scope, tree)
+        resolved = _eval_static_path(location_node, script, assignments)
+        if resolved is None:
+            _log.warning(
+                "compute_intra_package_closure: unresolvable dynamic loader "
+                "reference in %s at line %s -- static analysis could not reduce "
+                "the spec_from_file_location() location argument to a concrete "
+                "path. A human should verify whether this reference is external "
+                "or needs to be deployed (AC BP-900g-8).",
+                script,
+                getattr(node, "lineno", "?"),
+            )
+            continue
+        candidates.extend(resolved)
+    return candidates
+
+
+def _is_syspath_mutation_call(node: ast.Call) -> bool:
+    """Return True when *node* calls ``sys.path.insert(...)`` or ``sys.path.append(...)``.
+
+    Matches only the attribute form reached through a bare ``sys`` name
+    (``sys.path.insert``/``sys.path.append``) -- the only form this codebase
+    uses for the sibling-directory-on-sys.path pattern this function exists
+    to resolve.
+    """
+    func = node.func
+    if not isinstance(func, ast.Attribute) or func.attr not in ("insert", "append"):
+        return False
+    path_attr = func.value
+    return (
+        isinstance(path_attr, ast.Attribute)
+        and path_attr.attr == "path"
+        and isinstance(path_attr.value, ast.Name)
+        and path_attr.value.id == "sys"
+    )
+
+
+def _syspath_pushed_path_node(node: ast.Call) -> ast.AST | None:
+    """Return the pushed-path argument node of a ``sys.path`` insert/append call.
+
+    ``sys.path.append(path)`` takes the path as the sole positional argument;
+    ``sys.path.insert(index, path)`` takes it as the second. Returns None when
+    the call does not carry enough positional arguments to identify one
+    (e.g. built entirely from ``**kwargs``, which this codebase never does).
+    """
+    func = node.func
+    if not isinstance(func, ast.Attribute):
+        # Unreachable in practice: callers only pass nodes that already
+        # passed _is_syspath_mutation_call, which requires this shape.
+        return None
+    if func.attr == "append":
+        return node.args[0] if node.args else None
+    return node.args[1] if len(node.args) >= 2 else None
+
+
+def _extract_syspath_directories(tree: ast.AST, script: Path) -> list[Path]:
+    """Return candidate directories pushed onto ``sys.path`` by *script*.
+
+    This is the third reference shape AC BP-900g-8 requires the closure to
+    see, alongside static imports and the dynamic loader:
+    ``sys.path.insert(0, <dir-expression>)`` followed by a plain
+    ``import``/``from ... import`` statement that resolves against the
+    pushed directory rather than the script's own directory or the package
+    root. ``goal_to_epic.py``'s ``run()`` is the live instance:
+    ``sys.path.insert(0, str(_sibling_dir))`` then
+    ``from scan_ac_store import traverse_ac_tree`` -- neither
+    ``scripts/scan_ac_store.py`` (script's own directory) nor
+    ``scripts/scan_ac_store.py``/``scripts/scan_ac_store/__init__.py``
+    (package root) exist, so without this function the plain import is
+    resolved against zero candidates and the dependency is dropped with no
+    log line at all.
+
+    Reuses ``_eval_static_path`` (the same local-variable-aware evaluator the
+    dynamic-loader path above uses) so a ``sys.path`` argument built through
+    local-variable indirection, a ``str(...)`` wrapper, or a ternary over two
+    statically-known branches is reduced the same way a
+    ``spec_from_file_location`` argument would be.
+
+    Per AC BP-900g-8's disclosure constraint, a pushed-path argument that does
+    NOT reduce statically is logged as a WARNING naming the file and line --
+    never silently dropped. This mirrors the treatment
+    ``_extract_dynamic_loader_paths`` already gives an unresolvable dynamic
+    loader call, so no path through this module produces an unresolved
+    intra-package reference with zero log output.
+    """
+    _annotate_parents(tree)
+    directories: list[Path] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not _is_syspath_mutation_call(node):
+            continue
+        path_node = _syspath_pushed_path_node(node)
+        if path_node is None:
+            continue
+        scope = _enclosing_scope(node, tree)
+        assignments = _build_local_assignments(scope, tree)
+        resolved = _eval_static_path(path_node, script, assignments)
+        if resolved is None:
+            _log.warning(
+                "compute_intra_package_closure: unresolvable sys.path mutation "
+                "in %s at line %s -- static analysis could not reduce the "
+                "pushed path argument to a concrete directory. A human should "
+                "verify whether an import that follows resolves an "
+                "intra-package module via this path (AC BP-900g-8).",
+                script,
+                getattr(node, "lineno", "?"),
+            )
+            continue
+        directories.extend(resolved)
+    return directories
+
+
+def _module_name_candidates(
+    module_name: str,
+    script_dir: Path,
+    root: Path,
+    extra_dirs: tuple[Path, ...] = (),
+) -> list[Path]:
+    """Return plausible file-path candidates for an absolute-import module name.
+
+    Candidates are only kept if they later pass an ``is_file()`` check by the
+    caller, so listing implausible candidates here is safe -- it never
+    manufactures a false positive, it only risks missing a true one.
+
+    *extra_dirs* adds one more candidate root per directory: any directory
+    the same script statically pushes onto ``sys.path`` via
+    ``_extract_syspath_directories`` before the import runs (AC BP-900g-8's
+    third reference shape). Without this, an import resolved only through a
+    ``sys.path.insert`` push -- e.g. ``scripts/goal_to_epic.py``'s
+    ``from scan_ac_store import traverse_ac_tree`` after
+    ``sys.path.insert(0, str(_sibling_dir))`` -- has no matching candidate
+    (``scripts/scan_ac_store.py`` and the package-root forms both point at
+    the wrong directory) and silently resolves to nothing.
+    """
+    parts = module_name.split(".")
+    rel = Path(*parts)
+    candidates = [root / f"{rel}.py", root / rel / "__init__.py"]
+    if len(parts) == 1:
+        # Bare same-directory import, e.g. `from test_enforcement import X`
+        # inside scripts/ac_store/done_proof.py -- resolved relative to the
+        # IMPORTING script's own directory, not the package root.
+        candidates.insert(0, script_dir / f"{parts[0]}.py")
+    for extra_dir in extra_dirs:
+        candidates.append(extra_dir / f"{rel}.py")
+        candidates.append(extra_dir / rel / "__init__.py")
+    return candidates
+
+
+def _extract_static_import_candidates(
+    tree: ast.AST,
+    script_dir: Path,
+    root: Path,
+    extra_dirs: tuple[Path, ...] = (),
+) -> list[Path]:
+    """Return file-path candidates for every ``import`` / ``from ... import`` statement.
+
+    *extra_dirs* (directories the script statically pushes onto ``sys.path``,
+    see ``_extract_syspath_directories``) is applied only to ABSOLUTE imports
+    -- a relative import (``from . import foo``) is resolved purely from the
+    script's own package location and is never affected by ``sys.path``.
+    """
+    candidates: list[Path] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                candidates.extend(
+                    _module_name_candidates(alias.name, script_dir, root, extra_dirs)
+                )
+        elif isinstance(node, ast.ImportFrom):
+            if node.level and node.level > 0:
+                base = script_dir
+                for _ in range(node.level - 1):
+                    base = base.parent
+                if node.module:
+                    candidates.extend(_module_name_candidates(node.module, base, root))
+                else:
+                    candidates.extend(base / f"{alias.name}.py" for alias in node.names)
+            elif node.module:
+                candidates.extend(
+                    _module_name_candidates(node.module, script_dir, root, extra_dirs)
+                )
+    return candidates
+
+
+def _closure_walk(script: Path, root: Path, visited: set[Path], closure: set[str]) -> None:
+    """Recursively add *script*'s resolvable intra-package dependencies to *closure*."""
+    if script in visited:
+        return
+    visited.add(script)
+
+    try:
+        text = script.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning("compute_intra_package_closure: cannot read %s: %s", script, exc)
+        return
+
+    try:
+        tree = ast.parse(text, filename=str(script))
+    except SyntaxError as exc:
+        _log.warning("compute_intra_package_closure: cannot parse %s: %s", script, exc)
+        return
+
+    syspath_dirs = tuple(_extract_syspath_directories(tree, script))
+    candidates = _extract_static_import_candidates(
+        tree, script.parent, root, extra_dirs=syspath_dirs
+    )
+    candidates.extend(_extract_dynamic_loader_paths(tree, script))
+
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            rel = candidate.resolve().relative_to(root).as_posix()
+        except ValueError:
+            continue
+        if rel not in closure:
+            closure.add(rel)
+        _closure_walk(candidate.resolve(), root, visited, closure)
+
+
+def compute_intra_package_closure(script: Path, root: Path) -> set[str]:
+    """Return the transitive set of intra-package modules *script* resolves.
+
+    Performs AST-based static analysis of *script* (and, transitively, every
+    sibling module it resolves) to derive the set the AC calls Set A
+    (``resolved_closure``): every module belonging to the same package that
+    *script* imports, resolves via a relative import, or loads dynamically via
+    ``importlib.util.spec_from_file_location`` with a statically-evaluable
+    ``__file__``-relative path.
+
+    This set is DERIVED from the code, never from a hand-maintained list: a
+    module added to *script*'s imports (or to a dependency's imports) tomorrow
+    is picked up automatically on the next call, with no list to edit.
+
+    Args:
+        script: Absolute path to the script to analyse.
+        root: The directory that returned dependency strings are expressed
+            relative to. Pass the package source root to analyse the SOURCE
+            tree, or a deployed output root to analyse the DEPLOYED tree --
+            the same function works unmodified against either, which is what
+            lets a caller prove a dependency is actually shipped rather than
+            merely present in source by construction.
+
+    Returns:
+        Set of root-relative POSIX path strings (e.g.
+        ``"scripts/ac_store/_component_migration_map.py"``) for every
+        intra-package module resolved, directly or transitively. Modules that
+        do not resolve to a real file under *root* (standard library,
+        third-party distributions, host-project paths) are never included --
+        no allowlist is needed because non-existence under *root* is itself
+        the discriminator.
+    """
+    closure: set[str] = set()
+    _closure_walk(script.resolve(), root.resolve(), set(), closure)
+    return closure
+
+
+def find_uncovered_closure_dependencies(
+    script_rel_path: str, root: Path, declared: set[str]
+) -> set[str]:
+    """Return closure entries for *script_rel_path* that are absent from *declared*.
+
+    Implements the AC's binding-direction rule: Set B (*declared*, the deploy
+    declaration) must CONTAIN closure(Set A). This function computes Set A via
+    ``compute_intra_package_closure`` and returns the entries Set B is missing
+    -- a non-empty result means the containment check has failed and the build
+    must abort naming these entries.
+
+    Args:
+        script_rel_path: Root-relative POSIX path string to the script to
+            analyse (e.g. ``"scripts/ac_store/generate_ticket_from_ac.py"``).
+        root: The directory *script_rel_path* is relative to, and that closure
+            entries are expressed relative to (see ``compute_intra_package_closure``).
+        declared: The declared/deployed set to check the closure against (Set B).
+
+    Returns:
+        Set of root-relative path strings present in the script's closure but
+        absent from *declared*. Empty when *declared* already contains the
+        full closure.
+    """
+    closure = compute_intra_package_closure(root / script_rel_path, root)
+    return closure - declared
 
 
 # ====================================================================

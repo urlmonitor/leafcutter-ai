@@ -1,0 +1,201 @@
+id: GE-125a-1-ii
+components:
+  - security_scanner
+  - commit_guardian
+title: "A name that merely resembles a chosen one does not collect the entitlement"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  FIXTURE ROOT USED BY EVERY SCENARIO BELOW. Each scenario builds a throwaway
+  project root, written <root>, that is a directory of its own and contains no
+  part of this repository, and no fixture is written anywhere inside this
+  repository's own working tree — a fixture under this repository's tickets/,
+  docs/retrospectives/, docs/acceptance-criteria/ or templates/skills/ would take
+  its verdict from this repository's reduced-scrutiny list rather than from the
+  scenario's. Every path below is relative to <root>, every file holds one line
+  with the same thirty-two-character opaque token of measured Shannon entropy
+  5.17, no suppression entries are in force, and every scenario is exercised the
+  way a commit exercises the check — the files are staged in <root> and the check
+  runs over the staged set.
+
+  Given <root> contains these files at the top of the project, whose first
+    segment resembles a chosen name without being it:
+      tickets-archive/2025/note.md
+      old-tickets/note.md
+      ticketsnew/note.md
+      templates/skills-experimental/example/SKILL.md
+  When they are staged and the check runs over the staged set,
+  Then the token is reported for all four,
+  Because a folder is either one of the four the project chose or it is not, and
+    a comparison that accepts a name because a chosen name begins it, ends it or
+    sits inside it hands the entitlement to folders nobody chose — a new way to
+    lose detection introduced by the change that removes the old one.
+
+  Given <root> contains these files, each carrying the tail of a two-segment
+    chosen location without the segment that heads it:
+      retrospectives/retro.md
+      acceptance-criteria/guardrail-engine/GE-999.yaml
+      api/acceptance-criteria/schema.yaml
+  When they are staged and the check runs over the staged set,
+  Then the token is reported for all three,
+  Because two of the four chosen locations are two segments deep and are chosen
+    as a whole: the second segment on its own, at the top of the project or
+    anywhere else, was never chosen, and treating the entitlement as a set of
+    single names rather than a set of locations widens it again.
+
+  Given <root> contains these files, where a chosen name appears as the name of a
+    file rather than of a folder:
+      src/tickets.py
+      docs/retrospectives.md
+      src/skills/registry.py
+  When they are staged and the check runs over the staged set,
+  Then the token is reported for all three,
+  Because the entitlement was granted to places, and a file that merely shares a
+    place's name is not one — including the third case, where the folder name
+    matches the tail of a chosen location while the head is absent.
+
+  Given <root> contains, in the same run, tickets/00_inbox/note.md alongside all
+    ten files named above,
+  When they are staged together and the check runs over the staged set once,
+  Then the token is reported for the ten and is not reported for
+    tickets/00_inbox/note.md,
+  And the run's exit status reports findings present,
+  Because these near misses are worth nothing as evidence unless the one true
+    match in the same run still comes out exempt: a comparison strict enough to
+    reject all ten and also reject the real one has closed the entitlement rather
+    than anchored it.
+depends_on:
+  - GE-125a-1
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001's fix direction — compare path segments from the root — is the change whose near-miss readings this record guards. None of the ten paths here appears in its measured tables, because none of them is exempt today."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/check_secrets.py is canonical; the deployed copies are build outputs."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Supplies the angle vocabulary. The near-miss arms are boundary tests; the mixed-run arm is the criterion-level control."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-125a-1
+  contract: "The location comparison that is anchored at the top of the project — this record fixes its precision, requiring it to match a chosen location exactly rather than approximately."
+it_requirements:
+  - "CANONICAL SOURCE, ADR-001. Any precision correction belongs in templates/scripts/commit_guardian/check_secrets.py, not in a deployed copy; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build.py outputs and check_hook_parity enforces agreement across all four locations. Run `python scripts/build.py --target-dir .` before any test that asserts deployed behaviour."
+  - "SEGMENT EQUALITY, NOT STRING AFFINITY. A path is exempt only when its root-relative segment list has a chosen location's segment list as a leading run of WHOLE segments, each compared by equality. Prefix, suffix and containment tests on the joined path string are all forbidden — tickets-archive, old-tickets and ticketsnew are each one such test away from exempt."
+  - "A CHOSEN LOCATION IS AN ORDERED SEQUENCE OF SEGMENTS, NOT A SET OF NAMES. Two of the four are two segments deep (docs/retrospectives, docs/acceptance-criteria, and templates/skills). Do not flatten the four locations into a set of individual names and test membership: that is the specific reading that makes retrospectives/ and acceptance-criteria/ exempt on their own, and it is easy to write by accident."
+  - "THE MATCH RUNS OVER DIRECTORY SEGMENTS ONLY — the final path component (the file name) must be excluded from the comparison. Including it makes src/tickets.py and docs/retrospectives.md exempt. Verify the exclusion explicitly rather than relying on the presence of an extension, since a file may have none."
+  - "THE FIXTURE TRAP. Every fixture lives in a throwaway tempfile-backed root; no fixture may be written anywhere inside this repository's working tree. This record is entirely about paths, so a fixture placed inside this repository would be judged by this repository's own reduced-scrutiny list and would prove nothing."
+  - "CREDENTIAL FIXTURES ARE ASSEMBLED AT RUNTIME FROM FRAGMENTS, following unit_tests/commit_guardian/test_scan_secrets_suppression.py. No credential-shaped source literal, and no .security-allowlist entry added to permit one. Note this record needs eleven fixtures carrying the same token, so a single runtime-assembled value should be reused rather than eleven literals written out."
+  - "EXECUTE THE CHECK — this record most of all. The BA's constraint is decisive here: the whole subject is the difference between two comparisons that read almost identically in source, and only running them apart tells them apart. A test that greps check_secrets.py, or that asserts on the contents of _PROSE_FILE_PREFIXES, cannot distinguish an equality comparison from a startswith comparison and will pass on either."
+  - "THE MIXED-RUN ARM IS NOT OPTIONAL AND MUST STAY MIXED. Read alone, the first three arms are all satisfied by refusing the entitlement to everything. The eleventh fixture — tickets/00_inbox/note.md, exempt — in the SAME run is what stops this record from certifying an over-narrowed comparison. Do not split it into a separate run or a separate test; the point is that both outcomes are produced by one invocation."
+  - "THE EXIT-STATUS HALF OF THE MIXED-RUN ARM MUST RUN A PROCESS. Invoke the command-line entry point in a fresh subprocess with the throwaway root as its working directory and assert the exit code. A returned findings list is not an exit status."
+  - "SCOPE FENCE. Do not change the membership of the four chosen locations and do not change what the exemption removes; it must still gate ENTROPY_HIGH only. This record constrains the PRECISION of the comparison delivered by GE-125a-1 and adds no new behaviour of its own."
+  - "Error-handling policy per CLAUDE.md applies: specific exception types, no bare except, no silently swallowed error, and no try/except around the pure segment-comparison function. A path whose segments cannot be determined must fail closed — report rather than exempt."
+test_spec:
+  - name: test_resembling_first_segment_names_do_not_collect_the_entitlement
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "tickets-archive/2025/note.md, old-tickets/note.md, ticketsnew/note.md and templates/skills-experimental/example/SKILL.md, each holding the runtime-assembled 5.17-entropy token in a throwaway root, are all reported. Fails if the segment comparison uses startswith, endswith or containment rather than equality."
+  - name: test_tail_segment_of_a_two_segment_location_is_not_a_location
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "retrospectives/retro.md, acceptance-criteria/guardrail-engine/GE-999.yaml and api/acceptance-criteria/schema.yaml are all reported. Fails if the four chosen locations were flattened from ordered segment sequences into a set of individual names."
+  - name: test_a_chosen_name_worn_by_a_file_is_not_a_location
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "src/tickets.py, docs/retrospectives.md and src/skills/registry.py are all reported. Fails if the final path component is included in the segment comparison, or if skills is matched without its templates head."
+  - name: test_mixed_run_reports_the_ten_near_misses_and_exempts_the_one_true_match
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "All ten near-miss fixtures plus tickets/00_inbox/note.md staged together and the check invoked once via its command-line entry point in a fresh subprocess: the ten are reported, the one true match is not, and the process exit code reports findings present. This is the arm that distinguishes an anchored comparison from a closed one."
+test_rationale: |
+  This record guards the REPLACEMENT rather than the defect, and that governs the
+  whole shape of the contract. Every one of the ten near-miss paths is reported on
+  today's behaviour, so all four descriptors are GREEN ON ARRIVAL and none of them
+  is evidence that anything landed. Say that plainly so a red-baseline or TDD-order
+  check does not misread this record: its job is to fail if the change goes wrong
+  in a specific direction, not to demonstrate that the change happened. The
+  red-baseline evidence for this L1 lives in GE-125a-1.
+  The near misses were chosen because the likely implementation — replace a
+  substring test with a comparison over path segments — has a family of readings
+  each one keystroke from correct. Descriptor one catches affinity-instead-of-
+  equality. Descriptor two catches the flattening of two-segment locations into a
+  name set, which is the easiest of the three to write by accident because two of
+  the four locations are two segments deep. Descriptor three catches the file name
+  being left in the compared segments. A change introducing any of them would pass
+  every measured row in GE-125a-1, and the L1 would have traded one silent loss for
+  another.
+  THE FOURTH DESCRIPTOR IS A MIXED RUN ON PURPOSE and is not duplication of
+  GE-125a-2. Read alone, the first three are all satisfied by refusing the
+  entitlement to everything — the over-narrowing failure. Carrying one true match
+  through the SAME invocation is what stops a suite that runs only this record from
+  certifying a closed entitlement. GE-125a-2 still owns the full four-location
+  control; this is that control in miniature, present so this file is not
+  self-defeating in isolation.
+  Every descriptor drives the real entry point over real files in a throwaway root.
+  Source inspection is specifically useless here: an equality comparison and a
+  startswith comparison read almost identically, so only running them apart tells
+  them apart.
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: "it-po-v3 technical enrichment (2026-08-24): assigned python-coder, complexity S (no new production behaviour beyond the precision of the comparison GE-125a-1 already delivers; the work is eleven fixtures and four guard tests). Authored it_requirements naming the three near-miss readings as explicit prohibitions — segment equality not string affinity, ordered segment sequences not a flattened name set, directory segments only with the file name excluded — plus the ADR-001 canonical-source and build rule, the throwaway-root fixture trap, runtime-assembled credential fragments reused across eleven fixtures, the BA's execute-the-check constraint (decisive on this record), the must-stay-mixed rule for the fourth arm, the subprocess exit-status rule, the scope fence and fail-closed error handling. Added four doc_links. Authored a 4-entry test_spec plus test_rationale recording that ALL FOUR arms are green on arrival and are therefore not admissible as evidence that GE-125a-1 landed. criteria, depends_on, expects_from, priority, work_status and notes unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS RECORD GUARDS THE REPLACEMENT, NOT THE DEFECT. Every path it names is
+  reported today, so on the current behaviour all four arms are GREEN ON ARRIVAL
+  and none of them is evidence that anything landed. They exist because the
+  change most likely to be written — replace a substring test with a comparison
+  over path segments — has a family of near-miss readings that are each one
+  keystroke away from correct and each of which reopens the hole in a new place:
+  a name compared with "begins with" instead of "equals"; a two-segment location
+  reduced to its last segment; the file name included in the segments compared.
+  A change that introduced any of them would pass the parent's measured rows and
+  this L1 would have traded one silent loss for another.
+
+  THE LAST ARM IS DELIBERATELY A MIXED RUN. Read on their own, the first three
+  arms are all satisfiable by refusing the entitlement to everything, which is
+  the failure GE-125a-2 exists to forbid. Repeating that control here in
+  miniature is not duplication of GE-125a-2: it is what stops a suite that runs
+  only this record from certifying an over-narrowed comparison. GE-125a-2 remains
+  the record that owns the full four-location control.
+
+  WHY THESE NAMES. tickets-archive/ and old-tickets/ are the shapes a project
+  actually grows; templates/skills-experimental/ is the shape this package would
+  grow. acceptance-criteria/ and retrospectives/ without their heading segment
+  are the specific reading a segment-set comparison produces if the four
+  locations are flattened into four names — two of the four are two segments
+  deep, which is easy to lose sight of. None of the ten is exempt today, so the
+  parent's measured table does not cover any of them.
+
+  FOR THE IT PO. The token is assembled at runtime from fragments, as recorded on
+  the parent. This record in particular cannot be discharged by inspecting the
+  check's source: the whole subject is the difference between two comparisons
+  that read almost identically, and only running them apart tells them apart.

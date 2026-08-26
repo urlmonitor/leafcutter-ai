@@ -1,0 +1,238 @@
+id: ACD-2100d-2
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: approved
+priority: medium
+title: "A repair that is missing from the source an installed file is generated from is reported as not delivered"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy in which an installed route file carries a repair that the
+    source it is generated from does not carry,
+  When the check that decides whether a change is delivered runs over that working
+    copy,
+  Then it reports the installed file as carrying behaviour its source does not and
+    names the file,
+  And the change is not reported as delivered while that remains true,
+  And running the installer over that working copy leaves the installed file
+    without the repair -- confirming the report rather than contradicting it.
+depends_on: [ACD-2100d]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must state which directory a repair has to land in for an install to carry it -- this record is the check that enforces it."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004's workaround note -- the deployed copy was patched by hand on 2026-08-18 and build.py overwrote it."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Which directories are source and which are build output."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The generated-file relationships this check reasons over."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Where a delivery check sits relative to the rest of the build surface."
+  - path: scripts/commit_guardian/check_output_drift.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE, AND THE PRIMARY ONE. The existing delivery check. Verified inert on 2026-08-26: it walks a hardcoded directory list and keys results in a namespace the manifest never uses, so all 169 files it found took the fail-open branch and it exited 0 without checking one of them."
+  - path: scripts/build_helpers.py
+    relationship: implements
+    status: exists
+    relevance: "EDIT SURFACE. write_build_manifest and its output-mapping computation are the installer-derived source-to-installed relationship this record's first requirement demands the check be built on. The mapping is real and already covers the route; what does not line up is the key namespace it emits versus the one the check computes."
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "EDIT SURFACE. The hook's file-trigger pattern is hardcoded to the same stale directory prefixes as the check itself, so a staged edit to a deployed route file under a differently-configured output root does not even fire it. Repairing the check without repairing the trigger leaves the verdict uncomputed rather than merely unread."
+  - path: unit_tests/build_guards/test_acd_2100d_2.py
+    relationship: creates
+    status: planned
+    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below; the generated ticket names this exact path."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The check must derive the source-to-installed relationship from the installer's own mapping, not from a hand-maintained list of file pairs. A second list of pairs goes stale the first time a file is added and the check then reports clean on the file it cannot see."
+  - "The check must name the file. 'Something is out of sync' cannot be acted on and cannot be distinguished by a test from a check that found nothing."
+  - "The check must not fire on a generated file that merely differs from its source in a way generation explains -- template expansion, header injection, path rewriting. Comparing raw bytes across a transform produces a check that is always red and is therefore always ignored."
+  - "The check must be usable from the point where 'delivered' is decided, and its result must be consumed there. A check that computes a correct verdict nobody reads is inert -- the phantom-gate failure mode this repo keeps rediscovering."
+  - "Must satisfy the repository error-handling policy: reading both copies is external I/O."
+  - "Must be idempotent and side-effect free: running the check must not modify either copy."
+  - "This is not a ban on touching an installed copy while debugging. The requirement is that a repair living only in build output is visible as undelivered before someone reports it as done."
+  - "THE CHECK IS NOT MISSING -- IT IS PRESENT AND INERT, AND THAT IS A HARDER STARTING POINT THAN A BLANK PAGE. Verified by running scripts/commit_guardian/check_output_drift.py in this worktree on 2026-08-26: it exited 0 having examined 169 output files and checked exactly none of them. Its scan list is a hardcoded set of directory names, while the installer's mapping keys every entry under the configured output root -- two namespaces that never intersect, so every file falls through the not-in-mapping branch. The first requirement above is therefore about the SCAN SIDE, not the mapping: the mapping is installer-derived and already correct. Derive the set of files to check, and the key each is looked up under, from the installer's mapping itself, so a newly deployed directory is covered the day it appears."
+  - "THE NOT-IN-MAPPING BRANCH MUST NOT STAY FAIL-OPEN. Today an output file with no mapping entry prints an informational line and is skipped. That is indistinguishable, from the outside, from a file that was checked and found clean -- and it is the branch every one of those 169 files took. A file that is deployed but unmapped is either a defect in the mapping or an untracked output; either way the check must say so in a way that a caller can act on, because 'I could not see this file' is the exact condition this record exists to make visible."
+  - "REPAIRING THE SCRIPT ALONE LEAVES THE GATE HALF-DEAD. The pre-commit registration in scripts/commit_guardian/commit_guardian.json restricts the hook to a hardcoded set of path prefixes. A deployed route file under a differently-configured output root does not match, so the hook never runs and the corrected verdict is never computed. Fix the trigger and the check together, and prefer deriving both from the same configured output root rather than restating it in a third place."
+  - "OWNERSHIP BOUNDARY WITH ACD-2100d-2-i. This record owns the determination -- the installer-derived mapping and the per-file divergence verdict -- and the files that compute and report it. ACD-2100d-2-i owns the install-time announcement and the installer's write paths. Neither record should modify the other's files: the determination reaches the announcement through the delivers_to contract, not through a shared edit surface."
+test_spec:
+  - name: test_installed_file_carrying_a_repair_its_source_lacks_is_reported
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A working copy in which an installed route file carries a change its source does
+      not; the check reports that file by name as carrying behaviour its source does
+      not.
+  - name: test_change_is_not_reported_as_delivered_while_the_divergence_stands
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the delivery check invoked the way the build invokes it, with its verdict read from the caller's decision rather than from the check's return value"
+    description: >-
+      The verdict is consumed where 'delivered' is decided -- the divergent working copy
+      is not reported as delivered -- so the check is wired, not merely present. A run
+      that examines files and checks none of them, exiting clean, must fail this test.
+  - name: test_running_the_installer_confirms_the_report_by_removing_the_repair
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The installer is run over the same working copy and the installed file afterwards
+      no longer carries the repair -- the report is confirmed by what the installer
+      actually does, not by an opinion about paths.
+  - name: test_a_generated_file_that_only_differs_by_generation_is_not_reported
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A freshly installed file that differs from its source only in ways generation
+      explains produces no report -- the check is not a raw byte comparison.
+test_rationale: >-
+  The third Then clause is what makes this testable end to end: it requires the report to
+  be confirmed by what the installer actually does, so the check cannot pass by being
+  merely opinionated about paths. Running the installer and observing the repair gone is
+  the real-artifact evidence. The reachability test is separate because a delivery check
+  whose verdict nobody reads is exactly the phantom-gate shape this repo keeps
+  rediscovering -- a correct verdict computed and discarded looks identical to a correct
+  verdict acted on, from the check's own tests. It is also not hypothetical here: the
+  check that exists today examines every deployed file and checks none of them, and it
+  has always exited 0. The negative case is charged as a boundary angle because a check
+  that fires on every generated file is worse than no check: it gets filtered and then
+  ignored.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100d-2-i
+    contract: "An installer-derived source-to-installed mapping plus a divergence determination per generated file -- the same determination the installer needs in order to announce that it is replacing a locally changed file. Delivered as a callable determination, not as a shared edit surface: ACD-2100d-2-i reads it and does not modify the files that compute it."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100d-2-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/20_TICKET-20260826-ACD-2100d-2.md
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE MOTIVATING FACT: on 2026-08-18 the KI-ACD-004 workaround was applied to the
+  DEPLOYED copy of setup_ticket_worktree.py. That file is build output; the next
+  build overwrote it from templates/ and the repair evaporated. For the window in
+  between, the defect looked fixed on the machine where it was tested.
+
+  THE THIRD CLAUSE IS THE ONE THAT MAKES THIS TESTABLE END TO END. It requires the
+  report to be confirmed by what the installer actually does, so the check cannot
+  pass by being merely opinionated about paths -- run the installer and observe the
+  repair gone.
+
+  WHAT THIS IS NOT. It is not a ban on touching an installed copy while debugging,
+  and it is not the general question of what "delivered" means for this repo. It is
+  the narrow guarantee that a repair living only in build output is visible as
+  undelivered before someone reports it as done. That distinction is what separates
+  this from a sibling behaviour: a, b and c say what the route must do, this says
+  where a repair must live for the copy that runs to do it.
+
+  THE SILENT-OVERWRITE HALF is ACD-2100d-2-i: an install that replaces a locally
+  changed generated file should say so. Reporting and refusing-to-be-silent are
+  different behaviours with different observations.
+
+  2026-08-25 (it-po): the delivers_to contract to ACD-2100d-2-i is deliberate -- the
+  divergence determination this record needs and the one the installer needs to
+  announce a replacement are the same computation. Building them twice is how the two
+  come to disagree, and a disagreement here means the check reports clean while the
+  installer silently discards a repair, which is the 2026-08-18 incident exactly.
+  The generation-transform requirement is the one a coder is most likely to trip on:
+  the naive implementation compares bytes, fires on every deployed file, and is
+  switched off within a week.
+
+  IT PO ENRICHMENT -- 2026-08-26 (files_touched backfill).
+
+  WHY THIS RECORD PRODUCED AN EMPTY files_touched. generate_ticket_from_ac.py derives
+  the ticket surface as the union of path tokens found in it_requirements prose that
+  exist on disk, plus doc_links whose relationship is one of constrains / creates /
+  implements / modifies / specifies. Every doc_link here was "describes" and no
+  it_requirement named a path, so the union was empty. This affected the whole d family
+  except d-4 -- four tickets, not the three originally reported. The enrichment below
+  fixes the cause, so a regeneration reproduces the same four paths.
+
+  A CORRECTION TO MY OWN FIRST HYPOTHESIS, RECORDED BECAUSE IT WOULD HAVE SENT A CODER
+  THE WRONG WAY. Reading the docstring of the installer's output-mapping computation, I
+  concluded it enumerated four template directories by hand and therefore could not see
+  the route file at all. That is what the docstring says and it is wrong -- the docstring
+  is stale. Reading the generated manifest instead showed nine workflow-script entries
+  present and correct, including the route. The mapping is installer-derived and already
+  covers this record's subject. Had I stopped at the docstring, this record would have
+  been pointed at rebuilding a mapping that already works.
+
+  WHAT IS ACTUALLY BROKEN, ESTABLISHED BY RUNNING IT RATHER THAN READING IT. Executing
+  scripts/commit_guardian/check_output_drift.py in this worktree on 2026-08-26: exit 0,
+  169 output files examined, 169 of them reported as "not in output_mappings" and
+  skipped, zero actually compared. The cause is a namespace mismatch. The check walks a
+  hardcoded list of directory names and forms its lookup keys relative to the repository
+  root; the installer keys every mapping entry under the configured output root. The two
+  key spaces never intersect, so every file takes the fail-open not-in-mapping branch.
+  The delivery check that this record exists to strengthen cannot presently report drift
+  on ANY file, and it has never been able to. That is the inert-gate shape called out in
+  the fourth it_requirement, and it is live rather than hypothetical.
+
+  THE FOUR PATHS, AND WHY EACH ONE IS THERE.
+
+  scripts/commit_guardian/check_output_drift.py -- the check itself, and the primary
+  surface. Both defects live here: the hardcoded scan list, and the fail-open branch that
+  turns "I cannot see this file" into silence.
+
+  scripts/build_helpers.py -- the installer-derived mapping the check must be built on.
+  Listed because the two sides have to agree on a key namespace and either side can be
+  the one that moves, and because the docstring materially misdescribes the coverage,
+  which is what misled me above. Listed with a narrower expectation than the check: this
+  may end up being a docstring correction plus an exported key-format helper rather than
+  a change to the computation.
+
+  scripts/commit_guardian/commit_guardian.json -- the hook registration. Its file-trigger
+  pattern carries the same stale prefixes as the check's scan list, so fixing only the
+  script leaves a gate that computes the right answer and never runs. This is the
+  enforce-on-the-gate-that-actually-runs case: name every enforcement point, and identify
+  which one is load-bearing.
+
+  unit_tests/build_guards/test_acd_2100d_2.py -- the four descriptors. The reachability
+  descriptor has been sharpened to say that a run which examines files and checks none of
+  them, exiting clean, must FAIL -- because that is precisely today's behaviour and a
+  test written without that sentence would pass against it.
+
+  PATHS CONSIDERED AND REJECTED.
+
+  scripts/build.py and scripts/build_phases.py -- rejected, and this is the boundary with
+  ACD-2100d-2-i. Those files hold the installer's four compare-before-write branches,
+  which are where the install-time ANNOUNCEMENT fires. This record is the DETERMINATION
+  and the report at delivery time. See the ownership boundary requirement above.
+
+  The generated build manifest -- rejected. An artifact the installer writes, not a file
+  anyone edits.
+
+  templates/workflows-js/plan-feature.js -- rejected. The route file is this record's
+  SUBJECT, not its surface; the check reasons about it and must not modify it, which the
+  side-effect-free requirement already states.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

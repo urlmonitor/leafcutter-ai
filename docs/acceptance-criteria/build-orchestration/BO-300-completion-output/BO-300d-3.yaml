@@ -1,0 +1,72 @@
+id: BO-300d-3
+title: "Every unbuilt piece carries the action that finishes it, and the action for an undetermined cause is safe under either explanation"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a closing report naming unbuilt pieces under the causes planned and not
+    finished, stopped part-way, and cause not determined,
+  When the report is read,
+  Then every named piece carries an action stated in terms of what the operator
+    does next,
+    And no named piece is left without one,
+    And the action stated for a piece that stopped part-way differs from the action
+      stated for a piece that was planned and not finished, because the two
+      situations have different remedies.
+
+  Given a piece reported with its cause not determined,
+  When its action is read,
+  Then the action is one that finishes the piece whichever of the possible causes
+    holds,
+    And the action does not instruct the operator to investigate a cause the run has
+      not established,
+    And the action does not depend on the operator first deciding which cause it was,
+  So the reader is not sent looking for a change that may never have happened.
+
+  Given a closing report with unbuilt pieces,
+  When the report is compared against a report from a run with no unbuilt pieces,
+  Then the actions appear only in the first,
+  So an action is a consequence of unbuilt work and never boilerplate the reader
+    learns to skip.
+depends_on:
+  - BO-300d
+  - BO-300d-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-026 — the remedy sentence was right by accident, for a stated reason that did not hold. The action and the cause must stand or fall together."
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Already requires the output to state what the operator should do about the pieces its re-read surfaced. This record extends that obligation to every unbuilt piece under every cause, including the undetermined one, rather than restating it."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE UNDETERMINED ACTION IS THE HARD ONE and is the reason this is its own record.
+  It is easy to write an action per cause when the cause is known; the criterion
+  that matters is that the undetermined bucket still yields a usable next step
+  rather than a shrug. KI-BO-026's own remedy — re-run the build over the same body
+  of work — happens to be safe under both possible causes, which is the shape being
+  demanded.
+
+  OVERLAP NOTED, NOT DUPLICATED: BO-300a-5's fourth Then clause already requires an
+  action for the pieces its re-read surfaced. Those pieces are a subset of the ones
+  covered here, and under BO-300d-2 they are exactly the pieces whose cause is now
+  undetermined. This record does not change what BO-300a-5 requires; it requires the
+  same thing of the pieces BO-300a-5 does not reach.

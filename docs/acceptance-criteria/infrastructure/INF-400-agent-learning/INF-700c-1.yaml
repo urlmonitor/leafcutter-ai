@@ -1,0 +1,138 @@
+id: INF-700c-1
+components:
+  - infrastructure
+  - knowledge_system
+title: "A record with no learning in it is never turned into a line on a curated knowledge file"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: todo
+priority: medium
+readiness: approved
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
+criteria: |
+  Given a knowledge record that carries only descriptive fields — the agent,
+    the component, a destination and a kind — and no learning text,
+  When the writer that appends learnings to knowledge surfaces processes that
+    record,
+  Then nothing is appended to any knowledge surface,
+  And no stand-in line is synthesised from the record's descriptive fields to
+    occupy the place the learning would have taken,
+  And the file named as that record's destination is byte-for-byte unchanged
+    after the run, whether or not it already existed,
+  And the run reports that record in a count of records carrying no learning,
+    kept separate from the count of records written and the count of records
+    that could not be routed,
+  And a run whose entire input is records of this shape writes to no file and
+    creates no file.
+depends_on:
+  - INF-700c
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-011-learning-emission-sink.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "DELETE THE SUBSTITUTION OUTRIGHT. scripts/knowledge/harvest_learnings.py line 351 reads `learning_text = event.get(\"text\", f\"[{entry_kind}] Learning from {ticket}\")`. The default must be removed, not narrowed, not guarded by a flag, not moved behind a config toggle. A default that still exists somewhere on the write path is a defect waiting for the next caller; the emitter-side twin of this prohibition is INF-700b-1-i."
+  - "CLASSIFICATION ORDER IS LOAD-BEARING — this is the single change that decides whether INF-700c-2 can reach its resting state. The no-learning-text test must run BEFORE the `entry_kind not in _KNOWN_ENTRY_KINDS` test at line 331. All 28 retained records carry BOTH an unknown entry_kind and no `text` (15 distinct kinds on disk, none of them among the 11 in _KNOWN_ENTRY_KINDS), so kind-first classification puts every one of them in `skipped_unknown`, which returns exit 3 forever — the permanently non-zero backlog the PO's hard constraint forbids."
+  - "'No learning text' means: the key is absent, the value is null, or the value is a string that is empty after whitespace normalisation. It must additionally reject a value that is a restatement of the record's own descriptive fields, so that deleting the harvester default cannot be undone by an emitter that inlines the same string."
+  - "A FOURTH COUNTER on HarvestResult, disjoint from the existing three: no-learning-text count plus a per-entry_kind breakdown, rendered in summary() alongside routed / unroutable / write_failures. The invariant to assert: routed + previously_processed + skipped_unknown + write_failures + no_learning_text equals the number of knowledge_captured records read. A bucket that does not participate in a total is a bucket that can silently drop records."
+  - "NO STATE ENTRY for an ineligible record. Do not add its hash to the idempotency record. The classification must be re-derived from the record on every run, so the resting state survives a fresh clone or a consumer install — debugging/logs/ is gitignored (.gitignore:60), so anything recorded there is not durable and would silently reimpose the manual step INF-700c-2's criteria forbid."
+  - "BYTE-FOR-BYTE DESTINATION INVARIANCE. For an ineligible record the writer must not open the destination for append, must not mkdir its parent, and must not touch it. Today _default_capture creates parent directories before writing; an ineligible record must never reach that function. Note that one of the ten destinations, memory/feedback_itpo_bo1700_worktree_gate_parity.md, does not exist and has never existed in git history — the 'creates no file' clause is about that record specifically."
+  - "Non-knowledge lines must not enter any bucket. The live stream holds 4 lines with no `event` key ({\"probe\": \"pre-drive-check\"}, from the writability probe this repository's own pre-drive checklist prescribes) and 1 line that is not JSON at all. They are filtered before classification; INF-400c-4-iii owns the stream split and INF-700c-1-i owns the malformed line."
+  - "Must not depend on which sink path is configured. The harvester's default is debugging/logs/knowledge_emissions.jsonl, which has never existed; the live records are in debugging/logs/agent_telemetry.jsonl. The eligibility rule is per record and must hold whatever INF-400c-4 settles."
+  - "Exit-code consequence, stated here because it is produced here: with the no-learning bucket in place, a run whose entire input is ineligible records has skipped_unknown = 0 and write_failures = 0, so main() returns 0 — the same code an empty input returns. INF-700c-2 asserts that equality; this AC must not introduce a new non-zero code for the ineligible bucket."
+test_spec:
+  - name: test_record_without_text_appends_nothing_and_leaves_destination_unchanged
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "An existing destination file is hashed before and after a run over one textless record and is byte-identical; capture_fn is never called."
+  - name: test_record_without_text_creates_no_destination_file
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A textless record naming a destination that does not exist leaves the path absent, covering the one of ten destinations that was never created."
+  - name: test_no_placeholder_line_is_synthesised_from_descriptive_fields
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "No output anywhere contains a string of the form '[<entry_kind>] Learning from', proving the substitution was deleted rather than relocated."
+  - name: test_textless_records_are_counted_separately_from_unroutable_and_written
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The result exposes a no-learning-text count distinct from routed, skipped_unknown and write_failures, and the five buckets sum to the number of knowledge records read."
+  - name: test_textless_record_is_classified_before_entry_kind_routing
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "A record with BOTH an unknown entry_kind and no text lands in the no-learning bucket and NOT in skipped_unknown — the ordering guard on which INF-700c-2's exit code depends."
+  - name: test_full_real_corpus_of_28_writes_nothing_and_creates_nothing
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Run over tests/fixtures/harvest_learnings/unroutable_corpus_28.json with the nine real destination paths staged as temp copies: all nine are byte-identical afterwards, the tenth is still absent, and the no-learning count is 28."
+  - name: test_record_with_real_text_is_still_written
+    target_dir: tests/knowledge/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The eligibility rule does not suppress a record carrying non-empty text with a known entry_kind — the guard against fixing this by writing nothing at all."
+test_rationale: |
+  The fifth descriptor is the one that would be omitted by a reasonable coder
+  and is the one that matters most: a textless record with a KNOWN entry_kind
+  would land in the no-learning bucket under either ordering, so only a record
+  that is simultaneously textless and unknown-kinded distinguishes the correct
+  order from the wrong one — and all 28 real records are exactly that shape. The
+  sixth uses the real corpus fixture rather than synthetic records because
+  synthetic fixtures for this component have already reproduced a bug-hiding
+  bias once in this repository. The seventh is the anti-cheat: every other
+  descriptor is satisfiable by a writer that writes nothing ever.
+delivers_to:
+  agent: python-coder
+  contract: "A per-record eligibility rule — a knowledge record is writable only if it carries non-empty `text` — evaluated before entry_kind routing, plus a fourth result bucket counting ineligible records. INF-700c-2 relies on both: on the rule for the resting state, and on the ordering for the exit code."
+expects_from:
+  ac_id: INF-700b-1
+  contract: "The `text` field on the knowledge record, required of a producer and optional to a consumer, whose absence this AC classifies as ineligible rather than invalid"
+origin_agent: BrainCandy
+created: 2026-08-26
+amended_by:
+  - reason: "IT PO technical enrichment, 2026-08-26. Named the classification-order constraint, which the criteria do not state and which decides whether INF-700c-2 can reach zero: all 28 records are simultaneously textless and unknown-kinded, so a kind-first check routes every one of them into skipped_unknown and pins exit 3. Also replaced the placeholder expects_from (which named the parent L1) with the real upstream contract from INF-700b-1, and required the ineligible records NOT be written to the idempotency state file, because debugging/logs/ is gitignored and a resting state stored there does not survive a clone."
+    by: it-po
+    at: 2026-08-26
+superseded_by: null
+covered_by:
+  - INF-700c-1-i
+implemented_by: []
+notes: |
+  This closes the substitution the harvester performs today: when learning text
+  is absent it composes a placeholder from the kind and the ticket, and the
+  ticket field is absent from all 28 retained records, so the composed line
+  reads "[agent-assignment-pattern] Learning from " with nothing after it.
+  Nine curated files between 3.6 KB and 23 KB are named as destinations by
+  those records, so the substitution is not a cosmetic defect — it degrades
+  real, hand-written knowledge.
+
+  Boundary: INF-400c-5 owns which kinds are recognised; this AC is indifferent
+  to the kind. A record with a perfectly canonical kind and no learning text is
+  still not written.
+change_target: code
+risk_surface: contract_boundary

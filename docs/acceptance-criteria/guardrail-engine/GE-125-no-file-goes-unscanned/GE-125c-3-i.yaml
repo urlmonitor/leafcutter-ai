@@ -1,0 +1,215 @@
+id: GE-125c-3-i
+components:
+  - security_scanner
+  - commit_guardian
+title: "The verdict is the same on either side of the point where the line is shortened, and for a value longer than that point"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a throwaway project whose ticket area holds three Markdown files staged for
+    commit,
+  And each file's only content line places the SAME project identifier of the
+    ticket form at a different offset: one ending at the 120th character of the
+    line, one beginning at the 121st character, and one beginning at the 118th so
+    that it straddles the 120th,
+  And the padding around it is ordinary prose that is not itself high-entropy,
+  And no suppression entries are in force,
+  When the three staged files are checked by the pre-commit secrets check,
+  Then all three files reach the same verdict — the identifier is set aside in each
+    and none of the three is reported,
+  Because the straddling case is the one a shortened copy mangles rather than
+    hides: it presents the judgement with a fragment of a value that would have
+    been recognised whole, which is how a value can be reported as unexplained
+    while being perfectly ordinary.
+
+  Given the same throwaway project,
+  And a fourth staged Markdown file in the same ticket area whose only content line
+    is a single opaque credential of at least 160 characters, so the value is
+    itself longer than the point at which the line is shortened, and no other text
+    appears on that line,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the credential is reported, named with its 1-based line number, and the
+    commit is blocked,
+  And the report does not reproduce the credential in full,
+  Because a value that outruns the shortened copy must still be judged as the value
+    it is — and because the shortened copy exists to show the author where something
+    was found, which is a reason to keep it for display and not a reason to judge it.
+
+  Given the same throwaway project,
+  And a fifth staged Markdown file in the same ticket area containing the same
+    160-character credential preceded by 300 characters of ordinary prose,
+  And no suppression entries are in force,
+  When the staged file is checked by the pre-commit secrets check,
+  Then the credential is reported and the commit is blocked, exactly as in the
+    fourth file,
+  Because the two files differ only in how much text precedes the same value, and
+    that is precisely the difference that must not change a verdict.
+depends_on:
+  - GE-125c-3
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "`Finding.excerpt` IS A DISPLAY FIELD AND MUST NEVER BE THE INPUT TO A VERDICT. It is set to `line.strip()[:120]` at `templates/skills/security-scanner/scripts/scan_secrets.py:248` and `:254`, and `_filter_prose_findings` passes `finding.excerpt` into `_is_prose_exempt` at `templates/scripts/commit_guardian/check_secrets.py:220` — so the exemption today judges a TRUNCATED line, a benign explanatory token past column 120 is invisible to it, and the verdict can turn on line length alone. The per-finding judgement MUST be computed from the full matched value and, where surrounding context is needed, from the whole untruncated source line — never from the excerpt. `excerpt` may continue to exist and to be printed to show the author where a value was found; it must not reach any code path that decides whether a value is set aside."
+  - "THE FOUR BOUNDARY CASES MUST BE EXERCISED AGAINST THE REAL CHECK, EACH AS ITS OWN FILE: the identifier ENDING at the 120th character, the identifier BEGINNING at the 121st, the identifier STRADDLING the 120th by beginning at the 118th, and a value LONGER than 120 characters in total. This is where the off-by-one lives — an implementation that keeps 120 characters, or 121, or that slices the line before matching rather than after, satisfies GE-125c-3's clear-cut cases and still mangles a value lying across the cut. Do not fold the trio into a single fixture or approximate an offset."
+  - "THE STRADDLE CASE IS THE SHARP ONE AND ITS FAILURE MODE IS A FALSE REPORT, NOT A SILENCE. A fragment of an ordinary identifier looks like an unexplained value, so the symptom is a commit blocked over nothing. Assert not merely that the file is unreported but that the identifier reached the SAME verdict as in the other two files, so a straddle that is set aside for a different reason is not mistaken for a pass."
+  - "THE SAME IDENTIFIER STRING MUST BE USED IN ALL THREE OFFSET FILES so that position is the only variable. If the three files use three different identifiers, a difference in verdict is not attributable to the offset and the arm proves nothing."
+  - "OFFSETS ARE PART OF THE FIXTURE CONTRACT: CONSTRUCT THEM PROGRAMMATICALLY AND ASSERT THEM BEFORE THE VERDICTS. Build the padding by computing its length from the identifier's length and the target column, then assert that the identifier ends at, begins at and straddles the intended character positions — stating explicitly whether the convention is 0-based or 1-based, since the criterion is written in 1-based terms and Python slicing is not. Only then assert the verdicts. A boundary fixture whose offset silently drifts is a green test that proves nothing, and eyeballing a 200-character line is not verification."
+  - "THE PADDING MUST NOT ITSELF BE HIGH-ENTROPY, AND THAT MUST BE ASSERTED, NOT ASSUMED. Build it from ordinary prose words with separators and assert as a precondition that no token the entropy rule would extract from it reaches the threshold — `_TOKEN_RE` collects runs of at least 20 characters from `[A-Za-z0-9+/=_-]` and `_ENTROPY_THRESHOLD` is 4.5 (`templates/scripts/commit_guardian/check_secrets.py:136-138`). Padding that is itself high-entropy would add findings of its own and make every verdict in this record unattributable."
+  - "THE NEVER-ECHO ASSERTION IS NARROW AND FENCED. Assert that the check's output does not contain the 160-character credential in its entirety — no line of the emitted report reproduces the full value — and that whatever fragment does appear stays within the existing display truncation. This is a narrow repetition of GE-125d's never-echo rule applied to the FINDING itself, stated here because a 160-character credential is the case where a report that echoes what it found is most obviously a disclosure. It does NOT decide GE-125d's reduced-scrutiny notice format, must not be read as deciding it, and must not be cited as coverage for GE-125d."
+  - "CARRYING THE UNTRUNCATED LINE FOR THE VERDICT MUST NOT LEAK IT INTO THE OUTPUT. The plumbing GE-125c-3 introduces gives the reporting path access to the full value for the first time; the display path must keep its truncation regardless. Treat any new appearance of the full value in stdout, stderr, a log line or a persisted artifact as a defect of this record, not a cosmetic issue."
+  - "CANONICAL SOURCE FOR BOTH SCRIPTS — A DEPLOYED-COPY-ONLY FIX IS REVERTED BY THE NEXT BUILD. The files are `templates/skills/security-scanner/scripts/scan_secrets.py` and `templates/scripts/commit_guardian/check_secrets.py`; `scripts/commit_guardian/` and `.leafcutter/scripts/commit_guardian/` are build outputs per ADR-001 and `check_hook_parity` enforces all four commit-guardian locations. Run `python scripts/build.py --target-dir .` after editing the templates and re-run the commit_guardian suite before claiming the change."
+  - "THROWAWAY ROOT IS A HARD REQUIREMENT AND ITS ABSENCE IS A DEFECT, NOT A WAIVER. Every fixture is a real file inside a `tempfile`-backed throwaway project root with the ticket area constructed INSIDE it and the check pointed at that root; no fixture under this repository's own `tickets/`, `docs/retrospectives/`, `docs/acceptance-criteria/` or `templates/skills/` trees. Assert as a precondition that the root path ABOVE the constructed prose directory contains none of the four segment names — the location match is a substring test, so a temporary root can re-arm the exemption by accident and every boundary arm would then pass for the wrong reason."
+  - "VERIFY BY EXECUTION, NEVER BY GREP OR BY WIRING ASSERTION. Each arm stages real files in a real git repository inside the throwaway root, runs the pre-commit secrets check as a process, and asserts the exit status together with the parsed findings and their 1-based line numbers. Asserting which string is handed to the judgement tests the plumbing, not the verdict."
+  - "CREDENTIAL-SHAPED FIXTURE STRINGS ARE ASSEMBLED AT RUNTIME from concatenated fragments, as `unit_tests/commit_guardian/test_scan_secrets_suppression.py` already does — which matters more here than elsewhere, because this record's fixture is a 160-character credential. No `.security-allowlist` entry may be added so that a literal can be committed."
+  - "ERROR HANDLING PER CLAUDE.md: the verdict path stays a pure function over strings and is not wrapped in try/except (Rule 4); file and subprocess access is wrapped in a typed except that logs at WARNING or re-raises (Rules 1-3). A failure to obtain the untruncated value must fail towards REPORTING it, never towards falling back to the excerpt behind an exception handler."
+  - "PERFORMANCE — THIS RUNS ON EVERY COMMIT. A value longer than the truncation point must not cause quadratic re-scanning of its line, and the check must complete in bounded time over a staged file containing a single 100,000-character line."
+test_spec:
+  - name: test_identifier_at_the_truncation_boundary_reaches_one_verdict_in_all_three_files
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Three staged files place the SAME ticket identifier at three offsets — ending at the 120th character, beginning at the 121st, and straddling the 120th by beginning at the 118th — with programmatically built ordinary-prose padding. All three yield zero findings and none blocks the commit, and the verdict is compared across the three rather than asserted independently. The straddle is the sharp case: a fragment of an ordinary identifier presented to a truncated judgement produces a FALSE REPORT, not a silence."
+  - name: test_value_longer_than_the_truncation_point_is_reported_and_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged file whose only content line is a single runtime-assembled opaque credential of at least 160 characters — longer than the point at which the line is shortened, with no other text on the line — yields exactly one finding named with its 1-based line number and a non-zero exit."
+  - name: test_report_does_not_reproduce_the_160_character_credential_in_full
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Over the same executed run, no line of the check's emitted output contains the 160-character credential in its entirety, and whatever fragment appears stays within the existing display truncation. Narrow and fenced: this is the never-echo rule applied to the FINDING itself and does not decide GE-125d's notice format."
+  - name: test_same_long_credential_after_300_characters_of_prose_reaches_the_same_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fifth staged file holding the same 160-character credential preceded by 300 characters of programmatically built prose padding reaches the same verdict as the fourth — reported, non-zero exit — so the two files differ only in how much text precedes one value and that difference changes nothing."
+  - name: test_boundary_offsets_and_padding_are_asserted_before_any_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "Fixture-integrity precondition: the padding lengths are computed from the identifier's length and the target column rather than typed; the identifier is asserted to end at, begin at and straddle the intended positions under an explicitly stated 0- or 1-based convention; the same identifier string is used in all three offset files; no token extractable from the padding reaches the entropy threshold; and the throwaway root above the constructed prose directory contains none of the four exempt segment names."
+test_rationale: |
+  Five descriptors. Four are the criterion's arms and the fifth is the fixture
+  contract that makes the other four mean anything.
+
+  The first descriptor compares the three offset files against each other rather
+  than asserting each independently, because the failure it hunts is a difference
+  between them. A straddling value that is set aside for some unrelated reason would
+  satisfy three independent "no finding" assertions while the boundary defect was
+  fully present; comparing the verdicts makes position the only variable. Using one
+  identifier string across all three files is part of the same argument.
+
+  The third descriptor is separated from the second deliberately. They run over the
+  same executed file but assert different things — that the value is caught, and
+  that catching it does not disclose it — and the second is the arm most likely to
+  regress as a side effect of the very change GE-125c-3 makes, since carrying the
+  untruncated line gives the reporting path access to the full value for the first
+  time. It is written narrowly and fenced in both the criterion and the
+  it_requirements so it cannot be read as settling GE-125d's notice format.
+
+  The fifth descriptor is not hygiene. Every arm here turns on a character position,
+  and a character position is exactly what drifts silently when a fixture string is
+  edited. Computing the padding from the identifier's length and asserting the
+  resulting offsets before the verdicts means such an edit fails on the offset rather
+  than passing on a verdict reached inside the first 120 characters — which looks
+  identical to success. It also pins the 0- versus 1-based convention, because the
+  criterion is written in 1-based terms and Python slicing is not, and that mismatch
+  is itself a plausible source of a one-character error in a record whose whole
+  subject is a one-character boundary.
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001's closing paragraph records the truncation defect this record exercises at the boundary itself."
+  - path: docs/architecture/components/security-scanner.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-125c-3
+  contract: "A finding record carrying the FULL matched value, and the whole untruncated source line where surrounding context is needed, with Finding.excerpt demoted to a display-only field that no verdict path reads. This record exercises the boundary that plumbing must survive: a value ending at the 120th character, one beginning at the 121st, one straddling from the 118th, and a value longer than 120 characters — and asserts that the new access to the full value does not leak it into the report."
+origin_agent: business-analyst
+created: 2026-08-19
+amended_by:
+  - reason: technical-enrichment
+    date: '2026-08-24'
+    by: it-po
+    entry: 'Added assigned_agent python-coder, estimated_complexity M, fourteen
+      it_requirements, five test_spec descriptors, test_rationale, four doc_links and an
+      expects_from contract on GE-125c-3; set readiness reviewed. The first
+      it_requirement names Finding.excerpt as a DISPLAY field and forbids it as the input
+      to any verdict, citing the truncation at scan_secrets.py:248 and :254 and the
+      pass-through at check_secrets.py:220. Further requirements enumerate the four
+      boundary cases (ending at 120, beginning at 121, straddling from 118, longer than
+      120) as separate files exercised against the real check; require the same
+      identifier string in all three offset files so position is the only variable;
+      require offsets to be computed programmatically and asserted before the verdicts
+      with the 0- or 1-based convention stated explicitly; require the padding to be
+      verified not high-entropy against the same constants the check uses; keep the BA
+      fence that the never-echo assertion is narrow to the finding itself and does NOT
+      decide GE-125d notice format; and add the leak constraint that new access to the
+      full value must not put it in stdout, stderr, logs or persisted output. criteria,
+      title, level and work_status unchanged.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  WHY THIS IS ITS OWN RECORD. The parent asserts that a value far past the
+  shortening point reaches the same verdict as one at the start. It does not
+  exercise the boundary itself, and the boundary is where an off-by-one lives: an
+  implementation that judges 120 characters, or 121, or that slices the line before
+  matching rather than after, can satisfy the parent's clear-cut cases and still
+  mangle a value that lies across the cut. The straddling case is the sharp one,
+  because the failure it produces is not a missed value but a MISJUDGED one — a
+  fragment of an ordinary identifier looks like an unexplained value, so the
+  visible symptom is a false report rather than a silence.
+
+  THE SECOND SCENARIO IS THE OTHER HALF OF THE PARENT'S INVARIANT and is stated
+  here rather than there because it is about the value rather than about its
+  position: a value longer than the shortened copy can never be judged whole from
+  that copy. It also carries the one output constraint this subtree needs to state
+  — the report must not print the value back in full. That constraint belongs to
+  GE-125d for reduced-scrutiny notices generally; it is repeated here only for the
+  finding itself, because a 160-character credential is the case where a report
+  that echoes what it found is most obviously a disclosure. Do not read this as
+  deciding GE-125d's notice format.
+
+  FIXTURE PLACEMENT — STATED, NOT INHERITED. Every fixture must be a real file
+  created inside a tempfile-backed throwaway project root, with the ticket area
+  constructed INSIDE that root and the check run against that root. No fixture may
+  be created under this repository's own `tickets/`, `docs/retrospectives/`,
+  `docs/acceptance-criteria/` or `templates/skills/` trees. The test module belongs
+  under `unit_tests/commit_guardian/`.
+
+  OFFSETS ARE PART OF THE FIXTURE CONTRACT and must be constructed and then
+  asserted before the verdicts are asserted: build the padding programmatically,
+  assert that the identifier ends at, begins at and straddles the intended
+  character positions, and only then assert the verdicts. A boundary fixture whose
+  offset silently drifts is a green test that proves nothing, and eyeballing a
+  200-character line is not verification.
+
+  VERIFY BY EXECUTION, NEVER BY READING THE SOURCE. Every arm runs the real
+  pre-commit secrets check over real staged files and asserts the process exit
+  status and the reported findings. Credential-shaped fixture strings are assembled
+  at runtime from concatenated fragments rather than written as source literals.

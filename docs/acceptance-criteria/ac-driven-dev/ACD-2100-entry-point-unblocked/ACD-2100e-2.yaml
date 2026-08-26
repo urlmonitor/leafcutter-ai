@@ -1,0 +1,208 @@
+id: ACD-2100e-2
+components:
+  - ac_driven_dev
+  - documentation_system
+readiness: approved
+priority: medium
+title: "A how-to guide takes an operator from a waiting run back to a running one"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given an operator who has found a run that stopped and reported that it is
+    waiting for an answer,
+  When they open the project's how-to guides,
+  Then a page tells them how to list the runs that are waiting and how to see
+    which decision each one is waiting on,
+  And it gives the invocation that starts the route again supplying the person's
+    answer for that decision -- the invocation the route itself accepts rather
+    than an edit of the stored record by hand,
+  And it states what the operator observes in each of the three ways that
+    invocation ends: the run continuing from the decision it was waiting on
+    without repeating the steps before it and no longer listed as waiting; the
+    run reporting there is nothing to resume when no waiting record exists; and
+    the run staying waiting and naming the decision that is outstanding when the
+    answer supplied names a different decision,
+  And for each of the two endings that do not resume it states that the drafted
+    work is unchanged and the waiting record is still there to be answered,
+  And each step and each outcome it gives names the criterion whose delivered
+    behaviour it describes,
+  And the page is reachable from the documentation index and declares the same
+    component as this criterion.
+depends_on: [ACD-2100e, ACD-2100c-3, ACD-2100c-3-i, ACD-2100a-4, ACD-2100e-1]
+doc_links:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: planned
+    relevance: "THE TARGET FILE. ACD-2100c-3 and ACD-2100c-3-i already link this exact path as planned; publishing under any other name leaves both dangling and check-doc-links cannot catch a target that never appears."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause and resume contract -- including re-entry with a supplied answer, which is the invocation the second Then clause requires the page to give."
+  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    relationship: related
+    status: planned
+    relevance: "The sequence diagram authored by ACD-2100e-1. An operator who wants to know how their run came to be waiting is sent there; this page does not restate the decision points. ORDERING GAP -- this page's depends_on does not name ACD-2100e-1 and no hook validates a markdown link, so see the requirements before hard-linking it."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the store the waiting record lives in and the record lifecycle a successful resume completes."
+  - path: docs/how-to/approval-gate.md
+    relationship: related
+    status: exists
+    relevance: "ADJACENT HOW-TO WITH A DIFFERENT SUBJECT -- the goal-to-epic readiness gate and its yes / review-all / cancel choices. Not this route's decision points and not resumable. Do not conflate the two gates in the reader's mind. It also declares components: [ac_driven_dev, build_orchestration], so it sits in the same component view as this page."
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+    relevance: "The index the last clause requires the page to be reachable from. It is generated."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "TARGET FILE -- a NEW how-to at exactly docs/how-to/resume-a-paused-plan-feature-run.md. ACD-2100c-3 and ACD-2100c-3-i both link that exact path as planned, and ACD-2100c-3 carries a delivers_to contract naming this id and documentation-expert."
+  - "NOTHING IN THIS REPOSITORY WILL CATCH A WRONG PATH -- check-doc-links IS NOT THE NET THE STORE NOTES ASSUME. check_doc_links validates DOC_LINKS declared in Python and SQL files only, and its own docstring states every failure is a warning and it always exits 0. No hook validates a markdown-to-markdown link at all. So the two inbound planned links and every outbound link this page carries are unguarded in both directions. Publishing at the exact path above is the entire defence."
+  - "THE OUTBOUND LINK TO c3-006 MAY POINT AT A FILE THAT DOES NOT EXIST YET. ACD-2100e-1 authors docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md and is NOT in this record's depends_on, so the sequencer may build this page first (KI-ACD-015: expects_from orders nothing). Combined with the previous requirement -- no hook validates a markdown link -- publishing first would ship a live page pointing at nothing, silently. Before publishing, either confirm the ordering edge has been added (recommended in the notes) or confirm the diagram exists; do not hard-link a file that is not there."
+  - "TITLE AND OPENING MUST DISTINGUISH THIS PAGE FROM docs/how-to/approval-gate.md. That page already exists, is about the goal-to-epic readiness gate and its yes / review-all / cancel choices, is not resumable and is none of the five decision points -- and it declares components: [ac_driven_dev, build_orchestration], so it lands in the same component view and the same how-to index as this page. An operator searching for \"gate\" reaches it first. Name the route and the waiting-run situation in the title and in the first sentence, and link approval-gate.md once as explicitly not this gate. Neither page absorbs the other."
+  - "FRONTMATTER components: MUST BE THE UNDERSCORE GRAPH ID ac_driven_dev -- NOT the kebab ac-driven-dev. check_doc_frontmatter validates every components entry against the keys of docs/components.json, which are the underscore ids. That declaration is the mechanically checkable half of the last Then clause. ACD-2100d-4's equivalent requirement states the kebab form; that wording is wrong and must not be copied. Follow the sibling how-tos for the rest of the block: type: how-to with a matching category: how-to, as docs/how-to/approval-gate.md does."
+  - "docs/INDEX.md IS GENERATED. Register the page by running the build and committing the regenerated index -- do not hand-edit it. A hand-edited index is reverted by the next build."
+  - "QUOTE THE INVOCATION AND EACH OF THE THREE OUTCOME REPORTS VERBATIM, never a paraphrase. The operator is matching a message on their screen against this page; a paraphrase they cannot match sends them away believing the page does not cover their case, which is the moment they escalate or re-run the route. Take every quoted string from the delivered behaviour of ACD-2100c-3 and ACD-2100c-3-i, not from an expectation."
+  - "THE LISTING STEP AND THE RESUME STEP MUST BOTH WORK FROM THE PROJECT ROOT AND FROM A WORKTREE. ACD-2100a-4's contract is a waiting record whose location is a function of the project rather than of the caller's working directory. Do not publish a path or an invocation that only resolves from one of them -- a working-directory-dependent path is the exact defect family this L1 sits in, and a page that reproduces it would send an operator to look for a record that is findable only from where the run happened to start."
+  - "DO NOT WRITE ANY OF THIS FROM KI-ACD-005's FIX DIRECTION. That known issue's stated root cause and stated fix are both out of date -- resolveGate already pauses on an unparseable answer and the observed loss came from a well-formed one -- so a procedure written from it would be wrong on the day it was published."
+  - "LENGTH IS A REAL CONSTRAINT -- check_doc_length caps a non-ADR document at 300 lines and 25 sections. Link out to ADR-024 and to c3-006 for how a run came to be waiting rather than absorbing either; this page is a procedure with an outcome, not an explanation of the gate flow."
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100c-3
+    contract: "The resume invocation and its observable outcomes -- resumed, nothing to resume, mismatched answer -- which the how-to walks an operator through."
+  - ac_id: ACD-2100c-3-i
+    contract: "The mismatched-answer outcome in detail: the answer is not applied, the run remains paused with its record on disk, it reports which decision it is waiting on, and nothing is discarded even when the supplied answer names a destructive choice on another decision."
+  - ac_id: ACD-2100a-4
+    contract: "A waiting record whose location is a function of the project rather than of the caller's working directory -- so the listing step and the resume step in this page work from the project root and from a worktree alike, and a run that reported itself waiting is actually findable."
+  - ac_id: ACD-2100e-1
+    contract: "ORDERING GAP -- SEE NOTES. The published sequence diagram at docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md, which this page links and sends an operator to for how their run came to be waiting -- so that this page can stay a procedure instead of restating the five decision points. depends_on does not carry this edge and no hook validates the markdown link, so building this record first ships a live page pointing at a file that does not exist."
+test_required: false
+test_rationale: >-
+  The deliverable is a prose how-to page with no executable surface a test could drive.
+  Every step and every outcome it publishes is owned and enforced elsewhere by tests that
+  execute: the resume invocation and its three observable endings by ACD-2100c-3, the
+  mismatched-answer ending and the drafted-work-unchanged guarantee by ACD-2100c-3-i, and
+  the findability of the waiting record from a worktree by ACD-2100a-4. A test over this
+  page could only assert that certain words appear in it, which is the presence-shaped
+  proof this whole tree exists to discredit -- it would pass on a page that names the
+  three outcomes correctly while giving an invocation the route no longer accepts, which
+  is precisely the failure that leaves an operator stranded. The two mechanically
+  checkable clauses in the criteria are already covered by live commit gates rather than
+  being untested: the component declaration by check-doc-frontmatter and the index
+  reachability by the generated docs/INDEX.md. A bespoke unit test would duplicate a
+  running gate rather than add coverage. Recorded explicitly so test-writer skips with an
+  accurate reason rather than silently.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/25_TICKET-20260826-ACD-2100e-2.md
+change_target: docs
+risk_surface: internal
+notes: |
+  THE ID AND THE TARGET PATH ARE FIXED FROM THE OTHER SIDE. ACD-2100c-3 and
+  ACD-2100c-3-i already carry a planned doc_link to
+  docs/how-to/resume-a-paused-plan-feature-run.md, and ACD-2100c-3 additionally
+  carries a delivers_to contract naming ACD-2100e-2 and documentation-expert.
+  Authoring under a different id or at a different path silently dangles both:
+  check-doc-links reports a broken link, never a target that was never created.
+
+  THE READER ARRIVES HOLDING A WAITING RUN. That is what separates this page from
+  ACD-2100e-1's diagram, which is for a reader who wants to understand the flow, and
+  from ACD-2100d-4's reference page, whose reader is holding a message about a file
+  that could not be found. This page is a procedure with an outcome: the run is
+  moving again.
+
+  ALL THREE ENDINGS OR THE PAGE IS A TRAP. ACD-2100c-3's contract names three
+  observable outcomes and the page must give all three, because the two that are not
+  a successful resume are exactly the ones an operator meets when something has gone
+  slightly wrong and is most likely to escalate or start over. The
+  drafted-work-unchanged clause is there so a mistyped resume does not read as work
+  lost -- ACD-2100c-3-i's whole subject is that the run survives it -- and so the
+  operator's correct next move is to answer again rather than to re-run the route.
+
+  WHY THE INVOCATION AND NOT A HAND EDIT. The second Then clause insists on the
+  invocation the route accepts. A page that told an operator to edit the stored record
+  would route them around ACD-2100c-4's provenance check, which is the defect this
+  whole L1 family exists to close, and would be a second answer path arriving through
+  the documentation rather than through the code.
+
+  BOUNDARY WITH ACD-2100d-4 -- HELD IN BOTH DIRECTIONS. Nothing here restates which
+  copy of a route file runs where or what the startup checks report, and this page
+  must not be retargeted at
+  docs/reference/plan-feature-layout-and-startup-checks.md.
+
+  BOUNDARY WITH AN EXISTING HOW-TO -- FOUND WHILE DECOMPOSING, NOT IN THE PO's NOTE.
+  docs/how-to/approval-gate.md already exists and is about a different gate: the
+  goal-to-epic readiness report and its yes / review-all / cancel choices, which is
+  not resumable and is not one of the five decision points. An operator searching the
+  how-to index for "gate" will find it first, so this page needs a title and an
+  opening that distinguish it, and neither page should absorb the other.
+
+  DELIVERED BEHAVIOUR ONLY. Every step and every outcome must name the criterion that
+  delivers it, and none of it may be written from KI-ACD-005's fix direction -- that
+  known issue's stated root cause and stated fix are both out of date, so a procedure
+  written from it would be wrong on the day it was published.
+
+  DEPENDS_ON CARRIES THE ORDERING AND NOTHING ELSE DOES. The build sequencer reads
+  depends_on only; expects_from edges are invisible to it (KI-ACD-015, open).
+  ACD-2100a-4 is named explicitly because it lives under a different L1, so the
+  composite edge on ACD-2100e does not reach it -- and it is load-bearing rather than
+  tidy: until it lands, pausing degrades to a persist failure when run from a
+  worktree, and a page telling an operator their waiting run can be picked up later
+  would be promising something that does not happen. ACD-2100c-2 already carries the
+  same cross-family edge, which is the precedent. ACD-2100a as a whole is deliberately
+  not depended on; only a-4 is load-bearing here.
+
+  FOR THE IT PO: assigned_agent is documentation-expert per ACD-2100c-3's delivers_to
+  contract. This is a prose deliverable with no executable surface, so
+  test_required: false with an explicit test_rationale is the likely correct call --
+  permitted because change_target is docs, with ACD-2100d-4 the precedent in this same
+  tree. Do not let that become a grep-for-words test: a test asserting that the three
+  outcome names appear in the page passes on a page that gives an invocation the route
+  no longer accepts, and presence-shaped proof is what this tree exists to discredit.
+  The three outcomes are each proved by executing tests on the records that own them --
+  ACD-2100c-3 and ACD-2100c-3-i -- and the two mechanically checkable clauses here are
+  already covered by the generated docs/INDEX.md and check-doc-frontmatter.
+
+  2026-08-25 (it-po): CONFIRMED documentation-expert rather than chosen. The assignment
+  was already fixed from the other side by ACD-2100c-3's delivers_to contract, which
+  names both this id and that agent. Sized M -- one new page plus the regenerated
+  docs/INDEX.md, with the work being reconciliation of three quoted outcome reports and
+  a two-layout invocation rather than volume of prose. Test contract is
+  test_required: false with the reason recorded in test_rationale rather than left to
+  inference, following ACD-2100d-4 in this same tree; permitted because change_target is
+  docs, which the schema validator allows.
+
+  ORDERING GAP FOUND AND NOT EDITED (depends_on is BA-owned). This page links
+  ACD-2100e-1's diagram and sends the operator to it, so e-1 is upstream, but
+  depends_on does not name it. Three facts compound: the sequencer reads depends_on only
+  (KI-ACD-015, open); expects_from orders nothing; and no hook in this repository
+  validates a markdown-to-markdown link -- check_doc_links covers DOC_LINKS in Python and
+  SQL files only and always exits 0. So building this record first would publish a live
+  page pointing at a file that does not exist and nothing would report it. Recorded above
+  as an expects_from contract and mirrored as a delivers_to on ACD-2100e-1, and carried
+  into it_requirements as a pre-publication check. The recommended edit before approval is
+  depends_on: [ACD-2100e, ACD-2100c-3, ACD-2100c-3-i, ACD-2100a-4, ACD-2100e-1]. Left to
+  the BA rather than applied here.
+
+  ONE CHECK THE STORE LEANS ON DOES NOT DO WHAT THE NOTES ASSUME. Several records in this
+  tree cite check-doc-links as the reason a wrong target path matters. The conclusion is
+  right -- publish at the exact path -- but the stated reason understates the risk: a
+  wrong path is not "reported as a broken link", it is not reported at all, on either
+  side. Flagged rather than corrected in the BA's own note text.
+
+  FRONTMATTER COMPONENT VOCABULARY -- ONE DEFECT FOUND IN THE PRECEDENT. ACD-2100d-4's
+  it_requirements instruct the author to declare the frontmatter component as the kebab
+  ac-driven-dev. check_doc_frontmatter validates components entries against the keys of
+  docs/components.json, which are the underscore graph ids, so that instruction would
+  fail the gate. Both records in this L1 state the underscore form; ACD-2100d-4 is
+  already approved and is reported for correction rather than edited here.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

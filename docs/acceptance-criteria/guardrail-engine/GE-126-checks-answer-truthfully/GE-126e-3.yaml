@@ -1,0 +1,175 @@
+id: GE-126e-3
+title: "A new check joins the census by being registered rather than by being remembered"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set of checks the census examines is derived from the same registration data the
+    rest of the check family already maintains rather than from a list the census keeps,
+  When a fixture check is registered by following the documented procedure and the census is
+    run again with no census-side edit of any kind,
+  Then the new check appears in the census's examined count and receives a classification,
+  And when that check is removed from the registration data and the census is run again it
+    disappears from the examined count rather than being reported as unexecutable,
+  And a check named in the registration data whose script the census cannot locate is reported
+    as attempted and unexecutable and named rather than being dropped from the count,
+  And no check is examined that the registration data does not name so the examined count and
+    the registered set describe the same population,
+  And the census reports the registration source it derived its set from so a reader can tell
+    which population the measurement covers.
+
+  Coverage note: covered by registering and deregistering a fixture check around census runs
+  and asserting the examined set changes accordingly with no edit to the census. Asserting only
+  that the census examines many checks does not cover this criterion; a hardcoded list also
+  examines many checks and silently omits every check added after it was written.
+depends_on:
+  - GE-126e
+  - GE-126e-1
+  - GE-126e-2
+doc_links:
+  - path: templates/scripts/commit_guardian/check_hook_parity.py
+    relationship: related
+    status: exists
+    relevance: "Already reads the registration data to compare the places a check is registered. The census's notion of the registered set should be the same one rather than a second list."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-020 records what happens to an enumeration nobody checks against reality: an author completes the documented procedure and lands outside a roster with nothing reporting it. A census with its own private list would be the next instance of that shape."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c.yaml
+    relationship: context
+    status: exists
+    relevance: "IT PO. GE-120c-3's parity harness has its own notion of the registered set. The L1 asks the two to share it if they can and to record the reason at enrichment time if they cannot. Read-only reference — that folder must not be edited."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. A roster made data while staying closed. Deriving the census population from registration data rather than from a census-owned list is the same principle applied to a measurement."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The examined population must be derived from the registration data the check family already maintains. The census may not keep a list of its own - a census roster would be a fifth enumeration opened on the same day GE-126d closes the fourth."
+  - "Where the parity check's notion of the registered set already exists, share it rather than growing a second reader of the same data. If it cannot be shared, record the reason in the implementation rather than leaving the divergence to be inferred - the L1 asks for that explicitly."
+  - "A registered check whose script cannot be located is reported as attempted and unexecutable, never dropped. A shrinking denominator makes the instance count look better without anything having improved, which is the arithmetic form of this tree's defect."
+  - "A deregistered check must disappear from the examined count rather than becoming an unexecutable finding. Those are different facts - one is 'this is no longer in the population', the other is 'this is in the population and I could not run it' - and conflating them makes every removal look like a defect."
+  - "The census must report the registration source it derived its set from. A measurement whose population is unstated cannot be compared with the next one, and GE-126e-5 publishes figures that a reader must be able to scope."
+  - "The registration data must be read from the DEPLOYED layout, matching where the census executes the checks. Reading the source manifest while executing deployed copies measures one population and enrols another."
+  - "Register and deregister exercises must be performed in an isolated fixture tree; the repository's own registration data must never be written by a test."
+  - "Error handling must follow the four rules in CLAUDE.md. Unreadable registration data must be reported, not failed open on - a census that fails open on its own enrolment examines nothing and says nothing is wrong."
+test_spec:
+  - name: test_a_newly_registered_fixture_appears_with_no_census_side_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the census entry point"
+    description: "A fixture check registered by following the documented procedure appears in the examined count and receives a classification, with no edit to the census of any kind - the assertion a hardcoded list cannot pass."
+  - name: test_a_deregistered_check_leaves_the_population_rather_than_becoming_unexecutable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Removing the fixture from the registration data drops it from the examined count and does NOT report it as unexecutable - the two facts are kept distinct so a removal does not read as a defect."
+  - name: test_a_registered_check_with_no_locatable_script_is_named_as_unexecutable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A check the registration data names but whose script cannot be found is reported as attempted, unexecutable and named - never quietly removed from the denominator."
+  - name: test_no_check_outside_the_registration_data_is_examined
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A check-shaped script present on disk but named by no registration data is absent from the examined set, so the examined count and the registered set describe the same population."
+  - name: test_the_census_enrols_from_the_deployed_registration_data
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/build.py --target-dir <temp> then the census entry point"
+    description: "After a real build, the reported registration source resolves to the deployed layout - the same layout the checks are executed from, so the enrolled and the measured populations are one population."
+test_rationale: |
+  A hardcoded census roster passes every test that asks whether the census examines many
+  checks, and silently omits every check added after it was written — which is the same
+  enumeration-drift shape KI-CG-020 records, occurring inside the instrument built to
+  detect that family. Only the register-and-rerun exercise, with no census-side edit,
+  distinguishes derivation from a list. The deregister descriptor covers the opposite
+  direction and specifically the wrong repair for it: reporting a removed check as
+  unexecutable, which would make every deletion look like a finding. The
+  unlocatable-script descriptor protects the denominator, and the deployed descriptor
+  guards against enrolling from one layout while executing from another, which would
+  produce a population that neither surface actually describes.
+delivers_to:
+  agent: architecture-diagram-author
+  contract: "The derivation of the census population from the registration data, and the reported registration source. GE-126e-4's diagram must show the population as derived rather than held, and must show which registration surface it is derived from, so a reader can see why a newly registered check is enrolled automatically."
+expects_from:
+  - ac_id: GE-126e-1
+    contract: "The per-check classification. This record determines WHICH checks receive one."
+  - ac_id: GE-126e-2
+    contract: "The examined, found and unexecutable counts, and the arithmetic invariant relating them. This record supplies the population those counts are taken over and adds the registration source to the report."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ENROLMENT IS PART OF THE PROMISE — the L1's words. A check the census does not know about is
+  indistinguishable from a check with no defect, which is the same substitution the census
+  exists to detect, occurring inside the census itself.
+
+  DERIVING THE SET FROM REGISTRATION DATA RATHER THAN FROM A LIST is also what stops this
+  becoming a fifth registration leg. GE-126d is closing a gap caused by exactly one more
+  enumeration than anybody was tracking; adding a census roster would open a new one on the
+  same day.
+
+  THE UNLOCATABLE-SCRIPT CLAUSE JOINS UP WITH GE-126e-2's THIRD CATEGORY. A registered check
+  whose script cannot be found is a real finding about the registration data and must not be
+  quietly removed from the population, because a shrinking denominator makes the instance count
+  look better without anything improving.
+
+  SHARE THE MACHINERY IF THE PARITY HARNESS LANDS FIRST and record that decision rather than
+  growing a second notion of the registered set. If the two cannot share it, say why at
+  enrichment time — the L1 asks for the reason to be written down rather than inferred.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  THE SHARED-MACHINERY QUESTION, ANSWERED AT ENRICHMENT TIME AS THE L1 ASKED. Two candidate
+  sources of a shared notion of the registered set exist today. The first is
+  check_hook_parity.py, which already reads the registration data for a different purpose and
+  is in this repository now - the census should read the same data through the same accessor.
+  The second is GE-120c-3's parity harness, which is APPROVED AND UNBUILT; it cannot be
+  extended because it does not exist, and its folder is byte-frozen so this tree cannot amend
+  it to arrange sharing. The recorded decision is therefore: share with check_hook_parity's
+  reader of the registration data now, and if GE-120c-3's harness lands before this record is
+  built, extend that harness rather than writing a second execution engine and record the
+  change. This is the reason the L1 asked for, written down rather than inferred.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY - the only edge in the tree to
+  architecture-diagram-author. GE-126e-4's diagram has a specific obligation this record
+  supplies: showing the population as DERIVED rather than held. A diagram drawn before this
+  lands would have to show a census-owned list, which is the design this record forbids.
+
+  ENROL AND EXECUTE FROM THE SAME LAYOUT. The sixth it_requirement is mine: GE-126e-1 requires
+  the census to execute deployed copies, so enrolling from the source manifest would measure
+  one population and describe another. It is the kind of split nobody notices until the two
+  layouts diverge by one check.
+
+  AGENT — python-coder.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

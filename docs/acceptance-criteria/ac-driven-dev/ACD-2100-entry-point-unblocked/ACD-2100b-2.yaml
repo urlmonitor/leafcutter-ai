@@ -1,0 +1,149 @@
+id: ACD-2100b-2
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: approved
+priority: medium
+title: "A registry whose contents cannot be understood is reported as unusable and not as a permission verdict"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a run in which the agent registry exists and can be opened and read but
+    its contents cannot be interpreted as a registry -- for example the file is
+    truncated part-way through,
+  When the startup check runs,
+  Then the run stops and reports that the registry was read but could not be
+    interpreted,
+  And that report differs in wording from the report given when the registry
+    cannot be read at all,
+  And the report contains no statement about whether any agent is permitted to run
+    repository commands,
+  And the report states where in the contents interpretation failed.
+depends_on: [ACD-2100b]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4 must say what each startup-check report means -- this is the second of the four."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-009 -- the four conflated outcomes; this is the second."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. Lines 1745-1791 -- the branch that today renders every failure as a permissions verdict."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M8 inverted -- a check asserting a failure cause it did not establish."
+  - path: docs/reference/fixture-policy.md
+    relationship: describes
+    status: exists
+    relevance: "The truncated fixture must be produced by truncating real serializer output, not by hand-typing a broken literal."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the registry format this outcome fails to interpret."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change must land under templates/. The deployed workflow is build output."
+  - "Fail closed: the run still stops. See ACD-2100b-4."
+  - "The four outcome reports must be distinguishable by their observable output alone. A shared catch-all message satisfies each outcome's own record read in isolation and leaves the operator unable to tell a wrong location from a corrupt file."
+  - "The report must locate the failure within the contents -- an offset, a line, or the fragment at which interpretation stopped. 'Could not interpret the registry' without a position sends the operator to read the whole file by eye."
+  - "The report must not name a permission setting and must not assert anything about any agent's permission."
+  - "Must satisfy the repository error-handling policy: the interpretation failure must be caught by type and logged at WARNING or higher before the halt -- it must not propagate as an unhandled failure, which stops the run for a reason the operator cannot read."
+  - "Must not emit the registry's contents into the report beyond the fragment needed to locate the failure -- the file can carry project configuration."
+test_spec:
+  - name: test_truncated_registry_is_reported_as_uninterpretable
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A registry produced by writing the real serializer's output and truncating it
+      part-way; the run stops and reports that the file was read but could not be
+      interpreted.
+  - name: test_uninterpretable_report_differs_from_the_unreadable_report
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Two runs -- one with the registry absent, one with it truncated -- produce
+      reports that differ from each other, and neither contains a permission verdict.
+  - name: test_uninterpretable_report_states_where_interpretation_failed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The report names a position within the file, and that position corresponds to
+      where the real serializer's output was cut.
+  - name: test_uninterpretable_registry_does_not_end_the_run_with_an_unhandled_failure
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      The run stops with the interpretation report as its recorded outcome rather than
+      with an unhandled failure -- both stop the run, so the report is the only thing
+      that tells them apart.
+test_rationale: >-
+  The second Then clause is why this is a separate record rather than a clause on
+  ACD-2100b-1, and it is the only one a test can hold: asserting that the two reports
+  differ is what stops the four outcomes collapsing back into one shared message. A
+  truncated file is the realistic fixture -- it is what a partial write or an
+  interrupted build-time copy produces -- and per the fixture-authenticity policy it
+  must be produced by truncating the real serializer's output, not by hand-typing a
+  broken literal, because a hand-typed literal can fail to parse for a reason the real
+  artifact never exhibits. The unhandled-failure assertion is separate because a crash
+  also stops the run, so a fail-closed assertion alone cannot distinguish the two.
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100b-4
+    contract: "The uninterpretable-registry outcome: a recorded halt carrying a position within the contents, worded differently from the unreadable-registry outcome and carrying no permission verdict."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/08_TICKET-20260826-ACD-2100b-2.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  OUTCOME 2 OF 4.
+
+  THE SECOND THEN CLAUSE IS THE ONE WORTH ENFORCING and it is why this is a
+  separate record from ACD-2100b-1 rather than a clause on it. The cheap
+  implementation of "report honestly" is one catch-all message covering both the
+  unreadable and the uninterpretable case, which still leaves the operator unable
+  to tell a wrong location from a corrupt file -- two completely different remedies.
+  Asserting that the two reports differ is what a test can actually check, and it
+  is what stops the four outcomes collapsing back into one.
+
+  A TRUNCATED FILE IS THE REALISTIC FIXTURE, not random bytes. Truncation is what a
+  partial write or an interrupted copy produces, and it is what the workspace-root
+  registry would look like if a build were interrupted mid-deploy.
+
+  BOUNDARY WITH ACD-2100b-3-i. A file that interprets cleanly but does not hold the
+  expected agent entries is NOT this outcome -- interpretation succeeded. That case
+  is the one that currently degrades into a false "agent absent" verdict, and it is
+  pinned separately.
+
+  FAILING CLOSED STILL HOLDS: the run stops. See ACD-2100b-4.
+
+  2026-08-25 (it-po): the "no unhandled failure" requirement is carried here as well as
+  in ACD-2100b-3-i because the truncation case reaches the interpreter and the
+  empty-collection case reaches the lookup -- two different raise sites, one shared
+  rule. Sized S rather than M: the outcome is one branch on an existing failure path,
+  and the expensive part of this L1 (four distinguishable outcomes proved by four runs)
+  is charged to ACD-2100b-4.
+target_epic: EPIC-StartingNewWorkTheProperWayAlways

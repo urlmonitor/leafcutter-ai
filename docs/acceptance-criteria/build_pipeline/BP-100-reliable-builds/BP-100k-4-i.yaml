@@ -1,0 +1,108 @@
+id: BP-100k-4-i
+components:
+  - build_pipeline
+title: "The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the repository's real gate registry in a fresh checkout, after every
+    unreachable activation condition has been corrected,
+  When the reachability check runs over every registered gate,
+  Then the count of gates reported unreachable is zero and the check permits the
+    commit,
+  And no gate that legitimately inspects the whole tree is reported unreachable
+    on the ground that it declares no path filter,
+  And given the check cannot obtain the set of paths the repository tracks, or
+    cannot read the registry,
+  When it runs,
+  Then it states that it could not determine reachability, names the reason, and
+    fails,
+  And it does not report the gates as reachable on the strength of a check it was
+    unable to perform.
+depends_on:
+  - BP-100k-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/pre-commit-hooks.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: describes
+    status: exists
+    relevance: "the real registry this guard runs over end to end; a false alarm here would block every commit in the repository, so the zero-unreachable case must be pinned down against the actual manifest rather than a fixture"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    hook_trigger_reachability_indeterminate:
+      type: object
+      description: "Explicit indeterminate verdict for the reachability check: emitted when the tracked-path set or the registry cannot be obtained, so an inability to evaluate reachability is a named failure rather than an implicit clean result."
+  reference_file_path: "templates/scripts/commit_guardian/commit_guardian.json"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "This is the paired negative case for BP-100k-4. Without it, the cheapest way to satisfy BP-100k-4 is to report every gate unreachable, which would block every commit; the second cheapest is to report every gate reachable whenever anything goes wrong, which restores the original defect one level up."
+    - "The zero-unreachable assertion must be count-based over the check's own summary, never an allowlist of today's gate names — an allowlist would pass while a newly registered dead trigger escaped."
+    - "The indeterminate path must be exercised by making the tracked-path lookup genuinely unavailable at run time, not by asserting that an error branch exists in the source."
+    - "Run the check from its DEPLOYED copy after build.py, not only from the templates source tree; a template-only verification leaves the running gate unproven."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts. The indeterminate verdict is the re-raise-equivalent here — it must never degrade into a swallowed error and a clean exit."
+test_spec:
+  - name: test_real_registry_yields_zero_unreachable_gates_and_exits_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The check, executed as a process over the repository's real registry in a fresh checkout, reports an unreachable count of exactly zero — read from its own summary — and terminates with exit status zero."
+  - name: test_whole_tree_gate_without_a_path_filter_is_not_flagged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A gate that declares it always runs and consumes no staged file list is reported reachable by the executed check, not flagged for lacking a path filter."
+  - name: test_unobtainable_tracked_path_set_produces_a_named_failure
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With the tracked-path lookup made genuinely unavailable at run time, the executed check states that it could not determine reachability, names the reason, and exits non-zero."
+  - name: test_unreadable_registry_is_not_reported_as_all_reachable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With the registry made unreadable, the executed check does not emit a zero-unreachable clean verdict; it emits the indeterminate verdict and exits non-zero."
+test_rationale: "Both failure modes this guard pins down are invisible to any test that reads the check's source: an over-firing implementation and a fail-open implementation are both source-shaped exactly like a correct one. Per the standing rule in CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep'), a grep-based test is forbidden and would be rejected. Each descriptor therefore executes the check as a process — twice over the real registry and twice under a genuinely broken precondition — and asserts on the emitted summary and the exit status. The indeterminate descriptors are the direct expression of this epic's thesis: a check that cannot perform its check must never report a pass."
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-4
+  contract: "The registry-wide reachability verdict and its exit-status contract, whose zero-unreachable case and whose indeterminate case this edge case pins down."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. Tests carrying
+      "# covers: BP-100k-4-i" exist in
+      unit_tests/commit_guardian/test_bp_100k_4_hardening.py and
+      unit_tests/commit_guardian/test_bp_100k_4_i.py, and both pass under
+      AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests run clean
+      apart from the unrelated test_ge_122e_1.py failure from another branch).
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_4_hardening.py
+  - unit_tests/commit_guardian/test_bp_100k_4_i.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+  - templates/scripts/commit_guardian/_hook_trigger_reachability_helpers.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+change_target: pipeline
+risk_surface: internal
+notes: "Paired negative case for BP-100k-4. Reviving two long-dead gate triggers is a change with repository-wide blast radius: an over-strict reachability check blocks every commit, and a fail-open one reproduces the original silence. Only running the check end to end over the real registry, and separately under a broken precondition, distinguishes a correct implementation from either shortcut."

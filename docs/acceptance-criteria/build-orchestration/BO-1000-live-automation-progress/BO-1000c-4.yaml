@@ -1,0 +1,91 @@
+id: BO-1000c-4
+components:
+  - build_orchestration
+title: "The run-progress journal is readable by an outside caller while the run is still in flight"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finalize-feature run executing in the background under the E2 engine,
+  When a caller outside that run reads the run's journal before the run process
+    has exited,
+  Then the records for the dispatches that have already occurred are present and
+    readable at that moment,
+  And re-reading the journal later in the same run returns strictly more records
+    than the earlier read, so the records accumulate over the run rather than
+    appearing only once it ends.
+depends_on: [BO-1000c-1a]
+doc_links:
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: "unit_tests/_workflow_engine_harness.py"
+  n_location_rule: "all"
+  required_skills:
+    - "python-coder"
+  post_write_commands: []
+  notes: |
+    Split out of BO-1000c-1a on 2026-08-25. BO-1000c-1a's coverage observes the
+    run only AFTER subprocess.run returns, parsing one JSON blob from stdout, so
+    it structurally cannot verify anything about mid-run state. Rather than let
+    a narrowed parent absorb the requirement silently, the in-flight clause is
+    carried here and left open.
+
+    This AC is deliberately NOT satisfiable at the current unit layer. It needs
+    an integration-level harness that:
+    - launches a real workflow run as a background process rather than waiting
+      on it to completion,
+    - locates that run's journal deterministically while it is executing,
+    - reads it at two separated points during the run and compares record counts.
+
+    Policy constraints (state WHAT, coder picks HOW):
+    - The two reads must come from a process OTHER than the one executing the
+      run — reading an in-memory structure inside the harness proves nothing
+      about what an external poller can see.
+    - The assertion must be strictly-more-records between reads, not
+      non-empty-at-the-end. A single end-of-run read is satisfied by a
+      write-once-at-exit implementation, which is precisely the behaviour this
+      AC exists to rule out.
+    - Test must tolerate timing variance without weakening the claim: poll with
+      a bounded timeout rather than sleeping a fixed interval and asserting once.
+expects_from:
+  ac_id: BO-1000c-1a
+  contract: "A durable, order-preserving per-dispatch record for the run, written by the E2 engine at <transcriptDir>/journal.jsonl."
+delivers_to:
+  agent: llm-expert
+  contract: >-
+    Confirmation that the engine journal can be polled mid-run, which is the
+    property BO-1000c-1b (poll + relay), BO-1000c-2 (over-time delivery) and
+    BO-1000c-2-i (halting-step line) all assume. Until this AC is met, those
+    three rest on an unverified assumption.
+test_required: true
+test_spec:
+  - name: test_journal_is_readable_from_another_process_mid_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    description: "A workflow run is launched as a background process; while it is still executing, a read from the parent process returns at least one dispatch record."
+  - name: test_journal_record_count_grows_during_a_single_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    description: "Two reads of the same run's journal, separated in time and both taken before the run exits, return strictly increasing record counts — proving append-as-you-go rather than a single end-of-run flush."
+origin_agent: BrainCandy
+created: 2026-08-25
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

@@ -1,0 +1,98 @@
+id: BO-3600a-2
+title: "The reconciliation states that the two records disagree and never decides which one is wrong"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a raised conflict between an open fault entry and a requirement that reads
+    finished,
+  When the reconciliation reports it,
+  Then the report states that the two records make incompatible claims,
+    And it does not state which of the two is correct,
+    And it does not state which of the two should be changed.
+
+  Given the same raised conflict,
+  When the reconciliation has finished,
+  Then the fault entry is byte-for-byte as it was before the run,
+    And the requirement record is byte-for-byte as it was before the run,
+  So detecting a disagreement never changes either account of it.
+
+  Given a raised conflict in which one of the two records carries a much more
+    recent timestamp than the other,
+  When the reconciliation reports it,
+  Then the more recent record is not presented as the correct one,
+  So recency is not quietly used as an adjudication rule.
+
+  Given a raised conflict,
+  When the report is read,
+  Then it carries enough of both records for a person to decide between them — what
+    each claims, and where each claim can be found,
+  So refusing to adjudicate does not mean refusing to inform.
+depends_on:
+  - BO-3600a
+  - BO-3600a-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600d.yaml
+    relationship: related
+    status: exists
+    relevance: "Where the verdict belongs. Which record was wrong is a human decision with three legitimate answers plus an explicit not-yet-decided; a check that picked a side would either be unimplementable or would pick one silently."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — the eight records it names were flipped back by a person holding the context. A check that had flipped them automatically would have been wrong about at least the ones the handover ticket says should be narrowed instead."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-3600a's notes make this explicit: the check decides that two records disagree
+  and must NOT decide which is right. This record is that instruction expressed as
+  behaviour, because an instruction in a note is not enforceable and a silently
+  picked side is exactly the failure the whole goal exists to prevent — a record
+  changed by something that did not understand it.
+
+  WORDING NOTE (2026-08-26). Two incidental phrases were reworded to stop the
+  declares_side_effect derivation (BO-2900g-2) reading this record as asserting a
+  durable effect. "where each claim is written" became "where each claim can be
+  found", and a Given clause's "was written much more recently" became "carries a
+  much more recent timestamp". Neither changed the meaning: this AC's whole point
+  is that NOTHING is mutated — its second scenario requires both records to be
+  byte-for-byte as they were before the run — so declares_side_effect is correctly
+  absent, i.e. false.
+
+  The derivation was matching on `\bis written\b` and `\bare written\b` inside
+  descriptive prose about where an existing claim lives. Worth knowing, because it
+  is not a wording quirk of this record: the deriver slices from the FIRST "Then"
+  to the END of the criteria, so in a multi-scenario Gherkin block every LATER
+  "Given" clause is scanned too. Its own docstring states that a durable-effect
+  phrase "appearing only in a Given clause does not count" — true for a
+  single-scenario record, false for every multi-scenario one. That is why the
+  third scenario's Given tripped it. Reported separately rather than worked around
+  silently; the reword here is the honest fix for THIS record, not a fix for the
+  deriver.
+
+  The second scenario is the one that makes this checkable without ambiguity: the
+  files are compared before and after. The fourth stops the refusal to adjudicate
+  becoming a refusal to be useful, which is how a detector ends up ignored.
+
+  The third scenario closes the plausible-looking shortcut. Preferring the newer
+  record is an adjudication rule wearing a heuristic's clothes, and in the material
+  behind this goal it would have been wrong: KI-BO-028's own corrections include a
+  register entry that was stale relative to a requirement record, and requirement
+  records that were stale relative to entries.

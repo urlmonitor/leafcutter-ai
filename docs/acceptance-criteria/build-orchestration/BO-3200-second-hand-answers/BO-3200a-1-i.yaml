@@ -1,0 +1,123 @@
+id: BO-3200a-1-i
+title: "The fact resolves correctly when the process is not started from the repository"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a build started from a location that is not the repository — a parent directory that
+    is not itself a repository, and a directory unrelated to the project,
+  When the build resolves a recorded fact about the project,
+  Then it obtains the same correct value it obtains when started from the repository itself.
+
+  Given a build started from a location from which the fact genuinely cannot be located,
+  When it resolves that fact,
+  Then it reports that it could not locate the source, naming the location it looked in, and
+    does not report a value.
+depends_on:
+  - BO-3200a-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018's secondary observation — the probes ran from the untracked workspace parent and the registry read succeeded only incidentally."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Why the developer layout has a populated deployed copy in the workspace parent — the accident that made the incidental success possible."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "USE THE REPOSITORY'S EXISTING ROOT-RESOLUTION HELPER (scripts/path_resolver.py) RATHER THAN A NEW UPWARD WALK. A second resolution strategy is a second place for the layouts to disagree, and the disagreement is invisible in the layout the author happens to develop in."
+  - "RESOLUTION MUST NOT SEARCH UNTIL SOMETHING PLAUSIBLE IS FOUND. A value read from the wrong copy is the same defect as a truncated one, and it fails on a consumer install while succeeding for the author — the deployed-layout trap CLAUDE.md records. The resolver must identify the ONE authoritative source or report not-found."
+  - "NOT-FOUND MUST NAME THE LOCATIONS LOOKED IN and must not report a value. It is BO-3200e's `undetermined`, not a substantive claim about the fact. 'Could not locate the source' and 'the source says no' send a reader to entirely different places."
+  - "THE TEST ENVIRONMENT MUST NOT CONTAIN A DEPLOYED COPY IN THE PARENT. That copy is exactly what made the original relay appear to work; a test run from a parent that happens to hold one reproduces the incidental success and proves nothing."
+  - "Must behave identically for the three layouts this package ships into: the source repository, a git worktree of it, and a consumer install where the package sits in a subdirectory. All three must be exercised."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200a-1
+    contract: "The direct source-read resolver {value, outcome, source_path, looked_in}. This AC constrains how source_path is resolved (via the existing root-resolution helper, never an upward walk from cwd) and requires `looked_in` to be populated and reported on the not-found outcome."
+test_spec:
+  - name: test_bo_3200a_1_i_same_value_from_three_starting_locations
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Resolve the fact with cwd set to (a) the repository, (b) a non-repository parent directory, (c) an unrelated directory, and assert all three return the identical correct value."
+  - name: test_bo_3200a_1_i_parent_holds_no_deployed_copy_during_the_test
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Assert the parent directory used by the previous test contains no deployed copy of the source. Without this the whole suite reproduces the incidental success that made the original defect invisible."
+  - name: test_bo_3200a_1_i_unlocatable_source_reports_where_it_looked
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "From a location where the source genuinely cannot be located, assert the outcome is not-found (BO-3200e's undetermined), that `looked_in` names the searched locations, and that no value is returned."
+  - name: test_bo_3200a_1_i_resolves_identically_in_a_worktree_and_a_consumer_layout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Exercise a git-worktree layout and a consumer-install layout (package in a subdirectory) and assert both resolve to the same authoritative source. The deployed layout is where this defect actually bites."
+test_rationale: |
+  The original defect was an INCIDENTAL success: the read worked only because that particular
+  parent happened to hold a populated deployed copy. Any test run in the developer's layout
+  reproduces that accident and reports green on a resolver that would fail on a consumer
+  install. So the second test asserts the accident is absent, and the fourth exercises the
+  layouts where it bites — a worktree and a consumer install.
+  The not-found test is the honesty half: making the read location-independent by searching
+  until something plausible turns up would pass the first test and silently read the wrong copy,
+  which is the same class of defect as a truncated read.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is KI-BO-018's secondary observation, and it is the reason the relayed read appeared to
+  work at all. The workflow's probes ran with the process location set to the untracked
+  workspace parent rather than the repository — evidenced by a sibling probe in the same run
+  reporting that it was not in a repository, while reading the registry from that same
+  directory succeeded. The registry read succeeded only INCIDENTALLY, because that particular
+  parent happened to hold a populated deployed copy. It would not hold for every layout.
+
+  WHY IT IS ITS OWN CRITERION. Replacing the relay with a direct read inherits the same
+  location assumption unless it is tested against it, and the failure it produces is worse than
+  the one it replaced: an incidental success in the developer's layout and a hard failure on a
+  consumer install, which is the deployed-layout trap CLAUDE.md records for hooks that import
+  undeployed modules. The two starting locations in the first scenario are chosen to break any
+  resolution that walks upward from wherever the process happens to begin.
+
+  THE SECOND SCENARIO KEEPS IT HONEST. Making the read location-independent must not be
+  achieved by searching until something plausible is found — a value read from the wrong copy
+  is the same defect as a truncated one. Not-found must be reported as not-found, which hands
+  off to BO-3200e for how that outcome is expressed.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The "parent holds no deployed copy" assertion is added as
+  its own test rather than left as a fixture convention. In this workspace the parent directory
+  of the repository IS a deployed target (ADR-001's self-hosting boundary), so the accident
+  that hid the original defect is the DEFAULT condition for anyone developing here. A fixture
+  convention would be forgotten; an assertion fails.

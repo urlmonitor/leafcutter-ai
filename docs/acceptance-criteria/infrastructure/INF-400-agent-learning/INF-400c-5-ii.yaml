@@ -1,0 +1,113 @@
+id: INF-400c-5-ii
+components:
+  - infrastructure
+title: "Every entry_kind already in flight has a declared mapping into the canonical vocabulary"
+component: infrastructure
+level: L3
+status: superseded_by
+req_status: superseded
+work_status: todo
+priority: high
+readiness: draft
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-5.yaml"
+criteria: |
+  WITHDRAWN — do not build. Superseded by INF-700c. Reason recorded below and
+  in amended_by; the original text is retained verbatim underneath it so the
+  decision can be audited against what was actually specified.
+
+  Why withdrawn (verified 2026-08-26). This criterion exists to make the 28
+  retained knowledge_captured events routable so they can be drained into
+  knowledge files. Both halves of that premise are false.
+
+  First, the events carry no learning. All 28 have exactly six keys — event,
+  timestamp, agent, component, destination, entry_kind — and there is no text
+  field and there never was one: the emitter contract in signoff section 7
+  step 4 specifies precisely those six fields. The event is a receipt of a
+  write, not a payload. The harvester substitutes
+  f"[{entry_kind}] Learning from {ticket}" when text is absent
+  (scripts/knowledge/harvest_learnings.py line 324) and ticket is absent from
+  all 28, so a successful drain would append 28 content-free strings of the
+  form "[agent-assignment-pattern] Learning from " into curated files.
+
+  Second, the learnings are not missing. Nine of the ten destinations named by
+  the 28 events exist and are substantial (3.6 KB to 23 KB). The busiest,
+  memory/feedback_itpo_agent_assignment_by_surface.md (23 KB, 10 events),
+  opens with "Captured 2026-06-16 during BO-210 / GE-102 technical
+  enrichment" — matching the timestamp, agent (it-po-v3) and destination of
+  the first event exactly. The agents wrote the knowledge inline and then
+  emitted a receipt. Only memory/feedback_itpo_bo1700_worktree_gate_parity.md
+  is absent, and it has never existed in git history.
+
+  So this AC is not withdrawn for being too hard or low value. It is withdrawn
+  because what it recovers is already on disk, and building it actively
+  corrupts nine real knowledge files to buy back at most one lost learning.
+  A legacy mapping over this corpus has no correct output: every canonical
+  kind it could name still routes a contentless record onto a curated page.
+
+  Not affected by this withdrawal: INF-400c-5 (declare one vocabulary) and
+  INF-400c-5-i (normalise separator and case variants) remain valid — they
+  govern emissions made from now on, which is where the vocabulary drift must
+  actually be stopped.
+
+  ---------------------------------------------------------------------------
+  ORIGINAL CRITERIA (retained for audit, no longer to be implemented):
+
+  Given the 28 knowledge_captured events already emitted carry 15 distinct
+    entry_kind values — agent-memory, agent_memory, agent-learning,
+    component-convention, component_convention, component_context,
+    agent-assignment-pattern, framing-note, framing_note,
+    framing-convention, component-framing-note, component_framing_note,
+    framing_decomposition, framing_decomposition_note, and
+    component-decomposition-and-operational-note,
+  And after separator and case normalisation these collapse to 11 distinct
+    values, none of which is a member of the canonical vocabulary,
+  When the legacy mapping is defined,
+  Then a declared mapping exists that names a canonical vocabulary member for
+    each of the 15 observed values,
+  And the mapping is total over those 15: a check enumerates the distinct
+    entry_kind values present in the retained corpus and fails, naming each
+    unmapped value, if any has no entry,
+  And applying the mapping to the 28 retained events yields 28 events whose
+    entry_kind is a canonical vocabulary member and 0 events that are
+    unroutable,
+  And where an observed value is ambiguous, the mapping resolves it using the
+    event's own destination path rather than by guessing from the label, so
+    that an event recorded as written to a file under memory/ maps to the
+    canonical kind whose routing rule writes to memory/,
+  And the mapping is applied on read, leaving the retained events unmodified,
+    so a corrected mapping can be re-applied to the same corpus later.
+depends_on: [INF-400c-5]
+doc_links:
+  - path: docs/architecture/adrs/ADR-034-knowledge-write-ownership.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+it_requirements:
+  - "WITHDRAWN — no implementation is expected. Retained requirements below describe what would have been built."
+  - "The totality check must read the distinct values present in the corpus, not a hardcoded list of 15 — new legacy values must surface as failures rather than pass unnoticed"
+  - "The mapping is a read-time translation layer, not a rewrite of the retained events; replay against a corrected mapping is the reason the corpus is retained"
+  - "This mapping must exist before the harvester is first pointed at the recovered corpus (see INF-400c-4-ii ordering)"
+  - "Must handle errors gracefully per the project error handling policy"
+delivers_to:
+  agent: python-coder
+  contract: "A total legacy-to-canonical entry_kind mapping that the recovery in INF-400c-4-ii depends on being in place before the first drain"
+expects_from:
+  ac_id: INF-400c-5
+  contract: "The declared canonical vocabulary that every legacy value must map into"
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: "Superseded by INF-700c and withdrawn from the build. Evidence gathered 2026-08-26: the 28 retained knowledge_captured events carry no learning text (six keys only — event, timestamp, agent, component, destination, entry_kind — per the signoff section 7 step 4 emitter contract), and 9 of the 10 destinations they name already exist on disk holding the real, substantial learnings the agents wrote inline. Mapping the 15 legacy entry_kind values would therefore not recover knowledge; it would enable the harvester's f\"[{entry_kind}] Learning from {ticket}\" fallback to append 28 content-free placeholder lines into nine curated files (3.6 KB to 23 KB), at a benefit of at most one genuinely lost learning (memory/feedback_itpo_bo1700_worktree_gate_parity.md, which has never existed in git history). Withdrawn because the thing it recovers is already on disk and building it actively corrupts real knowledge files — not because it is difficult. Consequential and left for BA re-decision: INF-400c-4-ii and the permanent non-zero exit from INF-400c-2-ii share the same premise."
+    by: product-owner
+    at: 2026-08-26
+superseded_by:
+  - INF-700c
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

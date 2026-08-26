@@ -180,6 +180,21 @@ def _write_skill_template(tmp_dir: Path, skill_id: str) -> None:
     )
 
 
+def _write_skill_registry(tmp_dir: Path, entries: list[dict]) -> None:
+    """Write minimal config/skill_registry.json into tmp_dir/config/.
+
+    Mirrors ``skill_registry.schema.json``'s required fields (id, name,
+    portable, domain, dependencies) so a fixture entry with
+    ``portable: False`` and no ``template_path`` is schema-shaped, not just
+    a bare dict with an id.
+    """
+    config_dir = tmp_dir / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "skill_registry.json").write_text(
+        json.dumps({"skills": entries}, indent=2)
+    )
+
+
 def _write_stale_deployed_skill(tmp_dir: Path, skill_id: str) -> None:
     """Create a stale .claude/skills/<id>/SKILL.md — simulates a deployed artifact.
 
@@ -245,6 +260,13 @@ class TestUnmarkedUnresolvableFails:
 
         error_count, _warning_count = validator(
             target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
             config={},
             dry_run=False,
             enforcement_level="error",
@@ -311,6 +333,13 @@ class TestDescriptiveOnlyPasses:
 
         error_count, _warning_count = validator(
             target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
             config={},
             dry_run=False,
             enforcement_level="error",
@@ -534,6 +563,13 @@ class TestVerdictIndependentOfStaleDeploy:
 
         error_count_with_stale, _ = validator(
             target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
             config={},
             dry_run=False,
             enforcement_level="error",
@@ -545,6 +581,13 @@ class TestVerdictIndependentOfStaleDeploy:
         # ---- Sub-check (b): WITHOUT stale deployed artifact ----
         error_count_without_stale, _ = validator(
             target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
             config={},
             dry_run=False,
             enforcement_level="error",
@@ -650,6 +693,13 @@ class TestMisTypedMarkerNotExemptedValidator:
 
         error_count, _warning_count = validator(
             target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
             config={},
             dry_run=False,
             enforcement_level="error",
@@ -864,4 +914,501 @@ class TestCheckSkillsInvokedXrefDescriptiveOnly:
             f"(string, not bool), but got warnings: {xref_warnings}. "
             "Only strict bool True (``is True``) must suppress the warning. "
             "A string 'true' is a data entry error and must still trigger the advisory."
+        )
+
+
+# ---------------------------------------------------------------------------
+# BP-1300a-1 / BP-1300a-1-i / BP-1300a-1-ii — Canonical-source-only resolution
+# (ticket 02_bp1300a1_canonical_skill_resolution.md, audit 2026-07-14)
+# ---------------------------------------------------------------------------
+#
+# validate_agent_self_description currently resolves skills_invoked skill_ids
+# against BOTH templates/skills/ (canonical) AND the DEPLOYED .claude/skills/
+# tree (the ``in_project`` leg, around line 1981). A stale local
+# .claude/skills/<id>/ directory therefore masks a genuinely dangling
+# pointer — the verdict differs between a stale local checkout and a fresh
+# CI clone, violating the environment-independence clause of BP-1300a-1.
+#
+# RED/GREEN mapping at time of authoring
+# ----------------------------------------
+# test_ac_bp1300a_1_dangling_pointer_fails_against_canonical
+#     RED — the current message text names the checked project-local
+#     (".claude/skills") path even though that leg must be dropped entirely;
+#     the boolean error_count > 0 assertion alone is already green today
+#     (a fully-absent skill_id with no stale deploy dir already fails), but
+#     the message-content assertion fails until the deployed-path wording is
+#     removed.
+# test_ac_bp1300a_1i_stale_deploy_does_not_mask_real_dangling_pointers
+#     RED — with the stale .claude/skills/direct-write and
+#     .claude/skills/run-tests dirs present, in_project=True for both, so the
+#     current code does NOT flag either as unresolved (error_count == 0).
+# test_ac_bp1300a_1ii_verdict_invariant_to_deployed_artifacts
+#     RED — the current code returns error_count == 0 WITH the stale deployed
+#     artifact present (in_project=True masks it) and error_count > 0
+#     WITHOUT it, so the "with == without" invariance assertion fails.
+#
+# What python-coder must implement to make these green:
+#     In validate_agent_self_description (scripts/build_phases.py), inside
+#     the ``for inv in skills_invoked:`` loop, drop the ``in_project`` leg
+#     entirely:
+#
+#         in_package = (package_skills_dir / skill_id).exists()
+#         if not in_package:
+#             problems.append(...)   # message must not reference .claude/skills
+#
+#     Per the ticket body, canonical source is "templates/skills plus the
+#     registry" — if the fix also consults config/skill_registry.json as a
+#     second canonical-source leg, that is additive and does not change any
+#     assertion here (none of the fixture skill_ids in these tests are
+#     registered in config/skill_registry.json).
+# ---------------------------------------------------------------------------
+
+
+class TestCanonicalSourceOnlyResolution:
+    """BP-1300a-1 / -1-i / -1-ii: resolve skill_id against canonical source only."""
+
+    def test_ac_bp1300a_1_dangling_pointer_fails_against_canonical(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # covers: BP-1300a-1
+        """BP-1300a-1: a skill_id absent from templates/skills + registry fails
+        the build, naming the id and the referencing entry.
+
+        Given the registry references a skill_id in a skills_invoked entry,
+            and no skill with that id exists in the canonical source
+            (templates/skills plus the registry),
+        When the build's skill-pointer check runs,
+        Then the build fails with a non-zero error_count,
+        And the failure names the dangling skill_id and the registry entry
+            that referenced it.
+
+        Also locks the canonical-only resolution source: the failure message
+        must not claim to have checked a DEPLOYED .claude/skills/ path — that
+        leg must be dropped entirely per BP-1300a-1-ii, not merely no longer
+        consulted while still being named in the message text.
+        """
+        validator = _require_validator()
+        agent_name = "fake-agent"
+        fm = dict(_FULL_FRONTMATTER)
+        fm["name"] = agent_name
+
+        registry_entry = {
+            "id": agent_name,
+            "category": "implementation",
+            "skills_invoked": [
+                {"skill_id": "canonical-only-dangling-xyz", "mode": "always"},
+            ],
+            "knowledge_channels": [{"channel": 1, "source": "template description"}],
+        }
+
+        _write_agent_template(tmp_path, agent_name, fm)
+        _write_registry(tmp_path, [registry_entry])
+        # No templates/skills/canonical-only-dangling-xyz/ dir, and no entry
+        # for it in config/skill_registry.json — genuinely absent from the
+        # canonical source.
+
+        error_count, _warning_count = validator(
+            target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+        captured = capsys.readouterr()
+
+        assert error_count > 0, (
+            "Expected the build to fail (error_count > 0) for a skill_id absent "
+            "from templates/skills + the registry, "
+            f"but got error_count={error_count}."
+        )
+        assert agent_name in captured.out and "canonical-only-dangling-xyz" in captured.out, (
+            "Expected the failure to name both the dangling skill_id "
+            "'canonical-only-dangling-xyz' and the referencing registry entry "
+            f"'{agent_name}'. Captured output:\n{captured.out}"
+        )
+        assert ".claude/skills" not in captured.out, (
+            "The failure message still references the DEPLOYED .claude/skills/ "
+            "path. Per BP-1300a-1-ii the deployed tree must be dropped entirely "
+            "from skill-pointer resolution — the message must describe only the "
+            "canonical source (templates/skills/ + the registry), not a leg "
+            "that is no longer consulted. Captured output:\n" + captured.out
+        )
+
+    def test_ac_bp1300a_1i_stale_deploy_does_not_mask_real_dangling_pointers(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # covers: BP-1300a-1-i
+        """BP-1300a-1-i: documentation-expert->direct-write and python-coder->
+        run-tests both fail even when a stale deployed .claude/skills tree
+        resolves them; both are named.
+
+        Given the registry references skill pointers documentation-expert ->
+            direct-write and python-coder -> run-tests, neither of which
+            resolves in the canonical source, while a stale deployed
+            .claude/skills tree happens to resolve them,
+        When the build's skill-pointer check runs against the canonical
+            source,
+        Then the build fails with a non-zero error_count,
+        And the failure names both dangling pointers.
+
+        Reproduces the real finding from the ticket's remediation context:
+        documentation-expert->direct-write and python-coder->run-tests error
+        in CI (no deployed tree) but pass on a stale local deployment
+        (in_project resolves True). These fixture entries are constructed
+        WITHOUT descriptive_only so they exercise the plain
+        unresolvable-pointer path this AC targets — the real registry already
+        carries descriptive_only: true for both (see
+        TICKET-20260708-BP-1300a-descriptive-skills.md), so this test
+        reproduces the audited scenario with a synthetic registry rather than
+        asserting against the current, already-remediated real one.
+        """
+        validator = _require_validator()
+
+        de_fm = dict(_FULL_FRONTMATTER)
+        de_fm["name"] = "documentation-expert"
+        pc_fm = dict(_FULL_FRONTMATTER)
+        pc_fm["name"] = "python-coder"
+
+        registry_entries = [
+            {
+                "id": "documentation-expert",
+                "category": "implementation",
+                "skills_invoked": [
+                    {"skill_id": "direct-write", "mode": "conditional"},
+                ],
+                "knowledge_channels": [{"channel": 1, "source": "template description"}],
+            },
+            {
+                "id": "python-coder",
+                "category": "implementation",
+                "skills_invoked": [
+                    {"skill_id": "run-tests", "mode": "conditional"},
+                ],
+                "knowledge_channels": [{"channel": 1, "source": "template description"}],
+            },
+        ]
+
+        _write_agent_template(tmp_path, "documentation-expert", de_fm)
+        _write_agent_template(tmp_path, "python-coder", pc_fm)
+        _write_registry(tmp_path, registry_entries)
+        # No templates/skills/direct-write/ or templates/skills/run-tests/ —
+        # genuinely absent from the canonical source.
+
+        # Stale deployed tree that WOULD resolve both under the old
+        # in_project check.
+        _write_stale_deployed_skill(tmp_path, "direct-write")
+        _write_stale_deployed_skill(tmp_path, "run-tests")
+
+        error_count, _warning_count = validator(
+            target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+        captured = capsys.readouterr()
+
+        assert error_count > 0, (
+            "Expected the build to fail for documentation-expert->direct-write "
+            "and python-coder->run-tests even with a stale deployed "
+            ".claude/skills tree present, "
+            f"but got error_count={error_count}. The validator is still "
+            "resolving against the deployed tree instead of the canonical "
+            "source only."
+        )
+        assert "direct-write" in captured.out, (
+            "Expected the failure to name the dangling 'direct-write' pointer. "
+            f"Captured output:\n{captured.out}"
+        )
+        assert "run-tests" in captured.out, (
+            "Expected the failure to name the dangling 'run-tests' pointer. "
+            f"Captured output:\n{captured.out}"
+        )
+
+    def test_ac_bp1300a_1ii_verdict_invariant_to_deployed_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BP-1300a-1-ii
+        """BP-1300a-1-ii: adding or removing the deployed .claude/skills
+        artifact does not change the unresolved verdict.
+
+        Given a skill_id that does not exist in the canonical source but a
+            matching stale artifact is present in the deployed .claude/skills
+            tree,
+        When the build's skill-pointer check runs,
+        Then the check ignores the deployed .claude/skills artifact and still
+            reports the skill_id as unresolved,
+        And the build fails,
+        And removing or adding the deployed artifact does not change the
+            verdict.
+        """
+        validator = _require_validator()
+        agent_name = "fake-agent"
+        fm = dict(_FULL_FRONTMATTER)
+        fm["name"] = agent_name
+
+        registry_entry = {
+            "id": agent_name,
+            "category": "implementation",
+            "skills_invoked": [
+                {"skill_id": "invariant-check-dangling-xyz", "mode": "always"},
+            ],
+            "knowledge_channels": [{"channel": 1, "source": "template description"}],
+        }
+
+        _write_agent_template(tmp_path, agent_name, fm)
+        _write_registry(tmp_path, [registry_entry])
+        # No templates/skills/invariant-check-dangling-xyz/ dir.
+
+        # ---- Sub-check (a): WITHOUT stale deployed artifact ----
+        error_count_without_stale, _ = validator(
+            target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+
+        # ---- Sub-check (b): WITH stale deployed artifact ----
+        _write_stale_deployed_skill(tmp_path, "invariant-check-dangling-xyz")
+
+        error_count_with_stale, _ = validator(
+            target_root=tmp_path,
+            # The fixture package IS tmp_path. Passed explicitly because the
+            # validator no longer derives its template/registry paths from
+            # target_root: doing so made the verdict depend on how the build
+            # was invoked, and in the repo's own ./build-self.sh layout
+            # (target_root = the parent workspace) it examined zero agents and
+            # reported "all agents pass" (BP-1300a-1).
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+
+        assert error_count_without_stale > 0, (
+            "Expected error_count > 0 without any deployed artifact for a "
+            "genuinely dangling skill_id, "
+            f"but got error_count={error_count_without_stale}."
+        )
+        assert error_count_with_stale > 0, (
+            "Expected error_count > 0 even WITH a stale deployed "
+            ".claude/skills/invariant-check-dangling-xyz/ artifact present — "
+            "the deployed tree must not be consulted for resolution, "
+            f"but got error_count={error_count_with_stale}. The validator is "
+            "still resolving against the deployed .claude/skills tree "
+            "(the in_project leg) instead of the canonical source only."
+        )
+        assert error_count_with_stale == error_count_without_stale, (
+            "Verdict changed when the deployed artifact was added — "
+            f"without={error_count_without_stale}, with={error_count_with_stale}. "
+            "Adding or removing a deployed .claude/skills/ artifact must not "
+            "change the unresolved verdict for a skill_id absent from the "
+            "canonical source."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Registry-declared-without-template skills — BP-1300a-1's literal wording
+# ("canonical source (templates/skills plus the registry)")
+# ---------------------------------------------------------------------------
+#
+# An adversarial review found that validate_agent_self_description resolved
+# skills_invoked skill_ids against templates/skills/<id>/ ONLY — never
+# consulting config/skill_registry.json. skill_registry.schema.json explicitly
+# permits a registry entry with portable: false and no template_path (a
+# domain-specific skill deployed only under .claude/skills, with no
+# templates/skills/<id>/ directory by design). Before this fix, an agent
+# whose skills_invoked named such a skill was falsely flagged as dangling.
+#
+# This class pins the chosen remediation (Option A from the adversarial
+# review — implement the AC criteria literally): resolve against
+# templates/skills/<id>/ OR a matching id in config/skill_registry.json.
+
+
+class TestRegistryDeclaredWithoutTemplateResolves:
+    """BP-1300a-1: a skill declared only in skill_registry.json (no template
+    directory) must resolve — not be reported as a dangling skill_id."""
+
+    def test_registry_declared_skill_without_template_resolves(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BP-1300a-1
+        """Given a skills_invoked entry naming a skill_id that has NO
+        templates/skills/<id>/ directory but DOES have a matching entry in
+        config/skill_registry.json (portable: false, no template_path — the
+        shape skill_registry.schema.json permits for a domain-specific skill
+        deployed only under .claude/skills),
+        When validate_agent_self_description runs in error mode,
+        Then error_count == 0 — the registry entry satisfies BP-1300a-1's
+        canonical source ("templates/skills plus the registry"), so the
+        skill_id is not reported as dangling.
+        """
+        validator = _require_validator()
+        agent_name = "fake-agent"
+        fm = dict(_FULL_FRONTMATTER)
+        fm["name"] = agent_name
+
+        registry_entry = {
+            "id": agent_name,
+            "category": "implementation",
+            "skills_invoked": [
+                {"skill_id": "rdk-db", "mode": "conditional"},
+            ],
+            "knowledge_channels": [{"channel": 1, "source": "template description"}],
+        }
+
+        _write_agent_template(tmp_path, agent_name, fm)
+        _write_registry(tmp_path, [registry_entry])
+        _write_skill_registry(
+            tmp_path,
+            [
+                {
+                    "id": "rdk-db",
+                    "name": "RDK DB",
+                    "portable": False,
+                    "domain": "rdk",
+                    "dependencies": [],
+                }
+            ],
+        )
+        # Intentionally: NO templates/skills/rdk-db/ directory — this skill
+        # is declared only in the registry, per its portable: false shape.
+
+        error_count, _warning_count = validator(
+            target_root=tmp_path,
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+
+        assert error_count == 0, (
+            "Expected validator NOT to flag skill_id 'rdk-db' — it is declared "
+            f"in config/skill_registry.json, but got error_count={error_count}. "
+            "BP-1300a-1's canonical source is 'templates/skills plus the "
+            "registry'; a registry-only entry (portable: false, no "
+            "template_path) must resolve."
+        )
+
+    def test_skill_absent_from_both_templates_and_registry_still_fails(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BP-1300a-1
+        """Regression guard for the OR logic: a skill_id present in NEITHER
+        templates/skills/ NOR config/skill_registry.json must still fail.
+
+        Guards against an over-broad fix that stops checking the disk-dir
+        leg entirely, or that treats an empty/unrelated registry as always
+        resolving.
+        """
+        validator = _require_validator()
+        agent_name = "fake-agent"
+        fm = dict(_FULL_FRONTMATTER)
+        fm["name"] = agent_name
+
+        registry_entry = {
+            "id": agent_name,
+            "category": "implementation",
+            "skills_invoked": [
+                {"skill_id": "genuinely-nowhere-xyz", "mode": "always"},
+            ],
+            "knowledge_channels": [{"channel": 1, "source": "template description"}],
+        }
+
+        _write_agent_template(tmp_path, agent_name, fm)
+        _write_registry(tmp_path, [registry_entry])
+        # A skill_registry.json exists but lists an unrelated skill —
+        # 'genuinely-nowhere-xyz' is not in it, and has no templates/skills/ dir.
+        _write_skill_registry(
+            tmp_path,
+            [
+                {
+                    "id": "some-other-skill",
+                    "name": "Some Other Skill",
+                    "portable": True,
+                    "domain": None,
+                    "dependencies": [],
+                }
+            ],
+        )
+
+        error_count, _warning_count = validator(
+            target_root=tmp_path,
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+
+        assert error_count > 0, (
+            "Expected validator to flag 'genuinely-nowhere-xyz' — absent from "
+            "both templates/skills/ and config/skill_registry.json — but got "
+            f"error_count={error_count}. The registry leg must not exempt "
+            "skill_ids it does not actually declare."
+        )
+
+    def test_missing_skill_registry_file_does_not_crash_and_still_flags(
+        self, tmp_path: Path
+    ) -> None:
+        # covers: BP-1300a-1
+        """The registry leg must degrade gracefully when skill_registry.json
+        is absent — no crash, and disk-dir resolution still governs.
+
+        Given no config/skill_registry.json exists at all,
+        When validate_agent_self_description runs on a skills_invoked entry
+        with no matching templates/skills/<id>/ directory,
+        Then the validator does not raise, and the skill_id is still flagged
+        as unresolvable (the registry leg contributes zero extra ids, it
+        does not fail open).
+        """
+        validator = _require_validator()
+        agent_name = "fake-agent"
+        fm = dict(_FULL_FRONTMATTER)
+        fm["name"] = agent_name
+
+        registry_entry = {
+            "id": agent_name,
+            "category": "implementation",
+            "skills_invoked": [
+                {"skill_id": "no-registry-file-xyz", "mode": "always"},
+            ],
+            "knowledge_channels": [{"channel": 1, "source": "template description"}],
+        }
+
+        _write_agent_template(tmp_path, agent_name, fm)
+        _write_registry(tmp_path, [registry_entry])
+        # Deliberately: no config/skill_registry.json written at all.
+
+        error_count, _warning_count = validator(
+            target_root=tmp_path,
+            package_root=tmp_path,
+            config={},
+            dry_run=False,
+            enforcement_level="error",
+        )
+
+        assert error_count > 0, (
+            "Expected validator to flag 'no-registry-file-xyz' when "
+            "config/skill_registry.json does not exist at all, "
+            f"but got error_count={error_count}. A missing registry file must "
+            "not be treated as 'everything resolves'."
         )

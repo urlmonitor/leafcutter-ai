@@ -1,0 +1,161 @@
+id: BO-3100c-2
+title: "No entry point reaches a specialist that coordinates other specialists, and a surviving one fails even when the new path works"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every entry point through which work can be driven,
+  When each is executed to completion over a small piece of real work,
+  Then the record of what dispatched what contains no dispatch whose source is a specialist,
+    And every dispatch's source is a layer that holds the dispatched step's result before
+    continuing.
+
+  Given the same system with one previously-retired coordinating specialist restored and
+    reachable from one entry point, while the relocated coordination continues to work
+    correctly for every other entry point,
+  When every entry point is executed,
+  Then the run through the restored coordinator is reported as violating the arrangement and
+    names that coordinator,
+    And the fact that the relocated coordination works elsewhere does not suppress the report.
+
+  Given an entry point that drives no work because there is nothing to do,
+  When it is executed,
+  Then it is reported as having been examined, so an entry point that could not be exercised
+    is distinguishable from one that was exercised and found clean.
+depends_on:
+  - BO-3100c
+  - BO-3100c-1
+doc_links:
+  - path: docs/architecture/components/supervisor-spawn-topology.md
+    relationship: modifies
+    status: exists
+    relevance: "The record of who may dispatch whom; the sweep enforces what this page describes."
+  - path: docs/architecture/diagrams/c1-001-command-map.md
+    relationship: describes
+    status: exists
+    relevance: "The entry points the sweep must cover — the set must be derived, not copied from here."
+  - path: docs/known-issues/supervisor-system.md
+    relationship: describes
+    status: exists
+    relevance: "KI-SS-001 — the coordinating specialists this sweep verifies are gone, and why absence must be checked rather than assumed."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THE SWEEP OBSERVES A RUN; IT DOES NOT INVENTORY THE SOURCE TREE. Its input is the runtime dispatch record produced by BO-3100c-1 during an actual execution. No part of it may search the sources for coordinating constructs, agent names, or dispatch call sites. A source scan gives wrong answers in BOTH directions — it misses a coordinator reached through an indirection, and it reports one that exists but is never reached. This is a hard boundary and BO-3100c-2-i's second scenario exists to hold it; an it_requirement that reintroduces a grep to 'improve coverage' violates both ACs."
+  - "THE ENTRY-POINT SET MUST BE DERIVED FROM THE DEPLOYED SURFACE, not hard-coded in the sweep. Enumerate what a consumer can actually invoke (the deployed command and workflow surface) so an entry point added later is swept without editing the sweep. A hard-coded list passes on the day it lands, which is exactly how the prompt-level fix rotted."
+  - "EVERY ENTRY POINT MUST BE ACCOUNTED FOR IN THE REPORT, with one of three states per entry point: exercised-and-clean, exercised-and-violating, or not-exercised. A silently skipped entry point reports clean while covering a shrinking fraction of the surface — the AC-store validator's zero-file pass (KI-ACS-001) in another guise. A sweep in which every entry point is not-exercised must FAIL, not pass."
+  - "A VIOLATION MUST NOT BE SUPPRESSED BY SUCCESS ELSEWHERE. The verdict is per entry point and the report is an aggregate; there must be no early return on first-clean, no 'majority clean' summarisation, and no de-duplication that collapses several violating entry points into one line."
+  - "The report must NAME the offending coordinator and the entry point that reached it. 'A violation was found' starts the diagnosis from nothing — the misdirection cost KI-BO-018 records."
+  - "'A layer that holds the result before continuing' must be read from the dispatch record's own field, set by the runtime at dispatch time. Inferring it from the source, or from whether the layer is a workflow, would make the check structural again."
+  - "The small piece of real work each entry point is executed over must be a real artifact of the kind that entry point processes, not a synthetic stub — per CLAUDE.md 'Real-artifact behavioral spot-check'. A stub reproduces the author's assumption about the dispatch shape."
+  - "Runtime budget: the full sweep across all entry points must fit inside a CI job. If it cannot, split it by entry point in CI — but never narrow the set, and never let a skipped entry point report as clean."
+delivers_to:
+  - agent: python-coder
+    contract: "A sweep report: {entry_points: [{name: str, state: 'exercised_clean' | 'exercised_violating' | 'not_exercised', violations: [{coordinator: str, dispatch_id: str}]}], total: int}. BO-3100c-2-i re-runs this sweep unmodified against a changed agent population; BO-3100d-3's third scenario uses it as the arbiter for the documentation's guidance."
+  - agent: reference-author
+    contract: "The sweep's pass/fail rule, expressed as the same discriminating question an author can apply to their own design, so BO-3100d-3's guidance and this enforcement cannot diverge."
+expects_from:
+  - ac_id: BO-3100c-1
+    contract: "The per-dispatch runtime record {dispatch_id, source, target_step, result_held_before_continuing, received_kind}, emitted for every dispatch of a real drive. The sweep's entire input; it reads nothing else about the system."
+test_spec:
+  - name: test_bo_3100c_2_no_dispatch_originates_from_a_specialist
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Execute every derived entry point over a small real work item under run_workflow_under_e2, collect the dispatch records, and assert no record has a specialist as its source and every record has result_held_before_continuing true."
+  - name: test_bo_3100c_2_restored_coordinator_is_reported_despite_other_entry_points_passing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE PARTIAL-FIX TEST. Restore one coordinating specialist reachable from exactly one entry point while all others stay correct; run the sweep and assert that entry point is reported as violating, the coordinator is named, and the report is not suppressed or summarised away by the other entry points' success."
+  - name: test_bo_3100c_2_entry_point_with_nothing_to_do_reports_as_examined
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An entry point driven with no work available is reported with an explicit state distinguishing 'could not be exercised' from 'exercised and clean' — the report must never render the two the same way."
+  - name: test_bo_3100c_2_sweep_that_exercises_nothing_fails
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A sweep in which no entry point could be exercised exits non-zero rather than reporting clean. Guards the KI-ACS-001 zero-input pass, committed by the very instrument that prevents it."
+  - name: test_bo_3100c_2_entry_point_set_is_derived_not_hard_coded
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Add a new entry point to the deployed surface fixture and re-run the sweep unmodified; assert it appears in the report. A hard-coded list fails here."
+  - name: test_bo_3100c_2_sweep_reads_no_source_files
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "THE BOUNDARY GUARD. Run the sweep with the dispatch record supplied and the source tree made unreadable (or with source reads instrumented) and assert it still produces its verdict without reading any source file. Locks in the observe-don't-inventory constraint so a later 'improvement' to a grep fails a test rather than passing review."
+test_rationale: |
+  This AC's own notes rule out the cheap coverage: a search of the sources passes on a
+  coordinator reached through an indirection and fails on one that exists but is unreachable.
+  So every test here drives real entry points and asserts on the RUNTIME dispatch record. The
+  fast-lane precedent in CLAUDE.md is the reference case — a runner passed its grep-only
+  structural tests while never executing its gates.
+  Two tests exist purely to keep the instrument honest. The zero-exercised test guards the
+  sweep against committing the failure it detects (KI-ACS-001). The no-source-reads test exists
+  because "do not grep" is otherwise a comment that a future contributor can delete without
+  anything failing; BO-3100c-2-i's second scenario depends on that boundary holding, and this
+  is what makes it mechanical.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements (incl. an explicit no-source-scan
+    boundary), delivers_to/expects_from, doc_links, test_spec/test_rationale, change_target/risk_surface.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by:
+  - BO-3100c-2-i
+implemented_by: []
+notes: |
+  THIS AC EXISTS BECAUSE OF THE PARENT L1'S EXPLICIT DECOMPOSITION WARNING: "the remaining
+  coordinators are retired must be verified by ABSENCE across the whole system, not by the
+  presence of the new path. A test asserting the new coordinator works is satisfied by a repo
+  that still contains five old ones." The second scenario is that warning turned into a
+  falsifiable case — it is written so that any implementation which only checks the new path
+  fails it.
+
+  The parent also states that retiring the remaining coordinators is part of this criterion,
+  not a follow-up: "a relocation that leaves the old path in place has not removed anything."
+
+  THE SWEEP MUST EXECUTE, NOT READ. The record of what dispatched what is a runtime
+  observation of a real drive. A search of the sources for coordinating constructs passes on
+  a coordinator that is reached through an indirection and fails on one that exists but is
+  unreachable — both wrong answers. CLAUDE.md's fast-lane precedent is the reference case: a
+  runner passed its grep-only structural tests while never executing its gates.
+
+  THE THIRD SCENARIO GUARDS THE SWEEP ITSELF. An entry point that silently exercises nothing
+  reports clean, which is the AC-store validator's zero-file no-op (KI-ACS-001) in another
+  guise — a success-shaped result from a run that checked nothing.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). The no-source-scan boundary is now an it_requirement AND
+  a test, not just a note. It was previously stated only in prose here and in BO-3100c-2-i,
+  which means the next person to want better coverage could add a grep and break BO-3100c-2-i's
+  second scenario without anything failing. The test that asserts the sweep produces its
+  verdict with the source tree unreadable is what makes the boundary hold.

@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-1.yaml"
 criteria: |
   Given a deployed command whose handoff references a workflow BY NAME, such as
@@ -43,5 +43,7 @@ origin_agent: business-analyst
 created: 2026-07-07
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_command_reachability_guard.py::TestNameFormRegistryTargetPasses
+implemented_by:
+  - scripts/build_phases.py

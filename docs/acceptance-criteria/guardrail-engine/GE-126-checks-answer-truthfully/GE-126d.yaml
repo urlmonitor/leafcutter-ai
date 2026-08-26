@@ -1,0 +1,105 @@
+id: GE-126d
+title: "Registering a new check is complete or you are told what is missing"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Follow the procedure to the end and your new check is fully wired in.
+
+  The written procedure for adding a check lists every place it has to be
+  registered, and the parity check that confirms registration knows about every
+  one of them. Leaving a place out is a deliberate choice you record rather than
+  an omission you never learn about.
+depends_on:
+  - GE-126
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-020 names the fourth leg, quotes the seven-entry allowlist, quotes the SKILL.md step that states the consequence, and records the BP-1100b-5 case where a fully-specified AC still ships a gate the autofix loop ignores."
+  - path: templates/skills/create-hook/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/precommit-autofix.json
+    relationship: related
+    status: exists
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: context
+    status: exists
+    relevance: "Step 4 states the consequence of absence from blocking_hook_ids: the hook is non-gating, skip it entirely, do not dispatch any fixer."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: context
+    status: exists
+    relevance: "Precedent for the shape wanted here — a roster made data while staying closed. The allowlist is a legitimate design; only its invisibility is the defect."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100b-5.yaml
+    relationship: context
+    status: exists
+    relevance: "An approved AC specifying a new check whose registration spec covers three legs and not the fourth. It is the worked example of the gap and will need amending or a knowing acceptance when it is built. Do not edit it from this tree."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-126d-1
+  - GE-126d-2
+  - GE-126d-3
+  - GE-126d-4
+  - GE-126d-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE ALLOWLIST IS NOT THE DEFECT. Not every check should have a fixer dispatched
+  at it, and a closed roster is the right design. The defect is that it is a
+  fourth leg of registration documented nowhere in the procedure that exists to
+  enumerate the legs — so an author can complete the documented procedure, watch
+  check_hook_parity pass, and land a check outside the loop with nothing
+  reporting the omission. Any L2 that proposes opening the allowlist or
+  defaulting new checks into it has misread this record.
+
+  THE SYMPTOM IS REDUCED PROTECTION RATHER THAN A FALSE PASS, AND THAT IS WHY IT
+  IS HERE ANYWAY. An omitted check still blocks the commit; it simply gets no
+  autofix attempt, so the cost is friction. It belongs under this goal because
+  the false answer is at the interrogation surface: "is my new check properly
+  registered" is answered yes by a complete-looking procedure and a green parity
+  check, and the answer is wrong. That is this goal's shape exactly — an
+  enumeration everyone trusts that is missing an item.
+
+  REUSE ACS-100i-9's SHAPE — this is the same problem it solved. One list, read
+  by both the procedure and the parity check, with one message format so the two
+  are identical rather than merely similar, and explicitly no second copy of the
+  legs written into the procedure text as prose. If the procedure enumerates the
+  legs in its own words and the parity check enumerates them in code, a fifth leg
+  will drift apart from the documentation the same way the fourth did.
+
+  THE REPORT IS A WARNING WITH A ROUTE, NOT A HARD FAILURE. Exclusion is
+  legitimate, so a check present in the manifest and absent from the allowlist
+  must be reported by name alongside the deliberate-exclusion route rather than
+  blocked. Decide at L2 what recording a deliberate exclusion looks like; the
+  criterion is that the choice becomes explicit, not that it becomes forbidden.
+
+  THE ACCEPTANCE SHAPE IS THE OMISSION, NOT THE PROCEDURE TEXT. A test asserting
+  that the procedure document mentions a fourth step passes on a sentence nobody
+  reads. Register a fixture check the documented way while omitting the fourth
+  leg and require the parity check to name it; register one that records a
+  deliberate exclusion and require the parity check to stay quiet. Then confirm
+  the seven checks currently on the allowlist are unaffected — they are the
+  regression boundary.
+
+  BP-1100b-5 IS NAMED AND IS NOT IN SCOPE. It is the worked example and it will
+  need amending or a knowing acceptance when it is built. Do not edit it from
+  this tree and do not add a depends_on edge to it — this record does not gate
+  that one.

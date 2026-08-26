@@ -28,6 +28,22 @@ HARDENING (ticket 08):
       node --check --input-type=module (ES-module parse mode), which rejects
       top-level `return` statements unlike node --check (script mode).
 
+ENGINE FIDELITY (BP-1100b-4): the workflow body under test now executes inside
+    a Node `vm` context (see `_JS_SHIM_TEMPLATE`) contextified with EXACTLY the
+    globals the real E2 engine injects (agent, parallel, pipeline, phase, log,
+    args, workflow, budget), per ADR-030 / docs/reference/workflow-authoring-
+    contract.md. `console` is also exposed as a deliberate, documented
+    back-compat exception (see the shim's inline comment) — it is not part of
+    the ADR-030 contract but several already-shipped, non-offending workflow
+    scripts reference it, and re-sandboxing it is out of this AC's scope. No
+    module loader (`require`, `module`, `exports`) and no process/filesystem
+    primitive (`process`, `__dirname`, `__filename`) is reachable from the
+    sandboxed body — referencing any of them throws a ReferenceError, exactly
+    as the real engine does. The harness DRIVER code (this file's own
+    generated shim, outside the vm context) still runs as a plain Node.js
+    module and keeps full `require`/`process` access — only the target
+    script's body is sandboxed.
+
 BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
     - plan-feature.js dispatches an unconditional "resolve-workspace-setup-
       permission" agent() call before Stage 0 on every invocation, and its
@@ -42,6 +58,15 @@ BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
       a sane "permitted" default for that gate without having to know about it,
       while a test that deliberately wants to exercise the denial path still
       overrides the label explicitly (caller-supplied keys always win).
+
+BO-2400f-12 (2026-08-25): the same script-specific-default mechanism now also
+    covers fast-lane-ship.js's unconditional "check-producibility" dispatch —
+    a fail-closed producibility-guard gate added between Resolve and the claim
+    step. Every pre-existing caller of fast-lane-ship.js gets a real
+    {"producible": true, "unproducible": []} default so its claim/test-writer/
+    coder dispatch assertions are unaffected by the new gate; a test that wants
+    to exercise the refusal path overrides the "check-producibility" label
+    explicitly (see unit_tests/workflows/test_bo2400f_12_refusal_workflow.py).
 """
 
 from __future__ import annotations
@@ -160,12 +185,19 @@ class E1CheckResult:
 # ---------------------------------------------------------------------------
 
 # The shim:
-#   1. Defines recording mock globals (agent, parallel, phase, log, args).
+#   1. Defines recording mock globals (agent, parallel, pipeline, phase, log,
+#      args, workflow, budget).
 #   2. Strips `export` keywords from the target script source.
 #   3. Wraps the target content in an async IIFE to handle top-level
 #      `return` and `await` — mirrors how the E2 engine treats scripts.
-#   4. Runs the async wrapper and serialises captured agent() calls and
-#      contract violations to JSON on stdout.
+#   4. Runs the async wrapper INSIDE a Node `vm` context contextified with
+#      ONLY the mock globals above (plus `console`, a documented back-compat
+#      exception — see the module docstring) so the target script body cannot
+#      reach `require`, `module`, `exports`, `process`, `__dirname`, or
+#      `__filename` (BP-1100b-4: engine-fidelity hardening).
+#   5. Runs the async wrapper and serialises captured agent() calls and
+#      contract violations to JSON on stdout — from the OUTER (unsandboxed)
+#      driver scope, which still has full Node.js access.
 #
 # Hardening changes (ticket 08):
 #   - __contractViolations__ array records harness-layer contract breaches.
@@ -173,11 +205,25 @@ class E1CheckResult:
 #     A non-array (spread-form) first argument records a violation and returns [].
 #   - agent() checks __labelResponses__ before falling back to the default stub.
 #   - Output format changed to {calls: [...], violations: [...]} (was a bare list).
+#
+# Hardening changes (BP-1100b-4):
+#   - The target script body now runs inside a Node `vm` context, not as a
+#     plain CommonJS module. Only agent/parallel/pipeline/phase/log/args/
+#     workflow/budget/console are contextified into it.
+#   - Added `pipeline()` (sequential agent-call executor, same
+#     contract-violation shape as `parallel()` for a non-array argument),
+#     `workflow()` (throws — E2 leaf-invariant guard), and `budget` (read-only
+#     stub object) to match the full ADR-030 injected-globals set.
+#   - Error handling for the sandboxed body moved OUTSIDE the vm context (the
+#     driver scope owns `process.stderr`/`process.stdout`; the sandboxed body
+#     itself has no `process` reference at all).
 
 _JS_SHIM_TEMPLATE = r"""
 'use strict';
 
-// ─── Recording state ──────────────────────────────────────────────────────────
+const vm = require('vm');
+
+// ─── Recording state (driver scope — NOT contextified into the sandbox) ───────
 const __capturedCalls__ = [];
 const __contractViolations__ = [];
 
@@ -305,6 +351,43 @@ async function parallel(thunksArg, ...rest) {
 }
 
 /**
+ * pipeline() — sequential agent-call executor (E2 primitive; same interface
+ * on E1 and E2 per docs/reference/workflow-authoring-contract.md #4). Takes a
+ * single ARRAY of zero-arg thunks, same contract as parallel() but executes
+ * them one at a time, in order, and returns their results in order.
+ *
+ * A non-array first argument is treated as the same class of contract
+ * violation as parallel()'s spread-form defect, for consistency.
+ */
+async function pipeline(stepsArg, ...rest) {
+  if (!Array.isArray(stepsArg)) {
+    __contractViolations__.push({
+      type: 'pipeline-non-array',
+      received_type: typeof stepsArg,
+      rest_args_count: rest.length,
+      detail: (
+        'pipeline() must receive an array of zero-arg thunks as its sole ' +
+        'argument (E2 API contract: pipeline([() => agent(...), ...])).'
+      ),
+    });
+    return [];
+  }
+
+  var results = [];
+  for (var i = 0; i < stepsArg.length; i++) {
+    var step = stepsArg[i];
+    if (typeof step === 'function') {
+      try {
+        results.push(await step());
+      } catch (_err) {
+        results.push(null);
+      }
+    }
+  }
+  return results;
+}
+
+/**
  * phase() — two-arity form: phase(name, fn) calls fn(); single-arity form:
  * phase(name) is a label-only no-op (quick-fix.js style).
  */
@@ -316,6 +399,29 @@ async function phase(name, fn) {
 
 /** log() — no-op in the stub. */
 function log(msg) { /* stub */ }
+
+/**
+ * workflow() — E2 leaf-invariant guard. In the real E2 engine, calling
+ * workflow() from inside a running workflow throws, because the script IS
+ * the workflow (see docs/reference/workflow-authoring-contract.md #5,
+ * ADR-030). The mock reproduces the throw so a script's engine-detection
+ * IIFE (`try { workflow(); return false } catch (_) { return true }`)
+ * correctly resolves to "this is an E2 host" under the harness too.
+ */
+function workflow() {
+  throw new Error(
+    'workflow() cannot be called from within a running workflow ' +
+    '(E2 leaf-invariant guard — see ADR-030).'
+  );
+}
+
+/**
+ * budget — read-only token/cost budget stub object (E2-only global; see
+ * docs/reference/workflow-authoring-contract.md #4/#6). No workflow script
+ * in this repo currently reads a specific shape from it, so the stub only
+ * needs to be a reachable, frozen object.
+ */
+var budget = Object.freeze({ tokens_used: 0, tokens_limit: null });
 
 /**
  * args — stub inputs object. Pre-populated with common fields so scripts that
@@ -333,30 +439,78 @@ var args = Object.assign({
   ac: 'BO-STUB-1',
 }, {ARGS_OBJECT});
 
-// ─── Script body ─────────────────────────────────────────────────────────────
+// ─── Sandbox construction (BP-1100b-4 engine fidelity) ────────────────────────
+//
+// Only the ADR-030 injected globals are contextified into the sandbox that
+// runs the target script body — NOT `require`, `module`, `exports`,
+// `process`, `__dirname`, or `__filename`. `console` is a deliberate,
+// documented exception (back-compat for already-shipped workflow scripts
+// that reference it; it is not part of the ADR-030 contract and is not one
+// of the engine-injected globals under test).
+const __sandbox__ = {
+  agent: agent,
+  parallel: parallel,
+  pipeline: pipeline,
+  phase: phase,
+  log: log,
+  args: args,
+  workflow: workflow,
+  budget: budget,
+  console: console,
+};
+vm.createContext(__sandbox__);
 
-// Wrap in an IIFE so top-level `return` and `await` are valid.
-(async function __e2body__() {
-  try {
-    // BEGIN TARGET SCRIPT
-    {SCRIPT_BODY}
-    // END TARGET SCRIPT
-  } catch (__err__) {
-    // Swallow errors from the script — we only care about dispatch count.
-    // Log to stderr so pytest can surface it on failure.
-    process.stderr.write('harness: script threw: ' + String(__err__) + '\n');
-  }
-})().then(function(__scriptResult__) {
-  // Emit captured calls, contract violations, AND the script's own top-level
-  // return value (the terminal payload) as structured JSON to stdout.
-  // (BO-2400f-11 / BO-2400f-4-vi: terminal-payload CONTENT assertions need
-  // the actual resolved value, not just which agent() calls fired.)
+// ─── Script body ─────────────────────────────────────────────────────────────
+//
+// Wrap in an IIFE so top-level `return` and `await` are valid, then run it
+// INSIDE the sandboxed vm context — never as a plain CommonJS module — so the
+// target script body cannot reach the driver's own require/process/module
+// bindings. Error handling lives entirely OUTSIDE the sandbox: the sandboxed
+// body has no `process` reference at all, so a script-level throw must
+// surface via the returned promise's rejection, not an inner try/catch.
+// The full inner-IIFE source (target script body wrapped in an async IIFE) is
+// built and JSON-encoded on the Python side (_build_shim) and substituted
+// here as a single JS string literal — never spliced as raw JS text into
+// this outer file — so the target script's own quoting/backticks/newlines
+// can never break the outer shim's own syntax.
+const __scriptSource__ = {INNER_SOURCE_JSON};
+
+let __resultPromise__;
+try {
+  __resultPromise__ = vm.runInContext(__scriptSource__, __sandbox__, {
+    filename: 'e2-workflow-body.js',
+  });
+} catch (__syncErr__) {
+  // Synchronous errors — e.g. a syntax error in the injected script, or a
+  // throw before the first `await` inside the IIFE (async functions still
+  // normally convert this into a rejection, so this branch is a defensive
+  // fallback for the async-function machinery itself failing to construct).
+  process.stderr.write('harness: script threw (sync): ' + String(__syncErr__) + '\n');
+  process.stdout.write(JSON.stringify({
+    calls: __capturedCalls__,
+    violations: __contractViolations__,
+    result: null,
+  }));
+  process.exit(0);
+}
+
+// Emit captured calls, contract violations, AND the script's own top-level
+// return value (the terminal payload) as structured JSON to stdout.
+// (BO-2400f-11 / BO-2400f-4-vi: terminal-payload CONTENT assertions need
+// the actual resolved value, not just which agent() calls fired.) The
+// resolved value comes from the SANDBOXED run above (vm.runInContext), never
+// from a plain unsandboxed IIFE — engine fidelity (BP-1100b-4) and terminal-
+// payload capture (BO-2400f-11) are independent features layered on the same
+// promise chain, not alternatives.
+Promise.resolve(__resultPromise__).then(function(__scriptResult__) {
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
     violations: __contractViolations__,
     result: (typeof __scriptResult__ === 'undefined' ? null : __scriptResult__),
   }));
 }).catch(function(__topErr__) {
+  // Swallow errors from the script — we only care about dispatch count.
+  // Log to stderr so pytest can surface it on failure.
   process.stderr.write('harness: top-level error: ' + String(__topErr__) + '\n');
   process.stdout.write(JSON.stringify({
     calls: __capturedCalls__,
@@ -377,6 +531,36 @@ var args = Object.assign({
 _PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
 _WORKSPACE_SETUP_PERMISSION_LABEL = "resolve-workspace-setup-permission"
 _AGENT_REGISTRY_RELATIVE_PATH = Path("config") / "agent_registry.json"
+
+# BO-2400f-12: fast-lane-ship.js dispatches an unconditional producibility-guard
+# check ("check-producibility") between Resolve and the claim step. Its
+# fail-closed default (a missing/unreadable verdict) REFUSES the run before any
+# claim or build-agent dispatch — exactly the behavior BO-2400f-12 requires, but
+# it means every PRE-EXISTING caller of this script that drives it past Resolve
+# without knowing about the new label would otherwise see its claim/test-writer/
+# coder dispatches vanish behind a refusal the moment this gate was added. As
+# with _WORKSPACE_SETUP_PERMISSION_LABEL above, a real producible default is
+# supplied here so every existing and future caller gets a sane "producible"
+# verdict without having to know about this gate; a test that deliberately wants
+# to exercise the refusal path still can — caller-supplied label_responses
+# always take precedence over this default.
+_FAST_LANE_SHIP_SCRIPT_NAME = "fast-lane-ship.js"
+_CHECK_PRODUCIBILITY_LABEL = "check-producibility"
+
+# BO-2400f-12: a producible verdict is meant to let the run proceed exactly as
+# before this gate existed — including all the way to the test-writer dispatch,
+# which sits behind the (pre-existing, BO-2400c-1) "fastlane-context-bundle"
+# assembly step. A caller asserting only "test-writer was reached on a
+# producible verdict" (BO-2400f-12-ii) has no reason to also know about that
+# unrelated, earlier-shipped gate, so a real, schema-conforming default bundle
+# (mirroring the one every context-bundle-aware caller already hand-stubs) is
+# supplied here too — never a source of a false "obtained" verdict for a test
+# that deliberately stubs its own bundle response instead.
+_CONTEXT_BUNDLE_LABEL = "fastlane-context-bundle"
+_CONTEXT_BUNDLE_DEFAULT_TEXT = (
+    "ARCHITECTURE (stub)\n\nCONVENTIONS (stub)\n\nHIGH-LEVEL ACS (stub)"
+    "\n\n<!-- CACHE_BREAKPOINT -->\n\nBATCH ACS (stub)\n\nPRIOR TESTS (stub)"
+)
 
 
 def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
@@ -416,6 +600,20 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     fail-closed behavior applies exactly as before this hardening pass, so
     this is never a source of a false "permitted" verdict.
     """
+    if script_path.name == _FAST_LANE_SHIP_SCRIPT_NAME:
+        return {
+            _CHECK_PRODUCIBILITY_LABEL: {
+                "producible": True,
+                "unproducible": [],
+                "message": "all producible (harness default)",
+            },
+            _CONTEXT_BUNDLE_LABEL: {
+                "obtained": True,
+                "bundle": _CONTEXT_BUNDLE_DEFAULT_TEXT,
+                "message": "bundle assembled (harness default)",
+            },
+        }
+
     if script_path.name != _PLAN_FEATURE_SCRIPT_NAME:
         return {}
 
@@ -513,9 +711,24 @@ def _build_shim(
     # Serialise caller-supplied args; merged over the default stub args in the shim.
     args_json = json.dumps(args or {})
 
+    # Build the full inner-IIFE source (target script wrapped for top-level
+    # `return`/`await`) and JSON-encode it as a single JS string literal. This
+    # is substituted into the outer shim (which runs it via vm.runInContext)
+    # rather than spliced as raw JS text, so the target script's own quoting,
+    # backticks, and newlines can never break the outer shim's own syntax
+    # (BP-1100b-4 engine-fidelity hardening).
+    inner_source = (
+        "(async function __e2body__() {\n"
+        "// BEGIN TARGET SCRIPT\n"
+        f"{body}\n"
+        "// END TARGET SCRIPT\n"
+        "})()"
+    )
+    inner_source_json = json.dumps(inner_source)
+
     return (
         _JS_SHIM_TEMPLATE
-        .replace("{SCRIPT_BODY}", body)
+        .replace("{INNER_SOURCE_JSON}", inner_source_json)
         .replace("{LABEL_RESPONSES}", label_responses_json)
         .replace("{ARGS_OBJECT}", args_json)
     )
@@ -657,10 +870,26 @@ def run_workflow_under_e2(
     contract_violations: list[dict] = []
     script_result: Any = None
 
+    parse_error = ""
     if stdout.strip():
         try:
             raw_output = json.loads(stdout)
         except json.JSONDecodeError as exc:
+            # Record the failure on the RESULT, not only in a log line.
+            #
+            # `console` is contextified into the sandbox and writes to the same
+            # stdout this parser reads, so a single console.log() in a workflow
+            # body corrupts the JSON payload. Leaving `error` empty made that
+            # outcome — dispatch_count=0, error="", returncode=0 — byte-for-byte
+            # identical to a clean run that dispatched no agents. Zero-dispatch
+            # is the precise failure this harness exists to detect (see the
+            # module docstring), and test_workflow_dual_engine.py already
+            # asserts error == "" and dispatch_count == 0 together, so a parse
+            # crash would have satisfied that guard rather than tripping it.
+            parse_error = (
+                f"failed to parse harness output as JSON: {exc}. "
+                f"stdout begins: {stdout[:200]!r}"
+            )
             logger.warning(
                 "Failed to parse harness output for %s: %s\nstdout: %.200s",
                 script_path,
@@ -700,6 +929,7 @@ def run_workflow_under_e2(
         stdout=stdout,
         stderr=stderr,
         returncode=proc.returncode,
+        error=parse_error,
         result=script_result,
     )
 

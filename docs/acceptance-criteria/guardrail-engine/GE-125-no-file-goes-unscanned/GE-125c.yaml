@@ -1,0 +1,80 @@
+id: GE-125c
+title: "One value judged harmless never takes the rest of the file with it"
+component: guardrail-engine
+components:
+  - security_scanner
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  An allowance covers a single result, never a whole file.
+
+  When something is judged not to be a credential, only that one thing is set
+  aside. Everything else in the same file is still examined, so a real
+  credential a few lines later is still found and still stops the commit.
+depends_on:
+  - GE-125
+doc_links:
+  - path: docs/known-issues/security-scanner.md
+    relationship: context
+    status: exists
+    relevance: "KI-SEC-001's third fix direction, and the paragraph after it: the check judges a TRUNCATED copy of the line, so a benign explanation sitting past the truncation point is invisible to it and the verdict can turn on line length alone. Any per-result rework needs the whole value, not the shortened copy."
+  - path: templates/skills/security-scanner/SKILL.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-08-19
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-125c-1
+  - GE-125c-2
+  - GE-125c-3
+  - GE-125c-4
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THIS IS THE STRUCTURAL FIX AND THE MOST EXPENSIVE OF THE FOUR. GE-125a and
+  GE-125b shrink a file-level allowance; this one removes the file as the unit
+  of the decision altogether. It is the only one of the four that would still
+  have value if the other three had already landed — with the reach corrected
+  and the file kinds gated, the intended locations still lose all of this
+  protection for every line, when what they actually need is relief for the
+  handful of lines that explain something.
+
+  THE MECHANISM ALREADY EXISTS IN PART and should be extended rather than
+  reinvented: the check already recognises certain project identifiers as
+  benign explanations rather than credentials. The ask is to make the same style
+  of per-result judgement carry the whole load, so nothing is set aside without
+  a stated reason for that specific result.
+
+  THE TRUNCATION HAZARD IS A REAL DEFECT, NOT A DETAIL, and it must be named in
+  the L2 rather than left for the coder to discover. The existing per-result
+  path is handed a shortened copy of the line, so whether a value is judged
+  benign can depend on how far along the line it sits. A per-result rule built
+  on the shortened copy inherits a verdict that changes with line length — which
+  is the same class of accident as the one this goal exists to remove.
+
+  THE COUNTING ARM IS LOAD-BEARING, and both directions of it fail on plausible
+  implementations. A file holding one set-aside result and one real credential
+  must report EXACTLY ONE. Zero means the file-level shape survived; two means
+  the allowance stopped working. An assertion of at-least-one passes on the
+  broken behaviour and does not discharge this. GE-123d-3 already specifies this
+  counting shape for the adjacent rule; reuse its reasoning rather than
+  re-deriving it, and do not close either as a duplicate of the other — that AC
+  is about a proposed exemption for the keyword rule, this one about the
+  existing exemption for the shapeless-value rule.
+
+  SEQUENCING WITHIN THIS GOAL: this L1 is the reason the other three are not
+  merely a narrowing exercise, but it is also the one whose value depends least
+  on the others. It may be scheduled last without weakening them.

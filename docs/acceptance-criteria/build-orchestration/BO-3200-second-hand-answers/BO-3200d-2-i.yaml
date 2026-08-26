@@ -1,0 +1,125 @@
+id: BO-3200d-2-i
+title: "A result that was never produced reports as not obtained, distinct from empty and from bad"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a specialist that fails before producing its result, so nothing is available at the
+    agreed handover,
+  When the step that reads the result runs,
+  Then it reports that the result could not be obtained, and the run halts.
+
+  Given a specialist that produces an empty result deliberately, so the handover carries
+    content of zero length,
+  When the step that reads the result runs,
+  Then it reports that the result was empty, and that report differs from the could-not-obtain
+    report.
+
+  Given a specialist that produces a complete result that fails the reading step's requirement,
+  When the step runs,
+  Then it reports that the result was inadequate, and that report differs from both of the
+    above.
+depends_on:
+  - BO-3200d-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-018 — the misdirection cost of a halt that names the wrong cause."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "THREE DISTINCT REPORTS, ALL OF WHICH HALT. This AC does not weaken the fail-closed posture BO-3200d-1-i protects; every one of the three stops the run. What differs is only what the halt SAYS, so the covering test must compare the reports rather than the outcomes."
+  - "THE THREE POINT AT THREE DIFFERENT PLACES and the wording must send the reader to the right one: nothing was produced (look at the producer's failure), nothing was meant to be there (look at whether the step should have run at all), something was produced that is not good enough (look at the content)."
+  - "REUSE BO-3200e's VOCABULARY. 'Could not be obtained' is the `undetermined` outcome: the step has not inspected anything and must not report a finding about content it never saw. 'Empty' and 'inadequate' are substantive findings about content the step did see. Do not invent a second spelling of could-not-tell for this site."
+  - "The distinction must be machine-readable as well as human-readable, so a caller can branch on which of the three occurred without parsing prose."
+  - "Empty must mean genuinely zero-length content at the handover, distinguished from the location not existing. Those are different facts about different things — one about the producer's output, one about whether the producer ran."
+  - "Classification must be total: every state the handover location can be in maps to exactly one of the three, and classification itself must not raise."
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200d-2
+    contract: "The caller-supplied handover location. This AC defines the three states it can be in when the consumer reads it and requires a distinct report for each."
+  - ac_id: BO-3200e-1
+    contract: "The could-not-tell vocabulary, reused for the not-obtained case rather than reinvented at this site."
+test_spec:
+  - name: test_bo_3200d_2_i_nothing_at_the_handover_reports_could_not_obtain_and_halts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Producer fails before writing anything; assert the consumer reports the result could not be obtained (BO-3200e's undetermined vocabulary) and the run halts."
+  - name: test_bo_3200d_2_i_empty_result_reports_empty_and_differs_from_not_obtained
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Producer deliberately writes zero-length content; assert the report says empty, the run halts, and the captured message and machine-readable outcome both differ from the not-obtained case."
+  - name: test_bo_3200d_2_i_inadequate_result_differs_from_both_others
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE THREE-WAY COMPARISON. Drive all three states in one test, capture all three reports, and assert every pair differs substantively and in its machine-readable value. Asserting each halts individually passes on three identical messages."
+  - name: test_bo_3200d_2_i_classification_is_total_and_never_raises
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Across a missing location, an unreadable location, a zero-length file, whitespace-only content and a complete-but-failing result, classification returns exactly one of the three and raises nothing."
+test_rationale: |
+  Every one of the three states halts the run, so an assertion on the outcome cannot tell them
+  apart — which means a test written per-state passes on an implementation that emits one
+  identical halt for all three. The load-bearing test therefore drives all three in one place and
+  compares the reports pairwise.
+  Moving the handover out of the reply is what creates these three states in the first place, so
+  they are a hazard the fix introduces rather than one it inherits; the natural implementation
+  collapses them into a single "no usable result" halt, and the reader then has three possible
+  causes and no indication which.
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-08-26
+  note: Added assigned_agent, complexity, it_requirements, expects_from, doc_links,
+    test_spec/test_rationale, change_target/risk_surface. criteria untouched; BO-3200e
+    vocabulary reuse made explicit.
+- action: approved
+  agent: approve_acs
+  date: '2026-08-26'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Moving the handover out of the reply creates a new way for it to be empty, and the three
+  states it can be in are easy to collapse into one halt. They must not be, because they point
+  at three different places: nothing was produced (look at the producer's failure), nothing was
+  meant to be there (look at whether the step should have run at all), and something was
+  produced that is not good enough (look at the content).
+
+  ALL THREE HALT. This AC does not weaken the fail-closed posture BO-3200d-1-i protects — every
+  one of the three stops the run. What differs is only what the halt says, and that is the
+  whole content of the criterion, so the covering test must compare the reports rather than the
+  outcomes.
+
+  This is BO-3200e's distinction applied at the handover: a step that could not obtain what it
+  was asked to read has not inspected anything, and must not report a finding about content it
+  never saw. Reuse that vocabulary rather than inventing a second one.
+
+  IT-PO ENRICHMENT NOTE (2026-08-26). One boundary the criteria imply and do not state: "empty"
+  must mean zero-length content actually present at the handover, not the location being absent.
+  Treating a missing location as empty would collapse the first two states through the back door
+  — and it is the collapse most likely to happen by accident, because both read as "nothing
+  there" to a naive check.

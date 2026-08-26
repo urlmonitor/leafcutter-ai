@@ -1,17 +1,17 @@
 ---
-title: "How to adopt the consolidated output root (.leafcutter/)"
+title: How to adopt the consolidated output root (.leafcutter/)
 type: how_to
 status: active
 created: 2026-05-27
-last_updated: 2026-05-27
+last_updated: 2026-08-25
 components:
-  - build_pipeline
-  - infrastructure
+- build_pipeline
+- infrastructure
 related_docs:
-  - docs/architecture/adrs/ADR-004-consolidated-output-root.md
-  - docs/reference/skills-config-fields.md
+- docs/architecture/adrs/ADR-004-consolidated-output-root.md
+- docs/reference/skills-config-fields.md
+description: Overview of How to adopt the consolidated output root (.leafcutter/).
 ---
-
 # How to adopt the consolidated output root (.leafcutter/)
 
 This guide walks an existing leafcutter user through migrating to the
@@ -255,4 +255,4 @@ should see only `.leafcutter/` changes — no leafcutter files scattered across
   considered, and positive/negative consequences.
 - `docs/reference/skills-config-fields.md` — full reference for all
   `skills_config.json` keys including `output_root` and `shim_strategy`.
-- `docs/README.md` — Diataxis index of all project documentation genres.
+- `config/doc_types.json` — Diataxis genre mapping for all project documentation.
