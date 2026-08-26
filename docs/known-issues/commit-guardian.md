@@ -815,8 +815,25 @@ whether it moves the other two.
 >   reference is already pointing at the wrong entry independently of this collision.
 >
 > Whoever owns this file should pick the renumber and fix all four references in one commit.
-> Next free id at time of writing is `KI-CG-018` (`016` and `017` were both claimed on
-> 2026-08-25 by two concurrent sessions — see the note on `KI-CG-017` below).
+>
+> **Citation audit, 2026-08-26 — still not renumbered, and the reason is now stronger.** A
+> repo-wide sweep done while resolving a different collision in this register found the
+> inbound set has grown from four to **nine**, and it splits across *both* entries:
+>
+> | Citation | Resolves to |
+> |---|---|
+> | `GE-126a-3.yaml:43`, `:63`, `:96`, `:128` · `GE-126a.yaml:26`, `:85` · `GE-126.yaml:209` | the **test seams** entry (above) |
+> | `GE-126.yaml:160` ("re-run with a deliberately invalid file") · `build-pipeline.md:1234` | **this** entry |
+> | `GE-126e.yaml:28` ("all the same family") · `BP-600d-3.yaml:186` | ambiguous |
+>
+> So a renumber is now a nine-site change spanning six acceptance-criteria records, two of
+> which cannot be resolved from their text alone. That is a deliberate, owner-sized piece of
+> work and not a drive-by fix — attempting it as a side effect of unrelated work is how the
+> `016`/`017` collision below was created in the first place.
+>
+> **Next free id is `KI-CG-034`.** The earlier note here said `018`; that was true on
+> 2026-08-25 and has been overtaken three times since. Do not allocate by reading this line —
+> read the file, on a fresh `origin/main`, immediately before you land.
 
 - **Severity:** high
 - **Status:** open
@@ -1530,7 +1547,18 @@ layouts differ, and the gate is configured against the layout it is not running 
 
 ---
 
-### KI-CG-016 — The uniqueness pass's YAML fast path fabricates an id claim for records a full parse rejects
+### KI-CG-032 — The uniqueness pass's YAML fast path fabricates an id claim for records a full parse rejects
+
+> **Renumbered 2026-08-26: filed as `KI-CG-016` in PR #575, now `KI-CG-032`.** That number was
+> already taken on `origin/main` by the `enforce_commit_delegation` entry above. The id was
+> allocated by grepping a stale checkout and taking the max, and that copy stopped at
+> `KI-CG-014` — `015`-`020` were already landed. The original `KI-CG-016` keeps its number: it
+> was there first and is cited from `changelogs/2026-08-25-2312-*.md`. This entry is hours old
+> and had exactly one inbound citation, repointed in the same commit.
+>
+> This is the fourth id collision in this register in two days and the second caused by
+> allocating against a snapshot — the defect `KI-BO-028` describes, committed in the register
+> that documents it.
 
 - **Severity:** medium
 - **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
@@ -1584,7 +1612,14 @@ often enough that the fallback never runs.
 
 ---
 
-### KI-CG-017 — Placeholder marker detection flags markdown emphasis as a list bullet, and its false-positive cost was measured on one marker and claimed for all six
+### KI-CG-033 — Placeholder marker detection flags markdown emphasis as a list bullet, and its false-positive cost was measured on one marker and claimed for all six
+
+> **Renumbered 2026-08-26: filed as `KI-CG-017` in PR #575, now `KI-CG-033`.** Same cause as
+> `KI-CG-032` above — allocated against a stale snapshot that stopped at `KI-CG-014`. The
+> original `KI-CG-017` (`check-build-drift` filtered on the consumer layout path) keeps its
+> number: it was there first and is cited from three `GE-126` acceptance criteria
+> (`GE-126d-1`, `GE-126e-2-i`, `GE-126e`), all of which mean the `check-build-drift` entry and
+> are correct as written. This entry's one inbound citation is repointed in the same commit.
 
 - **Severity:** medium
 - **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
