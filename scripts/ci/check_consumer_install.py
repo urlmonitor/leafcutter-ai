@@ -57,6 +57,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 _MINIMAL_SKILLS_CONFIG: dict[str, str] = {
     "_comment": "Minimal config for consumer-install simulation (BP-900h-1).",
@@ -178,7 +179,7 @@ def _verify_deployed_tree(target_dir: Path) -> tuple[Path, int]:
     return output_root, 0
 
 
-def _import_audit_modules(package_dir: Path) -> tuple[object, object]:
+def _import_audit_modules(package_dir: Path) -> tuple[ModuleType, ModuleType]:
     """Import the existing reference-resolution modules from ``package_dir/scripts``.
 
     Reuses ``build_referential_integrity`` and ``build_propagation_audit``
