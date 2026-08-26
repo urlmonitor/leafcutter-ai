@@ -536,7 +536,7 @@ cannot see, where the absence of the check is documented as correct.
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1 (16 tests across 8 files, one PR)
+- **Occurrences:** 1 (18 tests across 8 files, one PR)
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `scripts/ac_store/pytest_ac_enforcement.py` (`_strict_mode`, `pytest_runtest_makereport`,
   `pytest_terminal_summary`); `.github/workflows/ci.yml` → job `test` ("Test suite (pytest)"),
@@ -565,7 +565,7 @@ masks only in local and ad-hoc runs.
 **Consequence 1 — a red baseline cannot be merged.** The AC-driven practice authors a failing test
 for an AC before the fix exists. That test cannot reach `main`: the required gate rejects it, no
 matter that its redness is the point. The evidence either sits on a branch collecting merge
-conflicts or is deleted. Observed on PR #602 — 16 red-baseline tests across 8 files, every one
+conflicts or is deleted. Observed on PR #602 — 18 red-baseline tests across 8 files, every one
 green-by-xfail locally and every one a hard failure in CI run `32969277018`.
 
 **Consequence 2 — where masking *does* apply, it inverts the local signal.** A masked run exits
@@ -590,6 +590,19 @@ silently has no merge path.
    handles it before the plugin sees a failure, so it reports `xfail` under `AC_ENFORCE_STRICT=1`
    too, and `strict=True` turns the day-the-fix-lands XPASS into a failure that forces the mark's
    removal. The baseline retires itself instead of rotting.
+
+   **Verified, not assumed** — two marked probes covering a not-done AC, run under
+   `AC_ENFORCE_STRICT=1`:
+
+   | probe | outcome under the strict flag |
+   |---|---|
+   | marked, body fails | `xfailed` — the mark survives the flag |
+   | marked, body passes | `FAILED [XPASS(strict)]` — forces the mark's removal |
+
+   The plugin logs `NOT masked (AC_ENFORCE_STRICT=1)` for the second and stays out of the way of
+   the first, because `pytest_runtest_makereport` only ever intercepts a *failing* report and
+   pytest core has already resolved the marked one.
+
    This cannot create phantom-done: `done_proof` already treats XFAIL as **not** satisfying the
    done gate (see `unit_tests/ac_store/test_bo2500a_done_proof.py` — an all-xfail run exits 0 and
    is still not done-eligible), so a marked baseline can be merged without becoming evidence.
