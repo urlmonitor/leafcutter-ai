@@ -2,10 +2,13 @@
 agent_id: knowledge-harvester
 title: 'Agent Card: knowledge-harvester'
 description: Runs the knowledge-emission harvester for a worktree. Reads unprocessed
-  knowledge_captured events from debugging/logs/knowledge_emissions.jsonl (per ADR-011),
-  routes each to the correct knowledge surface via the capture-learning write protocol,
-  marks events as processed, and reports a summary. Invoked by ticket-supervisor or
-  by the user after a batch of phase agents have signed off.
+  knowledge_captured events from debugging/logs/knowledge_emissions.jsonl (per ADR-011)
+  and routes each to the correct knowledge surface via the capture-learning write
+  protocol. A routed event is marked processed so re-runs are idempotent; an event
+  whose entry_kind is unrecognised is left UNMARKED and retained for a later run
+  rather than dropped (INF-400c-2-ii). Reports a summary distinguishing routed from
+  unroutable counts. Invoked by ticket-supervisor or by the user after a batch of
+  phase agents have signed off.
 type: card
 status: active
 created: 2026-08-13
@@ -16,10 +19,13 @@ last_updated: '2026-08-13'
 
 **Runs the knowledge-emission harvester for a worktree. Reads unprocessed
 knowledge_captured events from debugging/logs/knowledge_emissions.jsonl
-(per ADR-011), routes each to the correct knowledge surface via the
-capture-learning write protocol, marks events as processed, and reports
-a summary. Invoked by ticket-supervisor or by the user after a batch of
-phase agents have signed off.**
+(per ADR-011) and routes each to the correct knowledge surface via the
+capture-learning write protocol. A routed event is marked processed so
+re-runs are idempotent; an event whose entry_kind is unrecognised is left
+UNMARKED and retained for a later run rather than dropped (INF-400c-2-ii).
+Reports a summary distinguishing routed from unroutable counts. Invoked by
+ticket-supervisor or by the user after a batch of phase agents have signed
+off.**
 
 | Field | Value |
 |-------|-------|
@@ -79,7 +85,8 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `none` | — | Read-only agent — no filesystem mutations |
+| `knowledge_surface_files` | — | The agent has no Edit/Write tool itself, but the harvest_learnings.py script it runs via Bash appends each routed event's learning text to the destination file named in that event. |
+| `harvest_state_file` | — | The script rewrites the idempotency state file with the updated set of processed-event hashes after each non-dry-run pass. Unroutable events are deliberately excluded from this file so they remain retryable on a later run (INF-400c-2-ii) — this is not a read-only agent. |
 ---
 
 ## Tools Available
