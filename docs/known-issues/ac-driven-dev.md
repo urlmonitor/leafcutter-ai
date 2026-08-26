@@ -353,8 +353,8 @@ removed the untracked file — restoring `main` to clean.
 
 - **Severity:** high
 - **Status:** open — live duplicate currently on `main`, see below
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2
+- **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `/plan-feature` AC-authoring stages — the id-selection step
 
 **Symptom.** When choosing the next free AC id, the pipeline does not see ids that are
@@ -417,6 +417,21 @@ link no gate could police. The evidence block above is left exactly as written: 
 what was true on `main` when this issue was filed. **This entry stays open** — nothing about
 the id-allocation step has changed, and the next `/plan-feature` run can still mint a
 duplicate the same way.
+
+**Second occurrence, 2026-08-25 — and it widens the entry.** A `business-analyst` run
+authoring ACs for `GE-122d` allocated `BP-900h-4`, an id already live and
+`readiness: approved` on `main`. Caught before the PR by a manual store-wide grep;
+renumbered to `BP-900h-6` across 11 references.
+
+Two things this adds to the entry as written above. First, the defect is **not confined to
+`/plan-feature`**: this run was a directly-dispatched authoring agent in an isolated
+worktree, so the fix must land in whatever the shared id-allocation step is, not in one
+command's prompt. Second, and worse for detection, the collision was minted **in a
+worktree branched from `origin/main`** — the colliding id was present in the branch's own
+checkout the whole time. So this is not a stale-clone problem that fetching would fix; the
+allocator simply did not look. Combined with KI-ACS-001 (the required `AC store valid`
+check does not test id uniqueness), a duplicate authored this way reaches `main` with every
+gate green.
 
 ---
 
@@ -615,7 +630,7 @@ keep the cap — the defect is where the cut lands, not that a cut happens.
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2
+- **Occurrences:** 3
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/goal_to_epic.py:1626` — the frontmatter block in
   `_render_master_plan()`; against `templates/hooks/ticket_frontmatter_guard.py`
@@ -652,6 +667,32 @@ was rejected for exactly the six fields named above. Fixed by hand in that epic 
 `type: epic`, `depends_on: []`, `requires_diagram`, `requires_adr`, `change_target`,
 `risk_surface` added, and `status` corrected from `in_progress` to `todo`, since no ticket
 in the epic has been started. The generator is unchanged, so the next epic reproduces it.
+
+**Third occurrence, 2026-08-25** — and it reconciles this entry with `KI-ACD-019`'s
+correction, which are both right about different gates. Reproduced by
+`goal_to_epic.py --ac GE-122d` (`EPIC-TheNumberingGuaranteeHoldsAtEveryStage`); all six
+fields supplied by hand again. Three runs, three identical hand-repairs — this is not
+intermittent.
+
+**There are two gates and they disagree by four fields.** Verified against both:
+
+| Gate | When it fires | Required set | Generator misses |
+|---|---|---|---|
+| `check_doc_frontmatter.py`, config `templates/scripts/commit_guardian/commit_guardian.json` → `ticket_frontmatter.required_fields` | pre-commit, on `tickets/**/*.md` | `title`, `status`, `components`, `created`, `depends_on` | **2** — `title`, `depends_on` |
+| `templates/hooks/ticket_frontmatter_guard.py` | Claude Code `PreToolUse` on `Edit`/`Write` | the same 5, plus `requires_diagram`, `requires_adr` (`:556-557`), `change_target`, `risk_surface` (`:560-561`) | **6** |
+
+`KI-ACD-019` is right that the generator writes through Python file I/O and so never trips
+the `PreToolUse` guard on generation, making the commit-blocking count 2. What it misses is
+the sequel: **the moment anyone opens the file with `Edit` or `Write` to supply those two,
+the `PreToolUse` guard fires and demands four more.** That is why every run so far has been
+repaired to the full six — not because six were commit-blocking, but because the act of
+repairing is itself an `Edit`. The number is 2 or 6 depending on how you fix it, and there
+is no route that requires only 2.
+
+So the fix direction below is unchanged, but the regression test must run **both** gates:
+satisfying only the pre-commit set leaves a Master_Plan no agent can subsequently edit.
+The four-field divergence between the two gates is worth closing on its own merits — a
+hand-written ticket and a generated one are held to different standards today.
 
 **Fix direction.** Render the full required frontmatter set. Then add a test that runs
 `ticket_frontmatter_guard` against a freshly generated Master_Plan, so the generator and
@@ -714,7 +755,7 @@ other.
 
 - **Severity:** medium
 - **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/goal_to_epic.py` — the `implemented_by` back-reference write
 
@@ -739,6 +780,15 @@ are accurate. Only their form is wrong. So the defect is a missing
 
 **Fix applied to the data.** All 37 rewritten to repo-relative; verified that each one
 resolves to a file that exists.
+
+**Second occurrence, 2026-08-25.** Reproduced by `goal_to_epic.py --ac GE-122d` on all
+nine ACs of `EPIC-TheNumberingGuaranteeHoldsAtEveryStage`, rewritten to repo-relative by
+hand again. This run was made **from a worktree**, so the embedded prefix was
+`/home/henzeh/projects/leafcutter/worktrees/ge122-acs/…` — a path that does not exist even
+on the machine that generated it once the worktree is removed. Worth stating because the
+first occurrence's absolute path at least pointed at the main checkout and so looked
+merely redundant; from a worktree the same defect writes a link that is dead everywhere,
+including locally.
 
 **Fix direction for the tool.** Make the back-reference relative to the project root at
 the point of write, and assert repo-relativity in the same test that covers KI-ACD-013 —
@@ -852,7 +902,7 @@ and emit a per-ticket progress line so the run is legible while it is happening.
 
 - **Severity:** high
 - **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/goal_to_epic.py` (`_translate_ticket_depends_on`, the epic-folder move,
   `_render_master_plan`) against `templates/hooks/ticket_frontmatter_guard.py`
@@ -897,6 +947,20 @@ whatever already re-points `implemented_by`. The regression test should generate
 two-ticket epic with one edge between them and run the real `ticket_frontmatter_guard`
 over the result, for the same reason KI-ACD-012 gives: asserting a filename format is a
 second copy of the rule that can itself fall behind.
+
+**Second occurrence, 2026-08-25.** Reproduced by `goal_to_epic.py --ac GE-122d`: seven
+dangling references across four of the nine tickets, plus the Master_Plan table. Repaired
+by hand.
+
+This occurrence sharpens the "easy to miss" claim above into something stronger. The
+`GE-122d` epic exists specifically to make a scaffold ticket precede a registration ticket
+— registering the commit-time check before the namespace roots exist would block every
+commit in a fresh install. That ordering is carried **only** by `depends_on`. So the
+generator's stale references do not merely degrade the build order here; they erase the
+one constraint the epic was assembled to enforce, while the Master_Plan table still reads
+correctly to a human reviewer. `ticket_frontmatter_guard` caught it, as before — but note
+that it catches it only because it resolves each reference against disk. A check that
+asserted `depends_on` was *present and non-empty* would have passed all four tickets.
 
 **Pattern:** a producer that renames its artifacts after writing the references to them.
 
@@ -965,3 +1029,145 @@ were filed after it ran and are **not** triaged.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M1 for the tests that let these read
 `done`; the missing-citation half is its own shape — a reference that resolves to nothing reads
 as coverage to everyone who checks for one.
+
+---
+
+### KI-ACD-020 — Non-interactive epic generation drops every unapproved leaf AC without naming one of them
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py:1449-1455` — `_gate_select_approved_ids()`, the
+  `if yes or approved_only:` branch; and its caller `run()` at `:2252-2264`
+
+**Symptom.** `goal_to_epic.py --ac <goal> --yes` (or `--approved-only`) generates an epic
+containing only the leaves that were already `readiness: approved`. Every leaf below
+`approved` is silently excluded: it is not listed, not counted, not warned about. The run
+exits 0 and reports success, and the epic looks complete because nothing in its output
+refers to what is missing.
+
+**Evidence — probed directly against the real function.**
+
+```text
+--yes            returns=['GE-999a-1', 'GE-999a-2']
+--yes            stdout=''
+--approved-only  returns=['GE-999a-1', 'GE-999a-2']
+--approved-only  stdout=''
+```
+
+Input was two approved and two unapproved ids (`reviewed`, `draft`). Both flags returned
+the identical two-element list and **wrote nothing to stdout at all**. The caller then does
+`leaf_ids = approved_ids` with no further notice.
+
+**Two distinct defects, and the second is the reason the first is invisible.**
+
+1. **The two flags are behaviourally identical.** Both enter the same branch and return
+   `list(readiness["approved"])`. Their help text presents them as different operations —
+   `--yes` as *"equivalent to choosing 'yes' at the interactive prompt"*, `--approved-only`
+   as *"filter to only already-approved leaf ACs and skip unapproved ones"*. A caller
+   reading that help reasonably expects `--yes` to be the permissive option. There is no
+   non-interactive way to include an unapproved leaf; `--yes` is a misleading name for
+   "skip everything not approved".
+
+2. **The exclusion is never reported.** `_print_readiness_report()` — which exists and
+   names every unapproved id and its readiness value — is called only from
+   `readiness_gate_prompt()`, the interactive path. The flag branch returns before it.
+   Note the asymmetry this creates in `run()`: the **all-approved** path calls
+   `print_fast_path_message()` and announces itself, while the **partial** path says
+   nothing. The complete run is the one that reports; the incomplete run is silent.
+
+**Why this matters more than a missing log line.** Epic generation is the step that decides
+what gets built. A goal AC is decomposed into leaves precisely because the leaves are the
+work; dropping a subset produces a well-formed epic that omits part of its own goal, with a
+Master_Plan that reads as authoritative. Encountered on `--ac GE-122d`, where three of the
+nine leaves were `readiness: reviewed` — and those three were the registration work the
+epic exists to deliver. Either flag would have produced a six-ticket epic whose purpose had
+been removed from it, exit 0, no warning. Caught only because the readiness values were
+checked by hand first.
+
+This is a false-green of the `M1` family (`docs/reference/false-green-mechanisms.md`): a
+successful-looking result whose scope silently shrank.
+
+**Fix direction.** Two things, and the second matters even if the first is contested:
+
+- Print the readiness report in the non-interactive branch too, and follow it with an
+  explicit line naming the count and ids being excluded. Reuse `_print_readiness_report()`
+  — it already formats exactly this.
+- Give the flags distinct meanings, or collapse them. If `--yes` is meant to be
+  "proceed with what is approved", it should say so; `--approved-only` is then a redundant
+  alias and should be documented as one. If instead `--yes` was intended to mean "treat
+  reviewed leaves as good enough", that is a real behaviour to build, and its absence is
+  why the current naming misleads.
+
+A regression test should assert on **stdout**, not just on the returned list — the returned
+list is correct under the current design, and the defect lives entirely in what is not
+said.
+
+**Pattern:** a narrowing applied silently on the path that has no human watching, while the
+path that does have one reports fully.
+
+---
+
+### KI-ACD-021 — Every `depends_on` edge pointing at an AC's own parent is dropped from the generated ticket, while the Master_Plan still draws it
+
+- **Severity:** high
+- **Status:** open (data corrected by hand 2026-08-25; generator unchanged)
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `scripts/goal_to_epic.py` — the ticket-frontmatter `depends_on` write, against
+  the same file's `_render_master_plan()` dependency block
+
+**Symptom.** In the epic generated from `GE-122d`, three tickets were written with
+`depends_on: []` in their frontmatter while the Master_Plan's own Dependencies block, in the
+same run, correctly recorded an edge for each:
+
+| Ticket | Master_Plan says | Frontmatter says |
+|---|---|---|
+| `GE-122d-3-i` | `-> GE-122d-3` | `[]` |
+| `GE-122d-3-ii` | `-> GE-122d-3` | `[]` |
+| `GE-122d-6-i` | `-> GE-122d-6` | `[]` |
+
+Each edge is present in the source AC YAML — `GE-122d-3-i.yaml:39-40` reads
+`depends_on: [GE-122d-3]`. So the generator read the edge, rendered it in one output, and
+omitted it from the other.
+
+**The rule, which is what makes this predictable rather than random.** Every dropped edge
+points at the AC's **own parent by id shape**; every retained edge points at a sibling or
+cousin. `GE-122d-2 -> GE-122d-1`, `GE-122d-4 -> GE-122d-1, GE-122d-2`,
+`GE-122d-5 -> GE-122d-2, GE-122d-3` and `GE-122d-6 -> GE-122d-1, GE-122d-3-ii` were all
+written correctly. `GE-122d-6 -> GE-122d-3-ii` is the one that settles it: a Roman-suffixed
+AC is fine as a dependency *target*. It is being the **source** of an edge to its own parent
+that loses it. The generator appears to treat a parent reference as the `covered_by` tree
+relation and filter it out, which is defensible for a tree link and wrong for `depends_on` —
+the author wrote it in the build-order field, and for the Roman-suffix
+technical-constraint pattern the base AC genuinely is a build predecessor.
+
+**Consequence.** `build-feature` reads frontmatter `depends_on`, not the Master_Plan prose.
+Three tickets were therefore machine-readable as unblocked and could be dispatched before the
+base AC they constrain. In this epic that is not cosmetic: `GE-122d-3-ii` scaffolds the
+namespace roots that `GE-122d-6` registers a commit-time check against, and registering
+before scaffolding makes every commit in every fresh install fail closed on an unresolvable
+root.
+
+**Distinct from `KI-ACD-018`, and the pair is worth reading together.** That entry is about
+edges that are *written but stale* — the pre-move filename. This one is about edges that are
+*not written at all*. They have opposite detection properties, which is the useful part:
+a stale edge is caught by `check_doc_frontmatter`, because a name that resolves to nothing is
+an error. A **missing** edge resolves vacuously — `depends_on: []` is valid frontmatter — so
+no gate fires, and the Master_Plan table reads correctly to a human reviewer either way.
+Between the two, `goal_to_epic.py` produced an epic in which four of the eight declared edges
+were wrong and only the loud half was caught.
+
+**Fix direction.** Write `depends_on` from the same resolved edge set the Master_Plan
+dependency block is rendered from — the divergence exists because two renderings compute the
+edge list separately, and one of them applies a parent filter. If parent references really
+should be excluded from build order, exclude them from *both* outputs and say so; a
+generator that draws an edge it does not wire is worse than one that does neither.
+
+The regression test must assert **frontmatter against the Master_Plan** for the same run,
+not either against an expected literal. A test that checks only that "some `depends_on` was
+written" passes here, since five of the eight edges were correct.
+
+**Pattern:** one fact rendered twice by two code paths, agreeing in the surface a human reads
+and disagreeing in the surface a machine reads.

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -122,7 +122,8 @@ amended_by:
     changed: "readiness draft->reviewed; check_identifier_uniqueness.py promoted from 'related' to 'modifies' and _uniqueness_scanners.py added as a second modifies edge so files_touched carries a real surface; three it_requirements added (derived namespace set, output-stream visibility, file scope); test_spec and test_rationale authored as five behavioural descriptors covering all three runs. criteria unchanged."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/09_TICKET-20260825-GE-122d-6-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -155,3 +156,4 @@ notes: |
   is used to. The added it_requirement derives the reported set from the same declaration the
   pass resolves its roots from, which is also what keeps this AC consistent with GE-122d-3-ii's
   requirement that no root be resolved from a location written into the pass.
+target_epic: EPIC-TheNumberingGuaranteeHoldsAtEveryStage

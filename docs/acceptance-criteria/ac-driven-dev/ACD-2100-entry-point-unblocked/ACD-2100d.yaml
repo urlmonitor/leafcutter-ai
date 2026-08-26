@@ -1,0 +1,103 @@
+id: ACD-2100d
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: draft
+priority: medium
+title: "The installed copy behaves like the one that was fixed"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  A repair to the route reaches your project instead of staying in the source.
+
+  What runs in your project is a copy that gets refreshed when you install. This
+  is met when the copy you actually run is the fixed one -- so a repair to the
+  route cannot be reported as delivered while every installed project keeps the
+  broken behaviour or has it introduced by the next install.
+depends_on: [ACD-2100]
+doc_links:
+  - docs/known-issues/ac-driven-dev.md
+  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100d-1
+  - ACD-2100d-2
+  - ACD-2100d-3
+  - ACD-2100d-4
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  ORIGIN: this L1 is NOT in any of the three known issues. I added it because
+  without it the other three can all be closed and every consumer stays broken,
+  which fails the brief's own success test -- "bad if closing it would still
+  leave the route unable to reach an authoring agent". It is the one child of
+  ACD-2100 the user could reasonably cut; if it is cut, say so explicitly rather
+  than letting it be dropped by omission.
+
+  THE TWO FACTS THAT MOTIVATE IT (both verified, 2026-08-25):
+    1. The DEPLOYED workflow at leafcutter-ai/.leafcutter/workflows/plan-feature.js
+       is STALE -- it contains no `permits_shell` gate at all. So running
+       build.py today would ADD the KI-ACD-009 blocker to a local install. The
+       defect ships to consumers on their next build. A source-only repair
+       therefore has a window in which installing makes things worse.
+    2. The 2026-08-18 workaround for KI-ACD-004 was applied to the DEPLOYED copy
+       of setup_ticket_worktree.py. build.py overwrites that file from
+       templates/, so the workaround evaporated on the next build. Any fix
+       landing outside templates/ (or build.py itself) is not a fix.
+
+  THIS IS A KNOWN REPEAT SHAPE IN THIS REPO, not a hypothetical. CLAUDE.md
+  already carries "New Hook / Gate Dependencies Must Be in the Build
+  Deploy-Manifest" and "Hook deployed-layout no-op trap" precisely because a
+  dependency that is not deployed no-ops or crashes at runtime while every
+  source-tree test passes. The same trap applies to a workflow whose deployed
+  copy is not the one that was tested.
+
+  BOUNDARY WITH ITS SIBLINGS: a, b and c say what the route must DO. This one
+  says the copy that runs must be the copy that does it. Do not let a child here
+  restate a sibling's behaviour "but in the deployed layout" -- that duplicates
+  coverage and splits the evidence for one behaviour across two L1s. The subject
+  here is parity and freshness of the deployed artifact, not the behaviour
+  itself.
+
+  COMPONENT NOTE FOR THE IT PO: the work most likely lands in the build surface
+  (`build_pipeline`) rather than in the AC-driven-dev surface. Kept under
+  ACD-2100 so the goal stays cohesive and the delivery condition is not orphaned
+  from the defects it delivers. RE-HOME CANDIDATE if the IT PO judges the
+  build-side ownership dominant.
+
+  SIZING FOR THE BA: the L2 cap is 5. Two or three behaviours are likely
+  enough:
+    1. the copy a user runs after installing behaves the same as the source copy
+       on the startup path -- verified by running the DEPLOYED artifact, in the
+       deployed layout, not by comparing files;
+    2. a fix to the route that exists only outside templates/ does not count as
+       delivered -- an install must not silently revert it;
+    3. installing into a project that currently works never introduces a
+       startup failure that was absent before (the fact-1 hazard, stated as a
+       standing guarantee).
+  Per CLAUDE.md's real-artifact rule, evidence must come from exercising the
+  deployed artifact in a fresh process. A test that diffs two files is not
+  evidence that the deployed one runs.
+
+  2026-08-25 (business-analyst): took all three suggested behaviours as
+  ACD-2100d-1 / -2 / -3, and used ONE of the two spare slots for ACD-2100d-4, the
+  reference page. That page serves the reference-doc documentation trigger on this
+  L1 AND the identical triggers on ACD-2100a and ACD-2100b, both of which are full
+  at five children with no slot for a documentation child. Suggestion 2 carried two
+  distinct behaviours -- "not counted as delivered" and "an install must not
+  silently revert it" -- so the silent-overwrite half is pinned as ACD-2100d-2-i;
+  the 2026-08-18 workaround did not fail loudly, it disappeared, and that silence
+  is what made it look like a fix. One slot remains free here deliberately.

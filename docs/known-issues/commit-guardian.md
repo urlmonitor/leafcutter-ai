@@ -799,6 +799,25 @@ whether it moves the other two.
 
 ### KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set
 
+> **ID COLLISION — this entry and the one at `KI-CG-012` above share a number.** Two sessions
+> minted `KI-CG-012` independently on 2026-08-25; the other entry ("the hooks' test seams
+> disagree on both variable name and separator") was itself renumbered from `KI-CG-008` at
+> merge, which is how the collision arose. Deliberately **not** renumbered here, because the
+> inbound references do not disambiguate cleanly and a wrong renumber is worse than a flagged
+> duplicate:
+>
+> - `commit-guardian.md:953` and `build-pipeline.md:1095` cite `KI-CG-012` for an
+>   "invisible until touched" property — fits neither entry unambiguously.
+> - `BP-600d-3.yaml:186` cites it as "a third" occurrence of index-scoping — that reads as
+>   *this* entry.
+> - The 2026-08-25 10:26 changelog describes `KI-CG-012` as the `_is_leaf_ac()` / leaf-definition
+>   disagreement, which is the text now filed as **`KI-CG-013`** — so at least one inbound
+>   reference is already pointing at the wrong entry independently of this collision.
+>
+> Whoever owns this file should pick the renumber and fix all four references in one commit.
+> Next free id at time of writing is `KI-CG-018` (`016` and `017` were both claimed on
+> 2026-08-25 by two concurrent sessions — see the note on `KI-CG-017` below).
+
 - **Severity:** high
 - **Status:** open
 - **Occurrences:** 3
@@ -1168,3 +1187,311 @@ settle by reading the matcher, not by experiment.
 **Fix direction.** Match on the parsed invocation — program resolves to `git` and the
 subcommand is `commit` — rather than on a substring of the command text. Failing that, exclude
 commands whose program is a known read-only tool (`grep`, `rg`, `cat`, `less`, `echo`).
+
+**Numbering.** A concurrent session minted `KI-CG-016` for a different defect on the same
+day and renumbered its own entry to `KI-CG-017` before merge, leaving `016` to this one — see
+that entry's own note. This is `KI-BO-024`'s id-collision shape again, resolved cooperatively
+rather than by any check.
+
+---
+
+### KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_governance.py:631-642` — `main()`
+
+**Symptom.** The hook returns `0` having read no file, with no output on stdout or stderr,
+and is indistinguishable at the call site from a run that checked every staged record and
+found nothing wrong.
+
+**Root cause — the diagnostic is downstream of the silent exits.** `main()` has two early
+returns, and the introspection counter that exists to prove the hook did work sits *after*
+both of them:
+
+```python
+631    if not ac_store.is_dir():
+632        # No AC store — exit 0 immediately without creating any directories
+633        return 0
+634
+635    # Get staged AC YAML files
+636    staged_paths = _get_staged_ac_paths()
+637    if not staged_paths:
+638        return 0  # No AC files staged — nothing to check
+639
+640    # Emit parsed file count to stderr for test introspection (AC-13)
+641    if os.environ.get("HOOK_COUNT_PARSED"):
+642        print(f"{_HOOK_PREFIX} parsed_files: {len(staged_paths)}", file=sys.stderr)
+```
+
+`HOOK_COUNT_PARSED` was added so a caller could confirm the hook saw its files. It is
+unreachable on precisely the two paths where it saw none. Setting it and getting silence is
+therefore ambiguous between "the variable is unset", "the hook is old", and "the hook
+checked nothing" — and only the third is true.
+
+Line 631 is reached with `ac_store` wrong whenever `_find_project_root()` resolves above the
+AC store. In the ADR-001 self-hosting layout the workspace parent carries a `CLAUDE.md` but
+no `docs/acceptance-criteria/`, so a run whose working directory is the workspace parent
+takes the 633 exit every time. Not intermittent.
+
+**Evidence.** Both observed on 2026-08-25 while authoring `ACD-2100`, by two agents
+independently, on a worktree that did contain 31 staged AC records:
+
+```
+$ HOOK_COUNT_PARSED=1 HOOK_TEST_FILES=<relative path to a real staged AC> \
+    python <worktree>/.leafcutter/scripts/commit_guardian/check_ac_governance.py
+(no output at all)
+exit: 0
+
+$ env --chdir=<worktree> HOOK_COUNT_PARSED=1 HOOK_TEST_FILES=<same path> \
+    python <worktree>/.leafcutter/scripts/commit_guardian/check_ac_governance.py
+[check-ac-governance] parsed_files: 1
+exit: 0
+```
+
+Same hook, same file, same exit code; only the working directory differs, and only the
+second run inspected anything.
+
+**Compounding: `argv` is ignored.** `_get_staged_ac_paths()` (`:285`) reads `git diff
+--cached` or `HOOK_TEST_FILES`. Passing paths on the command line does not make the hook
+check them, so a caller who verifies the hook by invoking it with a path gets a pass that
+means nothing. This is the same shape already recorded for the other AC hooks — silence is
+not a pass, and neither is exit 0 with an argument the hook never read.
+
+**Why this is worse than a crash.** In pre-commit the working directory is the repository
+root, so the gate does run there — its practical blast radius is ad-hoc verification, agent
+self-checks, and any CI step that invokes it from elsewhere. Those are exactly the callers
+who would report "governance passes" on the strength of an exit code.
+
+**Fix direction.** Three separable changes, in order of value:
+
+- Emit the `HOOK_COUNT_PARSED` diagnostic (or an unconditional one-line summary naming the
+  resolved root and the file count) **before** the early returns, so a run that checked
+  nothing says so. A check that cannot report what it looked at should not be able to
+  report success.
+- Distinguish "no AC store found at `<resolved root>`" from "AC store found, nothing
+  staged". Both are legitimately exit 0; they are not the same fact.
+- Resolve the root the way the guardian hooks that already handle this layout do —
+  `_resolve_root.py` exists for it. Falling back to a bare relative `_AC_STORE_DIR` when
+  `_find_project_root()` returns `None` (`:627`) is what makes the failure depend on cwd.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M8, and a variant worth naming
+separately: the *instrumentation* meant to defeat M8 placed where the M8 path cannot reach
+it.
+
+---
+
+### KI-CG-019 — the `templates/` copy of `check_ac_parent_covered_by` fail-opens on an import it can never satisfy, so verifying from `templates/` always passes
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/commit_guardian/check_ac_parent_covered_by.py` — the
+  `derive_parent_id` import guard
+
+**Symptom.** Run from `templates/`, the hook prints a warning and exits 0 without checking
+anything:
+
+```
+$ HOOK_ROOT=<worktree> HOOK_TEST_FILES=<a real AC record> \
+    python <worktree>/templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+[check-ac-parent-covered-by] WARNING: cannot import derive_parent_id: ac_parent_id.py not
+found via package import, script-relative, or project-root walk.; skipping check (fail-open)
+exit: 0
+```
+
+The deployed copy under `.leafcutter/scripts/commit_guardian/` imports cleanly and runs.
+
+**Root cause.** `ac_parent_id.py` lives in `scripts/ac_store/` and is placed next to the
+hook only by `build.py`. In `templates/` that sibling does not exist, and none of the three
+resolution strategies can find it — so the condition is not an environment accident but a
+permanent property of that copy. The failure is guaranteed, and the response to a guaranteed
+failure is to pass.
+
+**Why it matters.** It is louder than `KI-CG-018` — it does print a warning — but it lands in
+the same trap: anyone verifying AC parent back-links by running the hook out of `templates/`
+gets exit 0 and a clean-looking result. That is a natural thing to do, because `templates/`
+is where the source of truth for the hook lives and where an author editing it is already
+working. The hook that exists to catch a stale `covered_by` is the one that silently
+abstains.
+
+Found while verifying `ACD-2100e`: a business-analyst hit the fail-open, noticed the warning,
+re-ran the deployed copy, and additionally corroborated the invariant by reading the parent's
+`covered_by` directly rather than trusting either exit code.
+
+**Fix direction.** Fail **closed** when the import cannot be satisfied and the hook was given
+files to check — the check exists to be blocking, and a blocking check that cannot load its
+own dependency has not passed. If the `templates/` copy is genuinely not meant to be
+executable in place, make it say that explicitly ("this copy is a build source; run the
+deployed hook") and exit non-zero, rather than emitting a warning shaped like a skip.
+
+Related: the deployed hook has no `parsed_files`-style diagnostic at all, so even a correct
+run cannot state what it inspected. Adding one alongside the `KI-CG-018` fix would make both
+hooks answerable to the same question.
+
+---
+
+### KI-CG-020 — hook registration has a fourth leg nobody documents: a hook absent from `blocking_hook_ids` is skipped by the autofix loop
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/scripts/precommit-autofix.json` `blocking_hook_ids`;
+  `templates/skills/precommit-autofix/SKILL.md` Step 4; `templates/skills/create-hook/SKILL.md`
+
+**Symptom.** A hook can be correctly registered by every documented step — script written,
+config key added, `hooks_manifest` entry added, row added to the hook documentation index —
+and still be ignored by the autofix loop, because a **fourth** registration surface exists
+that the `create-hook` procedure does not mention.
+
+`templates/scripts/precommit-autofix.json` carries a closed allowlist:
+
+```json
+"blocking_hook_ids": [
+  "check-complexity",
+  "check-docstrings",
+  "check-exception-handling",
+  "check-file-size",
+  "check-ac-schema",
+  "check-ac-limits",
+  "check-contract-shrinking"
+]
+```
+
+`precommit-autofix/SKILL.md` Step 4 is explicit about the consequence: if a failing hook
+does not appear in `blocking_hook_ids`, *"the hook is non-gating — skip it entirely, do not
+dispatch any fixer."*
+
+**Why this is a registration gap rather than a configuration choice.** The allowlist is a
+reasonable design — not every hook should have a fixer dispatched at it. The defect is that
+it is a **fourth leg of registration documented nowhere in the procedure that exists to
+enumerate the legs.** `create-hook` codifies three-way registration (script + guardian
+config + doc index) and `check_hook_parity` enforces consistency across those three. Neither
+knows this file exists. So the natural failure is silent: an author follows the documented
+procedure completely, `check_hook_parity` passes, and the hook lands outside the loop with
+nothing reporting the omission.
+
+**Evidence.** Found on 2026-08-25 while reviewing `BP-1100b-5`, an approved AC specifying a
+new staged-hunk commit-guardian hook (`check_presence_only_assertions.py`). Its
+`it_requirements` spell out three-way registration in detail — including an explicit
+`n_location_rule: "2"` constraint warning that a config key without a `hooks_manifest` entry
+"is a no-op that reads as shipped". Neither that record's `it_requirements`, `constraints`
+nor `doc_links` mentions `precommit-autofix.json`. As specified, the AC ships a gate the
+autofix loop is configured to ignore — and the record's own coverage would not catch it,
+because all twelve of its test descriptors exercise the hook directly.
+
+The irony is worth recording: `BP-1100b-5` exists to stop tests that look like proof but
+are not, and it carries a registration spec that looks complete but is not, for the same
+structural reason — an enumeration everyone trusts that is missing an item.
+
+**Scope.** The 7 hooks on the allowlist are unaffected. The exposure is every hook added
+since the allowlist was closed and every hook added from here, and the symptom is not a
+failure but a *reduced* one: the hook still blocks the commit, it simply gets no autofix
+attempt, so the effect is friction rather than a false pass. That is why this is `medium`
+and not `high` — but it is the kind of gap that is only ever noticed by someone reading the
+autofix config for an unrelated reason.
+
+**Fix direction.**
+
+- Add the fourth leg to `create-hook`'s procedure, with the decision made explicit: every
+  new hook is either added to `blocking_hook_ids` or is deliberately non-gating, and the
+  author records which. An omission by default is the current behaviour and is the thing to
+  remove.
+- Extend `check_hook_parity` to cover it, so a hook present in `hooks_manifest` and absent
+  from `blocking_hook_ids` is reported — as a warning naming the deliberate-exclusion route,
+  not as a hard failure, since exclusion is legitimate.
+- Amend `BP-1100b-5` when it is built, or accept the gap knowingly for that hook.
+
+---
+
+### KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes
+
+> **Minted as `KI-CG-016`, renumbered to `017` before merge.** A concurrent session claimed
+> `KI-CG-016` for a different defect (the delegation hook substring-matching command text) in a
+> PR authored at the same time. Renumbered here rather than there because that PR's description
+> was already written around `016`, and because filing a duplicate in the same commit that flags
+> the `KI-CG-012` duplicate would be self-defeating. Both numbers are free on `origin/main` at
+> the time of writing; if the other PR lands as something else, this entry keeps `017` regardless
+> — the number is arbitrary, the collision is not.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** the generated `.pre-commit-config.yaml`, `check-build-drift` entry — `files: ^leafcutter/templates/`
+
+**Symptom.** The hook exists to catch a template edited without a rebuild. Its file filter is
+`^leafcutter/templates/`, which is where templates live in a **consumer** install, where the
+package is vendored under `leafcutter/`. In this repository — the package itself — templates
+live at `templates/`. The pattern therefore matches nothing here, the hook has `pass_filenames:
+false` and no `always_run`, and pre-commit skips it. The one repository where every template
+change originates is the one repository where the drift gate does not run.
+
+**Evidence.** Observed in two consecutive commits on `fix/signoff-tool-allowlist`, which is
+what makes it unambiguous rather than inferred:
+
+```text
+commit 1 — staged five files under templates/agents/
+  Check Build Drift (leafcutter)........................(no files to check)Skipped
+
+commit 2 — staged only changelogs/ and docs/acceptance-criteria/
+  Check Build Drift (leafcutter)........................Failed
+```
+
+Skipped on the commit that changed five agent templates; ran on the commit that changed no
+template at all. The second run failed for an unrelated reason (KI-BP-011 — a manifest with no
+`output_mappings`), and only because the worktree was mid-bootstrap and briefly held an older
+config in which the entry carried `always_run: true`. Once the canonical build regenerated the
+config, the `^leafcutter/templates/` filter came back and the hook skipped again.
+
+**Why the severity is high rather than medium.** This is the gate whose absence lets every
+other deploy-staleness issue in the build-pipeline register survive. KI-BP-004 (worktree hooks
+frozen at build time) and KI-BP-008 (a skipped workflow-install phase leaving a deployed
+workflow 1497 lines stale) both propose extending `check_build_drift` as the natural home for
+the fix. Both proposals are unreachable while the hook never fires in the package repo.
+
+**A DETECTOR ALREADY EXISTS, AND IT IS RED — found while committing this entry.**
+`check-hook-trigger-reachability` (BP-100k-4) does exactly this analysis and fires on it. It
+ran on the commit that added this section and failed, naming **five** unreachable hooks, not
+one:
+
+```text
+UNREACHABLE: check-build-drift            files pattern '^leafcutter/templates/'
+UNREACHABLE: check-infra-docs             files pattern '(docker-compose.*\.ya?ml|...)'
+UNREACHABLE: check-paths-integrity        files pattern '^leafcutter/config/paths\.json$'
+UNREACHABLE: check-architecture-scaffolds files pattern '^leafcutter/templates/docs/architecture/'
+UNREACHABLE: check-output-drift           files pattern '^(\.claude/agents/|\.claude/skills/|...)'
+check-hook-trigger-reachability: RESULT total=50 unreachable=5 exempt=0
+```
+
+So the correction to this entry's original framing: the gap is **not** that nothing detects the
+condition. It is that the condition is unresolved across five hooks, and the gate that reports
+it blocks commits touching unrelated files, which makes it likely to be skipped rather than
+acted on. Three of the five (`check-build-drift`, `check-paths-integrity`,
+`check-architecture-scaffolds`) are the `^leafcutter/`-anchored consumer-path class this entry
+describes. `check-output-drift` is the same class pointing at `.claude/`, which is gitignored
+here. `check-infra-docs` is different in kind — this repo genuinely has no docker-compose or
+`.env.example`, so that one may be legitimately inapplicable rather than misconfigured, and an
+`exempt` mechanism exists (`exempt=0`) that nobody has used.
+
+That distinction is the real work: the reachability gate currently cannot tell "this filter is
+written against the wrong layout" from "this hook does not apply to this repository". Until it
+can, its verdict is unactionable in bulk and gets skipped, which is how five accumulated.
+
+**Fix direction.** Derive the filter from the layout rather than hardcoding one of the two, or
+match both — `(^|/)templates/`. Do it for all three consumer-path hooks at once, mark
+`check-infra-docs` exempt if it is genuinely inapplicable, and decide what `check-output-drift`
+should point at given `.claude/` is gitignored. Verify by staging a template change in the
+package repo and observing `check-build-drift` actually run — the skip line is quiet and reads
+like a pass.
+
+**Trap.** `(no files to check) Skipped` is visually indistinguishable from a hook that ran and
+had nothing to say, and it appears in the middle of a long green hook list. Nothing in a normal
+commit surfaces the fact that the drift gate has been inert for the life of the repository.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2's filter form: source and deployed
+layouts differ, and the gate is configured against the layout it is not running in.

@@ -1,0 +1,169 @@
+id: ACD-2100a-2
+components:
+  - ac_driven_dev
+  - worktree_manager
+readiness: approved
+priority: medium
+title: "The setup step finds the repository it operates on even when the script itself lives outside it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a copy of the worktree setup step placed in a directory that is not inside
+    any git repository and has no repository among its ancestors,
+  And exactly one git repository exists among the immediate subdirectories of that
+    directory,
+  When the setup step is executed from that directory with no repository location
+    supplied by the caller,
+  Then it resolves the repository it operates on to that one repository,
+  And it exits successfully with the requested worktree present on disk under that
+    repository,
+  And it states on its error stream which repository it selected and that the
+    selection came from a search rather than from the script's own location.
+depends_on: [ACD-2100a]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page authored by ACD-2100d-4. The resolution order this behaviour establishes is one of the facts that page must state."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004 carries the reproduction command and the exit-128 evidence for this layer."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. `_git_toplevel()` (~line 116) anchors on Path(__file__).resolve().parent at lines 134-135 with no fallback."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The layout the docstring claims to protect against and does not."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the worktree-creation surface this script implements."
+  - path: docs/reference/fixture-policy.md
+    relationship: describes
+    status: exists
+    relevance: "The authenticity rules the fixture for this behaviour must satisfy -- the existing tmp_path fixture reproduces the bias that hid the defect."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The change must land under templates/scripts/. The deployed copy under .leafcutter/scripts/ is build output and was already patched by hand once on 2026-08-18; that patch was regenerated away."
+  - "The anchor-based resolution must remain the first choice; the search is a fallback that runs only when the anchor yields no repository. A change that makes the search primary alters behaviour for every caller that works today."
+  - "The search must be bounded: immediate subdirectories of the starting directory only. It must not walk upward past the starting directory and must not follow symlinks out of it -- an unbounded walk on a developer machine can reach unrelated repositories and is a denial-of-service surface on a deep tree."
+  - "The fallback must announce itself on the diagnostic stream at WARNING or higher and name the repository it selected. A silent fallback is indistinguishable from the anchor having worked and leaves the next wrong-repository incident undiagnosable."
+  - "Must satisfy the repository error-handling policy: the git invocation is external I/O and must be wrapped in a typed except that logs at WARNING or re-raises; it must not be swallowed."
+  - "Must not change behaviour for callers that supply an explicit repository location -- that path must not consult the anchor or the search at all."
+  - "The resolution must be idempotent: two runs from the same directory with the same layout select the same repository."
+test_spec:
+  - name: test_repository_resolved_by_search_when_script_lives_outside_any_repo
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A genuinely non-repository directory containing exactly one git repository among
+      its immediate subdirectories, with the script copied outside that repository; the
+      step resolves to that repository and the requested worktree is present on disk
+      under it after the process exits.
+  - name: test_setup_step_resolves_from_its_real_command_line_entry_point
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/setup_ticket_worktree.py invoked as a subprocess with real argv and no repository location supplied"
+    description: >-
+      The behaviour is exercised through the script's own command-line entry point in a
+      fresh subprocess with cwd set to the non-repository directory -- not by importing
+      the resolver -- and the exit status is success.
+  - name: test_search_fallback_announces_the_repository_it_selected
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The error stream of that same subprocess names the selected repository and marks
+      the selection as coming from a search rather than from the script's own location.
+  - name: test_explicit_repository_location_bypasses_the_search_unchanged
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      With an explicit repository location supplied, the step uses it even when the
+      search would find a different candidate, and emits no search announcement.
+test_rationale: >-
+  The existing tests for this script invoke it from a tmp_path fixture that IS a git
+  repository, so the default anchor always resolves and the fallback is never reached.
+  Any test built on that fixture passes against the unfixed code and is therefore not
+  evidence. The Given here has to be constructed for real: a directory that is genuinely
+  not a repository, with no repository among its ancestors, and the script copied
+  outside the repository it is pointed at. Running the script as a subprocess rather
+  than importing the resolver is what makes the reachability claim real -- an imported
+  resolver can be correct while the command-line path still anchors on __file__. A test
+  that greps the source for a resolution helper proves nothing (CLAUDE.md, "Gate /
+  Workflow ACs -- Verify Behaviorally").
+delivers_to:
+  - agent: python-coder
+    ac_id: ACD-2100a-2-i
+    contract: "A repository resolver with an ordered contract: explicit caller-supplied location wins; otherwise the anchor; otherwise a bounded search of immediate subdirectories. The search returns its full candidate set, so the ambiguous case is representable rather than collapsed to a first hit."
+  - agent: python-coder
+    ac_id: ACD-2100a-5
+    contract: "A setup step that exits successfully from a working directory that is not a repository, with the created worktree under the resolved repository."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2100a-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE SECOND LAYER, separate from the path. Verified by the PO on 2026-08-25:
+  `_git_toplevel()` in templates/scripts/setup_ticket_worktree.py defaults its
+  anchor to `Path(__file__).resolve().parent` with no fallback. For the deployed
+  copy that directory is `<workspace>/.leafcutter/scripts/`, and `<workspace>` is
+  untracked -- the git root is `leafcutter-ai/`, one level DOWN -- so `rev-parse`
+  exits 128. Reproduced:
+
+    $ git -C /home/henzeh/projects/leafcutter/.leafcutter/scripts rev-parse --show-toplevel
+    fatal: not a git repository ...
+
+  The function's own docstring names this exact layout as the thing it protects
+  against and then asserts "the script always lives physically inside the
+  repository it operates on", which under self-hosting is false.
+
+  WHY EXISTING TESTS MISS IT ENTIRELY -- READ BEFORE WRITING THE TEST. Unit tests
+  for this script invoke it from a `tmp_path` fixture that IS a git repository, so
+  the default anchor always resolves and the fallback is never exercised. Per
+  CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally", the Given here must be
+  built for real: a directory that is genuinely not a repository, with the script
+  copied outside the repository it is pointed at. A test that greps for a
+  resolution helper, or that reuses the repo-shaped tmp_path fixture, proves
+  nothing. Same fixture bias as the check_secrets root-resolution defect fixed in
+  GE-118a-1.
+
+  THE STDERR CLAUSE IS DELIBERATE. A silent fallback is indistinguishable from the
+  anchor having worked, so the next person to debug a wrong-repository worktree has
+  no signal. The 2026-08-18 hand-patch of the deployed copy warned on stderr when
+  the fallback fired; that instinct was right even though the patch itself
+  evaporated on the next build.
+
+  AMBIGUITY IS NOT COVERED HERE. Exactly one candidate is the Given. Two or more is
+  ACD-2100a-2-i, and it must refuse rather than pick -- guessing a repository is
+  worse than failing, because the worktree lands in the wrong project.
+
+  2026-08-25 (it-po): the delivers_to contract to ACD-2100a-2-i is written as "the
+  search returns its full candidate set" on purpose. If the resolver's internal
+  contract is "return the repository", the ambiguous case has nowhere to live and
+  a-2-i becomes unimplementable without re-opening this record. The shape of the
+  return value is the coder's choice; that it can represent more than one candidate
+  is not. Search bounding is stated as a policy constraint rather than an algorithm --
+  an unbounded upward walk is the obvious first implementation and it is the one that
+  reaches unrelated repositories on a developer machine.
