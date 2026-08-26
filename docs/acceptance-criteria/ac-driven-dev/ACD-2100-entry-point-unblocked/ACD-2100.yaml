@@ -25,10 +25,22 @@ criteria: |
   rather than only in the source it was fixed in.
 depends_on: []
 doc_links:
-  - docs/known-issues/ac-driven-dev.md
-  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
-  - docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
-  - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "The three blocker entries this tree closes -- KI-ACD-004, KI-ACD-005, KI-ACD-009. Two of them carry root causes since shown to be out of date; the corrections live in this tree's notes rather than in that file."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The layout in which the path-resolution defects only reproduce: workspace parent is not a git repository and the deployed copy sits outside the repo it operates on."
+  - path: docs/architecture/adrs/ADR-012-retire-create-ticket-js.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes /plan-feature as the mandated entry point for all new work, which is what makes these three defects blockers rather than inconveniences."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause-and-resume mechanism ACD-2100c depends on, and the reason a gate that cannot reach a user has a correct behaviour other than discarding the run."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null

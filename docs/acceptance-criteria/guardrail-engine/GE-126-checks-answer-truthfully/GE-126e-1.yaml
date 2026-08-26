@@ -1,0 +1,197 @@
+id: GE-126e-1
+title: "Every check is classified by running it and not by reading it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two fixture checks enrolled alongside the real ones — the first written to reproduce
+    a recorded shape by terminating with the ordinary success value when the place it needs
+    cannot be located and the second written to refuse whenever it cannot reach what it
+    needs,
+  And for each check something that genuinely violates the rule that check enforces,
+  When the census runs each check twice out of process — once from a working directory where
+    its prerequisites resolve and once from a working directory where they do not — and
+    records for each of the two runs which of three outcomes it produced: the work was
+    refused the check said it could not inspect or the check reported a clean pass,
+  Then it classifies the first fixture as an instance because it refused in the first run and
+    reported a clean pass in the second,
+  And it classifies the second fixture as not an instance because it never reported a clean
+    pass from a run in which it inspected nothing,
+  And for every check it classifies as an instance it records the two working directories and
+    the two outcomes so a reader can re-run the pair by hand and see the same difference,
+  And a check that refuses in both runs and a check that passes in both runs are classified
+    differently from each other and neither is classified as an instance,
+  And no classification is assigned to any check from the content of its source.
+
+  Coverage note: covered only by running the census over a fixture set whose expected
+  classification is known in advance and asserting each classification. The two fixtures are
+  the control pair: a census that classifies everything as an instance passes on the first
+  and fails on the second, and a census that classifies nothing does the reverse. A census
+  that derives classifications by searching source text does not cover this criterion — it
+  reports on dead code and is quietly wrong in both directions.
+depends_on:
+  - GE-126e
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's evidence block is the discriminating procedure this criterion turns into a repeatable measurement: same check, same file, two working directories, only one run inspected anything. KI-CG-019 is the second recorded shape the fixtures reproduce."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c.yaml
+    relationship: context
+    status: exists
+    relevance: "Related and not the same question. That tree builds a harness comparing a check's verdict between two working copies to prove a parity property; this census asks of one layout at a time whether a check can reach a clean answer without inspecting anything. Share the execution machinery if that harness lands first. Read-only reference — that folder must not be edited."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Its four-check probe model and canary - a gate must be shown to FIRE - is the nearest architectural precedent for classifying by execution rather than by inspection."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Which copies deploy, and therefore which copy of each check the census must execute. A census run against the source tree measures a population nobody runs."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Every classification must come from executing the check. No classification may be derived from source text, from an abstract syntax tree, from an import, or from any static property. A census built by searching for an early return reports on dead code and is wrong in both directions."
+  - "Each check must be executed in its own process against a disposable copy of a working tree. A census that runs seventy checks against the real repository will have several of them mutate it, and a mutated repository invalidates every classification taken after the first."
+  - "Each execution must be bounded by a timeout. A check that hangs is a third-category unexecutable result for GE-126e-2 to report, never a pass and never a silent omission from the population."
+  - "A check that crashes, cannot be launched, or exceeds its timeout is an unexecutable result, not an absence. Silently dropping it shrinks the denominator and makes the instance count look better without anything having improved."
+  - "The census must execute the DEPLOYED copy of each check. The source-tree copy is a population nobody runs, and for at least one member the source copy's behaviour differs from the deployed copy's by construction (KI-CG-019)."
+  - "The four outcome pairings must be distinguishable in the recorded result - refused in both, passed in both, could-not-inspect in both, and the asymmetric pair. Only the asymmetric pair is an instance; folding pass-in-both into the instance count would inflate the first measured number the L0 forbids stating at all until it is measured honestly."
+  - "The two fixture checks must reproduce the recorded SHAPES rather than name the two recorded checks. Naming the real checks makes this criterion expire the moment GE-126a to GE-126c land, and leaves the census untested afterwards."
+  - "The census must have a stated runtime budget and must report its own wall-clock time. Roughly seventy checks run twice is on the order of a hundred and forty process launches, and an unbounded census is one nobody runs twice."
+  - "Error handling must follow the four rules in CLAUDE.md. An except block around a check launch that neither logs nor re-raises would turn a failed launch into a silent omission, which is this census committing the defect it measures."
+test_spec:
+  - name: test_the_instance_fixture_is_classified_as_an_instance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the census entry point"
+    description: "A fixture check written to reproduce the recorded shape - refuses where its prerequisites resolve, returns the ordinary success value where they do not - is classified as an instance, and the classification carries both working directories and both outcomes."
+  - name: test_the_refusing_fixture_is_classified_as_not_an_instance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A fixture check that refuses whenever it cannot reach what it needs is classified as not an instance. Paired with the first descriptor this is the control pair: a census that classifies everything passes one and fails the other."
+  - name: test_all_four_outcome_pairings_receive_distinct_classifications
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Fixtures for refused-in-both, passed-in-both, could-not-inspect-in-both and the asymmetric pair are each classified, the four classifications differ, and only the asymmetric pair is an instance."
+  - name: test_a_check_whose_source_reads_defective_but_runs_correctly_is_not_an_instance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A fixture carrying an unreachable early-return-zero in dead code, but which refuses on both runs, is classified as not an instance - a source-searching census fails here and no execution-based one can."
+  - name: test_the_census_executes_the_deployed_copy_of_each_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/build.py --target-dir <temp> then the census entry point"
+    description: "After a real build, the census's executions resolve to the deployed copies; a fixture whose deployed and source copies behave differently is classified by the deployed behaviour."
+test_rationale: |
+  The failure this record must exclude is a census that is confidently wrong — and the
+  cheap implementation, searching each check's source for an early return, is confidently
+  wrong in both directions while producing a plausible list. Only fixtures whose correct
+  classification is known in advance can catch that, and the pair is deliberately
+  adversarial: a census that classifies everything as an instance passes the first and
+  fails the second, one that classifies nothing does the reverse, and neither can pass
+  both. The dead-code descriptor is the direct anti-grep assertion — a source-reading
+  census must fail it. The fixtures reproduce the recorded shapes rather than naming the
+  recorded checks so that the control pair survives GE-126a to GE-126c landing; naming
+  the real checks would leave the census untested from the moment it became useful.
+delivers_to:
+  agent: python-coder
+  contract: "The per-check classification: for each executed check, the two working directories, the outcome of each run, and which of the four pairings resulted - with only the asymmetric pair counting as an instance. GE-126e-2 aggregates these into examined, found and unexecutable counts; GE-126e-3 determines which population is classified; GE-126e-2-i constrains how the result is delivered."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE OBSERVABLE IS THE OUTCOME OF RUNNING THE CHECK AND NEVER A PROPERTY OF ITS SOURCE. The
+  L1 is unambiguous about this and gives the reason: a census built by searching for an early
+  return reports on dead code and will be wrong in both directions. This record makes the
+  execution mandatory by making the fixtures' known classifications the assertion.
+
+  THE FIXTURES REPRODUCE THE TWO RECORDED SHAPES RATHER THAN NAMING THE TWO RECORDED CHECKS.
+  Naming the real checks would make this criterion expire the moment GE-126a to GE-126c land,
+  and would leave the census untested afterwards. Fixtures built to the recorded shapes keep
+  the control pair meaningful for as long as the census exists.
+
+  THE FOUR-WAY DISTINCTION IS DELIBERATE. Refused in both, passed in both, could-not-inspect
+  in both, and the asymmetric pair are four different facts. Only the asymmetric pair is an
+  instance. A check that passes in both runs may simply have had nothing to object to; that
+  is a different finding and folding it into the instance count would inflate the first
+  measured number, which the L0 forbids being stated at all until it is measured honestly.
+
+  RECORDING THE TWO WORKING DIRECTORIES IS WHAT MAKES THE VERDICT ARGUABLE. A classification
+  nobody can reproduce is an assertion. The pair recorded alongside it is what lets a reader
+  disagree, which is the property KI-CG-018's own evidence block has and which is why it was
+  believed.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND IS NOT TERMINAL. This record produces the per-check
+  classification that the whole rest of the branch is built on: GE-126e-2 aggregates it,
+  GE-126e-3 decides whose classifications are produced, GE-126e-2-i constrains delivery,
+  GE-126e-4 draws it and GE-126e-5 publishes the first measurement of it. The contract is
+  written per-check rather than as a report, because the report is GE-126e-2's deliverable
+  and conflating the two lets an implementation satisfy both with a summary nobody can
+  re-run.
+
+  expects_from IS NULL AND THAT IS A DECISION. Head of the GE-126e chain. Not an unenriched
+  field. DO NOT REFILL.
+
+  THE TEST CONTRACT IS DELIBERATELY NOT A SPOT-CHECK OF THE THREE KNOWN HOOKS, and this is
+  the point most likely to be lost in implementation. Not one descriptor names
+  check_ac_governance, check_ac_parent_covered_by or check_hook_parity. Every descriptor
+  turns on a fixture whose correct classification is fixed in advance. A suite that
+  substitutes 'the census finds the three known instances' is testing the census against
+  the answer it was written from, and it expires the moment GE-126a to GE-126c land.
+
+  A CHECK THE CENSUS WILL VERY LIKELY SURFACE, RECORDED HERE RATHER THAN ACTED ON. While
+  using check_ac_limits.py during this feature's authoring, the business analyst observed
+  that it carries the census's target shape itself: three silent exit-0 returns, argv
+  ignored in favour of the HOOK_TEST_FILES seam, and no diagnostic on any path - so its
+  silence is fail-open in three ways and is not evidence of a pass. It was not filed as a
+  known issue and it is NOT in scope for this tree. It is written down here because
+  GE-126e's census is the mechanism that should surface it, and because a census that runs
+  and does NOT surface it would be worth investigating. Do not widen any record here to
+  repair it; GE-126e-2-i is explicit that the census reports and does not repair.
+
+  THE EXECUTION-ISOLATION AND TIMEOUT REQUIREMENTS ARE MINE, NOT THE BA'S. Roughly seventy
+  checks executed twice is on the order of a hundred and forty process launches, several of
+  which mutate whatever tree they are pointed at. Without disposable trees the census
+  corrupts its own measurement after the first mutating check; without a timeout one
+  hanging check makes the whole census unrunnable and therefore unrun.
+
+  SIZED L. A process-isolated execution harness, four-way outcome classification, and
+  disposable-tree management. This is the largest single record in the tree.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

@@ -1,0 +1,166 @@
+id: GE-126a-1
+title: "A record you name on the command line is the record that gets judged"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed AC-governance check is invoked out of process with the path of
+    one acceptance-criterion record named as its only command-line target,
+  And that record genuinely violates the rule the check enforces — it is a record new
+    to the index that carries no originating-agent field at all,
+  When the check finishes,
+  Then the check refuses that record: the outcome it reports is a refusal and the
+    accompanying text names the record by the path that was handed to it and names
+    the rule it broke,
+  And a second invocation identical in every respect except that the named record
+    carries a valid originating-agent field reports an ordinary pass,
+  And the refusal and the pass are told apart by the outcome value alone without any
+    caller having to read prose,
+  And the behaviour recorded on 2026-08-25 — the ordinary success outcome returned by
+    a run that never read the file whose path it was given — is no longer producible
+    on this path with any command-line target.
+
+  Coverage note: covered only by a test that executes the deployed check in a separate
+  process against a record known to violate the rule and asserts on the outcome. A test
+  that hands the check a clean record does not cover this criterion, because a check
+  that discarded the argument entirely also passes that test. A test that searches the
+  check's source for argument handling does not cover it either — a grep-only test
+  passes on dead code (CLAUDE.md, "Gate / Workflow ACs — Verify Behaviorally, Not by
+  Grep").
+depends_on:
+  - GE-126a
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's compounding paragraph is the observation this criterion closes: _get_staged_ac_paths() reads the staged set or the test seam and never argv, so a caller who verifies the check by handing it a path gets a pass that means nothing."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+    relevance: "The check whose argv contract this criterion pins. The originating-agent requirement it enforces on a record new to the index is the rule the violating fixture breaks."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The component-level description of how a check receives its scope and what its result means. Read before changing the target-resolution path."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Fixes which copy is the deployed gate. Every assertion for this criterion is made against the deployed copy, never the templates/ source."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/. A result obtained by running the templates/ source copy is not evidence for this criterion (ADR-001, ADR-013)."
+  - "Coverage must reach the check through its process entry point. unit_tests/commit_guardian/test_check_ac_governance.py states in its own module docstring that it calls the hook's internal functions directly rather than by subprocess; that seam does not satisfy this criterion and must not be reused for it."
+  - "Must not change the exit status of any commit-time invocation that passes today. The refusal-versus-pass distinction is carried by the machine-readable outcome value; the component's deliberate fail-open-on-internal-error convention (GE-116a-1-iii) is not repealed by this record."
+  - "The outcome value must be readable by a caller that parses no prose - a caller must be able to tell refusal from pass without matching on message text."
+  - "The violating fixture record must be serialised by the same writer the real store uses rather than written as a hand-indented literal, because an indented-versus-column-zero difference has already produced a parser that was a no-op on every real record (CLAUDE.md, 'Real-artifact behavioral spot-check before declaring done')."
+  - "Any module newly imported by the check must be added to the build deploy manifest in the same change and the deployed copy exercised afterwards; a source-tree-only import raises ModuleNotFoundError at hook runtime (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "Error handling must follow the four rules in CLAUDE.md. An except block that neither logs at WARNING or higher nor re-raises is the silent-abstention shape this record exists to remove, reintroduced inside the fix."
+test_spec:
+  - name: test_argv_named_record_missing_origin_agent_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Deployed check run by subprocess with one AC path as its only argv target, that record new to the index and carrying no origin_agent, reports a refusal whose text names that exact path and the rule broken."
+  - name: test_argv_named_clean_record_is_an_ordinary_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same invocation with a valid origin_agent on the named record reports the ordinary success outcome - the discriminating control that stops the refusal being unconditional."
+  - name: test_argv_target_is_judged_when_the_staged_set_is_disjoint_from_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "With the violating record named on argv and the git index holding only unrelated clean files, the run still refuses the named record - an implementation that reads the staged set and discards argv cannot pass this."
+  - name: test_refusal_and_pass_differ_in_the_deployed_copys_outcome_value
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Both runs are executed against the build-deployed copy and are told apart by the returned outcome value alone with no message-text matching."
+test_rationale: |
+  A direct-import unit test of the target-resolution function would be green against
+  the code as it stands on 2026-08-25, because that code resolves targets correctly
+  from the staged set — the defect is that argv never reaches the resolver. Only a
+  subprocess run whose argv and whose staged set disagree can tell the two apart, and
+  only a violating record can prove the resolved target was actually read. The
+  disjoint-staged-set descriptor is the load-bearing one: a check that quietly ignores
+  argv passes every other descriptor in this list.
+delivers_to:
+  agent: python-coder
+  contract: "The resolved-target set for check_ac_governance: the ordered collection of acceptance-criterion record paths a run will judge, populated from argv when argv names targets. GE-126a-2 extends the same collection with a target that resolved to nothing, and GE-126a-3 populates it from the environment seam. Both consumers require that a member of this collection is judged rather than counted."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE FIRST OF THE TWO MANDATORY ARMS the L1 names. It establishes that a
+  named target is honoured. GE-126a-2 establishes that a named target which resolves
+  to nothing is a caller error rather than a pass. Neither arm alone distinguishes
+  "honoured your argument" from "ignored it and found nothing to complain about", so
+  do not close one by satisfying the other.
+
+  WHY THE VIOLATING RECORD IS LOAD-BEARING AND THE CLEAN ONE IS ONLY THE CONTROL. The
+  observable is the verdict on a record known to break the rule. A printed count of
+  files seen is explicitly NOT accepted here — the L1 says so and the L0 says so — a
+  check can echo the number of paths it was handed and have inspected a different set.
+  The clean-record run exists solely to prove the refusal is discriminating rather than
+  unconditional; without it an implementer satisfies this by refusing everything.
+
+  BOUNDARY — THIS IS NOT AN EMPTY-SCOPE RULE. A run with no target named at all, where
+  nothing is in scope, still reports an ordinary pass. That boundary is pinned
+  separately as GE-126a-2-i because breaking it breaks every commit-time invocation of
+  the whole AC check family, and because it is the most likely regression from this
+  work.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET, not because this criterion is
+  terminal. Contracts between records are filled at the IT PO stage. See BP-1100b-5 on
+  main for why that distinction is worth stating rather than leaving to inference.
+  DO NOT REFILL this field from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND IS NOT TERMINAL. This record establishes the
+  resolved-target collection that GE-126a-2 and GE-126a-3 both extend. The contract is
+  the collection and the obligation attached to a member of it — that it is JUDGED,
+  not counted. Stated that way because both consumers can be satisfied superficially by
+  a longer list nobody reads.
+
+  expects_from IS NULL AND THAT IS A DECISION. This is the head of the GE-126a chain:
+  it consumes no artifact produced by another record in this tree. It is not an
+  unenriched field. DO NOT REFILL.
+
+  AGENT AND ORDERING. python-coder. Ordering to GE-126a-2 and GE-126a-3 lives in their
+  depends_on and nowhere else — expects_from is invisible to the build sequencer
+  (KI-ACD-015), so the contract above carries no scheduling meaning.
+
+  THE TEST CONTRACT IS DELIBERATELY THREE-ARMED PLUS ONE. The third descriptor —
+  argv naming the violating record while the git index holds only unrelated clean files
+  — is the only one an implementation that discards argv cannot satisfy. If a reviewer
+  has to drop a descriptor, that is not the one.
+
+  NOT AUTHORED HERE: declares_side_effect. It is derived from the Then clause per
+  BO-2900g-2 and hand-authoring it is what produced the nine store-wide disagreements
+  recorded in KI-CG-015.

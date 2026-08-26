@@ -1,0 +1,169 @@
+id: GE-126b-3
+title: "The check finds the same store from wherever you happen to be standing"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a working copy whose acceptance-criterion store holds one staged record that
+    genuinely violates the rule the deployed AC-governance check enforces,
+  When the check is invoked out of process by absolute path from the working copy root
+    and again from the parent directory that carries a project marker but no store and
+    again from a subdirectory several levels inside the working copy,
+  Then all three runs resolve the same root and report the same root in their statement,
+  And all three runs refuse the same record naming it so the resolution is corroborated
+    by a verdict rather than by the root string alone,
+  And the check reaches that root by the same means the rest of the check family already
+    uses rather than by a walk it carries privately so a later layout change moves all of
+    them together,
+  And when no root can be resolved by that shared means the check reports that it could
+    not resolve a root and names the directory it started from instead of quietly falling
+    back to a relative location and answering about a place it never located.
+
+  Coverage note: covered only by out-of-process runs of the deployed check from the three
+  working directories asserting both the resolved root and the refusal in each. Asserting
+  the resolved root alone does not cover this criterion; a check can report a root it did
+  not read from.
+depends_on:
+  - GE-126b
+  - GE-126b-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's third fix direction: resolve the root the way the guardian checks that already handle this layout do. Falling back to a bare relative store location when the private root walk returns nothing is what makes the failure depend on the working directory."
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: related
+    status: exists
+    relevance: "The shared resolution the rest of the family already imports. This criterion is about joining it rather than adding a nineteenth private walk."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: context
+    status: exists
+    relevance: "Defines the workspace-parent layout in which the private walk resolves above the store every time."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The prior art for a working-directory-dependent gate silently skipping. Its fail-closed-on-self-error invariant is the model for the unresolvable-root clause here."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the family's shared root resolution is described. Joining it is a change to the family's shape, not a local fix."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The check must join the shared root resolution the rest of the family already imports rather than keeping a corrected private walk. A point fix that repairs the private walk is the fourth patch of a shape this component has patched three times and leaves this check out of step at the next layout change."
+  - "The private root walk must be DELETED, not left in place as a fallback. A retained fallback preserves the working-directory dependence for exactly the case the shared resolution fails on, which is the case that produced KI-CG-018."
+  - "No silent fallback to a relative store location is permitted. When the shared means resolves nothing, the check reports that and names the directory it started from - substituting a guess is what lets it answer about a place it never located."
+  - "If joining the shared resolution introduces a new import for the deployed hook, that module must be in the build deploy manifest in the same change and the DEPLOYED copy exercised. A source-tree-only import raises ModuleNotFoundError at hook runtime and, once this gate is required, blocks every merge (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "Every assertion must be made against the copy the build deploys under .leafcutter/. The workspace-parent case is a property of the deployed layout and does not reproduce from the source tree."
+  - "Must not change the exit status of any commit-time invocation that passes today; in pre-commit the working directory is already the repository root and that path must be untouched."
+  - "Error handling must follow the four rules in CLAUDE.md; an unresolvable root is an expected condition to be reported, not an internal error to fail open on."
+test_spec:
+  - name: test_three_working_directories_resolve_one_identical_root
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Deployed check invoked by absolute path from the working-copy root, from the workspace parent that carries a project marker but no store, and from a deep subdirectory - all three report the same resolved root, compared to each other rather than to a literal."
+  - name: test_all_three_working_directories_refuse_the_same_staged_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Each of the three runs refuses the same violating record by name. The resolved-root string alone does not cover this - a check can report a root it did not read from."
+  - name: test_the_workspace_parent_run_no_longer_reproduces_the_2026_08_25_silence
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "The exact working directory KI-CG-018 reproduced from - the ADR-001 workspace parent carrying CLAUDE.md and no docs/acceptance-criteria/ - now resolves the store below it and refuses the staged violating record."
+  - name: test_unresolvable_root_is_reported_and_never_silently_substituted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "In a tree where the shared means can resolve no root, the check names the directory it started from and reports the failure; it does not fall back to a relative store location and does not report an ordinary pass. A seeded violating record placed at the relative fallback location is NOT judged, proving the fallback is gone."
+test_rationale: |
+  Asserting the resolved root is the obvious test and it is insufficient in a specific
+  way the criteria call out: a check can print a root it never read from, which is
+  exactly the class of self-report this tree bars. Pairing each root assertion with a
+  refusal on the same staged record is what binds the string to an inspection. The
+  fourth descriptor is written negatively on purpose — a seeded violating record at the
+  old relative fallback location must NOT be judged — because a retained fallback is
+  invisible to every positive assertion and is the most likely form the cheap fix takes.
+  The third descriptor reproduces the recorded working directory specifically, so the
+  original observation is closed rather than merely made unlikely.
+delivers_to:
+  agent: documentation-expert
+  contract: "The resolved root reported by every run, obtained through the shared family resolution rather than a private walk, plus the unresolvable-root report naming the starting directory. GE-126b-4 states that every run reports the root it resolved; that statement is only true once this record lands."
+expects_from:
+  ac_id: GE-126b-1
+  contract: "The unconditional pre-exit statement, which carries the resolved root as one of its two facts. This record supplies the value that field reports and makes it independent of the caller's working directory."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE L1 REQUIRED THIS TO BE A SEPARATE L2 WITH ITS OWN OBSERVABLE and this record is that
+  separation. Repairing root resolution removes one route to the silent exit; it does not
+  remove the silence. GE-126b-1 and GE-126b-2 must hold even when the root resolves
+  perfectly, and neither may be closed by this record.
+
+  THE ORDER MATTERS FOR THE OTHER DIRECTION TOO. If this lands first, the workspace-parent
+  case that KI-CG-018 reproduced stops arising, and a reader could conclude the defect is
+  gone. It is not — it is one working directory further away. That is precisely why
+  GE-126b-1's pair is written against a tree that genuinely contains no store.
+
+  DO NOT ADD A NINETEENTH PRIVATE ROOT WALK. This check is one of the files still carrying
+  its own walk while a majority of the family already imports the shared resolution. A
+  point fix that keeps the private walk and merely corrects it is the fourth patch of a
+  shape this component has patched three times already.
+
+  THE UNRESOLVABLE-ROOT CLAUSE IS THE ANTI-FALLBACK CLAUSE. The observed defect depends on
+  a silent fallback to a relative location. Reporting the failure to resolve rather than
+  substituting a guess is what stops the check answering about a place it never located.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. GE-126b-4's criterion "every run
+  says what root it resolved" is only a true statement about the shipped system once this
+  record lands. That makes it a contract rather than a coincidence of ordering, and it is
+  why the contract names the unresolvable-root report as well as the happy path — the
+  reference has to describe both.
+
+  THE DELETE-THE-PRIVATE-WALK REQUIREMENT IS THE ONE MOST LIKELY TO BE SOFTENED. Keeping
+  the old walk as a fallback looks conservative and is the opposite: it preserves the
+  working-directory dependence for precisely the inputs the shared resolution fails on.
+  The fourth test descriptor is written to detect a retained fallback specifically, by
+  seeding a violating record at the old relative location and requiring it NOT to be
+  judged.
+
+  AGENT — python-coder. Ordering lives in depends_on. The expects_from edge is data-shape
+  documentation only (KI-ACD-015).
+
+  A DEPLOY-MANIFEST WARNING, NOT A NEW OBLIGATION. If joining the shared resolution adds
+  an import to the deployed hook, that module must be in the build deploy map in the same
+  change. This repository has already shipped a required gate that crashed with
+  ModuleNotFoundError for exactly this reason, and unit tests importing from the source
+  tree mask it completely.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

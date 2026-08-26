@@ -1,0 +1,161 @@
+id: GE-126d-2
+title: "Recording a deliberate exclusion silences the report for that check and no other"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two fixture checks both registered on every documented leg and both absent from the
+    roster the autofix loop reads and one of them carrying a recorded deliberate exclusion
+    that states who decided and why,
+  When the registration parity check runs,
+  Then it names the fixture check with no recorded exclusion and does not name the one that
+    carries it,
+  And removing the recorded exclusion and running again on an otherwise identical tree
+    causes that check to be named so the silence was caused by the record rather than by
+    the check being overlooked,
+  And a recorded exclusion that names a check absent from the manifest does not silence
+    anything and is itself named,
+  And an exclusion record does not add its check to the roster so a check excluded from the
+    autofix loop stays excluded from it,
+  And the check that carries a recorded exclusion still blocks a commit that violates its
+    rule so recording an exclusion has changed what the autofix loop attempts and nothing
+    about what the check enforces.
+
+  Coverage note: covered by running the parity check over a fixture registration set in
+  each of the four states and asserting which checks are named in each. The last clause is
+  covered by a separate out-of-process run of the excluded fixture check against input that
+  genuinely violates its rule, asserting it still blocks.
+depends_on:
+  - GE-126d
+  - GE-126d-1
+doc_links:
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-020's fix direction: every new check is either added to the roster or is deliberately non-gating and the author records which. An omission by default is the current behaviour and is the thing to remove."
+  - path: templates/scripts/commit_guardian/check_hook_parity.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: context
+    status: exists
+    relevance: "The precedent for the shape wanted here — a roster made data while staying closed. Exclusion is a legitimate recorded decision rather than an absence."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Where the registration legs and their consequences are described. A new durable record type attached to a check belongs in that description."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The exclusion must be a durable record attached to the check, carrying who decided and why. A suppression comment in a config file, a naming convention, or an entry in a second list are all rejected: the first two are not readable as data and the third is another enumeration to drift."
+  - "An exclusion must never place its check on the roster. The roster stays closed and an exclusion is the opposite of membership - an implementation that satisfies the silence by adding the check to the roster has inverted the record."
+  - "An exclusion must never change what its check enforces. Exclusion means no fixer is dispatched; it has never meant the check stops blocking. An implementation that lets an exclusion make a check non-gating turns a friction fix into a hole and this record forbids it behaviourally rather than by note."
+  - "An exclusion naming a check absent from the manifest must itself be reported. An enumeration whose entries are never checked against reality drifts in both directions, which is the same reasoning that produced GE-126d-1-i."
+  - "The exclusion store must be data the parity check reads, and it must not become a fifth registration leg with its own separate enumeration. Where it lives should be decided against GE-126d-3's single declaration rather than ahead of it."
+  - "If the exclusion store is a new file the build must deploy, it must be added to the build deploy manifest in the same change and the DEPLOYED parity check exercised against it. A source-tree-only file makes the deployed check silently see no exclusions at all."
+  - "Every run must be out of process over an isolated fixture tree; the repository's own manifest, roster and exclusion records must not be read or written by the tests."
+  - "Error handling must follow the four rules in CLAUDE.md."
+test_spec:
+  - name: test_the_check_with_no_recorded_exclusion_is_named_and_the_other_is_not
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_hook_parity.py"
+    description: "Two fixture checks both off the roster, one carrying a recorded exclusion: the parity check names the one without and does not name the one with."
+  - name: test_removing_the_exclusion_record_causes_that_check_to_be_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The exclusion is removed and nothing else changed; the previously silent check is now named. This binds the silence to the record - a parity check that names nothing also produces the first descriptor's silence."
+  - name: test_an_exclusion_for_a_check_absent_from_the_manifest_is_itself_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An exclusion record naming a check the manifest does not contain silences nothing and is reported in its own right."
+  - name: test_an_excluded_check_still_blocks_input_that_violates_its_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "the excluded fixture check's own script"
+    description: "The excluded fixture check is run out of process against input that genuinely violates its rule and still blocks, and it is confirmed absent from the roster - exclusion changed what the autofix loop attempts and nothing about enforcement."
+test_rationale: |
+  The first descriptor is silence, and silence is what a parity check that is not
+  looking also produces — so on its own it is satisfied by the defect. The second
+  descriptor is the whole coverage: remove the record, change nothing else, and the
+  check must be named. The fourth descriptor guards the most dangerous available
+  misreading, that an exclusion makes a check non-gating, and it is asserted
+  behaviourally by running the excluded check against real violating input rather than
+  by a note in the record, because a note cannot fail. The third descriptor closes the
+  drift direction that GE-126d-1-i establishes for the roster and that applies equally
+  to any second list of names.
+delivers_to:
+  agent: documentation-expert
+  contract: "The deliberate-exclusion record: what it is, where it lives, what it must carry (who decided and why), and the two facts a reader must be told about it - that it never adds its check to the roster and never changes what its check enforces. GE-126d-4 tells an author how to record one and GE-126d-5 states what each leg buys."
+expects_from:
+  ac_id: GE-126d-1
+  contract: "The roster as a fourth registration leg the parity check reads, and the finding it emits for a check absent from it. This record supplies the exclusion route that finding is required to name."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS WHERE THE L1'S DEFERRED DECISION IS TAKEN: recording a deliberate exclusion is a
+  durable record attached to the check that names the decision, not a suppression comment
+  and not silence. The L1 asked for the shape to be decided at L2 and said the criterion is
+  that the choice becomes explicit.
+
+  THE LAST CLAUSE FENCES OFF THE MOST DANGEROUS MISREADING. Exclusion from the autofix
+  roster means no fixer is dispatched. It has never meant the check stops blocking. An
+  implementation that treats an exclusion record as a way to make a check non-gating would
+  turn a friction fix into a hole, and this record forbids it with a behavioural assertion
+  rather than a note.
+
+  THE REMOVE-AND-RERUN ARM IS WHAT BINDS THE SILENCE TO THE RECORD. A parity check that
+  never names anything also produces the silence in the first arm. Only the paired run
+  where the record is absent distinguishes a working suppression from a check that is not
+  looking.
+
+  AN EXCLUSION FOR A CHECK THAT DOES NOT EXIST IS NOT A SUPPRESSION and is named for the
+  same reason GE-126d-1-i names a stale roster entry: an enumeration whose entries are
+  never checked against reality drifts in both directions.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NOW SET AND CROSSES AN AGENT BOUNDARY. Both documentation records in this
+  branch depend on what an exclusion IS: GE-126d-4 has to tell an author how to record one,
+  GE-126d-5 has to state that it never changes enforcement. The contract carries those two
+  facts explicitly because they are the two a reader will otherwise guess wrong.
+
+  A DECISION LEFT OPEN ON PURPOSE, AND FLAGGED. Where the exclusion record lives is NOT
+  fixed here. It should be decided against GE-126d-3's single declaration rather than
+  ahead of it, because inventing a home for it now is how a fifth enumeration gets created
+  on the same day the fourth is closed. The fifth it_requirement says so; a coder who
+  reaches this record before GE-126d-3 should raise it rather than choose.
+
+  A DEPLOY-MANIFEST WARNING. If the exclusion store is a new file, the build must deploy
+  it or the deployed parity check sees no exclusions at all and names every excluded check
+  - which is the noise failure this branch is trying to avoid, arriving through the build.
+
+  AGENT — python-coder. Surface is check_hook_parity.py plus whatever data surface the
+  exclusion record lands on; both Python-adjacent config, no split warranted.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

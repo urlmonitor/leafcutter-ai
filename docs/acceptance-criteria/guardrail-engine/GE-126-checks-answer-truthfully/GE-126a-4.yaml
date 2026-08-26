@@ -1,0 +1,157 @@
+id: GE-126a-4
+title: "The written procedure for interrogating a check yourself is one you can follow and trust"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to confirm for themselves that a check would refuse a
+    particular piece of work rather than trusting an exit code,
+  When they follow the documented procedure for interrogating a check end to end,
+  Then the procedure tells them how to name the record they want examined by both
+    routes the check honours — the command line and the environment seam — and states
+    that a target named and not resolved is reported rather than passed,
+  And it tells them how to distinguish the three answers they can receive: the work was
+    refused the work was examined and found clean or the check could not examine the
+    work it was named,
+  And it states in the reader's own terms that an exit code alone has never been
+    sufficient evidence and names the outcome value they should read instead,
+  And the worked example the procedure contains is a record that genuinely violates a
+    rule together with the refusal it produces so a reader who copies the example sees
+    a refusal rather than a pass,
+  And the earlier advice that a silent run means a clean run is removed from the
+    documentation rather than left standing beside the new procedure.
+
+  Coverage note: covered by executing the worked example in the procedure verbatim
+  against the deployed check and asserting the documented refusal is the one produced.
+  A test that asserts the document merely mentions the procedure does not cover this
+  criterion — a sentence nobody executes is the documentation form of a check that
+  never runs.
+depends_on:
+  - GE-126a
+  - GE-126a-1
+  - GE-126a-2
+  - GE-126a-3
+doc_links:
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: "The existing surface for hook operation. The interrogation procedure belongs here or on a page this one routes to."
+  - path: docs/how-to/verify-precommit-active.md
+    relationship: related
+    status: exists
+    relevance: "The adjacent how-to about confirming the hook layer is live. Its relationship to the per-check interrogation procedure must be stated rather than left for the reader to infer."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The component the procedure operates on. The procedure must route to it rather than restating how the check family is laid out."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. The procedure must tell the reader to invoke the DEPLOYED copy. A procedure that names the templates/ path would send every reader into the GE-126c defect."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "The worked example must name the deployed copy under .leafcutter/ as the thing to invoke. A procedure that names the templates/ path teaches every reader to reproduce the defect GE-126c exists to close."
+  - "Every command in the worked example must be a single simple shell command with absolute paths - no chaining, no cd - because the readers of this page include agents operating under that constraint (CLAUDE.md, 'Shell Convention')."
+  - "The worked example must be extractable from the document by a test without the test re-typing it. A test that retypes the commands asserts the test author's belief rather than the document's content, and the two drift silently."
+  - "The removal clause is a deletion obligation and must be verified as one: the test that covers this AC must assert the superseded advice is ABSENT, not merely that the new procedure is present. Leaving the old sentence beside the new one is how half the readership keeps following the old route."
+  - "The document must not state or imply how many checks in the family honour this contract. Only check_ac_governance is repaired by this L1 and GE-126e is what would measure the rest (L0 standing rule)."
+  - "Frontmatter and doc-type conventions must satisfy check_doc_frontmatter and check_doc_types_agents at the commit that lands the page."
+test_spec:
+  - name: test_worked_example_commands_are_extracted_and_executed_verbatim
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "docs/how-to/managing-pre-commit-hooks.md interrogation procedure"
+    description: "The test parses the worked example out of the shipped markdown and runs each command as written against the deployed check; it does not retype them."
+  - name: test_worked_example_produces_the_refusal_the_document_shows
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Running the extracted example against the record the document supplies yields the refusal outcome and the record name the document shows - a reader who copies the example sees a refusal, not a pass."
+  - name: test_procedure_names_both_honoured_routes_and_each_route_works
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "For each target route the procedure names, the test drives that route against the documented violating record and asserts a refusal - so a route the document names but the check does not honour is caught."
+  - name: test_silence_means_clean_advice_is_absent_from_the_hook_how_to_pages
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "No page under docs/how-to/ covering this hook family still states that a silent run or a bare zero exit constitutes verification - the deletion is asserted, not just the addition."
+test_rationale: |
+  A documentation AC covered by a presence assertion is the documentation form of the
+  defect this whole tree exists to close: the page passes, nobody runs it, and the
+  procedure it describes may not work. Extracting the worked example from the shipped
+  markdown rather than retyping it is what makes the assertion about the document; a
+  retyped command asserts the test author's memory and stays green while the page rots.
+  The per-route descriptor exists because a procedure can name a route the check does
+  not honour, and that failure is invisible to any test that only runs the first
+  example. The deletion descriptor is separate because an addition test passes with the
+  contradicted advice still on the page.
+delivers_to: null
+expects_from:
+  ac_id: GE-126a-3
+  contract: "The enumerated set of honoured target routes for check_ac_governance and the outcome value each of the four seam states produces. The procedure documents exactly this enumeration; it may not describe routes in general terms and may not name a route the check does not honour."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  SATISFIES THE how-to LEG of GE-126a's documentation_triggers. The reference-doc leg is
+  GE-126a-5.
+
+  THE REMOVAL CLAUSE IS DELIBERATE. GE-120b's how-to trigger was written as a
+  REPLACEMENT rather than an addition for the same reason: leaving the old advice in
+  place beside the new procedure means half the readers keep following the old one. Any
+  documented statement that a silent run or a bare exit code constitutes verification is
+  the thing being replaced.
+
+  THE EXECUTABLE WORKED EXAMPLE IS WHAT MAKES THIS AN ACCEPTANCE CRITERION rather than a
+  request for prose. A documented procedure nobody runs is the documentation analogue of
+  the defect this whole goal exists to close, and this component already has a recorded
+  instance of it: a hook documented as dispatching an agent that has never dispatched
+  one.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: its output is a page a human reads. No other record in this tree consumes
+  the procedure, and GE-126a-5 is a sibling reference rather than a downstream consumer
+  — the two are the two documentation_triggers legs of the same L1, not a chain. DO NOT
+  REFILL.
+
+  AGENT — documentation-expert, and the surfaces are docs/how-to/ pages only. Note for
+  the driver: documentation-expert has a recorded habit of dispatching a leaf specialist
+  and returning before it finishes. Verify the page exists on disk before accepting the
+  sign-off; an early 'nothing changed' reading is not proof the specialist died.
+
+  THE EXTRACT-DO-NOT-RETYPE REQUIREMENT IS THE CORE OF THE TEST CONTRACT and it is the
+  thing a test author will skip. Retyping the commands into the test produces a test of
+  the test author, which stays green while the page rots. Every descriptor here is
+  written to turn on the shipped bytes.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).

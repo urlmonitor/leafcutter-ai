@@ -19,8 +19,14 @@ criteria: |
   allowed to throw away work you have not seen.
 depends_on: [ACD-2100]
 doc_links:
-  - docs/known-issues/ac-driven-dev.md
-  - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-005. Its stated root cause and fix direction are BOTH out of date -- resolveGate already pauses on an unparseable answer, and the observed refusal was well-formed JSON. Read this L1's notes before that entry."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause-and-resume mechanism that makes 'pause instead of discard' a real option. Durable only once ACD-2100a-4 lands, which is why ACD-2100c-2 depends on it across L1 families."
 assigned_agent: null
 delivers_to: null
 expects_from: null
@@ -127,3 +133,20 @@ notes: |
   and subject are separate bindings and the resume path checks neither today.
   Cap is FULL at 5: the sequence-diagram and how-to triggers on this L1 have no
   slot and are reported to the it-po rather than displacing a blocker behaviour.
+
+  2026-08-26 RESOLVED — this L1's two documentation_triggers ARE served. Read the
+  paragraph above as history, not as an open question. `ACD-2100e` ("You can pick up
+  a waiting run without reading the program") was authored as the sibling L1 the note
+  above recommends, and its two children serve exactly these triggers:
+
+    - `ACD-2100e-1`  sequence-diagram  -> docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    - `ACD-2100e-2`  how-to            -> docs/how-to/resume-a-paused-plan-feature-run.md
+
+  The triggers stay declared here because this L1 is the SUBJECT the pages document;
+  `ACD-2100e` is where the deliverables live. Do not remove them from this record and
+  do not author a second diagram or how-to — five of this L1's own children already
+  link `e-1` or `e-2` by id from their doc_links, and two carry delivers_to contracts
+  naming them, so a duplicate under a different id would dangle those links silently.
+
+  The cap is still genuinely FULL at 5 and that part is unchanged: nothing further may
+  be added to this L1, and `child_limit_override` remains the wrong tool here.

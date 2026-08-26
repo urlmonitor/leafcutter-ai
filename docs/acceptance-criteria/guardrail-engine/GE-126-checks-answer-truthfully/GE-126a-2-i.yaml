@@ -1,0 +1,146 @@
+id: GE-126a-2-i
+title: "Naming no target at all in an empty scope is still an ordinary pass"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the deployed AC-governance check is invoked out of process with no target named
+    on its command line and no target supplied by any other route,
+  And the scope it derives for itself is genuinely empty — the acceptance-criterion
+    store is present at the root it resolved and no record in it is staged,
+  When the check finishes,
+  Then it reports the ordinary success outcome and does not report an unresolved-target
+    condition,
+  And the same invocation performed with one staged record that genuinely violates the
+    rule still refuses that record so the pass above is a statement about scope rather
+    than a check that stopped working,
+  And a commit that stages only files outside the acceptance-criterion store completes
+    without this check reporting anything other than the ordinary success outcome.
+
+  Coverage note: covered only by a test that executes the deployed check in a separate
+  process on a working copy with an empty in-scope set and asserts the ordinary success
+  outcome, paired with a run on the same working copy with one violating record staged
+  that asserts the refusal. The pair is the coverage — the pass alone is also produced
+  by a check that has stopped running.
+depends_on:
+  - GE-126a-2
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: "KI-CG-018's fix direction lists distinguishing an absent store from an empty staged set. This record protects the second of those two from being swept into the unresolved-target rule."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Describes the commit-time invocation shape that this record protects — the empty-scope run is what most commits produce."
+  - path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+    relationship: describes
+    status: exists
+    relevance: "IT PO. Establishes that a gate must be proven to FIRE rather than merely be present. The paired violating run here is the same requirement applied to an empty-scope pass."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Both runs of the pair must be executed against the copy the build deploys under .leafcutter/, in the same working copy, differing only in what is staged."
+  - "The empty-scope pass must be reachable with no environment variable set at all. A pass that depends on a caller having configured something is not the commit-time path this record protects."
+  - "This is a regression fence with no new behaviour of its own: the deployed check's exit status and outcome value for an empty-scope run must be byte-identical before and after the GE-126a work lands. Capture both from the pre-change deployed copy and assert against the captured values."
+  - "The third clause must be exercised as a real commit in a scratch repository with the hook chain installed, not as a direct invocation. A staged set of only non-AC files is the most common commit in this repository and the direct invocation does not reproduce how the hook receives it."
+  - "Error handling must follow the four rules in CLAUDE.md; an empty scope is an expected condition and must not travel through any warning or fail-open path."
+test_spec:
+  - name: test_no_target_named_and_empty_scope_is_the_ordinary_success_outcome
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_ac_governance.py"
+    description: "Deployed check run by subprocess with no argv target and no environment target, store present at the resolved root and nothing staged, returns the ordinary success outcome and does NOT return the unresolved-target outcome value GE-126a-2 introduced."
+  - name: test_same_working_copy_with_one_violating_record_staged_still_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The paired run - identical working copy, one staged record missing origin_agent - refuses that record. Without this the empty-scope pass is also produced by a check that has stopped running."
+  - name: test_commit_staging_only_non_ac_files_is_not_disturbed_by_this_check
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: e2e
+    angle: reachability
+    surface_invoked: "git commit in a scratch repository with the deployed pre-commit chain installed"
+    description: "A real commit in a scratch repository staging only files outside docs/acceptance-criteria/ completes, with this check contributing nothing but the ordinary success outcome."
+  - name: test_empty_scope_outcome_is_unchanged_from_the_pre_change_deployed_copy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The empty-scope exit status and outcome value match the values captured from the deployed copy before the GE-126a work landed - the explicit anti-regression assertion the L1 asks for."
+test_rationale: |
+  This record adds no behaviour, so a criterion-only test is trivially green today and
+  stays green under the exact regression it exists to catch — a GE-126a-2 fix that
+  treats "no targets" as "targets that did not resolve" would still pass a test that
+  only asserts a zero exit, if that test were written against the old outcome
+  vocabulary. Two things make it real: the paired violating run, which proves the pass
+  is a verdict about scope rather than a check that has stopped; and the e2e commit,
+  because most commits in this repository stage nothing under the AC store and the
+  direct invocation does not reproduce how the hook receives that case.
+delivers_to: null
+expects_from:
+  ac_id: GE-126a-2
+  contract: "The unresolved-target outcome value. This record's whole content is the case in which that value must NOT be produced: no target named, empty derived scope."
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS EXISTS BECAUSE THE L1 NAMES IT AS THE MOST LIKELY REGRESSION and asks for it to
+  be stated here rather than cross-referenced. Every commit-time invocation of the AC
+  check family runs with an empty scope most of the time. A repair to GE-126a-2 that
+  treats "no targets" the same as "targets that did not resolve" would fail every such
+  commit.
+
+  IT IS AN L3 RATHER THAN AN L2 BECAUSE IT PINS THE NEGATIVE EDGE of GE-126a-2's rule
+  rather than adding a behaviour of its own. It is nonetheless mandatory coverage: the
+  paired run with a violating record is what stops this criterion being satisfied by a
+  check that reports success unconditionally.
+
+  SAME SENTENCE AS GE-120a-4 AND NOT THE SAME RECORD. GE-120a-4 states this boundary
+  for the agent-side store validator, which is source-only and exempt from the template
+  round-trip. This record states it for the deployed commit-guardian check. Neither
+  closes the other and the GE-120 folder must not be edited to link them.
+
+  delivers_to IS NULL BECAUSE NOTHING IS ENRICHED YET. DO NOT REFILL from the BA stage.
+
+  ------------------------------------------------------------------------------
+  IT PO ENRICHMENT — 2026-08-26. Supersedes the BA delivers_to paragraph above.
+
+  delivers_to IS NULL AND THAT IS NOW A DECISION, NOT AN UNFILLED FIELD. This record is
+  TERMINAL: it produces no artifact, value or contract that any other record in this
+  tree consumes. It is a fence around a value GE-126a-2 introduced, asserting the one
+  region where that value must not appear. Nothing downstream can be built on a
+  prohibition. DO NOT REFILL — a later pass that reads this null as unenriched and
+  invents a consumer would be inventing one.
+
+  AGENT AND SIZE. python-coder, S. The implementation cost is near zero; the whole
+  weight of this record is in its four test descriptors, one of which is a real commit
+  in a scratch repository.
+
+  WHY THE FOURTH DESCRIPTOR CAPTURES A PRE-CHANGE BASELINE. A regression fence that
+  asserts against a hand-written expectation is asserting against the author's belief
+  about today's behaviour. Capturing the value from the deployed copy BEFORE the
+  GE-126a work lands makes it a measurement. The coder must take that capture first —
+  once the change is in, the baseline is unrecoverable without a checkout.
+
+  NOT AUTHORED HERE: declares_side_effect (derived per BO-2900g-2, see KI-CG-015).
