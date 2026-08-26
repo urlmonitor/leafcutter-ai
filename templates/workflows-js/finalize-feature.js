@@ -126,7 +126,7 @@ function narrate(progressText, description) {
 // The 'progressText' argument carries the literal 'Step X of N' label so the
 // text is statically visible to tooling and tests that parse the source file.
 //
-// BO-1000c-1a NOTE: in-flight visibility of a running finalize workflow is
+// BO-1000c-1a / BP-1100b-45 NOTE: in-flight visibility of a running finalize workflow is
 // provided by the E2 engine's own per-agent run journal
 // (<transcriptDir>/journal.jsonl), not by anything this script writes. See
 // the removal note where the old on-disk journal helper used to live,
@@ -577,7 +577,7 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
 }
 
 // ---------------------------------------------------------------------------
-// Run-progress journal — AC BO-1000c-1a (REDEFINED 2026-08-18)
+// Run-progress journal — AC BO-1000c-1a (REDEFINED, BP-1100b-45, 2026-08-18)
 //
 // This script previously defined its own on-disk append-only journal
 // (a helper function plus a path variable, writing run-progress.journal.jsonl)
@@ -598,7 +598,8 @@ if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
 // this script writes. This is a granularity change from the old per-step
 // (narrate/outcome) journal to per-agent-dispatch — the engine journal does
 // not persist log() output, so per-step text lines are not recoverable from
-// it. Full decision record in BO-1000c-1a's amended_by entry.
+// it. See this ticket's Comments for the full decision record, and
+// BO-1000c-1a's amended_by entries for the AC-level history.
 // ---------------------------------------------------------------------------
 
 // Track completed and skipped steps for the final summary.

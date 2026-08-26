@@ -1,0 +1,81 @@
+id: BO-3100e-1
+title: "A positive, well-formed verdict from a step whose own result does not exist is not counted as done"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a step whose declared result is that the change is published where the team
+    can see it and a review of it is open,
+    And the step returns a well-formed report and records a positive verdict for
+      itself,
+    And, looked for directly, the change has not been published anywhere the team
+      can see it and no review of it exists,
+  When the step's completion is judged,
+  Then the step is not counted as done,
+    And it does not appear among the steps the build records as completed,
+    And the judgement is unchanged by the wording of the report or by the verdict
+      the step recorded for itself.
+
+  Given the same step returning the same well-formed report and the same positive
+    verdict,
+    And the change has been published where the team can see it and a review of it
+      is open,
+  When the step's completion is judged,
+  Then the step is counted as done,
+  So two steps whose reports are identical receive opposite judgements, because the
+    judgement is read from the result and not from the report.
+
+  Given the same step whose declared result has not come into being,
+    And the step nevertheless changed files in the project while it ran — it drafted
+      its submission and wrote its own verdict into the work record,
+  When the step's completion is judged,
+  Then the step is not counted as done,
+  So a step that was busy is distinguished from a step that delivered, and a generic
+    did-anything-change test is not sufficient to pass this judgement.
+depends_on:
+  - BO-3100e
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007's open half — a positive sign-off left by a step that did nothing observable, where the read-back reads the entry's status field and nothing else. The publish case is the anchor."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100b.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling this refines. Its evidence surface is whether any non-volatile file changed; the third scenario here is exactly the case that passes that test and still delivered nothing of its own."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Where per-step dispatch and the record of which steps completed are defined."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SHAPE B, not shape A. A step leaving no verdict is BO-2900f-1's and BO-3100b's;
+  this is the step that leaves a POSITIVE, well-formed verdict having produced none
+  of its own result. The second scenario is the discriminator that makes the record
+  falsifiable: identical reports, opposite judgements.
+
+  The third scenario is the BO-3100b boundary written as a test rather than as a
+  boundary note. Files changed; the declared result did not come into being; the
+  step still fails. Any implementation that satisfies this by widening the
+  did-anything-change test has not satisfied it.
+
+  VERIFY BY EXECUTION, per CLAUDE.md. The result is looked for directly — the
+  publication and the review are checked for existence, not inferred from the
+  step's own record of itself, which is the input under suspicion.

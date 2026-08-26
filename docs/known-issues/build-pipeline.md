@@ -24,9 +24,22 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-BP-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new section with a **date-and-slug id**:
+`### KI-BP-YYYYMMDD-short-slug`. Nothing here is generated — edit it by hand. Fill in what
+you actually know; an issue recorded with a thin `Evidence` line is far better than one not
+recorded.
+
+**Why not the next free number.** The sequential `KI-BP-NNN` form is retained for the
+entries that already carry it, and must not be renumbered — inbound references would break.
+But it is not usable for new entries. "Append the next free number" requires every author to
+read the same file at the same moment and act on it before anyone else does, which fails the
+moment two agents or two sessions work in parallel. On 2026-08-25 it produced **ten**
+collisions in a single day, one of which reached `main`, and this register already carries
+two renumbering notes as scar tissue (KI-BP-020, and the KI-CG-012 collision recorded in
+`commit-guardian.md`). KI-BO-024 diagnosed this and named the remedy: *"Make the number
+non-sequential. A date-plus-slug id cannot collide."* Two authors would have to pick the same
+slug on the same day, and if they did they are describing the same defect anyway. Both id
+forms sort and grep identically on the `KI-BP-` prefix.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -2316,3 +2329,222 @@ other register entries, and defined zero times. The citations here have been rep
 plain description. Whoever owns `build-orchestration.md` should either write the entry or
 retire the id; a reference that resolves to nothing is indistinguishable from one whose target
 was deleted, and readers cannot tell which they are looking at.
+
+---
+
+**Independently rediscovered, 2026-08-26 (EPIC-BuildPipelinePhantomRemediation).** A second
+session hit the same mechanism from the drift-gate side and authored a duplicate entry as
+`KI-BP-20260826-1340`, nine minutes after this one and — independently — with the same
+timestamped-id convention. That duplicate is withdrawn in favour of this entry; its distinct
+evidence is folded in below rather than filed twice. Two sessions converging on the same
+hazard and the same fix for ids, in the same hour, without either knowing of the other, is
+itself the strongest available argument that the convention above was the right call.
+
+Five further observations, all from the drift-gate side, all cleared by a single rebuild from
+the correct worktree:
+
+1. `check-output-drift` reported `drifted=27`. Twenty-six were files the branch never touched —
+   `git diff origin/main...HEAD` showed no change to `templates/agents/adr-author.md` or the
+   other nine agent templates flagged.
+2. Later in the same session the same gate reported `drifted=55`, again entirely cleared by a
+   rebuild.
+3. Three failures in `unit_tests/commit_guardian/test_ge_120_doc_types_deployed_resolution.py`,
+   which reads the shared tree. Its `doc_type_validators.py` had been rewritten while the
+   `doc_types.json` beside it was a week older — the tree was internally inconsistent, mixing
+   two builds. They passed again later with no code change.
+4. `unit_tests/commit_guardian/test_bp_100k_4.py`'s real-registry test flipped red three
+   separate times while the source registry held the fix throughout, each time because a build
+   from the main checkout redeployed main's pre-fix `commit_guardian.json` over it. Fixed by
+   pointing the test at the *source* registry via `HOOK_TEST_CONFIG` — a test that asserts a
+   property of this repository must read the version-controlled artifact, not a build output of
+   unknown provenance.
+5. Seventeen orphaned files (12 of them `.py` under `scripts/commit_guardian/`) sat in the
+   shared tree with no template in any worktree and no git history in any commit — another
+   session's uncommitted work, leaked in and reported as coverage gaps against an unrelated
+   branch.
+
+**Beyond the deploy tree: any shared mutable state here has the same property.** On the same
+day a concurrent session removed an *active* worktree mid-drive, snapshotting first as
+`8cd1e3c0` (`WIP SNAPSHOT ... not for merge`, author `manual`, `git add -A --no-verify`).
+Nothing was lost, but a foreign commit appeared on the branch and one subagent's edits were
+silently absent afterwards. Separately, an uncommitted known-issues entry in the main checkout
+was overwritten by `4c47882a` within the hour. The deploy tree, the main checkout's working
+tree, and a worktree's very existence are all writable by a session that does not know you
+exist — so treat an uncommitted edit anywhere outside your own worktree as volatile, and commit
+register entries immediately rather than leaving them staged.
+
+---
+
+### KI-BP-20260826-1421 — a worktree provisioned with a `/tmp` hook tree loses every package gate when `/tmp` is cleared, and pre-commit's own error message recommends disabling the gates to make it go away
+
+- **Severity:** medium
+- **Status:** open — no AC
+- **Occurrences:** 2 (same session, 2026-08-26)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** the documented worktree provisioning fix in `CLAUDE.md` → "Worktree pre-commit
+  config" · `pre-commit`'s missing-config error path
+
+**Background.** A fresh worktree has no `.pre-commit-config.yaml` and no populated
+`.leafcutter`, so every package hook is skipped unless provisioned. `CLAUDE.md` prescribes a
+symlink to the main tree's `.leafcutter`. Where the shared tree is untrustworthy — see
+`KI-BP-20260826-1331`, the per-file collage — the natural alternative is to build a clean tree
+to a scratch directory and symlink at that instead.
+
+**Symptom.** Do that with a scratch directory under `/tmp` and the provisioning silently
+expires. Twice in one session, a hook tree built to `/tmp/lc-build-check` was gone by the next
+commit:
+
+```text
+$ ls /tmp/lc-build-check/
+exit: 2
+
+$ git commit …
+No .pre-commit-config.yaml file was found
+- To temporarily silence this, run `PRE_COMMIT_ALLOW_NO_CONFIG=1 git ...`
+- To permanently silence this, install pre-commit with the --allow-missing-config option
+```
+
+The `.leafcutter` symlink still exists and still looks right in `ls -la`; it points into a
+directory that no longer does. Nothing about the symlink indicates it is dangling until a hook
+tries to run.
+
+**The dangerous part is the remediation advice, not the wipe.** This particular failure is
+**fail-closed** — the commit is refused, loudly. That is the good outcome. But the first
+suggestion pre-commit prints is `PRE_COMMIT_ALLOW_NO_CONFIG=1`, which converts it into the
+**silent skip** this repository already has an entry for: every package hook bypassed, commit
+succeeds, no output. An operator — or an agent — following the tool's own advice turns a
+refusal into exactly the fail-open state `KI-BP-004` and the `CLAUDE.md` checklist exist to
+prevent. The escape hatch is one environment variable and it is printed at the moment of
+maximum incentive to use it.
+
+Both times, the fix was to rebuild the tree, not to set the variable. Recorded because that is
+a judgement call made twice under time pressure, and it will not always go that way.
+
+**Cause not established — and one plausible culprit is ruled out.** `wsl-reclaim.timer` runs
+hourly and fired at `14:02:32`, minutes before the second failure, which is suggestive. It is
+not the cause: `~/.local/bin/wsl-reclaim` contains **no reference to `/tmp`**, walks only
+`$PROJECT_ROOT`, and applies a 24-hour age floor (`AGE_MIN=1440`), while the deleted tree was
+minutes old and outside that root.
+
+Both disappearances also coincided with a Claude Code process exit, which is the other
+candidate — but coincidence is all that has been established. Naming a mechanism here on the
+strength of the timing alone would be the same error this register documents repeatedly, so it
+is left open. What is established is the operational fact: **in this environment, `/tmp` does
+not reliably survive a session boundary**, and anything a worktree depends on for gate
+enforcement must not live there.
+
+**Fix direction.** Three, in increasing order of value:
+
+1. **Do not provision hook trees under `/tmp`.** A persistent path works —
+   `/home/henzeh/projects/worktrees/.hooktree` is in use now. Cheap, immediate, and the
+   documented `CLAUDE.md` procedure should say so rather than leaving the location to the
+   operator.
+2. **Make a dangling `.leafcutter` detectable before commit time.** A symlink whose target has
+   vanished is indistinguishable from a healthy one by inspection; the pre-drive checklist's
+   `ls <worktree-root>/.leafcutter` passes on a broken link. `ls -L` or `test -e` would not.
+3. **Never accept `PRE_COMMIT_ALLOW_NO_CONFIG`.** Whatever else changes, an environment
+   variable that disables every gate should not be reachable by following an error message.
+   If the repo cannot stop pre-commit printing it, the checklist should name it explicitly as
+   a thing not to do, and say why.
+
+**Pattern:** provisioning that expires without a signal, plus a tool whose remediation advice
+for the loud failure is to convert it into a quiet one.
+
+**Related.** `KI-BP-004` (a worktree's deployed hooks frozen at build time — the same
+provisioning surface failing by staleness rather than absence). `KI-BP-20260826-1331` (the
+shared-root collage, which is *why* a scratch tree gets built in the first place — fixing that
+removes the incentive that leads here). `KI-BP-003` (`config/doc_types.json` missing from the
+deployed tree, which makes `check-doc-frontmatter` fail on every commit from a freshly built
+scratch tree and trains operators to reach for `SKIP=`).
+
+---
+
+### KI-BP-20260826-worktree-hooks-only-on-one-path — A worktree made with plain `git worktree add` has no hooks, and nothing at commit time says so
+
+> **First entry using the date-and-slug id form.** See "Adding an issue" at the top of this
+> file, and KI-BO-024 for why the sequential form was abandoned for new entries.
+
+- **Severity:** high
+- **Status:** open — no AC
+- **Occurrences:** 3 in one session (2026-08-26), all in the same session by the same operator
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `templates/scripts/setup_ticket_worktree.py` — `_establish_pre_commit_config`
+  (~:585-670) and the AC-5 fail-fast probe at `~:864-872`. Also `CLAUDE.md` → "Worktree
+  pre-commit config (MANDATORY for worktree-based drives)".
+
+**The provisioning code is correct. That is the point of this entry.**
+`_establish_pre_commit_config` is well built: no-op if already present, symlink `.leafcutter`
+first, fall back to copying `.pre-commit-config.yaml` on filesystems where `os.symlink`
+raises, warn and continue if neither source exists — and then a fail-fast probe converts that
+last warn-and-continue into a hard `BootstrapError`. Nothing below is a criticism of it.
+
+The defect is that **this is the only path that runs it.** `git worktree add` is the obvious
+way to make a worktree, it is what the git documentation teaches, and it performs none of
+this. A worktree created that way has no `.pre-commit-config.yaml`, so `git commit` runs with
+`PRE_COMMIT_ALLOW_NO_CONFIG=1` and **every package hook is skipped in silence**.
+
+**Evidence — three for three, in one session.** An operator created three worktrees with
+`git worktree add` (`po-edit`, `ac-supervisor`, `red-baseline`). All three lacked
+`.pre-commit-config.yaml`. This was noticed only because one commit happened to refuse
+outright; the other two would have committed clean with no hooks at all.
+
+The cost is not hypothetical. Once the config was in place, the AC guards on ONE of those
+branches caught three real defects that would otherwise have merged:
+
+| guard | what it caught |
+|---|---|
+| `check-ac-governance` | a new AC file with no `origin_agent` |
+| `check-ac-parent-covered-by` | **8** missing L2→L3 parent back-links |
+| `check-ac-schema` | a `declares_side_effect` mismatch |
+
+Fifty-one new AC records were about to be committed with none of that checked.
+
+**A second, separable defect: the probe's success condition is an OR, and it is wrong.**
+
+```python
+if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):
+    raise BootstrapError.missing_config(config_path, build_exc)
+```
+
+The comment above it states the intent plainly: *"a `.leafcutter` symlink alone is a valid
+established state."* **It is not.** `pre-commit` looks for `.pre-commit-config.yaml` at the
+repository root and nothing else. Directly observed twice this session: with the
+`.leafcutter` symlink present and correct, `git commit` still returned
+
+```
+No .pre-commit-config.yaml file was found
+- To temporarily silence this, run `PRE_COMMIT_ALLOW_NO_CONFIG=1 git ...`
+```
+
+and only began running hooks once the config file itself was copied in. In this workspace
+`/home/henzeh/projects/leafcutter/.leafcutter/.pre-commit-config.yaml` does not exist, so the
+symlink cannot be supplying it. So the probe passes a worktree in which hooks are entirely
+disabled — a fail-open in the guard written specifically to prevent a fail-open. Note that
+`CLAUDE.md`'s documented check has the same shape (`ls ... .pre-commit-config.yaml || ls
+... .leafcutter`) and will likewise report a healthy worktree that has no hooks.
+
+**Why the silence is the severity.** A skipped hook and a passing hook produce identical
+output: nothing. There is no line in the commit output saying "0 hooks ran". The operator
+learns about it at merge time, or never. KI-BO-027 records an epic worktree that *did* have
+both markers, so this is inconsistent rather than uniformly broken, which is worse — the
+condition cannot be inferred from experience.
+
+**Fix direction.**
+
+1. **Detect at commit time, not creation time.** Provisioning at creation only helps
+   worktrees created the blessed way. A guard that notices at commit — "this repository has
+   `.leafcutter/` but this worktree has no `.pre-commit-config.yaml`" — covers every creation
+   path including ones that do not exist yet. This is the highest-value half.
+2. **Fix the probe's OR to require `.pre-commit-config.yaml` specifically**, since that is
+   the file `pre-commit` actually reads, and correct the comment that asserts otherwise.
+   Correct `CLAUDE.md`'s check in the same change.
+3. Optionally hook `git worktree add` itself, or make the documentation lead with
+   `setup_ticket_worktree.py create-only` rather than presenting the raw git command as
+   equivalent.
+
+Do **not** fix this by adding a manual step to a checklist. There already is one — in
+`CLAUDE.md`, marked MANDATORY, with both fix recipes — and it was missed three times in one
+session by an operator who had read it.
+
+**Pattern:** a correct guard reachable from exactly one entry point, protecting against a
+condition whose only symptom is silence.

@@ -1,0 +1,163 @@
+id: BP-100k-5
+components:
+  - build_pipeline
+title: "The drift gate examines the deployed surface the build actually wrote, and reports the size of the population it did not examine — a verified count with no denominator is not a pass"
+component: build-pipeline
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the build has just deployed its full set of outputs into the project,
+  And the set of deployed files is larger than the set the drift gate is
+    currently able to compare,
+  When the output-drift gate runs,
+  Then the population it inspects is the set of files the build recorded as
+    having written, not a set inferred from the locations the gate already knows
+    how to look in,
+  And its run summary states both the number of deployed files it compared and
+    the number of deployed files it did not compare, so every verified count is
+    reported against the size of the population it was drawn from,
+  And every deployed file it did not compare is individually accounted for as
+    either an unregistered coverage gap or a declared exemption — no deployed
+    file the build wrote is absent from the run altogether,
+  And a run in which the number of deployed files it did not compare is greater
+    than zero is not described as clean and does not exit as though the whole
+    deployed surface had been checked,
+  And the symptom ("the gate announces a verified count while a substantial
+    share of the deployed files were never collected at all, so they produce
+    neither a gap nor an exemption and are simply invisible") must not occur for
+    any file the build records as having written.
+depends_on:
+  - BP-100k
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/build-drift-hook.md"
+    relationship: describes
+    status: exists
+  - path: "docs/build-pipeline.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: modifies
+    status: exists
+    relevance: "the gate whose inspection set is currently derived from the parent directories of the records it already holds, plus a hardcoded floor — which is why a file in a directory no record mentions is never collected and therefore never reported. It is also itself one of the deployed files no record covers: the gate does not police itself."
+  - path: "scripts/build_helpers.py"
+    relationship: modifies
+    status: exists
+    relevance: "holds the root cause. _canonicalize_output_path() returns None when a deployed path's top-level directory has no canonical entry in shim_map, and the output is then dropped from output_mappings with no record that it was dropped. The reverse-lookup table _OUTPUT_REL_TO_CANONICAL is additionally built under a single-segment filter that excludes every multi-segment shim_map entry. Both defects live here, and the inspection set must be derived from this file's record of what the build wrote."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    drift_gate_examined_population:
+      type: object
+      description: "Run-summary section pairing the number of deployed files the gate compared with the number of deployed files it did not compare and the total the build recorded as written, so a verified count is always reported against a denominator and an unexamined file cannot be silently absent from the run."
+  reference_file_path: "templates/scripts/commit_guardian/check_output_drift.py"
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "ROOT CAUSE — fix the mechanism, not the directory list. In scripts/build_helpers.py, _canonicalize_output_path() returns None when the top-level directory of an output-root-relative path has no canonical entry in shim_map, and the output is then DROPPED from output_mappings with no record that it was dropped. A directory misses in two distinct ways: (a) it has no shim_map entry at all — config, debugging, paused_runs; (b) it has a MULTI-SEGMENT shim_map entry, because _OUTPUT_REL_TO_CANONICAL is built under the filter `if \"/\" not in output_rel`, which excludes ('scripts/commit_guardian', ...), ('scripts/doc_compliance', ...) and ('scripts/feedback', ...) from the reverse lookup despite their being present in shim_map. That one filter is why all 181 deployed script files vanish. Widening a scan-directory list in the gate leaves both causes in place and the next new directory silently uncovered."
+    - "A translation from a deployed output to its canonical source that FAILS must be RECORDED as manifest data — the same data-not-detection principle behind the existing output_mappings_error field — never dropped silently. This is the epic's thesis one level up: a mapping step that cannot map something must record that it could not map it, so a drop is a reported condition rather than an absence."
+    - "SCOPE WARNING FOR THE IMPLEMENTER: closing this will surface roughly 253 coverage gaps at once (the currently unrecorded deployed files). The correct resolution is to REGISTER the deploy surface in the build's output records, not to bulk-exempt it. A blanket exemption over the deploy tree would recreate the silent suppression list BP-100k-3 removed, and would satisfy the letter of this AC while restoring the exact defect. BP-100k-5-i exists to make that shortcut fail."
+    - "The 251-silent versus 2-reported split is the shape to fix, not the raw unrecorded count. Two unrecorded files today produce a GAP line because they sit in a directory the gate already visits; the other 251 sit in directories the scan-set derivation never visits and are therefore absent from every count. An implementation that records more mappings but leaves the scan set derived from directories the gate already knows will move files between those two buckets without closing the silent one."
+    - "The deployed commit-guardian scripts must be inside the examined population. Today no record covers the deployed scripts directory at all, so a hand-edit to a deployed drift gate — including the output-drift gate itself — is invisible to every gate. A gate that cannot detect a change to itself cannot be relied on to report a pass."
+    - "Deriving the inspection set from the records the gate already holds is NOT sufficient — that is BP-100k-2's failure mode at a larger scale. When the record set itself omits a directory, deriving from it cannot help. The inspection set must come from what the build reports having written."
+    - "Symlinked deploy locations must be resolved to one canonical record, not counted twice. Several deployed agent-platform directories are symlinks into the runtime deploy tree and are already covered under their canonical keys; an implementation that double-counts them will report a denominator larger than the real deployed population and turn this fix into a different false number."
+    - "The 'did not compare' figure must appear in the run summary as a count alongside the compared count, not only as per-file informational lines a reader skims past."
+    - "Exit status must distinguish a run that examined the whole deployed surface from one that did not; a run that examined a fraction must not exit as though it had examined everything."
+    - "Verify behaviorally — run the real build, then execute the gate as a process over the real deployed tree and assert on the emitted counts. A unit assertion over the record set stays green on a gate that never collects the files, which is the incumbent defect."
+    - "Must follow the repo error-handling policy: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
+    - "REGISTRATION SURFACE: any new configuration key belongs in templates/scripts/commit_guardian/commit_guardian.json — the authoritative guardian config. templates/commit-guardian/commit_guardian.json is a different, smaller file and is NOT the registration surface. A build.py re-run is required after editing anything under templates/, since the gate runs from its deployed copy."
+    - "This AC and BP-100k-6 both edit check_output_drift.py and must land as one reviewable diff; they must not run concurrently."
+test_spec:
+  - name: test_inspection_set_equals_what_the_build_recorded_writing
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "After a real build, the set of deployed files the executed gate reports having inspected equals the set the build recorded as having written — compared as sets, not counts, so a directory the gate never looks in is detected rather than averaged away."
+  - name: test_run_summary_reports_compared_and_not_compared_counts_together
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The executed gate's run summary states the number of deployed files compared and the number not compared in the same summary, so the verified figure is never emitted without its denominator."
+  - name: test_every_uncompared_deployed_file_is_individually_accounted_for
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "For a deployed file the gate cannot compare, the executed run names it as either an unregistered coverage gap or a declared exemption; the count of individually accounted-for files equals the reported not-compared count, so none is silently absent."
+  - name: test_partial_examination_is_not_reported_as_clean
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "A run in which at least one deployed file was not compared is not described as clean by the executed gate and its exit status differs from a run in which the whole deployed surface was compared."
+  - name: test_a_deployed_file_in_an_unrecorded_directory_is_still_collected
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "A deployed file the build writes into a directory that no existing record mentions appears in the executed gate's run as a named gap or exemption, proving collection is driven by what the build wrote rather than by the directories the gate already knew about."
+  - name: test_an_output_whose_canonical_source_cannot_be_resolved_is_recorded_not_dropped
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Running the real build with a deployed output whose top-level directory has no canonical mapping causes the build's own records to carry an explicit entry stating that the output could not be translated; the output is never absent from the records with no trace that it was dropped."
+  - name: test_a_multi_segment_mapped_directory_is_not_excluded_from_the_records
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "Deployed files under a directory whose canonical mapping spans more than one path segment appear in the build's records after a real build, so a mapping that exists is not discarded by the reverse-lookup construction."
+  - name: test_deployed_gate_scripts_are_themselves_in_the_examined_population
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: behavioral
+    description: "The deployed commit-guardian gate scripts, including the output-drift gate itself, appear in the executed gate's inspected population, and hand-editing one of them yields a drift verdict — the gates police the gates."
+test_rationale: "The incumbent gate prints a verified count of 275 while 253 of the 528 deployed files are recorded nowhere — and, decisively, only 2 of those 253 produce a gap line. The other 251 sit in directories the scan-set derivation never visits, so they yield neither a gap nor an exemption and are absent from every count; absent the two reported gaps the run reads as clean. Every one of those files is invisible to any test that inspects the record set or imports a helper, because the record set is internally consistent — the population is what is wrong, and the mapping step that shrank it discards failures without recording them. Per the standing rule in CLAUDE.md ('Gate / Workflow ACs — Verify Behaviorally, Not by Grep'), a test that greps the gate source or asserts a configuration string is forbidden here and will be rejected — it stays green on a gate that collects nothing. Each descriptor therefore runs the real build and executes the gate as a process over the real deployed tree, asserting on the emitted counts, the named per-file verdicts and the exit status; the two mapping descriptors assert on the build's own records after a real build, because a silent drop is only observable as an absence unless the drop is recorded."
+delivers_to:
+  agent: python-coder
+  contract: "A drift-gate run summary in which the compared count, the not-compared count and the total the build recorded writing are emitted together, with the inspection set derived from the build's own record of what it deployed, and with every failed output-to-canonical translation recorded as manifest data rather than dropped."
+expects_from:
+  ac_id: BP-100k-2
+  contract: "The build's record of every deployed output and the source it was produced from; this AC governs the population the gate draws from that record and how it reports what it could not examine."
+origin_agent: BrainCandy
+created: 2026-08-25
+amended_by:
+  - reason: "corrected-measurement"
+    entry: "Corrected the H-1 evidence, which overcounted. The original notes claimed ~512 unrecorded deployed files under the runtime deploy tree (97%); that double-counted the agent-platform directories, which are symlinks into the runtime tree and are already covered under their canonical keys. Accurate measurement (manifest keys vs files on disk, __pycache__ excluded): 253 of 528 deployed files unrecorded (48%), broken down as 2 skills, 56 gemini, 181 scripts, 5 config, 5 deployed-claude, 4 miscellaneous. The sharper finding now recorded in notes: only 2 of the 253 produce a GAP line; the other 251 are silent, and all 181 deployed script files — every commit-guardian hook, including both drift gates — are policed by nothing. Rewrote notes; corrected the scope-warning constraint from 'several hundred' to ~253; added four it_requirements constraints (the _canonicalize_output_path/_OUTPUT_REL_TO_CANONICAL root cause, the record-a-failed-translation-as-manifest-data rule, the 251-silent-vs-2-reported shape, the gates-must-police-the-gates requirement, and a symlink double-counting warning); sharpened the check_output_drift.py and build_helpers.py doc_link relevance; added three test_spec descriptors (unresolvable-mapping recorded not dropped, multi-segment mapped directory not excluded, deployed gate scripts in the examined population); softened one criteria phrase from 'several hundred deployed files' to 'a substantial share of the deployed files' so no criterion carries the retracted number. criteria substance, id, title, level, assigned_agent, estimated_complexity, priority, readiness, work_status, delivers_to's core contract and expects_from otherwise unchanged."
+    by: business-analyst
+    date: 2026-08-25
+  - by: ac-reconcile
+    at: 2026-08-26
+    note: >-
+      work_status set to done from verified evidence. Tests carrying
+      "# covers: BP-100k-5" exist in
+      unit_tests/commit_guardian/test_bp_100k_5.py,
+      unit_tests/commit_guardian/test_bp_100k_5_ii.py,
+      unit_tests/commit_guardian/test_bp_100k_3_hardening_b1.py,
+      unit_tests/commit_guardian/test_bp_100k_3_hardening_h1_h5.py and
+      unit_tests/build_guards/test_bp_100k_5_partial_output_mappings.py, and all
+      pass under AC_ENFORCE_STRICT=1 (targeted run 2026-08-26; full unit_tests
+      run clean apart from the unrelated test_ge_122e_1.py failure from another
+      branch). implemented_by and covered_by recorded from the real files.
+superseded_by: null
+covered_by:
+  - BP-100k-5-i
+  - unit_tests/commit_guardian/test_bp_100k_5.py
+  - unit_tests/commit_guardian/test_bp_100k_5_ii.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_b1.py
+  - unit_tests/commit_guardian/test_bp_100k_3_hardening_h1_h5.py
+  - unit_tests/build_guards/test_bp_100k_5_partial_output_mappings.py
+implemented_by:
+  - scripts/build_helpers.py
+  - scripts/build_phases.py
+  - templates/scripts/commit_guardian/check_output_drift.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: "Verified defect, 2026-08-25, measured against this epic's own worktree; measurement corrected the same day after the first figure was found to double-count symlinked directories. The output-drift gate's own result line reads verified=275, uncomparable=2, exempt=0, gaps=2, drifted=27. Accurate coverage, manifest key counts against files on disk with __pycache__ excluded: agents 59/59, commands 33/33, hooks 12/12, workflows 9/9 and the deployed rules directory 16/16 are all covered; skills 52/54 leaves 2 unrecorded; gemini 94/150 leaves 56; scripts 0/181 leaves ALL 181; config 0/5; the deployed claude directory 0/5; and debugging, paused_runs, the pre-commit config and the settings file contribute 4 more. Total 253 of 528 deployed files unrecorded — 48%, not the 97% first reported. The agent-platform directories are symlinks into the runtime deploy tree, so their files are already covered under their canonical keys and must not be counted twice. THE SHARPER FINDING: only 2 of those 253 produce a GAP line — they happen to sit in a directory the gate already visits. The other 251 sit in directories the scan-set derivation never visits, so they produce no gap, no exemption, and appear in no count at all. The silent-versus-reported split is the phantom shape, not the raw unrecorded number. THE HEADLINE: all 181 deployed script files are policed by nothing, and that directory holds every commit-guardian hook, including the two drift gates themselves. The drift gates do not police the drift gates — a hand-edit to a deployed gate is invisible to every gate, including itself. ROOT CAUSE, in scripts/build_helpers.py: _canonicalize_output_path() returns None when a deployed path's top-level directory has no canonical shim_map entry, and the output is then dropped from output_mappings with no record that it was dropped. A directory misses either by having no shim_map entry (config, debugging, paused_runs) or by having a multi-segment one — the reverse-lookup table is built under a filter excluding any entry containing a path separator, which discards scripts/commit_guardian, scripts/doc_compliance and scripts/feedback despite their being present in shim_map, and that is why all 181 script files vanish. This is the epic's thesis one level up: a mapping step that cannot map something drops it without recording that it could not map it. A verified count with no denominator is the phantom pass in numeric form."

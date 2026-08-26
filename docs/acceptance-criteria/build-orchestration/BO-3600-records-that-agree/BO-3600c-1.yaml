@@ -1,0 +1,77 @@
+id: BO-3600c-1
+title: "A fault entry naming a requirement that does not exist, or one that has been retired, is flagged"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fault entry naming requirement id X, and the requirement store holds no
+    record with that id,
+  When the register is checked,
+  Then the entry is flagged as carrying a reference that cannot be resolved,
+    And the flag names the entry and names X.
+
+  Given a fault entry naming requirement id Y, where Y exists but has been
+    superseded or deprecated,
+  When the register is checked,
+  Then the entry is flagged as pointing at a record that has been retired,
+    And that flag is distinguishable from the flag for a reference that does not
+      exist at all,
+    And where the retired record names its replacement, the flag names it too,
+  So the reader is told what to point at instead rather than only that the pointer
+    is wrong.
+
+  Given a fault entry every one of whose named requirements exists and is live,
+  When the register is checked,
+  Then the entry is not flagged,
+  So a clean entry stays clean and the check does not annotate the whole register.
+
+  Given a fault entry naming five requirements of which two cannot be resolved,
+  When the register is checked,
+  Then both unresolvable references are named,
+    And the three that resolve are not,
+  So the flag identifies which reference is wrong rather than only which entry
+    contains one.
+depends_on:
+  - BO-3600c
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028's correction list — five stale claims found in sibling entries during a single pass over sixty-five, none of which any process had detected. A named-but-nonexistent requirement id is the class this record makes decidable."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The id format and the lifecycle states — active, deprecated, superseded — that distinguish a missing reference from a retired one."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: internal
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE MOST DECIDABLE CLASS, and therefore the one to build first. Both halves are
+  structured: an id in a fixed format on one side, a record keyed by that id on the
+  other. Nothing beyond extraction and lookup is needed.
+
+  The second scenario matters because ids are never reused in this store, so a
+  reference to a retired record is a different problem from a reference to nothing —
+  the finding is still reachable, it has just moved. Collapsing the two would send
+  the reader looking for a record that is sitting right there.
+
+  The third and fourth scenarios are the precision controls. A check that flags the
+  entry rather than the reference makes a five-subject entry as much work to triage
+  as it was before the check existed.

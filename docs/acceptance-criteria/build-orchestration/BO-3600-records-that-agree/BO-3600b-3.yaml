@@ -1,0 +1,72 @@
+id: BO-3600b-3
+title: "Retiring a fault and demoting a requirement are separate acts, and neither happens as a side effect of the other"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a raised conflict decided as the fault having already been fixed,
+  When the retire outcome is applied to the fault entry,
+  Then the fault entry reads as retired,
+    And no requirement record's finished-or-unfinished state changes,
+    And no requirement record is modified at all by that act.
+
+  Given a raised conflict decided as the finished claim having been false,
+  When the demotion is applied to the requirement,
+  Then the requirement reads as unfinished with its reason recorded,
+    And no fault entry is retired by that act,
+    And no fault entry is modified at all by it.
+
+  Given a conflict where both records need changing,
+  When both outcomes are applied,
+  Then each is applied as its own act against its own record,
+    And each is separately visible in the history of what was changed,
+  So two changes are never bundled into one that cannot be undone separately.
+
+  Given the demotion of a requirement,
+  When the transition it uses is compared against the transition used when a
+    requirement's proof lapses,
+  Then it is the same transition,
+  So there is one way for a requirement to lose its finished state and not two.
+depends_on:
+  - BO-3600b
+  - BO-3600b-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400b.yaml
+    relationship: related
+    status: exists
+    relevance: "The demotion transition to be reused, not rebuilt: a finished record returns to unfinished carrying the reason and the date. BO-3600b's notes require reuse explicitly."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3600-records-that-agree/BO-3600d.yaml
+    relationship: related
+    status: exists
+    relevance: "Where the choice between the two acts is made and recorded. This record governs only that the two acts stay separate once chosen."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-3600b's boundary note, written as behaviour: retiring a fault entry is NOT the
+  same as demoting a requirement, and the two must not share one mechanism by
+  accident. The accident is easy to have — both are triggered by the same detected
+  conflict, so a single "resolve" path that touches both records is the obvious
+  implementation and the wrong one. Once bundled, a mistaken verdict cannot be
+  partly undone, and the asymmetric cost of a wrong retirement becomes unavoidable.
+
+  The fourth scenario is the reuse clause. A second way of taking a finished badge
+  away would itself be two records of one thing that can disagree — the failure this
+  entire goal exists to end, recreated by its own remedy.

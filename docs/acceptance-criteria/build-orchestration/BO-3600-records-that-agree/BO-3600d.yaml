@@ -1,0 +1,90 @@
+id: BO-3600d
+title: "Every conflict ends in a recorded decision, never in silence"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Each surfaced conflict gets a verdict you can look up later.
+
+  When the two records disagree, somebody decides which one was wrong, and that
+  decision is written down where the next reader will find it: the claim was
+  overstated, or the fault was already fixed, or the promise was narrowed to what
+  was actually delivered. A conflict never disappears just because attention moved
+  on, and nobody re-litigates the same disagreement six weeks later.
+depends_on:
+  - BO-3600
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-028 — a finding whose own fix direction ('check the BO-2900 family first') was recorded and then, in its own words, 'that check was not done'."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The amended_by field, where a narrowing of a requirement is already required to be recorded so it is not mistaken for a silent relaxation."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+change_target: pipeline
+risk_surface: contract_boundary
+origin_agent: product-owner
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3600d-1
+  - BO-3600d-2
+  - BO-3600d-3
+  - BO-3600d-4
+  - BO-3600d-5
+implemented_by: []
+documentation_triggers:
+  - state-diagram
+  - reference-doc
+notes: |
+  WITHOUT THIS THE TREE IS A NOISE GENERATOR. BO-3600a surfaces conflicts; if
+  surfacing is all that happens, the same pairs are re-raised on every run, the
+  output stops being read, and the check is worse than nothing because it looks
+  like coverage. Every long-lived detector in this repo that lacked a disposition
+  path ended up ignored.
+
+  THREE LEGITIMATE VERDICTS, all three already practised by hand in the material
+  behind this goal — the BA should not invent a fourth:
+    - The finished claim was false: the requirement goes back to unfinished with
+      the reason recorded. This is TQ-400b's transition. REUSE IT.
+    - The fault was already fixed: the fault entry is retired. This is BO-3600b.
+    - Neither is wrong, the promise was simply broader than what was built: the
+      requirement's wording is narrowed and the narrowing is recorded as an
+      amendment. KI-BO-028's handover ticket offers exactly this choice on five of
+      its eight records ("satisfied, or narrowed ... with an amended_by entry
+      recording why"), and the ticket's own risk note explains the discipline:
+      narrowing a criterion is a governance change and must not be mistakeable for
+      a silent relaxation.
+
+  A FOURTH OUTCOME MUST BE POSSIBLE AND MUST BE EXPLICIT: "not yet decided". A
+  verdict path that forces an answer produces bad answers. What must be impossible
+  is the conflict vanishing with no state at all.
+
+  This is the counterpart of BO-2800e ("every check gets a verdict") applied to a
+  different subject — that one dispositions the checks themselves, this one
+  dispositions the conflicts a check finds. Cite the parallel; do not merge.
+
+  DECOMPOSED 2026-08-26 (business-analyst). Five L2 children, this L1's full child
+  cap: BO-3600d-1 (a conflict has a durable identity across runs and cannot leave
+  the outstanding list without a decision — the precondition for everything else
+  here), BO-3600d-2 (the three resolutions plus an explicit not-yet-decided, with
+  anything else refused, demotion reusing TQ-400b's transition and a narrowing
+  recorded so it cannot read as an ordinary edit; + BO-3600d-2-i, deferral is
+  counted and ages so it is not free), BO-3600d-3 (a decided conflict stops being
+  raised, and is raised again when the facts behind the decision change — the noise
+  suppression and its safety valve), BO-3600d-4 (state diagram) and BO-3600d-5
+  (reference entry) for the two documentation_triggers.

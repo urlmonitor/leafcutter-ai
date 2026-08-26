@@ -1,0 +1,80 @@
+id: BO-3100f-3
+title: "A step that stopped short and a step that was skipped are recorded under different words, and neither borrows the other's"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run containing two steps that did not complete,
+    And the first was decided in advance not to be run, for a blocker declared
+      before it would have started, so it never ran,
+    And the second ran, attempted its work, and could not finish because of a
+      confirmation it could not obtain,
+  When the run records their outcomes,
+  Then the first is recorded as skipped, carrying its declared reason,
+    And the second is recorded as stopped short, carrying what stopped it,
+    And neither is recorded using the other's word,
+    And a reader of the record can tell, for each, which of the two happened.
+
+  Given a step that ran and stopped short,
+  When the run records its outcome,
+  Then it is not recorded as skipped,
+  So a step that failed to happen is never filed as a step nobody expected, which is
+    the substitution that makes a run's report come out clean.
+
+  Given a step that was decided in advance not to be run,
+  When the run records its outcome,
+  Then it is not recorded as stopped short,
+  So the distinction holds in both directions and the word "skipped" keeps the
+    meaning it already has.
+
+  Given the vocabulary the run uses for step outcomes,
+  When the words "skipped" and "stopped short" are each traced through the run's
+    records,
+  Then each carries exactly one meaning throughout,
+    And no third sense of either word is introduced,
+  So the words stay usable as evidence rather than needing interpretation per
+    record.
+depends_on:
+  - BO-3100f
+  - BO-3100f-1
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-007 — the same run correctly surfaced two steps it had skipped on declared blockers, and the entry calls that legible and correct. Skipped is not the defect; recording a stop as one would be."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900f-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Where the skipped outcome and its reason are already established for a requested gate that did not run, and whose notes record the identical term collision at the gate layer. Inherit that distinction; this record must not re-derive a third meaning."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  VOCABULARY, INHERITED NOT INVENTED. Skipped means the run decided in advance not
+  to run the step. Stopped short means it ran, tried, and could not finish.
+  Collapsing them loses the difference between a step nobody expected and a step
+  that failed to happen — and the collapse has a direction that matters: filing a
+  stop as a skip is how a run's report comes out clean.
+
+  The fourth scenario is the guard against the fix itself introducing drift, which
+  BO-2900f-1's notes record happening once already for the word "skipped" at the
+  gate layer.
+
+  This record deliberately does not decide whether a skipped step withholds the
+  run's success value. KI-BO-007 calls the skips in the anchor run legible and
+  correct, and BO-3100f-2 scopes the leading value to steps that stopped short.

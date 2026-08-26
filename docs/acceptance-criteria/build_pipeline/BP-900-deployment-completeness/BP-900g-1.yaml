@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
 criteria: |
   Given a deployed command whose handoff references a workflow by a path such as
@@ -59,4 +59,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BP-900g-1-i
-implemented_by: []
+  - unit_tests/build_guards/test_command_reachability_guard.py
+  - unit_tests/build_guards/test_deploy_collision_guard.py
+implemented_by:
+  - scripts/build_phases.py
+  - scripts/build.py

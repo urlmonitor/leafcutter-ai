@@ -1,0 +1,58 @@
+id: BO-300d-2-i
+title: "Each unbuilt piece is reported under exactly one cause, and the causes account for the stated count"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a closing report stating that twenty pieces were not built,
+  When the report is read,
+  Then each of the twenty appears under exactly one cause,
+    And no piece appears under two causes,
+    And the number of pieces listed across all causes is twenty.
+
+  Given a piece for which the run holds a recorded outcome saying the work stopped
+    short, and which is also absent from the run's record of completed work,
+  When the report is produced,
+  Then that piece is reported as stopped part-way and is not additionally reported
+    as planned and not finished,
+  So the more specific cause is the only one stated and the count is not inflated by
+    the same piece twice.
+
+  Given a run in which no piece falls into a given cause,
+  When the report is produced,
+  Then that cause is not presented as an empty list of pieces alongside the others,
+  So the reader is not asked to distinguish an empty cause from a cause that was
+    never considered.
+depends_on:
+  - BO-300d-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300d-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The stated count this constraint reconciles against. A count and a per-cause breakdown that disagree are two records of the same run contradicting each other."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Double-counting is the quiet way a count stops being trustworthy: a report saying
+  twenty while listing twenty-three across its causes leaves the operator with no
+  number they can act on, and the arithmetic is back in their hands — the exact
+  thing BO-300d-1 removes.
+
+  The precedence rule in the second scenario is stated once, here, rather than in
+  BO-300d-2, so the cause taxonomy stays a taxonomy and does not become an ordering
+  puzzle inside its own record.

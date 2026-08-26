@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -85,9 +85,13 @@ amended_by:
     entry: "Added test_spec (4 whole-tree behavioral descriptors, one per Then-clause: zero uncomparable count from the gate's own summary; no artifact reported drifted; both gates clean and exit zero; the stricter reporting raises no false alarm on the full real tree) and test_rationale. Added two it_requirements constraints: the Bundle A2 shared-diff rule with BP-100k-3 plus the requirement to exercise the DEPLOYED hook copies under scripts/commit_guardian/ after build.py, and a rule that the zero-uncomparable assertion be count-based rather than an allowlist of today's artifact names. Added one edit-surface doc_link (check_build_drift.py) so files_touched covers both gates. criteria, assigned_agent (python-coder), estimated_complexity (S), reference_file_path, delivers_to, expects_from, readiness and work_status left unchanged."
     by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_3_i.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md
+  - templates/scripts/commit_guardian/_drift_exemptions.py
+  - templates/scripts/commit_guardian/check_build_drift.py
+  - templates/scripts/commit_guardian/check_output_drift.py
 change_target: pipeline
 risk_surface: internal
 notes: "Paired negative case for the Gap A fix. Without it, the cheapest way to satisfy BP-100k-3 is to make every uncomparable artifact fail, which would block every commit on the current tree; and the cheapest way to satisfy BP-100k-1/2 is to record fingerprints that no gate actually consults. Running both gates end to end over a freshly built tree is the only check that catches either shortcut."

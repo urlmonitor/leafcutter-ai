@@ -1,0 +1,64 @@
+id: BO-3600c-2-i
+title: "A reference whose subject moved says where it went, and never asserts a deletion it cannot establish"
+component: build-orchestration
+components:
+  - ac_store
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fault entry naming a file, a position, and the thing at that position,
+    And that thing is no longer at that position but is found elsewhere in the same
+      file,
+  When the register is checked,
+  Then the flag states that the position has moved and names the position where the
+    thing was found.
+
+  Given the same entry where the thing is found in a different file,
+  When the register is checked,
+  Then the flag states that the subject has moved and names the file it was found
+    in.
+
+  Given the same entry where the thing is not found anywhere the check looked,
+  When the register is checked,
+  Then the flag states that the reference could not be resolved and names where the
+    check looked,
+    And it does not state that the subject was deleted,
+  So the reader is not given an instruction the check cannot support.
+
+  Given an entry whose reference resolves unchanged,
+  When the register is checked,
+  Then nothing is stated about it having moved,
+  So the moved report is a consequence of movement and not an annotation on every
+    reference.
+depends_on:
+  - BO-3600c-2
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-022 and KI-BO-023 — in both cases the defect was unchanged and only the address moved. A flag that said the reference was gone would have been actively misleading about two live findings."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: business-analyst
+created: 2026-08-26
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-3600c's criteria say the point is that a finding does not quietly rot into a
+  wrong instruction. A flag reading "this no longer exists" for something that
+  simply moved is a new wrong instruction issued by the check that was supposed to
+  prevent them — and, worse, one carrying the authority of automation.
+
+  The third scenario is the honesty bound: not-found-where-we-looked is a weaker and
+  true claim, and it names the search so the reader can widen it. Asserting deletion
+  would require having looked everywhere, which the check has not done.
