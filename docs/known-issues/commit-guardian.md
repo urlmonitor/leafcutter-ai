@@ -1641,3 +1641,458 @@ marker actually costs anything.
 
 **Pattern:** a claim generalised from the one case that was measured, in a change whose whole
 purpose was to bound false positives.
+
+---
+
+> **Entries `KI-CG-021` … `KI-CG-031` are recovered from an unmerged branch.** They were
+> written between 2026-08-19 and 2026-08-25 while driving
+> `EPIC-GE122UniquenessPassAndRepair`, into a parallel known-issues register that PR #495
+> invented with its own id scheme (`KI-CG-9`, `KI-CG-12`, …). That register lost every
+> reconciliation conflict against this file and was discarded; a pairwise comparison then
+> found the two are disjoint in subject matter, so the analysis below would have been lost
+> with the branch. Every entry was re-verified against `main` at `37655862` before being
+> filed, and each `Status` line states plainly whether the code it describes is on `main`
+> or only on the unmerged branch. Two entries from that set were **dropped** as no longer
+> true and are deliberately absent: one about `origin/main`-staleness in
+> `test_ge_122e_1.py` (fixed 2026-08-18, the assertion is now a one-directional id-set
+> difference) and one about agent cards failing `check-doc-frontmatter` (fixed — `card` is
+> now a valid `config/doc_types.json` type and the cards validate clean).
+
+---
+
+### KI-CG-021 — The whole-collection uniqueness pass is registered in no hook config and no CI workflow, and has never run
+
+- **Severity:** blocker
+- **Status:** open — **the code is NOT on `main`**; `check_identifier_uniqueness.py` and its
+  four scanners live only on the unmerged PR #495 (`feat/ge-122-integrity-guard`). Filed
+  here because it is the gating precondition on landing that branch: the merge must not be
+  taken as "the gate now exists".
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** PR #495's `templates/scripts/commit_guardian/check_identifier_uniqueness.py`;
+  `templates/scripts/commit_guardian/commit_guardian.json`; `.pre-commit-config.yaml`
+
+**Symptom.** Found in review round six, by the first reviewer to test the gate *as deployed*
+rather than by invoking it from the source tree. Nothing invokes it:
+
+```
+grep "check_identifier_uniqueness" templates/scripts/commit_guardian/commit_guardian.json  -> 0
+grep "check_identifier_uniqueness" .pre-commit-config.yaml                                 -> 0
+grep -rl across every .json / .yaml / .yml / .js / .toml in the repo
+    -> docs/acceptance-criteria/.../GE-122a-1.yaml   (the AC that specifies it)
+    -> tickets/.../.pending/adr_handoff.json         (a pending handoff)
+       nothing else
+```
+
+No pre-commit hook invokes it. No CI workflow invokes it. The one registered hook with a
+similar name, `check-decision-number-uniqueness`, runs a **different** script
+(`check_adr_collision.py`) — and see `KI-CG-022`: that registration itself exists only on
+the branch.
+
+**Root cause.** Six review rounds and five fix commits hardened a `main()` that no runner
+calls. The commit immediately before the discovery is titled *"the fail-closed contract was
+never wired to the exit code"* — and nothing reads that exit code.
+
+The epic's own `Master_Plan.md` named this outcome in advance:
+
+> The trap this epic is most likely to fall into: **a guard that is built, tested green, and
+> registered nowhere.**
+
+and its Success Criteria require *"one whole-collection uniqueness pass, **registered in
+`commit_guardian.json`** and reachable through its production entry point — not a second
+inert detector."* **That criterion is not met.** The epic was commissioned because three
+whole-collection detectors were already registered nowhere. It produced a fourth.
+
+**Why nothing caught it.** Every round verified behaviour by importing the module or running
+the script directly. Not one asked what invokes it in production. Each round's verification
+was accurate and none of them addressed the question. This register's recurring lesson — *a
+signal computed correctly and then not consumed* — applied to the entire component, and the
+reviews inherited the blind spot from the thing they were reviewing. Generalised as
+`KI-TQ-007` in the testing-quality register.
+
+**Fix direction.** **Do not register it in the same change that ships it.** See
+`KI-BO-030` — doing so today makes the package uninstallable. Required order: scaffold the
+missing namespace roots, **then** register, **then** re-run the deployed-consumer test.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a gate whose reachability was
+never asked about; verification that stops at the function and never reaches the entry point.
+
+---
+
+### KI-CG-022 — `check_adr_collision.py` exists but is registered nowhere, and the branch that registers it also makes it fail closed without `origin/main`
+
+- **Severity:** medium — **downgraded from the high recorded on the branch, because the
+  claim it rested on is false for `main`** (see Evidence)
+- **Status:** open — the *script* is on `main` and has been since the initial commit; the
+  *registration* and the *fail-closed behaviour* are **not** on `main` and live only on
+  unmerged PR #495. The defect is therefore latent on `main` and becomes live the moment
+  that branch lands.
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `templates/scripts/commit_guardian/check_adr_collision.py:81-101`
+  (`get_committed_adr_numbers`); `templates/scripts/commit_guardian/commit_guardian.json`
+
+**Symptom (as observed on the branch).** The hook reads the decision-number sequence from
+`origin/main` and fails closed when that ref does not exist:
+
+```
+[check_adr_collision] BLOCKED -- could not read the decision-number sequence:
+  could not read the decision sequence on 'origin/main' (git ls-tree exited 128):
+  fatal: Not a valid object name origin/main
+[check_adr_collision] Uniqueness was not established, so this commit cannot proceed.
+```
+
+A `git init` repository has no `origin/main`. Every ADR-touching commit in any repo that is
+not a clone with a `main` branch is blocked. Found while building a fresh consumer install
+to test `KI-CG-021`.
+
+**Evidence — the branch entry's own framing was wrong, and this is the correction.** The
+branch recorded this as *"This hook IS registered and required … live on `main` today — not
+introduced by this epic."* Both halves are false for `main`, verified directly at
+`37655862`:
+
+- **Not registered.** `grep -n 'check_adr_collision\|check-decision-number-uniqueness'
+  templates/scripts/commit_guardian/commit_guardian.json` returns **nothing**, across all 55
+  registered hooks. A repo-wide grep over `.json` / `.yaml` / `.yml` / `.py` / `.js` /
+  `.toml` finds the name only in the script itself, `config/package_boundary.json`,
+  `scripts/adr_refs.py`, and seven GE-12x AC records. No `.pre-commit-config.yaml` entry
+  either. `git log -- templates/scripts/commit_guardian/check_adr_collision.py` shows the
+  file present since `11dbd26b` (initial commit) and never registered since.
+- **Not fail-closed.** `main`'s copy fails **open**. Its docstring states
+  *"Empty on any error"* and the body is literally `if rc != 0: return set()`
+  (`check_adr_collision.py:93-94`). The `BLOCKED -- could not read the decision-number
+  sequence` string appears **nowhere** in the repository.
+
+So the branch registered the hook (as `check-decision-number-uniqueness`) *and* converted it
+from fail-open to fail-closed, then observed the consequence and recorded it as pre-existing.
+It was neither.
+
+**Why this matters more, not less.** `main` today has the opposite defect: a decision-number
+collision detector that has never run in the package's entire history, silently returning an
+empty set on any git error even where it *is* invoked by hand. And the branch's two changes
+compose into the fresh-install blocker above. Landing PR #495 without addressing this ships
+that blocker.
+
+**Fix direction.** Treat as one change with three parts: register the hook; keep it fail-closed
+(fail-open is what let it hide for months); and make an absent `origin/main` a *distinguishable*
+condition — resolve the first ref that exists from `origin/main`, `main`, `HEAD` and only block
+when none resolves, matching the `_resolve_first_ref` pattern
+`unit_tests/commit_guardian/test_ge_122e_1.py:504` already uses for exactly this reason.
+
+**Pattern:** an entry that mis-states which tree its evidence came from. Verification run on a
+branch, recorded as a property of `main`.
+
+---
+
+### KI-CG-023 — `check-predone-scope` cannot distinguish a ticket's subject from its driver, and reconciles branch-wide rather than commit-wide
+
+- **Severity:** medium
+- **Status:** open — code is on `main` and live, but **advisory by default**
+  (`files_touched_reconciliation.strict: false`), which is what keeps this at medium rather
+  than the blocker severity observed on the branch, where it was hit in strict mode
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py`
+  — `_reconcile` (`all_changed = branch_diff_files | frozenset(staged_files)`, ~:451) and
+  `_get_branch_diff_files` (:113-132); registered as `check-predone-scope` in
+  `commit_guardian.json:589`
+
+**Symptom.** The hook reads every modified ticket `.md` in the change set as a *governing*
+ticket authorising the commit, then reports source changes as undeclared against that
+ticket's `files_touched`. It has no notion of a ticket being the *subject* of a change.
+
+This misfires on any work that repairs tickets. GE-122e-2 deleted five duplicate work items;
+the hook read those five long-finished June tickets as the commit's authorisers and blocked.
+
+**Second, compounding defect: it reconciles branch-wide, not commit-wide.** An attempt to
+satisfy it by splitting the source changes into a separate commit still failed, and the error
+named files that were not in the commit at all (`_commit_disposition.py`,
+`_uniqueness_scanners.py`, `_work_items_scanner.py` — all from earlier commits on the
+branch). No commit boundary can satisfy it.
+
+**Evidence.** Both defects are visible in the hook's own source on `main`. Its module
+docstring states it *"Computes branch diff plus staged source files"* and that *"when
+multiple done tickets are staged together, reconciliation uses the UNION"* — the two
+behaviours described above, documented as intent. The union is computed at
+`all_changed = branch_diff_files | frozenset(staged_files)`.
+
+**Detection.** The tell is a blocker (or advisory) naming files absent from
+`git diff --staged`.
+
+**Fix direction.** Two independent changes: (1) distinguish subject from driver, probably by
+treating a ticket as governing only when the commit is authored under it; (2) reconcile
+against the staged diff rather than the branch diff. Until then, `SKIP=check-predone-scope`
+with the justification written into the commit message — used once on `6715e4c3`.
+
+**Pattern:** a scope check whose population is the branch while its subject is the commit.
+The same population-vs-change mismatch as `KI-CG-001`.
+
+---
+
+### KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout
+
+- **Severity:** medium
+- **Status:** open — code is on `main` and live
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `templates/scripts/commit_guardian/config.py:224-226`
+  (`AGENT_REGISTRY_PATH` default) consumed by
+  `templates/scripts/commit_guardian/_signoff_parity_checks.py:96-103`
+  (`load_agent_registry`)
+
+**Symptom.** The hook resolves the agent registry at
+`<worktree_root>/leafcutter/config/agent_registry.json`. That path is wrong for this layout
+— nothing exists there — so it emits a warning to stderr and skips check #6 entirely:
+
+```
+[check-ticket-signoff-parity] WARNING: agent registry not found at
+  <worktree>/leafcutter/config/agent_registry.json; skipping check #6
+```
+
+The hook then **exits 0**. The other checks run, so the hook looks healthy; one of its checks
+has simply never fired in this layout.
+
+**Evidence.** `config.py:224` reads
+`AGENT_REGISTRY_PATH = _get("ticket_signoff_parity", "agent_registry_path",
+"leafcutter/config/agent_registry.json")`. The registry actually lives at
+`config/agent_registry.json` (repo root), and no `ticket_signoff_parity.agent_registry_path`
+override is set anywhere in `config/` or `.claude/skills_config.json`, so the wrong default
+is what every run uses. `load_agent_registry` returns `{}` and its docstring names the
+behaviour as intentional: *"Fail-open: returns an empty dict when the registry file is absent
+or unreadable so that check #6 is skipped rather than blocking commits."*
+
+**Detection.** Run the hook and read stderr, not just the exit code. Silence is not the same
+as a pass.
+
+**Fix direction.** Resolve the registry the way other layout-aware scripts do — derive the
+root from `git rev-parse` via the sibling `_resolve_root.py` that 27 files in the same
+directory already import, and support both the source-repo and deployed layouts. Correcting
+the default alone is the one-line fix. Separately, consider whether an unresolvable registry
+should fail closed rather than skip: fail-open was chosen so a missing registry cannot block
+commits, but the cost is a check nobody knows is off.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` — a gate that reports success while
+one of its checks was never given the data it needs.
+
+---
+
+### KI-CG-025 — `check_ticket_state_integrity.py` retains an always-exit-0 contract that a coder cannot unilaterally retire
+
+- **Severity:** medium
+- **Status:** open — **the code is NOT on `main`**; the script lives only on unmerged
+  PR #495. Filed so the constraint is not rediscovered when that branch lands.
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** PR #495's `templates/scripts/commit_guardian/check_ticket_state_integrity.py`
+
+**Symptom.** The script documents a `Returns: Always 0` fail-open contract, so the hook
+cannot block anything. GE-122a-2 widened work-item integrity checking but did **not** retire
+it.
+
+**Root cause of the stall, which is the part worth recording.** The contract is pinned by
+existing tests, so a coder may not unilaterally weaken it — retiring it needs a `test-writer`
+pass first to change the pinned expectations. That ordering constraint is why a known
+fail-open survived a change that touched the same file.
+
+**Fix direction.** Sequence it as test-writer (amend the pinned expectations) → coder (retire
+the contract), not the reverse. Any AC written for it must name the pinned tests explicitly,
+or the coder phase will correctly refuse again.
+
+---
+
+### KI-CG-026 — The unattributed-collision count is computed and then discarded by `pre-commit`
+
+- **Severity:** medium
+- **Status:** open — **the producing code is NOT on `main`** (it is PR #495's
+  `check_identifier_uniqueness.py`), but the **consuming** half of the defect is: no hook in
+  `commit_guardian.json` sets `verbose`, so this will reproduce exactly as described the
+  moment the gate is registered
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26 (consuming half re-verified against
+  `37655862`)
+- **Where:** PR #495's `check_identifier_uniqueness.py` operator message;
+  `templates/scripts/commit_guardian/commit_guardian.json` (the generated `pre-commit` config)
+
+**Symptom.** GE-122a-1-i requires a visible count of reported-but-unattributed collisions, on
+the stated grounds that *"a visible count is what makes the backlog shrink."* Run directly,
+the gate emits it:
+
+```
+[check_identifier_uniqueness] 1 reported-but-unattributed contested number(s)
+  with no claimant in the current change set (not blocking)
+```
+
+Under `pre-commit`, a **passing** hook's stdout is discarded. So on the non-blocking path —
+the only path this message exists for — the operator never sees it.
+
+**Evidence.** `grep -c verbose templates/scripts/commit_guardian/commit_guardian.json`
+returns **0**. The generated config sets `verbose: true` on no hook at all, so this is not a
+per-hook oversight but a property of every advisory message the hook family emits on its
+passing path.
+
+**Fix direction.** Set `verbose: true` on this hook's registration when `KI-CG-021` is
+addressed. Worth a wider look while there: any other hook whose value is an advisory printed
+on the passing path has the same problem today.
+
+**Pattern:** same shape as `KI-CG-007`, one layer further out — computed correctly, then not
+consumed.
+
+---
+
+### KI-CG-027 — `main()` derives the project root from `Path.cwd()` while the canonical resolver sits unused beside it
+
+- **Severity:** medium
+- **Status:** open — **the code is NOT on `main`**; lives only on unmerged PR #495. The
+  shared resolver it should adopt (`_resolve_root.py`) **is** on `main` and is imported by 27
+  sibling files.
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** PR #495's `check_identifier_uniqueness.py` `main()`; against
+  `templates/scripts/commit_guardian/_resolve_root.py`
+
+**Symptom.** Under `pre-commit` the cwd happens to be the repo root, so it works **by luck**.
+From any nested directory it does not:
+
+```
+$ env --chdir=<consumer>/docs python3 .../check_identifier_uniqueness.py
+BLOCKING: ... acceptance-criteria, decisions, diagrams, work-items      exit 1
+```
+
+All four namespaces unresolvable, so with the `KI-CG-007` fail-closed fix in place it
+hard-blocks. Any agent or manual invocation from a subdirectory is affected.
+
+**Fix direction.** Adopt `_resolve_root.py` (git-toplevel first). The resolver exists, is
+already the convention, and is in the same directory — this is a one-import change, not a
+design question.
+
+---
+
+### KI-CG-028 — The diagrams root is hardcoded while its sibling architecture roots are configurable
+
+- **Severity:** medium
+- **Status:** open — **the consuming code is NOT on `main`** (PR #495's
+  `check_identifier_uniqueness.py`), but the **cause** is on `main` and verified: there is no
+  `architecture_diagrams` key in `config/paths.json`
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
+- **Where:** `config/paths.json:48-51`; PR #495's `check_identifier_uniqueness.py`
+
+**Symptom.** `config/paths.json` declares the other architecture roots and not this one:
+
+```json
+"architecture":            "docs/architecture/",
+"architecture_adrs":       "docs/architecture/adrs/",
+"architecture_components": "docs/architecture/components/",
+```
+
+There is **no `architecture_diagrams` key** — confirmed by direct read at lines 48-51, where
+`architecture_components_optional: true` follows and the enumeration ends. The gate hardcodes
+`docs/architecture/diagrams/` instead. So of the four namespaces it polices, one has a root a
+consumer cannot relocate while its two immediate siblings can.
+
+**Why it matters.** Once the gate is registered (`KI-CG-021`), a consumer that keeps diagrams
+anywhere else gets a permanently unresolvable namespace, which under the `KI-CG-007`
+fail-closed contract blocks every commit with no configuration escape.
+
+**Fix direction.** Add `architecture_diagrams` to `paths.json` and read the root from it,
+mirroring how `architecture_adrs` is already consumed — **non-optional**, since the gate hard-
+requires the root to exist. Fold this into the scaffolding work (`KI-BO-030`): the same change
+decides where the directory lives and how the gate finds it, and splitting them invites the two
+answers to diverge. `docs/reference/architecture-docs-layout.md` is the design note for this.
+
+**Context for whoever picks this up.** `docs/architecture/diagrams/` currently holds 24 files:
+13 match the `c{level}-{seq}` pattern the gate's numbering namespace polices, and 11 do not.
+Those 11 are a **binding, permanent exemption** recorded in `GE-122e.yaml` / `GE-122b.yaml` by
+a PO gate decision of 2026-08-17 — do not renumber them.
+
+---
+
+### KI-CG-029 — `repair_work_item_duplicates.py` has no CLI, so a destructive repair can only be invoked from a test
+
+- **Severity:** low
+- **Status:** open — **the code is NOT on `main`**; lives only on unmerged PR #495
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Where:** PR #495's `templates/scripts/commit_guardian/repair_work_item_duplicates.py`
+
+**Symptom.** The module is importable only. The live repair run against the real `tickets/`
+tree therefore went through a throwaway operator harness in `/tmp` rather than a supported
+entry point.
+
+**Why it was left.** Nothing in the AC's `test_spec` required a CLI, and adding untested
+surface for convenience was declined — the right call under the rules in force. Recorded
+because the consequence outlives the decision: a repair that can only be invoked from a test
+is awkward to re-run and hard to audit, and the `/tmp` harness that actually mutated the
+tickets tree is not in version control.
+
+**Fix direction.** If the branch lands, give it a CLI *with* a test, or record explicitly that
+the repair is one-shot and closed.
+
+---
+
+### KI-CG-030 — Staged paths with non-ASCII characters are silently unattributed
+
+- **Severity:** low in this repository, **medium in a consumer project with non-ASCII
+  filenames**
+- **Status:** open — the instance is on unmerged PR #495 (`_commit_disposition.py`), but the
+  **precedent it was copied from is on `main` and live**: `check_ac_schema.py` uses the same
+  unsafe form at three call sites
+- **Occurrences:** 1
+- **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (precedent re-verified against
+  `37655862`)
+- **Where:** `templates/scripts/commit_guardian/check_ac_schema.py:349`, `:396`, `:439`
+  (`_get_staged_ac_paths` and siblings); PR #495's `_commit_disposition.py::_get_staged_paths`
+
+**Symptom.** These call sites use plain `git diff --cached --name-only`, with no `-z` and no
+`--no-quote-path`. Under git's default `core.quotePath=true`, a staged path containing
+non-ASCII characters comes back **quote-escaped** (e.g. `"tickets/caf\303\251.md"`). That
+string does not resolve to a real path, so the check silently fails to match it.
+
+**Why the direction is bad.** For the uniqueness gate the consequence is that a collision the
+current commit **did** cause is reported as *unattributed*, which by design does **not**
+block. The commit proceeds. A silent miss, on the side that lets work through.
+
+**Evidence.** Found during the first review of `GE-122a-1-i`. It is inherited from
+`check_ac_schema.py::_get_staged_ac_paths`, which that AC's own `doc_links` name as its
+precedent — so it is a pre-existing convention rather than something the GE-122 work
+introduced. On `main` at `37655862` all three `check_ac_schema.py` call sites still use the
+bare `--name-only` form.
+
+**Why it is low here.** This repository's numbered artifacts are ASCII by convention
+(`GE-122a-1.yaml`, `ADR-029-*.md`, `TICKET-*.md`). Nothing currently in the collection can
+trigger it.
+
+**Fix direction.** Use `git diff --cached --name-only -z` and split on NUL, or pass
+`--no-quote-path`. **Fix both call sites together** — leaving the precedent unfixed means the
+next author copies it again, which is exactly how this instance arose.
+
+---
+
+### KI-CG-031 — `scan_decisions` and `scan_diagrams` fail silently while their sibling scanner logs
+
+- **Severity:** low, but it makes every misconfiguration harder to diagnose than it should be
+- **Status:** open — **the code is NOT on `main`**; lives only on unmerged PR #495
+- **Occurrences:** 1
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** PR #495's `_uniqueness_scanners.py` (`scan_decisions`, `scan_diagrams`) against
+  `_work_items_scanner.py`
+
+**Symptom.** When a namespace root is missing, `_work_items_scanner.py` logs:
+
+```
+[check_identifier_uniqueness] WARNING: cannot read <path>/tickets/ticket_lifecycle.json
+```
+
+`scan_decisions` and `scan_diagrams` return `passed=False` for an absent root with **no log
+line at all**.
+
+**Evidence that this costs real time.** Three failing tests were first read as "the lifecycle
+config is missing" because that was the only namespace that said anything; the fixtures were
+in fact missing **three** roots, and the two silent ones were only found by printing the
+verdict directly. That mis-diagnosis is also recorded from the other side, as the second
+instance in `KI-TQ-005`. Since the fail-closed contract now blocks the commit, an operator
+hitting this sees a non-zero exit with one namespace named and two staying quiet.
+
+**Fix direction.** Give the silent scanners the same WARNING the work-items scanner already
+emits. The `unresolvable_namespaces` field added for `KI-CG-007` already carries the
+information; this is only about surfacing it at the point of failure.
