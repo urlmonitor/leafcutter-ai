@@ -300,6 +300,7 @@ class TestReleaseExecutorCharter(_FixtureCase):
             self.assertIsNotNone(
                 entry, f"agentType {agent_id!r} has no config/agent_registry.json entry"
             )
+            assert entry is not None  # narrowing for mypy; assertIsNotNone above is the real check
             if entry.get("permits_shell") is False:
                 violations.append(agent_id)
 
