@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-08-26
 components:
   - build_pipeline
 related_docs:
@@ -1473,6 +1473,39 @@ index with an all-empty scan: a run that resolves zero documents in every catego
 certainly resolved the wrong directory, and should exit non-zero saying which directory it
 scanned rather than rendering the emptiness as content.
 
+> **Review note, 2026-08-26 — the first half of that fix direction is wrong as written; the
+> second half is the one to build.**
+>
+> "`generate_index` should take the same `target_root / docs_dir`" would reproduce this exact
+> bug rather than fix it. Every entry in `_CATEGORIES` (`generate_doc_index.py:64-74`) already
+> carries the `docs/` prefix — `("Components", "docs/architecture/components", True)`,
+> `("How-To Guides", "docs/how-to", True)`, and so on for all nine. Hand the generator a root
+> that already ends in `docs/` and it scans `<root>/docs/docs/architecture/components`, which
+> exists nowhere, so every category comes back empty and it writes the identical nine-section
+> `No docs found.` stub. The failure would look like no fix had been applied at all. It would
+> also break every link the index renders, since those are built from the same prefixed paths.
+>
+> Whoever picks this up has to choose one of two coherent shapes, not mix them:
+>
+> 1. **Keep `_CATEGORIES` prefixed and pass the repo root.** The generator's contract stays
+>    "give me the root that *contains* `docs/`". The build phase's bug is then simply that it
+>    passes `target_root` where it should pass the root implied by `docs_root` — strip the
+>    trailing `docs/` from `docs_root` and pass that. Smallest change; the generator is
+>    untouched.
+> 2. **Strip the `docs/` prefix from all nine `_CATEGORIES` entries and pass the docs root.**
+>    Then `target_root / docs_dir` is correct. But this changes the generator's contract and
+>    every rendered link path, so the link-rendering code has to be audited in the same commit.
+>
+> Option 1 is smaller and safer, and it is the one that matches how the generator already
+> behaves when invoked directly — the reproduction recorded in this entry passes
+> `--repo-root .../leafcutter-ai`, a root *containing* `docs/` rather than a docs root, and
+> gets a correct 221-line index. That invocation is the working contract; the build phase is
+> what disagrees with it.
+>
+> The refuse-to-overwrite-on-an-all-empty-scan guard is independently correct and worth landing
+> on its own, ahead of either option. It is the part that turns this from a silent 175-line
+> deletion into a loud failure, and unlike the path fix it cannot itself be got subtly wrong.
+
 **Pattern:** a resolver that reads one tree and writes another, with the failure rendering as
 ordinary output.
 
@@ -1558,6 +1591,30 @@ one it already makes. (b) Stop prescribing a relative path: change `SKILL.md:180
 agent templates to invoke `.leafcutter/scripts/feedback/submit_feedback.py`, which resolves in
 both layouts. (b) alone stops the crash but routes the write to the install-tree sink, which
 is `KI-FC-001` — so it must land together with that fix, not before it.
+
+> **Review note, 2026-08-26 — the KI-FC-001 condition belongs on (a) as well, not only (b).**
+>
+> As written, the "must land together with that fix" condition is attached only to (b), which
+> reads as though (a) were safe to ship alone. It is not, and for the same underlying reason.
+>
+> `_find_project_root()` (`templates/scripts/feedback/submit_feedback.py:65-77`) starts from
+> `Path(__file__).resolve().parent`, and `.resolve()` follows symlinks. So the moment
+> `scripts/feedback` in a worktree becomes a **symlink** into the shared install tree — which
+> is precisely what (a) creates — `__file__` resolves into the install tree, the six-level
+> walk-up finds the install tree's `.claude/`, and `_JSONL_DEFAULT` becomes
+> `<install-tree>/debugging/logs/feedback.jsonl`. Same destination as (b). Either way the crash
+> stops and the feedback lands somewhere nobody is looking, which is arguably worse than the
+> loud `(submit-failed)` it replaces, because it reads as success.
+>
+> So the accurate statement is: **KI-FC-001 gates both (a) and (b)**, since both route through
+> a `__file__` resolved into the install tree. Fix the sink resolution first and (a) and (b)
+> become interchangeable in ordering.
+>
+> One thing to check before reproducing: that symlink now **exists** in the GE-120 worktree,
+> created after this entry was filed. A fresh attempt to reproduce the original
+> `(submit-failed)` crash there will not reproduce it — it will silently exercise the
+> install-tree-sink path instead. Confirm whether `scripts/feedback` is a symlink before
+> concluding which of the two failure modes you are looking at.
 
 **Pattern:** a build output that reaches the project root and not the worktrees, called
 through a path that only resolves at the project root.
@@ -1686,3 +1743,77 @@ BP-900g-9's fail-closed principle but worth fixing on sight; it is one line.
 
 **Pattern:** an exception handler that makes a missing dependency indistinguishable from a
 satisfied one.
+
+---
+
+### KI-BP-021 — Nothing validates the shape of a changelog entry: CI checks only that a file exists, no pre-commit hook looks at one, and the emitter's own output is an empty body
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
+- **Where:** `.github/workflows/ci.yml:268-295` (the `changelog-presence` job);
+  `scripts/release/check_changelog_presence.py` (`_has_added_changelog`);
+  `.pre-commit-config.yaml` (no changelog hook of any kind);
+  `scripts/changelog/emit_entry.py:361`
+
+**Symptom.** A changelog entry can reach `main` with a well-formed frontmatter block and a
+completely empty body, and every gate passes.
+
+**What each layer actually checks.** Three layers look plausible and only one of them reads an
+entry at all:
+
+- **CI `changelog-presence` (BLOCKING).** Runs
+  `check_changelog_presence.py --base origin/<base_ref>`, whose whole job is
+  `_has_added_changelog` — was a file **added** under `changelogs/`. It never opens it. A
+  one-byte file passes.
+- **Pre-commit.** Nothing. A grep for `changelog` across `.pre-commit-config.yaml` returns no
+  hook. The only mention anywhere in commit-guardian config is `"^changelogs/"` in
+  `commit_scope.hook_artefact_patterns` — an **exclusion** that tells the warn-only scope guard
+  to ignore changelog files.
+- **`emit_entry.py` (write time only).** This is the one real check, and it is good as far as
+  it goes: `validate_payload` enforces `REQUIRED_FIELDS` (`title`, `date`, `time`, `type`,
+  `components`, `summary`, `description`) and raises `ValueError` on several more conditions.
+  But it validates the **payload**, not the file, and only when the tool is used. A
+  hand-written entry never meets it.
+
+**The body is empty by construction.** `emit_entry.py:361` writes
+`content = frontmatter + "\n## Entry\n"` — the tool's documented output is frontmatter plus a
+bare `## Entry` heading as a placeholder. Filling it in is a convention nothing enforces. So the
+default artefact of the sanctioned path is precisely the artefact no gate rejects.
+
+**Evidence.** The changelog entry in the `docs/ki-epic-drive-findings` work carries a bare
+`## Entry` body, with the whole narrative compressed into the one-line YAML `description` field
+— unlike its same-day siblings, which have real bodies. It passed the blocking CI gate, because
+that gate only counted the file.
+
+**Why medium rather than low.** The changelog is not decoration here: `release.yml` computes the
+next SemVer from these entries, and per the release rules a production tag is cut **only** when
+a `changelogs/` entry exists since the last tag. So the file is load-bearing for versioning
+while its contents are unchecked. The failure is also self-concealing in the usual way — an
+empty body renders as a heading with nothing under it, which looks like a formatting quirk
+rather than a missing record, and the information it should have carried is gone by the time
+anyone reads the release notes.
+
+**Fix direction.** A format check is cheap and belongs at both layers, but the ordering matters:
+
+1. **Pre-commit hook first**, over staged `changelogs/*.md` only. Assert the frontmatter parses,
+   carries every `REQUIRED_FIELDS` key, and — the part that catches this — that the body below
+   `## Entry` is non-empty after stripping whitespace. Local, fast, fixable in the moment.
+2. **Then widen the CI gate** from presence to presence-and-shape, reusing the same checker so
+   the two cannot drift. Worth doing even with the hook in place, since worktrees routinely run
+   with hooks unestablished (see the pre-drive checklist in `CLAUDE.md`) and a silently-skipped
+   hook is exactly how this class of gap survives.
+
+One caution for whoever builds it: do **not** implement the body check by reusing
+`validate_payload`. That function reads a payload dict, not a file, so pointing it at
+`changelogs/*.md` would require re-deriving the payload from the frontmatter — at which point
+the body, the only thing actually unchecked today, is still not being read. The new check must
+open the file.
+
+Consider also making `emit_entry.py` stop writing a bare `## Entry`: either require body text in
+the payload, or write a visible `<!-- TODO: fill in -->` marker the new hook rejects, so an
+unfinished entry fails loudly instead of looking finished.
+
+**Pattern:** three gates that appear to cover a surface, where one is an exclusion, one checks
+existence, and the only real validator runs before the artefact exists.
