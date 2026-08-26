@@ -197,3 +197,39 @@ post-onboard checklist. After installing, run:
 ```bash
 python scripts/onboard_hook_opt_in.py
 ```
+
+## Presence-Only Assertion Guard (check-presence-only-assertions)
+
+The `check-presence-only-assertions` hook rejects a newly staged test
+assertion whose entire "coverage" is a grep for a symbol's presence in a
+source file — a substring check (`'literal(' in content`,
+`assertIn('literal(', content)`) or a regular-expression declaration check
+(`re.compile(r"function\s+NAME\s*\(")`). A presence-only assertion stays
+green even when the code it names is unreachable, so by itself it is not
+coverage (BP-1100b-5, EPIC-BuildPipelinePhantomRemediation).
+
+**Key behaviours:**
+
+- **Staged hunks only.** The hook reads `git diff --cached` and scans only
+  ADDED lines — never a whole-file or whole-tree scan. This makes it a
+  ratchet: pre-existing presence-only assertions elsewhere in the repo do not
+  block a commit that never touches them (the backlog is a separate,
+  out-of-scope sweep).
+- **Scope: test files only, scanned sources only.** Only files that look like
+  test files (`test_*.py`, `*_test.py`) are scanned, and only when the
+  assertion is proximate to a reference to a file matched by
+  `scanned_source_globs` — an assertion over an unlisted file is not flagged.
+- **Both forms matched.** Substring-form and regex-declaration-form
+  presence-only assertions are both detected, independently.
+- **Waiver:** a `# presence-only: <reason>` comment directly above the
+  assertion suppresses it, provided `<reason>` is non-empty after stripping.
+  An empty or whitespace-only reason does NOT suppress. Accepted waivers and
+  their reasons are listed in the hook's own output.
+
+**Configuration** (in `presence_only_assertion_guard` section of `commit_guardian.json`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `true` | Set to `false` to disable the hook entirely. |
+| `scanned_source_globs` | `["templates/workflows-js/*.js", "templates/scripts/commit_guardian/*.py"]` | Glob patterns (matched via `fnmatch`) for source files whose presence-only coverage is rejected. DATA read from this key — never hardcoded in the hook. |
+| `waiver_marker` | `"presence-only"` | The comment marker recognised as `# <marker>: <reason>`. |

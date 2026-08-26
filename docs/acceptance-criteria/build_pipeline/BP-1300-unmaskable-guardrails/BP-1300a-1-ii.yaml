@@ -6,7 +6,7 @@ component: build-pipeline
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -43,5 +43,7 @@ created: 2026-07-07
 amended_by:
   - it-po-v3
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_self_description_descriptive_only.py::TestCanonicalSourceOnlyResolution::test_ac_bp1300a_1ii_verdict_invariant_to_deployed_artifacts
+implemented_by:
+  - scripts/build_phases.py

@@ -6,7 +6,7 @@ component: build-pipeline
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -45,4 +45,8 @@ superseded_by: null
 covered_by:
   - BP-1300a-1-i
   - BP-1300a-1-ii
-implemented_by: []
+  - unit_tests/build_guards/test_self_description_descriptive_only.py::TestCanonicalSourceOnlyResolution
+  - unit_tests/build_guards/test_self_description_descriptive_only.py::TestRegistryDeclaredWithoutTemplateResolves
+implemented_by:
+  - scripts/build_phases.py
+  - scripts/build.py
