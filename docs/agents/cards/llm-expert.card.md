@@ -227,6 +227,7 @@ flowchart TD
 - ACS-800f-2: The authoring agent instructions describe the UID-and-metadata model
 - ACS-800f-3: The schema reference prose describes stable UIDs and metadata hierarchy
 - AR-200a-1: An agent template carrying a sign-off obligation declares a tool that can perform the write
+- AR-200b-1: An agent template that names a mutating tool as the way to do a mandatory step declares that tool
 - BO-1000c-1b: The /finalize-feature launcher polls the run-progress journal and relays it into the main conversation
 - BO-1000c-2: Surfaced progress reflects the in-flight step, arriving over time rather than only at the end
 - BO-1000c-2-i: On a mid-flight halt the last conversation line reflects the halting step, live
@@ -480,6 +481,7 @@ flowchart TD
 - INF-400b-1-i: Knowledge capture does not block agent exit if route-learning or capture-learning is unavailable
 - INF-400b-1-ii: Duplicate learnings are not persisted twice across consecutive runs
 - INF-400b-2: Knowledge emissions from v3 agents use the same JSONL event schema as signoff section 7
+- INF-400b-2-ii: Every shipped description of the knowledge-capture record agrees with every other and with the records actually written
 - INF-400b-3: V3 agent knowledge-capture prompt is domain-appropriate for specification work
 - INF-400c-4-i: No shipped template directs a knowledge_captured event at the telemetry sink
 - INF-400e-1: Second-run BA produces L2 ACs that reference standing rules without being told
@@ -490,6 +492,9 @@ flowchart TD
 - INF-400f-2: BA v3 component discoveries are available to the IT PO v3 in the same pipeline run
 - INF-400f-3: Cross-agent knowledge flows through shared persistence, not agent-to-agent message passing
 - INF-600l-3: The pr-reviewer prose backstop for card/registry consistency delegates the search to research-agent
+- INF-700b-1: An agent that finishes with a learning leaves a durable record of it by following the capture step verbatim
+- INF-700b-1-i: An agent with nothing to record leaves no record, so silence in the record means silence in the learning
+- INF-700b-1-ii: A capture step that cannot complete leaves a countable failure record, not only a warning
 - KM-KGS-100e-8: The authoring-agent templates instruct emitting a component on every criterion
 - KM-KQS-032: Agent Protocol specifies standard invocation syntax with keyword and surface parameters
 - KM-KQS-033: Agent Protocol specifies zero-result and empty-graph handling as non-error conditions
